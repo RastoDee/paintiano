@@ -82,161 +82,6 @@ function paintSnapMidi(midi, scaleKey){
 }
 
 function snapDurQ(q){const t=[0.25,0.5,0.75,1,1.5,2,3,4];let b=1,bd=Infinity;for(const x of t){const d=Math.abs(q-x);if(d<bd){bd=d;b=x;}}return b;}
-
-// Decompress a .mxl (zipped MusicXML) ArrayBuffer to the inner XML text.
-// Uses inline ZIP parsing + browser's built-in DecompressionStream — no library, ~50 LOC.
-// Works on iOS Safari 16.4+, Chrome 80+, Firefox 113+.
-async function mxlToXml(buf){
-  const bytes=new Uint8Array(buf);
-  const dv=new DataView(buf);
-  // Find End-of-Central-Directory record (EOCD signature 0x06054b50), scanning from file end backwards
-  let eocd=-1;
-  for(let i=bytes.length-22;i>=0&&i>=bytes.length-65557;i--){
-    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
-  }
-  if(eocd<0) throw new Error('Not a valid .mxl (no EOCD record)');
-  const cdEntries=dv.getUint16(eocd+10,true);
-  const cdOffset=dv.getUint32(eocd+16,true);
-  // Walk the central directory
-  const files=[];
-  let p=cdOffset;
-  for(let i=0;i<cdEntries;i++){
-    if(dv.getUint32(p,true)!==0x02014b50) throw new Error('Corrupt .mxl central directory');
-    const method=dv.getUint16(p+10,true);
-    const compSize=dv.getUint32(p+20,true);
-    const fnameLen=dv.getUint16(p+28,true);
-    const extraLen=dv.getUint16(p+30,true);
-    const commentLen=dv.getUint16(p+32,true);
-    const lfh=dv.getUint32(p+42,true);
-    const name=new TextDecoder().decode(bytes.slice(p+46,p+46+fnameLen));
-    files.push({name,method,compSize,lfh});
-    p+=46+fnameLen+extraLen+commentLen;
-  }
-  // Pick the main score file: prefer .musicxml or .xml not in META-INF.
-  // If META-INF/container.xml exists we could parse it for the rootfile path, but the heuristic below works for all musescore.com / MuseScore Studio exports.
-  const main=files.find(f=>!f.name.startsWith('META-INF')&&(f.name.endsWith('.musicxml')||f.name.endsWith('.xml')))
-           ||files.find(f=>f.name.endsWith('.xml'));
-  if(!main) throw new Error('No score file inside .mxl');
-  // Local file header → actual data offset
-  if(dv.getUint32(main.lfh,true)!==0x04034b50) throw new Error('Corrupt .mxl file header');
-  const lfnLen=dv.getUint16(main.lfh+26,true);
-  const lexLen=dv.getUint16(main.lfh+28,true);
-  const dataAt=main.lfh+30+lfnLen+lexLen;
-  const compressed=bytes.slice(dataAt,dataAt+main.compSize);
-  let xmlBytes;
-  if(main.method===0){
-    // Stored, no compression
-    xmlBytes=compressed;
-  }else if(main.method===8){
-    // Deflate (raw, no zlib header)
-    if(typeof DecompressionStream==='undefined'){
-      throw new Error('This browser is too old to read compressed .mxl. Update Safari/Chrome, or re-export as uncompressed .musicxml.');
-    }
-    const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-    xmlBytes=new Uint8Array(await new Response(stream).arrayBuffer());
-  }else{
-    throw new Error('Unsupported .mxl compression method: '+main.method);
-  }
-  return new TextDecoder('utf-8').decode(xmlBytes);
-}
-
-// MusicXML parser — converts MuseScore/Finale/Dorico XML exports into Paintiano events.
-// Reads pitches, durations, voices, chords, multi-staff piano directly — no OMR guessing.
-// Accepts uncompressed .musicxml / .xml only (compressed .mxl needs unzip and is not supported here).
-function parseMusicXml(xmlText){
-  const doc=new DOMParser().parseFromString(xmlText,'application/xml');
-  const err=doc.querySelector('parsererror');
-  if(err) throw new Error('Invalid MusicXML: '+(err.textContent||'').replace(/\s+/g,' ').slice(0,80));
-  if(!doc.querySelector('score-partwise, score-timewise')) throw new Error('Not a MusicXML score (no <score-partwise> root). If you exported .mxl, re-export as uncompressed .musicxml.');
-  const stepSemi={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
-  const notes=[]; // [{startQ, durQ, midi, vel}]
-  let lastNoteStartQ=0;
-  for(const part of doc.querySelectorAll('score-partwise > part')){
-    let divisions=4;
-    let curTimeQ=0;
-    for(const measure of part.querySelectorAll(':scope > measure')){
-      for(const elem of measure.children){
-        const tag=elem.tagName;
-        if(tag==='attributes'){
-          const div=elem.querySelector(':scope > divisions');
-          if(div) divisions=parseInt(div.textContent)||divisions;
-        }else if(tag==='note'){
-          if(elem.querySelector(':scope > grace')) continue; // skip grace notes
-          const isChord=elem.querySelector(':scope > chord')!==null;
-          const isRest=elem.querySelector(':scope > rest')!==null;
-          const durEl=elem.querySelector(':scope > duration');
-          const duration=durEl?parseFloat(durEl.textContent):0;
-          const durQ=duration/divisions;
-          if(isRest){
-            if(!isChord) curTimeQ+=durQ;
-            continue;
-          }
-          const pitchEl=elem.querySelector(':scope > pitch');
-          if(!pitchEl){
-            if(!isChord) curTimeQ+=durQ;
-            continue;
-          }
-          const step=pitchEl.querySelector(':scope > step')?.textContent||'C';
-          const octave=parseInt(pitchEl.querySelector(':scope > octave')?.textContent||'4');
-          const alter=parseFloat(pitchEl.querySelector(':scope > alter')?.textContent||'0');
-          const midi=Math.round((octave+1)*12+(stepSemi[step]||0)+alter);
-          // Dynamics → velocity
-          let vel=88;
-          const dyn=elem.querySelector(':scope > notations > dynamics');
-          if(dyn){
-            const tag=dyn.children[0]?.tagName;
-            const dynMap={ppp:30,pp:42,p:55,mp:70,mf:85,f:100,ff:115,fff:127,sf:110,sfz:115,fp:80};
-            if(tag&&dynMap[tag.toLowerCase()]) vel=dynMap[tag.toLowerCase()];
-          }
-          // For chord notes: same startQ as the previous note in this voice/part; curTimeQ wasn't advanced
-          const noteStartQ=isChord?lastNoteStartQ:curTimeQ;
-          if(midi>=0&&midi<128) notes.push({startQ:noteStartQ,durQ,midi,vel});
-          if(!isChord){
-            lastNoteStartQ=curTimeQ;
-            curTimeQ+=durQ;
-          }
-        }else if(tag==='backup'){
-          const dur=parseFloat(elem.querySelector(':scope > duration')?.textContent||'0');
-          curTimeQ=Math.max(0,curTimeQ-dur/divisions);
-        }else if(tag==='forward'){
-          const dur=parseFloat(elem.querySelector(':scope > duration')?.textContent||'0');
-          curTimeQ+=dur/divisions;
-        }
-      }
-    }
-  }
-  if(!notes.length) throw new Error('No playable notes found in MusicXML.');
-  // Sort by start time, then pitch (for stable chord rendering low→high)
-  notes.sort((a,b)=>a.startQ-b.startQ||a.midi-b.midi);
-  // Group simultaneous notes into chord events
-  const events=[];
-  const EPS=0.005;
-  for(const n of notes){
-    const last=events[events.length-1];
-    if(last&&Math.abs(last.startQ-n.startQ)<EPS){
-      last.notes.push({m:n.midi,v:n.vel,durMs:Math.round(n.durQ*500)});
-      last.maxDurQ=Math.max(last.maxDurQ,n.durQ);
-    }else{
-      events.push({startQ:n.startQ,maxDurQ:n.durQ,notes:[{m:n.midi,v:n.vel,durMs:Math.round(n.durQ*500)}]});
-    }
-  }
-  // Deduplicate identical pitches within each chord (multi-voice unisons)
-  for(const ev of events){
-    const seen=new Set();
-    ev.notes=ev.notes.filter(n=>seen.has(n.m)?false:(seen.add(n.m),true));
-  }
-  // Build Paintiano events. Fixed 100 BPM means 600 ms per quarter; durations scale from durQ.
-  const QUARTER_MS=600;
-  return events.map((c,idx)=>{
-    const dms=Math.max(120,Math.round(c.maxDurQ*QUARTER_MS));
-    return{
-      n:c.notes.map(n=>({m:n.m,v:n.v,durMs:dms})),
-      startMs:Math.round(c.startQ*QUARTER_MS),
-      idx,
-      durQ:snapDurQ(c.maxDurQ)
-    };
-  });
-}
 function computeGrid(arg){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
   const totalQ=evs.reduce((s,e)=>s+(e.durQ!=null?e.durQ:1),0);
@@ -270,45 +115,6 @@ function computeGrid(arg){
     }
     const f=segments[0];
     cells.push({idx:i,x:f.x,y:f.y,w:f.w,h:f.h,segments});
-  }
-  // Cleanup: if the very last event left a tiny stranded segment on a new bottom row,
-  // absorb it so the canvas doesn't end with an isolated single cell.
-  if(cells.length>0){
-    const lastCell=cells[cells.length-1];
-    const segs=lastCell.segments;
-    if(segs.length>=2){
-      // Last event has multiple segments — last one is a wrap-continuation. If it's tiny on its own row, drop it and extend the prev segment.
-      const veryLast=segs[segs.length-1];
-      const prev=segs[segs.length-2];
-      if(veryLast.y>prev.y && veryLast.w<BW*1.5){
-        segs.pop();
-        prev.w=CW-prev.x;
-      }
-    }else if(segs.length===1 && cells.length>=2){
-      // Last event is single segment alone on a new row. Try to slot it into the previous row by shrinking the prev cell's last segment.
-      const veryLast=segs[0];
-      const prevCell=cells[cells.length-2];
-      const prevSegs=prevCell.segments;
-      const prevLast=prevSegs[prevSegs.length-1];
-      if(veryLast.y>prevLast.y && veryLast.x===0 && veryLast.w<BW*3){
-        const shrinkBy=veryLast.w;
-        if(prevLast.w>shrinkBy+BW){
-          prevLast.w-=shrinkBy;
-          veryLast.x=prevLast.x+prevLast.w;
-          veryLast.y=prevLast.y;
-          // Sync cell's x/y/w to first (and only) segment
-          lastCell.x=veryLast.x;lastCell.y=veryLast.y;lastCell.w=veryLast.w;lastCell.h=veryLast.h;
-        }else{
-          // Not enough room — at least stretch the lonely segment so the bottom row isn't a single tiny cell
-          veryLast.w=CW-veryLast.x;
-          lastCell.w=veryLast.w;
-        }
-      }
-    }
-    // Always ensure the last segment reaches the right edge of its row (clean bottom-right corner)
-    const finalSegs=cells[cells.length-1].segments;
-    const finalLast=finalSegs[finalSegs.length-1];
-    if(finalLast.x+finalLast.w<CW){finalLast.w=CW-finalLast.x;}
   }
   // CH may be slightly off if the last event rounded; recompute from cells
   const lastSeg=cells.length?cells[cells.length-1].segments[cells[cells.length-1].segments.length-1]:null;
@@ -514,10 +320,172 @@ function noteArr2events(notes,tempo){
 function encodeMidi(events,tempo){const bpm=tempo||120,TPB=480,USPB=Math.round(60000000/bpm);function vl(v){const b=[v&0x7f];v>>=7;while(v>0){b.unshift((v&0x7f)|0x80);v>>=7;}return b;}function ms2t(ms){return Math.round(ms*TPB*bpm/60000);}const evts=[];events.forEach(ev=>ev.n.forEach(n=>{evts.push({t:ms2t(ev.startMs),on:true,m:n.m,v:n.v});evts.push({t:ms2t(ev.startMs+n.durMs),on:false,m:n.m});}));evts.sort((a,b)=>a.t-b.t||(a.on?1:-1));const track=[0,0xff,0x51,0x03,(USPB>>16)&0xff,(USPB>>8)&0xff,USPB&0xff];let prev=0;evts.forEach(ev=>{const d=ev.t-prev;prev=ev.t;track.push(...vl(d));track.push(ev.on?0x90:0x80,ev.m,ev.on?ev.v:0);});track.push(0,0xff,0x2f,0x00);const tl=track.length;return new Uint8Array([0x4d,0x54,0x68,0x64,0,0,0,6,0,0,0,1,(TPB>>8)&0xff,TPB&0xff,0x4d,0x54,0x72,0x6b,(tl>>24)&0xff,(tl>>16)&0xff,(tl>>8)&0xff,tl&0xff,...track]);}
 
 
+// ─── Staff line detection for OMR-lite ─────────────────────────────
+function detectStaves(canvas) {
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, W, H).data;
+
+  // 1. Find rows with long continuous dark runs (likely staff lines)
+  // Tolerant: allow short gaps (anti-aliased pixels), lum threshold loosened
+  const lineYs = [];
+  for (let y = 0; y < H; y++) {
+    let maxRun = 0, curRun = 0, gap = 0;
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      const lum = (imgData[i] + imgData[i+1] + imgData[i+2]) / 3;
+      if (lum < 140) { curRun++; gap = 0; if (curRun > maxRun) maxRun = curRun; }
+      else {
+        gap++;
+        if (gap <= 2 && curRun > 0) { curRun++; } // tolerate small gaps
+        else { curRun = 0; gap = 0; }
+      }
+    }
+    if (maxRun > W * 0.35) lineYs.push(y);  // 35% width threshold
+  }
+  if (lineYs.length < 5) return [];
+
+  // 2. Cluster adjacent Y values (a staff line is 1-3 px thick)
+  const lines = [];
+  let cur = [lineYs[0]];
+  for (let i = 1; i < lineYs.length; i++) {
+    if (lineYs[i] - cur[cur.length-1] <= 3) cur.push(lineYs[i]);
+    else {
+      lines.push(Math.round(cur.reduce((a,b)=>a+b,0)/cur.length));
+      cur = [lineYs[i]];
+    }
+  }
+  lines.push(Math.round(cur.reduce((a,b)=>a+b,0)/cur.length));
+  if (lines.length < 5) return [];
+
+  // 3. Find groups of 5 evenly-spaced lines = staves
+  const staves = [];
+  let i = 0;
+  while (i <= lines.length - 5) {
+    const five = [lines[i], lines[i+1], lines[i+2], lines[i+3], lines[i+4]];
+    const s = [five[1]-five[0], five[2]-five[1], five[3]-five[2], five[4]-five[3]];
+    const avgSp = (s[0]+s[1]+s[2]+s[3]) / 4;
+    const consistent = s.every(sp => Math.abs(sp - avgSp) <= 4);
+    if (consistent && avgSp >= 5 && avgSp <= 40) {
+      staves.push({ topY: five[0], bottomY: five[4], spacing: avgSp, lineYs: five });
+      i += 5;
+    } else i++;
+  }
+  return staves;
+}
+
+function staffRelativePitch(clusterY, staff, clef) {
+  // Treble: bottom line E4(64), top line F5(77)
+  // Bass:   bottom line G2(43), top line A3(57)
+  const relFromBottom = (staff.bottomY - clusterY) / Math.max(1, staff.bottomY - staff.topY);
+  const baseMidi = clef === 'treble' ? 64 : 43;
+  const topMidi  = clef === 'treble' ? 77 : 57;
+  // Allow notes up to 1 octave above/below the staff (ledger lines)
+  const rel = Math.max(-0.7, Math.min(1.7, relFromBottom));
+  const continuous = baseMidi + rel * (topMidi - baseMidi);
+  // Snap to C major (diatonic)
+  const CMAJ = [0, 2, 4, 5, 7, 9, 11];
+  const oct = Math.floor(continuous / 12);
+  const pc = continuous - oct * 12;
+  let best = CMAJ[0], bestD = 99;
+  for (const c of CMAJ) {
+    const d = Math.abs(c - pc);
+    if (d < bestD) { bestD = d; best = c; }
+  }
+  return Math.max(21, Math.min(108, oct * 12 + best));
+}
 
 
+function findNoteheadsInStaff(data, W, H, staff) {
+  // Scan a region around the staff for notehead-shaped dark blobs.
+  // Notehead heuristics: vertical run of staff.spacing*0.4 to *1.3 height,
+  // horizontal extent of staff.spacing*0.4 to *1.5 width.
+  const margin = Math.round(staff.spacing * 4);
+  const yStart = Math.max(0, staff.topY - margin);
+  const yEnd = Math.min(H, staff.bottomY + margin);
+  const minH = Math.max(2, Math.round(staff.spacing * 0.4));
+  const maxH = Math.round(staff.spacing * 1.4);
+  const minW = Math.max(3, Math.round(staff.spacing * 0.4));
+  const maxW = Math.round(staff.spacing * 1.6);
+  const candidates = [];
+
+  for (let x = 0; x < W; x += 2) {  // step by 2 for speed
+    let runStart = -1;
+    for (let y = yStart; y <= yEnd; y++) {
+      const i = (y * W + x) * 4;
+      const lum = (data[i] + data[i+1] + data[i+2]) / 3;
+      const isDark = lum < 115;
+      if (isDark) { if (runStart < 0) runStart = y; }
+      else {
+        if (runStart >= 0) {
+          const runH = y - runStart;
+          if (runH >= minH && runH <= maxH) {
+            // Check horizontal extent at middle of run
+            const midY = runStart + Math.floor(runH / 2);
+            let leftW = 0;
+            for (let dx = 1; dx <= maxW + 2 && x - dx >= 0; dx++) {
+              const i2 = (midY * W + (x - dx)) * 4;
+              if ((data[i2] + data[i2+1] + data[i2+2]) / 3 < 115) leftW = dx;
+              else break;
+            }
+            let rightW = 0;
+            for (let dx = 1; dx <= maxW + 2 && x + dx < W; dx++) {
+              const i2 = (midY * W + (x + dx)) * 4;
+              if ((data[i2] + data[i2+1] + data[i2+2]) / 3 < 115) rightW = dx;
+              else break;
+            }
+            const totalW = leftW + 1 + rightW;
+            if (totalW >= minW && totalW <= maxW) {
+              const cx = x - leftW + Math.floor(totalW / 2);
+              candidates.push({ x: cx, y: midY });
+            }
+          }
+          runStart = -1;
+        }
+      }
+    }
+  }
+
+  // Dedupe nearby candidates (within ~staff.spacing/2 in both axes)
+  const mergeDist = Math.max(3, Math.round(staff.spacing * 0.6));
+  candidates.sort((a, b) => a.x - b.x || a.y - b.y);
+  const deduped = [];
+  for (const c of candidates) {
+    let merged = false;
+    for (const d of deduped) {
+      if (Math.abs(c.x - d.x) <= mergeDist && Math.abs(c.y - d.y) <= mergeDist) {
+        merged = true;
+        break;
+      }
+    }
+    if (!merged) deduped.push(c);
+  }
+  return deduped;
+}
 
 // ─── PDF → image via pdf.js (no API) ──────────────────────────────
+async function pdfPageToCanvas(arrayBuffer, pageNum) {
+  if (!window.pdfjsLib) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('Cannot load pdf.js from CDN'));
+      document.head.appendChild(s);
+    });
+    if (!window.pdfjsLib) throw new Error('pdf.js failed to initialize');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const page = await pdf.getPage(pageNum || 1);
+  const viewport = page.getViewport({ scale: 2 });
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  return { canvas, totalPages: pdf.numPages };
+}
 
 // AI library — full song arrangements
 const AI_LIBRARY = [
@@ -4679,7 +4647,7 @@ export default function Paintiano() {
   const refMidi      = useRef(null);
   const refAudio     = useRef(null);
   const refImage     = useRef(null);
-  const refScore     = useRef(null);
+  const refPdf       = useRef(null);
 
   const [mode,      setMode]      = useState('harmony');
   const [chords,    setChords]    = useState([]);
@@ -4850,41 +4818,6 @@ export default function Paintiano() {
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
 
-  // MusicXML upload — exact, structured score data from MuseScore / Finale / Dorico.
-  // Far more accurate than PDF OMR because every note's pitch, octave, accidental, and rhythm is encoded.
-  // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
-  // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
-  const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';
-    setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();
-    try{
-      const buf=await file.arrayBuffer();
-      const head=new Uint8Array(buf.slice(0,4));
-      const name=(file.name||'').toLowerCase();
-      // Quick sniff: ZIP magic 'PK' = .mxl; '<' = plain XML; 'MThd' = MIDI (user error)
-      const isZip=head[0]===0x50&&head[1]===0x4b;
-      const isXml=head[0]===0x3c||(head[0]===0xef&&head[1]===0xbb&&head[2]===0xbf); // '<' or UTF-8 BOM
-      const isMidi=head[0]===0x4d&&head[1]===0x54&&head[2]===0x68&&head[3]===0x64;
-      if(isMidi){setErr('That looks like a MIDI file. Use the ♬ midi button instead.');setErrInfo(true);return;}
-      if(!isZip&&!isXml){
-        setErr('Not a MusicXML score. Pick a .musicxml, .xml, or .mxl file (or a .mscz from MuseScore — those are .mxl underneath).');
-        setErrInfo(true);return;
-      }
-      let xmlText;
-      if(isZip){
-        setWLabel('decompressing .mxl');setWPct(40);
-        xmlText=await mxlToXml(buf);
-      }else{
-        xmlText=new TextDecoder('utf-8').decode(buf);
-      }
-      setWLabel('parsing notes');setWPct(70);
-      const evts=parseMusicXml(xmlText);
-      if(!evts.length){setErr('No playable notes in MusicXML.');setErrInfo(false);return;}
-      applyEvents(evts,file.name.replace(/\.[^.]+$/,''));
-    }catch(e){setErr('Score: '+e.message);setErrInfo(false);}
-    finally{setWorking(false);setWLabel('');setWPct(0);}
-  },[stopAll,applyEvents]);
-
   // Built-in sample loaders — embedded files, decoded through the real pipelines
   const loadSampleMidi=useCallback(()=>{
     try{
@@ -4934,6 +4867,138 @@ export default function Paintiano() {
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[songQ,playing,anim,working,stopAll,applyEvents]);
 
+  const loadPdf=useCallback(async(e)=>{
+    const file=e.target.files[0];if(!file)return;e.target.value='';
+    setWorking(true);setWLabel('rendering PDF');setWPct(10);setErr('');setErrInfo(false);stopAll();
+    try{
+      const buf=await file.arrayBuffer();
+      setWPct(35);
+      const{canvas:pdfCanvas,totalPages}=await pdfPageToCanvas(buf,1);
+      setWLabel('analyzing score');setWPct(55);
+
+      // OMR-lite: detect staves, find noteheads, group into chords (like MIDI events)
+      setWLabel('detecting staves');setWPct(58);
+      const staves=detectStaves(pdfCanvas);
+      setWPct(64);
+
+      const haveStaves = staves.length > 0;
+      if(!haveStaves){
+        setWLabel('no staves — pentatonic fallback');setWPct(70);
+      }
+
+      setWLabel('finding noteheads');
+      const W=pdfCanvas.width,H=pdfCanvas.height;
+      const fullData=pdfCanvas.getContext('2d').getImageData(0,0,W,H).data;
+      const allHeads=[];
+
+      if(haveStaves){
+        for(let si=0;si<staves.length;si++){
+          const staff=staves[si];
+          const clef=(si%2===0)?'treble':'bass';
+          const system=Math.floor(si/2);
+          const heads=findNoteheadsInStaff(fullData,W,H,staff);
+          for(const h of heads)allHeads.push({...h,staff,clef,system,staffIdx:si});
+        }
+      } else {
+        // Fallback: scan in 14x14 grid for dark clusters, use page-Y to pentatonic pitch
+        const N=14, blockPxW=W/N, blockPxH=H/N;
+        const PENT=[];
+        for(let oct=3;oct<=6;oct++)for(const pc of [0,2,4,7,9])PENT.push((oct+1)*12+pc);
+        for(let row=0;row<N;row++){
+          for(let col=0;col<N;col++){
+            const bx0=Math.floor(col*blockPxW),by0=Math.floor(row*blockPxH);
+            const bw=Math.floor(blockPxW),bh=Math.floor(blockPxH);
+            let totalDark=0;
+            const darkRows=[];
+            for(let y=0;y<bh;y++){
+              let cnt=0;
+              for(let x=0;x<bw;x++){
+                const i=((by0+y)*W+(bx0+x))*4;
+                const lum=(fullData[i]+fullData[i+1]+fullData[i+2])/3;
+                if(lum<135){cnt++;totalDark++;}
+              }
+              if(cnt>=Math.max(2,bw*0.04))darkRows.push({y,cnt});
+            }
+            if(totalDark<bw*bh*0.02)continue;
+            // Cluster dark rows
+            const clusters=[];let cur=null;
+            for(const dr of darkRows){
+              if(!cur||dr.y-cur.end>2){cur={start:dr.y,end:dr.y,total:dr.cnt};clusters.push(cur);}
+              else{cur.end=dr.y;cur.total+=dr.cnt;}
+            }
+            const candidates=clusters.filter(c=>{
+              const h=c.end-c.start+1;
+              if(h<=2&&c.total/h>bw*0.6)return false; // staff line
+              return c.total>=3;
+            }).sort((a,b)=>b.total-a.total).slice(0,3);
+            for(const c of candidates){
+              const cy=by0+(c.start+c.end)/2;
+              const yNorm=Math.max(0,Math.min(1,cy/H));
+              const pentIdx=Math.max(0,Math.min(PENT.length-1,Math.round((1-yNorm)*(PENT.length-1))));
+              const midi=PENT[pentIdx];
+              allHeads.push({x:bx0+bw/2,y:cy,_midi:midi,system:row,staff:null,clef:null,staffIdx:0});
+            }
+          }
+        }
+      }
+      setWPct(78);
+
+      if(allHeads.length===0){
+        setErr('No noteheads detected. Score may be too faint or unusual.');setErrInfo(true);
+        return;
+      }
+
+      // Sort noteheads by reading order: system top-to-bottom, X left-to-right
+      allHeads.sort((a,b)=>{
+        if(a.system!==b.system)return a.system-b.system;
+        return a.x-b.x;
+      });
+
+      // Group noteheads at similar X (within a system) into chords
+      const refSpacing = haveStaves ? staves[0].spacing : 12;
+      const mergeDistX=Math.max(6,Math.round(refSpacing*0.7));
+      const chordGroups=[];
+      for(const h of allHeads){
+        const last=chordGroups[chordGroups.length-1];
+        if(last&&last[0].system===h.system&&h.x-last[last.length-1].x<=mergeDistX){
+          last.push(h);
+        }else{
+          chordGroups.push([h]);
+        }
+      }
+      setWPct(86);
+
+      // Convert chord groups to events (like MIDI's chord events)
+      const TEMPO_MS=350;
+      const events=[];
+      for(let ci=0;ci<chordGroups.length;ci++){
+        const group=chordGroups[ci];
+        const seen=new Set();
+        const notes=[];
+        for(const h of group){
+          const midi = h._midi != null ? h._midi : staffRelativePitch(h.y,h.staff,h.clef);
+          if(seen.has(midi))continue;
+          seen.add(midi);
+          notes.push({m:midi,v:90,durMs:TEMPO_MS-40});
+        }
+        if(notes.length)events.push({n:notes,startMs:ci*TEMPO_MS,durQ:1});
+      }
+      setWPct(92);
+
+      if(!events.length){setErr('No valid chords formed.');setErrInfo(false);return;}
+
+      // Apply like MIDI does: applyEvents will set up grid via computeGrid(numEvents)
+      const title=file.name.replace(/\.[^.]+$/,'')+(totalPages>1?' (p1/'+totalPages+')':'')+(haveStaves?' · '+staves.length+' staves':' · fallback')+' · '+events.length+' chords';
+      applyEvents(events,title);
+
+      // Generate MIDI for download
+      const bytes=encodeMidi(events,Math.round(60000/TEMPO_MS));
+      setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
+      setMidiName(file.name.replace(/\.[^.]+$/,'').replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
+      setWPct(100);
+    }catch(e){setErr('PDF: '+e.message);setErrInfo(false);}
+    finally{setWorking(false);setWLabel('');setWPct(0);}
+  },[stopAll,applyEvents]);
 
   const loadImage=useCallback(e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';
@@ -5160,7 +5225,7 @@ export default function Paintiano() {
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:'32px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)'}}>
       <div style={{textAlign:'center',marginBottom:18}}>
         <h1 style={{fontSize:'2.2rem',fontWeight:300,letterSpacing:'.18em',margin:'0 0 4px',color:'rgba(201,168,76,.9)'}}>Paintiano</h1>
-        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.38,margin:'0 0 4px',textTransform:'uppercase'}}>music → φ painting · <span style={{color:'rgba(140,255,180,.95)',fontWeight:'bold'}}>BUILD #80</span></p>
+        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.38,margin:'0 0 4px',textTransform:'uppercase'}}>music → φ painting · <span style={{color:'rgba(140,255,180,.95)',fontWeight:'bold'}}>BUILD #70</span></p>
         <div style={{fontSize:'.55rem',letterSpacing:'.1em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
       </div>
 
@@ -5191,8 +5256,8 @@ export default function Paintiano() {
         <button onClick={()=>setPickMode('midi')} disabled={busy} style={btn({borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ midi</button>
         <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
         <button onClick={()=>setPickMode('audio')} disabled={busy} style={btn({borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ audio'}</button>
-        <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-        <button onClick={()=>refScore.current?.click()} disabled={busy} style={btn({borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})} title="upload a MusicXML score (.musicxml or .mxl from MuseScore / Finale / Dorico)">{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 score'}</button>
+        <input ref={refPdf} type="file" accept="application/pdf,.pdf" onChange={loadPdf} style={{display:'none'}}/>
+        <button onClick={()=>refPdf.current?.click()} disabled={busy} style={btn({borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('PDF')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('PDF')?'⟳ '+wPct+'%':'𝄞 pdf'}</button>
         <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
         <button onClick={()=>setPickMode('image')} disabled={busy} style={btn({borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 image</button>
       </div>
