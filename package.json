@@ -1,0 +1,22 @@
+{
+  "name": "paintiano",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Music → φ painting. Turn MIDI / audio / images / typed song names into a colored chord painting on the golden-ratio grid.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tone": "^15.0.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.2",
+    "vite": "^5.4.10",
+    "vite-plugin-pwa": "^0.20.5"
+  }
+}
