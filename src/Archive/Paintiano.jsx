@@ -320,144 +320,7 @@ function computeGrid(arg){
   const finalCH=lastSeg?lastSeg.y+BH:CH;
   return{N,BW,BH,CW,CH:finalCH,cells,rows:Math.round(finalCH/BH),totalQ};
 }
-// Block renderers — two per-cell styles plus the flow global renderer.
-//   mosaic: sharp rectangles + thin halo (the original look — geometric, digital)
-//   oil:    impasto brushstrokes with shadow, bristles, highlights, sparkle
-// FLOW is a separate global renderer (drawFlowAll below) since it needs the
-// full sequence to draw a continuous path. The dispatcher `drawBlock` picks
-// one based on the style argument; default is mosaic.
-function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;sorted.forEach((note,i)=>{const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;ctx.fillStyle=`rgba(${r},${g},${b},${(a*.18).toFixed(3)})`;ctx.fillRect(bx-2,y-2,BW+4,bh+4);ctx.fillStyle=`rgba(${r},${g},${b},${a.toFixed(3)})`;ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);});if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}}
-function drawBlockOil(ctx,bx,by,notes,gc,BW,BH){
-  // Oil-paint impasto renderer. Each chord scatters 3–4 brushstrokes per voice;
-  // each stroke is built up from FOUR layers to fake the depth of real pigment:
-  //   1) shadow — a darker, slightly-offset polygon beneath the stroke (depth)
-  //   2) bristles — 4–6 parallel marks at slightly different tones (loaded brush)
-  //   3) highlight — a thin lighter shape along the upper edge (paint ridge catching light)
-  //   4) specular — an occasional near-white speck (wet-paint sparkle)
-  // Edges use 12-vertex polygons with ±18% radius jitter so they read as
-  // hand-painted, not vector-perfect. Per-chord stroke direction gives the
-  // canvas gestural rhythm — strokes within a chord cluster around the same
-  // angle, different chords go in different directions. Deterministic seed.
-  const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
-  let seed=((bx*73)^(by*113)^(BW*271)^(BH*947))>>>0;
-  const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
-  // Hand-painted polygon — perturbed radii so the outline isn't perfectly smooth.
-  const rough=(ax,ay,rx,ry)=>{
-    const segs=12;
-    ctx.beginPath();
-    for(let i=0;i<segs;i++){
-      const a=(i/segs)*Math.PI*2;
-      const j=0.82+rnd()*0.36;
-      const x=ax+Math.cos(a)*rx*j;
-      const y=ay+Math.sin(a)*ry*j;
-      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-    }
-    ctx.closePath();ctx.fill();
-  };
-  sorted.forEach((note,vi)=>{
-    const[r,g,b,a]=gc(note.m,note.v);
-    const yOff=by+vi*bh;
-    // Voice-coherent stroke direction
-    const chordAngle=rnd()*Math.PI*2;
-    const count=3+Math.floor(rnd()*2); // 3–4 strokes per voice
-    for(let k=0;k<count;k++){
-      const cx=bx+rnd()*BW;
-      const cy=yOff+rnd()*bh;
-      const angle=chordAngle+(rnd()-0.5)*Math.PI/3; // chord direction ±30°
-      const length=BW*(0.50+rnd()*0.45);
-      const width=bh*(0.35+rnd()*0.30);
-      ctx.save();
-      ctx.translate(cx,cy);
-      ctx.rotate(angle);
-      // 1) Shadow — offset 1.5px down-right, dark colour
-      const sR=Math.round(r*0.40), sG=Math.round(g*0.40), sB=Math.round(b*0.40);
-      ctx.fillStyle=`rgba(${sR},${sG},${sB},${(a*0.55).toFixed(3)})`;
-      rough(1.5,1.5,length*1.05,width*0.55);
-      // 2) Body — 4–6 parallel bristle marks with alternating tone shifts
-      const bristles=4+Math.floor(rnd()*3);
-      for(let bi=0;bi<bristles;bi++){
-        const t=(bi+0.5)/bristles;
-        const yB=(t-0.5)*width;
-        const tone=(bi%2===0?1:-1)*(10+rnd()*25);
-        const br=Math.max(0,Math.min(255,Math.round(r+tone)));
-        const bg=Math.max(0,Math.min(255,Math.round(g+tone*0.65)));
-        const bb=Math.max(0,Math.min(255,Math.round(b+tone*0.35)));
-        const op=a*(0.70+rnd()*0.30);
-        ctx.fillStyle=`rgba(${br},${bg},${bb},${op.toFixed(3)})`;
-        rough(0,yB,length*(0.85+rnd()*0.30),width/bristles*1.4);
-      }
-      // 3) Highlight — lighter ridge along the top edge of the stroke
-      const hR=Math.min(255,Math.round(r+65)), hG=Math.min(255,Math.round(g+65)), hB=Math.min(255,Math.round(b+55));
-      ctx.fillStyle=`rgba(${hR},${hG},${hB},${(a*0.45).toFixed(3)})`;
-      rough(-length*0.05,-width*0.32,length*0.55,width*0.11);
-      // 4) Specular sparkle — small near-white speck on wet paint, ~38% of strokes
-      if(rnd()>0.62){
-        ctx.fillStyle=`rgba(255,250,240,${(a*0.40).toFixed(3)})`;
-        rough(-length*0.15+(rnd()-0.5)*length*0.3,-width*0.25,length*0.08,width*0.04);
-      }
-      ctx.restore();
-    }
-  });
-}
-// Brushstroke flow renderer — treats the entire chord sequence as a single
-// path. Each chord is a control point; consecutive points are joined with
-// smooth quadratic curves. Stroke width tracks velocity, colour follows the
-// chord's notes. Up to 3 voice-ribbons are layered with small vertical
-// offsets so chords with multiple voices read as parallel strokes.
-// Row breaks (where the path wraps to the next line) end the current stroke
-// and start fresh on the new row — no diagonal jumps.
-// Unlike the per-cell styles, this needs the FULL chord sequence at once,
-// so it's called from the render loop instead of being dispatched per-cell.
-function drawFlowAll(ctx,chordsArr,grid,gc){
-  if(!chordsArr||chordsArr.length<2)return;
-  const pts=[];
-  for(const c of chordsArr){
-    const cell=grid.cells&&grid.cells[c.idx];
-    if(!cell)continue;
-    const seg=(cell.segments&&cell.segments[0])||cell;
-    pts.push({
-      x:seg.x+(seg.w||grid.BW)/2,
-      y:seg.y+(seg.h||grid.BH)/2,
-      notes:c.n,
-      cellH:seg.h||grid.BH
-    });
-  }
-  if(pts.length<2)return;
-  ctx.lineCap='round';
-  ctx.lineJoin='round';
-  const maxVoices=3;
-  for(let v=0;v<maxVoices;v++){
-    const yOff=(v-1)*5; // -5, 0, +5 px voice offset
-    for(let i=0;i<pts.length-1;i++){
-      const p1=pts[i],p2=pts[i+1];
-      // Row-break detection: skip if path wraps to next row (y jumps).
-      if(Math.abs(p2.y-p1.y)>(p1.cellH||20)*1.5)continue;
-      // Sort by velocity, pick voice v
-      const sortedNotes=[...p1.notes].sort((a,b)=>b.v-a.v);
-      const note=sortedNotes[v];
-      if(!note)continue;
-      const[r,g,b,a]=gc(note.m,note.v);
-      const width=2.5+(note.v/127)*9;
-      // Smooth: quadratic curve through midpoints
-      const p0=i>0?pts[i-1]:p1;
-      const startX=(p0.x+p1.x)/2;
-      const startY=(p0.y+p1.y)/2+yOff;
-      const endX=(p1.x+p2.x)/2;
-      const endY=(p1.y+p2.y)/2+yOff;
-      ctx.strokeStyle=`rgba(${r},${g},${b},${(a*0.72).toFixed(3)})`;
-      ctx.lineWidth=width;
-      ctx.beginPath();
-      ctx.moveTo(startX,startY);
-      ctx.quadraticCurveTo(p1.x,p1.y+yOff,endX,endY);
-      ctx.stroke();
-    }
-  }
-}
-
-function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
-  if(style==='oil')return drawBlockOil(ctx,bx,by,notes,gc,BW,BH);
-  return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH);
-}
+function drawBlock(ctx,bx,by,notes,gc,BW,BH){const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;sorted.forEach((note,i)=>{const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;ctx.fillStyle=`rgba(${r},${g},${b},${(a*.18).toFixed(3)})`;ctx.fillRect(bx-2,y-2,BW+4,bh+4);ctx.fillStyle=`rgba(${r},${g},${b},${a.toFixed(3)})`;ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);});if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}}
 
 // Convert a downsampled-image pixel array into musical events using a given hue→pitch table
 // (COF for harmony mode, SPEC_HUE for spectral mode). Pure: same input + same table → same output.
@@ -495,26 +358,7 @@ function pixelsToImageEvents(px,nc,nr,table){
   // least one voice instead of dropping out to silence).
   function pxToNote(idx, soft){
     const{r,g,b}=px[idx],[h,s,l]=toHsl(r,g,b);
-    // ── GRAYSCALE PATH ──
-    // Achromatic pixels (white / grey / black) carry no hue information but
-    // they DO carry value information. Map them to pitch class C with octave
-    // driven by lightness: black ≈ C2 (deep bass), mid-grey ≈ C5 (middle),
-    // white ≈ C7 (high treble). This forms a structural backbone under the
-    // colour melody and keeps monochrome regions audible instead of silent.
-    if (s < 10) {
-      const oct = Math.max(2, Math.min(7, Math.round(2 + (l/100) * 5)));
-      const midi = (oct + 1) * 12; // pitch class 0 = C
-      // Contrast-driven velocity: pure black and pure white speak louder than
-      // muddy mid-grey, so the visual extremes are also the sonic extremes.
-      const contrast = Math.abs(l - 50) * 2; // 0 (mid-grey) … 100 (black/white)
-      const v = Math.round(45 + (contrast/100) * 50); // 45 … 95
-      return { m: midi, v, durMs: noteDur };
-    }
-    // ── CHROMATIC PATH ──
-    // Saturated pixels at near-black or near-white extremes contain little
-    // visible colour information, so we drop them; the grayscale branch above
-    // already covers achromatic value extremes.
-    if (l < 6 || l > 94) return null;
+    if(l<6||l>94||s<10)return null;
     const dh=Math.min(Math.abs(h-bgHue),360-Math.abs(h-bgHue));
     const chroma=s*Math.min(l,100-l)/50; // 0..100
     const isBackgroundHue = dh < 30;
@@ -833,53 +677,6 @@ const SONG_LIBRARY = [
 
 const MOODS = ['funny','sad','aggressive','dreamy','love','nostalgic','calm','excited','crazy'];
 
-// Searchable in-app guide. Each entry: title, body, plus keywords to widen
-// the match surface for the search box. Sections are independent — order
-// only affects display when the search box is empty.
-const GUIDE = [
-  {id:'overview', title:'Overview', keywords:'start begin intro what is paintiano how',
-   body:'Paintiano paints music as a φ-proportioned grid of coloured blocks, and plays paintings back as music. Pick a source — Compose, MIDI, Audio, Score, Image, or a mood — and the canvas fills in. Use Play to hear it, Print to save the painting, Rec (in image mode) to capture the audio.'},
-  {id:'modes', title:'Harmony vs Spectral', keywords:'colour color mode hue palette circle fifths chromatic',
-   body:'Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly. Open Concept for the full theory.'},
-  {id:'style', title:'Mosaic / Oil / Flow', keywords:'style mosaic oil dabs flow impressionist impasto brush bristle paint rendering look ribbon stroke calligraphy twombly monet',
-   body:'How each chord-block is rendered. MOSAIC = the original sharp φ-rectangle look (geometric, digital, Mondrian-ish). OIL = real impasto brushstrokes — each stroke layered from a dark shadow, 4–6 parallel bristle marks at varied tones, a lit highlight ridge, and occasional specular sparkle. Edges are hand-painted polygons, not vector ellipses. Strokes within a chord cluster around the same angle so the canvas reads as gestural brushwork. FLOW = the chord sequence traced as continuous brushstroke ribbons — the grid disappears entirely (calligraphy / Cy Twombly gesture). Switch any time, the canvas repaints instantly. Only affects music-mode paintings; image transcription always renders the literal pixel mosaic.'},
-  {id:'demo', title:'Demo (Für Elise)', keywords:'demo für elise beethoven test example sample',
-   body:'Tap ♩ DEMO to play a built-in Für Elise excerpt. The keyboard surfaces automatically so you can watch the keys light up. While the demo is loaded, the Play button is disabled — Stop still works during playback. Press CLEAR to leave demo mode.'},
-  {id:'compose', title:'Compose with the keyboard', keywords:'compose keyboard piano live record keys play',
-   body:'Tap ♪ COMPOSE to reveal the on-screen piano. Tap or hold keys; longer holds produce wider blocks. Vertical position on a key affects velocity (lower = louder). Hardware keyboard works too: A–K white keys, W/E/T/Y/U black keys. Hit Play to replay your composition.'},
-  {id:'scale-snap', title:'Scale snap (advanced)', keywords:'scale snap key major minor chromatic free',
-   body:'In Compose mode, the ⚙ icon reveals a scale-snap selector. Snap input to C maj, A min, G maj, E min, D maj, F maj, or D min — notes outside the chosen scale are pulled to the nearest in-scale neighbour. Set to "free" (default) for full chromatic.'},
-  {id:'moods', title:'Mood selector', keywords:'mood ai compose generate funny sad love calm crazy dreamy excited aggressive nostalgic',
-   body:'Pick a mood from the dropdown to load a built-in 30–60 second composition matching that mood. Nine moods: funny, sad, aggressive, dreamy, love, nostalgic, calm, excited, crazy. After picking one you can MORPH into another mood or VARY for a fresh take.'},
-  {id:'midi', title:'♬ MIDI upload', keywords:'midi upload import file mid',
-   body:'Upload any standard MIDI file (.mid / .midi). Multi-track files are condensed into chord events, tempo-mapped, and painted. A built-in sample is available if you tap ♬ MIDI without a file.'},
-  {id:'audio', title:'♫ Audio upload', keywords:'audio mp3 wav transcribe upload pitch detection',
-   body:'Upload mp3, wav, m4a, ogg, or aac. Audio is decoded and pitch-detected into MIDI-like events. Works best with clean monophonic or sparse polyphonic source material; busy mixes get blurry. Built-in sample available.'},
-  {id:'score', title:'𝄞 Score (MusicXML)', keywords:'score musicxml mxl musescore finale dorico sheet music',
-   body:'Upload exact sheet music from MuseScore, Finale, or Dorico. Accepts uncompressed .musicxml / .xml and zipped .mxl (or .mscz with MuseScore — same internal format). Pitches, durations, dynamics, and chords come through exactly — the most accurate input.'},
-  {id:'image', title:'🖼 Image transcription', keywords:'image painting picture transcribe paint chagall photo colour grayscale white black grey',
-   body:'Upload an image; Paintiano reads it as a score. Downsampled to 192×120 pixels, walked left-to-right top-to-bottom, producing 960 chord events across a 2-minute performance. Hue → pitch, lightness → octave, chroma → velocity. White / grey / black pixels also play — they map to pitch class C with octave by lightness (black ≈ C2 deep bass, white ≈ C7 high treble), forming a structural backbone under the colour melody. Dominant background hue is suppressed so figurative content dominates. See Concept for the full algorithm.'},
-  {id:'morph', title:'✦ Morph', keywords:'morph crossfade blend transition mood between',
-   body:'Available after picking a mood. Tap ✦ MORPH to crossfade the current mood into another. First half is mood A, second half is mood B, with a velocity blend in the 40–60% zone.'},
-  {id:'vary', title:'🎲 Vary', keywords:'vary variation reroll randomize random fresh',
-   body:'Available after picking a mood. Tap 🎲 VARY to reroll a fresh interpretation of the same mood. Keep tapping for different takes — pitch and rhythm vary while the mood signature stays.'},
-  {id:'play-stop', title:'♩ Play / ■ Stop', keywords:'play stop playback transport',
-   body:'Play sounds the painted score; Stop halts it. Both buttons appear in the top toolbar and during play in the bottom dock. In demo mode Play is disabled — Stop still works to interrupt playback.'},
-  {id:'print', title:'🖨 Print (save the painting)', keywords:'print export png image save painting picture',
-   body:'Renders the painting at 8× resolution as a PNG. Tap to open the preview, then copy to clipboard or long-press the image to save. On iOS the share sheet from the copy step is the most reliable path to Files / Photos.'},
-  {id:'record', title:'⏺ Rec & save the audio', keywords:'record rec audio capture save mp4 m4a wav recording',
-   body:'Available in image mode. Tap ⏺ REC to record audio output while the painting plays. Tap ⏹ to stop both playback and recording. A SAVE RECORDING button appears with the file — tap to share / save via the system dialog (Files, AirDrop, Downloads, Mail, audio apps).'},
-  {id:'clear', title:'Clear', keywords:'clear reset start over delete',
-   body:'Wipes the current session — canvas, chords, recording, info, demo state, and compose state — and returns to a fresh start. Use this between sessions or to leave demo mode.'},
-  {id:'troubleshoot', title:'Troubleshooting', keywords:'troubleshoot problem error broken fix bug help slow',
-   body:'If the status reads "loading piano…" wait a few seconds for the sample library to download (~5 MB). If it falls back to "synth piano" the samples failed to load — the app still works with an oscillator synth, less rich tone. Save buttons unresponsive: the iframe sandbox may be blocking that method — try a different platform or screenshot for the painting.'},
-];
-const guideMatch = (e,q) => {
-  const n = q.trim().toLowerCase();
-  if (!n) return true;
-  return e.title.toLowerCase().includes(n) || e.keywords.toLowerCase().includes(n) || e.body.toLowerCase().includes(n);
-};
-
 
 function findSong(query) {
   const q = query.toLowerCase().trim();
@@ -1019,36 +816,9 @@ export default function Paintiano() {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioName, setAudioName] = useState('');
-  const [audioShareMsg, setAudioShareMsg] = useState(null);
-  // Auto-dismiss share status after a few seconds
-  useEffect(()=>{
-    if(!audioShareMsg||audioShareMsg.tone==='wait')return;
-    const t=setTimeout(()=>setAudioShareMsg(null),5000);
-    return()=>clearTimeout(t);
-  },[audioShareMsg]);
   // Scale-snap is now hidden behind an advanced toggle. With 88 keys available
   // the user generally wants the real chromatic piano; snap is opt-in.
   const [showAdvanced, setShowAdvanced] = useState(false);
-  // Compose mode: explicit toggle that surfaces the piano keyboard. Default OFF
-  // so the keyboard doesn't clutter the canvas during normal playback / loaded
-  // songs / image transcription. Auto-enabled by Für Elise demo. Auto-cleared
-  // by clear() and by loading any external content (applyEvents / loadImage).
-  const [composeMode, setComposeMode] = useState(false);
-  // Block style: how each chord/voice is rendered on the canvas.
-  // 'mosaic' = sharp rectangles (default), 'oil' = impasto brushstrokes with
-  // shadow/bristles/highlights, 'flow' = continuous brushstroke ribbons.
-  // Only affects music-mode rendering; image-mode (which paints the original
-  // pixel mosaic) ignores this.
-  const [style, setStyle] = useState('mosaic');
-  // Demo mode: true while a Für Elise demo session is active. Locks the
-  // play action (Stop still works because it's the same button in playing state)
-  // so the demo can't be re-triggered without an explicit clear.
-  const [demoMode, setDemoMode] = useState(false);
-  // Inline "concept" modal: explains Harmony/Spectral and image transcription.
-  const [showAbout, setShowAbout] = useState(false);
-  // Inline "guide" modal: searchable how-to entries covering every feature.
-  const [showGuide, setShowGuide] = useState(false);
-  const [guideQuery, setGuideQuery] = useState('');
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [currentMood, setCurrentMood] = useState(null);
   const [varySource, setVarySource] = useState(null);
@@ -1095,15 +865,10 @@ export default function Paintiano() {
       ctx.strokeStyle='rgba(255,255,255,0.025)';ctx.lineWidth=.5;
       for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*BW,0);ctx.lineTo(i*BW,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*BH);ctx.lineTo(CW,i*BH);ctx.stroke();}
       const lim=anim?disp:(playing&&info)?disp:chords.length;
-      const limited=chords.slice(0,lim);
-      if(style==='flow'){
-        drawFlowAll(ctx,limited,grid,gc);
-      }else{
-        limited.forEach(({n:notes,idx})=>{const cell=grid.cells&&grid.cells[idx];if(cell){if(cell.segments)cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);}else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(ctx,col*BW,row*BH,notes,gc,BW,BH,style);}});
-      }
-      if(!info){const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);if(pending.length>0)drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style==='flow'?'mosaic':style);}
+      chords.slice(0,lim).forEach(({n:notes,idx})=>{const cell=grid.cells&&grid.cells[idx];if(cell){if(cell.segments)cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h));else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h);}else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(ctx,col*BW,row*BH,notes,gc,BW,BH);}});
+      if(!info){const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);if(pending.length>0)drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch);}
     }
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -1117,11 +882,9 @@ export default function Paintiano() {
     setGrid(computeGrid(evs));
   },[chords]);
 
-  // Center the keyboard scroll on middle C (MIDI 60) whenever the keyboard
-  // becomes visible (compose mode toggles on, or first mount with it already on).
-  // Display:none zeroes clientWidth, so the calculation must happen post-paint.
+  // On first mount, center the keyboard scroll on middle C (MIDI 60) so the
+  // user lands in the playable middle range rather than at A0 on the far left.
   useEffect(()=>{
-    if(!composeMode)return;
     const wrap = kbScrollRef.current;
     if (!wrap) return;
     const c4 = WKEYS.find(k => k.midi === 60);
@@ -1129,7 +892,7 @@ export default function Paintiano() {
     const WKW_LOCAL = 26;
     const target = c4.wi * WKW_LOCAL - wrap.clientWidth / 2 + WKW_LOCAL / 2;
     wrap.scrollLeft = Math.max(0, target);
-  },[composeMode]);
+  },[]);
 
   const playNote = useCallback((midi,vel=88,durMs=500)=>{
     // Spawn a visualizer ripple (skip in image mode — too busy with the photo)
@@ -1315,8 +1078,6 @@ export default function Paintiano() {
     setOriginalImgUrl(null);
     setCurrentMood(null);
     setSongQ('');
-    setComposeMode(false);
-    setDemoMode(false);
   },[stopAll]);
 
   const applyEvents = useCallback((events,title)=>{
@@ -1328,12 +1089,10 @@ export default function Paintiano() {
     setGrid(g);setChords(wi);setDisp(wi.length);
     setInfo({title,count:wi.length,dur:Math.round(lastMs/1000)});
     idxRef.current=wi.length;
-    setComposeMode(false);
-    setDemoMode(false);
   },[]);
 
   const demoPlay=()=>{
-    if(busy)return;Tone.start();clear();setComposeMode(true);setDemoMode(true);setPlaying(true);
+    if(busy)return;Tone.start();clear();setPlaying(true);
     let t=0;
     DEMO.forEach(({n:notes,d})=>{
       const ct=t;
@@ -1527,15 +1286,6 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           // Process pixels into events using the current mode's hue→pitch table
           const evts=pixelsToImageEvents(px,nc,nr,mode==='spectral'?SPEC_HUE:COF);
           stopAll();
-          // Explicit canvas clear — when loading consecutive images, both
-          // downsample to 192×120 so canvas.width/height don't change, which
-          // means the browser does NOT auto-reset the canvas content. Without
-          // this, the previous image's mosaic stays on the canvas and bleeds
-          // through the new <img> via mix-blend-mode: screen.
-          const cv=canvasRef.current;
-          if(cv){try{cv.getContext('2d').clearRect(0,0,cv.width,cv.height);}catch(_){}}
-          setComposeMode(false);
-          setDemoMode(false);
           setOriginalImgUrl(evt.target.result);
           setGrid({N:nc,BW,BH,CW:nc*BW,CH:nr*BH});setViewMode('image');
           setChords(evts);setDisp(evts.length);
@@ -1700,10 +1450,10 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
     }
   };
 
-  // Auto-stop the recorder once playback finishes (playing → false).
-  // A 700 ms tail lets the last notes ring out before capture closes.
+  // Auto-stop the MediaRecorder once playback finishes (playing → false).
+  // A 700 ms tail lets the last notes ring out before the stream is closed.
   useEffect(()=>{
-    if(!playing&&recording&&recorderRef.current){
+    if(!playing&&recording&&recorderRef.current?.state==='recording'){
       const r=recorderRef.current;
       setTimeout(()=>{try{r.stop();}catch(_){}},700);
     }
@@ -1726,11 +1476,6 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
     }
   },[disp,playing,anim,viewMode,grid]);
 
-  // Recording: capture Tone.js master out via MediaRecorder. Output is mp4/m4a
-  // on iOS Safari, webm elsewhere. Inline <audio> playback of the result is
-  // unreliable on iOS so we skip the inline player and offer only a save
-  // button — the file itself is fine for download / share / play in Files /
-  // Voice Memos / Music.
   const startRecord=()=>{
     if(!chords.length||recording||playing)return;
     if(!window.MediaRecorder){setErr('Recording not supported in this browser.');setErrInfo(false);return;}
@@ -1753,12 +1498,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       const blob=new Blob(recChunksRef.current,{type:mt});
       const ext=mt.includes('ogg')?'ogg':mt.includes('mp4')?'m4a':'webm';
       const name=(info?.title||'paintiano').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').slice(0,50)+'.'+ext;
-      if(blob.size<2000){
-        setErr('Recording was too short — hold rec for at least a second.');
-        setErrInfo(false);
-      }else{
-        setAudioBlob(blob);setAudioName(name);
-      }
+      setAudioBlob(blob);setAudioName(name);
       setRecording(false);recorderRef.current=null;
     };
     recorderRef.current=recorder;
@@ -1766,71 +1506,6 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
     setRecording(true);
     setAudioBlob(null);
     startPlay();
-  };
-
-  // Stop both the MediaRecorder and the playback. They start together via
-  // startRecord → startPlay, so the rec button stops them together too.
-  // requestData() flushes pending bytes before stop — helps iOS mp4 finalize.
-  const stopRecord=useCallback(()=>{
-    const r=recorderRef.current;
-    if(r){
-      try{if(r.state==='recording'){try{r.requestData();}catch(_){}r.stop();}}catch(_){}
-    }
-    stopAll();
-  },[stopAll]);
-
-  // Save / share the recording across platforms. Tries three methods in order:
-  //   1. navigator.share({files}) — iOS Safari, Android Chrome (share sheet)
-  //   2. showSaveFilePicker — Chrome/Edge desktop (native save dialog)
-  //   3. Anchor <a download> click — Firefox / older browsers / fallback
-  // Each method handles its own AbortError (user cancellation).
-  const shareRecording=async()=>{
-    if(!audioBlob)return;
-    setAudioShareMsg({tone:'wait',text:'saving…'});
-    const file=new File([audioBlob],audioName,{type:audioBlob.type||'audio/mp4'});
-    // 1. Share sheet — phones + macOS
-    if(navigator.share){
-      try{
-        const canTry=!navigator.canShare||navigator.canShare({files:[file]});
-        if(canTry){
-          await navigator.share({files:[file],title:'Paintiano recording'});
-          setAudioShareMsg({tone:'ok',text:'shared — pick a destination'});
-          return;
-        }
-      }catch(e){
-        if(e?.name==='AbortError'){setAudioShareMsg({tone:'ok',text:'cancelled'});return;}
-        // fall through to next method
-      }
-    }
-    // 2. Native save dialog — Chrome / Edge / Opera desktop
-    if(window.showSaveFilePicker){
-      try{
-        const ext=audioName.split('.').pop()||'m4a';
-        const handle=await window.showSaveFilePicker({
-          suggestedName:audioName,
-          types:[{description:'Audio recording',accept:{[file.type||'audio/mp4']:['.'+ext]}}]
-        });
-        const w=await handle.createWritable();
-        await w.write(audioBlob);
-        await w.close();
-        setAudioShareMsg({tone:'ok',text:'saved'});
-        return;
-      }catch(e){
-        if(e?.name==='AbortError'){setAudioShareMsg({tone:'ok',text:'cancelled'});return;}
-        // fall through
-      }
-    }
-    // 3. Anchor download — Firefox, older browsers, ultimate fallback
-    try{
-      const url=URL.createObjectURL(audioBlob);
-      const a=document.createElement('a');
-      a.href=url;a.download=audioName;a.rel='noopener';
-      document.body.appendChild(a);a.click();document.body.removeChild(a);
-      setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}},10000);
-      setAudioShareMsg({tone:'ok',text:'download started — check your Downloads folder'});
-    }catch(e){
-      setAudioShareMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')});
-    }
   };
 
   const{N,BW,BH,CW,CH}=grid;
@@ -1863,16 +1538,12 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           hctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;hctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
         }
       }else{
-        if(style==='flow'){
-          drawFlowAll(hctx,chords,grid,gc);
-        }else{
-          chords.forEach(({n:notes,idx})=>{
-            const cell=grid.cells&&grid.cells[idx];
-            if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
-            else if(cell)drawBlock(hctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
-            else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(hctx,col*BW,row*BH,notes,gc,BW,BH,style);}
-          });
-        }
+        chords.forEach(({n:notes,idx})=>{
+          const cell=grid.cells&&grid.cells[idx];
+          if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h));
+          else if(cell)drawBlock(hctx,cell.x,cell.y,notes,gc,cell.w,cell.h);
+          else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(hctx,col*BW,row*BH,notes,gc,BW,BH);}
+        });
       }
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
       if(!blob){setErr('Print: could not encode image.');setErrInfo(false);return;}
@@ -1922,7 +1593,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0)?'32px 16px 200px':'32px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)'}}>
       <div style={{textAlign:'center',marginBottom:18}}>
         <h1 style={{fontSize:'2.2rem',fontWeight:300,letterSpacing:'.18em',margin:'0 0 4px',color:'rgba(201,168,76,.9)',paddingLeft:'.18em'}}>Paintiano</h1>
-        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.38,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}>music → φ painting <span style={{opacity:.55}}>· v2.0</span> <span onClick={()=>setShowAbout(true)} style={{cursor:'pointer',marginLeft:4,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.45)',color:'rgba(201,168,76,.75)'}}>concept</span> <span onClick={()=>setShowGuide(true)} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.5)',color:'rgba(140,200,255,.8)'}}>guide</span></p>
+        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.38,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}>music → φ painting <span style={{opacity:.55}}>· v1.0</span></p>
         <div style={{fontSize:'.55rem',letterSpacing:'.1em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
       </div>
 
@@ -1932,12 +1603,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
             <button key={m} onClick={()=>setMode(m)} style={{...btn(),border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(207,197,168,.45)'}}>{m}</button>
           ))}
         </div>
-        <div style={{display:'flex',border:'1px solid rgba(180,140,255,.28)',borderRadius:2,overflow:'hidden'}} title="block rendering style — affects music-mode paintings">
-          {['mosaic','oil','flow'].map(s=>(
-            <button key={s} onClick={()=>setStyle(s)} style={{...btn(),border:'none',borderRadius:0,padding:'5px 10px',background:style===s?'rgba(180,140,255,.16)':'transparent',color:style===s?'rgba(210,170,255,.95)':'rgba(207,197,168,.45)'}}>{s}</button>
-          ))}
-        </div>
-        <button onClick={demoPlay} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':'play Für Elise demo'} style={btn({borderColor:'rgba(201,168,76,.4)',color:busy?'rgba(201,168,76,.3)':GOLD})}>♩ demo</button>
+        <button onClick={demoPlay} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':''} style={btn({borderColor:'rgba(201,168,76,.4)',color:busy?'rgba(201,168,76,.3)':GOLD})}>♩ für elise</button>
         <button onClick={clear} style={btn({borderColor:'rgba(207,197,168,.14)',color:'rgba(207,197,168,.35)'})}>clear</button>
       </div>
 
@@ -1953,16 +1619,15 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         </select>
       </div>
 
-      <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'nowrap',justifyContent:'center',overflowX:'auto',maxWidth:'100%',padding:'2px 4px',WebkitOverflowScrolling:'touch'}}>
-        <button onClick={()=>setComposeMode(v=>!v)} disabled={busy||loadedMode} title={loadedMode?'clear loaded content first':composeMode?'hide keyboard':'show piano keyboard'} style={btn({padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.28)',color:loadedMode?'rgba(140,220,180,.18)':composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.65)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>♪ compose</button>
+      <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',justifyContent:'center'}}>
         <input ref={refMidi} type="file" accept=".mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-        <button onClick={()=>{if(composedMode)return;setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('midi');}} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':''} style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ midi</button>
+        <button onClick={()=>{if(composedMode)return;setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('midi');}} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':''} style={btn({borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ midi</button>
         <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-        <button onClick={()=>{if(composedMode)return;setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('audio');}} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':''} style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ audio'}</button>
+        <button onClick={()=>{if(composedMode)return;setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('audio');}} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':''} style={btn({borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ audio'}</button>
         <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-        <button onClick={()=>{if(composedMode)return;setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('score');}} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':'upload a MusicXML score (.musicxml or .mxl from MuseScore / Finale / Dorico)'} style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 score'}</button>
+        <button onClick={()=>{if(composedMode)return;setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('score');}} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':''} style={btn({borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})} title="upload a MusicXML score (.musicxml or .mxl from MuseScore / Finale / Dorico)">{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 score'}</button>
         <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
-        <button onClick={()=>{if(composedMode)return;setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('image');}} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':''} style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 image</button>
+        <button onClick={()=>{if(composedMode)return;setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('image');}} disabled={busy||composedMode} title={composedMode?'clear keyboard composition first':''} style={btn({borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 image</button>
       </div>
 
       {preview && (
@@ -2039,7 +1704,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
           setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
         }} disabled={!varySource||busy} title={!varySource?'pick a mood first':'reroll: a fresh take'} style={btn({borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.2)'})}>🎲 vary</button>
-        <button onClick={busy?stopAll:startPlay} disabled={demoMode&&!playing} title={demoMode&&!playing?'demo mode — clear to play again':''} style={btn({borderColor:'rgba(90,190,110,.45)',color:chords.length?playing?'rgba(90,190,110,.5)':(demoMode?'rgba(90,190,110,.2)':'rgba(90,190,110,.9)'):'rgba(90,190,110,.2)'})}>{playing?'■ stop':'♩ play'}</button>
+        <button onClick={busy?stopAll:startPlay} style={btn({borderColor:'rgba(90,190,110,.45)',color:chords.length?playing?'rgba(90,190,110,.5)':'rgba(90,190,110,.9)':'rgba(90,190,110,.2)'})}>{playing?'■ stop':'♩ play'}</button>
         <button onClick={exportImage} disabled={!chords.length||busy} style={btn({borderColor:'rgba(180,140,255,.4)',color:chords.length?'rgba(200,160,255,.9)':'rgba(180,140,255,.2)'})}>🖨 print</button>
       </div>
 
@@ -2065,17 +1730,9 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       )}
 
       {audioBlob && (
-        <div style={{width:'100%',maxWidth:480,marginBottom:10,padding:'0 8px',boxSizing:'border-box',textAlign:'center'}}>
-          <div style={{fontSize:'.5rem',letterSpacing:'.1em',opacity:.55,marginBottom:8,textTransform:'uppercase'}}>{audioName} · {(audioBlob.size/1024).toFixed(0)} KB</div>
-          <button onClick={shareRecording} style={{...btn({borderColor:'rgba(255,160,80,.55)',color:'rgba(255,190,120,1)'}),padding:'9px 24px',fontSize:'.7rem',letterSpacing:'.14em',background:'transparent',cursor:'pointer'}}>↓ save recording</button>
-          {audioShareMsg && (
-            <div style={{fontSize:'.55rem',marginTop:8,padding:'5px 10px',display:'inline-block',borderRadius:3,color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.95)':audioShareMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.95)',border:'1px solid '+(audioShareMsg.tone==='ok'?'rgba(140,255,180,.4)':audioShareMsg.tone==='wait'?'rgba(201,168,76,.3)':'rgba(255,140,120,.35)')}}>
-              {audioShareMsg.text}
-            </div>
-          )}
-          <div style={{fontSize:'.5rem',color:'rgba(180,170,150,.45)',marginTop:6,lineHeight:1.4,padding:'0 8px'}}>
-            opens system save/share — Files, Downloads, AirDrop, Mail, audio apps
-          </div>
+        <div style={{width:'100%',maxWidth:480,marginBottom:10,padding:'0 8px',boxSizing:'border-box'}}>
+          <div style={{fontSize:'.48rem',letterSpacing:'.1em',opacity:.45,marginBottom:5,textAlign:'center',textTransform:'uppercase'}}>{audioName}</div>
+          <audio controls src={audioBlobUrl} style={{width:'100%',display:'block',borderRadius:4,accentColor:'rgba(255,90,90,.9)'}} />
         </div>
       )}
 
@@ -2109,68 +1766,6 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         {pending.length>0?<span style={{color:GOLD}}>▸ building chord: {pending.length} voice{pending.length>1?'s':''}</span>:viewMode==='image'?<span style={{color:'rgba(210,160,255,.7)'}}>{grid.N}×{pixelRef.current?.nr||'?'} pixel grid</span>:<span>grid {N}×{N} · {BW}×{BH}px · φ≈{(BH/BW).toFixed(3)}</span>}
       </div>
 
-
-      {showAbout && (
-        <div onClick={()=>setShowAbout(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif"}}>
-            <div style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>concept</div>
-
-            <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmony vs Spectral</h3>
-            <p style={{margin:'0 0 12px'}}>In both modes every note is painted as a block whose <em>hue</em> is determined by its pitch class (C, C♯, D…), whose <em>lightness</em> tracks its octave (higher notes lighter, lower notes darker), and whose <em>saturation</em> follows velocity (louder strikes are more vivid). What changes between the modes is the dictionary mapping pitch to hue.</p>
-            <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmony mode</strong> places the twelve pitch classes around the colour wheel in <em>Circle-of-Fifths</em> order. Notes a perfect fifth apart (C → G → D → A …) become hue neighbours; tonally distant notes sit on opposite sides. Anything written in a key paints in a tight cluster of related colours, while modulations and dissonance show up as visible jumps across the wheel. Choose Harmony when you want the painting to <em>read</em> like the music.</p>
-            <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral mode</strong> maps the same twelve pitch classes in strict chromatic order at 30° hue steps — C is red, every semitone shifts the hue one notch. Adjacent semitones become hue neighbours; perfect fifths now span seven steps around the wheel. The more literal "one colour per note" approach, useful for picking out melodic lines and for image transcription.</p>
-            <p style={{margin:'0 0 14px',fontStyle:'italic',opacity:.7}}>The painting geometry — block size, sequence, the φ proportions of the golden ratio — is identical in both modes. Only the colour-to-pitch lookup differs.</p>
-            <p style={{margin:'0 0 22px'}}>A separate toolbar toggle picks the <em>rendering style</em> for each chord: <strong style={{color:'rgba(210,170,255,.9)'}}>mosaic</strong> (the original sharp rectangles — Mondrian-ish), <strong style={{color:'rgba(210,170,255,.9)'}}>oil</strong> (impasto brushstrokes built from a shadow layer, 4–6 parallel bristle marks, a lit ridge highlight and an occasional specular sparkle — real-paint structure rather than flat dabs), or <strong style={{color:'rgba(210,170,255,.9)'}}>flow</strong> (the chord sequence traced as continuous brushstroke ribbons that follow the music as a gesture rather than a grid — closer to calligraphy or Cy Twombly). The underlying φ-grid stays the same; only the mark-making changes.</p>
-
-            <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Image transcription</h3>
-            <p style={{margin:'0 0 12px'}}>When you drop a painting in, Paintiano reads it as a score. The image is downsampled to a 192 × 120 pixel grid and walked left-to-right, top-to-bottom: six adjacent pixel rows form one chord, four adjacent columns are merged into one time-step. That yields 960 chord events spread across a fixed two-minute performance — roughly 125 ms per chord, with each note ringing about 625 ms so successive chords overlap and blend.</p>
-            <p style={{margin:'0 0 8px'}}>Every pixel that survives the filtering becomes a note by reading its HSL colour:</p>
-            <ul style={{margin:'0 0 14px',paddingLeft:20}}>
-              <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Hue → pitch class</strong> — matched to the current mode's table (Circle of Fifths in Harmony, even chromatic steps in Spectral).</li>
-              <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Lightness → octave</strong> — darker pixels in the lower register, lighter ones in the upper, compressed to a playable range (octaves 3 – 6).</li>
-              <li><strong style={{color:'rgba(210,160,255,.9)'}}>Chroma → velocity</strong> — vivid colours play louder, muted colours softer.</li>
-            </ul>
-            <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>White, grey, and black</strong> are not silent. Achromatic pixels carry no hue but plenty of value information, so they all play the pitch class C with octave determined by lightness: black ≈ C2 (deep bass), mid-grey ≈ C5, white ≈ C7 (high treble). Contrast drives velocity — pure black and pure white speak louder than muddy mid-grey. The grayscale layer becomes a structural backbone of stacked octaves underneath the colour melody.</p>
-            <p style={{margin:'0 0 14px'}}>A statistical pre-pass identifies the painting's <em>dominant background hue</em> — the cobalt sky in a Chagall, the cream wash in a Cézanne — and raises the threshold for pixels in that hue band to register at all. Off-background hues pass at a much lower bar. Without this step a single-colour field (often 40–70% of a canvas) would drown everything in a one-note drone; with it, the figurative content, accents, and contrasting strokes are what you actually hear.</p>
-            <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>The result is a composition specific to the painting: not random, not literal, but a structured reading where the colour palette becomes a harmonic palette, the composition becomes phrasing, and the brushwork becomes texture.</p>
-
-            <button onClick={()=>setShowAbout(false)} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
-          </div>
-        </div>
-      )}
-
-      {showGuide && (
-        <div onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif"}}>
-            <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>guide</div>
-            <input
-              type="search"
-              value={guideQuery}
-              onChange={e=>setGuideQuery(e.target.value)}
-              onFocus={()=>{inputFocus.current=true;}}
-              onBlur={()=>{inputFocus.current=false;}}
-              placeholder="search the guide…"
-              autoCapitalize="off"
-              autoComplete="off"
-              spellCheck={false}
-              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid rgba(140,200,255,.3)',borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:'.78rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none'}}
-            />
-            {(() => {
-              const matches = GUIDE.filter(e => guideMatch(e, guideQuery));
-              if (matches.length === 0) {
-                return <p style={{textAlign:'center',opacity:.5,fontStyle:'italic',padding:'20px 0'}}>No matches for "{guideQuery}".</p>;
-              }
-              return matches.map(entry => (
-                <details key={entry.id} open={!!guideQuery.trim()} style={{marginBottom:6,border:'1px solid rgba(207,197,168,.08)',borderRadius:4,padding:'2px 0',background:'rgba(255,255,255,0.012)'}}>
-                  <summary style={{cursor:'pointer',padding:'9px 12px',color:'rgba(140,200,255,.92)',fontWeight:500,fontSize:'.82rem',letterSpacing:'.02em',listStyle:'none',userSelect:'none'}}>{entry.title}</summary>
-                  <p style={{margin:0,padding:'2px 14px 12px',color:'rgba(207,197,168,.82)',fontSize:'.76rem',lineHeight:1.65}}>{entry.body}</p>
-                </details>
-              ));
-            })()}
-            <button onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{display:'block',margin:'20px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
-          </div>
-        </div>
-      )}
 
       {showMorphMenu && (
         <div onClick={()=>setShowMorphMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
@@ -2211,7 +1806,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       <div style={{textAlign:'center',marginBottom:4,fontSize:'.7rem',letterSpacing:'.1em',color:active.size>0?GOLD:'rgba(201,168,76,.25)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit'}}>
         {active.size>0?[...active].sort((a,b)=>a-b).map(noteName).join(' · '):'—'}
       </div>
-      {showAdvanced && composeMode && (
+      {showAdvanced && (
         <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
           <button onClick={()=>{
             const cur=PAINT_SCALE_KEYS.indexOf(paintScale);
@@ -2222,17 +1817,17 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         </div>
       )}
       <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
-        <button onClick={()=>setShowAdvanced(v=>!v)} title="advanced: scale snap" style={{display:composeMode?'inline-block':'none',padding:'5px 10px',background:'transparent',color:showAdvanced?'rgba(201,168,76,.85)':'rgba(180,180,180,.5)',border:'1px solid '+(showAdvanced?'rgba(201,168,76,.45)':'rgba(180,180,180,.25)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
+        <button onClick={()=>setShowAdvanced(v=>!v)} title="advanced: scale snap" style={{padding:'5px 10px',background:'transparent',color:showAdvanced?'rgba(201,168,76,.85)':'rgba(180,180,180,.5)',border:'1px solid '+(showAdvanced?'rgba(201,168,76,.45)':'rgba(180,180,180,.25)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
           ⚙
         </button>
-        <button onClick={busy?stopAll:startPlay} disabled={(!chords.length&&!playing)||(demoMode&&!playing)} title={demoMode&&!playing?'demo mode — clear to play again':''} style={{padding:'5px 10px',background:'transparent',color:chords.length?(playing?'rgba(90,190,110,.5)':(demoMode?'rgba(90,190,110,.2)':'rgba(90,190,110,.95)')):'rgba(90,190,110,.25)',border:'1px solid '+(chords.length&&!(demoMode&&!playing)?'rgba(90,190,110,.55)':'rgba(90,190,110,.2)'),borderRadius:5,cursor:chords.length&&!(demoMode&&!playing)?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+        <button onClick={busy?stopAll:startPlay} disabled={!chords.length&&!playing} style={{padding:'5px 10px',background:'transparent',color:chords.length?(playing?'rgba(90,190,110,.5)':'rgba(90,190,110,.95)'):'rgba(90,190,110,.25)',border:'1px solid '+(chords.length?'rgba(90,190,110,.55)':'rgba(90,190,110,.2)'),borderRadius:5,cursor:chords.length?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
           {playing?'■ stop':'▶ play'}
         </button>
-        <button onClick={recording?stopRecord:startRecord} disabled={!chords.length&&!recording} style={{display:viewMode==='image'?'inline-block':'none',padding:'5px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:chords.length||recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}} title={recording?'stop recording':'record audio output'}>
+        <button onClick={recording?()=>{try{recorderRef.current?.stop();}catch(_){}}: startRecord} disabled={!chords.length&&!recording} style={{display:viewMode==='image'?'inline-block':'none',padding:'5px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:chords.length||recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}} title={recording?'stop recording':'record audio output'}>
           {recording?'⏹ rec…':'⏺ rec'}
         </button>
       </div>
-      <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',paddingBottom:4,display:composeMode?'block':'none'}}>
+      <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',paddingBottom:4}}>
         <div style={{position:'relative',width:PW,height:WKH,userSelect:'none',opacity:loadedMode?0.25:(busy&&!playing?0.4:1),filter:loadedMode?'grayscale(0.6)':'none',pointerEvents:loadedMode?'none':'auto'}}>
           {WKEYS.map(({midi,wi})=>(
             <div key={midi}
