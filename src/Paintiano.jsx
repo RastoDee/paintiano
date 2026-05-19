@@ -38,9 +38,71 @@ const harmCol=(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],75+(v/127)*15,octL(m));
 const SPEC_HUE=Array.from({length:12},(_,pc)=>pc*30);
 const specCol=(m,v=100)=>{const h=SPEC_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
 
-function parseMidi(buf){const d=new Uint8Array(buf);let p=0;const u8=()=>d[p++],u16=()=>{const v=(d[p]<<8)|d[p+1];p+=2;return v;},u32=()=>{const v=(d[p]<<24)|(d[p+1]<<16)|(d[p+2]<<8)|d[p+3];p+=4;return v;},vl=()=>{let v=0,b;do{b=u8();v=(v<<7)|(b&0x7f);}while(b&0x80);return v;};p+=4;u32();u16();const nT=u16(),div=u16(),temps=[{tick:0,uspb:500000}],raw=[];for(let t=0;t<nT;t++){while(p+4<d.length&&!(d[p]===0x4d&&d[p+1]===0x54&&d[p+2]===0x72&&d[p+3]===0x6b))p++;if(p+8>d.length)break;p+=4;const tLen=u32(),tEnd=Math.min(p+tLen,d.length);let tick=0,st=0,held={};while(p<tEnd){try{tick+=vl();}catch(_){break;}let s=d[p];if(s>=0x80){st=s;p++;}const tp=st&0xf0;if(tp===0x90){const pitch=u8(),vel=u8();if(vel>0)held[pitch]=[tick,vel];else if(held[pitch]){raw.push([pitch,held[pitch][0],held[pitch][1],tick]);delete held[pitch];}}else if(tp===0x80){const pitch=u8();u8();if(held[pitch]){raw.push([pitch,held[pitch][0],held[pitch][1],tick]);delete held[pitch];}}else if(st===0xff){const mt=u8(),ml=vl();if(mt===0x51&&ml===3){const uspb=(u8()<<16)|(u8()<<8)|u8();temps.push({tick,uspb});}else p+=ml;}else if(st===0xf0||st===0xf7){p+=vl();}else if((tp===0xb0||tp===0xe0||tp===0xa0)){u8();u8();}else if(tp===0xc0||tp===0xd0){u8();}}for(const pi in held)raw.push([parseInt(pi),held[pi][0],held[pi][1],tEnd]);p=tEnd;}raw.sort((a,b)=>a[1]-b[1]);temps.sort((a,b)=>a.tick-b.tick);return{raw,div,temps};}
+function parseMidi(buf){
+  const d=new Uint8Array(buf);let p=0;
+  const u8=()=>d[p++];
+  const u16=()=>{const v=(d[p]<<8)|d[p+1];p+=2;return v;};
+  const u32=()=>{const v=(d[p]<<24)|(d[p+1]<<16)|(d[p+2]<<8)|d[p+3];p+=4;return v;};
+  const vl=()=>{let v=0,b;do{b=u8();v=(v<<7)|(b&0x7f);}while(b&0x80);return v;};
+  p+=4;u32();u16();
+  const nT=u16(),div=u16();
+  const temps=[{tick:0,uspb:500000}],raw=[],skipped=[];
+  for(let t=0;t<nT;t++){
+    // Scan forward to next MTrk header
+    while(p+4<d.length&&!(d[p]===0x4d&&d[p+1]===0x54&&d[p+2]===0x72&&d[p+3]===0x6b))p++;
+    if(p+8>d.length)break;
+    p+=4;
+    const tLen=u32(),tEnd=Math.min(p+tLen,d.length);
+    const trackStart=p;
+    try{
+      let tick=0,st=0,held={};
+      while(p<tEnd){
+        tick+=vl();
+        let s=d[p];if(s>=0x80){st=s;p++;}
+        const tp=st&0xf0;
+        if(tp===0x90){const pitch=u8(),vel=u8();if(vel>0)held[pitch]=[tick,vel];else if(held[pitch]){raw.push([pitch,held[pitch][0],held[pitch][1],tick]);delete held[pitch];}}
+        else if(tp===0x80){const pitch=u8();u8();if(held[pitch]){raw.push([pitch,held[pitch][0],held[pitch][1],tick]);delete held[pitch];}}
+        else if(st===0xff){const mt=u8(),ml=vl();if(mt===0x51&&ml===3){const uspb=(u8()<<16)|(u8()<<8)|u8();temps.push({tick,uspb});}else p+=ml;}
+        else if(st===0xf0||st===0xf7){p+=vl();}
+        else if(tp===0xb0||tp===0xe0||tp===0xa0){u8();u8();}
+        else if(tp===0xc0||tp===0xd0){u8();}
+      }
+      // Flush any held notes at track end
+      for(const pi in held)raw.push([parseInt(pi),held[pi][0],held[pi][1],tEnd]);
+    }catch(err){
+      skipped.push(t+1); // 1-based track number for the user
+    }
+    p=tEnd; // always advance past the track regardless
+  }
+  raw.sort((a,b)=>a[1]-b[1]);
+  temps.sort((a,b)=>a.tick-b.tick);
+  return{raw,div,temps,skipped};
+}
 function t2ms(ticks,div,temps){let ms=0,prev=0,uspb=500000;for(const{tick:tc,uspb:u}of temps){if(tc>=ticks)break;ms+=(tc-prev)*uspb/div/1000;prev=tc;uspb=u;}return ms+(ticks-prev)*uspb/div/1000;}
-function toChords(raw,div,temps){if(!raw.length)return[];const uspb=temps[temps.length-1]?.uspb||500000,quarterMs=uspb/1000,wt=Math.max(2,Math.round(CWIN*div*1000/uspb)),out=[];let i=0;while(i<raw.length){const bt=raw[i][1],g=[];while(i<raw.length&&raw[i][1]-bt<=wt){const[m,st,v,et]=raw[i];g.push({m,v,durMs:Math.max(80,t2ms(et,div,temps)-t2ms(st,div,temps))});i++;}const maxDur=Math.max(...g.map(n=>n.durMs));out.push({n:g,startMs:t2ms(bt,div,temps),durQ:snapDurQ(maxDur/quarterMs)});}return out;}
+
+// Shared normalizer: takes a flat array of {m, startMs, durMs, v}, groups
+// simultaneous notes (within CWIN ms) into chord events, and computes durQ.
+// Both toChords (MIDI ticks) and noteArr2events (beat/BPM) resolve their
+// format first, then delegate here.
+function groupToEvents(flat,quarterMs){
+  if(!flat.length)return[];
+  flat.sort((a,b)=>a.startMs-b.startMs);
+  const out=[];let i=0;
+  while(i<flat.length){
+    const bt=flat[i].startMs,g=[];
+    while(i<flat.length&&flat[i].startMs-bt<=CWIN){g.push(flat[i]);i++;}
+    const maxDur=Math.max(...g.map(n=>n.durMs));
+    out.push({n:g.map(({m,v,durMs})=>({m,v,durMs})),startMs:bt,durQ:snapDurQ(maxDur/(quarterMs||500))});
+  }
+  return out;
+}
+
+function toChords(raw,div,temps){
+  if(!raw.length)return[];
+  const uspb=temps[temps.length-1]?.uspb||500000,quarterMs=uspb/1000;
+  const flat=raw.map(([m,st,v,et])=>({m,v,startMs:t2ms(st,div,temps),durMs:Math.max(80,t2ms(et,div,temps)-t2ms(st,div,temps))}));
+  return groupToEvents(flat,quarterMs);
+}
 
 // Paint-mode setting tables
 const PAINT_DURS = [
@@ -789,7 +851,34 @@ const midiToKeyX = (midi) => {
 // Uses sharps for the black keys (the most common piano notation).
 const NOTE_PCS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const noteName = (m) => NOTE_PCS[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+// Pre-built lookup tables: O(1) for both directions across the full MIDI range.
+const _midiToName = Array.from({length:128},(_,i)=>noteName(i));
+const _nameToMidi = Object.fromEntries(_midiToName.map((n,i)=>[n,i]));
 const LEGEND=[{n:'C',pc:0},{n:'G',pc:7},{n:'D',pc:2},{n:'A',pc:9},{n:'E',pc:4},{n:'B',pc:11},{n:'F#',pc:6},{n:'D♭',pc:1},{n:'A♭',pc:8},{n:'E♭',pc:3},{n:'B♭',pc:10},{n:'F',pc:5}];
+
+// Chord recognition: given a set of MIDI numbers, return a chord name like "C maj" or null.
+// Checks all 12 rotations (inversions) of the pitch-class set against common interval patterns.
+function recognizeChord(midis){
+  if(midis.length<2)return null;
+  const pcs=[...new Set(midis.map(m=>m%12))].sort((a,b)=>a-b);
+  if(pcs.length<2)return null;
+  // Interval patterns from root: [intervals from root] → suffix
+  const PATTERNS=[
+    [[4,7],'maj'],[[ 3,7],'min'],[[4,7,11],'maj7'],[[4,7,10],'7'],
+    [[3,7,10],'m7'],[[3,6],'dim'],[[4,8],'aug'],[[2,7],'sus2'],
+    [[5,7],'sus4'],[[3,6,10],'m7♭5'],[[4,7,9],'6'],[[3,7,9],'m6'],
+  ];
+  for(let i=0;i<pcs.length;i++){
+    const root=pcs[i];
+    const intervals=pcs.map(p=>((p-root)+12)%12).filter(x=>x>0).sort((a,b)=>a-b);
+    for(const[pat,suffix]of PATTERNS){
+      if(pat.length===intervals.length&&pat.every((v,j)=>v===intervals[j])){
+        return NOTE_PCS[root]+' '+suffix;
+      }
+    }
+  }
+  return null;
+}
 
 // Für Elise — extended rondo (A-B-A-C-A) by Beethoven, ~1 min
 const DEMO=[
@@ -860,31 +949,23 @@ function fftMag(buf){const N=buf.length,re=new Float32Array(N),im=new Float32Arr
 function pickPitches(mag,sr){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>0.12){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
 async function transcribeAudio(audioBuf,onP){const sr=audioBuf.sampleRate,ch0=audioBuf.getChannelData(0),data=audioBuf.numberOfChannels>1?Float32Array.from({length:ch0.length},(_,i)=>(ch0[i]+audioBuf.getChannelData(1)[i])*0.5):ch0,FRAME=2048,HOP=512,total=Math.floor((data.length-FRAME)/HOP),active={},notes=[];for(let f=0;f<total;f++){const mag=fftMag(data.slice(f*HOP,f*HOP+FRAME)),found=new Set(pickPitches(mag,sr).map(p=>{if(!active[p.midi])active[p.midi]={sf:f,mx:p.mag};else active[p.midi].mx=Math.max(active[p.midi].mx,p.mag);return p.midi;}));for(const m in active){if(!found.has(+m)){notes.push({midi:+m,sf:active[m].sf,ef:f,mx:active[m].mx});delete active[m];}}if(f%80===0){onP(f/total);await new Promise(r=>setTimeout(r,0));}}for(const m in active)notes.push({midi:+m,sf:active[m].sf,ef:total,mx:active[m].mx});const f2ms=f=>f*HOP/sr*1000,raw=notes.filter(n=>f2ms(n.ef-n.sf)>=60).map(n=>({m:n.midi,startMs:f2ms(n.sf),durMs:Math.max(80,f2ms(n.ef-n.sf)),v:Math.max(40,Math.min(120,Math.round(n.mx*110)))})).sort((a,b)=>a.startMs-b.startMs);const evts=[];let i=0;while(i<raw.length){const bt=raw[i].startMs,g=[];while(i<raw.length&&raw[i].startMs-bt<=CWIN)g.push({m:raw[i].m,v:raw[i].v,durMs:raw[i++].durMs});if(g.length){const md=Math.max(...g.map(n=>n.durMs));evts.push({n:g,startMs:bt,durQ:snapDurQ(md/500)});}}return evts;}
 
-function name2midi(note){if(!note)return null;const m=note.trim().match(/^([A-G])(#{1,2}|bb?|x)?(-?\d)$/i);if(!m)return null;const PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11},pc=PC[m[1].toUpperCase()];if(pc===undefined)return null;const a=m[2]||'',acc=a.startsWith('##')||a==='x'?2:a.startsWith('#')?1:a.startsWith('bb')?-2:a.startsWith('b')?-1:0,midi=(parseInt(m[3])+1)*12+pc+acc;return midi>=21&&midi<=108?midi:null;}
+function name2midi(note){if(!note)return null;const trimmed=note.trim();if(_nameToMidi[trimmed]!==undefined){const v=_nameToMidi[trimmed];return v>=21&&v<=108?v:null;}const m=trimmed.match(/^([A-G])(#{1,2}|bb?|x)?(-?\d)$/i);if(!m)return null;const PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11},pc=PC[m[1].toUpperCase()];if(pc===undefined)return null;const a=m[2]||'',acc=a.startsWith('##')||a==='x'?2:a.startsWith('#')?1:a.startsWith('bb')?-2:a.startsWith('b')?-1:0,midi=(parseInt(m[3])+1)*12+pc+acc;return midi>=21&&midi<=108?midi:null;}
 function noteArr2events(notes,tempo){
   let bpm=tempo||120;
-  const sorted=notes.slice().sort((a,b)=>a.beat-b.beat);
-  if(!sorted.length)return [];
+  // Normalise: accept both object {note,dur,beat} and array [pitch,dur,beat,vel]
+  const norm=notes.map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:n);
+  const sorted=norm.slice().sort((a,b)=>a.beat-b.beat);
+  if(!sorted.length)return[];
   // Auto-scale tempo: target ~30s playback regardless of song's natural length
   const last=sorted[sorted.length-1],totalBeats=last.beat+(last.dur||1);
-  // Scale target duration by note count: longer songs play longer
   const noteCount=sorted.length;
   const TARGET=Math.max(25,Math.min(90,noteCount*0.25));
   const naturalSec=totalBeats*60/bpm;
   if(naturalSec>TARGET)bpm=bpm*naturalSec/TARGET;
   bpm=Math.min(180,Math.max(95,bpm));
-  const msb=60000/bpm,evts=[];
-  let i=0;
-  while(i<sorted.length){
-    const bt=sorted[i].beat,g=[];
-    while(i<sorted.length&&Math.abs(sorted[i].beat-bt)<0.12){
-      const midi=name2midi(sorted[i].note);
-      if(midi)g.push({m:midi,v:Math.max(20,Math.round(80*(sorted[i]._vScale||1))),durMs:Math.max(80,Math.round(sorted[i].dur*msb*0.92))});
-      i++;
-    }
-    if(g.length)evts.push({n:g,startMs:Math.round(bt*msb)});
-  }
-  return evts;
+  const msb=60000/bpm;
+  const flat=sorted.map(n=>{const midi=name2midi(n.note);if(!midi)return null;const v=n.vel?Math.max(20,Math.min(127,Math.round(n.vel))):Math.max(20,Math.round(80*(n._vScale||1)));return{m:midi,v,startMs:Math.round(n.beat*msb),durMs:Math.max(80,Math.round(n.dur*msb*0.92))};}).filter(Boolean);
+  return groupToEvents(flat,msb);
 }
 function encodeMidi(events,tempo){const bpm=tempo||120,TPB=480,USPB=Math.round(60000000/bpm);function vl(v){const b=[v&0x7f];v>>=7;while(v>0){b.unshift((v&0x7f)|0x80);v>>=7;}return b;}function ms2t(ms){return Math.round(ms*TPB*bpm/60000);}const evts=[];events.forEach(ev=>ev.n.forEach(n=>{evts.push({t:ms2t(ev.startMs),on:true,m:n.m,v:n.v});evts.push({t:ms2t(ev.startMs+n.durMs),on:false,m:n.m});}));evts.sort((a,b)=>a.t-b.t||(a.on?1:-1));const track=[0,0xff,0x51,0x03,(USPB>>16)&0xff,(USPB>>8)&0xff,USPB&0xff];let prev=0;evts.forEach(ev=>{const d=ev.t-prev;prev=ev.t;track.push(...vl(d));track.push(ev.on?0x90:0x80,ev.m,ev.on?ev.v:0);});track.push(0,0xff,0x2f,0x00);const tl=track.length;return new Uint8Array([0x4d,0x54,0x68,0x64,0,0,0,6,0,0,0,1,(TPB>>8)&0xff,TPB&0xff,0x4d,0x54,0x72,0x6b,(tl>>24)&0xff,(tl>>16)&0xff,(tl>>8)&0xff,tl&0xff,...track]);}
 
@@ -932,41 +1013,47 @@ const MOODS = ['funny','sad','aggressive','dreamy','love','nostalgic','calm','ex
 // only affects display when the search box is empty.
 const GUIDE = [
   {id:'overview', title:'Overview', keywords:'start begin intro what is paintiano how',
-   body:'Paintiano paints music as a φ-proportioned grid of coloured blocks, and plays paintings back as music. Pick a source — Compose, MIDI, Audio, Score, Image, or a mood — and the canvas fills in. Use Play to hear it, Print to save the painting, Rec (in image mode) to capture the audio.'},
+   body:'Paintiano paints music as a φ-proportioned grid of coloured blocks, and plays paintings back as music. Pick a source — Compose, Sing, MIDI, Audio, Score, Image, or a mood — and the canvas fills as you play. Hit Play to hear it, Print to save the painting, Rec (image mode only) to capture the audio.'},
   {id:'modes', title:'Harmony vs Spectral', keywords:'colour color mode hue palette circle fifths chromatic',
-   body:'Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly. Open Concept for the full theory.'},
-  {id:'style', title:'Painting style: Picasso / Rembrandt / Monet', keywords:'style picasso rembrandt monet cubist cubism impressionist impressionism chiaroscuro oil impasto baroque dutch golden age artist painting brush stroke shard dab mosaic default rendering look',
-   body:'Optional artist-style overlay on the chord painting. With nothing selected the canvas uses the implicit mosaic default (sharp φ-rectangles + halo). Pick one of three artist languages: PICASSO (analytical cubism) mixes three subdivision patterns at random per chord — a simple bisect (one cut, 2 planes), a corner fan (2–3 planes radiating from one corner), or a centre fan (4–6 planes from an inside pivot). So adjacent chords look genuinely different — some are minimal slashes, others are heavily fragmented. Alternating bright/dark tones across planes give the broken-light effect, with bold dark contour lines. REMBRANDT (Dutch Golden Age chiaroscuro) layers each chord as impasto brushstrokes — dark shadow underneath, 4–6 parallel bristle marks, lit ridge highlight, occasional specular sparkle — paint with real dimension catching the light. MONET (impressionism) scatters 8–12 soft circular dabs with luminosity-jittered colour and radial-gradient feathered edges — soft, glowing, no hard borders. Tap the active artist again to deselect and return to mosaic. Switch any time, the canvas repaints instantly. Only affects music-mode paintings; image transcription always renders the literal pixel mosaic.'},
+   body:'Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly.'},
+  {id:'style', title:'Painting style: Picasso / Rembrandt / Monet', keywords:'style picasso rembrandt monet cubist impressionist chiaroscuro impasto brush stroke dab mosaic artist',
+   body:'Optional artist-style overlay. With nothing selected the canvas uses the mosaic default (sharp φ-rectangles + halo). Picasso (analytical cubism) fractures each chord into geometric planes. Rembrandt layers impasto brushstrokes with chiaroscuro lighting. Monet scatters soft circular dabs with feathered edges. Tap the active artist again to deselect. Switches instantly.'},
   {id:'demo', title:'Demo (Für Elise)', keywords:'demo für elise beethoven test example sample',
-   body:'Tap ♩ DEMO to play a built-in Für Elise excerpt. The keyboard surfaces automatically so you can watch the keys light up. While the demo is loaded, the Play button is disabled — Stop still works during playback. Press CLEAR to leave demo mode.'},
-  {id:'compose', title:'Compose with the keyboard', keywords:'compose keyboard piano live record keys play',
-   body:'Tap ♪ COMPOSE to reveal the on-screen piano. Tap or hold keys; longer holds produce wider blocks. Vertical position on a key affects velocity (lower = louder). Hardware keyboard works too: A–K white keys, W/E/T/Y/U black keys. Hit Play to replay your composition.'},
-  {id:'scale-snap', title:'Scale snap (advanced)', keywords:'scale snap key major minor chromatic free',
+   body:'Tap DEMO to play a built-in Für Elise excerpt. The keyboard surfaces automatically so you can watch the keys light up. Press CLEAR to leave demo mode.'},
+  {id:'compose', title:'Compose with the keyboard', keywords:'compose keyboard piano live record keys play undo backspace enter space chord name recognise',
+   body:'Tap ♪ COMPOSE (or press Enter) to reveal the on-screen piano. Tap or hold keys — longer holds produce wider blocks. Hardware keyboard: A–K white keys, W/E/T/Y/U black keys. Backspace undoes the last chord. Space bar plays/pauses. Enter toggles the keyboard. When you hold keys that form a known chord (C maj, A min, D7…) the name appears in the readout. Hit Play to replay your composition.'},
+  {id:'sing', title:'🎤 Sing / mic painting', keywords:'sing mic microphone voice hum pitch vocal',
+   body:'Tap 🎤 SING and allow microphone access. Sing, hum, or whistle — the app detects your pitch in real time, plays it through the piano sampler, and paints each note as a block. The canvas fills as you perform. Tap again to stop. Note: mic access is blocked inside Claude\'s sandbox — works correctly as a standalone page.'},
+  {id:'scale-snap', title:'Scale snap (advanced)', keywords:'scale snap key major minor chromatic free advanced',
    body:'In Compose mode, the ⚙ icon reveals a scale-snap selector. Snap input to C maj, A min, G maj, E min, D maj, F maj, or D min — notes outside the chosen scale are pulled to the nearest in-scale neighbour. Set to "free" (default) for full chromatic.'},
   {id:'moods', title:'Mood selector', keywords:'mood ai compose generate funny sad love calm crazy dreamy excited aggressive nostalgic',
-   body:'Pick a mood from the dropdown to load a built-in 30–60 second composition matching that mood. Nine moods: funny, sad, aggressive, dreamy, love, nostalgic, calm, excited, crazy. After picking one you can MORPH into another mood or VARY for a fresh take.'},
+   body:'Pick a mood from the dropdown to generate a composition. Nine moods: funny, sad, aggressive, dreamy, love, nostalgic, calm, excited, crazy. The canvas starts blank and fills chord by chord as the music plays. After picking one you can MORPH into another mood or VARY for a fresh take.'},
   {id:'midi', title:'♬ MIDI upload', keywords:'midi upload import file mid',
-   body:'Upload any standard MIDI file (.mid / .midi). Multi-track files are condensed into chord events, tempo-mapped, and painted. A built-in sample is available if you tap ♬ MIDI without a file.'},
+   body:'Upload any standard MIDI file (.mid / .midi). Multi-track files are condensed into chord events, tempo-mapped, and painted. A built-in sample is available if you tap ♬ MIDI without a file. The canvas starts blank and fills as the piece plays.'},
   {id:'audio', title:'♫ Audio upload', keywords:'audio mp3 wav transcribe upload pitch detection',
-   body:'Upload mp3, wav, m4a, ogg, or aac. Audio is decoded and pitch-detected into MIDI-like events. Works best with clean monophonic or sparse polyphonic source material; busy mixes get blurry. Built-in sample available.'},
+   body:'Upload mp3, wav, m4a, ogg, or aac. Audio is decoded and pitch-detected into MIDI-like events. Works best with clean monophonic or sparse polyphonic material. Built-in sample available.'},
   {id:'score', title:'𝄞 Score (MusicXML)', keywords:'score musicxml mxl musescore finale dorico sheet music',
-   body:'Upload exact sheet music from MuseScore, Finale, or Dorico. Accepts uncompressed .musicxml / .xml and zipped .mxl (or .mscz with MuseScore — same internal format). Pitches, durations, dynamics, and chords come through exactly — the most accurate input.'},
-  {id:'image', title:'🖼 Image transcription', keywords:'image painting picture transcribe paint chagall photo colour grayscale white black grey',
-   body:'Upload an image; Paintiano reads it as a score. Downsampled to 192×120 pixels, walked left-to-right top-to-bottom, producing 960 chord events across a 2-minute performance. Hue → pitch, lightness → octave, chroma → velocity. White / grey / black pixels also play — they map to pitch class C with octave by lightness (black ≈ C2 deep bass, white ≈ C7 high treble), forming a structural backbone under the colour melody. Dominant background hue is suppressed so figurative content dominates. See Concept for the full algorithm.'},
+   body:'Upload exact sheet music from MuseScore, Finale, or Dorico. Accepts .musicxml, .xml, and .mxl. Pitches, durations, dynamics, and chords come through exactly — the most accurate input.'},
+  {id:'image', title:'🖼 Image transcription', keywords:'image painting picture transcribe paint photo colour',
+   body:'Upload an image; Paintiano reads it as a score. Downsampled to 192×120 pixels, walked left-to-right top-to-bottom, producing chord events across a ~2 minute performance. Hue → pitch, lightness → octave, chroma → velocity. Dominant background hue is suppressed so figurative content dominates.'},
   {id:'morph', title:'✦ Morph', keywords:'morph crossfade blend transition mood between',
-   body:'Available after picking a mood. Tap ✦ MORPH to crossfade the current mood into another. First half is mood A, second half is mood B, with a velocity blend in the 40–60% zone.'},
+   body:'Available after picking a mood. Tap ✦ MORPH to crossfade the current mood into another. First half is mood A, second half is mood B, with a velocity blend in the 40–60% zone. The progress bar subtitle shows the blend e.g. "happy → sad".'},
   {id:'vary', title:'🎲 Vary', keywords:'vary variation reroll randomize random fresh',
-   body:'Available after picking a mood. Tap 🎲 VARY to reroll a fresh interpretation of the same mood. Keep tapping for different takes — pitch and rhythm vary while the mood signature stays.'},
-  {id:'play-stop', title:'♩ Play / ■ Stop', keywords:'play stop playback transport',
-   body:'Play sounds the painted score; Stop halts it. Both buttons appear in the top toolbar and during play in the bottom dock. In demo mode Play is disabled — Stop still works to interrupt playback.'},
+   body:'Available after picking a mood. Tap 🎲 VARY to reroll a fresh interpretation of the same mood. Keep tapping for different takes — pitch and rhythm vary while the mood signature stays. The canvas border flashes gold on each reroll.'},
+  {id:'playback', title:'Play / Pause / Seek', keywords:'play pause stop resume seek scrub progress bar position jump drag',
+   body:'The Play button starts and pauses playback (Space bar also works). Tap anywhere on the progress bar to jump to that position. Drag the progress bar left or right to scrub through the piece live — release to resume from that point. Time remaining is shown during playback.'},
+  {id:'loop', title:'⟳ Loop', keywords:'loop repeat cycle mood continuous',
+   body:'Available during mood playback. Tap ⟳ LOOP to keep the piece repeating continuously. Tap again to turn off. The button highlights gold when active.'},
+  {id:'speed', title:'Playback speed', keywords:'speed slow fast tempo rate slider 1x half',
+   body:'The speed slider in the transport dock adjusts playback rate from 0.25× to 2×. Tap the speed label to reset to 1×. Changes take effect immediately during playback.'},
   {id:'print', title:'🖨 Print (save the painting)', keywords:'print export png image save painting picture',
-   body:'Renders the painting at 8× resolution as a PNG. Tap to open the preview, then copy to clipboard or long-press the image to save. On iOS the share sheet from the copy step is the most reliable path to Files / Photos.'},
-  {id:'record', title:'⏺ Rec & save the audio', keywords:'record rec audio capture save mp4 m4a wav recording',
-   body:'Available in image mode. Tap ⏺ REC to record audio output while the painting plays. Tap ⏹ to stop both playback and recording. A SAVE RECORDING button appears with the file — tap to share / save via the system dialog (Files, AirDrop, Downloads, Mail, audio apps).'},
+   body:'Renders the painting at 8× resolution as a PNG. Tap to open the preview, then long-press the image to save to Photos / Files, or copy to clipboard. In Compose mode you can name the piece before saving.'},
+  {id:'record', title:'⏺ Rec (image mode)', keywords:'record rec audio capture save mp4 m4a recording share',
+   body:'Available in image mode only. Tap ⏺ REC to start recording the audio output and playback simultaneously. Recording stops automatically when the piece ends — a share/save row then appears in the dock. Tap Share to save via the system dialog (Files, AirDrop, Downloads, Mail). Tap ✕ to dismiss without saving. Note: share is blocked inside Claude\'s sandbox — works as a standalone page.'},
   {id:'clear', title:'Clear', keywords:'clear reset start over delete',
-   body:'Wipes the current session — canvas, chords, recording, info, demo state, and compose state — and returns to a fresh start. Use this between sessions or to leave demo mode.'},
+   body:'Wipes the current session — canvas, chords, recording, info, and compose state — and returns to a blank start.'},
   {id:'troubleshoot', title:'Troubleshooting', keywords:'troubleshoot problem error broken fix bug help slow',
-   body:'If the status reads "loading piano…" wait a few seconds for the sample library to download (~5 MB). If it falls back to "synth piano" the samples failed to load — the app still works with an oscillator synth, less rich tone. Save buttons unresponsive: the iframe sandbox may be blocking that method — try a different platform or screenshot for the painting.'},
+   body:'If status reads "loading piano…" wait a few seconds for samples to download (~5 MB). If it falls back to "synth piano" the app still works with an oscillator synth. Mic access and the share sheet are blocked in Claude\'s iframe sandbox — both work correctly when Paintiano runs as a standalone page.'},
 ];
 const guideMatch = (e,q) => {
   const n = q.trim().toLowerCase();
@@ -1031,8 +1118,8 @@ function rerollSong(song) {
     if (midi > 48 && Math.random() < 0.15) {
       newMidi += Math.random() < 0.5 ? -12 : 12;
     }
-    while (newMidi < 24) newMidi += 12;
-    while (newMidi > 96) newMidi -= 12;
+    // Clamp to full piano range after all transformations
+    newMidi = Math.max(21, Math.min(108, newMidi));
     // Subtle rhythmic jitter
     const durMul = 0.85 + Math.random() * 0.3;
     return {
@@ -1067,6 +1154,8 @@ export default function Paintiano() {
   const recorderRef      = useRef(null);
   const recChunksRef     = useRef([]);
   const recStreamDestRef = useRef(null);
+  const micStreamRef     = useRef(null);
+  const micRafRef        = useRef(null);
   // Press-tracking: per-midi {pressTime,chordIdx}. On release we compute
   // the actual hold duration and patch it into the chord that captured this
   // press, so each block's width reflects how long the key was held.
@@ -1074,12 +1163,16 @@ export default function Paintiano() {
   const sessionStart = useRef(0);
   const ripplesRef    = useRef([]);
   const visualizerRef = useRef(null);
+  const highlightCanvasRef = useRef(null);
   const viewModeRef   = useRef('paint');
-  const imgSpeedRef   = useRef(1);
+  const playbackSpeedRef = useRef(1);
   const resumeFromRef = useRef(null); // null = fresh start, number = resume from this disp index
   // Tracks the last full-paint snapshot so playback can append incrementally
   // instead of re-running every artist-style draw from chord 0 on each `disp` tick.
   const lastPaintRef  = useRef({disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null});
+  // Intro reveal animation: tracks the RAF id so it can be cancelled by clear()
+  // or a subsequent load before the previous animation finishes.
+  const introRafRef   = useRef(null);
 
   const [mode,      setMode]      = useState('harmony');
   const [chords,    setChords]    = useState([]);
@@ -1116,8 +1209,10 @@ export default function Paintiano() {
   const [midiBlob,  setMidiBlob]  = useState(null);
   const [midiName,  setMidiName]  = useState('');
   const [recording, setRecording] = useState(false);
+  const [micPainting, setMicPainting] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioName, setAudioName] = useState('');
+  const [recordingName, setRecordingName] = useState('');
   const [audioShareMsg, setAudioShareMsg] = useState(null);
   // Auto-dismiss share status after a few seconds
   useEffect(()=>{
@@ -1128,7 +1223,8 @@ export default function Paintiano() {
   // Scale-snap is now hidden behind an advanced toggle. With 88 keys available
   // the user generally wants the real chromatic piano; snap is opt-in.
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [imgSpeed,     setImgSpeed]     = useState(1);
+  const [hoveredKey,   setHoveredKey]   = useState(null);
+  const [playbackSpeed,setPlaybackSpeed]= useState(1);
   const [holdPaused,   setHoldPaused]   = useState(false); // true while button is held during playback
   // Compose mode: explicit toggle that surfaces the piano keyboard. Default OFF
   // so the keyboard doesn't clutter the canvas during normal playback / loaded
@@ -1153,6 +1249,10 @@ export default function Paintiano() {
   const [guideQuery, setGuideQuery] = useState('');
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [currentMood, setCurrentMood] = useState(null);
+  const [loopMode,    setLoopMode]    = useState(false);
+  const [varyFlash,   setVaryFlash]   = useState(false);
+  const [compositionName, setCompositionName] = useState('');
+  const loopModeRef = useRef(false);
   const [varySource, setVarySource] = useState(null);
 
   const [originalImgUrl, setOriginalImgUrl] = useState(null);
@@ -1164,7 +1264,8 @@ export default function Paintiano() {
   // composition). Conversely, once any keyboard note has been recorded, the
   // file/song loaders are locked until clear (so a load can't clobber work).
   const loadedMode = false;
-  const composedMode = chords.some(c => c.recorded);
+  const composedModeRef = useRef(false);
+  const composedMode = composedModeRef.current;
 
   useEffect(()=>{
     let dead=false;
@@ -1215,7 +1316,34 @@ export default function Paintiano() {
     // is unchanged, append only the newly-revealed blocks instead of re-running
     // every artist-style draw from chord 0. Cuts an O(N²) playback into O(N).
     const prev = lastPaintRef.current;
-    const lim = anim?disp:playing?disp:holdPaused?disp:chords.length;
+    const lim = anim?disp:playing?disp:holdPaused?disp:disp<chords.length?disp:chords.length;
+    // Fast path: if only `pending` changed (keypress preview in compose mode),
+    // skip the full repaint — just redraw the next-block preview.
+    const onlyPendingChanged =
+      prev.chords===chords &&
+      prev.grid===grid &&
+      prev.gc===gc &&
+      prev.style===style &&
+      prev.viewMode===viewMode &&
+      prev.mode===mode &&
+      prev.stamp===stamp &&
+      prev.anim===anim &&
+      prev.playing===playing &&
+      prev.disp===lim &&
+      prev.info===info &&
+      prev.holdPaused===holdPaused &&
+      prev.pending!==pending;
+    if(onlyPendingChanged){
+      // Clear just the next-block cell and redraw preview
+      const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
+      const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
+      ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
+      ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
+      ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
+      if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
+      lastPaintRef.current={...prev,pending};
+      return;
+    }
     const canAppend =
       (playing||anim) &&
       prev.chords===chords &&
@@ -1252,11 +1380,31 @@ export default function Paintiano() {
   // block's width reflects its duration. File-loaded sessions already
   // get cells from applyEvents → computeGrid; we skip them via the
   // `recorded` flag to avoid clobbering that layout.
+  // Re-run computeGrid only when the set of recorded chord durations actually
+  // changes — not on every chords mutation (e.g. disp ticks during playback,
+  // or demo chords being appended don't change durQ at all).
+  // A cheap string signature of [idx:durQ, ...] is compared against the last
+  // run; if identical, computeGrid is skipped entirely.
+  const gridSigRef = useRef('');
   useEffect(()=>{
     if(!chords.length)return;
     if(!chords.some(c=>c.recorded))return;
+    const sig=chords.map(c=>`${c.idx}:${c.durQ}`).join(',');
+    if(sig===gridSigRef.current)return;
+    gridSigRef.current=sig;
     const evs=chords.map(c=>({durQ:c.durQ!=null?c.durQ:snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-    setGrid(computeGrid(evs));
+    const newGrid=computeGrid(evs);
+    // Update the ref immediately so startPlay always sees fresh grid.
+    // Defer the state update (which triggers a re-render) until not playing
+    // so the grid recompute doesn't stutter compose-mode playback.
+    gridRef.current=newGrid;
+    if(!playingRef.current){
+      setGrid(newGrid);
+    }else{
+      // Schedule the visual update for after playback stops
+      const unsub=()=>{setGrid(newGrid);};
+      const check=setInterval(()=>{if(!playingRef.current){clearInterval(check);unsub();}},200);
+    }
   },[chords]);
 
   // Center the keyboard scroll on middle C (MIDI 60) whenever the keyboard
@@ -1286,10 +1434,12 @@ export default function Paintiano() {
     }
     try{
       const gain=Math.max(0.01,Math.min(1,vel/127)),dur=Math.max(0.05,durMs/1000);
-      if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur,Tone.now(),gain);return;}
+      // Sustain tail: ring ~40% beyond durMs so chords blend rather than gate off. Capped at 1.8 s.
+      const tailS=Math.min(dur*0.4,1.8);
+      if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
       if(ac.state==='suspended')ac.resume();
-      const freq=440*Math.pow(2,(midi-69)/12),now=ac.currentTime,fade=Math.min(dur+.35,1.5),amp=gain*.18,master=ac.createGain();
+      const freq=440*Math.pow(2,(midi-69)/12),now=ac.currentTime,fade=Math.min(dur+tailS+.35,3.0),amp=gain*.18,master=ac.createGain();
       master.gain.setValueAtTime(amp,now);master.gain.exponentialRampToValueAtTime(.0001,now+fade);master.connect(ac.destination);
       if(recStreamDestRef.current){try{master.connect(recStreamDestRef.current);}catch(_){}}
       [[1,1],[2,.5],[3,.25],[4,.1]].forEach(([h,w])=>{const osc=ac.createOscillator(),g=ac.createGain();osc.type='sine';osc.frequency.value=freq*h;g.gain.value=w;osc.connect(g);g.connect(master);osc.start(now);osc.stop(now+fade+.05);osc.onended=()=>{try{osc.disconnect();g.disconnect();}catch(_){}};});
@@ -1300,8 +1450,24 @@ export default function Paintiano() {
 
   // Mirror viewMode into a ref so playNote (stable callback) can read it
   useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
-  // Mirror imgSpeed into a ref so the image step loop reads the live value mid-playback
-  useEffect(() => { imgSpeedRef.current = imgSpeed; }, [imgSpeed]);
+  // Mirror playbackSpeed into a ref so step loops read the live value mid-playback
+  useEffect(() => { playbackSpeedRef.current = playbackSpeed; }, [playbackSpeed]);
+  // Refs mirrored for the highlight RAF loop (which can't close over React state)
+  const playingRef  = useRef(false);
+  const dispRef     = useRef(0);
+  const handlePauseClickRef = useRef(null);
+  const startPlayRef = useRef(null);
+  const chordsRef   = useRef([]);
+  const gridRef     = useRef(null);
+  const gcRef       = useRef(null);
+  useEffect(()=>{ playingRef.current=playing; },[playing]);
+  useEffect(()=>{ dispRef.current=disp; },[disp]);
+  useEffect(()=>{ chordsRef.current=chords; },[chords]);
+  useEffect(()=>{ gridRef.current=grid; },[grid]);
+  useEffect(()=>{ gcRef.current=gc; },[gc]);
+  const infoRef = useRef(null);
+  useEffect(()=>{ infoRef.current=info; },[info]);
+  useEffect(()=>{ loopModeRef.current=loopMode; },[loopMode]);
 
   // Visualizer animation loop — runs always; cheap when no ripples
   useEffect(() => {
@@ -1309,6 +1475,11 @@ export default function Paintiano() {
     const tick = () => {
       const canvas = visualizerRef.current;
       if (canvas) {
+        // Skip all canvas work when idle — no ripples and not playing
+        if(!ripplesRef.current.length && !playingRef.current){
+          raf = requestAnimationFrame(tick);
+          return;
+        }
         const ctx = canvas.getContext('2d');
         const w = canvas.width, h = canvas.height;
         ctx.clearRect(0, 0, w, h);
@@ -1340,11 +1511,81 @@ export default function Paintiano() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Playback highlight loop — draws an animated pulsing border on the
+  // currently-playing block. Runs on its own canvas overlay (zIndex 3)
+  // so it never disturbs the main paint or the ripple visualizer.
+  // Reads everything through refs so the callback stays stable.
+  useEffect(() => {
+    let raf;
+    const tick = () => {
+      const canvas = highlightCanvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const isPlaying = playingRef.current;
+        const d = dispRef.current;
+        const chords = chordsRef.current;
+        const grid = gridRef.current;
+        const gc = gcRef.current;
+        if (isPlaying && d > 0 && chords.length && grid && gc) {
+          const chord = chords[d - 1];
+          if (chord) {
+            const cell = grid.cells && grid.cells[chord.idx];
+            const { BW, BH, N } = grid;
+            const si = chord.idx % (N * N);
+            const cx = cell ? cell.x : (si % N) * BW;
+            const cy = cell ? cell.y : Math.floor(si / N) * BH;
+            const cw = cell ? cell.w : BW;
+            const ch = cell ? cell.h : BH;
+            // Pulse: smooth sine wave 0→1→0 over 600ms
+            const pulse = (Math.sin(performance.now() / 600 * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+            // Derive colour from the chord's highest-velocity note
+            const note = chord.n.reduce((a, b) => b.v > a.v ? b : a, chord.n[0]);
+            const [r, g, b] = gc(note.m, note.v).slice(0, 3);
+            const alpha = 0.35 + pulse * 0.55;
+            const lw = 1.5 + pulse * 1.5;
+            ctx.strokeStyle = `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+            ctx.lineWidth = lw;
+            ctx.strokeRect(cx + lw / 2, cy + lw / 2, cw - lw, ch - lw);
+            // Inner glow fill
+            ctx.fillStyle = `rgba(${r},${g},${b},${(pulse * 0.07).toFixed(3)})`;
+            ctx.fillRect(cx + lw, cy + lw, cw - lw * 2, ch - lw * 2);
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   const stopAll = useCallback(()=>{
     genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
     try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
     setPlaying(false);setAnim(false);
     setHoldPaused(false);resumeFromRef.current=null;
+  },[]);
+
+  // Pause playback when the tab goes to background. The audio context suspends
+  // automatically, but timers keep firing — leaving the UI stuck in playing state.
+  // Store the chord position so resume picks up from where it stopped.
+  useEffect(()=>{
+    const onHide=()=>{
+      if(document.hidden){
+        if(playingRef.current){
+          resumeFromRef.current=dispRef.current;
+          setHoldPaused(true);
+          genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
+          try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+          setPlaying(false);setAnim(false);
+        }
+      }else{
+        // Tab became visible — re-wake the audio context in case the browser suspended it
+        try{Tone.start();}catch(_){}
+      }
+    };
+    document.addEventListener('visibilitychange',onHide);
+    return()=>document.removeEventListener('visibilitychange',onHide);
   },[]);
 
   // Schedule a timeout and remember its id so stopAll can cancel it. The id
@@ -1384,6 +1625,7 @@ export default function Paintiano() {
     // uses durQ to size each rectangle's width — so longer holds → wider blocks.
     const maxMs=Math.max(...notes.map(n=>n.durMs));
     const durQ=snapDurQ(maxMs/500);
+    composedModeRef.current=true;
     setChords(p=>[...p,{n:notes,idx,startMs,recorded:true,durQ}]);
   },[paintDur]);
 
@@ -1458,19 +1700,33 @@ export default function Paintiano() {
     }
   },[paintScale]);
 
+  const undoLast = useCallback(()=>{
+    setChords(prev=>{
+      if(!prev.length)return prev;
+      const next=prev.slice(0,-1);
+      if(!next.length){idxRef.current=0;sessionStart.current=0;}
+      return next;
+    });
+    setDisp(p=>Math.max(0,p-1));
+  },[]);
+
   useEffect(()=>{
     const map={a:60,w:61,s:62,e:63,d:64,f:65,t:66,g:67,y:68,h:69,u:70,j:71,k:72,o:73,l:74,p:75};
     const held=new Set();
-    const dn=e=>{if(inputFocus.current)return;const m=map[e.key];if(m&&!held.has(e.key)){held.add(e.key);pressNote(m);}};
+    const dn=e=>{if(inputFocus.current)return;if(e.key==='Backspace'&&composeMode){e.preventDefault();undoLast();return;}if(e.key===' '){e.preventDefault();handlePauseClickRef.current?.();return;}if(e.key==='Enter'){e.preventDefault();if(!composeMode){setComposeMode(true);}else{setComposeMode(false);}return;}const m=map[e.key];if(m&&!held.has(e.key)){held.add(e.key);pressNote(m);}};
     const up=e=>held.delete(e.key);
     window.addEventListener('keydown',dn);window.addEventListener('keyup',up);
     return()=>{window.removeEventListener('keydown',dn);window.removeEventListener('keyup',up);};
-  },[pressNote]);
+  },[pressNote,composeMode,undoLast]);
 
   const clear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
+    if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
+    if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
+    if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
+    setMicPainting(false);
     setChords([]);idxRef.current=0;setPending([]);pendingRef.current=[];
-    pressInfo.current={};sessionStart.current=0;
+    pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
     setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
     pixelRef.current=null;setViewMode('paint');setStamp(s=>s+1);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
@@ -1481,6 +1737,10 @@ export default function Paintiano() {
     setPickMode(null);
     setComposeMode(false);
     setDemoMode(false);
+    setLoopMode(false);loopModeRef.current=false;
+    setCompositionName('');
+    setPaintScale('off');
+    setRecordingName('');
   },[stopAll]);
 
   const applyEvents = useCallback((events,title)=>{
@@ -1489,50 +1749,29 @@ export default function Paintiano() {
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
     pixelRef.current=null;setViewMode('paint');setOriginalImgUrl(null);
-    setGrid(g);setChords(wi);setDisp(wi.length);
+    setGrid(g);setChords(wi);setDisp(0);
     setInfo({title,count:wi.length,dur:Math.round(lastMs/1000)});
     idxRef.current=wi.length;
     setComposeMode(false);
     setDemoMode(false);
+    setPlaybackSpeed(1);playbackSpeedRef.current=1;
+    composedModeRef.current=false;
+    // Canvas starts blank — blocks appear chord by chord during playback,
+    // so the painting builds itself in sync with the music.
+    if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
+    setDisp(0);
   },[]);
-
-  const demoPlay=()=>{
-    if(busy)return;Tone.start();clear();setDemoMode(true);setPlaying(true);
-    let t=0;
-    DEMO.forEach(({n:notes,d})=>{
-      const ct=t;
-      timers.current.push(setTimeout(()=>{
-        notes.forEach(({m,v,durMs})=>{playNote(m,v,durMs);setActive(p=>new Set([...p,m]));setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs,d));});
-        const idx=idxRef.current++;setChords(p=>[...p,{n:notes,idx,startMs:ct,recorded:true,durQ:snapDurQ(d/500)}]);setDisp(p=>p+1);
-      },ct));
-      t+=d+25;
-    });
-    timers.current.push(setTimeout(()=>setPlaying(false),t+300));
-  };
-
-  const resumeDemo=useCallback((fromNote)=>{
-    Tone.start();setDemoMode(true);setPlaying(true);
-    let t=0;
-    DEMO.slice(fromNote).forEach(({n:notes,d})=>{
-      const ct=t;
-      timers.current.push(setTimeout(()=>{
-        notes.forEach(({m,v,durMs})=>{playNote(m,v,durMs);setActive(p=>new Set([...p,m]));setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs,d));});
-        const idx=idxRef.current++;setChords(p=>[...p,{n:notes,idx,startMs:ct,recorded:true,durQ:snapDurQ(d/500)}]);setDisp(p=>p+1);
-      },ct));
-      t+=d+25;
-    });
-    timers.current.push(setTimeout(()=>setPlaying(false),t+300));
-  },[playNote]);
 
   const loadMidi=e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
     const r=new FileReader();
     r.onload=evt=>{
       try{
-        const{raw,div,temps}=parseMidi(evt.target.result);
+        const{raw,div,temps,skipped}=parseMidi(evt.target.result);
         const evts=toChords(raw,div,temps);
         if(!evts.length){setErr('No notes found in MIDI.');setErrInfo(false);return;}
         stopAll();applyEvents(evts,file.name.replace(/\.midi?$/i,'').replace(/[_-]/g,' '));
+        if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
       }catch(e){setErr('MIDI parse error: '+e.message);setErrInfo(false);}
     };
     r.readAsArrayBuffer(file);
@@ -1593,10 +1832,11 @@ export default function Paintiano() {
   const loadSampleMidi=useCallback(()=>{
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_MIDI_B64);
-      const{raw,div,temps}=parseMidi(arrayBuffer);
+      const{raw,div,temps,skipped}=parseMidi(arrayBuffer);
       const evts=toChords(raw,div,temps);
       if(!evts.length){setErr('Sample MIDI: no notes.');setErrInfo(false);return;}
       stopAll();applyEvents(evts,SAMPLE_MIDI_NAME);
+      if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
   },[stopAll,applyEvents]);
 
@@ -1651,16 +1891,25 @@ export default function Paintiano() {
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();
     try{
-      const prompt=`Compose a short expressive solo piano piece for: "${title.slice(0,80)}".
-Output ONLY a single valid JSON object — no markdown, no prose.
-Schema: {"title":"...","tempo":90,"notes":[["C4",1,0],...]}
-Each note: [pitch, durationInBeats, startBeat]. Same startBeat = chord.
-Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in octaves 2-3, vary rhythm and dynamics through chord density.`;
+      const prompt=`Compose a short expressive solo piano piece inspired by: "${title.slice(0,80)}".
+Output ONLY a single valid JSON object — no markdown, no prose, no explanation.
+Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
+Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
+
+Composition rules:
+- 52–80 notes total
+- Pick a specific key (e.g. "D minor", "F major", "B minor") that fits the mood — stay mostly diatonic, use chromatic passing tones sparingly
+- Structure: opening (establish key + motif, sparse), development (harmonically richer, busiest texture), close (return to opening motif, quieter)
+- Bass register (octaves 2–3): provide harmonic grounding — roots, fifths, or walking bass. At least 12 bass notes
+- Melody (octaves 4–6): singable, with a recognisable motif that recurs
+- Dynamics through velocity: opening ~55–70, development ~80–110, close ~45–65
+- Vary note durations: mix 0.25, 0.5, 1, 2 beat values — avoid uniform rhythm
+- Pitches: use C4/F#3/Bb5 style with octave number, sharps only (no flats in pitch names — use C#4 not Db4)`;
       setWPct(40);
       const resp=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
       });
       setWPct(75);
       const respText=await resp.text();
@@ -1682,7 +1931,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
     }catch(e){setErr(e.message||'Compose failed');setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
-  },[songQ,busy,composedMode,stopAll,applyEvents]);
+  },[songQ,busy,stopAll,applyEvents]);
 
 
 
@@ -1724,6 +1973,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           setChords(evts);setDisp(evts.length);
           setInfo({title:file.name.replace(/\.[^.]+$/,''),count:evts.length,dur:Math.round(IMG_TARGET_MS/1000)});
           idxRef.current=evts.length;setStamp(s=>s+1);
+          setPlaybackSpeed(1);playbackSpeedRef.current=1;
         }catch(e){setErr('Image: '+e.message);setErrInfo(false);}
       };
       img.src=evt.target.result;
@@ -1804,9 +2054,14 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
   },[busy,chords,viewMode,grid,stopAll]);
 
   const startPlay=useCallback(()=>{
+    const chords=chordsRef.current;
+    const grid=gridRef.current;
+    const info=infoRef.current;
+    const viewMode=viewModeRef.current;
     if(busy||!chords.length)return;Tone.start();
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
-    stopAll();setDisp(fromIdx);setPlaying(true);
+    const isResume=fromIdx>0;
+    stopAll();if(!isResume)setDisp(0);setPlaying(true);
     if(viewMode==='image'&&pixelRef.current){
       const{nc,nr,px}=pixelRef.current,{BW,BH,CW,CH}=grid,cv=canvasRef.current,ctx=cv?.getContext('2d'),gen=genRef.current;
       if(ctx&&fromIdx===0){ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);}
@@ -1838,12 +2093,20 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           // Soften velocity for unmerged (overlapping notes can pile up, want gentle blend)
           const velScale=chords[i]._runLen?1:0.75;
           try{
-            chords[i].n.forEach(({m,v,durMs})=>{
-              const scaledDur=Math.round(durMs*durMul/imgSpeedRef.current);
+            const notes=chords[i].n;
+            const midis=notes.map(({m,v,durMs})=>{
+              const scaledDur=Math.round(durMs*durMul/playbackSpeedRef.current);
               playNote(m,Math.round(v*velScale),scaledDur);
-              setActive(p=>new Set([...p,m]));
-              setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(scaledDur,800));
+              return{m,scaledDur};
             });
+            // Batch add all notes in this chord in one state update
+            setActive(p=>new Set([...p,...midis.map(x=>x.m)]));
+            // Group removes by clamped duration to minimise state updates
+            const byDur={};
+            for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
+            for(const[t,ms]of Object.entries(byDur)){
+              setTimeout(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
+            }
             // Scroll the keyboard to center on this chord's notes (same behavior
             // as the chord-playback loop). Lets you see which keys correspond to
             // the painting's colors as the image plays back.
@@ -1852,37 +2115,90 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
               const xs=chords[i].n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
               if(xs.length){
                 const cx=xs.reduce((a,b)=>a+b,0)/xs.length;
-                wrap.scrollTo({left:Math.max(0,cx - wrap.clientWidth/2 + 13),behavior:'smooth'});
+                const target=Math.max(0,cx - wrap.clientWidth/2 + 13);
+                wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});
               }
             }
           }catch(_){}
         }
         setDisp(i+1);
         i++;
-        timers.current.push(setTimeout(step,Math.round(150/imgSpeedRef.current)));
+        timers.current.push(setTimeout(step,Math.round(150/playbackSpeedRef.current)));
       };
       step();
     }else{
-      // If chords were recorded via keyboard with real timing, use those gaps.
-      // Otherwise (e.g. file-loaded but no info, or synthesized), fall back to a uniform 350ms step.
+      // Step-loop: schedules one chord at a time so playbackSpeedRef is read
+      // live on every step — slider changes take effect immediately.
       const useRecorded=chords.some(c=>c.recorded);
-      const baseMs=fromIdx>0?(chords[fromIdx]?.startMs||0):0;
-      chords.slice(fromIdx).forEach(({n,startMs,recorded},j)=>{const i=fromIdx+j;const delay=(info||recorded||useRecorded)?Math.max(0,(startMs||0)-baseMs):j*350;timers.current.push(setTimeout(()=>{try{setDisp(i+1);n.forEach(({m,v,durMs})=>{playNote(m,v,durMs||300);setActive(p=>new Set([...p,m]));setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs||300,800));});
-        // Auto-scroll the keyboard so the active keys are centered in view.
-        // Uses smooth scroll so the keyboard glides between chords instead of jumping.
-        const wrap=kbScrollRef.current;
-        if(wrap){
-          const xs=n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
-          if(xs.length){
-            const cx=xs.reduce((a,b)=>a+b,0)/xs.length;
-            wrap.scrollTo({left:Math.max(0,cx - wrap.clientWidth/2 + 13),behavior:'smooth'});
+      let i=fromIdx;
+      const step=()=>{
+        if(i>=chords.length){setPlaying(false);setDisp(chords.length);return;}
+        const{n,startMs,recorded}=chords[i];
+        setDisp(i+1);
+        try{
+          const midis=n.map(({m,v,durMs})=>{
+            const scaledDur=Math.round((durMs||300)/playbackSpeedRef.current);
+            playNote(m,v,scaledDur);
+            return{m,scaledDur};
+          });
+          setActive(p=>new Set([...p,...midis.map(x=>x.m)]));
+          const byDur={};
+          for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
+          for(const[t,ms]of Object.entries(byDur)){
+            setTimeout(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
           }
+          const wrap=kbScrollRef.current;
+          if(wrap){
+            const xs=n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
+            if(xs.length){const cx=xs.reduce((a,b)=>a+b,0)/xs.length;const target=Math.max(0,cx-wrap.clientWidth/2+13);wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});}
+          }
+        }catch(_){}
+        i++;
+        if(i>=chords.length){
+          // Schedule stop (or loop restart) after last note rings out
+          const last=chords[chords.length-1];
+          const tail=Math.round((last?.n?.reduce((mx,nn)=>Math.max(mx,nn.durMs||0),0)||500)/playbackSpeedRef.current)+300;
+          timers.current.push(setTimeout(()=>{
+            if(loopModeRef.current){
+              resumeFromRef.current=0;
+              startPlay();
+            }else{
+              setPlaying(false);setDisp(chords.length);
+            }
+          },tail));
+        }else{
+          // Gap to next chord: diff between adjacent startMs when available, else uniform 350ms.
+          // For recorded compositions, cap at 1000ms to remove hesitation pauses from composing.
+          const hasTimings=info||recorded||useRecorded;
+          const rawGap=hasTimings?Math.max(0,(chords[i].startMs||0)-(startMs||0)):350;
+          const gap=useRecorded?Math.min(rawGap,1000):rawGap;
+          timers.current.push(setTimeout(step,Math.round(gap/playbackSpeedRef.current)));
         }
-      }catch(_){}},delay));});
-      const last=chords[chords.length-1],end=(info||useRecorded)?Math.max(0,(last?.startMs||0)-baseMs)+(last?.n?.reduce((mx,nn)=>Math.max(mx,nn.durMs||0),0)||500)+300:(chords.length-fromIdx)*350+500;
-      timers.current.push(setTimeout(()=>{setPlaying(false);setDisp(chords.length);},end));
+      };
+      step();
     }
-  },[busy,chords,viewMode,grid,info,playNote,stopAll]);
+  },[busy,playNote,stopAll]);
+
+  const demoPlay=useCallback(()=>{
+    if(busy)return;Tone.start();
+    stopAll();clearTimeout(kbTimer.current);
+    if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
+    let t=0;
+    const wi=DEMO.map((item,i)=>{const startMs=t;t+=item.d+25;return{n:item.n,startMs,idx:i,durQ:snapDurQ(item.d/500)};});
+    const g=computeGrid(wi);
+    const inf={title:'Für Elise · Beethoven',count:wi.length,dur:Math.round(t/1000)};
+    pendingRef.current=[];setPending([]);pressInfo.current={};sessionStart.current=0;gridSigRef.current='';
+    setChords(wi);chordsRef.current=wi;
+    setGrid(g);gridRef.current=g;
+    setInfo(inf);infoRef.current=inf;
+    setDisp(0);idxRef.current=wi.length;
+    setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;setStamp(s=>s+1);
+    setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+    setComposeMode(false);setPickMode(null);setCurrentMood(null);setVarySource(null);setSongQ('');
+    setDemoMode(true);
+    resumeFromRef.current=0;
+    startPlay();
+  },[busy,stopAll,startPlay]);
 
   const handlePauseClick=useCallback(()=>{
     if(playing){
@@ -1893,18 +2209,14 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       setPlaying(false);setAnim(false);
     }else if(holdPaused){
       setHoldPaused(false);
-      if(demoMode){
-        const from=resumeFromRef.current??0;
-        resumeFromRef.current=null;
-        resumeDemo(from);
-      }else{
-        startPlay(); // startPlay reads and clears resumeFromRef itself
-      }
+      startPlay(); // startPlay reads and clears resumeFromRef itself
     }else if(!busy){
       resumeFromRef.current=null;
       startPlay();
     }
-  },[playing,holdPaused,busy,disp,demoMode,resumeDemo,startPlay]);
+  },[playing,holdPaused,busy,disp,demoMode,startPlay]);
+  useEffect(()=>{handlePauseClickRef.current=handlePauseClick;},[handlePauseClick]);
+  useEffect(()=>{startPlayRef.current=startPlay;},[startPlay]);
 
   // Auto-stop the recorder once playback finishes (playing → false).
   // A 700 ms tail lets the last notes ring out before capture closes.
@@ -1944,7 +2256,6 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
     const rawCtx=Tone.getContext().rawContext;
     const streamDest=rawCtx.createMediaStreamDestination();
     recStreamDestRef.current=streamDest;
-    // Tap Tone.js master output — additive connect, speakers still work
     try{Tone.getDestination().connect(streamDest);}catch(_){}
     const mimeType=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg'].find(t=>{try{return MediaRecorder.isTypeSupported(t);}catch(_){return false;}})||'';
     let recorder;
@@ -1959,12 +2270,8 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       const blob=new Blob(recChunksRef.current,{type:mt});
       const ext=mt.includes('ogg')?'ogg':mt.includes('mp4')?'m4a':'webm';
       const name=(info?.title||'paintiano').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').slice(0,50)+'.'+ext;
-      if(blob.size<2000){
-        setErr('Recording was too short — hold rec for at least a second.');
-        setErrInfo(false);
-      }else{
-        setAudioBlob(blob);setAudioName(name);
-      }
+      if(blob.size<2000){setErr('Recording was too short — hold rec for at least a second.');setErrInfo(false);}
+      else{setAudioBlob(blob);setAudioName(name);}
       setRecording(false);recorderRef.current=null;
     };
     recorderRef.current=recorder;
@@ -1985,22 +2292,85 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
     stopAll();
   },[stopAll]);
 
-  // Save / share the recording across platforms. Tries three methods in order:
+  const stopMicPainting=useCallback(()=>{
+    if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
+    if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
+    setMicPainting(false);
+  },[]);
+
+  const startMicPainting=useCallback(async()=>{
+    if(micPainting)return stopMicPainting();
+    if(!navigator.mediaDevices?.getUserMedia){setErr('Microphone not available in this browser.');setErrInfo(false);return;}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      micStreamRef.current=stream;
+      const AC=window.AudioContext||window.webkitAudioContext;
+      const ac=new AC();
+      const src=ac.createMediaStreamSource(stream);
+      const analyser=ac.createAnalyser();
+      analyser.fftSize=2048;
+      src.connect(analyser);
+      const buf=new Float32Array(analyser.fftSize);
+      const sr=ac.sampleRate;
+      setMicPainting(true);
+      // Reset canvas for fresh painting
+      stopAll();setChords([]);idxRef.current=0;sessionStart.current=0;gridSigRef.current='';
+      composedModeRef.current=true;
+      setDisp(0);setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
+      setViewMode('paint');setStamp(s=>s+1);
+      Tone.start();
+      let lastCommit=performance.now();
+      const COMMIT_INTERVAL=300; // emit a chord every 300ms
+      const tick=()=>{
+        if(!micStreamRef.current){stopMicPainting();return;}
+        analyser.getFloatTimeDomainData(buf);
+        const mag=fftMag(buf);
+        const pitches=pickPitches(mag,sr);
+        const now=performance.now();
+        if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
+          lastCommit=now;
+          const notes=pitches.slice(0,4).map(p=>({m:p.midi,v:Math.max(40,Math.min(120,Math.round(p.mag*110))),durMs:COMMIT_INTERVAL}));
+          // Play the notes
+          notes.forEach(({m,v,durMs})=>{
+            playNote(m,v,durMs);
+            setActive(p=>new Set([...p,m]));
+            setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs,800));
+          });
+          // Paint the chord
+          const idx=idxRef.current++;
+          if(!sessionStart.current)sessionStart.current=now;
+          const startMs=now-sessionStart.current;
+          const maxMs=COMMIT_INTERVAL;
+          const durQ=snapDurQ(maxMs/500);
+          setChords(p=>{const next=[...p,{n:notes,idx,startMs,recorded:true,durQ}];return next;});
+          setDisp(p=>p+1);
+        }
+        micRafRef.current=requestAnimationFrame(tick);
+      };
+      micRafRef.current=requestAnimationFrame(tick);
+    }catch(e){
+      setErr('Microphone access denied.');setErrInfo(false);
+      setMicPainting(false);
+    }
+  },[micPainting,stopMicPainting,playNote,stopAll]);
   //   1. navigator.share({files}) — iOS Safari, Android Chrome (share sheet)
   //   2. showSaveFilePicker — Chrome/Edge desktop (native save dialog)
   //   3. Anchor <a download> click — Firefox / older browsers / fallback
   // Each method handles its own AbortError (user cancellation).
   const shareRecording=async()=>{
     if(!audioBlob)return;
+    const ext=audioName.split('.').pop()||'m4a';
+    const baseName=audioName.replace(/\.[^.]+$/,'');
+    const finalName=baseName+'.'+ext;
     setAudioShareMsg({tone:'wait',text:'saving…'});
-    const file=new File([audioBlob],audioName,{type:audioBlob.type||'audio/mp4'});
+    const file=new File([audioBlob],finalName,{type:audioBlob.type||'audio/mp4'});
     // 1. Share sheet — phones + macOS
     if(navigator.share){
       try{
         const canTry=!navigator.canShare||navigator.canShare({files:[file]});
         if(canTry){
           await navigator.share({files:[file],title:'Paintiano recording'});
-          setAudioShareMsg({tone:'ok',text:'shared — pick a destination'});
+          setAudioShareMsg({tone:'ok',text:'shared ✓'});
           return;
         }
       }catch(e){
@@ -2011,15 +2381,14 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
     // 2. Native save dialog — Chrome / Edge / Opera desktop
     if(window.showSaveFilePicker){
       try{
-        const ext=audioName.split('.').pop()||'m4a';
         const handle=await window.showSaveFilePicker({
-          suggestedName:audioName,
+          suggestedName:finalName,
           types:[{description:'Audio recording',accept:{[file.type||'audio/mp4']:['.'+ext]}}]
         });
         const w=await handle.createWritable();
         await w.write(audioBlob);
         await w.close();
-        setAudioShareMsg({tone:'ok',text:'saved'});
+        setAudioShareMsg({tone:'ok',text:'saved ✓'});
         return;
       }catch(e){
         if(e?.name==='AbortError'){setAudioShareMsg({tone:'ok',text:'cancelled'});return;}
@@ -2030,10 +2399,10 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
     try{
       const url=URL.createObjectURL(audioBlob);
       const a=document.createElement('a');
-      a.href=url;a.download=audioName;a.rel='noopener';
+      a.href=url;a.download=finalName;a.rel='noopener';
       document.body.appendChild(a);a.click();document.body.removeChild(a);
       setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}},10000);
-      setAudioShareMsg({tone:'ok',text:'download started — check your Downloads folder'});
+      setAudioShareMsg({tone:'ok',text:'download started ✓'});
     }catch(e){
       setAudioShareMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')});
     }
@@ -2044,7 +2413,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
   const pct=info?Math.round(disp/Math.max(1,chords.length)*100):null;
   const pianoColor={loading:'rgba(207,197,168,.35)',ready:'rgba(90,190,110,.55)',error:'rgba(201,168,76,.55)'};
   const pianoLabel={loading:' loading piano…',ready:' grand piano',error:' synth piano'};
-  const btn=(ex={})=>({background:'transparent',border:'1px solid',borderRadius:2,fontSize:'.58rem',letterSpacing:'.12em',padding:'5px 14px',cursor:'pointer',textTransform:'uppercase',color:'rgba(207,197,168,.7)',borderColor:'rgba(207,197,168,.2)',...ex});
+  const btn=(ex={})=>({background:'transparent',border:'1px solid',borderRadius:2,fontSize:'.7rem',letterSpacing:'.12em',padding:'5px 14px',cursor:'pointer',textTransform:'uppercase',color:'rgba(207,197,168,.7)',borderColor:'rgba(207,197,168,.2)',...ex});
 
   // Export the painting as a high-resolution PNG.
   // Artifact iframes block <a download>, window.open, and rewrite blob: URLs to a
@@ -2078,7 +2447,8 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       }
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
       if(!blob){setErr('Print: could not encode image.');setErrInfo(false);return;}
-      const filename=`paintiano-${(info?.title||'painting').replace(/[^\w-]+/g,'_').slice(0,60)}-${hi.width}x${hi.height}.png`;
+      const title=compositionName.trim()||info?.title||'painting';
+      const filename=`paintiano-${title.replace(/[^\w-]+/g,'_').slice(0,60)}-${hi.width}x${hi.height}.png`;
       const file=new File([blob],filename,{type:'image/png'});
       const url=URL.createObjectURL(blob);
       // Show the PNG inline + keep File for the explicit Save button (must be user-gesture for iOS share to work)
@@ -2128,15 +2498,15 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         <div style={{fontSize:'.55rem',letterSpacing:'.1em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
       </div>
 
-      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap',justifyContent:'center'}}>
-        <div style={{display:'flex',border:'1px solid rgba(201,168,76,.25)',borderRadius:2,overflow:'hidden'}}>
+      <div style={{display:'flex',gap:10,marginBottom:10,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
+        <div style={{display:'flex',border:'1px solid rgba(201,168,76,.25)',borderRadius:2,overflow:'hidden',flexShrink:0}}>
           {['harmony','spectral'].map(m=>(
-            <button key={m} onClick={()=>setMode(m)} style={{...btn(),border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(207,197,168,.45)'}}>{m}</button>
+            <button key={m} onClick={()=>setMode(m)} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(207,197,168,.45)'}}>{m}</button>
           ))}
         </div>
-        <div style={{display:'flex',border:'1px solid rgba(180,140,255,.28)',borderRadius:2,overflow:'hidden'}} title="painting style — tap again to deselect (mosaic default)">
+        <div style={{display:'flex',border:'1px solid rgba(180,140,255,.28)',borderRadius:2,overflow:'hidden',flexShrink:0}} title="painting style — tap again to deselect (mosaic default)">
           {[['picasso','picasso'],['rembrandt','rembrandt'],['monet','monet']].map(([k,label])=>(
-            <button key={k} onClick={()=>setStyle(style===k?null:k)} style={{...btn(),border:'none',borderRadius:0,padding:'5px 9px',background:style===k?'rgba(180,140,255,.16)':'transparent',color:style===k?'rgba(210,170,255,.95)':'rgba(207,197,168,.45)'}}>{label}</button>
+            <button key={k} onClick={()=>setStyle(style===k?null:k)} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 10px',background:style===k?'rgba(180,140,255,.16)':'transparent',color:style===k?'rgba(210,170,255,.95)':'rgba(207,197,168,.45)'}}>{label}</button>
           ))}
         </div>
       </div>
@@ -2149,9 +2519,10 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           title=""
           style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid rgba(201,168,76,.3)',borderRadius:3,padding:'8px 12px',color:songQ?'rgba(207,197,168,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:busy?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize'}}>
           <option value="">✦ select a mood…</option>
+          {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
           {MOODS.map(m=><option key={m} value={m}>{m}</option>)}
         </select>
-        <button onClick={()=>chords.length&&!busy&&currentMood&&setShowMorphMenu(true)} disabled={!chords.length||busy||!currentMood} title={!currentMood?'pick a mood first':'morph current mood into another'} style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy?'rgba(220,170,255,.9)':'rgba(220,150,255,.2)'})}>✦ morph</button>
+        <button onClick={()=>chords.length&&!busy&&currentMood&&setShowMorphMenu(true)} disabled={!chords.length||busy||!currentMood} title={!currentMood?'pick a mood first':'morph current mood into another'} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy?'rgba(220,170,255,.9)':'rgba(220,150,255,.2)'})}>✦ morph</button>
         <button onClick={()=>{
           if(busy||!varySource)return;
           const varied=rerollSong(varySource);
@@ -2164,25 +2535,39 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           const bytes=encodeMidi(evts,varied.tempo||100);
           setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
           setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
-        }} disabled={!varySource||busy} title={!varySource?'pick a mood first':'reroll: a fresh take'} style={{...btn({borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.2)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy?1:.35}}>🎲 vary</button>
+          setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
+        }} disabled={!varySource||busy} title={!varySource?'pick a mood first':'reroll: a fresh take'} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.2)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy?1:.35}}>🎲 vary</button>
       </div>
 
-      <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'nowrap',justifyContent:'center',overflowX:'auto',maxWidth:'100%',padding:'2px 4px',WebkitOverflowScrolling:'touch'}}>
-        <button onClick={()=>{if(!composeMode){clear();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} title={composeMode?'hide keyboard':'show piano keyboard'} style={btn({padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>♪ compose</button>
+      <div style={{display:'flex',gap:4,marginBottom:16,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch',maxWidth:'100%',padding:'2px 0'}}>
+        <button onClick={()=>{if(!composeMode){clear();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?'♪ composing':'♪ compose'}</button>
+        <button onClick={startMicPainting} disabled={busy&&!micPainting} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:micPainting?'rgba(255,100,100,.7)':'rgba(255,140,140,.4)',color:micPainting?'rgba(255,100,100,1)':'rgba(255,160,160,.8)',background:micPainting?'rgba(255,60,60,.1)':'transparent'})}>{micPainting?'🎤':'🎤 sing'}</button>
         <input ref={refMidi} type="file" accept=".mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('midi');}} disabled={busy} title="" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ midi</button>
+        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('midi');}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ midi</button>
         <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('audio');}} disabled={busy} title="" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ audio'}</button>
+        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('audio');}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ audio'}</button>
         <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('score');}} disabled={busy} title="upload a MusicXML score (.musicxml or .mxl from MuseScore / Finale / Dorico)" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 score'}</button>
+        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('score');}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 score'}</button>
         <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('image');}} disabled={busy} title="" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 image</button>
+        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('image');}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 image</button>
       </div>
 
       {preview && (
         <div onClick={closePreview} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1100,padding:10,overflow:'auto'}}>
           <div onClick={e=>e.stopPropagation()} style={{maxWidth:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
             <div style={{letterSpacing:'.12em',color:'rgba(201,168,76,.85)',fontSize:'.65rem',textAlign:'center'}}>🖨 {preview.w}×{preview.h} · {(preview.size/1024/1024).toFixed(1)} MB</div>
+            {composedMode&&(
+              <input
+                type="text"
+                value={compositionName}
+                onChange={e=>setCompositionName(e.target.value)}
+                onFocus={()=>{inputFocus.current=true;}}
+                onBlur={()=>{inputFocus.current=false;}}
+                placeholder="name this piece…"
+                maxLength={60}
+                style={{width:'100%',maxWidth:320,boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid rgba(201,168,76,.3)',borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:'.72rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center'}}
+              />
+            )}
             <button onClick={copyPreview} style={{padding:'14px 24px',background:'rgba(140,180,255,.15)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.6)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.14em',fontSize:'.8rem',textTransform:'uppercase',fontWeight:'bold'}}>⎘ copy png to clipboard</button>
             <div style={{fontSize:'.65rem',color:'rgba(207,197,168,.85)',textAlign:'center',padding:'10px 14px',lineHeight:1.6,maxWidth:340,border:'1px solid rgba(140,180,255,.25)',borderRadius:6,background:'rgba(140,180,255,.04)'}}>
               after copy → open <b>Files</b>, <b>Notes</b>, <b>Mail</b>, or any messaging app → <b>paste</b>. From Files you can save it as a real PNG; from Mail you can email it to yourself.
@@ -2253,49 +2638,83 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         </div>
       )}
 
-      {midiBlob && (
-        <div style={{width:'100%',maxWidth:480,marginBottom:10,textAlign:'center'}}>
-          <a href={blobUrl} download={midiName} style={{...btn({borderColor:'rgba(90,190,110,.5)',color:'rgba(90,190,110,.9)'}),display:'inline-block',textDecoration:'none',padding:'7px 20px'}}>↓ {midiName}</a>
-        </div>
-      )}
-
-      {audioBlob && (
-        <div style={{width:'100%',maxWidth:480,marginBottom:10,padding:'0 8px',boxSizing:'border-box',textAlign:'center'}}>
-          <div style={{fontSize:'.5rem',letterSpacing:'.1em',opacity:.55,marginBottom:8,textTransform:'uppercase'}}>{audioName} · {(audioBlob.size/1024).toFixed(0)} KB</div>
-          <button onClick={shareRecording} style={{...btn({borderColor:'rgba(255,160,80,.55)',color:'rgba(255,190,120,1)'}),padding:'9px 24px',fontSize:'.7rem',letterSpacing:'.14em',background:'transparent',cursor:'pointer'}}>↓ save recording</button>
-          {audioShareMsg && (
-            <div style={{fontSize:'.55rem',marginTop:8,padding:'5px 10px',display:'inline-block',borderRadius:3,color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.95)':audioShareMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.95)',border:'1px solid '+(audioShareMsg.tone==='ok'?'rgba(140,255,180,.4)':audioShareMsg.tone==='wait'?'rgba(201,168,76,.3)':'rgba(255,140,120,.35)')}}>
-              {audioShareMsg.text}
-            </div>
-          )}
-          <div style={{fontSize:'.5rem',color:'rgba(180,170,150,.45)',marginTop:6,lineHeight:1.4,padding:'0 8px'}}>
-            opens system save/share — Files, Downloads, AirDrop, Mail, audio apps
-          </div>
-        </div>
-      )}
-
       {info && (
         <div style={{width:Math.min(CW,typeof window!=='undefined'?window.innerWidth-32:480),marginBottom:8}}>
-          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',opacity:.5,marginBottom:4}}>
-            <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60%'}}>{info.title}</span>
-            <span>{disp}/{chords.length} · {info.dur}s</span>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',marginBottom:4}}>
+            <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60%',opacity:info.title.includes('→')?0.85:0.5,color:info.title.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:info.title.includes('→')?'.62rem':'.57rem',fontStyle:info.title.includes('→')?'italic':'normal'}}>{info.title}</span>
+            <span style={{opacity:.5}}>
+              {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(info.dur/playbackSpeed-elapsedS));return remS+'s left';})():info.dur+'s'}
+            </span>
           </div>
-          <div style={{height:2,background:'rgba(255,255,255,0.07)',borderRadius:1}}>
-            <div style={{height:'100%',width:pct+'%',background:playing&&info?'rgba(90,190,110,.7)':'rgba(201,168,76,.5)',borderRadius:1,transition:'width .1s linear'}}/>
+          <div
+            onClick={e=>{
+              if(!chords.length)return;
+              const rect=e.currentTarget.getBoundingClientRect();
+              const frac=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+              const idx=Math.floor(frac*chords.length);
+              stopAll();
+              resumeFromRef.current=idx;
+              startPlay();
+            }}
+            onTouchStart={e=>{e.preventDefault();}}
+            onTouchMove={e=>{
+              if(!chords.length)return;
+              e.preventDefault();
+              const touch=e.touches[0];
+              const rect=e.currentTarget.getBoundingClientRect();
+              const frac=Math.max(0,Math.min(1,(touch.clientX-rect.left)/rect.width));
+              const idx=Math.floor(frac*chords.length);
+              stopAll();
+              resumeFromRef.current=idx;
+              setDisp(idx);
+            }}
+            onTouchEnd={e=>{
+              e.preventDefault();
+              if(!chords.length)return;
+              startPlay();
+            }}
+            style={{height:8,background:'rgba(255,255,255,0.07)',borderRadius:4,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none'}}>
+            <div style={{height:'100%',width:pct+'%',background:playing&&info?'rgba(90,190,110,.7)':'rgba(201,168,76,.5)',borderRadius:4,transition:'none'}}/>
           </div>
         </div>
       )}
 
-      <div style={{position:'relative',border:'1px solid rgba(201,168,76,.12)',boxShadow:'0 0 40px rgba(0,0,0,.6)',marginBottom:8}}>
+      <div style={{position:'relative',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease'}}
+        onClick={e=>{
+          if(playing||!chords.length)return;
+          const cv=canvasRef.current;if(!cv)return;
+          const rect=cv.getBoundingClientRect();
+          const scaleX=CW/rect.width, scaleY=CH/rect.height;
+          const tx=(e.clientX-rect.left)*scaleX, ty=(e.clientY-rect.top)*scaleY;
+          const hit=chords.find(c=>{
+            const cell=grid.cells&&grid.cells[c.idx];
+            if(!cell)return false;
+            const segs=cell.segments||[cell];
+            return segs.some(s=>tx>=s.x&&tx<=s.x+s.w&&ty>=s.y&&ty<=s.y+s.h);
+          });
+          if(!hit)return;
+          Tone.start();
+          const midis=hit.n.map(({m,v,durMs})=>{playNote(m,v,durMs||300);return{m,dur:durMs||300};});
+          setActive(p=>new Set([...p,...midis.map(x=>x.m)]));
+          const byDur={};
+          for(const{m,dur}of midis){const t=Math.min(dur,800);(byDur[t]||(byDur[t]=[])).push(m);}
+          for(const[t,ms]of Object.entries(byDur)){
+            setTimeout(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
+          }
+        }}
+      >
         {viewMode==='image'&&originalImgUrl&&(
           <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <canvas ref={canvasRef} width={CW} height={CH} style={{display:'block',maxWidth:'100%',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal'}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
+        <canvas ref={highlightCanvasRef} width={CW} height={CH} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {chords.length===0&&(
           <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
-            <div style={{opacity:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase'}}>play · paint · upload</div>
-            <div style={{opacity:.05,fontSize:'2.8rem'}}>♩</div>
+            <div style={{opacity:composeMode?.22:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':'inherit'}}>
+              {composeMode?'play the keys to paint':'play · paint · upload'}
+            </div>
+            <div style={{opacity:composeMode?.08:.05,fontSize:'2.8rem'}}>♩</div>
           </div>
         )}
       </div>
@@ -2311,11 +2730,15 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
             <button onClick={()=>setShowAbout(false)} style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
             <div style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>concept</div>
 
+            <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Compose & Sing</h3>
+            <p style={{margin:'0 0 12px'}}>Two ways to create from scratch. <strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> reveals an on-screen piano — tap or hold keys, longer holds produce wider blocks. Hardware keyboard: A–K for white keys, W/E/T/Y/U for black. Backspace undoes the last chord. Enter toggles the keyboard. Space bar plays and pauses. Chord names (C maj, A min…) appear live in the note readout.</p>
+            <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Sing</strong> uses your microphone. Sing, hum, or whistle — pitch is detected every 300 ms, played through the piano sampler, and painted as a block. The canvas fills as you perform. Microphone access is blocked in the Claude sandbox but works fully as a standalone page.</p>
+
             <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmony vs Spectral</h3>
             <p style={{margin:'0 0 12px'}}>In both modes every note is painted as a block whose <em>hue</em> is determined by its pitch class (C, C♯, D…), whose <em>lightness</em> tracks its octave (higher notes lighter, lower notes darker), and whose <em>saturation</em> follows velocity (louder strikes are more vivid). What changes between the modes is the dictionary mapping pitch to hue.</p>
             <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmony mode</strong> places the twelve pitch classes around the colour wheel in <em>Circle-of-Fifths</em> order. Notes a perfect fifth apart (C → G → D → A …) become hue neighbours; tonally distant notes sit on opposite sides. Anything written in a key paints in a tight cluster of related colours, while modulations and dissonance show up as visible jumps across the wheel. Choose Harmony when you want the painting to <em>read</em> like the music.</p>
             <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral mode</strong> maps the same twelve pitch classes in strict chromatic order at 30° hue steps — C is red, every semitone shifts the hue one notch. Adjacent semitones become hue neighbours; perfect fifths now span seven steps around the wheel. The more literal "one colour per note" approach, useful for picking out melodic lines and for image transcription.</p>
-            <p style={{margin:'0 0 14px',fontStyle:'italic',opacity:.7}}>The painting geometry — block size, sequence, the φ proportions of the golden ratio — is identical in both modes. Only the colour-to-pitch lookup differs.</p>
+            <p style={{margin:'0 0 14px',fontStyle:'italic',opacity:.7}}>The painting geometry — block size, sequence, the φ proportions of the golden ratio — is identical in both modes. Only the colour-to-pitch lookup differs. During playback, tap or drag the progress bar to seek to any position. Chord names are recognised live in the compose readout (C maj, A min, dom7…).</p>
             <p style={{margin:'0 0 22px'}}>A separate toolbar toggle picks an optional <em>painting style</em> — which artist's mark-making language renders each chord. With nothing selected, the canvas paints in the implicit mosaic default: sharp φ-rectangles with a soft halo. <strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> (analytical cubism) mixes three subdivision strategies per chord — a simple bisect (one cut), a corner fan (2–3 planes radiating from one corner), or a centre fan (4–6 planes from an internal pivot) — so adjacent chords look meaningfully different rather than all using the same pattern. Adjacent planes alternate brighter / darker for the broken-light effect, with bold dark architectural contour lines along every plane edge. <strong style={{color:'rgba(210,170,255,.9)'}}>Rembrandt</strong> (Dutch Golden Age chiaroscuro) layers each chord as impasto brushstrokes built from a dark shadow underneath, 4–6 parallel bristle marks, a lit ridge highlight, and occasional specular sparkle — paint with depth and dimension catching the light from one side. <strong style={{color:'rgba(210,170,255,.9)'}}>Monet</strong> (impressionism) scatters 8–12 soft circular dabs per voice with luminosity-jittered colour and radial-gradient feathered edges — chord becomes a glowing colour field, no hard borders. Tap the active artist again to deselect and return to mosaic. The colour-to-pitch mapping and underlying φ-grid stay the same; only the mark-making changes.</p>
 
             <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Image transcription</h3>
@@ -2385,6 +2808,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
                   const evts=noteArr2events(morphed.notes,morphed.tempo);
                   if(!evts.length){setErr('Morph produced no notes');return;}
                   applyEvents(evts,morphed.title);
+                  setCurrentMood(currentMood+' → '+m);
                   const bytes=encodeMidi(evts,morphed.tempo||100);
                   setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                   setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
@@ -2402,9 +2826,24 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           watch the canvas animate while the piano stays visible). When not
           playing, it flows in normal document order. */}
       <div style={(playing||chords.length>0||composeMode)?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
+      {/* Recording save row — appears in dock when a recording is ready */}
+      {audioBlob&&(
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
+          <span style={{flex:1,fontSize:'.6rem',color:'rgba(255,140,120,.9)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{audioName} · {(audioBlob.size/1024).toFixed(0)}KB</span>
+          {audioShareMsg&&<span style={{fontSize:'.5rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
+          <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>share</button>
+          <button onClick={()=>{setAudioBlob(null);setAudioName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
+        </div>
+      )}
       {/* Note-name readout */}
-      <div style={{textAlign:'center',marginBottom:4,fontSize:'.7rem',letterSpacing:'.1em',color:active.size>0?GOLD:'rgba(201,168,76,.25)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
-        {active.size>0?[...active].sort((a,b)=>a-b).map(noteName).join(' · '):'—'}
+      <div style={{textAlign:'center',marginBottom:4,fontSize:'.7rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.4)':'rgba(201,168,76,.25)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
+        {active.size>0?(()=>{
+          const sorted=[...active].sort((a,b)=>a-b);
+          const chord=recognizeChord(sorted);
+          return chord
+            ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.55)',fontSize:'.6rem',letterSpacing:'.08em'}}>· {chord}</span></span>
+            : sorted.map(noteName).join(' · ');
+        })():composeMode&&chords.length>0?`${chords.length} chord${chords.length>1?'s':''}  ·  tap to play`:'—'}
       </div>
       {showAdvanced && composeMode && (
         <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
@@ -2417,60 +2856,99 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         </div>
       )}
       <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
-        <button onClick={()=>setShowAdvanced(v=>!v)} title="advanced: scale snap" style={{display:composeMode?'inline-block':'none',padding:'7px 10px',background:'transparent',color:showAdvanced?'rgba(201,168,76,.85)':'rgba(180,180,180,.5)',border:'1px solid '+(showAdvanced?'rgba(201,168,76,.45)':'rgba(180,180,180,.25)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
-          ⚙
+        <button onClick={()=>{if(paintScale!=='off'){setPaintScale('off');setShowAdvanced(false);}else setShowAdvanced(v=>!v);}} title="advanced: scale snap" style={{display:composeMode?'inline-block':'none',padding:'7px 10px',background:paintScale!=='off'?'rgba(140,255,180,.08)':'transparent',color:paintScale!=='off'?'rgba(140,255,180,.85)':showAdvanced?'rgba(201,168,76,.85)':'rgba(180,180,180,.5)',border:'1px solid '+(paintScale!=='off'?'rgba(140,255,180,.45)':showAdvanced?'rgba(201,168,76,.45)':'rgba(180,180,180,.25)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          ⚙ scale
         </button>
         <button
           onClick={handlePauseClick}
-          disabled={(!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)}
-          title={demoMode&&!playing?'demo mode — clear to play again':holdPaused?'click to resume':'click to pause'}
-          style={{padding:'7px 10px',background:holdPaused?'rgba(90,190,110,.08)':'transparent',color:chords.length?(playing||holdPaused?'rgba(90,190,110,.7)':(demoMode?'rgba(90,190,110,.2)':'rgba(90,190,110,.95)')):'rgba(90,190,110,.25)',border:'1px solid '+(chords.length&&!(demoMode&&!playing&&!holdPaused)?'rgba(90,190,110,.55)':'rgba(90,190,110,.2)'),borderRadius:5,cursor:chords.length&&!(demoMode&&!playing&&!holdPaused)?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          disabled={recording||(!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)}
+          title={recording?'stop recording to use playback controls':demoMode&&!playing?'demo mode — clear to play again':holdPaused?'click to resume':'click to pause'}
+          style={{padding:'7px 10px',background:holdPaused?'rgba(90,190,110,.08)':'transparent',color:recording?'rgba(90,190,110,.2)':chords.length?(playing||holdPaused?'rgba(90,190,110,.7)':(demoMode?'rgba(90,190,110,.2)':'rgba(90,190,110,.95)')):'rgba(90,190,110,.25)',border:'1px solid '+(recording?'rgba(90,190,110,.15)':chords.length&&!(demoMode&&!playing&&!holdPaused)?'rgba(90,190,110,.55)':'rgba(90,190,110,.2)'),borderRadius:5,cursor:recording||(!chords.length&&!(demoMode&&!playing&&!holdPaused))?'default':'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
           {holdPaused?'▶ resume':playing?'⏸ pause':'▶ play'}
         </button>
+        {currentMood&&(
+          <button onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} title="loop mood" style={{padding:'7px 10px',background:loopMode?'rgba(201,168,76,.1)':'transparent',color:loopMode?GOLD:'rgba(201,168,76,.35)',border:'1px solid '+(loopMode?'rgba(201,168,76,.5)':'rgba(201,168,76,.18)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>⟳ loop</button>
+        )}
         {viewMode!=='image'&&(
           <button onClick={exportImage} disabled={!chords.length||busy} style={{padding:'7px 10px',background:'transparent',color:chords.length?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(chords.length?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:chords.length&&!busy?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
             🖨 print
           </button>
         )}
-        {viewMode==='image'&&(
-          <button onClick={recording?stopRecord:startRecord} disabled={!chords.length&&!recording} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:chords.length||recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}} title={recording?'stop recording':'record audio output'}>
+        {viewMode==='image'&&chords.length>0&&(
+          <button onClick={recording?stopRecord:startRecord} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:chords.length||recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}} title={recording?'stop recording':'record audio output'}>
             {recording?'⏹ rec…':'⏺ rec'}
           </button>
         )}
-        {viewMode==='image'&&(
-          <span style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 8px',border:'1px solid rgba(201,168,76,.2)',borderRadius:5}}>
-            <span style={{fontSize:'.5rem',color:GOLD,minWidth:22,textAlign:'right',letterSpacing:'.04em'}}>{imgSpeed===0.5?'½×':`${imgSpeed}×`}</span>
-            <input type="range" min={0.5} max={2} step={0.05} value={imgSpeed}
-              onChange={e=>setImgSpeed(parseFloat(e.target.value))}
-              style={{width:80,accentColor:GOLD,cursor:'pointer'}}/>
-          </span>
-        )}
+        {chords.length>0&&(()=>{
+          const spd=playbackSpeed;
+          const setSpd=setPlaybackSpeed;
+          const lo=0.25;
+          const label=spd===0.5?'½×':spd===1?'1×':`${spd}×`;
+          return(
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 8px',border:'1px solid rgba(201,168,76,.2)',borderRadius:5}} title="playback speed">
+              <button onClick={()=>setSpd(1)} style={{padding:'4px 7px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:4,cursor:spd===1?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit'}}>{label}</button>
+              <input type="range" min={lo} max={2} step={0.05} value={spd}
+                onChange={e=>setSpd(parseFloat(e.target.value))}
+                style={{width:80,accentColor:GOLD,cursor:'pointer'}}/>
+            </span>
+          );
+        })()}
         <button onClick={clear} style={{padding:'7px 10px',background:'transparent',color:'rgba(207,197,168,.35)',border:'1px solid rgba(207,197,168,.14)',borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>clear</button>
+        {composeMode&&(
+          <button onClick={undoLast} disabled={!chords.length||playing} title="remove last chord (Backspace)" style={{padding:'7px 10px',background:'transparent',color:chords.length&&!playing?'rgba(207,197,168,.65)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!playing?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:5,cursor:chords.length&&!playing?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>↩</button>
+        )}
       </div>
       <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',paddingBottom:4,display:composeMode?'block':'none'}}>
         <div style={{position:'relative',width:PW,height:WKH,userSelect:'none',opacity:loadedMode?0.25:(busy&&!playing?0.4:1),filter:loadedMode?'grayscale(0.6)':'none',pointerEvents:loadedMode?'none':'auto'}}>
-          {WKEYS.map(({midi,wi})=>(
+          {WKEYS.map(({midi,wi})=>{
+            const snapped=paintSnapMidi(midi,paintScale);
+            const isHovered=hoveredKey===midi&&!busy&&!active.has(midi);
+            const [hr,hg,hb]=isHovered?gc(snapped,88).slice(0,3):[0,0,0];
+            const wkBg=active.has(midi)
+              ?'linear-gradient(180deg,#c9a84c,#a88830)'
+              :pending.includes(midi)
+                ?'rgba(201,168,76,.3)'
+                :isHovered
+                  ?`linear-gradient(180deg,rgba(${hr},${hg},${hb},0.28),rgba(${hr},${hg},${hb},0.18) 60%,rgba(240,235,220,1))`
+                  :'rgba(240,235,220,1)';
+            return(
             <div key={midi}
               onMouseDown={e=>!busy&&!loadedMode&&pressNote(midi,e)}
               onMouseUp={()=>!busy&&!loadedMode&&releaseNote(midi)}
-              onMouseLeave={()=>!busy&&!loadedMode&&pressInfo.current[paintSnapMidi(midi,paintScale)]&&releaseNote(midi)}
+              onMouseEnter={()=>!busy&&setHoveredKey(midi)}
+              onMouseLeave={()=>{setHoveredKey(null);if(!busy&&!loadedMode&&pressInfo.current[paintSnapMidi(midi,paintScale)])releaseNote(midi);}}
               onTouchStart={e=>{e.preventDefault();if(!busy&&!loadedMode)pressNote(midi,e);}}
               onTouchEnd={e=>{e.preventDefault();if(!busy&&!loadedMode)releaseNote(midi);}}
               onTouchCancel={e=>{if(!busy&&!loadedMode)releaseNote(midi);}}
-              style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:active.has(midi)?'linear-gradient(180deg,#c9a84c,#a88830)':pending.includes(midi)?'rgba(201,168,76,.3)':'rgba(240,235,220,1)',borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:active.has(midi)?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)'}}>
+              style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:active.has(midi)?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease'}}>
               {midi%12===0?'C'+(Math.floor(midi/12)-1):''}
             </div>
-          ))}
-          {BKEYS.map(({midi,lw})=>(
+            );
+          })}
+          {BKEYS.map(({midi,lw})=>{
+            const snapped=paintSnapMidi(midi,paintScale);
+            const isHovered=hoveredKey===midi&&!busy&&!active.has(midi);
+            const [hr,hg,hb]=isHovered?gc(snapped,88).slice(0,3):[0,0,0];
+            const outOfScale=paintScale!=='off'&&paintScalePCs(paintScale)&&!paintScalePCs(paintScale).includes(midi%12);
+            const bkBg=active.has(midi)
+              ?'linear-gradient(180deg,#7a5a00,#5a4000)'
+              :isHovered
+                ?`linear-gradient(180deg,rgba(${hr},${hg},${hb},0.7),rgba(${hr},${hg},${hb},0.4) 60%,#0a0a0a)`
+                :outOfScale
+                  ?'linear-gradient(180deg,#2a2a2a,#1a1a1a)'
+                  :'linear-gradient(180deg,#1a1a1a,#0a0a0a)';
+            return(
             <div key={midi}
               onMouseDown={e=>!busy&&!loadedMode&&pressNote(midi,e)}
               onMouseUp={()=>!busy&&!loadedMode&&releaseNote(midi)}
-              onMouseLeave={()=>!busy&&!loadedMode&&pressInfo.current[paintSnapMidi(midi,paintScale)]&&releaseNote(midi)}
+              onMouseEnter={()=>!busy&&setHoveredKey(midi)}
+              onMouseLeave={()=>{setHoveredKey(null);if(!busy&&!loadedMode&&pressInfo.current[paintSnapMidi(midi,paintScale)])releaseNote(midi);}}
               onTouchStart={e=>{e.preventDefault();if(!busy&&!loadedMode)pressNote(midi,e);}}
               onTouchEnd={e=>{e.preventDefault();if(!busy&&!loadedMode)releaseNote(midi);}}
               onTouchCancel={e=>{if(!busy&&!loadedMode)releaseNote(midi);}}
-              style={{position:'absolute',left:(lw+0.65)*WKW,top:0,width:BKW,height:BKH,background:active.has(midi)?'linear-gradient(180deg,#7a5a00,#5a4000)':(paintScale!=='off'&&paintScalePCs(paintScale)&&!paintScalePCs(paintScale).includes(midi%12))?'linear-gradient(180deg,#2a2a2a,#1a1a1a)':'linear-gradient(180deg,#1a1a1a,#0a0a0a)',borderRadius:'0 0 4px 4px',border:'1px solid rgba(0,0,0,.7)',cursor:busy&&!playing?'default':'pointer',zIndex:2,boxShadow:active.has(midi)?'none':'2px 5px 10px rgba(0,0,0,.85)',transition:'background .05s'}}/>
-          ))}
+              style={{position:'absolute',left:(lw+0.65)*WKW,top:0,width:BKW,height:BKH,background:bkBg,borderRadius:'0 0 4px 4px',border:'1px solid rgba(0,0,0,.7)',cursor:busy&&!playing?'default':'pointer',zIndex:2,boxShadow:active.has(midi)?'none':'2px 5px 10px rgba(0,0,0,.85)',transition:'background .08s ease'}}/>
+            );
+          })}
         </div>
       </div>
       </div>
