@@ -2397,32 +2397,36 @@ Composition rules:
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=800; // 800ms — longer for smoother flow
       const RMS_THRESHOLD=0.003; // very low — iOS same-device mic+speaker signal is weak
+      let prevChordSig=''; // chord-change detection
       const tick=()=>{
         if(!listenStreamRef.current){stopMicListening();return;}
         analyser.getFloatTimeDomainData(buf);
         let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
         if(rms<RMS_THRESHOLD){listenRafRef.current=requestAnimationFrame(tick);return;}
         const mag=fftMag(buf);
-        // Low minMag (0.08) — music has many simultaneous partials, more permissive
         const pitches=pickPitches(mag,sr,0.05);
         const now=performance.now();
         if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
           const sustainMs=Math.round(COMMIT_INTERVAL*1.8);
-          // Take up to 6 notes — music is polyphonic
           const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:sustainMs}));
-          // Show active keys but don't play — music is already playing
+          // Chord-change detection — only paint when harmony shifts
+          const sig=notes.map(n=>n.m).sort().join(',');
+          // Show active keys always
           notes.forEach(({m})=>{
             setActive(p=>new Set([...p,m]));
             setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),sustainMs);
           });
-          // Paint the chord
-          const idx=idxRef.current++;
-          if(!sessionStart.current)sessionStart.current=now;
-          const startMs=now-sessionStart.current;
-          const durQ=snapDurQ(COMMIT_INTERVAL/500);
-          setChords(p=>{const next=[...p,{n:notes,idx,startMs,recorded:true,durQ}];return next;});
-          setDisp(p=>p+1);
+          if(sig!==prevChordSig){
+            prevChordSig=sig;
+            // Paint only on chord change
+            const idx=idxRef.current++;
+            if(!sessionStart.current)sessionStart.current=now;
+            const startMs=now-sessionStart.current;
+            const durQ=snapDurQ(COMMIT_INTERVAL/500);
+            setChords(p=>{const next=[...p,{n:notes,idx,startMs,recorded:true,durQ}];return next;});
+            setDisp(p=>p+1);
+          }
         }
         listenRafRef.current=requestAnimationFrame(tick);
       };
@@ -2460,7 +2464,6 @@ Composition rules:
       const tick=()=>{
         if(!micStreamRef.current){stopMicPainting();return;}
         analyser.getFloatTimeDomainData(buf);
-        // RMS energy gate — bail out if signal is too quiet (room noise, breath, silence)
         let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
         if(rms<RMS_THRESHOLD){micRafRef.current=requestAnimationFrame(tick);return;}
         const mag=fftMag(buf);
@@ -2468,20 +2471,21 @@ Composition rules:
         const now=performance.now();
         if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
-          const sustainMs=Math.round(COMMIT_INTERVAL*1.8); // overlap into next chord for legato
-          const notes=pitches.slice(0,4).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:sustainMs}));
-          // Play the notes
-          notes.forEach(({m,v,durMs})=>{
-            playNote(m,v,durMs);
-            setActive(p=>new Set([...p,m]));
-            setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs,1000));
-          });
-          // Paint the chord
+          // Monophonic — take only the strongest pitch
+          const top=pitches[0];
+          // Scale-snap to C major
+          const snapped=paintSnapMidi(top.midi,'cmaj');
+          const sustainMs=Math.round(COMMIT_INTERVAL*1.8);
+          const notes=[{m:snapped,v:Math.max(50,Math.min(120,Math.round(top.mag*110))),durMs:sustainMs}];
+          // Play and highlight
+          playNote(snapped,notes[0].v,sustainMs);
+          setActive(p=>new Set([...p,snapped]));
+          setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(snapped);return s;}),Math.min(sustainMs,1000));
+          // Paint
           const idx=idxRef.current++;
           if(!sessionStart.current)sessionStart.current=now;
           const startMs=now-sessionStart.current;
-          const maxMs=COMMIT_INTERVAL;
-          const durQ=snapDurQ(maxMs/500);
+          const durQ=snapDurQ(COMMIT_INTERVAL/500);
           setChords(p=>{const next=[...p,{n:notes,idx,startMs,recorded:true,durQ}];return next;});
           setDisp(p=>p+1);
         }
