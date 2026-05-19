@@ -1614,6 +1614,7 @@ export default function Paintiano() {
   const [micVolLevel, setMicVolLevel] = useState(0); // 0–1 smoothed RMS
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioName, setAudioName] = useState('');
+  const [scoreName, setScoreName] = useState('');
   const [recordingName, setRecordingName] = useState('');
   const [audioShareMsg, setAudioShareMsg] = useState(null);
   // Auto-dismiss share status after a few seconds
@@ -1646,6 +1647,7 @@ export default function Paintiano() {
   const [demoMode, setDemoMode] = useState(false);
   // Inline "concept" modal: explains Harmony/Spectral and image transcription.
   const [showAbout, setShowAbout] = useState(false);
+  const [showSizePicker, setShowSizePicker] = useState(false);
   // Inline "guide" modal: searchable how-to entries covering every feature.
   const [showGuide, setShowGuide] = useState(false);
   const [guideQuery, setGuideQuery] = useState('');
@@ -2193,7 +2195,9 @@ export default function Paintiano() {
         const{raw,div,temps,skipped}=parseMidi(evt.target.result);
         const evts=toChords(raw,div,temps);
         if(!evts.length){setErr('No notes found in MIDI.');setErrInfo(false);return;}
-        stopAll();applyEvents(evts,file.name.replace(/\.midi?$/i,'').replace(/[_-]/g,' '));
+        const mName=file.name.replace(/\.midi?$/i,'').replace(/[_-]/g,' ');
+        stopAll();applyEvents(evts,mName);
+        setCompositionName(mName);
         if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
       }catch(e){setErr('MIDI parse error: '+e.message);setErrInfo(false);}
     };
@@ -2211,7 +2215,9 @@ export default function Paintiano() {
       ac.close();
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(!evts.length){setErr('No notes detected.');setErrInfo(false);return;}
-      applyEvents(evts,file.name.replace(/\.[^.]+$/,''));
+      const aName=file.name.replace(/\.[^.]+$/,'');
+      setCompositionName(aName);
+      applyEvents(evts,aName);
     }catch(e){setErr('Audio: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -2246,7 +2252,10 @@ export default function Paintiano() {
       setWLabel('parsing notes');setWPct(70);
       const evts=parseMusicXml(xmlText);
       if(!evts.length){setErr('No playable notes in MusicXML.');setErrInfo(false);return;}
-      applyEvents(evts,file.name.replace(/\.[^.]+$/,''));
+      const sName=file.name.replace(/\.[^.]+$/,'');
+      setScoreName(sName);
+      setCompositionName(sName);
+      applyEvents(evts,sName);
     }catch(e){setErr('Score: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -2964,11 +2973,23 @@ Composition rules:
   // Artifact iframes block <a download>, window.open, and rewrite blob: URLs to a
   // sandbox-internal scheme — the only thing that reliably works is rendering the PNG
   // inside the iframe as <img> and letting iOS native long-press → Save to Photos do the job.
-  const exportImage=async()=>{
+  const exportImage=async(sizeMode='web')=>{
     try{
       if(!chords.length){setErr('Nothing to print yet — load a song or image first.');setErrInfo(false);return;}
-      const SCALE=8;
       const{N,BW,BH,CW,CH}=grid;
+      // sizeMode: 'web' = 4× (good for screens/social), 'print' = A1 300dpi
+      let SCALE, label, dpi;
+      if(sizeMode==='print'){
+        const A1_MIN=7000;
+        const rawScale=Math.ceil(A1_MIN/Math.max(CW,CH));
+        SCALE=Math.max(rawScale,8);
+        dpi=Math.round((CW*SCALE)/23.39); // A1 width=23.39in
+        label='A1-print';
+      } else {
+        SCALE=4;
+        dpi=null;
+        label='web';
+      }
       const hi=document.createElement('canvas');
       hi.width=Math.round(CW*SCALE);hi.height=Math.round(CH*SCALE);
       const hctx=hi.getContext('2d');
@@ -2993,12 +3014,12 @@ Composition rules:
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
       if(!blob){setErr('Print: could not encode image.');setErrInfo(false);return;}
       const title=compositionName.trim()||info?.title||'painting';
-      const filename=`paintiano-${title.replace(/[^\w-]+/g,'_').slice(0,60)}-${hi.width}x${hi.height}.png`;
+      const filename=`paintiano-${title.replace(/[^\w-]+/g,'_').slice(0,60)}-${hi.width}x${hi.height}-${label}.png`;
       const file=new File([blob],filename,{type:'image/png'});
       const url=URL.createObjectURL(blob);
-      // Show the PNG inline + keep File for the explicit Save button (must be user-gesture for iOS share to work)
       setPreviewMsg(null);
-      setPreview({url,filename,w:hi.width,h:hi.height,size:blob.size,file});
+      setShowSizePicker(false);
+      setPreview({url,filename,w:hi.width,h:hi.height,size:blob.size,file,dpi,label});
     }catch(e){setErr('Print: '+e.message);setErrInfo(false);}
   };
 
@@ -3036,7 +3057,7 @@ Composition rules:
   };
 
   return (
-    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'32px 16px 220px':'32px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)'}}>
+    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'48px 16px 220px':'48px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)'}}>
       <div style={{textAlign:'center',marginBottom:18}}>
         <h1 style={{fontSize:'2.2rem',fontWeight:300,letterSpacing:'.18em',margin:'0 0 4px',color:'rgba(201,168,76,.9)',paddingLeft:'.18em'}}>Paintiano</h1>
         <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.7,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}><span onClick={()=>setShowAbout(true)} style={{cursor:'pointer',paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)',opacity:1}}>{t('concept')}</span> <span onClick={busy?undefined:demoPlay} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.55)',color:busy?'rgba(201,168,76,.25)':'rgba(201,168,76,.85)',opacity:1}}>{t('demo')}</span> <span onClick={()=>setShowGuide(true)} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>{t('guide')}</span><span style={{marginLeft:18,opacity:1}}><button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} style={{padding:'1px 5px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.45)',borderRadius:2,cursor:'pointer',fontSize:'.45rem',fontFamily:'inherit',letterSpacing:'.1em'}}>{lang}</button></span></p>
@@ -3105,22 +3126,19 @@ Composition rules:
       {preview && (
         <div onClick={closePreview} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1100,padding:10,overflow:'auto'}}>
           <div onClick={e=>e.stopPropagation()} style={{maxWidth:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
-            <div style={{letterSpacing:'.12em',color:'rgba(201,168,76,.85)',fontSize:'.65rem',textAlign:'center'}}>🖨 {preview.w}×{preview.h} · {(preview.size/1024/1024).toFixed(1)} MB</div>
-            {composedMode&&(
-              <input
-                type="text"
-                value={compositionName}
-                onChange={e=>setCompositionName(e.target.value)}
-                onFocus={()=>{inputFocus.current=true;}}
-                onBlur={()=>{inputFocus.current=false;}}
-                placeholder="name this piece…"
-                maxLength={60}
-                style={{width:'100%',maxWidth:320,boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid rgba(201,168,76,.3)',borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:'.72rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center'}}
-              />
-            )}
-            <button onClick={copyPreview} style={{padding:'14px 24px',background:'rgba(140,180,255,.15)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.6)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.14em',fontSize:'.8rem',textTransform:'uppercase',fontWeight:'bold'}}>⎘ copy png to clipboard</button>
-            <div style={{fontSize:'.65rem',color:'rgba(207,197,168,.85)',textAlign:'center',padding:'10px 14px',lineHeight:1.6,maxWidth:340,border:'1px solid rgba(140,180,255,.25)',borderRadius:6,background:'rgba(140,180,255,.04)'}}>
-              after copy → open <b>Files</b>, <b>Notes</b>, <b>Mail</b>, or any messaging app → <b>paste</b>. From Files you can save it as a real PNG; from Mail you can email it to yourself.
+            <div style={{letterSpacing:'.12em',color:'rgba(201,168,76,.85)',fontSize:'.65rem',textAlign:'center'}}>🖨 {preview.w}×{preview.h}{preview.dpi?` · ${preview.dpi}dpi`:''}{preview.label?' · '+preview.label:''} · {(preview.size/1024/1024).toFixed(1)} MB</div>
+            {compositionName.trim()&&(<div style={{fontSize:'.6rem',color:'rgba(201,168,76,.6)',textAlign:'center',letterSpacing:'.08em'}}>{compositionName}</div>)}
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'center'}}>
+              <button onClick={()=>{
+                if(navigator.share){
+                  navigator.share({files:[preview.file],title:preview.filename}).catch(()=>{});
+                } else {
+                  const a=document.createElement('a');
+                  a.href=preview.url;a.download=preview.filename;
+                  a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);
+                }
+              }} style={{padding:'12px 20px',background:'rgba(140,180,255,.15)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.6)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:'.75rem',textTransform:'uppercase',fontWeight:'bold'}}>↓ {t('save')}</button>
+              <button onClick={copyPreview} style={{padding:'12px 20px',background:'rgba(140,180,255,.06)',color:'rgba(160,200,255,.75)',border:'1px solid rgba(140,180,255,.3)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:'.75rem',textTransform:'uppercase'}}>⎘ copy</button>
             </div>
             {previewMsg && (
               <div style={{fontSize:'.6rem',padding:'8px 12px',borderRadius:4,maxWidth:340,textAlign:'center',lineHeight:1.4,wordBreak:'break-word',color:previewMsg.tone==='ok'?'rgba(140,255,180,.95)':previewMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.95)',border:'1px solid '+(previewMsg.tone==='ok'?'rgba(140,255,180,.4)':previewMsg.tone==='wait'?'rgba(201,168,76,.25)':'rgba(255,140,120,.3)'),background:previewMsg.tone==='ok'?'rgba(140,255,180,.08)':'transparent'}}>
@@ -3274,6 +3292,38 @@ Composition rules:
       </div>
 
 
+      {showSizePicker && (
+        <div onClick={()=>setShowSizePicker(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'#0a0a14',border:'1px solid rgba(200,160,255,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:'rgba(200,160,255,.75)',fontSize:'.65rem'}}>
+              🖨 {t('print').replace('🖨 ','')}</div>
+            <input
+              type="text"
+              value={compositionName}
+              onChange={e=>setCompositionName(e.target.value)}
+              onFocus={()=>{inputFocus.current=true;}}
+              onBlur={()=>{inputFocus.current=false;}}
+              placeholder="name this piece…"
+              maxLength={80}
+              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:'.72rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14}}
+            />
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:'.72rem'}}>
+                🖥 {t('sizeWeb')||'Web / Social'}
+                <div style={{fontSize:'.52rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>~4× · fast · share online</div>
+              </button>
+              <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:'.72rem'}}>
+                🖨 {t('sizePrint')||'Print A1 · 300 DPI'}
+                <div style={{fontSize:'.52rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>~20× · large file · print-ready</div>
+              </button>
+              <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.6rem',marginTop:4}}>
+                {t('cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAbout && (
         <div onClick={()=>setShowAbout(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
@@ -3360,11 +3410,16 @@ Composition rules:
         </div>
       )}
       {audioBlob&&(
-        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
-          <span style={{flex:1,fontSize:'.6rem',color:'rgba(255,140,120,.9)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{audioName} · {(audioBlob.size/1024).toFixed(0)}KB</span>
-          {audioShareMsg&&<span style={{fontSize:'.5rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
-          <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
-          <button onClick={()=>{setAudioBlob(null);setAudioName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
+        <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{flex:1,fontSize:'.6rem',color:'rgba(255,140,120,.9)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{audioName} · {(audioBlob.size/1024).toFixed(0)}KB</span>
+            {audioShareMsg&&<span style={{fontSize:'.5rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
+            <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
+            <button onClick={()=>{setAudioBlob(null);setAudioName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
+          </div>
+          {audioBlob.type&&audioBlob.type.includes('webm')&&(
+            <div style={{fontSize:'.48rem',color:'rgba(255,180,120,.55)',letterSpacing:'.04em'}}>webm/opus format · plays in Chrome, VLC — not Windows Media Player</div>
+          )}
         </div>
       )}
       {/* Note-name readout */}
@@ -3402,7 +3457,7 @@ Composition rules:
           <button onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} style={{padding:'7px 10px',background:loopMode?'rgba(201,168,76,.1)':'transparent',color:loopMode?GOLD:'rgba(201,168,76,.6)',border:'1px solid '+(loopMode?'rgba(201,168,76,.5)':'rgba(201,168,76,.3)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{t('loop')}</button>
         )}
         {viewMode!=='image'&&(
-          <button onClick={exportImage} disabled={!chords.length||busy||micPainting||micListening} style={{padding:'7px 10px',background:'transparent',color:chords.length&&!micPainting&&!micListening?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(chords.length&&!micPainting&&!micListening?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:chords.length&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          <button onClick={()=>chords.length&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!chords.length||busy||micPainting||micListening} style={{padding:'7px 10px',background:'transparent',color:chords.length&&!micPainting&&!micListening?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(chords.length&&!micPainting&&!micListening?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:chords.length&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
             {t('print')}
           </button>
         )}
