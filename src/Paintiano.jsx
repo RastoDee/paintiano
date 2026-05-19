@@ -1075,6 +1075,11 @@ export default function Paintiano() {
   const ripplesRef    = useRef([]);
   const visualizerRef = useRef(null);
   const viewModeRef   = useRef('paint');
+  const imgSpeedRef   = useRef(1);
+  const resumeFromRef = useRef(null); // null = fresh start, number = resume from this disp index
+  // Tracks the last full-paint snapshot so playback can append incrementally
+  // instead of re-running every artist-style draw from chord 0 on each `disp` tick.
+  const lastPaintRef  = useRef({disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null});
 
   const [mode,      setMode]      = useState('harmony');
   const [chords,    setChords]    = useState([]);
@@ -1123,6 +1128,8 @@ export default function Paintiano() {
   // Scale-snap is now hidden behind an advanced toggle. With 88 keys available
   // the user generally wants the real chromatic piano; snap is opt-in.
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [imgSpeed,     setImgSpeed]     = useState(1);
+  const [holdPaused,   setHoldPaused]   = useState(false); // true while button is held during playback
   // Compose mode: explicit toggle that surfaces the piano keyboard. Default OFF
   // so the keyboard doesn't clutter the canvas during normal playback / loaded
   // songs / image transcription. Auto-enabled by Für Elise demo. Auto-cleared
@@ -1163,7 +1170,13 @@ export default function Paintiano() {
     let dead=false;
     const s=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
       onload:()=>{if(!dead){samplerOk.current=true;setPiano('ready');}},
-      onerror:()=>{if(!dead){samplerOk.current=false;setPiano('error');}},
+      onerror:()=>{if(!dead){
+        samplerOk.current=false;setPiano('error');
+        // One-time, dismissible info: explain why audio sounds thin. Uses
+        // errInfo (info-tone, not error-tone) so it doesn't look like a crash.
+        setErr('Grand-piano samples could not load — falling back to a built-in synth. Audio still works, just less rich.');
+        setErrInfo(true);
+      }},
     }).toDestination();
     samplerRef.current=s;
     return()=>{dead=true;try{s.dispose();}catch(_){}samplerRef.current=null;samplerOk.current=false;};
@@ -1185,15 +1198,54 @@ export default function Paintiano() {
       // Stopped: leave whatever pixels the animation painted
       return;
     }
-    ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
-    {
+    // Helper: draw a single chord at its grid cell. Pulled out for the
+    // incremental-append fast path below.
+    const drawOne = (chord) => {
+      const{n:notes,idx}=chord;
+      const cell=grid.cells&&grid.cells[idx];
+      if(cell){
+        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
+        else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
+      }else{
+        const si=idx%(N*N),col=si%N,row=Math.floor(si/N);
+        drawBlock(ctx,col*BW,row*BH,notes,gc,BW,BH,style);
+      }
+    };
+    // Fast path: if only `disp` advanced during playback and every other input
+    // is unchanged, append only the newly-revealed blocks instead of re-running
+    // every artist-style draw from chord 0. Cuts an O(N²) playback into O(N).
+    const prev = lastPaintRef.current;
+    const lim = anim?disp:playing?disp:holdPaused?disp:chords.length;
+    const canAppend =
+      (playing||anim) &&
+      prev.chords===chords &&
+      prev.grid===grid &&
+      prev.gc===gc &&
+      prev.style===style &&
+      prev.viewMode===viewMode &&
+      prev.mode===mode &&
+      prev.stamp===stamp &&
+      prev.anim===anim &&
+      prev.playing===playing &&
+      lim>=prev.disp &&
+      lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)); // sanity bound: skip giant jumps
+    if(canAppend && lim>prev.disp){
+      for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
+    }else{
+      ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
       ctx.strokeStyle='rgba(255,255,255,0.025)';ctx.lineWidth=.5;
       for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*BW,0);ctx.lineTo(i*BW,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*BH);ctx.lineTo(CW,i*BH);ctx.stroke();}
-      const lim=anim?disp:playing?disp:chords.length;
-      chords.slice(0,lim).forEach(({n:notes,idx})=>{const cell=grid.cells&&grid.cells[idx];if(cell){if(cell.segments)cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);}else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(ctx,col*BW,row*BH,notes,gc,BW,BH,style);}});
-      if(!info&&!playing){const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);if(pending.length>0)drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);}
+      for(let i=0;i<lim;i++) drawOne(chords[i]);
+      if(!info&&!playing){
+        const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
+        const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
+        ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
+        ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
+        if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
+      }
     }
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style]);
+    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode};
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,holdPaused]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -1248,6 +1300,8 @@ export default function Paintiano() {
 
   // Mirror viewMode into a ref so playNote (stable callback) can read it
   useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
+  // Mirror imgSpeed into a ref so the image step loop reads the live value mid-playback
+  useEffect(() => { imgSpeedRef.current = imgSpeed; }, [imgSpeed]);
 
   // Visualizer animation loop — runs always; cheap when no ripples
   useEffect(() => {
@@ -1288,7 +1342,25 @@ export default function Paintiano() {
 
   const stopAll = useCallback(()=>{
     genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
+    try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
     setPlaying(false);setAnim(false);
+    setHoldPaused(false);resumeFromRef.current=null;
+  },[]);
+
+  // Schedule a timeout and remember its id so stopAll can cancel it. The id
+  // is removed from the tracking array once it fires (preventing unbounded
+  // growth on long playbacks — previously the array kept every fired id until
+  // stopAll). genRef.current is captured so the callback can self-cancel if
+  // playback has been stopped + restarted.
+  const pushTimer = useCallback((fn,ms)=>{
+    const gen=genRef.current;
+    const id=setTimeout(()=>{
+      timers.current=timers.current.filter(t=>t!==id);
+      if(genRef.current!==gen)return;
+      fn();
+    },ms);
+    timers.current.push(id);
+    return id;
   },[]);
 
   const commit = useCallback(()=>{
@@ -1406,6 +1478,7 @@ export default function Paintiano() {
     setCurrentMood(null);
     setVarySource(null);
     setSongQ('');
+    setPickMode(null);
     setComposeMode(false);
     setDemoMode(false);
   },[stopAll]);
@@ -1437,8 +1510,22 @@ export default function Paintiano() {
     timers.current.push(setTimeout(()=>setPlaying(false),t+300));
   };
 
+  const resumeDemo=useCallback((fromNote)=>{
+    Tone.start();setDemoMode(true);setPlaying(true);
+    let t=0;
+    DEMO.slice(fromNote).forEach(({n:notes,d})=>{
+      const ct=t;
+      timers.current.push(setTimeout(()=>{
+        notes.forEach(({m,v,durMs})=>{playNote(m,v,durMs);setActive(p=>new Set([...p,m]));setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs,d));});
+        const idx=idxRef.current++;setChords(p=>[...p,{n:notes,idx,startMs:ct,recorded:true,durQ:snapDurQ(d/500)}]);setDisp(p=>p+1);
+      },ct));
+      t+=d+25;
+    });
+    timers.current.push(setTimeout(()=>setPlaying(false),t+300));
+  },[playNote]);
+
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
     const r=new FileReader();
     r.onload=evt=>{
       try{
@@ -1452,7 +1539,7 @@ export default function Paintiano() {
   };
 
   const loadAudio=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
     setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -1472,7 +1559,7 @@ export default function Paintiano() {
   // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
     setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -1547,7 +1634,7 @@ export default function Paintiano() {
 
   const aiMidi=useCallback((title)=>{
     if(!title||playing||anim||working)return;
-    setSongQ(title);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();
+    setSongQ(title);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');stopAll();
     const song=findSong(title);
     if(!song){setErr('Song not found in library.');return;}
     const evts=noteArr2events(song.notes,song.tempo);
@@ -1573,7 +1660,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       const resp=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'claude-sonnet-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
       });
       setWPct(75);
       const respText=await resp.text();
@@ -1600,7 +1687,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
 
 
   const loadImage=useCallback(e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
     const r=new FileReader();
     r.onerror=()=>{setErr('Could not read image.');setErrInfo(false);};
     r.onload=evt=>{
@@ -1608,7 +1695,12 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       img.onerror=()=>{setErr('Could not decode image.');setErrInfo(false);};
       img.onload=()=>{
         try{
-          const nc=192,nr=120,BW=Math.max(1,Math.floor(480/nc)),BH=Math.max(2,Math.round(BW*PHI));
+          const nc=192;
+          const availW=window.innerWidth||480;
+          const BW=Math.max(1,Math.floor(availW/nc));
+          const BH=Math.max(2,Math.round(BW*PHI));
+          const imgRatio=img.naturalHeight/Math.max(1,img.naturalWidth);
+          const nr=Math.max(60,Math.min(400,Math.round(nc*imgRatio*BW/BH)));
           const ofc=document.createElement('canvas');ofc.width=nc;ofc.height=nr;
           const ctx=ofc.getContext('2d');ctx.drawImage(img,0,0,nc,nr);
           const raw=ctx.getImageData(0,0,nc,nr).data;
@@ -1680,7 +1772,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
     stopAll();applyEvents(wi.map(c=>({n:c.n,startMs:c.startMs})),best.title+' · '+best.artist);
   };
 
-  const startAnimate=()=>{
+  const startAnimate=useCallback(()=>{
     if(busy||!chords.length)return;stopAll();setDisp(0);setAnim(true);
     if(viewMode==='image'&&pixelRef.current){
       const{nc,nr,px}=pixelRef.current,{BW,BH,CW,CH}=grid,cv=canvasRef.current,ctx=cv?.getContext('2d'),gen=genRef.current;
@@ -1709,14 +1801,16 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       };
       step();
     }else{let i=0;const step=()=>{if(i>chords.length){setAnim(false);return;}setDisp(i++);timers.current.push(setTimeout(step,i<20?0:18));};step();}
-  };
+  },[busy,chords,viewMode,grid,stopAll]);
 
-  const startPlay=()=>{
-    if(busy||!chords.length)return;Tone.start();stopAll();setDisp(0);setPlaying(true);
+  const startPlay=useCallback(()=>{
+    if(busy||!chords.length)return;Tone.start();
+    const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
+    stopAll();setDisp(fromIdx);setPlaying(true);
     if(viewMode==='image'&&pixelRef.current){
       const{nc,nr,px}=pixelRef.current,{BW,BH,CW,CH}=grid,cv=canvasRef.current,ctx=cv?.getContext('2d'),gen=genRef.current;
-      if(ctx){ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);}
-      let i=0;
+      if(ctx&&fromIdx===0){ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);}
+      let i=fromIdx;
       const CHORD_SIZE=6;
       const colStep=pixelRef.current.colStep||1;
       const effCols=Math.ceil(nc/colStep);
@@ -1745,12 +1839,10 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           const velScale=chords[i]._runLen?1:0.75;
           try{
             chords[i].n.forEach(({m,v,durMs})=>{
-              playNote(m,Math.round(v*velScale),durMs*durMul);
-              // Mirror the chord-playback path: highlight keys + populate the note
-              // readout. Auto-clear after the audible duration so the gold sustain
-              // band doesn't outlive the sound.
+              const scaledDur=Math.round(durMs*durMul/imgSpeedRef.current);
+              playNote(m,Math.round(v*velScale),scaledDur);
               setActive(p=>new Set([...p,m]));
-              setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs*durMul,800));
+              setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(scaledDur,800));
             });
             // Scroll the keyboard to center on this chord's notes (same behavior
             // as the chord-playback loop). Lets you see which keys correspond to
@@ -1767,14 +1859,15 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         }
         setDisp(i+1);
         i++;
-        timers.current.push(setTimeout(step,150));
+        timers.current.push(setTimeout(step,Math.round(150/imgSpeedRef.current)));
       };
       step();
     }else{
       // If chords were recorded via keyboard with real timing, use those gaps.
       // Otherwise (e.g. file-loaded but no info, or synthesized), fall back to a uniform 350ms step.
       const useRecorded=chords.some(c=>c.recorded);
-      chords.forEach(({n,startMs,recorded},i)=>{const delay=(info||recorded||useRecorded)?(startMs||0):i*350;timers.current.push(setTimeout(()=>{try{setDisp(i+1);n.forEach(({m,v,durMs})=>{playNote(m,v,durMs||300);setActive(p=>new Set([...p,m]));setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs||300,800));});
+      const baseMs=fromIdx>0?(chords[fromIdx]?.startMs||0):0;
+      chords.slice(fromIdx).forEach(({n,startMs,recorded},j)=>{const i=fromIdx+j;const delay=(info||recorded||useRecorded)?Math.max(0,(startMs||0)-baseMs):j*350;timers.current.push(setTimeout(()=>{try{setDisp(i+1);n.forEach(({m,v,durMs})=>{playNote(m,v,durMs||300);setActive(p=>new Set([...p,m]));setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs||300,800));});
         // Auto-scroll the keyboard so the active keys are centered in view.
         // Uses smooth scroll so the keyboard glides between chords instead of jumping.
         const wrap=kbScrollRef.current;
@@ -1786,10 +1879,32 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           }
         }
       }catch(_){}},delay));});
-      const last=chords[chords.length-1],end=(info||useRecorded)?(last?.startMs||0)+(last?.n?.reduce((mx,nn)=>Math.max(mx,nn.durMs||0),0)||500)+300:chords.length*350+500;
+      const last=chords[chords.length-1],end=(info||useRecorded)?Math.max(0,(last?.startMs||0)-baseMs)+(last?.n?.reduce((mx,nn)=>Math.max(mx,nn.durMs||0),0)||500)+300:(chords.length-fromIdx)*350+500;
       timers.current.push(setTimeout(()=>{setPlaying(false);setDisp(chords.length);},end));
     }
-  };
+  },[busy,chords,viewMode,grid,info,playNote,stopAll]);
+
+  const handlePauseClick=useCallback(()=>{
+    if(playing){
+      resumeFromRef.current=disp;
+      setHoldPaused(true);
+      genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
+      try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+      setPlaying(false);setAnim(false);
+    }else if(holdPaused){
+      setHoldPaused(false);
+      if(demoMode){
+        const from=resumeFromRef.current??0;
+        resumeFromRef.current=null;
+        resumeDemo(from);
+      }else{
+        startPlay(); // startPlay reads and clears resumeFromRef itself
+      }
+    }else if(!busy){
+      resumeFromRef.current=null;
+      startPlay();
+    }
+  },[playing,holdPaused,busy,disp,demoMode,resumeDemo,startPlay]);
 
   // Auto-stop the recorder once playback finishes (playing → false).
   // A 700 ms tail lets the last notes ring out before capture closes.
@@ -2006,10 +2121,10 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
   };
 
   return (
-    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'32px 16px 200px':'32px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)'}}>
+    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'32px 16px 220px':'32px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)'}}>
       <div style={{textAlign:'center',marginBottom:18}}>
         <h1 style={{fontSize:'2.2rem',fontWeight:300,letterSpacing:'.18em',margin:'0 0 4px',color:'rgba(201,168,76,.9)',paddingLeft:'.18em'}}>Paintiano</h1>
-        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.38,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}>music → φ painting <span style={{opacity:.55}}>· v2.0</span> <span onClick={()=>setShowAbout(true)} style={{cursor:'pointer',marginLeft:4,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.45)',color:'rgba(201,168,76,.75)'}}>concept</span> <span onClick={()=>setShowGuide(true)} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.5)',color:'rgba(140,200,255,.8)'}}>guide</span></p>
+        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.38,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}>music → φ painting <span style={{opacity:.55}}>· v2.1</span> <span onClick={()=>setShowAbout(true)} style={{cursor:'pointer',marginLeft:4,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)',opacity:1}}>concept</span> <span onClick={busy?undefined:demoPlay} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.55)',color:busy?'rgba(201,168,76,.25)':'rgba(201,168,76,.85)',opacity:1}}>demo</span> <span onClick={()=>setShowGuide(true)} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>guide</span></p>
         <div style={{fontSize:'.55rem',letterSpacing:'.1em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
       </div>
 
@@ -2024,32 +2139,44 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
             <button key={k} onClick={()=>setStyle(style===k?null:k)} style={{...btn(),border:'none',borderRadius:0,padding:'5px 9px',background:style===k?'rgba(180,140,255,.16)':'transparent',color:style===k?'rgba(210,170,255,.95)':'rgba(207,197,168,.45)'}}>{label}</button>
           ))}
         </div>
-        <button onClick={demoPlay} disabled={busy} title="play Für Elise demo" style={btn({borderColor:'rgba(201,168,76,.4)',color:busy?'rgba(201,168,76,.3)':GOLD})}>♩ demo</button>
-        <button onClick={clear} style={btn({borderColor:'rgba(207,197,168,.14)',color:'rgba(207,197,168,.35)'})}>clear</button>
       </div>
 
-      <div style={{width:'100%',maxWidth:480,marginBottom:12}}>
+      <div style={{display:'flex',gap:6,marginBottom:12,width:'100%',maxWidth:480,alignItems:'stretch'}}>
         <select
           value={songQ}
           onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);aiMidi(e.target.value);}}}
           disabled={busy}
           title=""
-          style={{width:'100%',background:'rgba(14,10,22,0.95)',border:'1px solid rgba(201,168,76,.3)',borderRadius:3,padding:'8px 12px',color:songQ?'rgba(207,197,168,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:busy?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize'}}>
+          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid rgba(201,168,76,.3)',borderRadius:3,padding:'8px 12px',color:songQ?'rgba(207,197,168,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:busy?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize'}}>
           <option value="">✦ select a mood…</option>
           {MOODS.map(m=><option key={m} value={m}>{m}</option>)}
         </select>
+        <button onClick={()=>chords.length&&!busy&&currentMood&&setShowMorphMenu(true)} disabled={!chords.length||busy||!currentMood} title={!currentMood?'pick a mood first':'morph current mood into another'} style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy?'rgba(220,170,255,.9)':'rgba(220,150,255,.2)'})}>✦ morph</button>
+        <button onClick={()=>{
+          if(busy||!varySource)return;
+          const varied=rerollSong(varySource);
+          if(!varied)return;
+          setVarySource(varied);
+          stopAll();
+          const evts=noteArr2events(varied.notes,varied.tempo);
+          if(!evts.length){setErr('Variation produced no notes');return;}
+          applyEvents(evts,varied.title+' ·');
+          const bytes=encodeMidi(evts,varied.tempo||100);
+          setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
+          setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
+        }} disabled={!varySource||busy} title={!varySource?'pick a mood first':'reroll: a fresh take'} style={{...btn({borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.2)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy?1:.35}}>🎲 vary</button>
       </div>
 
       <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'nowrap',justifyContent:'center',overflowX:'auto',maxWidth:'100%',padding:'2px 4px',WebkitOverflowScrolling:'touch'}}>
         <button onClick={()=>{if(!composeMode){clear();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} title={composeMode?'hide keyboard':'show piano keyboard'} style={btn({padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>♪ compose</button>
         <input ref={refMidi} type="file" accept=".mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('midi');}} disabled={busy} title="" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ midi</button>
+        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('midi');}} disabled={busy} title="" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ midi</button>
         <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('audio');}} disabled={busy} title="" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ audio'}</button>
+        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('audio');}} disabled={busy} title="" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ audio'}</button>
         <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('score');}} disabled={busy} title="upload a MusicXML score (.musicxml or .mxl from MuseScore / Finale / Dorico)" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 score'}</button>
+        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('score');}} disabled={busy} title="upload a MusicXML score (.musicxml or .mxl from MuseScore / Finale / Dorico)" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 score'}</button>
         <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setPickMode('image');}} disabled={busy} title="" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 image</button>
+        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('image');}} disabled={busy} title="" style={btn({padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 image</button>
       </div>
 
       {preview && (
@@ -2111,25 +2238,6 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         </div>
       )}
 
-      <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',justifyContent:'center'}}>
-        <button onClick={()=>chords.length&&!busy&&currentMood&&setShowMorphMenu(true)} disabled={!chords.length||busy||!currentMood} title={!currentMood?'pick a mood first':'morph current mood into another'} style={btn({borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy?'rgba(220,170,255,.9)':'rgba(220,150,255,.2)'})}>✦ morph</button>
-        <button onClick={()=>{
-          if(busy||!varySource)return;
-          const varied=rerollSong(varySource);
-          if(!varied)return;
-          setVarySource(varied);
-          stopAll();
-          const evts=noteArr2events(varied.notes,varied.tempo);
-          if(!evts.length){setErr('Variation produced no notes');return;}
-          applyEvents(evts,varied.title+' ·');
-          const bytes=encodeMidi(evts,varied.tempo||100);
-          setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
-          setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
-        }} disabled={!varySource||busy} title={!varySource?'pick a mood first':'reroll: a fresh take'} style={{...btn({borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.2)'}),opacity:varySource&&!busy?1:.35}}>🎲 vary</button>
-        <button onClick={busy?stopAll:startPlay} disabled={demoMode&&!playing} title={demoMode&&!playing?'demo mode — clear to play again':''} style={btn({borderColor:'rgba(90,190,110,.45)',color:chords.length?playing?'rgba(90,190,110,.5)':(demoMode?'rgba(90,190,110,.2)':'rgba(90,190,110,.9)'):'rgba(90,190,110,.2)'})}>{playing?'■ stop':'♩ play'}</button>
-        <button onClick={exportImage} disabled={!chords.length||busy} style={btn({borderColor:'rgba(180,140,255,.4)',color:chords.length?'rgba(200,160,255,.9)':'rgba(180,140,255,.2)'})}>🖨 print</button>
-      </div>
-
       {err && (
         <div style={{width:'100%',maxWidth:480,marginBottom:10,fontSize:'.6rem',lineHeight:1.5,textAlign:'left',padding:'8px 12px',borderRadius:2,maxHeight:240,overflow:'auto',wordBreak:'break-word',fontFamily:'monospace',color:errInfo?'rgba(201,168,76,.85)':'rgba(255,100,80,.85)',border:errInfo?'1px solid rgba(201,168,76,.25)':'1px solid rgba(255,100,80,.2)'}}>
           {errInfo?'𝄞 ':'✕ '}{err}
@@ -2167,7 +2275,7 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       )}
 
       {info && (
-        <div style={{width:Math.min(CW,typeof window!=='undefined'?window.innerWidth-32:480),marginBottom:10}}>
+        <div style={{width:Math.min(CW,typeof window!=='undefined'?window.innerWidth-32:480),marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',opacity:.5,marginBottom:4}}>
             <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60%'}}>{info.title}</span>
             <span>{disp}/{chords.length} · {info.dur}s</span>
@@ -2178,9 +2286,9 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         </div>
       )}
 
-      <div style={{position:'relative',border:'1px solid rgba(201,168,76,.18)',boxShadow:'0 0 40px rgba(0,0,0,.6)',marginBottom:14}}>
+      <div style={{position:'relative',border:'1px solid rgba(201,168,76,.12)',boxShadow:'0 0 40px rgba(0,0,0,.6)',marginBottom:8}}>
         {viewMode==='image'&&originalImgUrl&&(
-          <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:`50% ${chords.length>0?Math.round(disp/chords.length*100):0}%`,display:'block',zIndex:0,pointerEvents:'none',transition:'object-position 0.3s ease'}}/>
+          <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <canvas ref={canvasRef} width={CW} height={CH} style={{display:'block',maxWidth:'100%',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal'}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
@@ -2192,14 +2300,15 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
         )}
       </div>
 
-      <div style={{marginBottom:14,fontSize:'.57rem',letterSpacing:'.1em',opacity:.5,textAlign:'center'}}>
+      <div style={{marginBottom:10,fontSize:'.57rem',letterSpacing:'.1em',opacity:.5,textAlign:'center'}}>
         {pending.length>0?<span style={{color:GOLD}}>▸ building chord: {pending.length} voice{pending.length>1?'s':''}</span>:viewMode==='image'?<span style={{color:'rgba(210,160,255,.7)'}}>{grid.N}×{pixelRef.current?.nr||'?'} pixel grid</span>:<span>grid {N}×{N} · {BW}×{BH}px · φ≈{(BH/BW).toFixed(3)}</span>}
       </div>
 
 
       {showAbout && (
         <div onClick={()=>setShowAbout(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif"}}>
+          <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
+            <button onClick={()=>setShowAbout(false)} style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
             <div style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>concept</div>
 
             <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmony vs Spectral</h3>
@@ -2228,7 +2337,8 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
 
       {showGuide && (
         <div onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif"}}>
+          <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
+            <button onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>guide</div>
             <input
               type="search"
@@ -2291,11 +2401,9 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
       {/* Bottom dock: only docks to the viewport during playback (so you can
           watch the canvas animate while the piano stays visible). When not
           playing, it flows in normal document order. */}
-      <div style={(playing||chords.length>0||composeMode)?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(8,6,14,0.94)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
-      {/* Note-name readout: shows the notes currently sounding (during playback
-          or while keys are held). Fades to a placeholder "—" between events
-          so the row's height stays stable and the dock doesn't jump. */}
-      <div style={{textAlign:'center',marginBottom:4,fontSize:'.7rem',letterSpacing:'.1em',color:active.size>0?GOLD:'rgba(201,168,76,.25)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit'}}>
+      <div style={(playing||chords.length>0||composeMode)?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
+      {/* Note-name readout */}
+      <div style={{textAlign:'center',marginBottom:4,fontSize:'.7rem',letterSpacing:'.1em',color:active.size>0?GOLD:'rgba(201,168,76,.25)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
         {active.size>0?[...active].sort((a,b)=>a-b).map(noteName).join(' · '):'—'}
       </div>
       {showAdvanced && composeMode && (
@@ -2303,21 +2411,41 @@ Rules: 36-52 notes, pitches C4/F#3/Bb5 style, octaves 2-6, include bass notes in
           <button onClick={()=>{
             const cur=PAINT_SCALE_KEYS.indexOf(paintScale);
             setPaintScale(PAINT_SCALE_KEYS[(cur+1)%PAINT_SCALE_KEYS.length]);
-          }} style={{padding:'5px 10px',background:'transparent',color:paintScale==='off'?'rgba(180,180,180,.55)':'rgba(140,255,180,.85)',border:'1px solid '+(paintScale==='off'?'rgba(180,180,180,.25)':'rgba(140,255,180,.35)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}} title="snap every tap to the chosen key (chromatic = off)">
+          }} style={{padding:'7px 10px',background:'transparent',color:paintScale==='off'?'rgba(180,180,180,.55)':'rgba(140,255,180,.85)',border:'1px solid '+(paintScale==='off'?'rgba(180,180,180,.25)':'rgba(140,255,180,.35)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}} title="snap every tap to the chosen key (chromatic = off)">
             ♫ {PAINT_SCALES[paintScale].label}
           </button>
         </div>
       )}
-      <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
-        <button onClick={()=>setShowAdvanced(v=>!v)} title="advanced: scale snap" style={{display:composeMode?'inline-block':'none',padding:'5px 10px',background:'transparent',color:showAdvanced?'rgba(201,168,76,.85)':'rgba(180,180,180,.5)',border:'1px solid '+(showAdvanced?'rgba(201,168,76,.45)':'rgba(180,180,180,.25)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
+      <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
+        <button onClick={()=>setShowAdvanced(v=>!v)} title="advanced: scale snap" style={{display:composeMode?'inline-block':'none',padding:'7px 10px',background:'transparent',color:showAdvanced?'rgba(201,168,76,.85)':'rgba(180,180,180,.5)',border:'1px solid '+(showAdvanced?'rgba(201,168,76,.45)':'rgba(180,180,180,.25)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
           ⚙
         </button>
-        <button onClick={busy?stopAll:startPlay} disabled={(!chords.length&&!playing)||(demoMode&&!playing)} title={demoMode&&!playing?'demo mode — clear to play again':''} style={{padding:'5px 10px',background:'transparent',color:chords.length?(playing?'rgba(90,190,110,.5)':(demoMode?'rgba(90,190,110,.2)':'rgba(90,190,110,.95)')):'rgba(90,190,110,.25)',border:'1px solid '+(chords.length&&!(demoMode&&!playing)?'rgba(90,190,110,.55)':'rgba(90,190,110,.2)'),borderRadius:5,cursor:chords.length&&!(demoMode&&!playing)?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
-          {playing?'■ stop':'▶ play'}
+        <button
+          onClick={handlePauseClick}
+          disabled={(!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)}
+          title={demoMode&&!playing?'demo mode — clear to play again':holdPaused?'click to resume':'click to pause'}
+          style={{padding:'7px 10px',background:holdPaused?'rgba(90,190,110,.08)':'transparent',color:chords.length?(playing||holdPaused?'rgba(90,190,110,.7)':(demoMode?'rgba(90,190,110,.2)':'rgba(90,190,110,.95)')):'rgba(90,190,110,.25)',border:'1px solid '+(chords.length&&!(demoMode&&!playing&&!holdPaused)?'rgba(90,190,110,.55)':'rgba(90,190,110,.2)'),borderRadius:5,cursor:chords.length&&!(demoMode&&!playing&&!holdPaused)?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          {holdPaused?'▶ resume':playing?'⏸ pause':'▶ play'}
         </button>
-        <button onClick={recording?stopRecord:startRecord} disabled={!chords.length&&!recording} style={{display:viewMode==='image'?'inline-block':'none',padding:'5px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:chords.length||recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}} title={recording?'stop recording':'record audio output'}>
-          {recording?'⏹ rec…':'⏺ rec'}
-        </button>
+        {viewMode!=='image'&&(
+          <button onClick={exportImage} disabled={!chords.length||busy} style={{padding:'7px 10px',background:'transparent',color:chords.length?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(chords.length?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:chords.length&&!busy?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+            🖨 print
+          </button>
+        )}
+        {viewMode==='image'&&(
+          <button onClick={recording?stopRecord:startRecord} disabled={!chords.length&&!recording} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:chords.length||recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}} title={recording?'stop recording':'record audio output'}>
+            {recording?'⏹ rec…':'⏺ rec'}
+          </button>
+        )}
+        {viewMode==='image'&&(
+          <span style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 8px',border:'1px solid rgba(201,168,76,.2)',borderRadius:5}}>
+            <span style={{fontSize:'.5rem',color:GOLD,minWidth:22,textAlign:'right',letterSpacing:'.04em'}}>{imgSpeed===0.5?'½×':`${imgSpeed}×`}</span>
+            <input type="range" min={0.5} max={2} step={0.05} value={imgSpeed}
+              onChange={e=>setImgSpeed(parseFloat(e.target.value))}
+              style={{width:80,accentColor:GOLD,cursor:'pointer'}}/>
+          </span>
+        )}
+        <button onClick={clear} style={{padding:'7px 10px',background:'transparent',color:'rgba(207,197,168,.35)',border:'1px solid rgba(207,197,168,.14)',borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>clear</button>
       </div>
       <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',paddingBottom:4,display:composeMode?'block':'none'}}>
         <div style={{position:'relative',width:PW,height:WKH,userSelect:'none',opacity:loadedMode?0.25:(busy&&!playing?0.4:1),filter:loadedMode?'grayscale(0.6)':'none',pointerEvents:loadedMode?'none':'auto'}}>
