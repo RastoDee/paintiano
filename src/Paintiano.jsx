@@ -1732,25 +1732,27 @@ export default function Paintiano() {
   const clear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
     if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
-    if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
-    if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
-    if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
-    if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
-    setMicPainting(false);setMicListening(false);
-    const isCreativeMode=composeMode||micPainting||micListening;
-    if(isCreativeMode){
-      // Full wipe — no loaded content to preserve
-      setChords([]);idxRef.current=0;setPending([]);pendingRef.current=[];
-      pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
-      setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
-      pixelRef.current=null;setViewMode('paint');
-      setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
-      setOriginalImgUrl(null);setCurrentMood(null);setVarySource(null);setSongQ('');
+    // For sing/listen: keep mic streams running — just wipe canvas
+    // For compose/loaded content: full wipe
+    if(!micPainting&&!micListening){
+      if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
+      if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
+      if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
+      if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
     }
-    // Always reset disp, stamp, errors, composition meta
+    // Always wipe canvas content
+    setChords([]);idxRef.current=0;setPending([]);pendingRef.current=[];
+    pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
+    setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+    pixelRef.current=null;setViewMode('paint');
+    setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
+    setOriginalImgUrl(null);
+    if(!micPainting&&!micListening){
+      setCurrentMood(null);setVarySource(null);setSongQ('');
+    }
     setDisp(0);setErr('');setStamp(s=>s+1);
     setCompositionName('');setPaintScale('off');setRecordingName('');
-  },[stopAll,composeMode,micPainting,micListening]);
+  },[stopAll,micPainting,micListening]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
