@@ -2152,7 +2152,7 @@ export default function Paintiano() {
     // Always wipe canvas content
     setChords([]);idxRef.current=0;setPending([]);pendingRef.current=[];
     pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
-    setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+    setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     pixelRef.current=null;setViewMode('paint');
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
@@ -2174,7 +2174,7 @@ export default function Paintiano() {
     setMicPainting(false);setMicVolActive(false);setMicVolLevel(0);setMicListening(false);
     setChords([]);idxRef.current=0;setPending([]);pendingRef.current=[];
     pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
-    setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+    setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     pixelRef.current=null;setViewMode('paint');setStamp(s=>s+1);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
@@ -2203,7 +2203,7 @@ export default function Paintiano() {
   },[]);
 
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     const r=new FileReader();
     r.onload=evt=>{
       try{
@@ -2220,7 +2220,7 @@ export default function Paintiano() {
   };
 
   const loadAudio=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -2245,7 +2245,7 @@ export default function Paintiano() {
   // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -2327,7 +2327,7 @@ export default function Paintiano() {
 
   const aiMidi=useCallback((title)=>{
     if(!title||playing||anim||working)return;
-    setSongQ(title);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');stopAll();
+    setSongQ(title);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');audioBlobRef.current=null;stopAll();
     const song=findSong(title);
     if(!song){setErr('Song not found in library.');return;}
     const evts=noteArr2events(song.notes,song.tempo);
@@ -2389,7 +2389,7 @@ Composition rules:
 
 
   const loadImage=useCallback(e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     const r=new FileReader();
     r.onerror=()=>{setErr('Could not read image.');setErrInfo(false);};
     r.onload=evt=>{
@@ -2521,10 +2521,9 @@ Composition rules:
       try{
         const el=audioElRef.current;
         if(el){
-          if(!el.src||el._blobRevoked){
-            el.src=URL.createObjectURL(audioBlobRef.current);
-            el._blobRevoked=false;
-          }
+          if(el._blobUrl){try{URL.revokeObjectURL(el._blobUrl);}catch(_){}}
+          el._blobUrl=URL.createObjectURL(audioBlobRef.current);
+          el.src=el._blobUrl;
           el.currentTime=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
           el.playbackRate=playbackSpeedRef.current;
           el.play().catch(()=>{});
@@ -2664,7 +2663,7 @@ Composition rules:
     setInfo(inf);infoRef.current=inf;
     setDisp(0);idxRef.current=wi.length;
     setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;setStamp(s=>s+1);
-    setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+    setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setComposeMode(false);setPickMode(null);setCurrentMood(null);setVarySource(null);setSongQ('');
     setDemoMode(true);
     resumeFromRef.current=0;
