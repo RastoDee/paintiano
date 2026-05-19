@@ -946,7 +946,7 @@ const SONGS=[
 ];
 
 function fftMag(buf){const N=buf.length,re=new Float32Array(N),im=new Float32Array(N);for(let i=0;i<N;i++)re[i]=buf[i]*(0.5-0.5*Math.cos(2*Math.PI*i/N));for(let i=1,j=0;i<N;i++){let bit=N>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}for(let len=2;len<=N;len<<=1){const ang=2*Math.PI/len;for(let i=0;i<N;i+=len){let cr=1,ci=0;const wR=Math.cos(ang),wI=-Math.sin(ang);for(let k=0;k<len/2;k++){const vR=re[i+k+len/2]*cr-im[i+k+len/2]*ci,vI=re[i+k+len/2]*ci+im[i+k+len/2]*cr;re[i+k+len/2]=re[i+k]-vR;im[i+k+len/2]=im[i+k]-vI;re[i+k]+=vR;im[i+k]+=vI;const nr=cr*wR-ci*wI;ci=cr*wI+ci*wR;cr=nr;}}}const mag=new Float32Array(N/2);for(let i=0;i<N/2;i++)mag[i]=Math.sqrt(re[i]*re[i]+im[i]*im[i]);return mag;}
-function pickPitches(mag,sr){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>0.12){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
+function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
 async function transcribeAudio(audioBuf,onP){const sr=audioBuf.sampleRate,ch0=audioBuf.getChannelData(0),data=audioBuf.numberOfChannels>1?Float32Array.from({length:ch0.length},(_,i)=>(ch0[i]+audioBuf.getChannelData(1)[i])*0.5):ch0,FRAME=2048,HOP=512,total=Math.floor((data.length-FRAME)/HOP),active={},notes=[];for(let f=0;f<total;f++){const mag=fftMag(data.slice(f*HOP,f*HOP+FRAME)),found=new Set(pickPitches(mag,sr).map(p=>{if(!active[p.midi])active[p.midi]={sf:f,mx:p.mag};else active[p.midi].mx=Math.max(active[p.midi].mx,p.mag);return p.midi;}));for(const m in active){if(!found.has(+m)){notes.push({midi:+m,sf:active[m].sf,ef:f,mx:active[m].mx});delete active[m];}}if(f%80===0){onP(f/total);await new Promise(r=>setTimeout(r,0));}}for(const m in active)notes.push({midi:+m,sf:active[m].sf,ef:total,mx:active[m].mx});const f2ms=f=>f*HOP/sr*1000,raw=notes.filter(n=>f2ms(n.ef-n.sf)>=60).map(n=>({m:n.midi,startMs:f2ms(n.sf),durMs:Math.max(80,f2ms(n.ef-n.sf)),v:Math.max(40,Math.min(120,Math.round(n.mx*110)))})).sort((a,b)=>a.startMs-b.startMs);const evts=[];let i=0;while(i<raw.length){const bt=raw[i].startMs,g=[];while(i<raw.length&&raw[i].startMs-bt<=CWIN)g.push({m:raw[i].m,v:raw[i].v,durMs:raw[i++].durMs});if(g.length){const md=Math.max(...g.map(n=>n.durMs));evts.push({n:g,startMs:bt,durQ:snapDurQ(md/500)});}}return evts;}
 
 function name2midi(note){if(!note)return null;const trimmed=note.trim();if(_nameToMidi[trimmed]!==undefined){const v=_nameToMidi[trimmed];return v>=21&&v<=108?v:null;}const m=trimmed.match(/^([A-G])(#{1,2}|bb?|x)?(-?\d)$/i);if(!m)return null;const PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11},pc=PC[m[1].toUpperCase()];if(pc===undefined)return null;const a=m[2]||'',acc=a.startsWith('##')||a==='x'?2:a.startsWith('#')?1:a.startsWith('bb')?-2:a.startsWith('b')?-1:0,midi=(parseInt(m[3])+1)*12+pc+acc;return midi>=21&&midi<=108?midi:null;}
@@ -2321,11 +2321,15 @@ Composition rules:
       Tone.start();
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=300; // emit a chord every 300ms
+      const RMS_THRESHOLD=0.15; // minimum RMS energy — ignores ambient noise / silence
       const tick=()=>{
         if(!micStreamRef.current){stopMicPainting();return;}
         analyser.getFloatTimeDomainData(buf);
+        // RMS energy gate — bail out if signal is too quiet (room noise, breath, silence)
+        let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
+        if(rms<RMS_THRESHOLD){micRafRef.current=requestAnimationFrame(tick);return;}
         const mag=fftMag(buf);
-        const pitches=pickPitches(mag,sr);
+        const pitches=pickPitches(mag,sr,0.30);
         const now=performance.now();
         if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
