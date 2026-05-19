@@ -1619,7 +1619,17 @@ export default function Paintiano() {
   const [audioBlob, setAudioBlob] = useState(null);
   const audioBlobRef = useRef(null);
   const audioPCMRef = useRef(null); // decoded AudioBuffer for Web Audio playback
-  const setAudioBlobAndRef = (b) => { audioBlobRef.current=b; setAudioBlob(b); };
+  const setAudioBlobAndRef = (b) => {
+    audioBlobRef.current=b;
+    setAudioBlob(b);
+    // Set src on audio element immediately so it's ready before play
+    const el=audioElRef.current;
+    if(el){
+      if(el._blobUrl){try{URL.revokeObjectURL(el._blobUrl);}catch(_){}}
+      if(b){el._blobUrl=URL.createObjectURL(b);el.src=el._blobUrl;}
+      else{el._blobUrl=null;el.src='';}
+    }
+  };
   const [audioName, setAudioName] = useState('');
   const [recBlob, setRecBlob] = useState(null);   // recording output blob (share row)
   const [recName, setRecName] = useState('');      // recording output name
@@ -2520,18 +2530,11 @@ Composition rules:
     if(viewMode==='audio'&&audioBlobRef.current){
       try{
         const el=audioElRef.current;
-        if(el){
+        if(el&&el.src){
           const seekSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
           el.playbackRate=playbackSpeedRef.current;
-          if(el._blobUrl){try{URL.revokeObjectURL(el._blobUrl);}catch(_){}}
-          el._blobUrl=URL.createObjectURL(audioBlobRef.current);
-          el.src=el._blobUrl;
-          const doPlay=()=>{
-            el.currentTime=seekSec;
-            el.play().catch(()=>{});
-          };
-          if(el.readyState>=1){doPlay();}
-          else{el.onloadedmetadata=()=>{el.onloadedmetadata=null;doPlay();};}
+          el.currentTime=seekSec;
+          el.play().catch(()=>{});
         }
       }catch(_){}
     }
