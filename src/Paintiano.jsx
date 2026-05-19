@@ -2533,7 +2533,8 @@ Composition rules:
         if(el&&el.src){
           const seekSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
           el.playbackRate=playbackSpeedRef.current;
-          el.currentTime=seekSec;
+          // Only seek if not already at the right position (drag sets it before stopAll)
+          if(Math.abs(el.currentTime-seekSec)>0.5) el.currentTime=seekSec;
           el.play().catch(()=>{});
         }
       }catch(_){}
@@ -3266,6 +3267,10 @@ Composition rules:
               const rect=e.currentTarget.getBoundingClientRect();
               const frac=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
               const idx=Math.floor(frac*chords.length);
+              if(viewModeRef.current==='audio'&&audioElRef.current&&audioElRef.current.src){
+                const seekSec=(chordsRef.current[idx]?.startMs||0)/1000;
+                audioElRef.current.currentTime=seekSec;
+              }
               stopAll();
               resumeFromRef.current=idx;
               startPlay();
@@ -3278,6 +3283,10 @@ Composition rules:
               const rect=e.currentTarget.getBoundingClientRect();
               const frac=Math.max(0,Math.min(1,(touch.clientX-rect.left)/rect.width));
               const idx=Math.floor(frac*chords.length);
+              if(viewModeRef.current==='audio'&&audioElRef.current&&audioElRef.current.src){
+                const seekSec=(chordsRef.current[idx]?.startMs||0)/1000;
+                audioElRef.current.currentTime=seekSec;
+              }
               stopAll();
               resumeFromRef.current=idx;
               setDisp(idx);
@@ -3587,7 +3596,7 @@ Composition rules:
         </div>
       </div>
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.01</div>
     </div>
   );
 }
