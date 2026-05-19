@@ -2521,12 +2521,17 @@ Composition rules:
       try{
         const el=audioElRef.current;
         if(el){
+          const seekSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
+          el.playbackRate=playbackSpeedRef.current;
           if(el._blobUrl){try{URL.revokeObjectURL(el._blobUrl);}catch(_){}}
           el._blobUrl=URL.createObjectURL(audioBlobRef.current);
           el.src=el._blobUrl;
-          el.currentTime=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
-          el.playbackRate=playbackSpeedRef.current;
-          el.play().catch(()=>{});
+          const doPlay=()=>{
+            el.currentTime=seekSec;
+            el.play().catch(()=>{});
+          };
+          if(el.readyState>=1){doPlay();}
+          else{el.onloadedmetadata=()=>{el.onloadedmetadata=null;doPlay();};}
         }
       }catch(_){}
     }
