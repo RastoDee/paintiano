@@ -2321,7 +2321,7 @@ Composition rules:
       Tone.start();
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=300; // emit a chord every 300ms
-      const RMS_THRESHOLD=0.15; // minimum RMS energy — ignores ambient noise / silence
+      const RMS_THRESHOLD=0.06; // minimum RMS energy — ignores ambient noise / silence
       const tick=()=>{
         if(!micStreamRef.current){stopMicPainting();return;}
         analyser.getFloatTimeDomainData(buf);
@@ -2329,7 +2329,7 @@ Composition rules:
         let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
         if(rms<RMS_THRESHOLD){micRafRef.current=requestAnimationFrame(tick);return;}
         const mag=fftMag(buf);
-        const pitches=pickPitches(mag,sr,0.30);
+        const pitches=pickPitches(mag,sr,0.20);
         const now=performance.now();
         if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
