@@ -2377,6 +2377,9 @@ Composition rules:
   const startMicListening=useCallback(async()=>{
     if(micListening){stopMicListening();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr('Microphone not available in this browser.');setErrInfo(false);return;}
+    // Only one mode at a time
+    setComposeMode(false);
+    if(micPainting){stopMicPainting();}
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
       listenStreamRef.current=stream;
@@ -2440,6 +2443,9 @@ Composition rules:
   const startMicPainting=useCallback(async()=>{
     if(micPainting)return stopMicPainting();
     if(!navigator.mediaDevices?.getUserMedia){setErr('Microphone not available in this browser.');setErrInfo(false);return;}
+    // Only one mode at a time
+    setComposeMode(false);
+    if(micListening){stopMicListening();}
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       micStreamRef.current=stream;
@@ -2695,7 +2701,7 @@ Composition rules:
           <button onClick={()=>{fullClear();setPickMode('image');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 IMAGE</button>
         </div>
         <div style={{display:'flex',gap:4,justifyContent:'center'}}>
-          <button onClick={()=>{if(!composeMode){fullClear();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?'♪ COMPOSING':'♪ COMPOSE'}</button>
+          <button onClick={()=>{if(!composeMode){fullClear();if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?'♪ COMPOSING':'♪ COMPOSE'}</button>
           <button onClick={startMicPainting} disabled={busy&&!micPainting} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micPainting?'rgba(255,100,100,.7)':'rgba(255,140,140,.4)',color:micPainting?'rgba(255,100,100,1)':'rgba(255,160,160,.8)',background:micPainting?'rgba(255,60,60,.1)':'transparent'})}>{micPainting?'🎤':'🎤 SING'}</button>
           <button onClick={startMicListening} disabled={busy&&!micListening} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micListening?'rgba(100,200,255,.7)':'rgba(100,180,255,.4)',color:micListening?'rgba(120,210,255,1)':'rgba(140,200,255,.8)',background:micListening?'rgba(60,160,255,.1)':'transparent'})}>{micListening?'🔊 LISTENING…':'🔊 LISTEN'}</button>
         </div>
@@ -3025,7 +3031,7 @@ Composition rules:
           <button onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} title="loop mood" style={{padding:'7px 10px',background:loopMode?'rgba(201,168,76,.1)':'transparent',color:loopMode?GOLD:'rgba(201,168,76,.35)',border:'1px solid '+(loopMode?'rgba(201,168,76,.5)':'rgba(201,168,76,.18)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>⟳ loop</button>
         )}
         {viewMode!=='image'&&(
-          <button onClick={exportImage} disabled={!chords.length||busy} style={{padding:'7px 10px',background:'transparent',color:chords.length?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(chords.length?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:chords.length&&!busy?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          <button onClick={exportImage} disabled={!chords.length||busy||micPainting||micListening} style={{padding:'7px 10px',background:'transparent',color:chords.length&&!micPainting&&!micListening?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(chords.length&&!micPainting&&!micListening?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:chords.length&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
             🖨 print
           </button>
         )}
