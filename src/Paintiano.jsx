@@ -2379,7 +2379,7 @@ Composition rules:
       setViewMode('paint');setStamp(s=>s+1);
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=500; // 500ms — captures chord changes in music
-      const RMS_THRESHOLD=0.015; // very low — picks up speaker output across room
+      const RMS_THRESHOLD=0.003; // very low — iOS same-device mic+speaker signal is weak
       const tick=()=>{
         if(!listenStreamRef.current){stopMicListening();return;}
         analyser.getFloatTimeDomainData(buf);
@@ -2387,7 +2387,7 @@ Composition rules:
         if(rms<RMS_THRESHOLD){listenRafRef.current=requestAnimationFrame(tick);return;}
         const mag=fftMag(buf);
         // Low minMag (0.08) — music has many simultaneous partials, more permissive
-        const pitches=pickPitches(mag,sr,0.08);
+        const pitches=pickPitches(mag,sr,0.05);
         const now=performance.now();
         if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
