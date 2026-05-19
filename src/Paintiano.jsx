@@ -1316,7 +1316,7 @@ export default function Paintiano() {
     // is unchanged, append only the newly-revealed blocks instead of re-running
     // every artist-style draw from chord 0. Cuts an O(N²) playback into O(N).
     const prev = lastPaintRef.current;
-    const lim = anim?disp:playing?disp:holdPaused?disp:disp<chords.length?disp:chords.length;
+    const lim = anim?disp:playing?disp:holdPaused?disp:composedModeRef.current?chords.length:disp<chords.length?disp:chords.length;
     // Fast path: if only `pending` changed (keypress preview in compose mode),
     // skip the full repaint — just redraw the next-block preview.
     const onlyPendingChanged =
