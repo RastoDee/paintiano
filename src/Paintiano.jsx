@@ -1156,6 +1156,9 @@ export default function Paintiano() {
   const recStreamDestRef = useRef(null);
   const micStreamRef     = useRef(null);
   const micRafRef        = useRef(null);
+  const micVolRef        = useRef(null);
+  const listenStreamRef  = useRef(null);
+  const listenRafRef     = useRef(null);
   // Press-tracking: per-midi {pressTime,chordIdx}. On release we compute
   // the actual hold duration and patch it into the chord that captured this
   // press, so each block's width reflects how long the key was held.
@@ -1210,6 +1213,9 @@ export default function Paintiano() {
   const [midiName,  setMidiName]  = useState('');
   const [recording, setRecording] = useState(false);
   const [micPainting, setMicPainting] = useState(false);
+  const [micListening, setMicListening] = useState(false);
+  const [micVolActive, setMicVolActive] = useState(false);
+  const [micVolLevel, setMicVolLevel] = useState(0); // 0–1 smoothed RMS
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioName, setAudioName] = useState('');
   const [recordingName, setRecordingName] = useState('');
@@ -1725,22 +1731,30 @@ export default function Paintiano() {
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
     setMicPainting(false);
+    setDisp(0);setErr('');setStamp(s=>s+1);
+    setCompositionName('');
+    setPaintScale('off');
+    setRecordingName('');
+  },[stopAll]);
+
+  const fullClear = useCallback(()=>{
+    stopAll();clearTimeout(kbTimer.current);
+    if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
+    if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
+    if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
+    if(micVolRef.current){const{raf,stream}=micVolRef.current;cancelAnimationFrame(raf);stream.getTracks().forEach(t=>t.stop());micVolRef.current=null;}
+    if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
+    if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
+    setMicPainting(false);setMicVolActive(false);setMicVolLevel(0);setMicListening(false);
     setChords([]);idxRef.current=0;setPending([]);pendingRef.current=[];
     pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
     setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
     pixelRef.current=null;setViewMode('paint');setStamp(s=>s+1);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
-    setCurrentMood(null);
-    setVarySource(null);
-    setSongQ('');
-    setPickMode(null);
-    setComposeMode(false);
-    setDemoMode(false);
-    setLoopMode(false);loopModeRef.current=false;
-    setCompositionName('');
-    setPaintScale('off');
-    setRecordingName('');
+    setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);
+    setComposeMode(false);setDemoMode(false);setLoopMode(false);loopModeRef.current=false;
+    setCompositionName('');setPaintScale('off');setRecordingName('');
   },[stopAll]);
 
   const applyEvents = useCallback((events,title)=>{
@@ -2181,6 +2195,7 @@ Composition rules:
 
   const demoPlay=useCallback(()=>{
     if(busy)return;Tone.start();
+    fullClear();
     stopAll();clearTimeout(kbTimer.current);
     if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
     let t=0;
@@ -2198,7 +2213,7 @@ Composition rules:
     setDemoMode(true);
     resumeFromRef.current=0;
     startPlay();
-  },[busy,stopAll,startPlay]);
+  },[busy,stopAll,startPlay,fullClear]);
 
   const handlePauseClick=useCallback(()=>{
     if(playing){
@@ -2292,11 +2307,113 @@ Composition rules:
     stopAll();
   },[stopAll]);
 
+  const stopMicVol=useCallback(()=>{
+    if(micVolRef.current){
+      const{raf,stream}=micVolRef.current;
+      cancelAnimationFrame(raf);
+      stream.getTracks().forEach(t=>t.stop());
+      micVolRef.current=null;
+    }
+    setMicVolActive(false);
+    setMicVolLevel(0);
+  },[]);
+
+  const startMicVol=useCallback(async()=>{
+    if(micVolActive){stopMicVol();return;}
+    if(!navigator.mediaDevices?.getUserMedia){setErr('Microphone not available.');setErrInfo(false);return;}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      const AC=window.AudioContext||window.webkitAudioContext;
+      const ac=new AC();
+      const src=ac.createMediaStreamSource(stream);
+      const analyser=ac.createAnalyser();
+      analyser.fftSize=256;
+      src.connect(analyser);
+      const buf=new Float32Array(analyser.fftSize);
+      setMicVolActive(true);
+      let smoothed=0;
+      const tick=()=>{
+        analyser.getFloatTimeDomainData(buf);
+        let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
+        smoothed=smoothed*0.75+rms*0.25; // smooth
+        setMicVolLevel(Math.min(1,smoothed*6)); // scale to 0–1
+        micVolRef.current.raf=requestAnimationFrame(tick);
+      };
+      micVolRef.current={raf:requestAnimationFrame(tick),stream};
+    }catch(e){
+      setErr('Microphone access denied.');setErrInfo(false);
+    }
+  },[micVolActive,stopMicVol]);
+
   const stopMicPainting=useCallback(()=>{
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
     setMicPainting(false);
   },[]);
+
+  const stopMicListening=useCallback(()=>{
+    if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
+    if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
+    setMicListening(false);
+  },[]);
+
+  const startMicListening=useCallback(async()=>{
+    if(micListening){stopMicListening();return;}
+    if(!navigator.mediaDevices?.getUserMedia){setErr('Microphone not available in this browser.');setErrInfo(false);return;}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
+      listenStreamRef.current=stream;
+      const AC=window.AudioContext||window.webkitAudioContext;
+      const ac=new AC();
+      const src=ac.createMediaStreamSource(stream);
+      const analyser=ac.createAnalyser();
+      analyser.fftSize=4096; // higher resolution for better pitch detection on complex music
+      src.connect(analyser);
+      const buf=new Float32Array(analyser.fftSize);
+      const sr=ac.sampleRate;
+      setMicListening(true);
+      // Reset canvas
+      stopAll();setChords([]);idxRef.current=0;sessionStart.current=0;gridSigRef.current='';
+      composedModeRef.current=true;
+      setDisp(0);setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
+      setViewMode('paint');setStamp(s=>s+1);
+      let lastCommit=performance.now();
+      const COMMIT_INTERVAL=500; // 500ms — captures chord changes in music
+      const RMS_THRESHOLD=0.015; // very low — picks up speaker output across room
+      const tick=()=>{
+        if(!listenStreamRef.current){stopMicListening();return;}
+        analyser.getFloatTimeDomainData(buf);
+        let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
+        if(rms<RMS_THRESHOLD){listenRafRef.current=requestAnimationFrame(tick);return;}
+        const mag=fftMag(buf);
+        // Low minMag (0.08) — music has many simultaneous partials, more permissive
+        const pitches=pickPitches(mag,sr,0.08);
+        const now=performance.now();
+        if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
+          lastCommit=now;
+          // Take up to 6 notes — music is polyphonic
+          const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(40,Math.min(120,Math.round(p.mag*110))),durMs:COMMIT_INTERVAL}));
+          // Show active keys but don't play — music is already playing
+          notes.forEach(({m,durMs})=>{
+            setActive(p=>new Set([...p,m]));
+            setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs,800));
+          });
+          // Paint the chord
+          const idx=idxRef.current++;
+          if(!sessionStart.current)sessionStart.current=now;
+          const startMs=now-sessionStart.current;
+          const durQ=snapDurQ(COMMIT_INTERVAL/500);
+          setChords(p=>{const next=[...p,{n:notes,idx,startMs,recorded:true,durQ}];return next;});
+          setDisp(p=>p+1);
+        }
+        listenRafRef.current=requestAnimationFrame(tick);
+      };
+      listenRafRef.current=requestAnimationFrame(tick);
+    }catch(e){
+      setErr('Microphone access denied.');setErrInfo(false);
+      setMicListening(false);
+    }
+  },[micListening,stopMicListening,stopAll]);
 
   const startMicPainting=useCallback(async()=>{
     if(micPainting)return stopMicPainting();
@@ -2521,7 +2638,7 @@ Composition rules:
           onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);aiMidi(e.target.value);}}}
           disabled={busy}
           title=""
-          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid rgba(201,168,76,.3)',borderRadius:3,padding:'8px 12px',color:songQ?'rgba(207,197,168,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:busy?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize'}}>
+          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid rgba(201,168,76,.3)',borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:busy?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize'}}>
           <option value="">✦ select a mood…</option>
           {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
           {MOODS.map(m=><option key={m} value={m}>{m}</option>)}
@@ -2543,17 +2660,22 @@ Composition rules:
         }} disabled={!varySource||busy} title={!varySource?'pick a mood first':'reroll: a fresh take'} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.2)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy?1:.35}}>🎲 vary</button>
       </div>
 
-      <div style={{display:'flex',gap:4,marginBottom:16,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch',maxWidth:'100%',padding:'2px 0'}}>
-        <button onClick={()=>{if(!composeMode){clear();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?'♪ composing':'♪ compose'}</button>
-        <button onClick={startMicPainting} disabled={busy&&!micPainting} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:micPainting?'rgba(255,100,100,.7)':'rgba(255,140,140,.4)',color:micPainting?'rgba(255,100,100,1)':'rgba(255,160,160,.8)',background:micPainting?'rgba(255,60,60,.1)':'transparent'})}>{micPainting?'🎤':'🎤 sing'}</button>
-        <input ref={refMidi} type="file" accept=".mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('midi');}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ midi</button>
-        <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('audio');}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ audio'}</button>
-        <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('score');}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 score'}</button>
-        <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
-        <button onClick={()=>{setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');setPickMode('image');}} disabled={busy} style={btn({padding:'5px 8px',letterSpacing:0,textTransform:'none',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 image</button>
+      <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,alignItems:'center'}}>
+        <div style={{display:'flex',gap:4,justifyContent:'center'}}>
+          <input ref={refMidi} type="file" accept=".mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
+          <button onClick={()=>{fullClear();setPickMode('midi');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ MIDI</button>
+          <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
+          <button onClick={()=>{fullClear();setPickMode('audio');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ AUDIO'}</button>
+          <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
+          <button onClick={()=>{fullClear();setPickMode('score');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 SCORE'}</button>
+          <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
+          <button onClick={()=>{fullClear();setPickMode('image');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 IMAGE</button>
+        </div>
+        <div style={{display:'flex',gap:4,justifyContent:'center'}}>
+          <button onClick={()=>{if(!composeMode){fullClear();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?'♪ COMPOSING':'♪ COMPOSE'}</button>
+          <button onClick={startMicPainting} disabled={busy&&!micPainting} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micPainting?'rgba(255,100,100,.7)':'rgba(255,140,140,.4)',color:micPainting?'rgba(255,100,100,1)':'rgba(255,160,160,.8)',background:micPainting?'rgba(255,60,60,.1)':'transparent'})}>{micPainting?'🎤':'🎤 SING'}</button>
+          <button onClick={startMicListening} disabled={busy&&!micListening} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micListening?'rgba(100,200,255,.7)':'rgba(100,180,255,.4)',color:micListening?'rgba(120,210,255,1)':'rgba(140,200,255,.8)',background:micListening?'rgba(60,160,255,.1)':'transparent'})}>{micListening?'🔊 LISTENING…':'🔊 LISTEN'}</button>
+        </div>
       </div>
 
       {preview && (
@@ -2683,7 +2805,7 @@ Composition rules:
         </div>
       )}
 
-      <div style={{position:'relative',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease'}}
+      <div style={{position:'relative',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center'}}
         onClick={e=>{
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
@@ -2898,6 +3020,7 @@ Composition rules:
           );
         })()}
         <button onClick={clear} style={{padding:'7px 10px',background:'transparent',color:'rgba(207,197,168,.35)',border:'1px solid rgba(207,197,168,.14)',borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>clear</button>
+        <button onClick={startMicVol} title={micVolActive?'stop mic visualizer':'canvas pulses with room sound'} style={{padding:'7px 10px',background:micVolActive?'rgba(100,200,255,.08)':'transparent',color:micVolActive?'rgba(120,210,255,.9)':'rgba(150,200,255,.4)',border:`1px solid ${micVolActive?'rgba(120,210,255,.45)':'rgba(150,200,255,.2)'}`,borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>{micVolActive?'🎙':'🎙'}</button>
         {composeMode&&(
           <button onClick={undoLast} disabled={!chords.length||playing} title="remove last chord (Backspace)" style={{padding:'7px 10px',background:'transparent',color:chords.length&&!playing?'rgba(207,197,168,.65)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!playing?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:5,cursor:chords.length&&!playing?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>↩</button>
         )}
