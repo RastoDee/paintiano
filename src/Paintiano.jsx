@@ -1022,6 +1022,8 @@ const GUIDE = [
    body:'Tap DEMO to play a built-in Für Elise excerpt. The keyboard surfaces automatically so you can watch the keys light up. Press CLEAR to leave demo mode.'},
   {id:'compose', title:'Compose with the keyboard', keywords:'compose keyboard piano live record keys play undo backspace enter space chord name recognise',
    body:'Tap ♪ COMPOSE (or press Enter) to reveal the on-screen piano. Tap or hold keys — longer holds produce wider blocks. Hardware keyboard: A–K white keys, W/E/T/Y/U black keys. Backspace undoes the last chord. Space bar plays/pauses. Enter toggles the keyboard. When you hold keys that form a known chord (C maj, A min, D7…) the name appears in the readout. Hit Play to replay your composition.'},
+  {id:'listen', title:'🔊 Listen — paint ambient music', keywords:'listen ambient music spotify speaker microphone room sound painting live',
+   body:'Tap 🔊 LISTEN and allow microphone access. Paintiano listens through the mic and paints what it hears — each detected chord becomes a colour block. Best results: play music from an external speaker or another device nearby, then hold your phone with the mic facing the sound. On iOS, music playing through the same phone\'s speaker is suppressed by the OS audio system and may not be detected — this is a hardware limitation, not a bug. Works well on Android Chrome or when audio comes from an external source.'},
   {id:'sing', title:'🎤 Sing / mic painting', keywords:'sing mic microphone voice hum pitch vocal',
    body:'Tap 🎤 SING and allow microphone access. Sing, hum, or whistle — the app detects your pitch in real time, plays it through the piano sampler, and paints each note as a block. The canvas fills as you perform. Tap again to stop. Note: mic access is blocked inside Claude\'s sandbox — works correctly as a standalone page.'},
   {id:'scale-snap', title:'Scale snap (advanced)', keywords:'scale snap key major minor chromatic free advanced',
@@ -1051,9 +1053,11 @@ const GUIDE = [
   {id:'record', title:'⏺ Rec (image mode)', keywords:'record rec audio capture save mp4 m4a recording share',
    body:'Available in image mode only. Tap ⏺ REC to start recording the audio output and playback simultaneously. Recording stops automatically when the piece ends — a share/save row then appears in the dock. Tap Share to save via the system dialog (Files, AirDrop, Downloads, Mail). Tap ✕ to dismiss without saving. Note: share is blocked inside Claude\'s sandbox — works as a standalone page.'},
   {id:'clear', title:'Clear', keywords:'clear reset start over delete',
-   body:'Wipes the current session — canvas, chords, recording, info, and compose state — and returns to a blank start.'},
+   body:'In Compose, Sing, or Listen mode: wipes the canvas and all recorded chords so you can start fresh — the mode stays active. In MIDI, audio, score, image, or mood mode: resets the canvas to blank but keeps the loaded piece so you can play it again without re-loading.'},
+  {id:'micvol', title:'Canvas breathing (mic volume)', keywords:'mic volume breathing pulse canvas room sound ambient',
+   body:'In Sing and Listen modes the canvas automatically pulses with the room volume — louder sound expands the canvas slightly, silence lets it rest. This uses a separate microphone analyser running alongside pitch detection. No button needed — starts and stops with Sing/Listen automatically.'},
   {id:'troubleshoot', title:'Troubleshooting', keywords:'troubleshoot problem error broken fix bug help slow',
-   body:'If status reads "loading piano…" wait a few seconds for samples to download (~5 MB). If it falls back to "synth piano" the app still works with an oscillator synth. Mic access and the share sheet are blocked in Claude\'s iframe sandbox — both work correctly when Paintiano runs as a standalone page.'},
+   body:'If status reads "loading piano…" wait a few seconds for samples to download (~5 MB). If it falls back to "synth piano" the app still works with an oscillator synth. Mic access and the share sheet are blocked in Claude\'s iframe sandbox — both work correctly when Paintiano runs as a standalone page. Listen mode does not work with same-device audio on iOS — use an external speaker or another device.'},
 ];
 const guideMatch = (e,q) => {
   const n = q.trim().toLowerCase();
@@ -1730,12 +1734,23 @@ export default function Paintiano() {
     if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
-    setMicPainting(false);
+    if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
+    if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
+    setMicPainting(false);setMicListening(false);
+    const isCreativeMode=composeMode||micPainting||micListening;
+    if(isCreativeMode){
+      // Full wipe — no loaded content to preserve
+      setChords([]);idxRef.current=0;setPending([]);pendingRef.current=[];
+      pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
+      setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+      pixelRef.current=null;setViewMode('paint');
+      setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
+      setOriginalImgUrl(null);setCurrentMood(null);setVarySource(null);setSongQ('');
+    }
+    // Always reset disp, stamp, errors, composition meta
     setDisp(0);setErr('');setStamp(s=>s+1);
-    setCompositionName('');
-    setPaintScale('off');
-    setRecordingName('');
-  },[stopAll]);
+    setCompositionName('');setPaintScale('off');setRecordingName('');
+  },[stopAll,composeMode,micPainting,micListening]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -2185,7 +2200,7 @@ Composition rules:
           // For recorded compositions, cap at 1000ms to remove hesitation pauses from composing.
           const hasTimings=info||recorded||useRecorded;
           const rawGap=hasTimings?Math.max(0,(chords[i].startMs||0)-(startMs||0)):350;
-          const gap=useRecorded?Math.min(rawGap,1000):rawGap;
+          const gap=useRecorded?Math.min(rawGap,400):rawGap;
           timers.current.push(setTimeout(step,Math.round(gap/playbackSpeedRef.current)));
         }
       };
@@ -2349,13 +2364,15 @@ Composition rules:
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
     setMicPainting(false);
-  },[]);
+    stopMicVol();
+  },[stopMicVol]);
 
   const stopMicListening=useCallback(()=>{
     if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
     if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
     setMicListening(false);
-  },[]);
+    stopMicVol();
+  },[stopMicVol]);
 
   const startMicListening=useCallback(async()=>{
     if(micListening){stopMicListening();return;}
@@ -2372,13 +2389,13 @@ Composition rules:
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
       setMicListening(true);
-      // Reset canvas
+      startMicVol();
       stopAll();setChords([]);idxRef.current=0;sessionStart.current=0;gridSigRef.current='';
       composedModeRef.current=true;
       setDisp(0);setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
       setViewMode('paint');setStamp(s=>s+1);
       let lastCommit=performance.now();
-      const COMMIT_INTERVAL=500; // 500ms — captures chord changes in music
+      const COMMIT_INTERVAL=800; // 800ms — longer for smoother flow
       const RMS_THRESHOLD=0.003; // very low — iOS same-device mic+speaker signal is weak
       const tick=()=>{
         if(!listenStreamRef.current){stopMicListening();return;}
@@ -2391,12 +2408,13 @@ Composition rules:
         const now=performance.now();
         if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
+          const sustainMs=Math.round(COMMIT_INTERVAL*1.8);
           // Take up to 6 notes — music is polyphonic
-          const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(40,Math.min(120,Math.round(p.mag*110))),durMs:COMMIT_INTERVAL}));
+          const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:sustainMs}));
           // Show active keys but don't play — music is already playing
-          notes.forEach(({m,durMs})=>{
+          notes.forEach(({m})=>{
             setActive(p=>new Set([...p,m]));
-            setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs,800));
+            setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),sustainMs);
           });
           // Paint the chord
           const idx=idxRef.current++;
@@ -2430,14 +2448,14 @@ Composition rules:
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
       setMicPainting(true);
-      // Reset canvas for fresh painting
+      startMicVol();
       stopAll();setChords([]);idxRef.current=0;sessionStart.current=0;gridSigRef.current='';
       composedModeRef.current=true;
       setDisp(0);setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
       setViewMode('paint');setStamp(s=>s+1);
       Tone.start();
       let lastCommit=performance.now();
-      const COMMIT_INTERVAL=300; // emit a chord every 300ms
+      const COMMIT_INTERVAL=600; // emit a chord every 600ms for smoother flow
       const RMS_THRESHOLD=0.06; // minimum RMS energy — ignores ambient noise / silence
       const tick=()=>{
         if(!micStreamRef.current){stopMicPainting();return;}
@@ -2450,12 +2468,13 @@ Composition rules:
         const now=performance.now();
         if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
-          const notes=pitches.slice(0,4).map(p=>({m:p.midi,v:Math.max(40,Math.min(120,Math.round(p.mag*110))),durMs:COMMIT_INTERVAL}));
+          const sustainMs=Math.round(COMMIT_INTERVAL*1.8); // overlap into next chord for legato
+          const notes=pitches.slice(0,4).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:sustainMs}));
           // Play the notes
           notes.forEach(({m,v,durMs})=>{
             playNote(m,v,durMs);
             setActive(p=>new Set([...p,m]));
-            setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs,800));
+            setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(durMs,1000));
           });
           // Paint the chord
           const idx=idxRef.current++;
@@ -2856,9 +2875,10 @@ Composition rules:
             <button onClick={()=>setShowAbout(false)} style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
             <div style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>concept</div>
 
-            <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Compose & Sing</h3>
-            <p style={{margin:'0 0 12px'}}>Two ways to create from scratch. <strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> reveals an on-screen piano — tap or hold keys, longer holds produce wider blocks. Hardware keyboard: A–K for white keys, W/E/T/Y/U for black. Backspace undoes the last chord. Enter toggles the keyboard. Space bar plays and pauses. Chord names (C maj, A min…) appear live in the note readout.</p>
-            <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Sing</strong> uses your microphone. Sing, hum, or whistle — pitch is detected every 300 ms, played through the piano sampler, and painted as a block. The canvas fills as you perform. Microphone access is blocked in the Claude sandbox but works fully as a standalone page.</p>
+            <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Compose, Sing & Listen</h3>
+            <p style={{margin:'0 0 12px'}}>Three ways to create from scratch. <strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> reveals an on-screen piano — tap or hold keys, longer holds produce wider blocks. Hardware keyboard: A–K for white keys, W/E/T/Y/U for black. Backspace undoes the last chord. Enter toggles the keyboard. Space bar plays and pauses. Chord names (C maj, A min…) appear live in the note readout.</p>
+            <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Sing</strong> uses your microphone. Sing, hum, or whistle — pitch is detected every 600 ms, played through the piano sampler, and painted as a block. Notes sustain into the next chord for a legato feel. The canvas fills as you perform.</p>
+            <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Listen</strong> also uses the microphone, but is tuned for ambient music rather than voice. Play music from a speaker nearby — Paintiano detects the pitches and paints them in real time, silently, without adding its own piano sound. The canvas breathes gently with the room volume. Works best with an external speaker; on iOS, same-device speaker audio is suppressed by the OS.</p>
 
             <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmony vs Spectral</h3>
             <p style={{margin:'0 0 12px'}}>In both modes every note is painted as a block whose <em>hue</em> is determined by its pitch class (C, C♯, D…), whose <em>lightness</em> tracks its octave (higher notes lighter, lower notes darker), and whose <em>saturation</em> follows velocity (louder strikes are more vivid). What changes between the modes is the dictionary mapping pitch to hue.</p>
@@ -2953,6 +2973,11 @@ Composition rules:
           playing, it flows in normal document order. */}
       <div style={(playing||chords.length>0||composeMode)?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {/* Recording save row — appears in dock when a recording is ready */}
+      {micListening&&(
+        <div style={{fontSize:'.48rem',letterSpacing:'.08em',color:'rgba(100,200,255,.35)',textAlign:'center',marginBottom:4,lineHeight:1.5}}>
+          🔊 best with external speaker or another device — iOS suppresses same-phone audio
+        </div>
+      )}
       {audioBlob&&(
         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
           <span style={{flex:1,fontSize:'.6rem',color:'rgba(255,140,120,.9)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{audioName} · {(audioBlob.size/1024).toFixed(0)}KB</span>
@@ -3005,7 +3030,7 @@ Composition rules:
             {recording?'⏹ rec…':'⏺ rec'}
           </button>
         )}
-        {chords.length>0&&(()=>{
+        {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
           const setSpd=setPlaybackSpeed;
           const lo=0.25;
@@ -3020,7 +3045,7 @@ Composition rules:
           );
         })()}
         <button onClick={clear} style={{padding:'7px 10px',background:'transparent',color:'rgba(207,197,168,.35)',border:'1px solid rgba(207,197,168,.14)',borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>clear</button>
-        <button onClick={startMicVol} title={micVolActive?'stop mic visualizer':'canvas pulses with room sound'} style={{padding:'7px 10px',background:micVolActive?'rgba(100,200,255,.08)':'transparent',color:micVolActive?'rgba(120,210,255,.9)':'rgba(150,200,255,.4)',border:`1px solid ${micVolActive?'rgba(120,210,255,.45)':'rgba(150,200,255,.2)'}`,borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>{micVolActive?'🎙':'🎙'}</button>
+        
         {composeMode&&(
           <button onClick={undoLast} disabled={!chords.length||playing} title="remove last chord (Backspace)" style={{padding:'7px 10px',background:'transparent',color:chords.length&&!playing?'rgba(207,197,168,.65)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!playing?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:5,cursor:chords.length&&!playing?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>↩</button>
         )}
