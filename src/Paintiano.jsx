@@ -2532,11 +2532,15 @@ Composition rules:
         const el=audioElRef.current;
         if(el&&el.src){
           const seekSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
+          console.log('[audio] fromIdx=',fromIdx,'seekSec=',seekSec,'el.currentTime=',el.currentTime,'el.src=',el.src.slice(0,40));
           el.playbackRate=playbackSpeedRef.current;
           el.currentTime=seekSec;
-          el.play().catch(()=>{});
+          console.log('[audio] after seek el.currentTime=',el.currentTime);
+          el.play().catch(e=>console.log('[audio] play error',e));
+        } else {
+          console.log('[audio] no el or no src', el, el?.src);
         }
-      }catch(_){}
+      }catch(e){console.log('[audio] exception',e);}
     }
 
     if(viewMode==='image'&&pixelRef.current){
@@ -3587,7 +3591,7 @@ Composition rules:
         </div>
       </div>
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.01</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.02</div>
     </div>
   );
 }
