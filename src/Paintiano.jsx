@@ -856,6 +856,135 @@ const _midiToName = Array.from({length:128},(_,i)=>noteName(i));
 const _nameToMidi = Object.fromEntries(_midiToName.map((n,i)=>[n,i]));
 const LEGEND=[{n:'C',pc:0},{n:'G',pc:7},{n:'D',pc:2},{n:'A',pc:9},{n:'E',pc:4},{n:'B',pc:11},{n:'F#',pc:6},{n:'D♭',pc:1},{n:'A♭',pc:8},{n:'E♭',pc:3},{n:'B♭',pc:10},{n:'F',pc:5}];
 
+// ── i18n ──────────────────────────────────────────────────────────────────
+const LANGS = ['EN','DE','FR','ES'];
+const I18N = {
+  EN:{
+    concept:'concept', demo:'demo', guide:'guide',
+    harmony:'harmony', spectral:'spectral',
+    selectMood:'✦ select a mood…', morph:'✦ morph', vary:'🎲 vary',
+    midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 SCORE', image:'🖼 IMAGE',
+    compose:'♪ COMPOSE', composing:'♪ COMPOSING',
+    sing:'🎤 SING', singing:'🎤',
+    listen:'🔊 LISTEN', listening:'🔊 LISTENING…',
+    play:'▶ play', pause:'⏸ pause', resume:'▶ resume',
+    print:'🖨 print', clear:'clear', loop:'⟳ loop', undo:'↩',
+    recArm:'⏺ rec', recStop:'⏹ rec…',
+    share:'share', save:'save', saving:'saving…', saved:'saved ✓',
+    chordsPlay:'chords · tap to play',
+    sLeft:'s left',
+    loadingPiano:' loading piano…', grandPiano:' grand piano', synthPiano:' synth piano',
+    listenHint:'best with external speaker or another device — iOS suppresses same-phone audio',
+    micDenied:'Microphone access denied.', micUnavailable:'Microphone not available in this browser.',
+    recUnsupported:'Recording not supported in this browser.',
+    recTooShort:'Recording was too short — hold rec for at least a second.',
+    searchGuide:'search the guide…', noMatches:'No matches for',
+    guideTitle:'guide', conceptTitle:'concept',
+    pickMoodFirst:'pick a mood first', morphInto:'morph current mood into another',
+    reroll:'reroll: a fresh take',
+    demoMode:'demo mode — clear to play again',
+    stopRecFirst:'stop recording to use playback controls',
+    stopListenFirst:'stop listening first', stopSingFirst:'stop singing first',
+    scaleBtn:'⚙ scale',
+    midiInput:'♬ MIDI INPUT', audioInput:'♫ AUDIO INPUT', scoreInput:'𝄞 SCORE INPUT', imageInput:'🖼 IMAGE INPUT',
+    builtInSample:'▶ built-in sample', chooseFile:'📁 choose file', cancel:'cancel',
+    close:'close',
+  },
+  DE:{
+    concept:'konzept', demo:'demo', guide:'anleitung',
+    harmony:'harmonie', spectral:'spektral',
+    selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'🎲 variieren',
+    midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITUR', image:'🖼 BILD',
+    compose:'♪ KOMPONIEREN', composing:'♪ KOMPONIERT…',
+    sing:'🎤 SINGEN', singing:'🎤',
+    listen:'🔊 LAUSCHEN', listening:'🔊 LAUSCHT…',
+    play:'▶ spielen', pause:'⏸ pause', resume:'▶ weiter',
+    print:'🖨 drucken', clear:'löschen', loop:'⟳ schleife', undo:'↩',
+    recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
+    share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓',
+    chordsPlay:'akkorde · zum spielen tippen',
+    sLeft:'s übrig',
+    loadingPiano:' klavier lädt…', grandPiano:' flügel', synthPiano:' synth-klavier',
+    listenHint:'am besten mit externem lautsprecher — iOS unterdrückt eigenes audio',
+    micDenied:'Mikrofonzugriff verweigert.', micUnavailable:'Mikrofon nicht verfügbar.',
+    recUnsupported:'Aufnahme wird nicht unterstützt.',
+    recTooShort:'Aufnahme zu kurz — mindestens eine Sekunde halten.',
+    searchGuide:'anleitung durchsuchen…', noMatches:'Keine Treffer für',
+    guideTitle:'anleitung', conceptTitle:'konzept',
+    pickMoodFirst:'zuerst stimmung wählen', morphInto:'aktuelle stimmung transformieren',
+    reroll:'neu würfeln',
+    demoMode:'demo-modus — löschen zum erneuten spielen',
+    stopRecFirst:'aufnahme stoppen für wiedergabe',
+    stopListenFirst:'erst lauschen stoppen', stopSingFirst:'erst singen stoppen',
+    scaleBtn:'⚙ tonart',
+    midiInput:'♬ MIDI EINGABE', audioInput:'♫ AUDIO EINGABE', scoreInput:'𝄞 PARTITUR EINGABE', imageInput:'🖼 BILD EINGABE',
+    builtInSample:'▶ integriertes beispiel', chooseFile:'📁 datei wählen', cancel:'abbrechen',
+    close:'schließen',
+  },
+  FR:{
+    concept:'concept', demo:'démo', guide:'guide',
+    harmony:'harmonie', spectral:'spectral',
+    selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'🎲 varier',
+    midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITION', image:'🖼 IMAGE',
+    compose:'♪ COMPOSER', composing:'♪ COMPOSITION…',
+    sing:'🎤 CHANTER', singing:'🎤',
+    listen:'🔊 ÉCOUTER', listening:'🔊 ÉCOUTE…',
+    play:'▶ jouer', pause:'⏸ pause', resume:'▶ reprendre',
+    print:'🖨 imprimer', clear:'effacer', loop:'⟳ boucle', undo:'↩',
+    recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
+    share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓',
+    chordsPlay:'accords · appuyer pour jouer',
+    sLeft:'s restant',
+    loadingPiano:' piano en chargement…', grandPiano:' piano à queue', synthPiano:' piano synthé',
+    listenHint:'idéal avec un haut-parleur externe — iOS supprime l\'audio interne',
+    micDenied:'Accès au microphone refusé.', micUnavailable:'Microphone non disponible.',
+    recUnsupported:'Enregistrement non supporté.',
+    recTooShort:'Enregistrement trop court — tenir au moins une seconde.',
+    searchGuide:'rechercher dans le guide…', noMatches:'Aucun résultat pour',
+    guideTitle:'guide', conceptTitle:'concept',
+    pickMoodFirst:'choisir d\'abord une humeur', morphInto:'transformer l\'humeur actuelle',
+    reroll:'relancer',
+    demoMode:'mode démo — effacer pour rejouer',
+    stopRecFirst:'arrêter l\'enregistrement pour contrôler',
+    stopListenFirst:'arrêter l\'écoute d\'abord', stopSingFirst:'arrêter le chant d\'abord',
+    scaleBtn:'⚙ gamme',
+    midiInput:'♬ ENTRÉE MIDI', audioInput:'♫ ENTRÉE AUDIO', scoreInput:'𝄞 ENTRÉE PARTITION', imageInput:'🖼 ENTRÉE IMAGE',
+    builtInSample:'▶ exemple intégré', chooseFile:'📁 choisir fichier', cancel:'annuler',
+    close:'fermer',
+  },
+  ES:{
+    concept:'concepto', demo:'demo', guide:'guía',
+    harmony:'armonía', spectral:'espectral',
+    selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'🎲 variar',
+    midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITURA', image:'🖼 IMAGEN',
+    compose:'♪ COMPONER', composing:'♪ COMPONIENDO…',
+    sing:'🎤 CANTAR', singing:'🎤',
+    listen:'🔊 ESCUCHAR', listening:'🔊 ESCUCHANDO…',
+    play:'▶ tocar', pause:'⏸ pausa', resume:'▶ continuar',
+    print:'🖨 imprimir', clear:'borrar', loop:'⟳ bucle', undo:'↩',
+    recArm:'⏺ grabar', recStop:'⏹ graba…',
+    share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓',
+    chordsPlay:'acordes · pulsar para tocar',
+    sLeft:'s restante',
+    loadingPiano:' cargando piano…', grandPiano:' piano de cola', synthPiano:' piano sintetizador',
+    listenHint:'mejor con altavoz externo — iOS suprime el audio propio',
+    micDenied:'Acceso al micrófono denegado.', micUnavailable:'Micrófono no disponible.',
+    recUnsupported:'Grabación no compatible.',
+    recTooShort:'Grabación demasiado corta — mantener al menos un segundo.',
+    searchGuide:'buscar en la guía…', noMatches:'Sin resultados para',
+    guideTitle:'guía', conceptTitle:'concepto',
+    pickMoodFirst:'primero elegir un estado', morphInto:'transformar el estado actual',
+    reroll:'relanzar',
+    demoMode:'modo demo — borrar para volver a tocar',
+    stopRecFirst:'detener grabación para controlar',
+    stopListenFirst:'detener escucha primero', stopSingFirst:'detener canto primero',
+    scaleBtn:'⚙ escala',
+    midiInput:'♬ ENTRADA MIDI', audioInput:'♫ ENTRADA AUDIO', scoreInput:'𝄞 ENTRADA PARTITURA', imageInput:'🖼 ENTRADA IMAGEN',
+    builtInSample:'▶ ejemplo integrado', chooseFile:'📁 elegir archivo', cancel:'cancelar',
+    close:'cerrar',
+  },
+};
+
 // Chord recognition: given a set of MIDI numbers, return a chord name like "C maj" or null.
 // Checks all 12 rotations (inversions) of the pitch-class set against common interval patterns.
 function recognizeChord(midis){
@@ -1011,54 +1140,282 @@ const MOODS = ['funny','sad','aggressive','dreamy','love','nostalgic','calm','ex
 // Searchable in-app guide. Each entry: title, body, plus keywords to widen
 // the match surface for the search box. Sections are independent — order
 // only affects display when the search box is empty.
-const GUIDE = [
-  {id:'overview', title:'Overview', keywords:'start begin intro what is paintiano how',
-   body:'Paintiano paints music as a φ-proportioned grid of coloured blocks, and plays paintings back as music. Pick a source — Compose, Sing, MIDI, Audio, Score, Image, or a mood — and the canvas fills as you play. Hit Play to hear it, Print to save the painting, Rec (image mode only) to capture the audio.'},
-  {id:'modes', title:'Harmony vs Spectral', keywords:'colour color mode hue palette circle fifths chromatic',
-   body:'Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly.'},
-  {id:'style', title:'Painting style: Picasso / Rembrandt / Monet', keywords:'style picasso rembrandt monet cubist impressionist chiaroscuro impasto brush stroke dab mosaic artist',
-   body:'Optional artist-style overlay. With nothing selected the canvas uses the mosaic default (sharp φ-rectangles + halo). Picasso (analytical cubism) fractures each chord into geometric planes. Rembrandt layers impasto brushstrokes with chiaroscuro lighting. Monet scatters soft circular dabs with feathered edges. Tap the active artist again to deselect. Switches instantly.'},
-  {id:'demo', title:'Demo (Für Elise)', keywords:'demo für elise beethoven test example sample',
-   body:'Tap DEMO to play a built-in Für Elise excerpt. The keyboard surfaces automatically so you can watch the keys light up. Press CLEAR to leave demo mode.'},
-  {id:'compose', title:'Compose with the keyboard', keywords:'compose keyboard piano live record keys play undo backspace enter space chord name recognise',
-   body:'Tap ♪ COMPOSE (or press Enter) to reveal the on-screen piano. Tap or hold keys — longer holds produce wider blocks. Hardware keyboard: A–K white keys, W/E/T/Y/U black keys. Backspace undoes the last chord. Space bar plays/pauses. Enter toggles the keyboard. When you hold keys that form a known chord (C maj, A min, D7…) the name appears in the readout. Hit Play to replay your composition.'},
-  {id:'listen', title:'🔊 Listen — paint ambient music', keywords:'listen ambient music spotify speaker microphone room sound painting live',
-   body:'Tap 🔊 LISTEN and allow microphone access. Paintiano listens through the mic and paints what it hears — each detected chord becomes a colour block. Best results: play music from an external speaker or another device nearby, then hold your phone with the mic facing the sound. On iOS, music playing through the same phone\'s speaker is suppressed by the OS audio system and may not be detected — this is a hardware limitation, not a bug. Works well on Android Chrome or when audio comes from an external source.'},
-  {id:'sing', title:'🎤 Sing / mic painting', keywords:'sing mic microphone voice hum pitch vocal',
-   body:'Tap 🎤 SING and allow microphone access. Sing, hum, or whistle — the app detects your pitch in real time, plays it through the piano sampler, and paints each note as a block. The canvas fills as you perform. Tap again to stop. Note: mic access is blocked inside Claude\'s sandbox — works correctly as a standalone page.'},
-  {id:'scale-snap', title:'Scale snap (advanced)', keywords:'scale snap key major minor chromatic free advanced',
-   body:'In Compose mode, the ⚙ icon reveals a scale-snap selector. Snap input to C maj, A min, G maj, E min, D maj, F maj, or D min — notes outside the chosen scale are pulled to the nearest in-scale neighbour. Set to "free" (default) for full chromatic.'},
-  {id:'moods', title:'Mood selector', keywords:'mood ai compose generate funny sad love calm crazy dreamy excited aggressive nostalgic',
-   body:'Pick a mood from the dropdown to generate a composition. Nine moods: funny, sad, aggressive, dreamy, love, nostalgic, calm, excited, crazy. The canvas starts blank and fills chord by chord as the music plays. After picking one you can MORPH into another mood or VARY for a fresh take.'},
-  {id:'midi', title:'♬ MIDI upload', keywords:'midi upload import file mid',
-   body:'Upload any standard MIDI file (.mid / .midi). Multi-track files are condensed into chord events, tempo-mapped, and painted. A built-in sample is available if you tap ♬ MIDI without a file. The canvas starts blank and fills as the piece plays.'},
-  {id:'audio', title:'♫ Audio upload', keywords:'audio mp3 wav transcribe upload pitch detection',
-   body:'Upload mp3, wav, m4a, ogg, or aac. Audio is decoded and pitch-detected into MIDI-like events. Works best with clean monophonic or sparse polyphonic material. Built-in sample available.'},
-  {id:'score', title:'𝄞 Score (MusicXML)', keywords:'score musicxml mxl musescore finale dorico sheet music',
-   body:'Upload exact sheet music from MuseScore, Finale, or Dorico. Accepts .musicxml, .xml, and .mxl. Pitches, durations, dynamics, and chords come through exactly — the most accurate input.'},
-  {id:'image', title:'🖼 Image transcription', keywords:'image painting picture transcribe paint photo colour',
-   body:'Upload an image; Paintiano reads it as a score. Downsampled to 192×120 pixels, walked left-to-right top-to-bottom, producing chord events across a ~2 minute performance. Hue → pitch, lightness → octave, chroma → velocity. Dominant background hue is suppressed so figurative content dominates.'},
-  {id:'morph', title:'✦ Morph', keywords:'morph crossfade blend transition mood between',
-   body:'Available after picking a mood. Tap ✦ MORPH to crossfade the current mood into another. First half is mood A, second half is mood B, with a velocity blend in the 40–60% zone. The progress bar subtitle shows the blend e.g. "happy → sad".'},
-  {id:'vary', title:'🎲 Vary', keywords:'vary variation reroll randomize random fresh',
-   body:'Available after picking a mood. Tap 🎲 VARY to reroll a fresh interpretation of the same mood. Keep tapping for different takes — pitch and rhythm vary while the mood signature stays. The canvas border flashes gold on each reroll.'},
-  {id:'playback', title:'Play / Pause / Seek', keywords:'play pause stop resume seek scrub progress bar position jump drag',
-   body:'The Play button starts and pauses playback (Space bar also works). Tap anywhere on the progress bar to jump to that position. Drag the progress bar left or right to scrub through the piece live — release to resume from that point. Time remaining is shown during playback.'},
-  {id:'loop', title:'⟳ Loop', keywords:'loop repeat cycle mood continuous',
-   body:'Available during mood playback. Tap ⟳ LOOP to keep the piece repeating continuously. Tap again to turn off. The button highlights gold when active.'},
-  {id:'speed', title:'Playback speed', keywords:'speed slow fast tempo rate slider 1x half',
-   body:'The speed slider in the transport dock adjusts playback rate from 0.25× to 2×. Tap the speed label to reset to 1×. Changes take effect immediately during playback.'},
-  {id:'print', title:'🖨 Print (save the painting)', keywords:'print export png image save painting picture',
-   body:'Renders the painting at 8× resolution as a PNG. Tap to open the preview, then long-press the image to save to Photos / Files, or copy to clipboard. In Compose mode you can name the piece before saving.'},
-  {id:'record', title:'⏺ Rec (image mode)', keywords:'record rec audio capture save mp4 m4a recording share',
-   body:'Available in image mode only. Tap ⏺ REC to start recording the audio output and playback simultaneously. Recording stops automatically when the piece ends — a share/save row then appears in the dock. Tap Share to save via the system dialog (Files, AirDrop, Downloads, Mail). Tap ✕ to dismiss without saving. Note: share is blocked inside Claude\'s sandbox — works as a standalone page.'},
-  {id:'clear', title:'Clear', keywords:'clear reset start over delete',
-   body:'In Compose, Sing, or Listen mode: wipes the canvas and all recorded chords so you can start fresh — the mode stays active. In MIDI, audio, score, image, or mood mode: resets the canvas to blank but keeps the loaded piece so you can play it again without re-loading.'},
-  {id:'micvol', title:'Canvas breathing (mic volume)', keywords:'mic volume breathing pulse canvas room sound ambient',
-   body:'In Sing and Listen modes the canvas automatically pulses with the room volume — louder sound expands the canvas slightly, silence lets it rest. This uses a separate microphone analyser running alongside pitch detection. No button needed — starts and stops with Sing/Listen automatically.'},
-  {id:'troubleshoot', title:'Troubleshooting', keywords:'troubleshoot problem error broken fix bug help slow',
-   body:'If status reads "loading piano…" wait a few seconds for samples to download (~5 MB). If it falls back to "synth piano" the app still works with an oscillator synth. Mic access and the share sheet are blocked in Claude\'s iframe sandbox — both work correctly when Paintiano runs as a standalone page. Listen mode does not work with same-device audio on iOS — use an external speaker or another device.'},
-];
+const CONCEPT_I18N = {
+  EN: (<>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmony vs Spectral</h3>
+    <p style={{margin:'0 0 12px'}}>In both modes every note is painted as a block whose <em>hue</em> is determined by its pitch class (C, C♯, D…), whose <em>lightness</em> tracks its octave, and whose <em>saturation</em> follows velocity. What changes between the modes is the dictionary mapping pitch to hue.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmony mode</strong> places the twelve pitch classes around the colour wheel in <em>Circle-of-Fifths</em> order. Notes a perfect fifth apart become hue neighbours; tonally distant notes sit on opposite sides. Anything written in a key paints in a tight cluster of related colours.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral mode</strong> maps the same twelve pitch classes in strict chromatic order at 30° hue steps — C is red, every semitone shifts the hue one notch. The more literal "one colour per note" approach, useful for picking out melodic lines.</p>
+    <p style={{margin:'0 0 22px'}}>A toolbar toggle picks an optional <em>painting style</em>. <strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> (analytical cubism) fractures each chord into geometric planes with bold contour lines. <strong style={{color:'rgba(210,170,255,.9)'}}>Rembrandt</strong> layers impasto brushstrokes with chiaroscuro lighting. <strong style={{color:'rgba(210,170,255,.9)'}}>Monet</strong> scatters soft circular dabs — chord becomes a glowing colour field. Tap the active artist again to return to mosaic.</p>
+    <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Image transcription</h3>
+    <p style={{margin:'0 0 12px'}}>When you drop a painting in, Paintiano reads it as a score. The image is downsampled to 192 × 120 pixels and walked left-to-right, top-to-bottom, yielding 960 chord events across a two-minute performance.</p>
+    <p style={{margin:'0 0 8px'}}>Every pixel becomes a note by reading its HSL colour:</p>
+    <ul style={{margin:'0 0 14px',paddingLeft:20}}>
+      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Hue → pitch class</strong> — matched to the current mode's table.</li>
+      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Lightness → octave</strong> — darker pixels in lower register, lighter in upper.</li>
+      <li><strong style={{color:'rgba(210,160,255,.9)'}}>Chroma → velocity</strong> — vivid colours play louder, muted softer.</li>
+    </ul>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>White, grey, and black</strong> are not silent — achromatic pixels play C with octave set by lightness.</p>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>The result is a composition specific to the painting: not random, not literal, but a structured reading where the colour palette becomes a harmonic palette.</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Compose, Sing &amp; Listen</h3>
+    <p style={{margin:'0 0 12px'}}>Three ways to create from scratch. <strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> reveals an on-screen piano — tap or hold keys, longer holds produce wider blocks. Hardware keyboard: A–K for white keys, W/E/T/Y/U for black. Backspace undoes the last chord. Enter toggles the keyboard. Space bar plays and pauses. Chord names (C maj, A min…) appear live in the note readout.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Sing</strong> uses your microphone. Sing, hum, or whistle — pitch is detected every 600 ms, played through the piano sampler, and painted as a block. Notes snap to C major scale. The canvas fills as you perform.</p>
+    <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Listen</strong> also uses the microphone, but is tuned for ambient music rather than voice. Play music from a speaker nearby — Paintiano detects the pitches and paints only when the chord changes, silently. Works best with an external speaker; on iOS, same-device speaker audio is suppressed by the OS.</p>
+  </>),
+  DE: (<>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmonie vs. Spektral</h3>
+    <p style={{margin:'0 0 12px'}}>In beiden Modi wird jede Note als Block gemalt, dessen <em>Farbton</em> durch die Tonklasse bestimmt wird, dessen <em>Helligkeit</em> die Oktave verfolgt und dessen <em>Sättigung</em> der Lautstärke folgt.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie-Modus</strong> ordnet die zwölf Tonklassen im Quintenzirkel um das Farbrad an. Töne, die eine Quinte auseinanderliegen, werden Farb-Nachbarn; tonal entfernte Töne liegen gegenüber.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spektral-Modus</strong> bildet die zwölf Tonklassen in streng chromatischer Reihenfolge in 30°-Schritten ab — C ist Rot, jeder Halbton verschiebt den Farbton einen Schritt.</p>
+    <p style={{margin:'0 0 22px'}}>Ein Schalter wählt einen optionalen <em>Malstil</em>. <strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> zerlegt jeden Akkord in geometrische Ebenen. <strong style={{color:'rgba(210,170,255,.9)'}}>Rembrandt</strong> schichtet Impasto-Pinselstriche mit Chiaroscuro. <strong style={{color:'rgba(210,170,255,.9)'}}>Monet</strong> streut weiche kreisförmige Tupfer. Aktiven Stil erneut antippen zum Zurücksetzen.</p>
+    <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Bildtranskription</h3>
+    <p style={{margin:'0 0 12px'}}>Wenn ein Gemälde geladen wird, liest Paintiano es als Partitur. Das Bild wird auf 192 × 120 Pixel verkleinert und von links nach rechts abgetastet — 960 Akkordereignisse über zwei Minuten.</p>
+    <ul style={{margin:'0 0 14px',paddingLeft:20}}>
+      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Farbton → Tonklasse</strong> — passend zur aktuellen Modus-Tabelle.</li>
+      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Helligkeit → Oktave</strong> — dunklere Pixel im tiefen Register, hellere im hohen.</li>
+      <li><strong style={{color:'rgba(210,160,255,.9)'}}>Sättigung → Lautstärke</strong> — lebhafte Farben spielen lauter, gedämpfte leiser.</li>
+    </ul>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Das Ergebnis ist eine kompositionsspezifische Lesart des Gemäldes: nicht zufällig, nicht wörtlich, sondern strukturiert — die Farbpalette wird zur harmonischen Palette.</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Komponieren, Singen &amp; Lauschen</h3>
+    <p style={{margin:'0 0 12px'}}>Drei Wege, von Grund auf neu zu erschaffen. <strong style={{color:'rgba(201,168,76,.95)'}}>Komponieren</strong> öffnet ein Bildschirmklavier — antippen oder halten, längeres Halten erzeugt breitere Blöcke. Hardware-Tastatur: A–K für weiße Tasten, W/E/T/Y/U für schwarze. Rücktaste macht den letzten Akkord rückgängig.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Singen</strong> verwendet das Mikrofon. Singen, summen oder pfeifen — die Tonhöhe wird alle 600 ms erkannt, durch den Klavier-Sampler gespielt und als Block gemalt. Töne werden in die C-Dur-Tonleiter eingerastet.</p>
+    <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Lauschen</strong> verwendet ebenfalls das Mikrofon, ist jedoch für Umgebungsmusik optimiert. Musik von einem Lautsprecher abspielen — Paintiano erkennt die Akkorde und malt nur bei Akkordwechsel, ohne eigenen Ton. Am besten mit externem Lautsprecher; auf iOS wird internes Audio unterdrückt.</p>
+  </>),
+  FR: (<>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmonie vs Spectral</h3>
+    <p style={{margin:'0 0 12px'}}>Dans les deux modes, chaque note est peinte comme un bloc dont la <em>teinte</em> est déterminée par sa classe de hauteur, dont la <em>luminosité</em> suit son octave, et dont la <em>saturation</em> suit la vélocité.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Mode Harmonie</strong> place les douze classes de hauteur autour de la roue des couleurs dans l'ordre du cercle des quintes. Les notes à une quinte de distance deviennent voisines en teinte.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Mode Spectral</strong> mappe les douze classes en ordre chromatique strict par pas de 30° — Do est rouge, chaque demi-ton décale la teinte d'un cran.</p>
+    <p style={{margin:'0 0 22px'}}>Un bouton sélectionne un <em>style pictural</em> optionnel. <strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> fragmente chaque accord en plans géométriques. <strong style={{color:'rgba(210,170,255,.9)'}}>Rembrandt</strong> superpose des coups de pinceau impasto avec clair-obscur. <strong style={{color:'rgba(210,170,255,.9)'}}>Monet</strong> disperse de douces touches circulaires. Appuyer à nouveau sur l'artiste actif pour revenir à la mosaïque.</p>
+    <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Transcription d'image</h3>
+    <p style={{margin:'0 0 12px'}}>Lorsque vous déposez une peinture, Paintiano la lit comme une partition. L'image est réduite à 192 × 120 pixels, parcourue de gauche à droite — 960 événements d'accords sur deux minutes.</p>
+    <ul style={{margin:'0 0 14px',paddingLeft:20}}>
+      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Teinte → classe de hauteur</strong> — selon la table du mode actuel.</li>
+      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Luminosité → octave</strong> — pixels sombres dans le registre grave, clairs dans l'aigu.</li>
+      <li><strong style={{color:'rgba(210,160,255,.9)'}}>Saturation → vélocité</strong> — couleurs vives jouent plus fort, ternes plus doucement.</li>
+    </ul>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Le résultat est une composition propre à la peinture : ni aléatoire, ni littérale, mais une lecture structurée où la palette de couleurs devient une palette harmonique.</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Composer, Chanter &amp; Écouter</h3>
+    <p style={{margin:'0 0 12px'}}>Trois façons de créer de toutes pièces. <strong style={{color:'rgba(201,168,76,.95)'}}>Composer</strong> révèle un piano à l'écran — appuyer ou maintenir les touches, maintenir plus longtemps produit des blocs plus larges. Clavier physique : A–K touches blanches, W/E/T/Y/U noires. Retour arrière annule le dernier accord.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Chanter</strong> utilise le microphone. Chantez, fredonnez ou sifflez — la hauteur est détectée toutes les 600 ms, jouée via le sampler piano et peinte en bloc. Les notes sont calées sur la gamme de Do majeur.</p>
+    <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Écouter</strong> utilise aussi le microphone, mais est optimisé pour la musique ambiante. Jouez de la musique depuis un haut-parleur — Paintiano détecte les accords et ne peint qu'au changement d'harmonie. Idéal avec un haut-parleur externe ; sur iOS, l'audio interne est supprimé par le système.</p>
+  </>),
+  ES: (<>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Armonía vs Espectral</h3>
+    <p style={{margin:'0 0 12px'}}>En ambos modos cada nota se pinta como un bloque cuyo <em>tono</em> lo determina su clase de altura, cuya <em>luminosidad</em> sigue su octava, y cuya <em>saturación</em> sigue la velocidad.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Modo Armonía</strong> coloca las doce clases de tono alrededor de la rueda de color en orden del círculo de quintas. Las notas separadas una quinta se convierten en vecinas de tono.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Modo Espectral</strong> mapea las doce clases en orden cromático estricto a pasos de 30° — Do es rojo, cada semitono desplaza el tono un paso.</p>
+    <p style={{margin:'0 0 22px'}}>Un botón selecciona un <em>estilo pictórico</em> opcional. <strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> fragmenta cada acorde en planos geométricos. <strong style={{color:'rgba(210,170,255,.9)'}}>Rembrandt</strong> superpone pinceladas impasto con claroscuro. <strong style={{color:'rgba(210,170,255,.9)'}}>Monet</strong> dispersa suaves toques circulares. Toca el artista activo de nuevo para volver al mosaico.</p>
+    <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Transcripción de imagen</h3>
+    <p style={{margin:'0 0 12px'}}>Al cargar una pintura, Paintiano la lee como partitura. La imagen se reduce a 192 × 120 píxeles, recorrida de izquierda a derecha — 960 eventos de acordes en dos minutos.</p>
+    <ul style={{margin:'0 0 14px',paddingLeft:20}}>
+      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Tono → clase de altura</strong> — según la tabla del modo actual.</li>
+      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Luminosidad → octava</strong> — píxeles oscuros en registro grave, claros en agudo.</li>
+      <li><strong style={{color:'rgba(210,160,255,.9)'}}>Saturación → velocidad</strong> — colores vivos suenan más fuerte, apagados más suave.</li>
+    </ul>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>El resultado es una composición específica de la pintura: ni aleatoria, ni literal, sino una lectura estructurada donde la paleta de colores se convierte en paleta armónica.</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Componer, Cantar &amp; Escuchar</h3>
+    <p style={{margin:'0 0 12px'}}>Tres formas de crear desde cero. <strong style={{color:'rgba(201,168,76,.95)'}}>Componer</strong> muestra un piano en pantalla — tocar o mantener las teclas, mantener más tiempo produce bloques más anchos. Teclado físico: A–K teclas blancas, W/E/T/Y/U negras. Retroceso deshace el último acorde.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Cantar</strong> usa el micrófono. Canta, tararea o silba — el tono se detecta cada 600 ms, se toca a través del sampler de piano y se pinta como bloque. Las notas se ajustan a la escala de Do mayor.</p>
+    <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Escuchar</strong> también usa el micrófono, pero está optimizado para música ambiente. Reproduce música desde un altavoz — Paintiano detecta los acordes y solo pinta cuando cambia la armonía, en silencio. Mejor con altavoz externo; en iOS el audio interno es suprimido por el sistema.</p>
+  </>),
+};
+
+const GUIDE_I18N = {
+  EN: [
+  {id:'overview', title:`Overview`, keywords:`start begin intro what is paintiano how`,
+   body:`Paintiano paints music as a φ-proportioned grid of coloured blocks, and plays paintings back as music. Pick a source — Compose, Sing, MIDI, Audio, Score, Image, or a mood — and the canvas fills as you play. Hit Play to hear it, Print to save the painting, Rec (image mode only) to capture the audio.`},
+  {id:'modes', title:`Harmony vs Spectral`, keywords:`colour color mode hue palette circle fifths chromatic`,
+   body:`Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly.`},
+  {id:'style', title:`Painting style: Picasso / Rembrandt / Monet`, keywords:`style picasso rembrandt monet cubist impressionist chiaroscuro impasto brush stroke dab mosaic artist`,
+   body:`Optional artist-style overlay. With nothing selected the canvas uses the mosaic default (sharp φ-rectangles + halo). Picasso (analytical cubism) fractures each chord into geometric planes. Rembrandt layers impasto brushstrokes with chiaroscuro lighting. Monet scatters soft circular dabs with feathered edges. Tap the active artist again to deselect. Switches instantly.`},
+  {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test example sample`,
+   body:`Tap DEMO to play a built-in Für Elise excerpt. The keyboard surfaces automatically so you can watch the keys light up. Press CLEAR to leave demo mode.`},
+  {id:'compose', title:`Compose with the keyboard`, keywords:`compose keyboard piano live record keys play undo backspace enter space chord name recognise`,
+   body:`Tap ♪ COMPOSE (or press Enter) to reveal the on-screen piano. Tap or hold keys — longer holds produce wider blocks. Hardware keyboard: A–K white keys, W/E/T/Y/U black keys. Backspace undoes the last chord. Space bar plays/pauses. Enter toggles the keyboard. When you hold keys that form a known chord (C maj, A min, D7…) the name appears in the readout. Hit Play to replay your composition.`},
+  {id:'listen', title:`🔊 Listen — paint ambient music`, keywords:`listen ambient music spotify speaker microphone room sound painting live`,
+   body:`Tap 🔊 LISTEN and allow microphone access. Paintiano listens through the mic and paints what it hears — each detected chord becomes a colour block. Best results: play music from an external speaker or another device nearby. On iOS, same-phone audio is suppressed by the OS — use an external source.`},
+  {id:'sing', title:`🎤 Sing / mic painting`, keywords:`sing mic microphone voice hum pitch vocal`,
+   body:`Tap 🎤 SING and allow microphone access. Sing, hum, or whistle — the app detects your pitch, snaps it to C major scale, plays it through the piano sampler, and paints each note as a block. Monophonic — one note at a time. Tap again to stop.`},
+  {id:'scale-snap', title:`Scale snap (advanced)`, keywords:`scale snap key major minor chromatic free advanced`,
+   body:`In Compose mode, the ⚙ icon reveals a scale-snap selector. Snap input to C maj, A min, G maj, E min, D maj, F maj, or D min — notes outside the chosen scale are pulled to the nearest in-scale neighbour. Set to "free" (default) for full chromatic.`},
+  {id:'moods', title:`Mood selector`, keywords:`mood ai compose generate funny sad love calm crazy dreamy excited aggressive nostalgic`,
+   body:`Pick a mood from the dropdown to generate a composition. Nine moods: funny, sad, aggressive, dreamy, love, nostalgic, calm, excited, crazy. The canvas starts blank and fills chord by chord as the music plays. After picking one you can MORPH into another mood or VARY for a fresh take.`},
+  {id:'midi', title:`♬ MIDI upload`, keywords:`midi upload import file mid`,
+   body:`Upload any standard MIDI file (.mid / .midi). Multi-track files are condensed into chord events, tempo-mapped, and painted. A built-in sample is available if you tap ♬ MIDI without a file. The canvas starts blank and fills as the piece plays.`},
+  {id:'audio', title:`♫ Audio upload`, keywords:`audio mp3 wav transcribe upload pitch detection`,
+   body:`Upload mp3, wav, m4a, ogg, or aac. Audio is decoded and pitch-detected into MIDI-like events. Works best with clean monophonic or sparse polyphonic material. Built-in sample available.`},
+  {id:'score', title:`𝄞 Score (MusicXML)`, keywords:`score musicxml mxl musescore finale dorico sheet music`,
+   body:`Upload exact sheet music from MuseScore, Finale, or Dorico. Accepts .musicxml, .xml, and .mxl. Pitches, durations, dynamics, and chords come through exactly — the most accurate input.`},
+  {id:'image', title:`🖼 Image transcription`, keywords:`image painting picture transcribe paint photo colour`,
+   body:`Upload an image; Paintiano reads it as a score. Downsampled to 192×120 pixels, walked left-to-right top-to-bottom. Hue → pitch, lightness → octave, chroma → velocity. Dominant background hue is suppressed so figurative content dominates.`},
+  {id:'morph', title:`✦ Morph`, keywords:`morph crossfade blend transition mood between`,
+   body:`Available after picking a mood. Tap ✦ MORPH to crossfade the current mood into another. First half is mood A, second half is mood B, with a velocity blend in the 40–60% zone. The progress bar subtitle shows the blend e.g. "happy → sad".`},
+  {id:'vary', title:`🎲 Vary`, keywords:`vary variation reroll randomize random fresh`,
+   body:`Available after picking a mood. Tap 🎲 VARY to reroll a fresh interpretation of the same mood. Keep tapping for different takes — pitch and rhythm vary while the mood signature stays. The canvas border flashes gold on each reroll.`},
+  {id:'playback', title:`Play / Pause / Seek`, keywords:`play pause stop resume seek scrub progress bar position jump drag`,
+   body:`The Play button starts and pauses playback (Space bar also works). Tap anywhere on the progress bar to jump to that position. Drag left or right to scrub live. Time remaining is shown during playback.`},
+  {id:'loop', title:`⟳ Loop`, keywords:`loop repeat cycle mood continuous`,
+   body:`Available during mood playback. Tap ⟳ LOOP to keep the piece repeating continuously. Tap again to turn off. The button highlights gold when active.`},
+  {id:'speed', title:`Playback speed`, keywords:`speed slow fast tempo rate slider 1x half`,
+   body:`The speed slider adjusts playback rate from 0.25× to 2×. Tap the speed label to reset to 1×. Changes take effect immediately during playback.`},
+  {id:'print', title:`🖨 Print (save the painting)`, keywords:`print export png image save painting picture`,
+   body:`Renders the painting at 8× resolution as a PNG. Tap to open the preview, then long-press the image to save to Photos / Files, or copy to clipboard.`},
+  {id:'record', title:`⏺ Rec (image mode)`, keywords:`record rec audio capture save mp4 m4a recording share`,
+   body:`Available in image mode only. Tap ⏺ REC to start recording the audio output and playback simultaneously. Recording stops automatically when the piece ends — a share row appears in the dock. Tap Share to save via the system dialog.`},
+  {id:'clear', title:`Clear`, keywords:`clear reset start over delete`,
+   body:`In Compose, Sing, or Listen mode: wipes the canvas and all recorded chords so you can start fresh — the mode stays active. In MIDI, audio, score, image, or mood mode: resets the canvas to blank but keeps the loaded piece so you can play it again.`},
+  {id:'micvol', title:`Canvas breathing (mic volume)`, keywords:`mic volume breathing pulse canvas room sound ambient`,
+   body:`In Sing and Listen modes the canvas automatically pulses with the room volume — louder sound expands the canvas slightly, silence lets it rest. Starts and stops with Sing/Listen automatically.`},
+  {id:'troubleshoot', title:`Troubleshooting`, keywords:`troubleshoot problem error broken fix bug help slow`,
+   body:`If status reads "loading piano…" wait a few seconds for samples to download (~5 MB). If it falls back to "synth piano" the app still works with an oscillator synth. Mic access and the share sheet are blocked in Claude's iframe sandbox — both work correctly when Paintiano runs as a standalone page. Listen mode does not work with same-device audio on iOS — use an external speaker or another device.`},
+  ],
+  DE: [
+  {id:'overview', title:`Überblick`, keywords:`start anfang intro was ist paintiano wie`,
+   body:`Paintiano malt Musik als φ-proportioniertes Raster farbiger Blöcke und spielt Gemälde als Musik ab. Wähle eine Quelle — Komponieren, Singen, MIDI, Audio, Partitur, Bild oder eine Stimmung — und die Leinwand füllt sich beim Spielen. Play tippen zum Hören, Drucken zum Speichern.`},
+  {id:'modes', title:`Harmonie vs. Spektral`, keywords:`farbe modus farbton palette quintenzirkel chromatisch`,
+   body:`Zwei Farbgrammatiken für dieselbe Musik. Harmonie ordnet die Tonklassen im Quintenzirkel um das Farbrad an — verwandte Tonarten clustern in ähnlichen Farben. Spektral verteilt sie in gleichmäßigen 30°-Schritten — ein Halbton, eine Farbe. Jederzeit wechselbar.`},
+  {id:'style', title:`Malstil: Picasso / Rembrandt / Monet`, keywords:`stil picasso rembrandt monet kubismus impressionismus chiaroscuro impasto pinselstrich`,
+   body:`Optionaler Künstlerstil. Ohne Auswahl verwendet die Leinwand den Mosaik-Standard. Picasso zerlegt jeden Akkord in geometrische Ebenen. Rembrandt schichtet Impasto-Pinselstriche mit Chiaroscuro-Beleuchtung. Monet streut weiche kreisförmige Tupfer. Aktiven Stil erneut antippen zum Abwählen.`},
+  {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test beispiel`,
+   body:`DEMO antippen, um einen integrierten Für-Elise-Ausschnitt abzuspielen. Die Tastatur erscheint automatisch. LÖSCHEN drücken, um den Demo-Modus zu verlassen.`},
+  {id:'compose', title:`Mit der Tastatur komponieren`, keywords:`komponieren tastatur klavier live aufnehmen tasten spielen rückgängig akkord`,
+   body:`♪ KOMPONIEREN antippen (oder Enter) um das Klavier einzublenden. Tasten antippen oder halten — längeres Halten erzeugt breitere Blöcke. Hardware-Tastatur: A–K weiße Tasten, W/E/T/Y/U schwarze Tasten. Rücktaste macht den letzten Akkord rückgängig. Leertaste spielt/pausiert.`},
+  {id:'listen', title:`🔊 Lauschen — Umgebungsmusik malen`, keywords:`lauschen umgebung musik spotify lautsprecher mikrofon raum malen live`,
+   body:`🔊 LAUSCHEN antippen und Mikrofonzugriff erlauben. Paintiano hört durch das Mikrofon und malt was es hört — jeder erkannte Akkord wird ein Farbblock. Am besten mit externem Lautsprecher. Auf iOS wird internes Audio vom System unterdrückt.`},
+  {id:'sing', title:`🎤 Singen / Mikrofon-Malerei`, keywords:`singen mikrofon stimme summen tonhöhe vokal`,
+   body:`🎤 SINGEN antippen und Mikrofonzugriff erlauben. Singen, summen oder pfeifen — die App erkennt deine Tonhöhe, rastet sie in die C-Dur-Tonleiter ein, spielt sie durch den Klavier-Sampler und malt jeden Ton als Block. Einstimmig — ein Ton nach dem anderen.`},
+  {id:'scale-snap', title:`Tonleiter-Einrasten (erweitert)`, keywords:`tonleiter einrasten dur moll chromatisch frei erweitert`,
+   body:`Im Komponier-Modus zeigt das ⚙-Symbol einen Tonleiter-Selektor. Eingabe auf C-Dur, a-Moll, G-Dur, e-Moll, D-Dur, F-Dur oder d-Moll einrasten lassen. "Frei" für vollständig chromatisch.`},
+  {id:'moods', title:`Stimmungsauswahl`, keywords:`stimmung ki komponieren generieren lustig traurig liebe ruhig verrückt verträumt`,
+   body:`Eine Stimmung wählen, um eine Komposition zu generieren. Neun Stimmungen: lustig, traurig, aggressiv, verträumt, Liebe, nostalgisch, ruhig, aufgeregt, verrückt. Danach MORPHEN oder VARIIEREN möglich.`},
+  {id:'midi', title:`♬ MIDI-Upload`, keywords:`midi upload importieren datei`,
+   body:`Beliebige Standard-MIDI-Datei hochladen. Ein integriertes Beispiel ist verfügbar, wenn ohne Datei auf ♬ MIDI getippt wird.`},
+  {id:'audio', title:`♫ Audio-Upload`, keywords:`audio mp3 wav transkribieren upload tonhöhenerkennung`,
+   body:`mp3, wav, m4a, ogg oder aac hochladen. Audio wird dekodiert und tonhöhenerkannt. Funktioniert am besten mit sauberem einstimmigem oder sparsam polyfonem Material.`},
+  {id:'score', title:`𝄞 Partitur (MusicXML)`, keywords:`partitur musicxml musescore finale dorico noten`,
+   body:`Exakte Noten von MuseScore, Finale oder Dorico hochladen. Akzeptiert .musicxml, .xml und .mxl. Tonhöhen, Dauern, Dynamik und Akkorde werden exakt übertragen.`},
+  {id:'image', title:`🖼 Bildtranskription`, keywords:`bild gemälde foto transkribieren malen farbe`,
+   body:`Ein Bild hochladen; Paintiano liest es als Partitur. Auf 192×120 Pixel herunterskaliert. Farbton → Tonhöhe, Helligkeit → Oktave, Sättigung → Lautstärke. Dominante Hintergrundfarbe wird unterdrückt.`},
+  {id:'morph', title:`✦ Morphen`, keywords:`morphen überblenden übergang stimmung zwischen`,
+   body:`Nach Stimmungsauswahl verfügbar. ✦ MORPHEN antippen, um die aktuelle Stimmung in eine andere überzublenden. Erste Hälfte Stimmung A, zweite Hälfte Stimmung B.`},
+  {id:'vary', title:`🎲 Variieren`, keywords:`variieren variation neu würfeln zufällig frisch`,
+   body:`Nach Stimmungsauswahl verfügbar. 🎲 VARIIEREN antippen für eine frische Interpretation derselben Stimmung. Mehrmals tippen für verschiedene Versionen.`},
+  {id:'playback', title:`Spielen / Pause / Suchen`, keywords:`spielen pause stopp fortsetzen suchen scrubben fortschrittsbalken position springen`,
+   body:`Play startet und pausiert die Wiedergabe (Leertaste auch). Fortschrittsbalken antippen zum Springen. Links/rechts ziehen zum Live-Scrubben. Verbleibende Zeit wird angezeigt.`},
+  {id:'loop', title:`⟳ Schleife`, keywords:`schleife wiederholen zyklus stimmung kontinuierlich`,
+   body:`Bei Stimmungswiedergabe verfügbar. ⟳ SCHLEIFE antippen für kontinuierliche Wiederholung. Erneut antippen zum Ausschalten. Schaltfläche leuchtet gold.`},
+  {id:'speed', title:`Wiedergabegeschwindigkeit`, keywords:`geschwindigkeit langsam schnell tempo rate regler`,
+   body:`Der Geschwindigkeitsregler passt die Wiedergaberate von 0,25× bis 2× an. Beschriftung antippen zum Zurücksetzen auf 1×.`},
+  {id:'print', title:`🖨 Drucken (Gemälde speichern)`, keywords:`drucken exportieren png bild speichern gemälde`,
+   body:`Rendert das Gemälde in 8-facher Auflösung als PNG. Antippen für Vorschau, dann lang drücken zum Speichern in Fotos / Dateien.`},
+  {id:'record', title:`⏺ Aufnahme (Bildmodus)`, keywords:`aufnahme audio aufnehmen speichern mp4 m4a teilen`,
+   body:`Nur im Bildmodus verfügbar. ⏺ AUFNAHME antippen, um Audio aufzunehmen. Aufnahme stoppt automatisch am Ende des Stücks.`},
+  {id:'clear', title:`Löschen`, keywords:`löschen zurücksetzen neu beginnen entfernen`,
+   body:`Im Komponier-, Sing- oder Lausch-Modus: Leinwand und Akkorde löschen — Modus bleibt aktiv. Im MIDI-, Audio-, Partitur-, Bild- oder Stimmungsmodus: Leinwand zurücksetzen, Stück bleibt erhalten.`},
+  {id:'micvol', title:`Leinwand-Puls (Mikrofonlautstärke)`, keywords:`mikrofon lautstärke puls leinwand raum klang umgebung`,
+   body:`Im Sing- und Lausch-Modus pulsiert die Leinwand automatisch mit der Raumlautstärke. Startet und stoppt automatisch.`},
+  {id:'troubleshoot', title:`Fehlerbehebung`, keywords:`fehlerbehebung problem fehler kaputt hilfe langsam`,
+   body:`Wenn "Klavier lädt…" angezeigt wird, einige Sekunden warten (~5 MB). Fällt es auf "Synth-Klavier" zurück, funktioniert die App weiterhin. Mikrofonzugriff und Teilen-Funktion im Claude-Sandbox blockiert — funktionieren als eigenständige Seite.`},
+  ],
+  FR: [
+  {id:'overview', title:`Vue d'ensemble`, keywords:`début intro paintiano comment`,
+   body:`Paintiano peint la musique sous forme de grille de blocs colorés aux proportions φ, et joue les peintures en tant que musique. Choisissez une source — Composer, Chanter, MIDI, Audio, Partition, Image ou une humeur — et la toile se remplit. Appuyez sur Jouer pour l'entendre, Imprimer pour sauvegarder.`},
+  {id:'modes', title:`Harmonie vs Spectral`, keywords:`couleur mode teinte palette cercle des quintes chromatique`,
+   body:`Deux grammaires de couleurs pour la même musique. L'harmonie place les classes de hauteur autour de la roue chromatique dans l'ordre du cercle des quintes. Le spectral les répartit en pas de 30°. Changeable à tout moment.`},
+  {id:'style', title:`Style pictural : Picasso / Rembrandt / Monet`, keywords:`style picasso rembrandt monet cubisme impressionnisme clair-obscur impasto pinceau`,
+   body:`Superposition de style artistique optionnelle. Sans sélection, mosaïque par défaut. Picasso fragmente chaque accord en plans géométriques. Rembrandt superpose des coups de pinceau impasto avec clair-obscur. Monet disperse de douces touches circulaires. Appuyer à nouveau pour désélectionner.`},
+  {id:'demo', title:`Démo (Für Elise)`, keywords:`démo für elise beethoven test exemple`,
+   body:`Appuyez sur DÉMO pour jouer un extrait de Für Elise intégré. Le clavier apparaît automatiquement. Appuyez sur EFFACER pour quitter le mode démo.`},
+  {id:'compose', title:`Composer avec le clavier`, keywords:`composer clavier piano live enregistrer touches jouer annuler accord`,
+   body:`Appuyez sur ♪ COMPOSER (ou Entrée) pour afficher le piano. Touchez ou maintenez les touches — maintenir plus longtemps produit des blocs plus larges. Clavier physique : A–K touches blanches, W/E/T/Y/U touches noires. Retour arrière annule le dernier accord. Espace joue/pause.`},
+  {id:'listen', title:`🔊 Écouter — peindre la musique ambiante`, keywords:`écouter ambiance musique spotify haut-parleur microphone son peinture`,
+   body:`Appuyez sur 🔊 ÉCOUTER et autorisez le microphone. Paintiano écoute et peint — chaque accord détecté devient un bloc de couleur. Meilleurs résultats avec un haut-parleur externe. Sur iOS, l'audio interne est supprimé par le système.`},
+  {id:'sing', title:`🎤 Chanter / peinture au micro`, keywords:`chanter micro microphone voix fredonner hauteur vocale`,
+   body:`Appuyez sur 🎤 CHANTER et autorisez le microphone. Chantez, fredonnez ou sifflez — détection de hauteur, calée sur Do majeur, jouée via le sampler piano et peinte. Monophonique — une note à la fois.`},
+  {id:'scale-snap', title:`Accrochage à la gamme (avancé)`, keywords:`gamme accrochage majeur mineur chromatique libre avancé`,
+   body:`En mode Composer, l'icône ⚙ révèle un sélecteur de gamme. Accrocher à Do maj, La min, Sol maj, Mi min, Ré maj, Fa maj ou Ré min. "Libre" pour chromatique complet.`},
+  {id:'moods', title:`Sélecteur d'humeur`, keywords:`humeur ia composer générer drôle triste amour calme fou rêveur`,
+   body:`Choisissez une humeur pour générer une composition. Neuf humeurs : drôle, triste, agressif, rêveur, amour, nostalgique, calme, excité, fou. Vous pouvez ensuite MORPHE ou VARIER.`},
+  {id:'midi', title:`♬ Import MIDI`, keywords:`midi importer fichier`,
+   body:`Importez n'importe quel fichier MIDI standard. Un exemple intégré est disponible si vous appuyez sans fichier.`},
+  {id:'audio', title:`♫ Import audio`, keywords:`audio mp3 wav transcrire importer détection hauteur`,
+   body:`Importez mp3, wav, m4a, ogg ou aac. L'audio est décodé et les hauteurs détectées. Fonctionne mieux avec du matériel monophonique propre.`},
+  {id:'score', title:`𝄞 Partition (MusicXML)`, keywords:`partition musicxml musescore finale dorico feuille de musique`,
+   body:`Importez des partitions exactes depuis MuseScore, Finale ou Dorico. Accepte .musicxml, .xml et .mxl.`},
+  {id:'image', title:`🖼 Transcription d'image`, keywords:`image tableau photo transcrire peindre couleur`,
+   body:`Importez une image ; Paintiano la lit comme une partition. Réduite à 192×120 pixels. Teinte → hauteur, luminosité → octave, saturation → vélocité. La teinte de fond dominante est supprimée.`},
+  {id:'morph', title:`✦ Morphe`, keywords:`morphe fondu enchaîné transition humeur entre`,
+   body:`Disponible après avoir choisi une humeur. Appuyez sur ✦ MORPHE pour fondre l'humeur actuelle dans une autre. Première moitié : humeur A, deuxième moitié : humeur B.`},
+  {id:'vary', title:`🎲 Varier`, keywords:`varier variation relancer aléatoire frais`,
+   body:`Appuyez sur 🎲 VARIER pour une nouvelle interprétation de la même humeur. Continuez à appuyer pour des versions différentes.`},
+  {id:'playback', title:`Jouer / Pause / Chercher`, keywords:`jouer pause arrêter reprendre chercher barre progression position sauter`,
+   body:`Le bouton Jouer démarre et met en pause la lecture (barre d'espace aussi). Appuyez sur la barre de progression pour sauter. Faites glisser pour scrubber en direct.`},
+  {id:'loop', title:`⟳ Boucle`, keywords:`boucle répéter cycle humeur continu`,
+   body:`Appuyez sur ⟳ BOUCLE pour répétition continue. Appuyez à nouveau pour désactiver. Le bouton s'illumine en or.`},
+  {id:'speed', title:`Vitesse de lecture`, keywords:`vitesse lent rapide tempo curseur`,
+   body:`Le curseur de vitesse ajuste la lecture de 0,25× à 2×. Appuyez sur le label pour revenir à 1×.`},
+  {id:'print', title:`🖨 Imprimer (sauvegarder la peinture)`, keywords:`imprimer exporter png image sauvegarder peinture`,
+   body:`Génère la peinture en PNG à résolution 8×. Maintenez appuyé pour enregistrer dans Photos / Fichiers.`},
+  {id:'record', title:`⏺ Enregistrer (mode image)`, keywords:`enregistrement audio capturer sauvegarder mp4 m4a partager`,
+   body:`Mode image uniquement. Appuyez sur ⏺ ENREG. pour enregistrer. L'enregistrement s'arrête automatiquement à la fin.`},
+  {id:'clear', title:`Effacer`, keywords:`effacer réinitialiser recommencer supprimer`,
+   body:`En mode Composer, Chanter ou Écouter : efface la toile — le mode reste actif. En mode MIDI, audio, partition, image ou humeur : remet la toile à zéro mais conserve le morceau.`},
+  {id:'micvol', title:`Respiration de la toile (volume micro)`, keywords:`micro volume respiration pulsation toile son ambiant`,
+   body:`En modes Chanter et Écouter, la toile pulse automatiquement avec le volume de la pièce. Démarre et s'arrête automatiquement.`},
+  {id:'troubleshoot', title:`Dépannage`, keywords:`dépannage problème erreur cassé aide lent`,
+   body:`Si "piano en chargement…" s'affiche, attendez quelques secondes (~5 Mo). L'accès au microphone et le partage sont bloqués dans le sandbox Claude — fonctionnent en page autonome.`},
+  ],
+  ES: [
+  {id:'overview', title:`Visión general`, keywords:`inicio intro qué es paintiano cómo`,
+   body:`Paintiano pinta música como una cuadrícula de bloques de color con proporciones φ, y reproduce pinturas como música. Elige una fuente — Componer, Cantar, MIDI, Audio, Partitura, Imagen o un estado — y el lienzo se llena mientras tocas. Pulsa Tocar para escuchar, Imprimir para guardar.`},
+  {id:'modes', title:`Armonía vs Espectral`, keywords:`color modo tono paleta círculo de quintas cromático`,
+   body:`Dos gramáticas de color para la misma música. Armonía coloca las clases de tono en el círculo de quintas alrededor de la rueda de color. Espectral los espacía en pasos de 30°. Cambia en cualquier momento.`},
+  {id:'style', title:`Estilo pictórico: Picasso / Rembrandt / Monet`, keywords:`estilo picasso rembrandt monet cubismo impresionismo claroscuro impasto pincelada`,
+   body:`Superposición de estilo artístico opcional. Sin selección, mosaico por defecto. Picasso fragmenta cada acorde en planos geométricos. Rembrandt superpone pinceladas impasto con claroscuro. Monet dispersa suaves toques circulares. Toca el artista activo de nuevo para deseleccionar.`},
+  {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven prueba ejemplo`,
+   body:`Pulsa DEMO para reproducir un extracto de Für Elise integrado. El teclado aparece automáticamente. Pulsa BORRAR para salir del modo demo.`},
+  {id:'compose', title:`Componer con el teclado`, keywords:`componer teclado piano en vivo grabar teclas tocar deshacer acorde`,
+   body:`Pulsa ♪ COMPONER (o Enter) para mostrar el piano. Toca o mantén pulsadas las teclas — mantener más tiempo produce bloques más anchos. Teclado físico: A–K teclas blancas, W/E/T/Y/U negras. Retroceso deshace el último acorde. Barra espaciadora toca/pausa.`},
+  {id:'listen', title:`🔊 Escuchar — pintar música ambiente`, keywords:`escuchar ambiente música spotify altavoz micrófono sonido pintura en vivo`,
+   body:`Pulsa 🔊 ESCUCHAR y permite el micrófono. Paintiano escucha y pinta lo que oye — cada acorde detectado se convierte en un bloque de color. Mejores resultados con altavoz externo. En iOS, el audio interno es suprimido por el sistema.`},
+  {id:'sing', title:`🎤 Cantar / pintura con micrófono`, keywords:`cantar micrófono voz tararear tono vocal`,
+   body:`Pulsa 🎤 CANTAR y permite el micrófono. Canta, tararea o silba — detección de tono, ajuste a Do mayor, tocado por el sampler de piano y pintado. Monofónico — una nota a la vez.`},
+  {id:'scale-snap', title:`Ajuste de escala (avanzado)`, keywords:`escala ajuste mayor menor cromático libre avanzado`,
+   body:`En modo Componer, el icono ⚙ muestra un selector de escala. Ajustar a Do maj, La min, Sol maj, Mi min, Re maj, Fa maj o Re min. "Libre" para cromático completo.`},
+  {id:'moods', title:`Selector de estado`, keywords:`estado ia componer generar gracioso triste amor calma loco soñador`,
+   body:`Elige un estado para generar una composición. Nueve estados: gracioso, triste, agresivo, soñador, amor, nostálgico, calma, emocionado, loco. Después puedes MORFAR o VARIAR.`},
+  {id:'midi', title:`♬ Importar MIDI`, keywords:`midi importar archivo`,
+   body:`Importa cualquier archivo MIDI estándar. Hay una muestra integrada disponible si pulsas ♬ MIDI sin archivo.`},
+  {id:'audio', title:`♫ Importar audio`, keywords:`audio mp3 wav transcribir importar detección de tono`,
+   body:`Importa mp3, wav, m4a, ogg o aac. El audio se decodifica y se detectan los tonos. Funciona mejor con material monofónico limpio.`},
+  {id:'score', title:`𝄞 Partitura (MusicXML)`, keywords:`partitura musicxml musescore finale dorico música`,
+   body:`Importa partituras exactas de MuseScore, Finale o Dorico. Acepta .musicxml, .xml y .mxl.`},
+  {id:'image', title:`🖼 Transcripción de imagen`, keywords:`imagen cuadro foto transcribir pintar color`,
+   body:`Importa una imagen; Paintiano la lee como partitura. Reducida a 192×120 píxeles. Tono → altura, luminosidad → octava, saturación → velocidad. El tono de fondo dominante es suprimido.`},
+  {id:'morph', title:`✦ Morfar`, keywords:`morfar fundido transición estado entre`,
+   body:`Disponible después de elegir un estado. Pulsa ✦ MORFAR para mezclar el estado actual con otro. Primera mitad estado A, segunda mitad estado B.`},
+  {id:'vary', title:`🎲 Variar`, keywords:`variar variación relanzar aleatorio fresco`,
+   body:`Pulsa 🎲 VARIAR para una nueva interpretación del mismo estado. Sigue pulsando para versiones diferentes.`},
+  {id:'playback', title:`Tocar / Pausa / Buscar`, keywords:`tocar pausa detener reanudar buscar barra progreso posición saltar`,
+   body:`El botón Tocar inicia y pausa la reproducción (barra espaciadora también). Pulsa la barra de progreso para saltar. Arrastra para scrubbing en vivo.`},
+  {id:'loop', title:`⟳ Bucle`, keywords:`bucle repetir ciclo estado continuo`,
+   body:`Pulsa ⟳ BUCLE para repetición continua. Pulsa de nuevo para desactivar. El botón se ilumina en dorado.`},
+  {id:'speed', title:`Velocidad de reproducción`, keywords:`velocidad lento rápido tempo control deslizante`,
+   body:`El control deslizante ajusta la velocidad de 0,25× a 2×. Pulsa la etiqueta para volver a 1×.`},
+  {id:'print', title:`🖨 Imprimir (guardar la pintura)`, keywords:`imprimir exportar png imagen guardar pintura`,
+   body:`Genera la pintura en PNG a resolución 8×. Mantén pulsado para guardar en Fotos / Archivos.`},
+  {id:'record', title:`⏺ Grabar (modo imagen)`, keywords:`grabación audio capturar guardar mp4 m4a compartir`,
+   body:`Solo en modo imagen. Pulsa ⏺ GRABAR para grabar. La grabación se detiene automáticamente al final.`},
+  {id:'clear', title:`Borrar`, keywords:`borrar reiniciar empezar de nuevo eliminar`,
+   body:`En modo Componer, Cantar o Escuchar: borra el lienzo — el modo permanece activo. En modo MIDI, audio, partitura, imagen o estado: restablece el lienzo pero mantiene el fragmento cargado.`},
+  {id:'micvol', title:`Respiración del lienzo (volumen del micrófono)`, keywords:`micrófono volumen respiración pulso lienzo sonido ambiente`,
+   body:`En los modos Cantar y Escuchar, el lienzo pulsa automáticamente con el volumen de la sala. Se inicia y detiene automáticamente.`},
+  {id:'troubleshoot', title:`Solución de problemas`, keywords:`solución problemas error roto ayuda lento`,
+   body:`Si aparece "cargando piano…" espera unos segundos (~5 MB). El acceso al micrófono y compartir están bloqueados en el sandbox de Claude — funcionan como página independiente.`},
+  ],
+};
+function getGuide(lang){ return GUIDE_I18N[lang] || GUIDE_I18N.EN; }
 const guideMatch = (e,q) => {
   const n = q.trim().toLowerCase();
   if (!n) return true;
@@ -1193,6 +1550,8 @@ export default function Paintiano() {
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);
+  const [lang, setLang] = useState(()=>localStorage.getItem('paintiano_lang')||'EN');
+  const t = (key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key;
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -2283,7 +2642,7 @@ Composition rules:
   // Voice Memos / Music.
   const startRecord=()=>{
     if(!chords.length||recording||playing)return;
-    if(!window.MediaRecorder){setErr('Recording not supported in this browser.');setErrInfo(false);return;}
+    if(!window.MediaRecorder){setErr(t('recUnsupported'));setErrInfo(false);return;}
     Tone.start();
     const rawCtx=Tone.getContext().rawContext;
     const streamDest=rawCtx.createMediaStreamDestination();
@@ -2302,7 +2661,7 @@ Composition rules:
       const blob=new Blob(recChunksRef.current,{type:mt});
       const ext=mt.includes('ogg')?'ogg':mt.includes('mp4')?'m4a':'webm';
       const name=(info?.title||'paintiano').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').slice(0,50)+'.'+ext;
-      if(blob.size<2000){setErr('Recording was too short — hold rec for at least a second.');setErrInfo(false);}
+      if(blob.size<2000){setErr(t('recTooShort'));setErrInfo(false);}
       else{setAudioBlob(blob);setAudioName(name);}
       setRecording(false);recorderRef.current=null;
     };
@@ -2337,7 +2696,7 @@ Composition rules:
 
   const startMicVol=useCallback(async()=>{
     if(micVolActive){stopMicVol();return;}
-    if(!navigator.mediaDevices?.getUserMedia){setErr('Microphone not available.');setErrInfo(false);return;}
+    if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       const AC=window.AudioContext||window.webkitAudioContext;
@@ -2358,7 +2717,7 @@ Composition rules:
       };
       micVolRef.current={raf:requestAnimationFrame(tick),stream};
     }catch(e){
-      setErr('Microphone access denied.');setErrInfo(false);
+      setErr(t('micDenied'));setErrInfo(false);
     }
   },[micVolActive,stopMicVol]);
 
@@ -2378,7 +2737,7 @@ Composition rules:
 
   const startMicListening=useCallback(async()=>{
     if(micListening){stopMicListening();return;}
-    if(!navigator.mediaDevices?.getUserMedia){setErr('Microphone not available in this browser.');setErrInfo(false);return;}
+    if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     // Only one mode at a time
     setComposeMode(false);
     if(micPainting){stopMicPainting();}
@@ -2437,14 +2796,14 @@ Composition rules:
       };
       listenRafRef.current=requestAnimationFrame(tick);
     }catch(e){
-      setErr('Microphone access denied.');setErrInfo(false);
+      setErr(t('micDenied'));setErrInfo(false);
       setMicListening(false);
     }
   },[micListening,stopMicListening,stopAll]);
 
   const startMicPainting=useCallback(async()=>{
     if(micPainting)return stopMicPainting();
-    if(!navigator.mediaDevices?.getUserMedia){setErr('Microphone not available in this browser.');setErrInfo(false);return;}
+    if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     // Only one mode at a time
     setComposeMode(false);
     if(micListening){stopMicListening();}
@@ -2501,7 +2860,7 @@ Composition rules:
       };
       micRafRef.current=requestAnimationFrame(tick);
     }catch(e){
-      setErr('Microphone access denied.');setErrInfo(false);
+      setErr(t('micDenied'));setErrInfo(false);
       setMicPainting(false);
     }
   },[micPainting,stopMicPainting,playNote,stopAll]);
@@ -2514,7 +2873,7 @@ Composition rules:
     const ext=audioName.split('.').pop()||'m4a';
     const baseName=audioName.replace(/\.[^.]+$/,'');
     const finalName=baseName+'.'+ext;
-    setAudioShareMsg({tone:'wait',text:'saving…'});
+    setAudioShareMsg({tone:'wait',text:t('saving')});
     const file=new File([audioBlob],finalName,{type:audioBlob.type||'audio/mp4'});
     // 1. Share sheet — phones + macOS
     if(navigator.share){
@@ -2522,7 +2881,7 @@ Composition rules:
         const canTry=!navigator.canShare||navigator.canShare({files:[file]});
         if(canTry){
           await navigator.share({files:[file],title:'Paintiano recording'});
-          setAudioShareMsg({tone:'ok',text:'shared ✓'});
+          setAudioShareMsg({tone:'ok',text:t('saved')});
           return;
         }
       }catch(e){
@@ -2540,7 +2899,7 @@ Composition rules:
         const w=await handle.createWritable();
         await w.write(audioBlob);
         await w.close();
-        setAudioShareMsg({tone:'ok',text:'saved ✓'});
+        setAudioShareMsg({tone:'ok',text:t('saved')});
         return;
       }catch(e){
         if(e?.name==='AbortError'){setAudioShareMsg({tone:'ok',text:'cancelled'});return;}
@@ -2564,7 +2923,8 @@ Composition rules:
   const WKW=26,WKH=88,BKW=16,BKH=54,PW=WKEYS.length*WKW;
   const pct=info?Math.round(disp/Math.max(1,chords.length)*100):null;
   const pianoColor={loading:'rgba(207,197,168,.35)',ready:'rgba(90,190,110,.55)',error:'rgba(201,168,76,.55)'};
-  const pianoLabel={loading:' loading piano…',ready:' grand piano',error:' synth piano'};
+  const pianoLabel={loading:t('loadingPiano'),ready:t('grandPiano'),error:t('synthPiano')};
+  const changeLang=(l)=>{setLang(l);try{localStorage.setItem('paintiano_lang',l);}catch(_){}}
   const btn=(ex={})=>({background:'transparent',border:'1px solid',borderRadius:2,fontSize:'.7rem',letterSpacing:'.12em',padding:'5px 14px',cursor:'pointer',textTransform:'uppercase',color:'rgba(207,197,168,.7)',borderColor:'rgba(207,197,168,.2)',...ex});
 
   // Export the painting as a high-resolution PNG.
@@ -2646,14 +3006,14 @@ Composition rules:
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'32px 16px 220px':'32px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)'}}>
       <div style={{textAlign:'center',marginBottom:18}}>
         <h1 style={{fontSize:'2.2rem',fontWeight:300,letterSpacing:'.18em',margin:'0 0 4px',color:'rgba(201,168,76,.9)',paddingLeft:'.18em'}}>Paintiano</h1>
-        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.38,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}>music → φ painting <span style={{opacity:.55}}>· v2.2</span> <span onClick={()=>setShowAbout(true)} style={{cursor:'pointer',marginLeft:4,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)',opacity:1}}>concept</span> <span onClick={busy?undefined:demoPlay} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.55)',color:busy?'rgba(201,168,76,.25)':'rgba(201,168,76,.85)',opacity:1}}>demo</span> <span onClick={()=>setShowGuide(true)} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>guide</span></p>
-        <div style={{fontSize:'.55rem',letterSpacing:'.1em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
+        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.7,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}><span onClick={()=>setShowAbout(true)} style={{cursor:'pointer',paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)',opacity:1}}>{t('concept')}</span> <span onClick={busy?undefined:demoPlay} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.55)',color:busy?'rgba(201,168,76,.25)':'rgba(201,168,76,.85)',opacity:1}}>{t('demo')}</span> <span onClick={()=>setShowGuide(true)} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>{t('guide')}</span><span style={{marginLeft:18,opacity:1}}><button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} style={{padding:'1px 5px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.45)',borderRadius:2,cursor:'pointer',fontSize:'.45rem',fontFamily:'inherit',letterSpacing:'.1em'}}>{lang}</button></span></p>
+        <div style={{fontSize:'.55rem',letterSpacing:'.1em',opacity:.8,color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
       </div>
 
       <div style={{display:'flex',gap:10,marginBottom:10,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
         <div style={{display:'flex',border:'1px solid rgba(201,168,76,.25)',borderRadius:2,overflow:'hidden',flexShrink:0}}>
           {['harmony','spectral'].map(m=>(
-            <button key={m} onClick={()=>setMode(m)} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(207,197,168,.45)'}}>{m}</button>
+            <button key={m} onClick={()=>setMode(m)} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(207,197,168,.45)'}}>{t(m)}</button>
           ))}
         </div>
         <div style={{display:'flex',border:'1px solid rgba(180,140,255,.28)',borderRadius:2,overflow:'hidden',flexShrink:0}} title="painting style — tap again to deselect (mosaic default)">
@@ -2670,11 +3030,11 @@ Composition rules:
           disabled={busy}
           title=""
           style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid rgba(201,168,76,.3)',borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:busy?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize'}}>
-          <option value="">✦ select a mood…</option>
+          <option value="">✦ {t('selectMood').replace('✦ ','')}</option>
           {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
           {MOODS.map(m=><option key={m} value={m}>{m}</option>)}
         </select>
-        <button onClick={()=>chords.length&&!busy&&currentMood&&setShowMorphMenu(true)} disabled={!chords.length||busy||!currentMood} title={!currentMood?'pick a mood first':'morph current mood into another'} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy?'rgba(220,170,255,.9)':'rgba(220,150,255,.2)'})}>✦ morph</button>
+        <button onClick={()=>chords.length&&!busy&&currentMood&&setShowMorphMenu(true)} disabled={!chords.length||busy||!currentMood} title={!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy?'rgba(220,170,255,.9)':'rgba(220,150,255,.2)'})}>{t('morph')}</button>
         <button onClick={()=>{
           if(busy||!varySource)return;
           const varied=rerollSong(varySource);
@@ -2688,24 +3048,24 @@ Composition rules:
           setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
           setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
           setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
-        }} disabled={!varySource||busy} title={!varySource?'pick a mood first':'reroll: a fresh take'} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.2)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy?1:.35}}>🎲 vary</button>
+        }} disabled={!varySource||busy} title={!varySource?t('pickMoodFirst'):t('reroll')} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.2)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy?1:.35}}>{t('vary')}</button>
       </div>
 
       <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,alignItems:'center'}}>
         <div style={{display:'flex',gap:4,justifyContent:'center'}}>
           <input ref={refMidi} type="file" accept=".mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-          <button onClick={()=>{fullClear();setPickMode('midi');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>♬ MIDI</button>
+          <button onClick={()=>{fullClear();setPickMode('midi');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>{t('midi')}</button>
           <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-          <button onClick={()=>{fullClear();setPickMode('audio');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':'♫ AUDIO'}</button>
+          <button onClick={()=>{fullClear();setPickMode('audio');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':t('audio')}</button>
           <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-          <button onClick={()=>{fullClear();setPickMode('score');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':'𝄞 SCORE'}</button>
+          <button onClick={()=>{fullClear();setPickMode('score');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':t('score')}</button>
           <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
-          <button onClick={()=>{fullClear();setPickMode('image');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>🖼 IMAGE</button>
+          <button onClick={()=>{fullClear();setPickMode('image');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>{t('image')}</button>
         </div>
         <div style={{display:'flex',gap:4,justifyContent:'center'}}>
-          <button onClick={()=>{if(!composeMode){fullClear();if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?'♪ COMPOSING':'♪ COMPOSE'}</button>
-          <button onClick={startMicPainting} disabled={busy&&!micPainting} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micPainting?'rgba(255,100,100,.7)':'rgba(255,140,140,.4)',color:micPainting?'rgba(255,100,100,1)':'rgba(255,160,160,.8)',background:micPainting?'rgba(255,60,60,.1)':'transparent'})}>{micPainting?'🎤':'🎤 SING'}</button>
-          <button onClick={startMicListening} disabled={busy&&!micListening} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micListening?'rgba(100,200,255,.7)':'rgba(100,180,255,.4)',color:micListening?'rgba(120,210,255,1)':'rgba(140,200,255,.8)',background:micListening?'rgba(60,160,255,.1)':'transparent'})}>{micListening?'🔊 LISTENING…':'🔊 LISTEN'}</button>
+          <button onClick={()=>{if(!composeMode){fullClear();if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
+          <button onClick={startMicPainting} disabled={busy&&!micPainting} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micPainting?'rgba(255,100,100,.7)':'rgba(255,140,140,.4)',color:micPainting?'rgba(255,100,100,1)':'rgba(255,160,160,.8)',background:micPainting?'rgba(255,60,60,.1)':'transparent'})}>{micPainting?t('singing'):t('sing')}</button>
+          <button onClick={startMicListening} disabled={busy&&!micListening} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micListening?'rgba(100,200,255,.7)':'rgba(100,180,255,.4)',color:micListening?'rgba(120,210,255,1)':'rgba(140,200,255,.8)',background:micListening?'rgba(60,160,255,.1)':'transparent'})}>{micListening?t('listening'):t('listen')}</button>
         </div>
       </div>
 
@@ -2748,7 +3108,7 @@ Composition rules:
         <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
           <div onClick={e=>e.stopPropagation()} style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:'.65rem'}}>
-              {pickMode==='midi'?'♬ MIDI INPUT':pickMode==='audio'?'♫ AUDIO INPUT':pickMode==='score'?'𝄞 SCORE INPUT':'🖼 IMAGE INPUT'}
+              {pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):t('imageInput')}
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <button onClick={()=>{
@@ -2758,7 +3118,7 @@ Composition rules:
                 else loadSampleImage();
                 setPickMode(null);
               }} style={{padding:'12px',background:'transparent',color:pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':'rgba(210,160,255,.85)',border:'1px solid '+(pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':'rgba(200,140,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
-                ▶ built-in sample
+                {t('builtInSample')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:SAMPLE_IMAGE_NAME}
@@ -2770,10 +3130,10 @@ Composition rules:
                 else refImage.current?.click();
                 setPickMode(null);
               }} style={{padding:'12px',background:'transparent',color:'rgba(201,168,76,.85)',border:'1px solid rgba(201,168,76,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
-                📁 choose file
+                {t('chooseFile')}
               </button>
               <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.6rem',marginTop:4}}>
-                cancel
+                {t('cancel')}
               </button>
             </div>
           </div>
@@ -2799,8 +3159,8 @@ Composition rules:
         <div style={{width:Math.min(CW,typeof window!=='undefined'?window.innerWidth-32:480),marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',marginBottom:4}}>
             <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60%',opacity:info.title.includes('→')?0.85:0.5,color:info.title.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:info.title.includes('→')?'.62rem':'.57rem',fontStyle:info.title.includes('→')?'italic':'normal'}}>{info.title}</span>
-            <span style={{opacity:.5}}>
-              {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(info.dur/playbackSpeed-elapsedS));return remS+'s left';})():info.dur+'s'}
+            <span style={{opacity:.75}}>
+              {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(info.dur/playbackSpeed-elapsedS));return remS+t('sLeft');})():info.dur+'s'}
             </span>
           </div>
           <div
@@ -2876,8 +3236,8 @@ Composition rules:
         )}
       </div>
 
-      <div style={{marginBottom:10,fontSize:'.57rem',letterSpacing:'.1em',opacity:.5,textAlign:'center'}}>
-        {pending.length>0?<span style={{color:GOLD}}>▸ building chord: {pending.length} voice{pending.length>1?'s':''}</span>:viewMode==='image'?<span style={{color:'rgba(210,160,255,.7)'}}>{grid.N}×{pixelRef.current?.nr||'?'} pixel grid</span>:<span>grid {N}×{N} · {BW}×{BH}px · φ≈{(BH/BW).toFixed(3)}</span>}
+      <div style={{marginBottom:10,fontSize:'.57rem',letterSpacing:'.18em',opacity:.6,textAlign:'center',textTransform:'uppercase'}}>
+        music → φ painting
       </div>
 
 
@@ -2885,33 +3245,9 @@ Composition rules:
         <div onClick={()=>setShowAbout(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
             <button onClick={()=>setShowAbout(false)} style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-            <div style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>concept</div>
-
-            <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Compose, Sing & Listen</h3>
-            <p style={{margin:'0 0 12px'}}>Three ways to create from scratch. <strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> reveals an on-screen piano — tap or hold keys, longer holds produce wider blocks. Hardware keyboard: A–K for white keys, W/E/T/Y/U for black. Backspace undoes the last chord. Enter toggles the keyboard. Space bar plays and pauses. Chord names (C maj, A min…) appear live in the note readout.</p>
-            <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Sing</strong> uses your microphone. Sing, hum, or whistle — pitch is detected every 600 ms, played through the piano sampler, and painted as a block. Notes sustain into the next chord for a legato feel. The canvas fills as you perform.</p>
-            <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Listen</strong> also uses the microphone, but is tuned for ambient music rather than voice. Play music from a speaker nearby — Paintiano detects the pitches and paints them in real time, silently, without adding its own piano sound. The canvas breathes gently with the room volume. Works best with an external speaker; on iOS, same-device speaker audio is suppressed by the OS.</p>
-
-            <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmony vs Spectral</h3>
-            <p style={{margin:'0 0 12px'}}>In both modes every note is painted as a block whose <em>hue</em> is determined by its pitch class (C, C♯, D…), whose <em>lightness</em> tracks its octave (higher notes lighter, lower notes darker), and whose <em>saturation</em> follows velocity (louder strikes are more vivid). What changes between the modes is the dictionary mapping pitch to hue.</p>
-            <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmony mode</strong> places the twelve pitch classes around the colour wheel in <em>Circle-of-Fifths</em> order. Notes a perfect fifth apart (C → G → D → A …) become hue neighbours; tonally distant notes sit on opposite sides. Anything written in a key paints in a tight cluster of related colours, while modulations and dissonance show up as visible jumps across the wheel. Choose Harmony when you want the painting to <em>read</em> like the music.</p>
-            <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral mode</strong> maps the same twelve pitch classes in strict chromatic order at 30° hue steps — C is red, every semitone shifts the hue one notch. Adjacent semitones become hue neighbours; perfect fifths now span seven steps around the wheel. The more literal "one colour per note" approach, useful for picking out melodic lines and for image transcription.</p>
-            <p style={{margin:'0 0 14px',fontStyle:'italic',opacity:.7}}>The painting geometry — block size, sequence, the φ proportions of the golden ratio — is identical in both modes. Only the colour-to-pitch lookup differs. During playback, tap or drag the progress bar to seek to any position. Chord names are recognised live in the compose readout (C maj, A min, dom7…).</p>
-            <p style={{margin:'0 0 22px'}}>A separate toolbar toggle picks an optional <em>painting style</em> — which artist's mark-making language renders each chord. With nothing selected, the canvas paints in the implicit mosaic default: sharp φ-rectangles with a soft halo. <strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> (analytical cubism) mixes three subdivision strategies per chord — a simple bisect (one cut), a corner fan (2–3 planes radiating from one corner), or a centre fan (4–6 planes from an internal pivot) — so adjacent chords look meaningfully different rather than all using the same pattern. Adjacent planes alternate brighter / darker for the broken-light effect, with bold dark architectural contour lines along every plane edge. <strong style={{color:'rgba(210,170,255,.9)'}}>Rembrandt</strong> (Dutch Golden Age chiaroscuro) layers each chord as impasto brushstrokes built from a dark shadow underneath, 4–6 parallel bristle marks, a lit ridge highlight, and occasional specular sparkle — paint with depth and dimension catching the light from one side. <strong style={{color:'rgba(210,170,255,.9)'}}>Monet</strong> (impressionism) scatters 8–12 soft circular dabs per voice with luminosity-jittered colour and radial-gradient feathered edges — chord becomes a glowing colour field, no hard borders. Tap the active artist again to deselect and return to mosaic. The colour-to-pitch mapping and underlying φ-grid stay the same; only the mark-making changes.</p>
-
-            <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Image transcription</h3>
-            <p style={{margin:'0 0 12px'}}>When you drop a painting in, Paintiano reads it as a score. The image is downsampled to a 192 × 120 pixel grid and walked left-to-right, top-to-bottom: six adjacent pixel rows form one chord, four adjacent columns are merged into one time-step. That yields 960 chord events spread across a fixed two-minute performance — roughly 125 ms per chord, with each note ringing about 625 ms so successive chords overlap and blend.</p>
-            <p style={{margin:'0 0 8px'}}>Every pixel that survives the filtering becomes a note by reading its HSL colour:</p>
-            <ul style={{margin:'0 0 14px',paddingLeft:20}}>
-              <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Hue → pitch class</strong> — matched to the current mode's table (Circle of Fifths in Harmony, even chromatic steps in Spectral).</li>
-              <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Lightness → octave</strong> — darker pixels in the lower register, lighter ones in the upper, compressed to a playable range (octaves 3 – 6).</li>
-              <li><strong style={{color:'rgba(210,160,255,.9)'}}>Chroma → velocity</strong> — vivid colours play louder, muted colours softer.</li>
-            </ul>
-            <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>White, grey, and black</strong> are not silent. Achromatic pixels carry no hue but plenty of value information, so they all play the pitch class C with octave determined by lightness: black ≈ C2 (deep bass), mid-grey ≈ C5, white ≈ C7 (high treble). Contrast drives velocity — pure black and pure white speak louder than muddy mid-grey. The grayscale layer becomes a structural backbone of stacked octaves underneath the colour melody.</p>
-            <p style={{margin:'0 0 14px'}}>A statistical pre-pass identifies the painting's <em>dominant background hue</em> — the cobalt sky in a Chagall, the cream wash in a Cézanne — and raises the threshold for pixels in that hue band to register at all. Off-background hues pass at a much lower bar. Without this step a single-colour field (often 40–70% of a canvas) would drown everything in a one-note drone; with it, the figurative content, accents, and contrasting strokes are what you actually hear.</p>
-            <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>The result is a composition specific to the painting: not random, not literal, but a structured reading where the colour palette becomes a harmonic palette, the composition becomes phrasing, and the brushwork becomes texture.</p>
-
-            <button onClick={()=>setShowAbout(false)} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
+            <div style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
+            {CONCEPT_I18N[lang]||CONCEPT_I18N.EN}
+            <button onClick={()=>setShowAbout(false)} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
           </div>
         </div>
       )}
@@ -2920,23 +3256,23 @@ Composition rules:
         <div onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
             <button onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-            <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>guide</div>
+            <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
             <input
               type="search"
               value={guideQuery}
               onChange={e=>setGuideQuery(e.target.value)}
               onFocus={()=>{inputFocus.current=true;}}
               onBlur={()=>{inputFocus.current=false;}}
-              placeholder="search the guide…"
+              placeholder={t('searchGuide')}
               autoCapitalize="off"
               autoComplete="off"
               spellCheck={false}
               style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid rgba(140,200,255,.3)',borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:'.78rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none'}}
             />
             {(() => {
-              const matches = GUIDE.filter(e => guideMatch(e, guideQuery));
+              const matches = getGuide(lang).filter(e => guideMatch(e, guideQuery));
               if (matches.length === 0) {
-                return <p style={{textAlign:'center',opacity:.5,fontStyle:'italic',padding:'20px 0'}}>No matches for "{guideQuery}".</p>;
+                return <p style={{textAlign:'center',opacity:.5,fontStyle:'italic',padding:'20px 0'}}>{t('noMatches')} "{guideQuery}".</p>;
               }
               return matches.map(entry => (
                 <details key={entry.id} open={!!guideQuery.trim()} style={{marginBottom:6,border:'1px solid rgba(207,197,168,.08)',borderRadius:4,padding:'2px 0',background:'rgba(255,255,255,0.012)'}}>
@@ -2987,26 +3323,26 @@ Composition rules:
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(
         <div style={{fontSize:'.48rem',letterSpacing:'.08em',color:'rgba(100,200,255,.35)',textAlign:'center',marginBottom:4,lineHeight:1.5}}>
-          🔊 best with external speaker or another device — iOS suppresses same-phone audio
+          🔊 {t('listenHint')}
         </div>
       )}
       {audioBlob&&(
         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
           <span style={{flex:1,fontSize:'.6rem',color:'rgba(255,140,120,.9)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{audioName} · {(audioBlob.size/1024).toFixed(0)}KB</span>
           {audioShareMsg&&<span style={{fontSize:'.5rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
-          <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>share</button>
+          <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
           <button onClick={()=>{setAudioBlob(null);setAudioName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
         </div>
       )}
       {/* Note-name readout */}
-      <div style={{textAlign:'center',marginBottom:4,fontSize:'.7rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.4)':'rgba(201,168,76,.25)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
+      <div style={{textAlign:'center',marginBottom:4,fontSize:'.7rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.6)':'rgba(201,168,76,.45)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
         {active.size>0?(()=>{
           const sorted=[...active].sort((a,b)=>a-b);
           const chord=recognizeChord(sorted);
           return chord
             ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.55)',fontSize:'.6rem',letterSpacing:'.08em'}}>· {chord}</span></span>
             : sorted.map(noteName).join(' · ');
-        })():composeMode&&chords.length>0?`${chords.length} chord${chords.length>1?'s':''}  ·  tap to play`:'—'}
+        })():composeMode&&chords.length>0?`${chords.length} ${t('chordsPlay')}`:'—'}
       </div>
       {showAdvanced && composeMode && (
         <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
@@ -3020,26 +3356,26 @@ Composition rules:
       )}
       <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
         <button onClick={()=>{if(paintScale!=='off'){setPaintScale('off');setShowAdvanced(false);}else setShowAdvanced(v=>!v);}} title="advanced: scale snap" style={{display:composeMode?'inline-block':'none',padding:'7px 10px',background:paintScale!=='off'?'rgba(140,255,180,.08)':'transparent',color:paintScale!=='off'?'rgba(140,255,180,.85)':showAdvanced?'rgba(201,168,76,.85)':'rgba(180,180,180,.5)',border:'1px solid '+(paintScale!=='off'?'rgba(140,255,180,.45)':showAdvanced?'rgba(201,168,76,.45)':'rgba(180,180,180,.25)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
-          ⚙ scale
+          {t('scaleBtn')}
         </button>
         <button
           onClick={handlePauseClick}
           disabled={recording||micListening||micPainting||(!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)}
-          title={recording?'stop recording to use playback controls':micListening?'stop listening first':micPainting?'stop singing first':demoMode&&!playing?'demo mode — clear to play again':holdPaused?'click to resume':'click to pause'}
+          title={recording?t('stopRecFirst'):micListening?t('stopListenFirst'):micPainting?t('stopSingFirst'):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):t('pause')}
           style={{padding:'7px 10px',background:holdPaused?'rgba(90,190,110,.08)':'transparent',color:recording||micListening||micPainting?'rgba(90,190,110,.2)':chords.length?(playing||holdPaused?'rgba(90,190,110,.7)':(demoMode?'rgba(90,190,110,.2)':'rgba(90,190,110,.95)')):'rgba(90,190,110,.25)',border:'1px solid '+(recording||micListening||micPainting?'rgba(90,190,110,.15)':chords.length&&!(demoMode&&!playing&&!holdPaused)?'rgba(90,190,110,.55)':'rgba(90,190,110,.2)'),borderRadius:5,cursor:recording||micListening||micPainting?'default':'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
-          {holdPaused?'▶ resume':playing?'⏸ pause':'▶ play'}
+          {holdPaused?t('resume'):playing?t('pause'):t('play')}
         </button>
         {currentMood&&(
-          <button onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} title="loop mood" style={{padding:'7px 10px',background:loopMode?'rgba(201,168,76,.1)':'transparent',color:loopMode?GOLD:'rgba(201,168,76,.35)',border:'1px solid '+(loopMode?'rgba(201,168,76,.5)':'rgba(201,168,76,.18)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>⟳ loop</button>
+          <button onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} style={{padding:'7px 10px',background:loopMode?'rgba(201,168,76,.1)':'transparent',color:loopMode?GOLD:'rgba(201,168,76,.6)',border:'1px solid '+(loopMode?'rgba(201,168,76,.5)':'rgba(201,168,76,.3)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{t('loop')}</button>
         )}
         {viewMode!=='image'&&(
           <button onClick={exportImage} disabled={!chords.length||busy||micPainting||micListening} style={{padding:'7px 10px',background:'transparent',color:chords.length&&!micPainting&&!micListening?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(chords.length&&!micPainting&&!micListening?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:chords.length&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
-            🖨 print
+            {t('print')}
           </button>
         )}
         {viewMode==='image'&&chords.length>0&&(
           <button onClick={recording?stopRecord:startRecord} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:chords.length||recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}} title={recording?'stop recording':'record audio output'}>
-            {recording?'⏹ rec…':'⏺ rec'}
+            {recording?t('recStop'):t('recArm')}
           </button>
         )}
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
@@ -3056,7 +3392,7 @@ Composition rules:
             </span>
           );
         })()}
-        <button onClick={clear} style={{padding:'7px 10px',background:'transparent',color:'rgba(207,197,168,.35)',border:'1px solid rgba(207,197,168,.14)',borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>clear</button>
+        <button onClick={clear} style={{padding:'7px 10px',background:'transparent',color:'rgba(207,197,168,.65)',border:'1px solid rgba(207,197,168,.35)',borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>{t('clear')}</button>
         
         {composeMode&&(
           <button onClick={undoLast} disabled={!chords.length||playing} title="remove last chord (Backspace)" style={{padding:'7px 10px',background:'transparent',color:chords.length&&!playing?'rgba(207,197,168,.65)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!playing?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:5,cursor:chords.length&&!playing?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>↩</button>
@@ -3116,8 +3452,7 @@ Composition rules:
         </div>
       </div>
       </div>
-
-
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3</div>
     </div>
   );
 }
