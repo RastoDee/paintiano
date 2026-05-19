@@ -474,102 +474,135 @@ function drawRembrandt(ctx,bx,by,notes,gc,BW,BH){
 }
 
 function drawPicasso(ctx,bx,by,notes,gc,BW,BH){
-  // Analytical cubism with three subdivision strategies picked at random per
-  // cell, so adjacent cells look meaningfully different — not every cell is
-  // the same pinwheel fan. Strategies (weights):
-  //   • BISECT (35%)     — one cut: horizontal, vertical, or diagonal → 2 planes
-  //   • CORNER FAN (30%) — pivot at a corner, 2–3 planes radiating across
-  //   • CENTRE FAN (35%) — pivot inside, 4–6 planes (the prior look, slimmed)
-  // Adjacent planes alternate brighter/darker for the broken-light effect.
-  // Bold dark contour lines trace every plane edge — Picasso's architecture.
-  // Tone shifts are uniform across R/G/B so chord hue (and the mode toggle)
-  // stays legible through the fragmentation.
+  // Flat geometric collage with occasional 3D accents (~20% of shapes).
+  // Shapes: rectangles, squares, triangles, parallelograms, trapezoids,
+  // diamonds. All hard-edged flat fills — no gradients, no radial light.
+  // 3D accent = dark depth face on one side (isometric box illusion).
+  // Shapes bleed freely past cell boundaries. Fully distinct from Rembrandt
+  // (painterly/organic) and Monet (soft dabs) — sharp, architectural, 2D.
+
   const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
   const rnd=_seedRnd(bx,by,BW,BH);
+
   sorted.forEach((note,vi)=>{
     const[r,g,b,a]=gc(note.m,note.v);
-    const yOff=by+vi*bh;
-    const x1=bx,y1=yOff,x2=bx+BW,y2=yOff+bh;
-    const planes=[];
-    const variant=rnd();
-    if(variant<0.35){
-      // BISECT — single cut through the cell, 2 planes
-      const cutType=rnd();
-      if(cutType<0.33){
-        const cy=y1+bh*(0.30+rnd()*0.40);
-        planes.push([{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:cy},{x:x1,y:cy}]);
-        planes.push([{x:x1,y:cy},{x:x2,y:cy},{x:x2,y:y2},{x:x1,y:y2}]);
-      }else if(cutType<0.66){
-        const cx=x1+BW*(0.30+rnd()*0.40);
-        planes.push([{x:x1,y:y1},{x:cx,y:y1},{x:cx,y:y2},{x:x1,y:y2}]);
-        planes.push([{x:cx,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:cx,y:y2}]);
-      }else{
-        // Diagonal cut: from a point on the left edge to a point on the right
-        const lY=y1+bh*(0.20+rnd()*0.60);
-        const rY=y1+bh*(0.20+rnd()*0.60);
-        planes.push([{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:rY},{x:x1,y:lY}]);
-        planes.push([{x:x1,y:lY},{x:x2,y:rY},{x:x2,y:y2},{x:x1,y:y2}]);
-      }
-    }else if(variant<0.65){
-      // CORNER FAN — pivot at one corner, fan to the opposite three corners
-      const corners=[{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:x1,y:y2}];
-      const cornerIdx=Math.floor(rnd()*4);
-      const pivot=corners[cornerIdx];
-      const walk=[];
-      for(let i=1;i<=3;i++)walk.push(corners[(cornerIdx+i)%4]);
-      // Optionally insert 1 mid-edge point between two corners of the walk
-      if(rnd()>0.35){
-        const insertAt=1+Math.floor(rnd()*2);
-        const a1=walk[insertAt-1], a2=walk[insertAt];
-        let mid;
-        if(a1.x===a2.x)mid={x:a1.x,y:a1.y+(a2.y-a1.y)*(0.30+rnd()*0.40)};
-        else mid={x:a1.x+(a2.x-a1.x)*(0.30+rnd()*0.40),y:a1.y};
-        walk.splice(insertAt,0,mid);
-      }
-      for(let i=0;i<walk.length-1;i++)planes.push([pivot,walk[i],walk[i+1]]);
-    }else{
-      // CENTRE FAN — pivot inside cell, 4–6 planes radiating to boundary
-      const px=x1+BW*(0.30+rnd()*0.40);
-      const py=y1+bh*(0.30+rnd()*0.40);
-      const pivot={x:px,y:py};
-      const boundary=[{x:x1,y:y1}];
-      if(rnd()>0.55)boundary.push({x:x1+BW*(0.25+rnd()*0.50),y:y1});
-      boundary.push({x:x2,y:y1});
-      if(rnd()>0.55)boundary.push({x:x2,y:y1+bh*(0.25+rnd()*0.50)});
-      boundary.push({x:x2,y:y2});
-      if(rnd()>0.55)boundary.push({x:x1+BW*(0.25+rnd()*0.50),y:y2});
-      boundary.push({x:x1,y:y2});
-      if(rnd()>0.55)boundary.push({x:x1,y:y1+bh*(0.25+rnd()*0.50)});
-      for(let i=0;i<boundary.length;i++){
-        const p1=boundary[i], p2=boundary[(i+1)%boundary.length];
-        planes.push([p1,p2,pivot]);
-      }
-    }
-    // Fill planes with alternating tone shifts
-    for(let i=0;i<planes.length;i++){
-      const tone=(i%2===0?1:-1)*(35+rnd()*45);
+    const yo=by+vi*bh;
+    const x1=bx,y1=yo,x2=bx+BW,y2=yo+bh;
+    const w=BW,h=bh;
+
+    const shapeCount=3+Math.floor(rnd()*5); // 3–7 shapes per voice cell
+
+    for(let s=0;s<shapeCount;s++){
+      // Flat fill colour — uniform tone shift, no gradient
+      const tone=(rnd()>0.5?1:-1)*(12+rnd()*68);
       const rJ=Math.max(0,Math.min(255,Math.round(r+tone)));
       const gJ=Math.max(0,Math.min(255,Math.round(g+tone)));
       const bJ=Math.max(0,Math.min(255,Math.round(b+tone)));
-      ctx.fillStyle=`rgba(${rJ},${gJ},${bJ},${a.toFixed(3)})`;
-      const poly=planes[i];
+      ctx.fillStyle=`rgba(${rJ},${gJ},${bJ},${(0.78+rnd()*0.22).toFixed(2)})`;
+
+      // Origin — can bleed 35% outside cell
+      const ox=x1+w*(rnd()*1.35-0.18);
+      const oy=y1+h*(rnd()*1.35-0.18);
+
+      // Size: 25% large, 37% medium, 38% small
+      const sizeScale=rnd()<0.25?0.55+rnd()*0.55
+                     :rnd()<0.5 ?0.22+rnd()*0.32
+                                :0.07+rnd()*0.18;
+      const sw=w*sizeScale*(0.5+rnd()*1.0);
+      const sh=h*sizeScale*(0.5+rnd()*1.0);
+
+      const shapeType=rnd();
+
+      // ── Draw flat shape ────────────────────────────────────────────
       ctx.beginPath();
-      ctx.moveTo(poly[0].x,poly[0].y);
-      for(let j=1;j<poly.length;j++)ctx.lineTo(poly[j].x,poly[j].y);
-      ctx.closePath();
+      if(shapeType<0.22){
+        // RECTANGLE / SQUARE
+        ctx.rect(ox, oy, sw, sh);
+      } else if(shapeType<0.44){
+        // TRIANGLE — 3 variants
+        const tv=rnd();
+        if(tv<0.33){
+          ctx.moveTo(ox,oy); ctx.lineTo(ox+sw,oy); ctx.lineTo(ox,oy+sh);
+        } else if(tv<0.66){
+          ctx.moveTo(ox+sw*0.5,oy); ctx.lineTo(ox+sw,oy+sh); ctx.lineTo(ox,oy+sh);
+        } else {
+          ctx.moveTo(ox+sw*(0.15+rnd()*0.35),oy);
+          ctx.lineTo(ox+sw,oy+sh*(0.25+rnd()*0.5));
+          ctx.lineTo(ox,oy+sh);
+        }
+        ctx.closePath();
+      } else if(shapeType<0.62){
+        // PARALLELOGRAM
+        const skew=sw*(0.18+rnd()*0.32)*(rnd()>0.5?1:-1);
+        ctx.moveTo(ox+skew,oy); ctx.lineTo(ox+sw+skew,oy);
+        ctx.lineTo(ox+sw-skew,oy+sh); ctx.lineTo(ox-skew,oy+sh);
+        ctx.closePath();
+      } else if(shapeType<0.80){
+        // TRAPEZOID
+        const inset=sw*(0.08+rnd()*0.28);
+        ctx.moveTo(ox+inset,oy); ctx.lineTo(ox+sw-inset,oy);
+        ctx.lineTo(ox+sw,oy+sh); ctx.lineTo(ox,oy+sh);
+        ctx.closePath();
+      } else {
+        // DIAMOND
+        ctx.moveTo(ox+sw*0.5,oy); ctx.lineTo(ox+sw,oy+sh*0.5);
+        ctx.lineTo(ox+sw*0.5,oy+sh); ctx.lineTo(ox,oy+sh*0.5);
+        ctx.closePath();
+      }
       ctx.fill();
-    }
-    // Bold architectural contour outlines
-    ctx.strokeStyle='rgba(12,8,4,0.78)';
-    ctx.lineWidth=1.3;
-    ctx.lineCap='round';
-    ctx.lineJoin='round';
-    for(const poly of planes){
-      ctx.beginPath();
-      ctx.moveTo(poly[0].x,poly[0].y);
-      for(let j=1;j<poly.length;j++)ctx.lineTo(poly[j].x,poly[j].y);
-      ctx.closePath();
-      ctx.stroke();
+
+      // ── Occasional 3D depth face (~20% of shapes, medium+ size) ────
+      if(rnd()<0.20 && sizeScale>0.18){
+        const depth=2+rnd()*5;
+        const dr=Math.max(0,Math.min(255,Math.round(rJ*0.52)));
+        const dg=Math.max(0,Math.min(255,Math.round(gJ*0.52)));
+        const db=Math.max(0,Math.min(255,Math.round(bJ*0.52)));
+        ctx.fillStyle=`rgba(${dr},${dg},${db},${(0.55+rnd()*0.3).toFixed(2)})`;
+        if(shapeType<0.22){
+          // Right face of rectangle
+          ctx.beginPath();
+          ctx.moveTo(ox+sw,oy); ctx.lineTo(ox+sw+depth,oy-depth);
+          ctx.lineTo(ox+sw+depth,oy+sh-depth); ctx.lineTo(ox+sw,oy+sh);
+          ctx.closePath(); ctx.fill();
+          // Bottom face
+          ctx.beginPath();
+          ctx.moveTo(ox,oy+sh); ctx.lineTo(ox+sw,oy+sh);
+          ctx.lineTo(ox+sw+depth,oy+sh-depth); ctx.lineTo(ox+depth,oy+sh-depth);
+          ctx.closePath(); ctx.fill();
+        } else {
+          // For other shapes: simple dark offset shadow shape
+          ctx.globalAlpha=0.35;
+          ctx.beginPath();
+          if(shapeType<0.44){
+            const tv2=rnd();
+            if(tv2<0.33){ctx.moveTo(ox+depth,oy+depth);ctx.lineTo(ox+sw+depth,oy+depth);ctx.lineTo(ox+depth,oy+sh+depth);}
+            else{ctx.moveTo(ox+sw*0.5+depth,oy+depth);ctx.lineTo(ox+sw+depth,oy+sh+depth);ctx.lineTo(ox+depth,oy+sh+depth);}
+          } else if(shapeType<0.62){
+            const sk2=sw*(0.18+rnd()*0.32)*(rnd()>0.5?1:-1);
+            ctx.moveTo(ox+sk2+depth,oy+depth);ctx.lineTo(ox+sw+sk2+depth,oy+depth);
+            ctx.lineTo(ox+sw-sk2+depth,oy+sh+depth);ctx.lineTo(ox-sk2+depth,oy+sh+depth);
+          } else if(shapeType<0.80){
+            const in2=sw*(0.08+rnd()*0.28);
+            ctx.moveTo(ox+in2+depth,oy+depth);ctx.lineTo(ox+sw-in2+depth,oy+depth);
+            ctx.lineTo(ox+sw+depth,oy+sh+depth);ctx.lineTo(ox+depth,oy+sh+depth);
+          } else {
+            ctx.moveTo(ox+sw*0.5+depth,oy+depth);ctx.lineTo(ox+sw+depth,oy+sh*0.5+depth);
+            ctx.lineTo(ox+sw*0.5+depth,oy+sh+depth);ctx.lineTo(ox+depth,oy+sh*0.5+depth);
+          }
+          ctx.closePath();
+          ctx.fillStyle=`rgba(0,0,0,0.3)`;
+          ctx.fill();
+          ctx.globalAlpha=1.0;
+        }
+      }
+
+      // Thin pencil outline on medium+ shapes
+      if(sizeScale>0.2){
+        ctx.strokeStyle=`rgba(0,0,0,${(0.10+rnd()*0.16).toFixed(2)})`;
+        ctx.lineWidth=0.4+rnd()*0.5;
+        ctx.lineJoin='miter';
+        ctx.stroke();
+      }
     }
   });
 }
