@@ -1691,18 +1691,24 @@ export default function Paintiano() {
 
   useEffect(()=>{
     let dead=false;
-    const s=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
-      onload:()=>{if(!dead){samplerOk.current=true;setPiano('ready');}},
-      onerror:()=>{if(!dead){
-        samplerOk.current=false;setPiano('error');
-        // One-time, dismissible info: explain why audio sounds thin. Uses
-        // errInfo (info-tone, not error-tone) so it doesn't look like a crash.
-        setErr('Grand-piano samples could not load — falling back to a built-in synth. Audio still works, just less rich.');
-        setErrInfo(true);
-      }},
-    }).toDestination();
-    samplerRef.current=s;
-    return()=>{dead=true;try{s.dispose();}catch(_){}samplerRef.current=null;samplerOk.current=false;};
+    let s=null;
+    const init=()=>{
+      if(s||dead)return;
+      s=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
+        onload:()=>{if(!dead){samplerOk.current=true;setPiano('ready');}},
+        onerror:()=>{if(!dead){
+          samplerOk.current=false;setPiano('error');
+          setErr('Grand-piano samples could not load — falling back to a built-in synth. Audio still works, just less rich.');
+          setErrInfo(true);
+        }},
+      }).toDestination();
+      samplerRef.current=s;
+      window.removeEventListener('pointerdown',init);
+      window.removeEventListener('keydown',init);
+    };
+    window.addEventListener('pointerdown',init,{once:true});
+    window.addEventListener('keydown',init,{once:true});
+    return()=>{dead=true;window.removeEventListener('pointerdown',init);window.removeEventListener('keydown',init);try{s&&s.dispose();}catch(_){}samplerRef.current=null;samplerOk.current=false;};
   },[]);
 
   const gc = useCallback((m,v)=>mode==='spectral'?specCol(m,v):harmCol(m,v),[mode]);
@@ -3280,7 +3286,7 @@ Composition rules:
               const touch=e.touches[0];
               const rect=e.currentTarget.getBoundingClientRect();
               const frac=Math.max(0,Math.min(1,(touch.clientX-rect.left)/rect.width));
-              const idx=Math.floor(frac*chords.length);
+              const idx=Math.min(Math.floor(frac*chords.length),chords.length-1);
               stopAll();
               resumeFromRef.current=idx;
               setDisp(idx);
@@ -3288,16 +3294,18 @@ Composition rules:
             onTouchEnd={e=>{
               e.preventDefault();
               if(!chords.length)return;
-              // If no touchmove happened (tap not drag), calculate position from touch
               if(e.changedTouches&&e.changedTouches[0]&&resumeFromRef.current===null){
                 const touch=e.changedTouches[0];
                 const rect=e.currentTarget.getBoundingClientRect();
                 const frac=Math.max(0,Math.min(1,(touch.clientX-rect.left)/rect.width));
-                const idx=Math.floor(frac*chords.length);
+                const idx=Math.min(Math.floor(frac*chords.length),chords.length-1);
                 stopAll();
                 resumeFromRef.current=idx;
               }
+              const idx=resumeFromRef.current;
               startPlay();
+              // If startPlay was blocked (busy), preserve position for Resume
+              if(resumeFromRef.current===null&&idx!==null)resumeFromRef.current=idx;
             }}
             onClick={e=>{e.preventDefault();}} // suppress iOS synthetic click after touch
             style={{height:8,background:'rgba(255,255,255,0.07)',borderRadius:4,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none'}}>
@@ -3600,7 +3608,7 @@ Composition rules:
         </div>
       </div>
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.11</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.12</div>
     </div>
   );
 }
