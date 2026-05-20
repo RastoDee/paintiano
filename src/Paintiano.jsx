@@ -1620,17 +1620,15 @@ export default function Paintiano() {
   const [audioBlob, setAudioBlob] = useState(null);
   const audioBlobRef = useRef(null);
   const audioPCMRef = useRef(null); // decoded AudioBuffer for Web Audio playback
-  const setAudioBlobAndRef = (b) => {
-    audioBlobRef.current=b;
-    setAudioBlob(b);
-    // Set src on audio element immediately so it's ready before play
+  const setAudioBlobAndRef = (b) => { audioBlobRef.current=b; setAudioBlob(b); };
+  // Set audio element src whenever audioBlob changes
+  useEffect(()=>{
     const el=audioElRef.current;
-    if(el){
-      if(el._blobUrl){try{URL.revokeObjectURL(el._blobUrl);}catch(_){}}
-      if(b){el._blobUrl=URL.createObjectURL(b);el.src=el._blobUrl;}
-      else{el._blobUrl=null;el.src='';}
-    }
-  };
+    if(!el)return;
+    if(el._blobUrl){try{URL.revokeObjectURL(el._blobUrl);}catch(_){}}
+    if(audioBlob){el._blobUrl=URL.createObjectURL(audioBlob);el.src=el._blobUrl;}
+    else{el._blobUrl=null;el.src='';}
+  },[audioBlob]);
   const [audioName, setAudioName] = useState('');
   const [recBlob, setRecBlob] = useState(null);   // recording output blob (share row)
   const [recName, setRecName] = useState('');      // recording output name
@@ -2008,6 +2006,7 @@ export default function Paintiano() {
           genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
           try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
           try{if(audioElRef.current)audioElRef.current.pause();}catch(_){}
+          try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current=null;}}catch(_){}
           setPlaying(false);setAnim(false);
         }
       }else{
@@ -2240,6 +2239,7 @@ export default function Paintiano() {
       const ac=new AC();
       const audioBuf=await ac.decodeAudioData(buf.slice(0));
       ac.close();
+      audioPCMRef.current=audioBuf;
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(!evts.length){setErr('No notes detected.');setErrInfo(false);return;}
       const aName=file.name.replace(/\.[^.]+$/,'');
@@ -2310,6 +2310,7 @@ export default function Paintiano() {
       const ac=new AC();
       const audioBuf=await ac.decodeAudioData(arrayBuffer.slice(0));
       ac.close();
+      audioPCMRef.current=audioBuf;
       setWLabel('transcribing sample');
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(!evts.length){setErr('Sample audio: no notes detected.');setErrInfo(false);return;}
@@ -2531,20 +2532,20 @@ Composition rules:
     const isResume=fromIdx>0;
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
 
-    // Audio mode: play real MP3 alongside the chord painting (no piano sampler)
-    if(viewMode==='audio'&&audioBlobRef.current){
+    // Audio mode: play via Web Audio API BufferSourceNode - supports precise offset natively
+    if(viewMode==='audio'&&audioPCMRef.current){
       try{
-        const el=audioElRef.current;
-        if(el&&el.src){
-          const seekSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
-          setDebugMsg(`fromIdx=${fromIdx} seek=${seekSec.toFixed(1)}s cur=${el.currentTime.toFixed(1)}s`);
-          el.playbackRate=playbackSpeedRef.current;
-          el.currentTime=seekSec;
-          el.play().catch(e=>setDebugMsg(m=>m+' ERR:'+e.message));
-        } else {
-          setDebugMsg(`no el or src: el=${!!el} src=${el?.src?.slice(0,20)}`);
-        }
-      }catch(e){setDebugMsg('EX:'+e.message);}
+        const ac=Tone.getContext().rawContext;
+        if(audioSourceRef.current){try{audioSourceRef.current.stop();}catch(_){}audioSourceRef.current=null;}
+        const src=ac.createBufferSource();
+        src.buffer=audioPCMRef.current;
+        src.playbackRate.value=playbackSpeedRef.current;
+        src.connect(ac.destination);
+        const offsetSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
+        src.start(0,offsetSec);
+        audioSourceRef.current=src;
+        src.onended=()=>{audioSourceRef.current=null;};
+      }catch(_){}
     }
 
     if(viewMode==='image'&&pixelRef.current){
@@ -2648,6 +2649,7 @@ Composition rules:
               startPlay();
             }else{
               try{if(audioElRef.current)audioElRef.current.pause();}catch(_){}
+              try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current=null;}}catch(_){}
               setPlaying(false);setDisp(chords.length);
             }
           },tail));
@@ -2693,6 +2695,7 @@ Composition rules:
       genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       try{if(audioElRef.current)audioElRef.current.pause();}catch(_){}
+      try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current=null;}}catch(_){}
       setPlaying(false);setAnim(false);
     }else if(holdPaused){
       setHoldPaused(false);
@@ -3597,7 +3600,7 @@ Composition rules:
         </div>
       </div>
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.06</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.11</div>
     </div>
   );
 }
