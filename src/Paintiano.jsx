@@ -1733,6 +1733,7 @@ const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered,
       onTouchStart={(e)=>{e.preventDefault();if(!disabled)pressNote(midi,e);}}
       onTouchEnd={(e)=>{e.preventDefault();if(!disabled)releaseNote(midi);}}
       onTouchCancel={()=>{if(!disabled)releaseNote(midi);}}
+      onContextMenu={(e)=>e.preventDefault()}
       style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:isActive?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
       {midi%12===0?'C'+(Math.floor(midi/12)-1):''}
     </div>
@@ -1757,6 +1758,7 @@ const BlackKey = memo(function BlackKey({midi, lw, snapped, isActive, isHovered,
       onTouchStart={(e)=>{e.preventDefault();if(!disabled)pressNote(midi,e);}}
       onTouchEnd={(e)=>{e.preventDefault();if(!disabled)releaseNote(midi);}}
       onTouchCancel={()=>{if(!disabled)releaseNote(midi);}}
+      onContextMenu={(e)=>e.preventDefault()}
       style={{position:'absolute',left:(lw+0.65)*WKW,top:0,width:BKW,height:BKH,background:bkBg,borderRadius:'0 0 4px 4px',border:'1px solid rgba(0,0,0,.7)',cursor:busy&&!playing?'default':'pointer',zIndex:2,boxShadow:isActive?'none':'2px 5px 10px rgba(0,0,0,.85)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}/>
   );
 });
@@ -2429,6 +2431,22 @@ export default function Paintiano() {
     }
   },[paintScale]);
 
+  // Release every key currently held. Called on global pointerup/blur and on
+  // mode changes — touchscreens routinely fail to fire touchend when the user
+  // drags off a key, leaving stuck-gold "active" keys that never clear.
+  const releaseAllHeld = useCallback(()=>{
+    const held=Object.keys(pressInfo.current);
+    if(!held.length)return;
+    for(const k of held){
+      const midi=+k;
+      delete pressInfo.current[midi];
+      if(samplerOk.current&&samplerRef.current){
+        try{samplerRef.current.triggerRelease(Tone.Frequency(midi,'midi').toNote(),Tone.now());}catch(_){}
+      }
+    }
+    setActive(new Set());
+  },[]);
+
   const undoLast = useCallback(()=>{
     setChords(prev=>{
       if(!prev.length)return prev;
@@ -2481,6 +2499,26 @@ export default function Paintiano() {
     window.addEventListener('keydown',onEsc);
     return()=>window.removeEventListener('keydown',onEsc);
   },[preview,showMorphMenu,showSizePicker,showGuide,showAbout,pickMode]);
+
+  // Release held keys when mode changes — switching out of compose (or into
+  // mic painting/listening) should never leave stuck "active" keys behind.
+  useEffect(()=>{releaseAllHeld();},[composeMode,micPainting,micListening,releaseAllHeld]);
+
+  // Global release safety net. Touchscreens routinely fail to fire touchend
+  // when the finger drags off a key, leaving keys visually "held" forever.
+  // Catch pointerup/pointercancel anywhere on the page, plus window blur
+  // (tab/app switch), as the universal "let go of everything" signal.
+  useEffect(()=>{
+    const release=()=>releaseAllHeld();
+    window.addEventListener('pointerup',release);
+    window.addEventListener('pointercancel',release);
+    window.addEventListener('blur',release);
+    return()=>{
+      window.removeEventListener('pointerup',release);
+      window.removeEventListener('pointercancel',release);
+      window.removeEventListener('blur',release);
+    };
+  },[releaseAllHeld]);
 
   const clear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -3503,21 +3541,20 @@ Composition rules:
         <select
           value={songQ}
           onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);aiMidi(e.target.value);if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);}}}
-          disabled={busy}
-          title=""
-          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid '+(moodHint?'rgba(220,170,255,.9)':'rgba(201,168,76,.3)'),borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':moodHint?'rgba(220,170,255,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:busy?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize',boxShadow:moodHint?'0 0 16px rgba(220,150,255,.35)':'none',transition:'border-color .2s ease, color .2s ease, box-shadow .2s ease'}}>
+          disabled={busy||composeMode||micPainting||micListening}
+          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid '+(moodHint?'rgba(220,170,255,.9)':'rgba(201,168,76,.3)'),borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':moodHint?'rgba(220,170,255,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:(busy||composeMode||micPainting||micListening)?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize',boxShadow:moodHint?'0 0 16px rgba(220,150,255,.35)':'none',transition:'border-color .2s ease, color .2s ease, box-shadow .2s ease'}}>
           <option value="">✦ {t('selectMood').replace('✦ ','')}</option>
           {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
           {MOOD_OPTIONS}
         </select>
         <button onClick={()=>{
-          if(busy)return;
+          if(busy||composeMode||micPainting||micListening)return;
           if(!currentMood){flashMoodHint();return;}
           if(!chords.length)return;
           setShowMorphMenu(true);
-        }} title={!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy?'rgba(220,170,255,.9)':'rgba(220,150,255,.35)'})}>{t('morph')}</button>
+        }} title={!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy&&!composeMode&&!micPainting&&!micListening?'rgba(220,170,255,.9)':'rgba(220,150,255,.35)'})}>{t('morph')}</button>
         <button onClick={()=>{
-          if(busy)return;
+          if(busy||composeMode||micPainting||micListening)return;
           if(!varySource){flashMoodHint();return;}
           const varied=rerollSong(varySource);
           if(!varied)return;
@@ -3530,24 +3567,41 @@ Composition rules:
           setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
           setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
           setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
-        }} title={!varySource?t('pickMoodFirst'):t('reroll')} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.35)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy?1:.55}}>{t('vary')}</button>
+        }} title={!varySource?t('pickMoodFirst'):t('reroll')} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy&&!composeMode&&!micPainting&&!micListening?'rgba(255,210,140,.9)':'rgba(255,200,120,.35)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy&&!composeMode&&!micPainting&&!micListening?1:.55}}>{t('vary')}</button>
       </div>
 
       <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,alignItems:'center'}}>
         <div style={{display:'flex',gap:4,justifyContent:'center'}}>
+          {/* Lock content-load buttons when the user is in an active creation
+              mode (compose / sing / listen). Loading a file would clobber
+              their work-in-progress, and the existing flows already do that
+              silently. Easier to just gate the buttons. */}
           <input ref={refMidi} type="file" accept="audio/midi,audio/x-midi,application/octet-stream,.mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-          <button onClick={()=>{fullClear();setPickMode('midi');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>{t('midi')}</button>
+          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;fullClear();setPickMode('midi');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:(busy||composeMode||micPainting||micListening)?'rgba(140,180,255,.25)':'rgba(140,180,255,.8)'})}>{t('midi')}</button>
           <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-          <button onClick={()=>{fullClear();setPickMode('audio');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':t('audio')}</button>
+          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;fullClear();setPickMode('audio');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:(busy||composeMode||micPainting||micListening)?'rgba(255,180,100,.25)':'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':t('audio')}</button>
           <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-          <button onClick={()=>{fullClear();setPickMode('score');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':t('score')}</button>
+          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;fullClear();setPickMode('score');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':(busy||composeMode||micPainting||micListening)?'rgba(210,150,255,.25)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':t('score')}</button>
           <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
-          <button onClick={()=>{fullClear();setPickMode('image');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:'rgba(210,160,255,.85)'})}>{t('image')}</button>
+          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;fullClear();setPickMode('image');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:(busy||composeMode||micPainting||micListening)?'rgba(210,160,255,.25)':'rgba(210,160,255,.85)'})}>{t('image')}</button>
         </div>
         <div style={{display:'flex',gap:4,justifyContent:'center'}}>
-          <button onClick={()=>{if(!composeMode){fullClear();if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(true);}else setComposeMode(false);}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
-          <button onClick={startMicPainting} disabled={busy&&!micPainting} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micPainting?'rgba(255,100,100,.7)':'rgba(255,140,140,.4)',color:micPainting?'rgba(255,100,100,1)':'rgba(255,160,160,.8)',background:micPainting?'rgba(255,60,60,.1)':'transparent'})}>{micPainting?t('singing'):t('sing')}</button>
-          <button onClick={startMicListening} disabled={busy&&!micListening} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micListening?'rgba(100,200,255,.7)':'rgba(100,180,255,.4)',color:micListening?'rgba(120,210,255,1)':'rgba(140,200,255,.8)',background:micListening?'rgba(60,160,255,.1)':'transparent'})}>{micListening?t('listening'):t('listen')}</button>
+          <button onClick={()=>{
+            if(busy)return;
+            // Soft-lock: if another creation mode is on, do nothing.
+            if(!composeMode&&(micPainting||micListening))return;
+            if(!composeMode){fullClear();setComposeMode(true);}else setComposeMode(false);
+          }} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':(micPainting||micListening)?'rgba(140,220,180,.2)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':(micPainting||micListening)?'rgba(140,220,180,.25)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
+          <button onClick={()=>{
+            if(busy&&!micPainting)return;
+            if(!micPainting&&(composeMode||micListening))return;
+            startMicPainting();
+          }} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micPainting?'rgba(255,100,100,.7)':(composeMode||micListening)?'rgba(255,140,140,.2)':'rgba(255,140,140,.4)',color:micPainting?'rgba(255,100,100,1)':(composeMode||micListening)?'rgba(255,160,160,.25)':'rgba(255,160,160,.8)',background:micPainting?'rgba(255,60,60,.1)':'transparent'})}>{micPainting?t('singing'):t('sing')}</button>
+          <button onClick={()=>{
+            if(busy&&!micListening)return;
+            if(!micListening&&(composeMode||micPainting))return;
+            startMicListening();
+          }} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micListening?'rgba(100,200,255,.7)':(composeMode||micPainting)?'rgba(100,180,255,.2)':'rgba(100,180,255,.4)',color:micListening?'rgba(120,210,255,1)':(composeMode||micPainting)?'rgba(140,200,255,.25)':'rgba(140,200,255,.8)',background:micListening?'rgba(60,160,255,.1)':'transparent'})}>{micListening?t('listening'):t('listen')}</button>
         </div>
       </div>
 
@@ -3683,6 +3737,7 @@ Composition rules:
       )}
 
       <div style={{position:'relative',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none'}}
+        onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
@@ -3928,8 +3983,9 @@ Composition rules:
             setClearArmed(false);
             clear();
           }else{
-            // First tap — arm. If the canvas is already empty, skip the dance.
-            if(!chords.length){clear();return;}
+            // First tap — arm only if there's something worth protecting.
+            // Empty chords AND empty pending = nothing on canvas, clear immediately.
+            if(!chords.length&&!pending.length){clear();return;}
             setClearArmed(true);
             clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
           }
@@ -3998,7 +4054,7 @@ Composition rules:
       </div>
       )}
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.44</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.4</div>
     </div>
   );
 }
