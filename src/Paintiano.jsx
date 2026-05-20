@@ -334,20 +334,51 @@ function parseMusicXml(xmlText){
     };
   });
 }
-function computeGrid(arg){
+function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
+  const liveMode = !!(opts && opts.liveMode);
   const totalQ=evs.reduce((s,e)=>s+(e.durQ!=null?e.durQ:1),0);
-  const N=Math.max(2,Math.ceil(Math.sqrt(totalQ)));
+  // Smart N (column count) picker — minimizes wasted space in the last row.
+  // Same as before; this just chooses a column count, not the canvas shape.
+  const N0=Math.max(2,Math.ceil(Math.sqrt(totalQ)));
+  let bestN=N0, bestScore=-1;
+  for(let dn=-1; dn<=2; dn++){
+    const n=Math.max(2, N0+dn);
+    const r=Math.max(1,Math.ceil(totalQ/n));
+    const fillRatio=totalQ/(n*r);
+    const score=fillRatio*100 - r*0.5;
+    if(score>bestScore){bestScore=score; bestN=n;}
+  }
+  const N=bestN;
   const rows=Math.max(1,Math.ceil(totalQ/N));
-  // Uniform global scale: every event's durQ is multiplied by this so the totals fill exactly N*rows cells.
-  // This way every block keeps the SAME unit width across the whole canvas (no per-row stretching) and the
-  // last row reaches the right edge naturally. Long events that overrun a row wrap into the next row as
-  // additional segments — visually continuing the same chord on the next line, no empty space at row ends.
+  // Uniform global scale so the totals fill exactly N*rows width-units.
+  // Every block keeps the SAME unit width across the canvas (no per-row stretching).
   const scale=(N*rows)/totalQ;
-  const BW=Math.max(4,Math.floor(480/N));
-  const BH=Math.round(BW*PHI);
-  const CW=N*BW;
-  const CH=rows*BH;
+  let BW, BH, CW, CH;
+  if(liveMode){
+    // LIVE-MODE FIXED CANVAS FRAME — compose / sing / listen.
+    // Width AND height stay constant regardless of chord count. Width chosen
+    // by viewport (a bit larger than non-live modes since compose paintings
+    // tend to be the focal point), height = width/PHI for golden-ratio frame.
+    // BH (row height) = CH/rows, so adding chords makes rows thinner without
+    // changing canvas shape — the "fixed picture frame" composition surface.
+    const vp=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:540;
+    const targetCW=Math.min(820,Math.max(360,vp-32));
+    BW=Math.max(4,Math.floor(targetCW/N));
+    CW=N*BW;
+    CH=Math.max(140,Math.round(CW/PHI));
+    BH=Math.max(4,Math.floor(CH/rows));
+  } else {
+    // LOADED-MODE GROW CANVAS — MIDI / audio / score / image / mood.
+    // Block height = BW * PHI (golden ratio per block), canvas height grows
+    // with row count. This is the original behavior pre-treemap experiment;
+    // imported content should display naturally per-chord without being
+    // squished to fit a fixed frame.
+    BW=Math.max(4,Math.floor(480/N));
+    BH=Math.round(BW*PHI);
+    CW=N*BW;
+    CH=rows*BH;
+  }
   const cells=[];
   let curX=0,curY=0;
   for(let i=0;i<evs.length;i++){
@@ -368,49 +399,35 @@ function computeGrid(arg){
     const f=segments[0];
     cells.push({idx:i,x:f.x,y:f.y,w:f.w,h:f.h,segments});
   }
-  // Cleanup: if the very last event left a tiny stranded segment on a new bottom row,
-  // absorb it so the canvas doesn't end with an isolated single cell.
+  // Ensure the very last segment reaches the right edge (clean bottom-right corner
+  // after rounding). Applies to both modes.
   if(cells.length>0){
-    const lastCell=cells[cells.length-1];
-    const segs=lastCell.segments;
-    if(segs.length>=2){
-      // Last event has multiple segments — last one is a wrap-continuation. If it's tiny on its own row, drop it and extend the prev segment.
-      const veryLast=segs[segs.length-1];
-      const prev=segs[segs.length-2];
-      if(veryLast.y>prev.y && veryLast.w<BW*1.5){
-        segs.pop();
-        prev.w=CW-prev.x;
-      }
-    }else if(segs.length===1 && cells.length>=2){
-      // Last event is single segment alone on a new row. Try to slot it into the previous row by shrinking the prev cell's last segment.
-      const veryLast=segs[0];
-      const prevCell=cells[cells.length-2];
-      const prevSegs=prevCell.segments;
-      const prevLast=prevSegs[prevSegs.length-1];
-      if(veryLast.y>prevLast.y && veryLast.x===0 && veryLast.w<BW*3){
-        const shrinkBy=veryLast.w;
-        if(prevLast.w>shrinkBy+BW){
-          prevLast.w-=shrinkBy;
-          veryLast.x=prevLast.x+prevLast.w;
-          veryLast.y=prevLast.y;
-          // Sync cell's x/y/w to first (and only) segment
-          lastCell.x=veryLast.x;lastCell.y=veryLast.y;lastCell.w=veryLast.w;lastCell.h=veryLast.h;
-        }else{
-          // Not enough room — at least stretch the lonely segment so the bottom row isn't a single tiny cell
-          veryLast.w=CW-veryLast.x;
-          lastCell.w=veryLast.w;
-        }
-      }
-    }
-    // Always ensure the last segment reaches the right edge of its row (clean bottom-right corner)
     const finalSegs=cells[cells.length-1].segments;
     const finalLast=finalSegs[finalSegs.length-1];
     if(finalLast.x+finalLast.w<CW){finalLast.w=CW-finalLast.x;}
+    // Live-mode only: stretch the last row vertically to reach the bottom edge.
+    // Integer flooring of BH=CH/rows can leave 1-Nrows pixels short; stretch
+    // every segment in the last row to cover that gap. In grow-mode the
+    // canvas height matches content exactly so no stretch is needed.
+    if(liveMode){
+      const lastY=finalLast.y;
+      if(lastY+finalLast.h<CH){
+        const extraH=CH-(lastY+finalLast.h);
+        for(const c of cells){
+          for(const s of c.segments){
+            if(s.y===lastY) s.h+=extraH;
+          }
+        }
+      }
+    }
   }
-  // CH may be slightly off if the last event rounded; recompute from cells
-  const lastSeg=cells.length?cells[cells.length-1].segments[cells[cells.length-1].segments.length-1]:null;
-  const finalCH=lastSeg?lastSeg.y+BH:CH;
-  return{N,BW,BH,CW,CH:finalCH,cells,rows:Math.round(finalCH/BH),totalQ};
+  // Grow-mode: recompute CH from actual cell positions in case rounding
+  // created a tiny mismatch. Live-mode keeps the declared CH (fixed frame).
+  if(!liveMode && cells.length>0){
+    const lastSeg=cells[cells.length-1].segments[cells[cells.length-1].segments.length-1];
+    CH=lastSeg.y+BH;
+  }
+  return{N,BW,BH,CW,CH,cells,rows,totalQ};
 }
 // Block renderers — three artist-styled mark-making languages plus the
 // implicit mosaic default (no selection). drawBlock dispatches per-cell.
@@ -2092,7 +2109,10 @@ export default function Paintiano() {
     if(sig===gridSigRef.current)return;
     gridSigRef.current=sig;
     const evs=chords.map(c=>({durQ:c.durQ!=null?c.durQ:snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-    const newGrid=computeGrid(evs);
+    // liveMode: compose / sing / listen produce a fixed-frame painting that
+    // shrinks rows as content grows. Imported content (MIDI/audio/score/mood/
+    // demo) skips this — they get the original grow-with-content canvas.
+    const newGrid=computeGrid(evs,{liveMode:true});
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
@@ -2340,7 +2360,12 @@ export default function Paintiano() {
     const now=performance.now();
     const notes=pendingRef.current.map(m=>{
       const info=pressInfo.current[m];
-      const elapsed=info?Math.max(now-info.pressTime,120):paintDur;
+      // If the key was already released before commit ran, info.releasedDur
+      // holds the real hold time — prefer it over the live elapsed estimate.
+      // This is the fix for "every fast tap renders the same width".
+      const elapsed = info
+        ? (info.releasedDur != null ? info.releasedDur : Math.max(now-info.pressTime, 120))
+        : paintDur;
       const v=info && typeof info.vel === 'number' ? info.vel : 88;
       return{m,v,durMs:Math.min(elapsed,4000)};
     });
@@ -2349,13 +2374,22 @@ export default function Paintiano() {
     if(!sessionStart.current)sessionStart.current=now;
     const startMs=now-sessionStart.current;
     for(const {m} of notes){
-      if(pressInfo.current[m])pressInfo.current[m].chordIdx=idx;
+      const info=pressInfo.current[m];
+      if(!info) continue;
+      if(info.releasedDur != null){
+        // Key was already released — commit consumed it, free the slot.
+        delete pressInfo.current[m];
+      } else {
+        // Still held — attach chordIdx so the future release patches the chord.
+        info.chordIdx=idx;
+      }
     }
-    // durQ derives from the chord's longest note (in quarter-note units,
-    // assuming a 500ms quarter @ 120bpm). The grid layout (computeGrid)
-    // uses durQ to size each rectangle's width — so longer holds → wider blocks.
+    // Continuous durQ — every press translates to a proportional block width.
+    // Clamped 0.2-4.0 so neither flash-taps nor multi-second holds dominate.
+    // computeGrid's scale=(N*rows)/totalQ invariant still fills the canvas
+    // exactly, regardless of how varied the durQs are across chords.
     const maxMs=Math.max(...notes.map(n=>n.durMs));
-    const durQ=snapDurQ(maxMs/500);
+    const durQ=Math.max(0.2,Math.min(4,maxMs/500));
     composedModeRef.current=true;
     setChords(p=>[...p,{n:notes,idx,startMs,recorded:true,durQ}]);
   },[paintDur]);
@@ -2407,14 +2441,14 @@ export default function Paintiano() {
     if(!info)return;
     const now=performance.now();
     const actualDur=Math.min(Math.max(now-info.pressTime,120),4000);
-    delete pressInfo.current[midi];
     // Stop the held sample at the actual release moment
     if(samplerOk.current&&samplerRef.current){
       try{samplerRef.current.triggerRelease(Tone.Frequency(midi,'midi').toNote(),Tone.now());}catch(_){}
     }
     setActive(p=>{const s=new Set(p);s.delete(midi);return s;});
-    // Patch the chord this midi was committed to
     if(info.chordIdx!=null){
+      // Commit already ran — patch the existing chord with the actual hold dur
+      delete pressInfo.current[midi];
       setChords(prev=>{
         const i=prev.findIndex(c=>c.idx===info.chordIdx);
         if(i<0)return prev;
@@ -2425,9 +2459,17 @@ export default function Paintiano() {
         newN[ni]={...newN[ni],durMs:actualDur};
         const maxMs=Math.max(...newN.map(n=>n.durMs||0));
         const next=prev.slice();
-        next[i]={...c,n:newN,durQ:snapDurQ(maxMs/500)};
+        // Continuous durQ — preserves expressive press-duration variation.
+        // Clamped so very short or very long holds don't blow up layout.
+        next[i]={...c,n:newN,durQ:Math.max(0.2,Math.min(4,maxMs/500))};
         return next;
       });
+    } else {
+      // Released BEFORE commit fired. Don't delete pressInfo yet — commit
+      // needs the actual hold duration. Stash it so commit reads it instead
+      // of falling back to paintDur (500ms), which was the cause of the
+      // "every fast tap is the same width" bug.
+      info.releasedDur=actualDur;
     }
   },[paintScale]);
 
@@ -2437,14 +2479,53 @@ export default function Paintiano() {
   const releaseAllHeld = useCallback(()=>{
     const held=Object.keys(pressInfo.current);
     if(!held.length)return;
+    const now=performance.now();
+    const patches=[]; // {chordIdx, midi, durMs}
     for(const k of held){
       const midi=+k;
-      delete pressInfo.current[midi];
+      const info=pressInfo.current[midi];
       if(samplerOk.current&&samplerRef.current){
         try{samplerRef.current.triggerRelease(Tone.Frequency(midi,'midi').toNote(),Tone.now());}catch(_){}
       }
+      if(info && info.chordIdx==null){
+        // Pre-commit release — keep the slot, stash the real hold time so the
+        // pending commit picks it up. Don't overwrite if releaseNote already stashed.
+        if(info.releasedDur==null){
+          info.releasedDur=Math.min(Math.max(now-info.pressTime,120),4000);
+        }
+      } else if(info && info.chordIdx!=null){
+        // Post-commit entry — global pointerup fires alongside per-key
+        // touchend, but ordering is non-deterministic. If WE delete first,
+        // the per-key releaseNote will see a null info and skip patching
+        // the chord with the actual hold dur — every chord ends up at the
+        // commit-time minimum (~65-120ms), producing identical widths.
+        // Solution: patch ourselves before deleting.
+        const actualDur=Math.min(Math.max(now-info.pressTime,120),4000);
+        patches.push({chordIdx:info.chordIdx,midi,durMs:actualDur});
+        delete pressInfo.current[midi];
+      } else {
+        delete pressInfo.current[midi];
+      }
     }
     setActive(new Set());
+    if(patches.length){
+      setChords(prev=>{
+        let next=prev;
+        for(const p of patches){
+          const i=next.findIndex(c=>c.idx===p.chordIdx);
+          if(i<0)continue;
+          const c=next[i];
+          const ni=c.n.findIndex(n=>n.m===p.midi);
+          if(ni<0)continue;
+          const newN=c.n.slice();
+          newN[ni]={...newN[ni],durMs:p.durMs};
+          const maxMs=Math.max(...newN.map(n=>n.durMs||0));
+          if(next===prev) next=prev.slice();
+          next[i]={...c,n:newN,durQ:Math.max(0.2,Math.min(4,maxMs/500))};
+        }
+        return next;
+      });
+    }
   },[]);
 
   const undoLast = useCallback(()=>{
@@ -4054,7 +4135,7 @@ Composition rules:
       </div>
       )}
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.4</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.4.03</div>
     </div>
   );
 }
