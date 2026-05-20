@@ -41,6 +41,53 @@ const harmCol=(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],75+(v/127)*15,octL(m));
 const SPEC_HUE=Array.from({length:12},(_,pc)=>pc*30);
 const specCol=(m,v=100)=>{const h=SPEC_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
 
+// Parse a #rrggbb hex string into [r,g,b] (0-255). Defaults to [128,128,128].
+const hexToRgb=(hex)=>{
+  if(typeof hex!=='string')return[128,128,128];
+  let h=hex.replace('#','');
+  if(h.length===3)h=h.split('').map(c=>c+c).join('');
+  if(!/^[0-9a-f]{6}$/i.test(h))return[128,128,128];
+  return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+};
+// Convert [r,g,b] (0-255) into '#rrggbb' lowercase hex string.
+const rgbToHex=([r,g,b])=>'#'+[r,g,b].map(x=>Math.round(Math.max(0,Math.min(255,x))).toString(16).padStart(2,'0')).join('');
+
+// Custom mode color: anchor on user's picked color per pitch class, then apply
+// subtle octave modulation (±15% lightness vs the default ±36% of Harmony/
+// Spectral) and gentle velocity modulation (saturation -10..+5%). The user's
+// chosen colour is faithfully represented at the mid-octave/mezzo-velocity
+// anchor point; surrounding notes shift slightly so octave and velocity remain
+// visually meaningful without overwhelming the user's palette intent.
+const customCol=(m,v=100,palette)=>{
+  const pc=m%12;
+  const hex=(palette&&palette[pc])||'#888888';
+  const[r,g,b]=hexToRgb(hex);
+  const[h0,s0,l0]=toHsl(r,g,b);
+  // Octave: shift lightness toward 50% as anchor, then offset by octave delta.
+  // Anchor lightness on user pick at MIDI 60 (middle C); ±15% across 8 octaves.
+  const octDelta=(Math.max(0,Math.min(8,Math.floor(m/12)-1))-5)*3;  // -15..+9
+  const l=Math.max(8,Math.min(92,l0+octDelta));
+  // Velocity: gentle saturation modulation around user's chosen saturation.
+  const velMod=(v/127-0.5)*15;  // -7.5..+7.5
+  const s=Math.max(0,Math.min(100,s0+velMod));
+  const[rr,gg,bb]=fromHsl(h0,s,l);
+  return[rr,gg,bb,0.7+(v/127)*0.3];
+};
+
+// B/W mode: pitch class drives lightness chromatically — C is darkest, B is
+// lightest, 12 evenly-spaced shades from black to white. Octave provides a
+// subtle additional ±10% lightness offset so the same pitch class at different
+// octaves is visually distinguishable. Velocity controls alpha (existing
+// pattern). Saturation = 0 → pure grayscale, no colour.
+const BW_LIGHT=Array.from({length:12},(_,pc)=>12+(pc/11)*76);
+const bwCol=(m,v=100)=>{
+  const pc=m%12;
+  const octDelta=(Math.max(0,Math.min(8,Math.floor(m/12)-1))-5)*2;  // -10..+6
+  const l=Math.max(6,Math.min(94,BW_LIGHT[pc]+octDelta));
+  const[r,g,b]=fromHsl(0,0,l);
+  return[r,g,b,0.7+(v/127)*0.3];
+};
+
 function parseMidi(buf){
   const d=new Uint8Array(buf);let p=0;
   const u8=()=>d[p++];
@@ -433,7 +480,10 @@ function computeGrid(arg, opts){
 // implicit mosaic default (no selection). drawBlock dispatches per-cell.
 //   picasso:   angular cubist shards with thin black contour outlines
 //   rembrandt: chiaroscuro impasto — shadow + bristles + ridge highlight + sparkle
-//   monet:     soft circular dabs with luminosity-jittered hue field
+//   kusama:    flat color field + many small dots in contrasting color +
+//              occasional infinity-net curve
+//   vangogh:   ribbons of pure pigment, frayed bristle ends, parallel flow
+//   kandinsky: concentric-circle eye + lines + triangles + dot constellations
 //   mosaic:    the implicit default — sharp rectangles + thin halo, used when
 //              no artist is explicitly selected. Not exposed in the toggle.
 
@@ -453,20 +503,19 @@ function _seedRnd(bx,by,BW,BH){
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;sorted.forEach((note,i)=>{const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;ctx.fillStyle=`rgba(${r},${g},${b},${(a*.18).toFixed(3)})`;ctx.fillRect(bx-2,y-2,BW+4,bh+4);ctx.fillStyle=`rgba(${r},${g},${b},${a.toFixed(3)})`;ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);});if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}}
 
 function drawRembrandt(ctx,bx,by,notes,gc,BW,BH){
-  // Chiaroscuro impasto: each chord scatters 3–4 brushstrokes per voice;
-  // each stroke is built up from FOUR layers to fake the depth of real pigment:
-  //   1) shadow — a darker, slightly-offset polygon beneath the stroke (depth)
-  //   2) bristles — 4–6 parallel marks at slightly different tones (loaded brush)
-  //   3) highlight — a thin lighter shape along the upper edge (paint ridge catching light)
-  //   4) specular — an occasional near-white speck (wet-paint sparkle)
-  // Edges use 12-vertex polygons with ±18% radius jitter so they read as
-  // hand-painted, not vector-perfect. Per-chord stroke direction gives the
-  // canvas gestural rhythm — strokes within a chord cluster around the same
-  // angle, different chords go in different directions. Tone shifts are pure
-  // luminosity so the chord's hue (and the harmony/spectral mode) reads clearly.
+  // Rembrandt — chunky, sculptural, BLENDED. Opposite of Van Gogh in nearly
+  // every axis:
+  // • Strokes overflow cell boundaries (origins can drift 25% past edge)
+  // • Length 0.8-2.4× cell long axis; occasional "long sweep" 1.6-2.4×
+  // • SFUMATO tone gradient ALONG each stroke (radial gradient: light core
+  //   fades to dark edges) — soft transitions, not pure pigment
+  // • Faint dark underglow beneath strokes (the Rembrandt ground)
+  // • 3-5 weighty strokes per voice
+  // • Bristle marks subtle (within the stroke, very low contrast)
+  // Result: sculpted, weighty marks that break out of the raster grid while
+  // keeping the blended-pigment identity.
   const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
   const rnd=_seedRnd(bx,by,BW,BH);
-  // Hand-painted polygon — perturbed radii so the outline isn't perfectly smooth.
   const rough=(ax,ay,rx,ry)=>{
     const segs=12;
     ctx.beginPath();
@@ -479,47 +528,99 @@ function drawRembrandt(ctx,bx,by,notes,gc,BW,BH){
     }
     ctx.closePath();ctx.fill();
   };
+  // 1) Faint dark wash underglow — Rembrandt's signature dark ground
+  // covering the cell, providing depth.
   sorted.forEach((note,vi)=>{
     const[r,g,b,a]=gc(note.m,note.v);
     const yOff=by+vi*bh;
-    // Voice-coherent stroke direction
+    // Dark wash: large radial gradient covering most of the voice slice
+    const wR=Math.round(r*0.22), wG=Math.round(g*0.22), wB=Math.round(b*0.22);
+    const washGrad=ctx.createRadialGradient(
+      bx+BW*0.5, yOff+bh*0.5, 0,
+      bx+BW*0.5, yOff+bh*0.5, Math.max(BW,bh)*0.7
+    );
+    washGrad.addColorStop(0, `rgba(${wR},${wG},${wB},${(a*0.50).toFixed(3)})`);
+    washGrad.addColorStop(0.7, `rgba(${wR},${wG},${wB},${(a*0.20).toFixed(3)})`);
+    washGrad.addColorStop(1, `rgba(${wR},${wG},${wB},0)`);
+    ctx.fillStyle=washGrad;
+    ctx.fillRect(bx-bh*0.2, yOff-bh*0.2, BW+bh*0.4, bh+bh*0.4);
+  });
+  // 2) Strokes — short, stubby, contained, with sfumato gradient
+  sorted.forEach((note,vi)=>{
+    const[r,g,b,a]=gc(note.m,note.v);
+    const yOff=by+vi*bh;
     const chordAngle=rnd()*Math.PI*2;
-    const count=3+Math.floor(rnd()*2); // 3–4 strokes per voice
+    const count=3+Math.floor(rnd()*3); // 3-5 strokes per voice — slightly more
     for(let k=0;k<count;k++){
-      const cx=bx+rnd()*BW;
-      const cy=yOff+rnd()*bh;
-      const angle=chordAngle+(rnd()-0.5)*Math.PI/3; // chord direction ±30°
-      const length=BW*(0.50+rnd()*0.45);
-      const width=bh*(0.35+rnd()*0.30);
+      // Stroke center can drift 25% past cell boundary — breaks the raster
+      // grid while preserving Rembrandt's sculptural identity (achieved
+      // through the strokes' inner character, not their position).
+      const cx=bx+(rnd()*1.25-0.125)*BW;
+      const cy=yOff+(rnd()*1.25-0.125)*bh;
+      const angle=chordAngle+(rnd()-0.5)*Math.PI/3;
+      // Occasional "long sweep" stroke — spans beyond the cell entirely
+      const longSweep = rnd() < 0.22;
+      const length = longSweep
+        ? Math.max(BW,bh)*(1.6+rnd()*0.8)   // 1.6-2.4× — clearly overflows
+        : Math.min(BW,bh)*(0.8+rnd()*0.9)*1.4; // 1.1-2.4× short axis
+      // Width: thicker — 0.45-0.85× of bh
+      const width=bh*(0.45+rnd()*0.4);
       ctx.save();
       ctx.translate(cx,cy);
       ctx.rotate(angle);
-      // 1) Shadow — offset 1.5px down-right, darker colour
-      const sR=Math.round(r*0.40), sG=Math.round(g*0.40), sB=Math.round(b*0.40);
-      ctx.fillStyle=`rgba(${sR},${sG},${sB},${(a*0.55).toFixed(3)})`;
-      rough(1.5,1.5,length*1.05,width*0.55);
-      // 2) Body — 4–6 parallel bristle marks with alternating luminosity shifts
-      // (uniform across R/G/B so hue is preserved — mode signal stays visible)
-      const bristles=4+Math.floor(rnd()*3);
+
+      // Shadow — slight offset, dark
+      const sR=Math.round(r*0.32), sG=Math.round(g*0.32), sB=Math.round(b*0.32);
+      ctx.fillStyle=`rgba(${sR},${sG},${sB},${(a*0.65).toFixed(3)})`;
+      rough(2.0, 2.0, length*1.08, width*0.58);
+
+      // Main body — SFUMATO RADIAL GRADIENT (light core → dark edges)
+      // This is the key visual change: tone modulates SMOOTHLY within the
+      // stroke rather than via discrete bristles. Light hits one spot, fades
+      // outward into shadow.
+      const lightOffsetX = (rnd()-0.5)*length*0.4; // where the light hits
+      const lightOffsetY = (rnd()-0.5)*width*0.3;
+      // Lighter core color
+      const cR=Math.min(255,Math.round(r+45+rnd()*20));
+      const cG=Math.min(255,Math.round(g+45+rnd()*20));
+      const cB=Math.min(255,Math.round(b+45+rnd()*20));
+      // Edge color (back to base)
+      const eR=Math.max(0,Math.round(r-15));
+      const eG=Math.max(0,Math.round(g-15));
+      const eB=Math.max(0,Math.round(b-15));
+      const bodyGrad=ctx.createRadialGradient(
+        lightOffsetX, lightOffsetY, 0,
+        lightOffsetX, lightOffsetY, Math.max(length, width)*0.65
+      );
+      bodyGrad.addColorStop(0, `rgba(${cR},${cG},${cB},${(a*0.98).toFixed(3)})`);
+      bodyGrad.addColorStop(0.5, `rgba(${r},${g},${b},${(a*0.94).toFixed(3)})`);
+      bodyGrad.addColorStop(1, `rgba(${eR},${eG},${eB},${(a*0.88).toFixed(3)})`);
+      ctx.fillStyle=bodyGrad;
+      rough(0, 0, length/2, width/2);
+
+      // Subtle bristle texture INSIDE the stroke — very low contrast,
+      // just enough to break up the smooth gradient without dominating
+      const bristles = 2 + Math.floor(rnd()*2); // 2-3 faint bristle marks
       for(let bi=0;bi<bristles;bi++){
         const t=(bi+0.5)/bristles;
-        const yB=(t-0.5)*width;
-        const tone=(bi%2===0?1:-1)*(10+rnd()*25);
+        const yB=(t-0.5)*width*0.7;
+        const tone=(rnd()-0.5)*15; // very small variance now
         const br=Math.max(0,Math.min(255,Math.round(r+tone)));
         const bg=Math.max(0,Math.min(255,Math.round(g+tone)));
         const bb=Math.max(0,Math.min(255,Math.round(b+tone)));
-        const op=a*(0.70+rnd()*0.30);
-        ctx.fillStyle=`rgba(${br},${bg},${bb},${op.toFixed(3)})`;
-        rough(0,yB,length*(0.85+rnd()*0.30),width/bristles*1.4);
+        ctx.fillStyle=`rgba(${br},${bg},${bb},${(a*0.35).toFixed(3)})`;
+        rough(0, yB, length*0.42, width*0.08);
       }
-      // 3) Highlight — lighter ridge along the top edge of the stroke
-      const hR=Math.min(255,Math.round(r+65)), hG=Math.min(255,Math.round(g+65)), hB=Math.min(255,Math.round(b+65));
-      ctx.fillStyle=`rgba(${hR},${hG},${hB},${(a*0.45).toFixed(3)})`;
-      rough(-length*0.05,-width*0.32,length*0.55,width*0.11);
-      // 4) Specular sparkle — small near-white speck on wet paint, ~38% of strokes
-      if(rnd()>0.62){
-        ctx.fillStyle=`rgba(255,250,240,${(a*0.40).toFixed(3)})`;
-        rough(-length*0.15+(rnd()-0.5)*length*0.3,-width*0.25,length*0.08,width*0.04);
+
+      // Highlight ridge — small, contained, lighter
+      const hR=Math.min(255,Math.round(r+70)), hG=Math.min(255,Math.round(g+70)), hB=Math.min(255,Math.round(b+70));
+      ctx.fillStyle=`rgba(${hR},${hG},${hB},${(a*0.55).toFixed(3)})`;
+      rough(lightOffsetX*0.6, -width*0.28+lightOffsetY*0.5, length*0.35, width*0.10);
+
+      // Specular sparkle — small near-white speck on wet paint
+      if(rnd()>0.55){
+        ctx.fillStyle=`rgba(255,250,240,${(a*0.55).toFixed(3)})`;
+        rough(lightOffsetX*0.5+(rnd()-0.5)*length*0.2, -width*0.22, length*0.06, width*0.035);
       }
       ctx.restore();
     }
@@ -660,36 +761,505 @@ function drawPicasso(ctx,bx,by,notes,gc,BW,BH){
   });
 }
 
-function drawMonet(ctx,bx,by,notes,gc,BW,BH){
-  // Impressionist dabs: 8–12 soft circular marks per voice with luminosity
-  // jitter (light/shadow across same hue) and radial-gradient feathered
-  // edges. Adjacent dabs overlap and blend optically — the cell becomes a
-  // colour field, no hard borders. Light, airy, Giverny-pond palette feel.
-  // Jitter is applied uniformly across R/G/B so the chord's hue identity is
-  // preserved — without this, the asymmetric jitter would wash out the
-  // harmony-vs-spectral colour difference.
+function drawKusama(ctx,bx,by,notes,gc,BW,BH){
+  // Kusama — fields of polka dots on a 3D-shaded "pumpkin" field. Each voice
+  // becomes a subtly rounded shape (side shadow + top highlight + vertical
+  // rib curves) covered in obsessive small dots in contrasting colors. The
+  // pumpkin shading is subtle — dots remain the dominant visual element, but
+  // each cell now has the dimensionality of one of her iconic pumpkins.
+  //
+  // Per voice:
+  // • Large flat background field in voice color
+  // • Pumpkin shading: directional side shadow + top highlight + 2-3 vertical
+  //   rib curves (bezier-curved inward at top and bottom for the fluted look)
+  // • 30-60 dots in contrasting color (mostly black or white, sometimes the
+  //   RGB complement)
+  // • 3 size tiers: large statement (5%), medium (35%), pinpoints (60%)
+  // • Sub-grid jitter so dots feel hand-placed, not mechanical
+  // • 15% chance per cell: "infinity net" curving line winds through the
+  //   dots — Kusama's other signature element
   const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
   const rnd=_seedRnd(bx,by,BW,BH);
+  // One net per cell, decided up-front
+  const drawNet = rnd() < 0.15;
+
+  sorted.forEach((note,vi)=>{
+    const[r,g,b,a]=gc(note.m,note.v);
+    const yOff = by + vi*bh;
+
+    // === 1. BACKGROUND FIELD — flat voice color, slightly overflowed ===
+    ctx.fillStyle = `rgba(${r},${g},${b},${a.toFixed(3)})`;
+    ctx.fillRect(bx-1, yOff-1, BW+2, bh+2);
+
+    // === 1b. PUMPKIN 3D SHADING ===
+    // Subtle rounded depth: side shadow + top highlight + 2-3 vertical ribs.
+    // Keeps the polka-dot field as the dominant element but gives each cell
+    // the subtle dimensionality of one of Kusama's iconic pumpkins.
+    // Side shadow direction (left or right) rotates per voice for variety.
+    const shadowSide = (vi + Math.floor(rnd()*2)) % 2 === 0 ? 'right' : 'left';
+    const sR = Math.round(r*0.65), sG = Math.round(g*0.65), sB = Math.round(b*0.65);
+    const shadowGrad = ctx.createLinearGradient(
+      shadowSide==='left' ? bx : bx+BW, yOff,
+      shadowSide==='left' ? bx+BW*0.55 : bx+BW*0.45, yOff
+    );
+    shadowGrad.addColorStop(0,    `rgba(${sR},${sG},${sB},${(a*0.55).toFixed(3)})`);
+    shadowGrad.addColorStop(0.6,  `rgba(${sR},${sG},${sB},${(a*0.18).toFixed(3)})`);
+    shadowGrad.addColorStop(1,    `rgba(${sR},${sG},${sB},0)`);
+    ctx.fillStyle = shadowGrad;
+    ctx.fillRect(bx-1, yOff-1, BW+2, bh+2);
+
+    // Top highlight — soft arc of slightly lighter tone catching light
+    const hR = Math.min(255, Math.round(r*1.20 + 12));
+    const hG = Math.min(255, Math.round(g*1.20 + 12));
+    const hB = Math.min(255, Math.round(b*1.20 + 12));
+    const topGrad = ctx.createLinearGradient(bx, yOff, bx, yOff + bh*0.45);
+    topGrad.addColorStop(0,   `rgba(${hR},${hG},${hB},${(a*0.40).toFixed(3)})`);
+    topGrad.addColorStop(1,   `rgba(${hR},${hG},${hB},0)`);
+    ctx.fillStyle = topGrad;
+    ctx.fillRect(bx-1, yOff-1, BW+2, bh*0.50);
+
+    // Vertical rib curves — 2-3 thin darker lines suggesting pumpkin segments.
+    // Curved inward at the top and bottom for the "fluted" pumpkin shape.
+    const ribCount = 2 + Math.floor(rnd()*2);
+    const rR = Math.round(r*0.45), rG = Math.round(g*0.45), rB = Math.round(b*0.45);
+    ctx.strokeStyle = `rgba(${rR},${rG},${rB},${(a*0.50).toFixed(3)})`;
+    ctx.lineWidth = Math.max(0.8, Math.min(BW,bh)*0.014);
+    ctx.lineCap = 'round';
+    for(let ri=1; ri<=ribCount; ri++){
+      const ribX = bx + BW * (ri/(ribCount+1));
+      // Curve inward at top and bottom — bezier with horizontal-pinched control points
+      const pinch = BW * 0.04;
+      ctx.beginPath();
+      ctx.moveTo(ribX, yOff + bh*0.12);
+      ctx.bezierCurveTo(
+        ribX - pinch, yOff + bh*0.35,
+        ribX - pinch, yOff + bh*0.65,
+        ribX,          yOff + bh*0.88
+      );
+      ctx.stroke();
+    }
+
+    // === 2. DOT COLOR — per voice, picked from black / white / complement ===
+    // The cells visually rotate through dot colors so the field reads
+    // distinctly as Kusama (the contrast is the whole point).
+    const dotColorRoll = rnd();
+    let dotR, dotG, dotB;
+    if(dotColorRoll < 0.45){
+      // Black dots — most common
+      dotR = 12; dotG = 8; dotB = 18;
+    } else if(dotColorRoll < 0.80){
+      // White dots
+      dotR = 245; dotG = 240; dotB = 228;
+    } else {
+      // Complementary dots — rare but iconic
+      dotR = Math.max(0,Math.min(255, 255 - r));
+      dotG = Math.max(0,Math.min(255, 255 - g));
+      dotB = Math.max(0,Math.min(255, 255 - b));
+    }
+
+    // === 3. DOT FIELD ===
+    // Density 30-60 dots per voice. Sub-grid arrangement: divide the voice
+    // slice into rows × cols and place dots with jitter so they feel hand-
+    // placed without overlapping too much.
+    const dotCount = 30 + Math.floor(rnd()*30);
+    // Choose dominant dot size for this voice (mostly small, occasional big)
+    const baseRadius = Math.min(BW, bh) * 0.045;
+    for(let k=0; k<dotCount; k++){
+      // Size tier: 5% large statement, 35% medium, 60% pinpoint
+      const sizeRoll = rnd();
+      const radius = sizeRoll < 0.05 ? baseRadius * (2.5 + rnd()*1.5)
+                   : sizeRoll < 0.40 ? baseRadius * (1.2 + rnd()*0.6)
+                                     : baseRadius * (0.4 + rnd()*0.5);
+      // Position with overflow — dots can drift past cell edges slightly
+      const cx = bx + (rnd()*1.1 - 0.05) * BW;
+      const cy = yOff + (rnd()*1.1 - 0.05) * bh;
+      // Slight per-dot alpha variation for hand-painted feel
+      const dotA = (a * (0.85 + rnd()*0.15)).toFixed(3);
+      ctx.fillStyle = `rgba(${dotR},${dotG},${dotB},${dotA})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI*2);
+      ctx.fill();
+    }
+  });
+
+  // === 4. INFINITY NET (15% of cells) ===
+  // Single curving line winding across the cell — Kusama's other signature.
+  // Drawn in white if cell is darker, black if lighter (auto-contrast).
+  if(drawNet){
+    // Compute approximate cell brightness from first voice color
+    const[r,g,b]=gc(sorted[0].m, sorted[0].v);
+    const luma = 0.299*r + 0.587*g + 0.114*b;
+    const netColor = luma > 128 ? 'rgba(12,8,18,0.65)' : 'rgba(245,240,228,0.65)';
+    ctx.strokeStyle = netColor;
+    ctx.lineWidth = Math.max(0.8, Math.min(BW,BH)*0.008);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // Wind a sinuous path through the cell with 4-6 control points
+    const ptCount = 4 + Math.floor(rnd()*3);
+    ctx.beginPath();
+    const startX = bx - BW*0.1 + rnd()*BW*0.3;
+    const startY = by + rnd()*BH;
+    ctx.moveTo(startX, startY);
+    for(let pi=0; pi<ptCount; pi++){
+      const t1 = (pi+0.5)/ptCount;
+      const t2 = (pi+1)/ptCount;
+      const cpx = bx + t1*BW*1.15 - BW*0.075;
+      const cpy = by + (rnd())*BH;
+      const ex = bx + t2*BW*1.15 - BW*0.075;
+      const ey = by + (rnd())*BH;
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawVanGogh(ctx,bx,by,notes,gc,BW,BH){
+  // Van Gogh — RIBBONS OF PURE PIGMENT. Pushed away from Rembrandt's blended
+  // sculptural impasto:
+  //
+  // • Strokes are LONGER and NARROWER (length 1.5-3× cell, ribbon-like)
+  // • AGGRESSIVE overflow — origins can be 40% past cell boundaries
+  // • Each bristle is a SINGLE solid color (no gradient along length)
+  // • Adjacent bristles within one stroke can be quite different colors —
+  //   pure pigments side-by-side, contrast through neighboring not blending
+  // • Flow vectors are MORE PARALLEL (30-90° offset, not 72-180°) so cell
+  //   reads as wind/grain direction, not chaos
+  // • Frayed ends: 4-6 hairs per terminus, longer (up to 3× stroke width)
+  // • Density: 8-15 strokes per voice; some anchors, some accents
+  //
+  // Where Rembrandt fades-tones-within-a-stroke (sfumato), Van Gogh keeps
+  // each ribbon a flat unbroken color and lets neighboring ribbons clash.
+  const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
+  const rnd=_seedRnd(bx,by,BW,BH);
+  // Two flow directions, mostly parallel — Van Gogh's strokes align with
+  // the "wind" or grain they depict
+  const flowA = rnd()*Math.PI*2;
+  const flowB = flowA + (Math.PI*0.17 + rnd()*Math.PI*0.33); // 30-90° offset
+
   sorted.forEach((note,vi)=>{
     const[r,g,b,a]=gc(note.m,note.v);
     const yOff=by+vi*bh;
-    const count=8+Math.floor(rnd()*5); // 8–12 dabs
-    for(let k=0;k<count;k++){
-      const cx=bx+rnd()*BW;
-      const cy=yOff+rnd()*bh;
-      const radius=Math.min(BW,bh)*(0.20+rnd()*0.25);
-      // Pure luminosity shift — same hue, varying brightness like dappled light
-      const tone=(rnd()-0.5)*55;
-      const rJ=Math.max(0,Math.min(255,Math.round(r+tone)));
-      const gJ=Math.max(0,Math.min(255,Math.round(g+tone)));
-      const bJ=Math.max(0,Math.min(255,Math.round(b+tone)));
-      // Soft feathered dab via radial gradient
-      const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,radius);
-      grad.addColorStop(0,`rgba(${rJ},${gJ},${bJ},${(a*0.78).toFixed(3)})`);
-      grad.addColorStop(0.55,`rgba(${rJ},${gJ},${bJ},${(a*0.40).toFixed(3)})`);
-      grad.addColorStop(1,`rgba(${rJ},${gJ},${bJ},0)`);
-      ctx.fillStyle=grad;
-      ctx.fillRect(cx-radius,cy-radius,radius*2,radius*2);
+    const strokeCount = 8 + Math.floor(rnd()*8); // 8-15 strokes per voice
+
+    for(let k=0;k<strokeCount;k++){
+      // Origin can bleed 40% past voice slice — aggressive overflow
+      const cx = bx + (rnd()*1.4 - 0.20) * BW;
+      const cy = yOff + (rnd()*1.4 - 0.20) * bh;
+      // Bias toward flow A so the cell has a dominant grain
+      const baseAngle = (rnd()<0.70 ? flowA : flowB) + (rnd()-0.5)*0.32;
+      // Stroke variety: rare anchor (12%), normal (70%), accent stab (18%)
+      const variant = rnd();
+      const anchor = variant < 0.12;
+      const accent = variant > 0.82;
+      const baseLen = Math.max(BW,bh);
+      // Longer, more ribbon-like
+      const length = anchor ? baseLen*(2.2+rnd()*0.8)
+                  : accent  ? baseLen*(0.40+rnd()*0.30)
+                            : baseLen*(1.2+rnd()*1.2);
+      // Narrower than before
+      const widthMul = anchor ? 1.4 : accent ? 0.65 : 0.85;
+      const strokeW = bh * (0.13+rnd()*0.13) * widthMul;
+      // Curvature: S-stroke or C-stroke
+      const curvSign = rnd()<0.4 ? -1 : 1;
+      const curvAmt = length * (0.30 + rnd()*0.45) * curvSign;
+      const cosA = Math.cos(baseAngle), sinA = Math.sin(baseAngle);
+      const x0 = cx - cosA*length/2;
+      const y0 = cy - sinA*length/2;
+      const x1 = cx + cosA*length/2;
+      const y1 = cy + sinA*length/2;
+      const px1x = cx - cosA*length/6 + (-sinA)*curvAmt*0.55;
+      const px1y = cy - sinA*length/6 + ( cosA)*curvAmt*0.55;
+      const px2x = cx + cosA*length/6 + (-sinA)*curvAmt*0.55;
+      const px2y = cy + sinA*length/6 + ( cosA)*curvAmt*0.55;
+
+      // 1) SHADOW — thin, dark
+      const shadowR = Math.round(r*0.32), shadowG = Math.round(g*0.32), shadowB = Math.round(b*0.32);
+      ctx.strokeStyle = `rgba(${shadowR},${shadowG},${shadowB},${(a*0.40).toFixed(3)})`;
+      ctx.lineWidth = strokeW * 1.05;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x0 + strokeW*0.15, y0 + strokeW*0.18);
+      ctx.bezierCurveTo(
+        px1x + strokeW*0.15, px1y + strokeW*0.18,
+        px2x + strokeW*0.15, px2y + strokeW*0.18,
+        x1 + strokeW*0.15, y1 + strokeW*0.18
+      );
+      ctx.stroke();
+
+      // 2) BODY — multiple PURE-COLOR bristles, each a single solid tone.
+      // The tone CAN be quite different between neighboring bristles — that
+      // pure-pigment-side-by-side clash is Van Gogh's color signature.
+      const layers = 3 + Math.floor(rnd()*3); // 3-5 bristles per stroke
+      for(let bi=0; bi<layers; bi++){
+        const offset = (bi/(layers-1) - 0.5) * strokeW * 0.65;
+        const nx = -sinA * offset;
+        const ny =  cosA * offset;
+        // Per-bristle tone shift — can be substantial (±55) so neighbors
+        // clash visibly. NO blending along the length.
+        const tone = (rnd()-0.5)*55;
+        const rJ = Math.max(0,Math.min(255,Math.round(r+tone)));
+        const gJ = Math.max(0,Math.min(255,Math.round(g+tone)));
+        const bJ = Math.max(0,Math.min(255,Math.round(b+tone)));
+        ctx.strokeStyle = `rgba(${rJ},${gJ},${bJ},${(a*0.95).toFixed(3)})`;
+        ctx.lineWidth = strokeW * 0.28;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x0+nx, y0+ny);
+        ctx.bezierCurveTo(px1x+nx, px1y+ny, px2x+nx, px2y+ny, x1+nx, y1+ny);
+        ctx.stroke();
+      }
+
+      // 3) HIGHLIGHT RIDGE — pure color, brighter, single curve along upper edge
+      const hR = Math.min(255, Math.round(r*1.55 + 25));
+      const hG = Math.min(255, Math.round(g*1.55 + 25));
+      const hB = Math.min(255, Math.round(b*1.55 + 25));
+      ctx.strokeStyle = `rgba(${hR},${hG},${hB},${(a*0.60).toFixed(3)})`;
+      ctx.lineWidth = strokeW * 0.16;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      const hnx = -sinA * (-strokeW*0.28);
+      const hny =  cosA * (-strokeW*0.28);
+      ctx.moveTo(x0+hnx, y0+hny);
+      ctx.bezierCurveTo(px1x+hnx, px1y+hny, px2x+hnx, px2y+hny, x1+hnx, y1+hny);
+      ctx.stroke();
+
+      // 4) FRAYED ENDS — MORE hairs, LONGER, more aggressive than before.
+      const endHairs = 4 + Math.floor(rnd()*3); // 4-6 hairs per terminus
+      const tx1 = 3*(x1 - px2x), ty1 = 3*(y1 - px2y);
+      const tlen1 = Math.sqrt(tx1*tx1 + ty1*ty1) || 1;
+      const txN1 = tx1/tlen1, tyN1 = ty1/tlen1;
+      const tx0 = 3*(px1x - x0), ty0 = 3*(px1y - y0);
+      const tlen0 = Math.sqrt(tx0*tx0 + ty0*ty0) || 1;
+      const txN0 = -tx0/tlen0, tyN0 = -ty0/tlen0;
+      for(let h=0; h<endHairs; h++){
+        const hairLen = strokeW * (1.5 + rnd()*2.5);
+        const hairOffset = (rnd()-0.5) * strokeW * 0.85;
+        const hairTone = (rnd()-0.5)*45;
+        const hrJ = Math.max(0,Math.min(255,Math.round(r+hairTone)));
+        const hgJ = Math.max(0,Math.min(255,Math.round(g+hairTone)));
+        const hbJ = Math.max(0,Math.min(255,Math.round(b+hairTone)));
+        ctx.strokeStyle = `rgba(${hrJ},${hgJ},${hbJ},${(a*0.70).toFixed(3)})`;
+        ctx.lineWidth = strokeW * 0.08;
+        ctx.lineCap = 'round';
+        const tailNx = -tyN1 * hairOffset, tailNy = txN1 * hairOffset;
+        ctx.beginPath();
+        ctx.moveTo(x1+tailNx, y1+tailNy);
+        ctx.lineTo(x1 + txN1*hairLen + tailNx, y1 + tyN1*hairLen + tailNy);
+        ctx.stroke();
+        if(rnd()<0.65){
+          const headNx = -tyN0 * hairOffset, headNy = txN0 * hairOffset;
+          ctx.beginPath();
+          ctx.moveTo(x0+headNx, y0+headNy);
+          ctx.lineTo(x0 + txN0*hairLen*0.75 + headNx, y0 + tyN0*hairLen*0.75 + headNy);
+          ctx.stroke();
+        }
+      }
+
+      // 5) RARE SPECK — small wet-pigment highlight along stroke
+      if(rnd()<0.15){
+        const t = 0.25 + rnd()*0.5;
+        const u = 1-t;
+        const speckX = u*u*u*x0 + 3*u*u*t*px1x + 3*u*t*t*px2x + t*t*t*x1;
+        const speckY = u*u*u*y0 + 3*u*u*t*px1y + 3*u*t*t*px2y + t*t*t*y1;
+        ctx.fillStyle = `rgba(255,250,${Math.min(255,Math.round(b*1.3+80))},0.82)`;
+        ctx.beginPath();
+        ctx.arc(speckX, speckY, strokeW*0.10 + rnd()*strokeW*0.08, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  });
+}
+
+function drawKandinsky(ctx,bx,by,notes,gc,BW,BH){
+  // Kandinsky — abstract geometric composition. Lines as protagonists,
+  // concentric circles as anchors, sharp triangles and dot clusters as
+  // accents. Diverges from Picasso (filled polygons), Van Gogh (curved
+  // strokes), Monet (soft dabs), Rembrandt (impasto blobs) by using
+  // line-based linear elements no other style features.
+  //
+  // Per voice:
+  // • One concentric-circle "eye" — 3-5 nested rings, alternating tones
+  // • 2-4 straight LINES crossing through/near the cell — different angles,
+  //   widths, occasionally tipped with an arrow or hook
+  // • 1-2 sharp triangle accents (filled or open chevron)
+  // • Occasional dot constellation — 3-5 dots in a line or arc
+  // • Rare black line cutting across for contrast (Kandinsky's signature)
+  //
+  // Cell-wide compositional axis means voices share rough diagonal direction
+  // so the cell reads coordinated, not chaotic.
+  const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
+  const rnd=_seedRnd(bx,by,BW,BH);
+  // Cell-wide composition axis (slight tilt, mostly diagonal)
+  const cellAxis = (rnd()*Math.PI*2);
+
+  sorted.forEach((note,vi)=>{
+    const[r,g,b,a]=gc(note.m,note.v);
+    const yOff = by + vi*bh;
+    const centerX = bx + BW*0.5;
+    const centerY = yOff + bh*0.5;
+    const minDim = Math.min(BW, bh);
+    // Voice-level angle offset from cell axis
+    const voiceAngle = cellAxis + (vi - n/2) * 0.35 + (rnd()-0.5)*0.4;
+
+    // === 1. CONCENTRIC CIRCLE EYE ===
+    // Position offset from center
+    const eyeX = centerX + (rnd()-0.5) * BW * 0.45;
+    const eyeY = yOff + bh*0.5 + (rnd()-0.5) * bh * 0.4;
+    const eyeMaxR = minDim * (0.30 + rnd()*0.20);
+    const rings = 3 + Math.floor(rnd()*3); // 3-5 rings
+    for(let ri = rings-1; ri >= 0; ri--){
+      const ringR = eyeMaxR * ((ri+1) / rings);
+      // Alternate tones: light, dark, base, light...
+      const tonePattern = ri % 3;
+      let rJ, gJ, bJ;
+      if(tonePattern === 0){
+        // Slight darker (base)
+        const t = -15 - rnd()*15;
+        rJ = Math.max(0,Math.min(255,Math.round(r+t)));
+        gJ = Math.max(0,Math.min(255,Math.round(g+t)));
+        bJ = Math.max(0,Math.min(255,Math.round(b+t)));
+      } else if(tonePattern === 1){
+        // Lighter highlight
+        const t = 30 + rnd()*30;
+        rJ = Math.max(0,Math.min(255,Math.round(r+t)));
+        gJ = Math.max(0,Math.min(255,Math.round(g+t)));
+        bJ = Math.max(0,Math.min(255,Math.round(b+t)));
+      } else {
+        // Saturated base
+        rJ = r; gJ = g; bJ = b;
+      }
+      ctx.fillStyle = `rgba(${rJ},${gJ},${bJ},${a.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(eyeX, eyeY, ringR, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // === 2. STRAIGHT LINES through the cell ===
+    const lineCount = 2 + Math.floor(rnd()*3); // 2-4 lines
+    for(let li=0; li<lineCount; li++){
+      const lineAngle = voiceAngle + (rnd()-0.5)*Math.PI*0.8;
+      const lineLen = Math.max(BW,bh) * (0.8 + rnd()*0.8); // can bleed past cell
+      // Origin somewhere in the cell, mostly around the eye
+      const ox = eyeX + (rnd()-0.5) * BW * 0.7;
+      const oy = eyeY + (rnd()-0.5) * bh * 0.7;
+      const cosL = Math.cos(lineAngle), sinL = Math.sin(lineAngle);
+      const x1 = ox - cosL * lineLen/2;
+      const y1 = oy - sinL * lineLen/2;
+      const x2 = ox + cosL * lineLen/2;
+      const y2 = oy + sinL * lineLen/2;
+      // Line thickness varies — some are thin, some are bold
+      const lineW = minDim * (0.015 + rnd()*0.06); // ~1.5-7.5% of cell dim
+      // Color: 70% chance use voice tone variation, 25% chance pure white,
+      // 5% chance pure black for high-contrast Kandinsky accent
+      const lineRoll = rnd();
+      let lineColor;
+      if(lineRoll < 0.05){
+        lineColor = `rgba(8,4,12,${(a*0.92).toFixed(3)})`;
+      } else if(lineRoll < 0.30){
+        lineColor = `rgba(245,238,220,${(a*0.85).toFixed(3)})`;
+      } else {
+        const t = (rnd()-0.5)*50;
+        const lrJ = Math.max(0,Math.min(255,Math.round(r+t)));
+        const lgJ = Math.max(0,Math.min(255,Math.round(g+t)));
+        const lbJ = Math.max(0,Math.min(255,Math.round(b+t)));
+        lineColor = `rgba(${lrJ},${lgJ},${lbJ},${a.toFixed(3)})`;
+      }
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = lineW;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      // 30% chance: add arrow tip or hook at one end
+      if(rnd() < 0.30){
+        const tipSize = lineW * 4;
+        // Pick end (with arrow direction continuing the line)
+        const tipX = x2, tipY = y2;
+        // Perpendicular vector
+        const px = -sinL, py = cosL;
+        // Arrowhead — small V at the tip pointing back along the line
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(tipX - cosL*tipSize + px*tipSize*0.6, tipY - sinL*tipSize + py*tipSize*0.6);
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(tipX - cosL*tipSize - px*tipSize*0.6, tipY - sinL*tipSize - py*tipSize*0.6);
+        ctx.stroke();
+      }
+    }
+
+    // === 3. TRIANGLE ACCENTS ===
+    const triCount = 1 + Math.floor(rnd()*2); // 1-2 triangles
+    for(let ti=0; ti<triCount; ti++){
+      // Position on opposite side from the eye
+      const tx = centerX + (eyeX < centerX ? 1 : -1) * BW * (0.15 + rnd()*0.2);
+      const ty = yOff + bh * (0.25 + rnd()*0.5);
+      const triSize = minDim * (0.18 + rnd()*0.22);
+      const triRot = rnd() * Math.PI * 2;
+      // Tone shift for triangle
+      const triTone = (rnd()-0.5)*80;
+      const trJ = Math.max(0,Math.min(255,Math.round(r+triTone)));
+      const tgJ = Math.max(0,Math.min(255,Math.round(g+triTone)));
+      const tbJ = Math.max(0,Math.min(255,Math.round(b+triTone)));
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.rotate(triRot);
+      ctx.beginPath();
+      ctx.moveTo(0, -triSize/2);
+      ctx.lineTo(triSize/2, triSize/2);
+      ctx.lineTo(-triSize/2, triSize/2);
+      ctx.closePath();
+      // 70% filled, 30% open chevron outline
+      if(rnd() < 0.7){
+        ctx.fillStyle = `rgba(${trJ},${tgJ},${tbJ},${(a*0.92).toFixed(3)})`;
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = `rgba(${trJ},${tgJ},${tbJ},${a.toFixed(3)})`;
+        ctx.lineWidth = minDim*0.025;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // === 4. DOT CONSTELLATION (occasional) ===
+    if(rnd() < 0.45){
+      const dotCount = 3 + Math.floor(rnd()*4); // 3-6 dots
+      const dotPathAngle = voiceAngle + (rnd()-0.5)*Math.PI*0.5;
+      const dotStartX = centerX + (rnd()-0.5)*BW*0.5;
+      const dotStartY = yOff + bh*0.3 + rnd()*bh*0.5;
+      const dotSpacing = minDim * (0.06 + rnd()*0.06);
+      const dotSize = minDim * (0.025 + rnd()*0.025);
+      const cosD = Math.cos(dotPathAngle), sinD = Math.sin(dotPathAngle);
+      for(let di=0; di<dotCount; di++){
+        const dx = dotStartX + cosD * dotSpacing * di;
+        const dy = dotStartY + sinD * dotSpacing * di;
+        // Dot color rotates between voice color, white, black
+        const dotRoll = (di + Math.floor(rnd()*3)) % 3;
+        let dotColor;
+        if(dotRoll === 0){
+          dotColor = `rgba(${r},${g},${b},${a.toFixed(3)})`;
+        } else if(dotRoll === 1){
+          dotColor = `rgba(245,238,220,${(a*0.9).toFixed(3)})`;
+        } else {
+          dotColor = `rgba(8,4,12,${(a*0.85).toFixed(3)})`;
+        }
+        ctx.fillStyle = dotColor;
+        ctx.beginPath();
+        ctx.arc(dx, dy, dotSize, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    // === 5. CENTER DOT in the eye ===
+    // Kandinsky's eyes often have a contrasting tiny dot at center
+    if(rnd() < 0.55){
+      const centerDotR = eyeMaxR * 0.08;
+      ctx.fillStyle = rnd() < 0.5 ? 'rgba(8,4,12,0.95)' : 'rgba(245,238,220,0.95)';
+      ctx.beginPath();
+      ctx.arc(eyeX, eyeY, centerDotR, 0, Math.PI*2);
+      ctx.fill();
     }
   });
 }
@@ -697,7 +1267,9 @@ function drawMonet(ctx,bx,by,notes,gc,BW,BH){
 function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
   if(style==='picasso')return drawPicasso(ctx,bx,by,notes,gc,BW,BH);
   if(style==='rembrandt')return drawRembrandt(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='monet')return drawMonet(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='kusama')return drawKusama(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='vangogh')return drawVanGogh(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,gc,BW,BH);
   return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
 }
 
@@ -952,12 +1524,15 @@ const LANGS = ['EN','DE','FR','ES'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    harmony:'harmony', spectral:'spectral',
+    harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
+    editPalette:'edit palette', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all',
     selectMood:'✦ select a mood…', morph:'✦ morph', vary:'🎲 vary',
     midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 SCORE', image:'🖼 IMAGE',
     compose:'♪ COMPOSE', composing:'♪ COMPOSING',
     sing:'🎤 SING', singing:'🎤',
     listen:'🔊 LISTEN', listening:'🔊 LISTENING…',
+    mic:'🎙 MIC', micActive:'🎙 LIVE',
+    voicePreset:'🎤 voice', musicPreset:'🔊 music',
     play:'▶ play', pause:'⏸ pause', resume:'▶ resume',
     print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', loop:'⟳ loop', undo:'↩',
     recArm:'⏺ rec', recStop:'⏹ rec…',
@@ -989,12 +1564,15 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    harmony:'harmonie', spectral:'spektral',
+    harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
+    editPalette:'palette bearbeiten', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen',
     selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'🎲 variieren',
     midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITUR', image:'🖼 BILD',
     compose:'♪ KOMPONIEREN', composing:'♪ KOMPONIERT…',
     sing:'🎤 SINGEN', singing:'🎤',
     listen:'🔊 LAUSCHEN', listening:'🔊 LAUSCHT…',
+    mic:'🎙 MIKRO', micActive:'🎙 LIVE',
+    voicePreset:'🎤 stimme', musicPreset:'🔊 musik',
     play:'▶ spielen', pause:'⏸ pause', resume:'▶ weiter',
     print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', loop:'⟳ schleife', undo:'↩',
     recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
@@ -1026,12 +1604,15 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    harmony:'harmonie', spectral:'spectral',
+    harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
+    editPalette:'modifier la palette', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer',
     selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'🎲 varier',
     midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITION', image:'🖼 IMAGE',
     compose:'♪ COMPOSER', composing:'♪ COMPOSITION…',
     sing:'🎤 CHANTER', singing:'🎤',
     listen:'🔊 ÉCOUTER', listening:'🔊 ÉCOUTE…',
+    mic:'🎙 MICRO', micActive:'🎙 LIVE',
+    voicePreset:'🎤 voix', musicPreset:'🔊 musique',
     play:'▶ jouer', pause:'⏸ pause', resume:'▶ reprendre',
     print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', loop:'⟳ boucle', undo:'↩',
     recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
@@ -1063,12 +1644,15 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    harmony:'armonía', spectral:'espectral',
+    harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
+    editPalette:'editar paleta', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo',
     selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'🎲 variar',
     midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITURA', image:'🖼 IMAGEN',
     compose:'♪ COMPONER', composing:'♪ COMPONIENDO…',
     sing:'🎤 CANTAR', singing:'🎤',
     listen:'🔊 ESCUCHAR', listening:'🔊 ESCUCHANDO…',
+    mic:'🎙 MICRO', micActive:'🎙 EN VIVO',
+    voicePreset:'🎤 voz', musicPreset:'🔊 música',
     play:'▶ tocar', pause:'⏸ pausa', resume:'▶ continuar',
     print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', loop:'⟳ bucle', undo:'↩',
     recArm:'⏺ grabar', recStop:'⏹ graba…',
@@ -1383,7 +1967,8 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Compose, Sing &amp; Listen</h3>
     <p style={{margin:'0 0 12px'}}>Three ways to create from scratch. <strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> reveals an on-screen piano — tap or hold keys, longer holds produce wider blocks. Hardware keyboard: A–K for white keys, W/E/T/Y/U for black. Backspace undoes the last chord. Enter toggles the keyboard. Space bar plays and pauses. Chord names (C maj, A min…) appear live in the note readout.</p>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Sing</strong> uses your microphone. Sing, hum, or whistle — pitch is detected every 600 ms, played through the piano sampler, and painted as a block. Notes snap to C major scale. The canvas fills as you perform.</p>
-    <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Listen</strong> also uses the microphone, but is tuned for ambient music rather than voice. Play music from a speaker nearby — Paintiano detects the pitches and paints only when the chord changes, silently. Works best with an external speaker; on iOS, same-device speaker audio is suppressed by the OS.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Listen</strong> also uses the microphone, but is tuned for ambient music rather than voice. Play music from a speaker nearby — Paintiano detects the pitches and paints only when the chord changes, silently. Works best with an external speaker; on iOS, same-device speaker audio is suppressed by the OS.</p>
+    <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>In all three live modes the canvas is a fixed golden-ratio frame. Block widths stay proportional to hold time, and rows shrink vertically as more chords are added — the painting densifies into finer detail rather than growing taller. Imported sources (MIDI, audio, score, image, mood) keep the original grow-with-content canvas.</p>
   </>),
   DE: (<>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmonie vs. Spektral</h3>
@@ -1403,6 +1988,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Drei Wege, von Grund auf neu zu erschaffen. <strong style={{color:'rgba(201,168,76,.95)'}}>Komponieren</strong> öffnet ein Bildschirmklavier — antippen oder halten, längeres Halten erzeugt breitere Blöcke. Hardware-Tastatur: A–K für weiße Tasten, W/E/T/Y/U für schwarze. Rücktaste macht den letzten Akkord rückgängig.</p>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Singen</strong> verwendet das Mikrofon. Singen, summen oder pfeifen — die Tonhöhe wird alle 600 ms erkannt, durch den Klavier-Sampler gespielt und als Block gemalt. Töne werden in die C-Dur-Tonleiter eingerastet.</p>
     <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Lauschen</strong> verwendet ebenfalls das Mikrofon, ist jedoch für Umgebungsmusik optimiert. Musik von einem Lautsprecher abspielen — Paintiano erkennt die Akkorde und malt nur bei Akkordwechsel, ohne eigenen Ton. Am besten mit externem Lautsprecher; auf iOS wird internes Audio unterdrückt.</p>
+    <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>In allen drei Live-Modi ist die Leinwand ein fester Rahmen im goldenen Schnitt. Die Blockbreite bleibt proportional zur Haltedauer, und die Zeilen werden mit jedem weiteren Akkord vertikal schmaler — das Bild verdichtet sich in feinere Details statt höher zu wachsen. Importierte Quellen (MIDI, Audio, Partitur, Bild, Stimmung) behalten die ursprüngliche mitwachsende Leinwand.</p>
   </>),
   FR: (<>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmonie vs Spectral</h3>
@@ -1422,6 +2008,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Trois façons de créer de toutes pièces. <strong style={{color:'rgba(201,168,76,.95)'}}>Composer</strong> révèle un piano à l'écran — appuyer ou maintenir les touches, maintenir plus longtemps produit des blocs plus larges. Clavier physique : A–K touches blanches, W/E/T/Y/U noires. Retour arrière annule le dernier accord.</p>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Chanter</strong> utilise le microphone. Chantez, fredonnez ou sifflez — la hauteur est détectée toutes les 600 ms, jouée via le sampler piano et peinte en bloc. Les notes sont calées sur la gamme de Do majeur.</p>
     <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Écouter</strong> utilise aussi le microphone, mais est optimisé pour la musique ambiante. Jouez de la musique depuis un haut-parleur — Paintiano détecte les accords et ne peint qu'au changement d'harmonie. Idéal avec un haut-parleur externe ; sur iOS, l'audio interne est supprimé par le système.</p>
+    <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>Dans les trois modes en direct, la toile est un cadre fixe au nombre d'or. La largeur des blocs reste proportionnelle au temps de maintien, et les rangées rétrécissent verticalement à mesure que des accords s'ajoutent — la peinture se densifie en détails plus fins plutôt que de s'allonger. Les sources importées (MIDI, audio, partition, image, ambiance) conservent la toile qui grandit avec le contenu.</p>
   </>),
   ES: (<>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Armonía vs Espectral</h3>
@@ -1441,6 +2028,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Tres formas de crear desde cero. <strong style={{color:'rgba(201,168,76,.95)'}}>Componer</strong> muestra un piano en pantalla — tocar o mantener las teclas, mantener más tiempo produce bloques más anchos. Teclado físico: A–K teclas blancas, W/E/T/Y/U negras. Retroceso deshace el último acorde.</p>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Cantar</strong> usa el micrófono. Canta, tararea o silba — el tono se detecta cada 600 ms, se toca a través del sampler de piano y se pinta como bloque. Las notas se ajustan a la escala de Do mayor.</p>
     <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Escuchar</strong> también usa el micrófono, pero está optimizado para música ambiente. Reproduce música desde un altavoz — Paintiano detecta los acordes y solo pinta cuando cambia la armonía, en silencio. Mejor con altavoz externo; en iOS el audio interno es suprimido por el sistema.</p>
+    <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>En los tres modos en vivo el lienzo es un marco fijo en proporción áurea. El ancho de los bloques permanece proporcional al tiempo de pulsación, y las filas se hacen más finas verticalmente con cada acorde añadido — la pintura se densifica en detalles más finos en lugar de alargarse. Las fuentes importadas (MIDI, audio, partitura, imagen, estado de ánimo) mantienen el lienzo original que crece con el contenido.</p>
   </>),
 };
 
@@ -1450,12 +2038,14 @@ const GUIDE_I18N = {
    body:`Paintiano paints music as a φ-proportioned grid of coloured blocks, and plays paintings back as music. Pick a source — Compose, Sing, MIDI, Audio, Score, Image, or a mood — and the canvas fills as you play. Hit Play to hear it, Print to save the painting, Rec (image mode only) to capture the audio.`},
   {id:'modes', title:`Harmony vs Spectral`, keywords:`colour color mode hue palette circle fifths chromatic`,
    body:`Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly.`},
-  {id:'style', title:`Painting style: Picasso / Rembrandt / Monet`, keywords:`style picasso rembrandt monet cubist impressionist chiaroscuro impasto brush stroke dab mosaic artist`,
-   body:`Optional artist-style overlay. With nothing selected the canvas uses the mosaic default (sharp φ-rectangles + halo). Picasso (analytical cubism) fractures each chord into geometric planes. Rembrandt layers impasto brushstrokes with chiaroscuro lighting. Monet scatters soft circular dabs with feathered edges. Tap the active artist again to deselect. Switches instantly.`},
-  {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test example sample`,
-   body:`Tap DEMO to play a built-in Für Elise excerpt. The keyboard surfaces automatically so you can watch the keys light up. Press CLEAR to leave demo mode.`},
-  {id:'compose', title:`Compose with the keyboard`, keywords:`compose keyboard piano live record keys play undo backspace enter space chord name recognise`,
-   body:`Tap ♪ COMPOSE (or press Enter) to reveal the on-screen piano. Tap or hold keys — longer holds produce wider blocks. Hardware keyboard: A–K white keys, W/E/T/Y/U black keys. Backspace undoes the last chord. Space bar plays/pauses. Enter toggles the keyboard. When you hold keys that form a known chord (C maj, A min, D7…) the name appears in the readout. Hit Play to replay your composition.`},
+  {id:'style', title:`Painting style: Picasso / Rembrandt / Kusama / Van Gogh / Kandinsky`, keywords:`style picasso rembrandt kusama van gogh kandinsky cubist polka dots impressionist chiaroscuro impasto brush stroke artist abstract geometric`,
+   body:`Optional artist-style overlay. With nothing selected the canvas uses the mosaic default (sharp φ-rectangles + halo). Picasso (analytical cubism) fractures each chord into geometric planes. Rembrandt layers impasto brushstrokes with chiaroscuro lighting. Kusama paints each cell as a flat color field with many small dots in contrasting colors and occasional infinity-net curves. Van Gogh streaks ribbons of pure pigment with frayed bristle ends. Kandinsky composes concentric-circle eyes with crossing lines and sharp triangles. Tap the active artist again to deselect. Switches instantly.`},
+  {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test example sample replace confirm`,
+   body:`Tap DEMO to play a built-in Für Elise excerpt. The keyboard surfaces automatically so you can watch the keys light up. If you already have content loaded, DEMO needs two taps — first one shows "replace current?", second confirms. Press CLEAR to leave demo mode.`},
+  {id:'compose', title:`Compose with the keyboard`, keywords:`compose keyboard piano live record keys play undo backspace enter space chord name recognise frame canvas fixed golden ratio`,
+   body:`Tap ♪ COMPOSE (or press Enter) to reveal the on-screen piano. Tap or hold keys — longer holds produce wider blocks. Hardware keyboard: A–K white keys, W/E/T/Y/U black keys. Backspace undoes the last chord. Space bar plays/pauses. Enter toggles the keyboard. When you hold keys that form a known chord (C maj, A min, D7…) the name appears in the readout. Hit Play to replay your composition. The canvas stays a fixed golden-ratio frame — as you add chords, every row gets thinner so the painting densifies rather than growing taller.`},
+  {id:'mobile-keys', title:`Mobile keyboard — swipe to scroll`, keywords:`mobile phone iphone ipad touch swipe scroll keyboard piano keys 88 horizontal pan`,
+   body:`The on-screen piano shows all 88 keys, which extends far beyond the phone screen width. Swipe horizontally across the keyboard area to pan across the full range — tapping a key still plays the note, sliding scrolls. C4 (middle C) sits roughly in the centre. On PC the keyboard fits the page; only mobile needs panning.`},
   {id:'listen', title:`🔊 Listen — paint ambient music`, keywords:`listen ambient music spotify speaker microphone room sound painting live`,
    body:`Tap 🔊 LISTEN and allow microphone access. Paintiano listens through the mic and paints what it hears — each detected chord becomes a colour block. Best results: play music from an external speaker or another device nearby. On iOS, same-phone audio is suppressed by the OS — use an external source.`},
   {id:'sing', title:`🎤 Sing / mic painting`, keywords:`sing mic microphone voice hum pitch vocal`,
@@ -1486,8 +2076,8 @@ const GUIDE_I18N = {
    body:`Renders the painting at 8× resolution as a PNG. Tap to open the preview, then long-press the image to save to Photos / Files, or copy to clipboard.`},
   {id:'record', title:`⏺ Rec (image mode)`, keywords:`record rec audio capture save mp4 m4a recording share`,
    body:`Available in image mode only. Tap ⏺ REC to start recording the audio output and playback simultaneously. Recording stops automatically when the piece ends — a share row appears in the dock. Tap Share to save via the system dialog.`},
-  {id:'clear', title:`Clear`, keywords:`clear reset start over delete`,
-   body:`In Compose, Sing, or Listen mode: wipes the canvas and all recorded chords so you can start fresh — the mode stays active. In MIDI, audio, score, image, or mood mode: resets the canvas to blank but keeps the loaded piece so you can play it again.`},
+  {id:'clear', title:`Clear`, keywords:`clear reset start over delete confirm arm two-tap`,
+   body:`In Compose, Sing, or Listen mode: the clear button needs two taps to fire — the first arms it (label changes to "tap again to clear"), the second wipes the canvas. This prevents accidental loss of a live composition. In MIDI, audio, score, image, or mood mode: resets the canvas to blank but keeps the loaded piece so you can play it again. Single tap, no confirm.`},
   {id:'micvol', title:`Canvas breathing (mic volume)`, keywords:`mic volume breathing pulse canvas room sound ambient`,
    body:`In Sing and Listen modes the canvas automatically pulses with the room volume — louder sound expands the canvas slightly, silence lets it rest. Starts and stops with Sing/Listen automatically.`},
   {id:'troubleshoot', title:`Troubleshooting`, keywords:`troubleshoot problem error broken fix bug help slow`,
@@ -1498,12 +2088,14 @@ const GUIDE_I18N = {
    body:`Paintiano malt Musik als φ-proportioniertes Raster farbiger Blöcke und spielt Gemälde als Musik ab. Wähle eine Quelle — Komponieren, Singen, MIDI, Audio, Partitur, Bild oder eine Stimmung — und die Leinwand füllt sich beim Spielen. Play tippen zum Hören, Drucken zum Speichern.`},
   {id:'modes', title:`Harmonie vs. Spektral`, keywords:`farbe modus farbton palette quintenzirkel chromatisch`,
    body:`Zwei Farbgrammatiken für dieselbe Musik. Harmonie ordnet die Tonklassen im Quintenzirkel um das Farbrad an — verwandte Tonarten clustern in ähnlichen Farben. Spektral verteilt sie in gleichmäßigen 30°-Schritten — ein Halbton, eine Farbe. Jederzeit wechselbar.`},
-  {id:'style', title:`Malstil: Picasso / Rembrandt / Monet`, keywords:`stil picasso rembrandt monet kubismus impressionismus chiaroscuro impasto pinselstrich`,
-   body:`Optionaler Künstlerstil. Ohne Auswahl verwendet die Leinwand den Mosaik-Standard. Picasso zerlegt jeden Akkord in geometrische Ebenen. Rembrandt schichtet Impasto-Pinselstriche mit Chiaroscuro-Beleuchtung. Monet streut weiche kreisförmige Tupfer. Aktiven Stil erneut antippen zum Abwählen.`},
-  {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test beispiel`,
-   body:`DEMO antippen, um einen integrierten Für-Elise-Ausschnitt abzuspielen. Die Tastatur erscheint automatisch. LÖSCHEN drücken, um den Demo-Modus zu verlassen.`},
-  {id:'compose', title:`Mit der Tastatur komponieren`, keywords:`komponieren tastatur klavier live aufnehmen tasten spielen rückgängig akkord`,
-   body:`♪ KOMPONIEREN antippen (oder Enter) um das Klavier einzublenden. Tasten antippen oder halten — längeres Halten erzeugt breitere Blöcke. Hardware-Tastatur: A–K weiße Tasten, W/E/T/Y/U schwarze Tasten. Rücktaste macht den letzten Akkord rückgängig. Leertaste spielt/pausiert.`},
+  {id:'style', title:`Malstil: Picasso / Rembrandt / Kusama / Van Gogh / Kandinsky`, keywords:`stil picasso rembrandt kusama van gogh kandinsky kubismus punkte impressionismus chiaroscuro impasto pinselstrich abstrakt`,
+   body:`Optionaler Künstlerstil. Ohne Auswahl verwendet die Leinwand den Mosaik-Standard. Picasso zerlegt jeden Akkord in geometrische Ebenen. Rembrandt schichtet Impasto-Pinselstriche mit Chiaroscuro-Beleuchtung. Kusama malt jede Zelle als flaches Farbfeld mit vielen kleinen Punkten in Kontrastfarben und gelegentlichen Unendlichkeitsnetz-Kurven. Van Gogh malt Bänder aus reinem Pigment mit ausgefransten Borstenenden. Kandinsky komponiert konzentrische Augen mit Linien und Dreiecken. Aktiven Stil erneut antippen zum Abwählen.`},
+  {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test beispiel ersetzen bestätigen`,
+   body:`DEMO antippen, um einen integrierten Für-Elise-Ausschnitt abzuspielen. Die Tastatur erscheint automatisch. Wenn bereits Inhalt geladen ist, benötigt DEMO zwei Tipps — der erste zeigt "aktuelles ersetzen?", der zweite bestätigt. LÖSCHEN drücken, um den Demo-Modus zu verlassen.`},
+  {id:'compose', title:`Mit der Tastatur komponieren`, keywords:`komponieren tastatur klavier live aufnehmen tasten spielen rückgängig akkord rahmen leinwand fest goldener schnitt`,
+   body:`♪ KOMPONIEREN antippen (oder Enter) um das Klavier einzublenden. Tasten antippen oder halten — längeres Halten erzeugt breitere Blöcke. Hardware-Tastatur: A–K weiße Tasten, W/E/T/Y/U schwarze Tasten. Rücktaste macht den letzten Akkord rückgängig. Leertaste spielt/pausiert. Die Leinwand bleibt ein fester Rahmen im goldenen Schnitt — beim Hinzufügen von Akkorden werden die Zeilen schmaler, das Bild verdichtet sich, statt höher zu wachsen.`},
+  {id:'mobile-keys', title:`Mobile Tastatur — wischen zum Scrollen`, keywords:`mobil handy iphone ipad berühren wischen scrollen tastatur klavier tasten 88 horizontal`,
+   body:`Das Bildschirmklavier zeigt alle 88 Tasten, die weit über die Handybreite hinausgehen. Horizontal über den Tastaturbereich wischen, um durch den gesamten Bereich zu pannen — eine Taste antippen spielt den Ton, Wischen scrollt. C4 (mittleres C) liegt etwa in der Mitte. Am PC passt die Tastatur auf die Seite; nur mobil ist Pannen nötig.`},
   {id:'listen', title:`🔊 Lauschen — Umgebungsmusik malen`, keywords:`lauschen umgebung musik spotify lautsprecher mikrofon raum malen live`,
    body:`🔊 LAUSCHEN antippen und Mikrofonzugriff erlauben. Paintiano hört durch das Mikrofon und malt was es hört — jeder erkannte Akkord wird ein Farbblock. Am besten mit externem Lautsprecher. Auf iOS wird internes Audio vom System unterdrückt.`},
   {id:'sing', title:`🎤 Singen / Mikrofon-Malerei`, keywords:`singen mikrofon stimme summen tonhöhe vokal`,
@@ -1534,8 +2126,8 @@ const GUIDE_I18N = {
    body:`Rendert das Gemälde in 8-facher Auflösung als PNG. Antippen für Vorschau, dann lang drücken zum Speichern in Fotos / Dateien.`},
   {id:'record', title:`⏺ Aufnahme (Bildmodus)`, keywords:`aufnahme audio aufnehmen speichern mp4 m4a teilen`,
    body:`Nur im Bildmodus verfügbar. ⏺ AUFNAHME antippen, um Audio aufzunehmen. Aufnahme stoppt automatisch am Ende des Stücks.`},
-  {id:'clear', title:`Löschen`, keywords:`löschen zurücksetzen neu beginnen entfernen`,
-   body:`Im Komponier-, Sing- oder Lausch-Modus: Leinwand und Akkorde löschen — Modus bleibt aktiv. Im MIDI-, Audio-, Partitur-, Bild- oder Stimmungsmodus: Leinwand zurücksetzen, Stück bleibt erhalten.`},
+  {id:'clear', title:`Löschen`, keywords:`löschen zurücksetzen neu beginnen entfernen bestätigen scharfschalten zwei tipps`,
+   body:`Im Komponier-, Sing- oder Lausch-Modus: die Löschen-Schaltfläche benötigt zwei Tipps — der erste schärft scharf (Beschriftung wird "nochmal antippen"), der zweite löscht die Leinwand. Verhindert versehentlichen Verlust einer Live-Komposition. Im MIDI-, Audio-, Partitur-, Bild- oder Stimmungsmodus: Leinwand zurücksetzen, Stück bleibt erhalten. Einmaliges Tippen, keine Bestätigung.`},
   {id:'micvol', title:`Leinwand-Puls (Mikrofonlautstärke)`, keywords:`mikrofon lautstärke puls leinwand raum klang umgebung`,
    body:`Im Sing- und Lausch-Modus pulsiert die Leinwand automatisch mit der Raumlautstärke. Startet und stoppt automatisch.`},
   {id:'troubleshoot', title:`Fehlerbehebung`, keywords:`fehlerbehebung problem fehler kaputt hilfe langsam`,
@@ -1546,12 +2138,14 @@ const GUIDE_I18N = {
    body:`Paintiano peint la musique sous forme de grille de blocs colorés aux proportions φ, et joue les peintures en tant que musique. Choisissez une source — Composer, Chanter, MIDI, Audio, Partition, Image ou une humeur — et la toile se remplit. Appuyez sur Jouer pour l'entendre, Imprimer pour sauvegarder.`},
   {id:'modes', title:`Harmonie vs Spectral`, keywords:`couleur mode teinte palette cercle des quintes chromatique`,
    body:`Deux grammaires de couleurs pour la même musique. L'harmonie place les classes de hauteur autour de la roue chromatique dans l'ordre du cercle des quintes. Le spectral les répartit en pas de 30°. Changeable à tout moment.`},
-  {id:'style', title:`Style pictural : Picasso / Rembrandt / Monet`, keywords:`style picasso rembrandt monet cubisme impressionnisme clair-obscur impasto pinceau`,
-   body:`Superposition de style artistique optionnelle. Sans sélection, mosaïque par défaut. Picasso fragmente chaque accord en plans géométriques. Rembrandt superpose des coups de pinceau impasto avec clair-obscur. Monet disperse de douces touches circulaires. Appuyer à nouveau pour désélectionner.`},
-  {id:'demo', title:`Démo (Für Elise)`, keywords:`démo für elise beethoven test exemple`,
-   body:`Appuyez sur DÉMO pour jouer un extrait de Für Elise intégré. Le clavier apparaît automatiquement. Appuyez sur EFFACER pour quitter le mode démo.`},
-  {id:'compose', title:`Composer avec le clavier`, keywords:`composer clavier piano live enregistrer touches jouer annuler accord`,
-   body:`Appuyez sur ♪ COMPOSER (ou Entrée) pour afficher le piano. Touchez ou maintenez les touches — maintenir plus longtemps produit des blocs plus larges. Clavier physique : A–K touches blanches, W/E/T/Y/U touches noires. Retour arrière annule le dernier accord. Espace joue/pause.`},
+  {id:'style', title:`Style pictural : Picasso / Rembrandt / Kusama / Van Gogh / Kandinsky`, keywords:`style picasso rembrandt kusama van gogh kandinsky cubisme pois impressionnisme clair-obscur impasto pinceau abstrait`,
+   body:`Superposition de style artistique optionnelle. Sans sélection, mosaïque par défaut. Picasso fragmente chaque accord en plans géométriques. Rembrandt superpose des coups de pinceau impasto avec clair-obscur. Kusama peint chaque cellule comme un aplat de couleur recouvert de nombreux petits points dans des couleurs contrastées, avec parfois des courbes de réseau infini. Van Gogh peint des rubans de pigment pur aux bords effilochés. Kandinsky compose des cercles concentriques avec lignes et triangles. Appuyer à nouveau pour désélectionner.`},
+  {id:'demo', title:`Démo (Für Elise)`, keywords:`démo für elise beethoven test exemple remplacer confirmer`,
+   body:`Appuyez sur DÉMO pour jouer un extrait de Für Elise intégré. Le clavier apparaît automatiquement. Si du contenu est déjà chargé, DÉMO nécessite deux appuis — le premier affiche "remplacer ?", le second confirme. Appuyez sur EFFACER pour quitter le mode démo.`},
+  {id:'compose', title:`Composer avec le clavier`, keywords:`composer clavier piano live enregistrer touches jouer annuler accord cadre toile fixe nombre or`,
+   body:`Appuyez sur ♪ COMPOSER (ou Entrée) pour afficher le piano. Touchez ou maintenez les touches — maintenir plus longtemps produit des blocs plus larges. Clavier physique : A–K touches blanches, W/E/T/Y/U touches noires. Retour arrière annule le dernier accord. Espace joue/pause. La toile reste un cadre fixe au nombre d'or — à mesure que vous ajoutez des accords, chaque rangée s'amincit, la peinture se densifie au lieu de s'allonger.`},
+  {id:'mobile-keys', title:`Clavier mobile — glisser pour défiler`, keywords:`mobile téléphone iphone ipad toucher glisser défiler clavier piano touches 88 horizontal pan`,
+   body:`Le piano à l'écran affiche les 88 touches, qui s'étendent bien au-delà de la largeur du téléphone. Glissez horizontalement sur la zone du clavier pour parcourir toute l'étendue — toucher une touche joue la note, glisser fait défiler. Le Do central (C4) se trouve à peu près au centre. Sur PC le clavier tient sur la page ; seul le mobile nécessite le défilement.`},
   {id:'listen', title:`🔊 Écouter — peindre la musique ambiante`, keywords:`écouter ambiance musique spotify haut-parleur microphone son peinture`,
    body:`Appuyez sur 🔊 ÉCOUTER et autorisez le microphone. Paintiano écoute et peint — chaque accord détecté devient un bloc de couleur. Meilleurs résultats avec un haut-parleur externe. Sur iOS, l'audio interne est supprimé par le système.`},
   {id:'sing', title:`🎤 Chanter / peinture au micro`, keywords:`chanter micro microphone voix fredonner hauteur vocale`,
@@ -1582,8 +2176,8 @@ const GUIDE_I18N = {
    body:`Génère la peinture en PNG à résolution 8×. Maintenez appuyé pour enregistrer dans Photos / Fichiers.`},
   {id:'record', title:`⏺ Enregistrer (mode image)`, keywords:`enregistrement audio capturer sauvegarder mp4 m4a partager`,
    body:`Mode image uniquement. Appuyez sur ⏺ ENREG. pour enregistrer. L'enregistrement s'arrête automatiquement à la fin.`},
-  {id:'clear', title:`Effacer`, keywords:`effacer réinitialiser recommencer supprimer`,
-   body:`En mode Composer, Chanter ou Écouter : efface la toile — le mode reste actif. En mode MIDI, audio, partition, image ou humeur : remet la toile à zéro mais conserve le morceau.`},
+  {id:'clear', title:`Effacer`, keywords:`effacer réinitialiser recommencer supprimer confirmer armer deux touches`,
+   body:`En mode Composer, Chanter ou Écouter : le bouton effacer nécessite deux appuis — le premier l'arme (le label devient "toucher à nouveau"), le second efface la toile. Évite la perte accidentelle d'une composition en direct. En mode MIDI, audio, partition, image ou humeur : remet la toile à zéro mais conserve le morceau. Un seul appui, sans confirmation.`},
   {id:'micvol', title:`Respiration de la toile (volume micro)`, keywords:`micro volume respiration pulsation toile son ambiant`,
    body:`En modes Chanter et Écouter, la toile pulse automatiquement avec le volume de la pièce. Démarre et s'arrête automatiquement.`},
   {id:'troubleshoot', title:`Dépannage`, keywords:`dépannage problème erreur cassé aide lent`,
@@ -1594,12 +2188,14 @@ const GUIDE_I18N = {
    body:`Paintiano pinta música como una cuadrícula de bloques de color con proporciones φ, y reproduce pinturas como música. Elige una fuente — Componer, Cantar, MIDI, Audio, Partitura, Imagen o un estado — y el lienzo se llena mientras tocas. Pulsa Tocar para escuchar, Imprimir para guardar.`},
   {id:'modes', title:`Armonía vs Espectral`, keywords:`color modo tono paleta círculo de quintas cromático`,
    body:`Dos gramáticas de color para la misma música. Armonía coloca las clases de tono en el círculo de quintas alrededor de la rueda de color. Espectral los espacía en pasos de 30°. Cambia en cualquier momento.`},
-  {id:'style', title:`Estilo pictórico: Picasso / Rembrandt / Monet`, keywords:`estilo picasso rembrandt monet cubismo impresionismo claroscuro impasto pincelada`,
-   body:`Superposición de estilo artístico opcional. Sin selección, mosaico por defecto. Picasso fragmenta cada acorde en planos geométricos. Rembrandt superpone pinceladas impasto con claroscuro. Monet dispersa suaves toques circulares. Toca el artista activo de nuevo para deseleccionar.`},
-  {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven prueba ejemplo`,
-   body:`Pulsa DEMO para reproducir un extracto de Für Elise integrado. El teclado aparece automáticamente. Pulsa BORRAR para salir del modo demo.`},
-  {id:'compose', title:`Componer con el teclado`, keywords:`componer teclado piano en vivo grabar teclas tocar deshacer acorde`,
-   body:`Pulsa ♪ COMPONER (o Enter) para mostrar el piano. Toca o mantén pulsadas las teclas — mantener más tiempo produce bloques más anchos. Teclado físico: A–K teclas blancas, W/E/T/Y/U negras. Retroceso deshace el último acorde. Barra espaciadora toca/pausa.`},
+  {id:'style', title:`Estilo pictórico: Picasso / Rembrandt / Kusama / Van Gogh / Kandinsky`, keywords:`estilo picasso rembrandt kusama van gogh kandinsky cubismo lunares impresionismo claroscuro impasto pincelada abstracto`,
+   body:`Superposición de estilo artístico opcional. Sin selección, mosaico por defecto. Picasso fragmenta cada acorde en planos geométricos. Rembrandt superpone pinceladas impasto con claroscuro. Kusama pinta cada celda como un campo de color plano con muchos puntos pequeños en colores contrastantes y curvas de red infinita ocasionales. Van Gogh pinta listones de pigmento puro con bordes deshilachados. Kandinsky compone círculos concéntricos con líneas y triángulos. Toca el artista activo de nuevo para deseleccionar.`},
+  {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven prueba ejemplo reemplazar confirmar`,
+   body:`Pulsa DEMO para reproducir un extracto de Für Elise integrado. El teclado aparece automáticamente. Si ya hay contenido cargado, DEMO requiere dos toques — el primero muestra "¿reemplazar?", el segundo confirma. Pulsa BORRAR para salir del modo demo.`},
+  {id:'compose', title:`Componer con el teclado`, keywords:`componer teclado piano en vivo grabar teclas tocar deshacer acorde marco lienzo fijo proporción áurea`,
+   body:`Pulsa ♪ COMPONER (o Enter) para mostrar el piano. Toca o mantén pulsadas las teclas — mantener más tiempo produce bloques más anchos. Teclado físico: A–K teclas blancas, W/E/T/Y/U negras. Retroceso deshace el último acorde. Barra espaciadora toca/pausa. El lienzo permanece como un marco fijo en proporción áurea — al añadir acordes, cada fila se hace más fina, la pintura se densifica en lugar de alargarse.`},
+  {id:'mobile-keys', title:`Teclado móvil — desliza para desplazar`, keywords:`móvil teléfono iphone ipad táctil deslizar desplazar teclado piano teclas 88 horizontal panorámica`,
+   body:`El piano en pantalla muestra las 88 teclas, que se extienden más allá del ancho del teléfono. Desliza horizontalmente sobre el área del teclado para recorrer todo el rango — tocar una tecla toca la nota, deslizar desplaza. El Do central (C4) está aproximadamente en el centro. En PC el teclado cabe en la página; solo el móvil necesita desplazamiento.`},
   {id:'listen', title:`🔊 Escuchar — pintar música ambiente`, keywords:`escuchar ambiente música spotify altavoz micrófono sonido pintura en vivo`,
    body:`Pulsa 🔊 ESCUCHAR y permite el micrófono. Paintiano escucha y pinta lo que oye — cada acorde detectado se convierte en un bloque de color. Mejores resultados con altavoz externo. En iOS, el audio interno es suprimido por el sistema.`},
   {id:'sing', title:`🎤 Cantar / pintura con micrófono`, keywords:`cantar micrófono voz tararear tono vocal`,
@@ -1630,8 +2226,8 @@ const GUIDE_I18N = {
    body:`Genera la pintura en PNG a resolución 8×. Mantén pulsado para guardar en Fotos / Archivos.`},
   {id:'record', title:`⏺ Grabar (modo imagen)`, keywords:`grabación audio capturar guardar mp4 m4a compartir`,
    body:`Solo en modo imagen. Pulsa ⏺ GRABAR para grabar. La grabación se detiene automáticamente al final.`},
-  {id:'clear', title:`Borrar`, keywords:`borrar reiniciar empezar de nuevo eliminar`,
-   body:`En modo Componer, Cantar o Escuchar: borra el lienzo — el modo permanece activo. En modo MIDI, audio, partitura, imagen o estado: restablece el lienzo pero mantiene el fragmento cargado.`},
+  {id:'clear', title:`Borrar`, keywords:`borrar reiniciar empezar de nuevo eliminar confirmar armar dos toques`,
+   body:`En modo Componer, Cantar o Escuchar: el botón borrar requiere dos toques — el primero lo arma (la etiqueta cambia a "tocar otra vez"), el segundo borra el lienzo. Evita la pérdida accidental de una composición en vivo. En modo MIDI, audio, partitura, imagen o estado: restablece el lienzo pero mantiene el fragmento cargado. Un solo toque, sin confirmación.`},
   {id:'micvol', title:`Respiración del lienzo (volumen del micrófono)`, keywords:`micrófono volumen respiración pulso lienzo sonido ambiente`,
    body:`En los modos Cantar y Escuchar, el lienzo pulsa automáticamente con el volumen de la sala. Se inicia y detiene automáticamente.`},
   {id:'troubleshoot', title:`Solución de problemas`, keywords:`solución problemas error roto ayuda lento`,
@@ -1829,6 +2425,24 @@ export default function Paintiano() {
   const introRafRef   = useRef(null);
 
   const [mode,      setMode]      = useState('harmony');
+  // Custom palette = 12 hex colors, one per pitch class (index 0 = C, 11 = B).
+  // null = uninitialized. Seeded on first switch to 'custom' mode from whichever
+  // mode was active. Persisted across sessions in localStorage.
+  const [customPalette, setCustomPalette] = useState(()=>{
+    try{
+      const raw=localStorage.getItem('paintiano_custom_palette');
+      if(!raw)return null;
+      const arr=JSON.parse(raw);
+      if(Array.isArray(arr) && arr.length===12) return arr;
+    }catch(_){}
+    return null;
+  });
+  useEffect(()=>{
+    if(!customPalette)return;
+    try{ localStorage.setItem('paintiano_custom_palette', JSON.stringify(customPalette)); }catch(_){}
+  },[customPalette]);
+  // Modal open state for the palette editor
+  const [showPaletteEditor, setShowPaletteEditor] = useState(false);
   const [chords,    setChords]    = useState([]);
   const [disp,      setDisp]      = useState(0);
   const [active,    setActive]    = useState(new Set());
@@ -1870,6 +2484,18 @@ export default function Paintiano() {
   const [recording, setRecording] = useState(false);
   const [micPainting, setMicPainting] = useState(false);
   const [micListening, setMicListening] = useState(false);
+  // Combined mic-mode preset — selects which behavior the single 🎙 MIC button
+  // activates. 'voice' = sing-style (monophonic, snap-to-C-major, piano echo),
+  // 'music' = listen-style (polyphonic chord detection, silent painting).
+  // Persisted across sessions in localStorage.
+  const [micPreset, setMicPreset] = useState(()=>{
+    try{ const v=localStorage.getItem('paintiano_mic_preset'); return v==='music'?'music':'voice'; }catch(_){ return 'voice'; }
+  });
+  useEffect(()=>{
+    try{ localStorage.setItem('paintiano_mic_preset', micPreset); }catch(_){}
+  },[micPreset]);
+  // Derived: any mic mode active?
+  const micActive = micPainting || micListening;
   const [micVolActive, setMicVolActive] = useState(false);
   const [micVolLevel, setMicVolLevel] = useState(0); // 0–1 smoothed RMS
   const [audioBlob, setAudioBlob] = useState(null);
@@ -1923,8 +2549,10 @@ export default function Paintiano() {
   // Block style: which artist's mark-making language renders each chord.
   // null (default) = implicit mosaic — sharp φ-rectangles. 'picasso' = cubist
   // shards with contour lines, 'rembrandt' = chiaroscuro impasto brushstrokes,
-  // 'monet' = soft impressionist dabs. Clicking the active artist a second
-  // time deselects, returning to mosaic. Only affects music-mode rendering;
+  // 'kusama' = fields of contrasting polka dots on flat color, 'vangogh' =
+  // ribbons of pure pigment, 'kandinsky' = geometric composition with
+  // circles/lines/triangles. Clicking the active artist a second time
+  // deselects, returning to mosaic. Only affects music-mode rendering;
   // image-mode ignores this.
   const [style, setStyle] = useState(null);
   // Demo mode: true while a Für Elise demo session is active. Locks the
@@ -1969,6 +2597,20 @@ export default function Paintiano() {
   const loadedMode = !!info && !composeMode && !micPainting && !micListening;
   const composedModeRef = useRef(false);
 
+  // === Creative mode draft stashes ===
+  // Each creative mode (compose/sing/listen) keeps its own work-in-progress draft.
+  // When the user switches to another mode, loads MIDI, picks a mood, etc., the
+  // current draft is stashed under its owner key. Re-entering that mode restores
+  // the stash so the user can continue from where they left off.
+  // Only an explicit CLEAR tap while INSIDE that mode wipes its stash.
+  const composeStashRef = useRef(null);
+  const singStashRef    = useRef(null);
+  const listenStashRef  = useRef(null);
+  // Which creative mode (if any) authored the chords currently on canvas.
+  // 'compose'|'sing'|'listen'|null. Used to know whose stash to update.
+  const draftOwnerRef = useRef(null);
+
+
   // Cleanup the compose-commit debounce on unmount so it can't fire commit()
   // against a torn-down state tree.
   useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);},[]);
@@ -1995,7 +2637,12 @@ export default function Paintiano() {
     return()=>{dead=true;window.removeEventListener('pointerdown',init);window.removeEventListener('keydown',init);try{s&&s.dispose();}catch(_){}samplerRef.current=null;samplerOk.current=false;};
   },[]);
 
-  const gc = useCallback((m,v)=>mode==='spectral'?specCol(m,v):harmCol(m,v),[mode]);
+  const gc = useCallback((m,v)=>{
+    if(mode==='bw') return bwCol(m,v);
+    if(mode==='custom' && customPalette) return customCol(m,v,customPalette);
+    if(mode==='spectral') return specCol(m,v);
+    return harmCol(m,v);
+  },[mode,customPalette]);
 
   useEffect(()=>{
     const cv=canvasRef.current;if(!cv)return;
@@ -2165,8 +2812,14 @@ export default function Paintiano() {
     }
     try{
       const gain=Math.max(0.01,Math.min(1,vel/127)),dur=Math.max(0.05,durMs/1000);
-      // Sustain tail: ring ~40% beyond durMs so chords blend rather than gate off. Capped at 1.8 s.
-      const tailS=Math.min(dur*0.4,1.8);
+      // Sustain tail: a real piano's body resonance rings 2-3 s after the key
+      // releases. A short chord (300 ms) at the old "40% of dur" produced only
+      // 120 ms of tail — barely time for the sample to bloom, sounding brittle
+      // and morse-like on playback. We floor the tail at 1.5 s and cap at 3 s,
+      // so even a flash-tap chord gets full piano-like decay. Live presses are
+      // unaffected: releaseNote calls triggerRelease at the user's release
+      // moment, cutting the note before this tail finishes.
+      const tailS=Math.min(Math.max(dur*0.4,1.5),3.0);
       if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
       if(ac.state==='suspended')ac.resume();
@@ -2203,6 +2856,61 @@ export default function Paintiano() {
   const infoRef = useRef(null);
   useEffect(()=>{ infoRef.current=info; },[info]);
   useEffect(()=>{ loopModeRef.current=loopMode; },[loopMode]);
+
+  // === Draft stash helpers ===
+  // stashDraft: snapshot current chord array under the slot of the mode that
+  // authored it. Only stashes recorded content (composedModeRef.current true);
+  // imported content (MIDI/audio/score/image/mood) is never stashed since the
+  // user can reload it from its source.
+  const stashDraft = useCallback((owner)=>{
+    if(!owner) return;
+    if(!composedModeRef.current) return;
+    const cur = chordsRef.current;
+    if(!cur || !cur.length) return;
+    const snapshot = {chords:cur.slice(), idxCounter:idxRef.current, sessionStart:sessionStart.current};
+    if(owner==='compose') composeStashRef.current = snapshot;
+    else if(owner==='sing' || owner==='listen'){
+      // Sing and Listen share one draft (presets of unified MIC mode). Save
+      // to both slots so either preset can restore on next entry.
+      singStashRef.current = snapshot;
+      listenStashRef.current = snapshot;
+    }
+  },[]);
+  // restoreStash: load the saved draft for `owner` onto the canvas. Returns
+  // true if a draft existed and was restored.
+  const restoreStash = useCallback((owner)=>{
+    let stash=null;
+    if(owner==='compose') stash=composeStashRef.current;
+    else if(owner==='sing') stash=singStashRef.current;
+    else if(owner==='listen') stash=listenStashRef.current;
+    if(!stash || !stash.chords.length) return false;
+    setChords(stash.chords);
+    chordsRef.current=stash.chords;
+    idxRef.current=stash.idxCounter;
+    sessionStart.current=stash.sessionStart;
+    composedModeRef.current=true;
+    draftOwnerRef.current=owner;
+    gridSigRef.current='';
+    setDisp(stash.chords.length);
+    setViewMode('paint');
+    setInfo(null);
+    return true;
+  },[]);
+  // resetCanvasForDraft: start a clean canvas owned by `owner` (called when
+  // entering a creative mode with no stash for it).
+  const resetCanvasForDraft = useCallback((owner)=>{
+    setChords([]); chordsRef.current=[];
+    idxRef.current=0; setPending([]); pendingRef.current=[];
+    pressInfo.current={}; sessionStart.current=0; gridSigRef.current='';
+    composedModeRef.current=true;
+    draftOwnerRef.current=owner;
+    setDisp(0);
+    setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
+    setViewMode('paint');
+    setInfo(null);
+    setStamp(s=>s+1);
+  },[]);
+
 
   // Visualizer animation loop — runs always; cheap when no ripples
   useEffect(() => {
@@ -2571,6 +3279,7 @@ export default function Paintiano() {
     const onEsc=(e)=>{
       if(e.key!=='Escape')return;
       if(preview){e.preventDefault();if(preview){try{URL.revokeObjectURL(preview.url);}catch(_){}}setPreview(null);return;}
+      if(showPaletteEditor){e.preventDefault();setShowPaletteEditor(false);return;}
       if(showMorphMenu){e.preventDefault();setShowMorphMenu(false);return;}
       if(showSizePicker){e.preventDefault();setShowSizePicker(false);return;}
       if(showGuide){e.preventDefault();setShowGuide(false);setGuideQuery('');return;}
@@ -2579,7 +3288,7 @@ export default function Paintiano() {
     };
     window.addEventListener('keydown',onEsc);
     return()=>window.removeEventListener('keydown',onEsc);
-  },[preview,showMorphMenu,showSizePicker,showGuide,showAbout,pickMode]);
+  },[preview,showMorphMenu,showSizePicker,showGuide,showAbout,pickMode,showPaletteEditor]);
 
   // Release held keys when mode changes — switching out of compose (or into
   // mic painting/listening) should never leave stuck "active" keys behind.
@@ -2604,8 +3313,18 @@ export default function Paintiano() {
   const clear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
     if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
+    // If in a creative mode, wipe ONLY that mode's stash (and the canvas).
+    // Other modes' drafts stay safely in their slots. If not in any creative
+    // mode, wipe loaded content but never the stashes.
+    if(composeMode){
+      composeStashRef.current=null;
+    } else if(micPainting || micListening){
+      // Sing and Listen are presets of the unified MIC mode and share a draft —
+      // wipe both stash slots together.
+      singStashRef.current=null;
+      listenStashRef.current=null;
+    }
     // For sing/listen: keep mic streams running — just wipe canvas
-    // For compose/loaded content: full wipe
     if(!micPainting&&!micListening){
       if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
       if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
@@ -2613,8 +3332,10 @@ export default function Paintiano() {
       if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
     }
     // Always wipe canvas content
-    setChords([]);idxRef.current=0;setPending([]);pendingRef.current=[];
+    setChords([]);chordsRef.current=[];idxRef.current=0;setPending([]);pendingRef.current=[];
     pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
+    // If in a creative mode, canvas stays in that mode (owner persists).
+    if(!composeMode&&!micPainting&&!micListening) draftOwnerRef.current=null;
     setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     pixelRef.current=null;setViewMode('paint');
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
@@ -2624,7 +3345,12 @@ export default function Paintiano() {
     }
     setDisp(0);setErr('');setStamp(s=>s+1);
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
-  },[stopAll,micPainting,micListening]);
+    // After clear in a creative mode, mark the canvas as draft-owned by that
+    // mode again so subsequent presses commit to the right stash.
+    if(composeMode) { composedModeRef.current=true; draftOwnerRef.current='compose'; }
+    else if(micPainting) { composedModeRef.current=true; draftOwnerRef.current='sing'; }
+    else if(micListening) { composedModeRef.current=true; draftOwnerRef.current='listen'; }
+  },[stopAll,micPainting,micListening,composeMode]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -2648,6 +3374,11 @@ export default function Paintiano() {
 
   const applyEvents = useCallback((events,title)=>{
     if(!events.length)return;
+    // Stash any active creative draft before replacing the canvas with imported
+    // content. The draft lives on in its mode's stash slot until the user
+    // explicitly CLEARs it from inside that mode.
+    if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
+    draftOwnerRef.current = null;
     events.forEach(ev=>{if(ev.durQ==null){const md=Math.max(...ev.n.map(n=>n.durMs||0),0);ev.durQ=md>0?snapDurQ(md/500):1;}});
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
@@ -2663,7 +3394,7 @@ export default function Paintiano() {
     // so the painting builds itself in sync with the music.
     if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
     setDisp(0);
-  },[]);
+  },[stashDraft]);
 
   const loadMidi=e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
@@ -2859,7 +3590,10 @@ Composition rules:
 
 
   const loadImage=useCallback(e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
+    const file=e.target.files[0];if(!file)return;e.target.value='';
+    if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
+    draftOwnerRef.current=null;
+    setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     const r=new FileReader();
     r.onerror=()=>{setErr('Could not read image.');setErrInfo(false);};
     r.onload=evt=>{
@@ -2879,8 +3613,13 @@ Composition rules:
           const px=[];
           for(let row=0;row<nr;row++)for(let col=0;col<nc;col++){const i=(row*nc+col)*4;px.push({r:raw[i],g:raw[i+1],b:raw[i+2]});}
           pixelRef.current={nc,nr,px,lastMode:mode,colStep:4};
-          // Process pixels into events using the current mode's hue→pitch table
-          const evts=pixelsToImageEvents(px,nc,nr,mode==='spectral'?SPEC_HUE:COF);
+          // Process pixels into events using the current mode's hue→pitch table.
+          // B/W uses harmony's hue table — same music as harmony, but the canvas
+          // renders monochrome because gc() returns greys in bw mode.
+          const hueTable = mode==='custom' && customPalette
+            ? customPalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; })
+            : (mode==='spectral'?SPEC_HUE:COF);
+          const evts=pixelsToImageEvents(px,nc,nr,hueTable);
           stopAll();
           // Explicit canvas clear — when loading consecutive images, both
           // downsample to 192×120 so canvas.width/height don't change, which
@@ -2902,20 +3641,27 @@ Composition rules:
       img.src=evt.target.result;
     };
     r.readAsDataURL(file);
-  },[mode,stopAll]);
+  },[mode,stopAll,stashDraft]);
 
   // When mode is toggled while an image is loaded, re-process pixels through the new
-  // hue→pitch table (HARMONY: COF / SPECTRAL: SPEC_HUE) so the audio actually follows the algorithm.
+  // hue→pitch table (HARMONY: COF / SPECTRAL: SPEC_HUE / CUSTOM: user palette).
   useEffect(()=>{
     if(viewMode!=='image'||!pixelRef.current)return;
-    if(pixelRef.current.lastMode===mode)return;
+    // Use mode+palette signature so swapping individual swatches in custom mode
+    // also forces a re-transcribe (not just mode-to-mode changes).
+    const sig = mode + (mode==='custom' && customPalette ? '|' + customPalette.join(',') : '');
+    if(pixelRef.current.lastSig===sig)return;
+    pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
     const{nc,nr,px}=pixelRef.current;
-    const evts=pixelsToImageEvents(px,nc,nr,mode==='spectral'?SPEC_HUE:COF);
+    const hueTable = mode==='custom' && customPalette
+      ? customPalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; })
+      : (mode==='spectral'?SPEC_HUE:COF);
+    const evts=pixelsToImageEvents(px,nc,nr,hueTable);
     stopAll();
     setChords(evts);setDisp(evts.length);
     idxRef.current=evts.length;setStamp(s=>s+1);
-  },[mode,viewMode,stopAll]);
+  },[mode,viewMode,stopAll,customPalette]);
 
   const loadSampleImage=useCallback(()=>{
     try{
@@ -3113,10 +3859,13 @@ Composition rules:
           },tail));
         }else{
           // Gap to next chord: diff between adjacent startMs when available, else uniform 350ms.
-          // For recorded compositions, cap at 1000ms to remove hesitation pauses from composing.
+          // For recorded compositions, cap at 1500ms to trim extreme thinking pauses while
+          // preserving the user's natural pacing. The cap used to be 400ms which produced
+          // a morse-like sequence — every chord arrived too fast regardless of how slowly
+          // the composer actually played.
           const hasTimings=info||recorded||useRecorded;
           const rawGap=hasTimings?Math.max(0,(chords[i].startMs||0)-(startMs||0)):350;
-          const gap=useRecorded?Math.min(rawGap,400):rawGap;
+          const gap=useRecorded?Math.min(rawGap,1500):rawGap;
           timers.current.push(setTimeout(step,Math.round(gap/playbackSpeedRef.current)));
         }
       };
@@ -3126,6 +3875,9 @@ Composition rules:
 
   const demoPlay=useCallback(()=>{
     if(busy)return;Tone.start();
+    // Stash any active creative draft before the demo takes over the canvas.
+    if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
+    draftOwnerRef.current=null;
     fullClear();
     stopAll();clearTimeout(kbTimer.current);
     if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
@@ -3144,7 +3896,7 @@ Composition rules:
     setDemoMode(true);
     resumeFromRef.current=0;
     startPlay();
-  },[busy,stopAll,startPlay,fullClear]);
+  },[busy,stopAll,startPlay,fullClear,stashDraft]);
 
   const handlePauseClick=useCallback(()=>{
     if(playing){
@@ -3298,6 +4050,11 @@ Composition rules:
   const startMicListening=useCallback(async()=>{
     if(micListening){stopMicListening();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
+    const prevOwner = draftOwnerRef.current;
+    // Continuation: re-entering listen, OR switching from sing (sibling preset
+    // within the unified MIC mode). In both cases we preserve the canvas.
+    const continuation = (prevOwner==='listen' || prevOwner==='sing');
+    if(prevOwner && !continuation) stashDraft(prevOwner);
     // Only one mode at a time
     setComposeMode(false);
     if(micPainting){stopMicPainting();}
@@ -3315,10 +4072,17 @@ Composition rules:
       const sr=ac.sampleRate;
       setMicListening(true);
       startMicVol();
-      stopAll();setChords([]);idxRef.current=0;sessionStart.current=0;gridSigRef.current='';
-      composedModeRef.current=true;
-      setDisp(0);setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
-      setViewMode('paint');setStamp(s=>s+1);
+      stopAll();
+      // Continuation (sibling preset or re-entering): preserve canvas.
+      // Fresh entry: restore listen stash or start blank.
+      if(!continuation){
+        if(!restoreStash('listen')){
+          resetCanvasForDraft('listen');
+        }
+      } else {
+        draftOwnerRef.current='listen';
+        composedModeRef.current=true;
+      }
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=800; // 800ms — longer for smoother flow
       const RMS_THRESHOLD=0.003; // very low — iOS same-device mic+speaker signal is weak
@@ -3367,6 +4131,11 @@ Composition rules:
   const startMicPainting=useCallback(async()=>{
     if(micPainting)return stopMicPainting();
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
+    const prevOwner = draftOwnerRef.current;
+    // Continuation: re-entering sing, OR switching from listen (sibling preset
+    // within the unified MIC mode). Preserve the canvas in both cases.
+    const continuation = (prevOwner==='sing' || prevOwner==='listen');
+    if(prevOwner && !continuation) stashDraft(prevOwner);
     // Only one mode at a time
     setComposeMode(false);
     if(micListening){stopMicListening();}
@@ -3384,10 +4153,15 @@ Composition rules:
       const sr=ac.sampleRate;
       setMicPainting(true);
       startMicVol();
-      stopAll();setChords([]);idxRef.current=0;sessionStart.current=0;gridSigRef.current='';
-      composedModeRef.current=true;
-      setDisp(0);setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
-      setViewMode('paint');setStamp(s=>s+1);
+      stopAll();
+      if(!continuation){
+        if(!restoreStash('sing')){
+          resetCanvasForDraft('sing');
+        }
+      } else {
+        draftOwnerRef.current='sing';
+        composedModeRef.current=true;
+      }
       Tone.start();
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=600; // emit a chord every 600ms for smoother flow
@@ -3605,14 +4379,29 @@ Composition rules:
         <div style={{fontSize:'.55rem',letterSpacing:'.1em',opacity:.8,color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
       </div>
 
-      <div style={{display:'flex',gap:10,marginBottom:10,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
+      <div style={{display:'flex',gap:10,marginBottom:6,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
         <div style={{display:'flex',border:'1px solid rgba(201,168,76,.25)',borderRadius:2,overflow:'hidden',flexShrink:0}}>
-          {['harmony','spectral'].map(m=>(
-            <button key={m} onClick={()=>setMode(m)} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(207,197,168,.45)'}}>{t(m)}</button>
+          {['harmony','spectral','bw','custom'].map(m=>(
+            <button key={m} onClick={()=>{
+              if(m==='custom' && !customPalette){
+                // First-ever pick of Custom: seed palette from whatever mode
+                // is currently active. Captures hue at default lightness/sat
+                // so the editor opens with sensible starting colors.
+                const seedTable = (mode==='spectral') ? SPEC_HUE : COF;
+                const seed = seedTable.map(h => rgbToHex(fromHsl(h, 80, 55)));
+                setCustomPalette(seed);
+              }
+              setMode(m);
+            }} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(207,197,168,.45)'}}>{t(m)}</button>
           ))}
         </div>
+        {mode==='custom' && (
+          <button onClick={()=>setShowPaletteEditor(true)} aria-label={t('editPalette')} title={t('editPalette')} style={{...btn(),fontSize:'.7rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(201,168,76,.4)',color:GOLD}}>✏</button>
+        )}
+      </div>
+      <div style={{display:'flex',gap:10,marginBottom:10,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
         <div style={{display:'flex',border:'1px solid rgba(180,140,255,.28)',borderRadius:2,overflow:'hidden',flexShrink:0}} title="painting style — tap again to deselect (mosaic default)">
-          {[['picasso','picasso'],['rembrandt','rembrandt'],['monet','monet']].map(([k,label])=>(
+          {[['picasso','picasso'],['rembrandt','rembrandt'],['kusama','kusama'],['vangogh','van gogh'],['kandinsky','kandinsky']].map(([k,label])=>(
             <button key={k} onClick={()=>setStyle(style===k?null:k)} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 10px',background:style===k?'rgba(180,140,255,.16)':'transparent',color:style===k?'rgba(210,170,255,.95)':'rgba(207,197,168,.45)'}}>{label}</button>
           ))}
         </div>
@@ -3658,31 +4447,78 @@ Composition rules:
               their work-in-progress, and the existing flows already do that
               silently. Easier to just gate the buttons. */}
           <input ref={refMidi} type="file" accept="audio/midi,audio/x-midi,application/octet-stream,.mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;fullClear();setPickMode('midi');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:(busy||composeMode||micPainting||micListening)?'rgba(140,180,255,.25)':'rgba(140,180,255,.8)'})}>{t('midi')}</button>
+          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('midi');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:(busy||composeMode||micPainting||micListening)?'rgba(140,180,255,.25)':'rgba(140,180,255,.8)'})}>{t('midi')}</button>
           <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;fullClear();setPickMode('audio');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:(busy||composeMode||micPainting||micListening)?'rgba(255,180,100,.25)':'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':t('audio')}</button>
+          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('audio');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:(busy||composeMode||micPainting||micListening)?'rgba(255,180,100,.25)':'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':t('audio')}</button>
           <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;fullClear();setPickMode('score');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':(busy||composeMode||micPainting||micListening)?'rgba(210,150,255,.25)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':t('score')}</button>
+          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('score');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':(busy||composeMode||micPainting||micListening)?'rgba(210,150,255,.25)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':t('score')}</button>
           <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
-          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;fullClear();setPickMode('image');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:(busy||composeMode||micPainting||micListening)?'rgba(210,160,255,.25)':'rgba(210,160,255,.85)'})}>{t('image')}</button>
+          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('image');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:(busy||composeMode||micPainting||micListening)?'rgba(210,160,255,.25)':'rgba(210,160,255,.85)'})}>{t('image')}</button>
         </div>
         <div style={{display:'flex',gap:4,justifyContent:'center'}}>
           <button onClick={()=>{
             if(busy)return;
             // Soft-lock: if another creation mode is on, do nothing.
             if(!composeMode&&(micPainting||micListening))return;
-            if(!composeMode){fullClear();setComposeMode(true);}else setComposeMode(false);
-          }} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':(micPainting||micListening)?'rgba(140,220,180,.2)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':(micPainting||micListening)?'rgba(140,220,180,.25)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
+            if(!composeMode){
+              const owner = draftOwnerRef.current;
+              if(owner==='compose'){
+                // Re-entering compose with chords still on canvas — no stash
+                // ever happened (nothing took them away), so just resume.
+                setComposeMode(true);
+                return;
+              }
+              // Switching FROM a different mode (or from imported content).
+              // Stash the other mode's draft if any, then restore compose stash.
+              if(owner) stashDraft(owner);
+              if(!restoreStash('compose')){
+                // No compose stash to return to — start a fresh canvas, wiping
+                // whatever loaded content (MIDI/audio/score/image/mood) was there.
+                resetCanvasForDraft('compose');
+                setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+                audioBlobRef.current=null;setCurrentMood(null);setVarySource(null);setSongQ('');
+              }
+              setComposeMode(true);
+            } else setComposeMode(false);
+          }} style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':(micPainting||micListening)?'rgba(140,220,180,.2)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':(micPainting||micListening)?'rgba(140,220,180,.25)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
+          {/* Combined MIC mode. One button to toggle the microphone-driven
+              painting. When active, two sub-buttons appear that let the user
+              switch between Voice (sing-style) and Music (listen-style)
+              behaviors. The chosen preset persists across sessions. */}
           <button onClick={()=>{
-            if(busy&&!micPainting)return;
-            if(!micPainting&&(composeMode||micListening))return;
-            startMicPainting();
-          }} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micPainting?'rgba(255,100,100,.7)':(composeMode||micListening)?'rgba(255,140,140,.2)':'rgba(255,140,140,.4)',color:micPainting?'rgba(255,100,100,1)':(composeMode||micListening)?'rgba(255,160,160,.25)':'rgba(255,160,160,.8)',background:micPainting?'rgba(255,60,60,.1)':'transparent'})}>{micPainting?t('singing'):t('sing')}</button>
-          <button onClick={()=>{
-            if(busy&&!micListening)return;
-            if(!micListening&&(composeMode||micPainting))return;
-            startMicListening();
-          }} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:micListening?'rgba(100,200,255,.7)':(composeMode||micPainting)?'rgba(100,180,255,.2)':'rgba(100,180,255,.4)',color:micListening?'rgba(120,210,255,1)':(composeMode||micPainting)?'rgba(140,200,255,.25)':'rgba(140,200,255,.8)',background:micListening?'rgba(60,160,255,.1)':'transparent'})}>{micListening?t('listening'):t('listen')}</button>
+            if(busy && !micActive) return;
+            // Mutex: if compose is on, do nothing.
+            if(!micActive && composeMode) return;
+            if(micActive){
+              // Turn the mic mode off entirely.
+              if(micPainting) stopMicPainting();
+              if(micListening) stopMicListening();
+              return;
+            }
+            // Activate using the remembered preset.
+            if(micPreset==='music') startMicListening();
+            else startMicPainting();
+          }} style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:micActive?'rgba(180,160,220,.7)':composeMode?'rgba(180,160,220,.2)':'rgba(180,160,220,.4)',color:micActive?'rgba(210,190,250,1)':composeMode?'rgba(180,160,220,.25)':'rgba(190,170,230,.8)',background:micActive?'rgba(140,120,200,.1)':'transparent'})}>{micActive?t('micActive'):t('mic')}</button>
+          {micActive && (
+            <>
+              {/* Voice sub-button — switches preset to 'voice' (Sing behavior) */}
+              <button onClick={()=>{
+                if(busy) return;
+                if(micPreset==='voice') return; // already in this preset
+                setMicPreset('voice');
+                if(micListening) stopMicListening();
+                startMicPainting();
+              }} style={btn({fontSize:'.55rem',padding:'5px 8px',flexShrink:0,borderColor:micPreset==='voice'?'rgba(255,100,100,.7)':'rgba(255,140,140,.3)',color:micPreset==='voice'?'rgba(255,100,100,1)':'rgba(255,160,160,.55)',background:micPreset==='voice'?'rgba(255,60,60,.1)':'transparent'})}>{t('voicePreset')}</button>
+              {/* Music sub-button — switches preset to 'music' (Listen behavior) */}
+              <button onClick={()=>{
+                if(busy) return;
+                if(micPreset==='music') return;
+                setMicPreset('music');
+                if(micPainting) stopMicPainting();
+                startMicListening();
+              }} style={btn({fontSize:'.55rem',padding:'5px 8px',flexShrink:0,borderColor:micPreset==='music'?'rgba(100,200,255,.7)':'rgba(100,180,255,.3)',color:micPreset==='music'?'rgba(120,210,255,1)':'rgba(140,200,255,.55)',background:micPreset==='music'?'rgba(60,160,255,.1)':'transparent'})}>{t('musicPreset')}</button>
+            </>
+          )}
         </div>
       </div>
 
@@ -3892,6 +4728,38 @@ Composition rules:
               <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.6rem',marginTop:4}}>
                 {t('cancel')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPaletteEditor && customPalette && (
+        <div onClick={()=>setShowPaletteEditor(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-palette-title" style={{maxWidth:420,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'24px 22px',color:'rgba(207,197,168,.88)',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
+            <button onClick={()=>setShowPaletteEditor(false)} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
+            <div id="paintiano-palette-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('paletteEditorTitle')}</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4, 1fr)',gap:10,marginBottom:18}}>
+              {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].map((label,pc)=>(
+                <label key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,cursor:'pointer'}}>
+                  <div style={{position:'relative',width:60,height:60,borderRadius:6,background:customPalette[pc],border:'2px solid rgba(207,197,168,.25)',boxShadow:'0 2px 6px rgba(0,0,0,.4)'}}>
+                    <input type="color" value={customPalette[pc]} onChange={e=>{
+                      const next=customPalette.slice();
+                      next[pc]=e.target.value;
+                      setCustomPalette(next);
+                    }} style={{position:'absolute',inset:0,opacity:0,cursor:'pointer',width:'100%',height:'100%'}} aria-label={label}/>
+                  </div>
+                  <span style={{fontSize:'.65rem',letterSpacing:'.06em',color:'rgba(207,197,168,.7)'}}>{label}</span>
+                </label>
+              ))}
+            </div>
+            <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18}}>
+              <button onClick={()=>{
+                // Clear all: reset every pitch class to neutral light grey.
+                // The user starts from a blank slate and picks each color
+                // themselves — no implicit harmony or spectral seed.
+                setCustomPalette(Array(12).fill('#cccccc'));
+              }} style={{padding:'8px 16px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.3)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('resetPalette')}</button>
+              <button onClick={()=>setShowPaletteEditor(false)} style={{padding:'8px 22px',background:'rgba(201,168,76,.15)',color:GOLD,border:'1px solid rgba(201,168,76,.45)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.12em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
             </div>
           </div>
         </div>
@@ -4135,7 +5003,7 @@ Composition rules:
       </div>
       )}
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.4.03</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.4.07</div>
     </div>
   );
 }
