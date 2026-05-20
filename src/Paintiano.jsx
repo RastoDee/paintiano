@@ -7,6 +7,9 @@ const CWIN = 55;
 const KB_WIN = 65;
 const DN = 25, DB = 16, DH = 26;
 const GOLD = '#c9a84c';
+// Anthropic model used by aiCompose. Pinned to the version prescribed by the
+// "API in artifacts" feature; bump here when Anthropic publishes a newer one.
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
 const S_BASE = "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/salamander/";
 const S_URLS = {"A0":"A0.mp3","C1":"C1.mp3","D#1":"Ds1.mp3","F#1":"Fs1.mp3","A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3","A5":"A5.mp3","C6":"C6.mp3","D#6":"Ds6.mp3","F#6":"Fs6.mp3","A6":"A6.mp3","C7":"C7.mp3","D#7":"Ds7.mp3","F#7":"Fs7.mp3","A7":"A7.mp3","C8":"C8.mp3"};
 
@@ -44,6 +47,12 @@ function parseMidi(buf){
   const u16=()=>{const v=(d[p]<<8)|d[p+1];p+=2;return v;};
   const u32=()=>{const v=(d[p]<<24)|(d[p+1]<<16)|(d[p+2]<<8)|d[p+3];p+=4;return v;};
   const vl=()=>{let v=0,b;do{b=u8();v=(v<<7)|(b&0x7f);}while(b&0x80);return v;};
+  // Validate "MThd" header before parsing — otherwise a non-MIDI file produces
+  // garbage track counts and divisions, then loops billions of times reading
+  // junk bytes. Fail cleanly with a useful message instead.
+  if(d.length<14||d[0]!==0x4d||d[1]!==0x54||d[2]!==0x68||d[3]!==0x64){
+    throw new Error('Not a MIDI file (missing MThd header).');
+  }
   p+=4;u32();u16();
   const nT=u16(),div=u16();
   const temps=[{tick:0,uspb:500000}],raw=[],skipped=[];
@@ -218,15 +227,39 @@ function parseMusicXml(xmlText){
   const stepSemi={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
   const notes=[]; // [{startQ, durQ, midi, vel}]
   let lastNoteStartQ=0;
+  // Dynamic markings live in <direction><direction-type><dynamics><X/></dynamics>
+  // and propagate forward until the next dynamic. Legacy exports sometimes put
+  // them inside <note><notations><dynamics> — we keep that as a per-note fallback.
+  const DYN_MAP={ppp:30,pp:42,p:55,mp:70,mf:85,f:100,ff:115,fff:115,ffff:115,sf:110,sfz:115,sffz:115,fz:108,rfz:108,fp:80,pf:90,n:85};
+  const clampVel=v=>Math.max(30,Math.min(115,v));
+  const readDynamicsFrom=(parent)=>{
+    if(!parent)return null;
+    const d=parent.querySelector(':scope > dynamics');
+    if(!d)return null;
+    const child=d.children[0]?.tagName;
+    if(child&&DYN_MAP[child.toLowerCase()]!=null) return DYN_MAP[child.toLowerCase()];
+    return null;
+  };
   for(const part of doc.querySelectorAll('score-partwise > part')){
     let divisions=4;
     let curTimeQ=0;
+    let curVel=85; // neutral mf at the start of each part
     for(const measure of part.querySelectorAll(':scope > measure')){
       for(const elem of measure.children){
         const tag=elem.tagName;
         if(tag==='attributes'){
           const div=elem.querySelector(':scope > divisions');
           if(div) divisions=parseInt(div.textContent)||divisions;
+        }else if(tag==='direction'){
+          // Dynamic marking — update the running velocity for subsequent notes
+          const dt=elem.querySelector(':scope > direction-type');
+          const newVel=readDynamicsFrom(dt);
+          if(newVel!=null) curVel=clampVel(newVel);
+        }else if(tag==='sound'){
+          // <sound dynamics="N"> is an explicit playback-velocity override (0–127 in MusicXML;
+          // 100 = mf in the spec). MuseScore emits these alongside markings.
+          const sdAttr=elem.getAttribute('dynamics');
+          if(sdAttr){const n=parseFloat(sdAttr); if(isFinite(n)) curVel=clampVel(Math.round(n*0.85));}
         }else if(tag==='note'){
           if(elem.querySelector(':scope > grace')) continue; // skip grace notes
           const isChord=elem.querySelector(':scope > chord')!==null;
@@ -247,14 +280,11 @@ function parseMusicXml(xmlText){
           const octave=parseInt(pitchEl.querySelector(':scope > octave')?.textContent||'4');
           const alter=parseFloat(pitchEl.querySelector(':scope > alter')?.textContent||'0');
           const midi=Math.round((octave+1)*12+(stepSemi[step]||0)+alter);
-          // Dynamics → velocity
-          let vel=88;
-          const dyn=elem.querySelector(':scope > notations > dynamics');
-          if(dyn){
-            const tag=dyn.children[0]?.tagName;
-            const dynMap={ppp:30,pp:42,p:55,mp:70,mf:85,f:100,ff:115,fff:127,sf:110,sfz:115,fp:80};
-            if(tag&&dynMap[tag.toLowerCase()]) vel=dynMap[tag.toLowerCase()];
-          }
+          // Velocity: running dynamic (from <direction>), with a per-note
+          // override if the legacy notations/dynamics path carries one.
+          let vel=curVel;
+          const localDyn=readDynamicsFrom(elem.querySelector(':scope > notations'));
+          if(localDyn!=null) vel=clampVel(localDyn);
           // For chord notes: same startQ as the previous note in this voice/part; curTimeQ wasn't advanced
           const noteStartQ=isChord?lastNoteStartQ:curTimeQ;
           if(midi>=0&&midi<128) notes.push({startQ:noteStartQ,durQ,midi,vel});
@@ -391,9 +421,15 @@ function computeGrid(arg){
 //              no artist is explicitly selected. Not exposed in the toggle.
 
 // Seeded RNG helper — same seed → same marks → no flicker between repaints.
+// Uses a module-level state holder rather than a per-call closure so the hot
+// painting path doesn't allocate a fresh function per block. Safe because
+// JS is single-threaded and the RNG is only used inside drawBlock callees,
+// which always re-seed at the start. _RND_STATE[0] is the live seed.
+const _RND_STATE = new Uint32Array(1);
+const _rnd = () => { _RND_STATE[0] = (_RND_STATE[0]*1664525+1013904223)>>>0; return _RND_STATE[0]/0x100000000; };
 function _seedRnd(bx,by,BW,BH){
-  let seed=((bx*73)^(by*113)^(BW*271)^(BH*947))>>>0;
-  return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
+  _RND_STATE[0] = ((bx*73)^(by*113)^(BW*271)^(BH*947))>>>0;
+  return _rnd;
 }
 
 // Sharp φ-rectangle look — implicit default when no artist style selected.
@@ -1109,7 +1145,65 @@ const SONGS=[
 
 function fftMag(buf){const N=buf.length,re=new Float32Array(N),im=new Float32Array(N);for(let i=0;i<N;i++)re[i]=buf[i]*(0.5-0.5*Math.cos(2*Math.PI*i/N));for(let i=1,j=0;i<N;i++){let bit=N>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}for(let len=2;len<=N;len<<=1){const ang=2*Math.PI/len;for(let i=0;i<N;i+=len){let cr=1,ci=0;const wR=Math.cos(ang),wI=-Math.sin(ang);for(let k=0;k<len/2;k++){const vR=re[i+k+len/2]*cr-im[i+k+len/2]*ci,vI=re[i+k+len/2]*ci+im[i+k+len/2]*cr;re[i+k+len/2]=re[i+k]-vR;im[i+k+len/2]=im[i+k]-vI;re[i+k]+=vR;im[i+k]+=vI;const nr=cr*wR-ci*wI;ci=cr*wI+ci*wR;cr=nr;}}}const mag=new Float32Array(N/2);for(let i=0;i<N/2;i++)mag[i]=Math.sqrt(re[i]*re[i]+im[i]*im[i]);return mag;}
 function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
-async function transcribeAudio(audioBuf,onP){const sr=audioBuf.sampleRate,ch0=audioBuf.getChannelData(0),data=audioBuf.numberOfChannels>1?Float32Array.from({length:ch0.length},(_,i)=>(ch0[i]+audioBuf.getChannelData(1)[i])*0.5):ch0,FRAME=2048,HOP=512,total=Math.floor((data.length-FRAME)/HOP),active={},notes=[];for(let f=0;f<total;f++){const mag=fftMag(data.slice(f*HOP,f*HOP+FRAME)),found=new Set(pickPitches(mag,sr).map(p=>{if(!active[p.midi])active[p.midi]={sf:f,mx:p.mag};else active[p.midi].mx=Math.max(active[p.midi].mx,p.mag);return p.midi;}));for(const m in active){if(!found.has(+m)){notes.push({midi:+m,sf:active[m].sf,ef:f,mx:active[m].mx});delete active[m];}}if(f%80===0){onP(f/total);await new Promise(r=>setTimeout(r,0));}}for(const m in active)notes.push({midi:+m,sf:active[m].sf,ef:total,mx:active[m].mx});const f2ms=f=>f*HOP/sr*1000,raw=notes.filter(n=>f2ms(n.ef-n.sf)>=60).map(n=>({m:n.midi,startMs:f2ms(n.sf),durMs:Math.max(80,f2ms(n.ef-n.sf)),v:Math.max(40,Math.min(120,Math.round(n.mx*110)))})).sort((a,b)=>a.startMs-b.startMs);const evts=[];let i=0;while(i<raw.length){const bt=raw[i].startMs,g=[];while(i<raw.length&&raw[i].startMs-bt<=CWIN)g.push({m:raw[i].m,v:raw[i].v,durMs:raw[i++].durMs});if(g.length){const md=Math.max(...g.map(n=>n.durMs));evts.push({n:g,startMs:bt,durQ:snapDurQ(md/500)});}}return evts;}
+// Reusable typed-array buffers — module-level so transcribeAudio doesn't
+// allocate ~15K Float32Arrays during a long file import. JS is single-threaded
+// and transcribeAudio runs sequentially, so the shared state is safe.
+const _TRANS_FRAME = new Float32Array(2048);
+
+async function transcribeAudio(audioBuf, onP) {
+  const sr = audioBuf.sampleRate;
+  const ch0 = audioBuf.getChannelData(0);
+  // Mix to mono if stereo. Float32Array.from is still allocated once per file
+  // (and it's the decoded-PCM scratch, not per-frame), so it's not a hot path.
+  const data = audioBuf.numberOfChannels > 1
+    ? Float32Array.from({length: ch0.length}, (_, i) => (ch0[i] + audioBuf.getChannelData(1)[i]) * 0.5)
+    : ch0;
+  const FRAME = 2048, HOP = 512;
+  const total = Math.floor((data.length - FRAME) / HOP);
+  const active = {}, notes = [];
+  const frame = _TRANS_FRAME;
+  for (let f = 0; f < total; f++) {
+    // Copy the next FRAME samples into the reusable buffer — was data.slice()
+    // per frame, which allocated and GC'd ~127MB on a 3-minute file.
+    const off = f * HOP;
+    for (let i = 0; i < FRAME; i++) frame[i] = data[off + i];
+    const mag = fftMag(frame);
+    const picks = pickPitches(mag, sr);
+    const found = new Set();
+    for (const p of picks) {
+      found.add(p.midi);
+      if (!active[p.midi]) active[p.midi] = {sf: f, mx: p.mag};
+      else active[p.midi].mx = Math.max(active[p.midi].mx, p.mag);
+    }
+    for (const m in active) {
+      if (!found.has(+m)) {
+        notes.push({midi: +m, sf: active[m].sf, ef: f, mx: active[m].mx});
+        delete active[m];
+      }
+    }
+    if (f % 80 === 0) {
+      onP(f / total);
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+  for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
+  const f2ms = f => f * HOP / sr * 1000;
+  const raw = notes
+    .filter(n => f2ms(n.ef - n.sf) >= 60)
+    .map(n => ({m: n.midi, startMs: f2ms(n.sf), durMs: Math.max(80, f2ms(n.ef - n.sf)), v: Math.max(40, Math.min(120, Math.round(n.mx * 110)))}))
+    .sort((a, b) => a.startMs - b.startMs);
+  const evts = [];
+  let i = 0;
+  while (i < raw.length) {
+    const bt = raw[i].startMs, g = [];
+    while (i < raw.length && raw[i].startMs - bt <= CWIN) g.push({m: raw[i].m, v: raw[i].v, durMs: raw[i++].durMs});
+    if (g.length) {
+      const md = Math.max(...g.map(n => n.durMs));
+      evts.push({n: g, startMs: bt, durQ: snapDurQ(md / 500)});
+    }
+  }
+  return evts;
+}
 
 function name2midi(note){if(!note)return null;const trimmed=note.trim();if(_nameToMidi[trimmed]!==undefined){const v=_nameToMidi[trimmed];return v>=21&&v<=108?v:null;}const m=trimmed.match(/^([A-G])(#{1,2}|bb?|x)?(-?\d)$/i);if(!m)return null;const PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11},pc=PC[m[1].toUpperCase()];if(pc===undefined)return null;const a=m[2]||'',acc=a.startsWith('##')||a==='x'?2:a.startsWith('#')?1:a.startsWith('bb')?-2:a.startsWith('b')?-1:0,midi=(parseInt(m[3])+1)*12+pc+acc;return midi>=21&&midi<=108?midi:null;}
 function noteArr2events(notes,tempo){
@@ -1555,8 +1649,10 @@ export default function Paintiano() {
   const micStreamRef     = useRef(null);
   const micRafRef        = useRef(null);
   const micVolRef        = useRef(null);
+  const micAcRef         = useRef(null); // AudioContext for mic-paint, closed on stop
   const listenStreamRef  = useRef(null);
   const listenRafRef     = useRef(null);
+  const listenAcRef      = useRef(null); // AudioContext for mic-listen, closed on stop
   // Press-tracking: per-midi {pressTime,chordIdx}. On release we compute
   // the actual hold duration and patch it into the chord that captured this
   // press, so each block's width reflects how long the key was held.
@@ -1570,7 +1666,7 @@ export default function Paintiano() {
   const resumeFromRef = useRef(null); // null = fresh start, number = resume from this disp index
   // Tracks the last full-paint snapshot so playback can append incrementally
   // instead of re-running every artist-style draw from chord 0 on each `disp` tick.
-  const lastPaintRef  = useRef({disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null});
+  const lastPaintRef  = useRef({disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false});
   // Intro reveal animation: tracks the RAF id so it can be cancelled by clear()
   // or a subsequent load before the previous animation finishes.
   const introRafRef   = useRef(null);
@@ -1685,9 +1781,12 @@ export default function Paintiano() {
   // keyboard is locked until clear (no mixing loaded content with new live
   // composition). Conversely, once any keyboard note has been recorded, the
   // file/song loaders are locked until clear (so a load can't clobber work).
-  const loadedMode = false;
+  // loadedMode: true when a file/song/image is the source of the current canvas
+  // (info is set by applyEvents/loadImage) AND the user isn't actively composing
+  // on the keyboard or running a live mic mode. Locks the keyboard so a stray
+  // tap can't clobber the loaded composition. Cleared by clear()/fullClear().
+  const loadedMode = !!info && !composeMode && !micPainting && !micListening;
   const composedModeRef = useRef(false);
-  const composedMode = composedModeRef.current;
 
   useEffect(()=>{
     let dead=false;
@@ -1769,7 +1868,7 @@ export default function Paintiano() {
       ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
       ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
-      lastPaintRef.current={...prev,pending};
+      lastPaintRef.current={...prev,pending,disp:lim};
       return;
     }
     const canAppend =
@@ -1800,7 +1899,7 @@ export default function Paintiano() {
         if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
       }
     }
-    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode};
+    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused};
   },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,holdPaused]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
@@ -1814,6 +1913,7 @@ export default function Paintiano() {
   // A cheap string signature of [idx:durQ, ...] is compared against the last
   // run; if identical, computeGrid is skipped entirely.
   const gridSigRef = useRef('');
+  const pendingGridRef = useRef(null);
   useEffect(()=>{
     if(!chords.length)return;
     if(!chords.some(c=>c.recorded))return;
@@ -1829,10 +1929,23 @@ export default function Paintiano() {
     if(!playingRef.current){
       setGrid(newGrid);
     }else{
-      // Schedule the visual update for after playback stops
-      const unsub=()=>{setGrid(newGrid);};
-      const check=setInterval(()=>{if(!playingRef.current){clearInterval(check);unsub();}},200);
+      // Schedule the visual update for after playback stops. Replace any
+      // prior pending interval so only the LATEST grid wins — and so we
+      // don't leak intervals when chords change rapidly during playback.
+      if(pendingGridRef.current){clearInterval(pendingGridRef.current);pendingGridRef.current=null;}
+      pendingGridRef.current=setInterval(()=>{
+        if(!playingRef.current){
+          clearInterval(pendingGridRef.current);
+          pendingGridRef.current=null;
+          setGrid(newGrid);
+        }
+      },200);
     }
+    return ()=>{
+      // Effect re-runs (or unmount): kill any pending interval so it can't
+      // resurrect a stale grid after a newer one has been scheduled.
+      if(pendingGridRef.current){clearInterval(pendingGridRef.current);pendingGridRef.current=null;}
+    };
   },[chords]);
 
   // Center the keyboard scroll on middle C (MIDI 60) whenever the keyboard
@@ -1951,6 +2064,12 @@ export default function Paintiano() {
     let raf;
     const tick = () => {
       const canvas = highlightCanvasRef.current;
+      // Early-out when idle — no playback, nothing to highlight. Skips the
+      // 60Hz clearRect-and-state-read churn that was burning CPU on phone.
+      if (!playingRef.current) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
       if (canvas) {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2052,7 +2171,7 @@ export default function Paintiano() {
     const idx=idxRef.current++;
     if(!sessionStart.current)sessionStart.current=now;
     const startMs=now-sessionStart.current;
-    for(const m of notes.map(n=>n.m)){
+    for(const {m} of notes){
       if(pressInfo.current[m])pressInfo.current[m].chordIdx=idx;
     }
     // durQ derives from the chord's longest note (in quarter-note units,
@@ -2246,6 +2365,11 @@ export default function Paintiano() {
       const audioBuf=await ac.decodeAudioData(buf.slice(0));
       ac.close();
       audioPCMRef.current=audioBuf;
+      // For long files the FFT pass can take a meaningful chunk of time. Let
+      // the user know so the progress bar doesn't look like a stuck app.
+      if(audioBuf.duration>90){
+        setWLabel('transcribing audio · this may take a minute');
+      }
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(!evts.length){setErr('No notes detected.');setErrInfo(false);return;}
       const aName=file.name.replace(/\.[^.]+$/,'');
@@ -2317,7 +2441,7 @@ export default function Paintiano() {
       const audioBuf=await ac.decodeAudioData(arrayBuffer.slice(0));
       ac.close();
       audioPCMRef.current=audioBuf;
-      setWLabel('transcribing sample');
+      setWLabel(audioBuf.duration>90?'transcribing sample · this may take a minute':'transcribing sample');
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(!evts.length){setErr('Sample audio: no notes detected.');setErrInfo(false);return;}
       setAudioBlobAndRef(blob);setAudioName('Liebestraum No.3 — Liszt.mp3');
@@ -2358,7 +2482,7 @@ export default function Paintiano() {
 
   const aiCompose=useCallback(async(overrideMood)=>{
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
-    if(!title||busy||composedMode)return;
+    if(!title||busy||composedModeRef.current)return;
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();
     try{
@@ -2380,7 +2504,7 @@ Composition rules:
       const resp=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+        body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages:[{role:'user',content:prompt}]})
       });
       setWPct(75);
       const respText=await resp.text();
@@ -2597,7 +2721,7 @@ Composition rules:
             const byDur={};
             for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
             for(const[t,ms]of Object.entries(byDur)){
-              setTimeout(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
+              pushTimer(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
             }
             // Scroll the keyboard to center on this chord's notes (same behavior
             // as the chord-playback loop). Lets you see which keys correspond to
@@ -2637,7 +2761,7 @@ Composition rules:
           const byDur={};
           for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
           for(const[t,ms]of Object.entries(byDur)){
-            setTimeout(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
+            pushTimer(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
           }
           const wrap=kbScrollRef.current;
           if(wrap){
@@ -2790,9 +2914,10 @@ Composition rules:
 
   const stopMicVol=useCallback(()=>{
     if(micVolRef.current){
-      const{raf,stream}=micVolRef.current;
+      const{raf,stream,ac}=micVolRef.current;
       cancelAnimationFrame(raf);
       stream.getTracks().forEach(t=>t.stop());
+      if(ac){try{ac.close();}catch(_){}}
       micVolRef.current=null;
     }
     setMicVolActive(false);
@@ -2820,7 +2945,7 @@ Composition rules:
         setMicVolLevel(Math.min(1,smoothed*6)); // scale to 0–1
         micVolRef.current.raf=requestAnimationFrame(tick);
       };
-      micVolRef.current={raf:requestAnimationFrame(tick),stream};
+      micVolRef.current={raf:requestAnimationFrame(tick),stream,ac};
     }catch(e){
       setErr(t('micDenied'));setErrInfo(false);
     }
@@ -2829,6 +2954,7 @@ Composition rules:
   const stopMicPainting=useCallback(()=>{
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
+    if(micAcRef.current){try{micAcRef.current.close();}catch(_){}micAcRef.current=null;}
     setMicPainting(false);
     stopMicVol();
   },[stopMicVol]);
@@ -2836,6 +2962,7 @@ Composition rules:
   const stopMicListening=useCallback(()=>{
     if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
     if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
+    if(listenAcRef.current){try{listenAcRef.current.close();}catch(_){}listenAcRef.current=null;}
     setMicListening(false);
     stopMicVol();
   },[stopMicVol]);
@@ -2851,6 +2978,7 @@ Composition rules:
       listenStreamRef.current=stream;
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      listenAcRef.current=ac;
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=4096; // higher resolution for better pitch detection on complex music
@@ -2879,16 +3007,18 @@ Composition rules:
           lastCommit=now;
           const sustainMs=Math.round(COMMIT_INTERVAL*1.8);
           const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:sustainMs}));
-          // Chord-change detection — only paint when harmony shifts
+          // Chord-change detection — highlight + paint only when harmony shifts.
+          // Re-firing setActive every commit for a sustained chord would cause
+          // an 800ms re-render rhythm with no visible benefit.
           const sig=notes.map(n=>n.m).sort().join(',');
-          // Show active keys always
-          notes.forEach(({m})=>{
-            setActive(p=>new Set([...p,m]));
-            setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),sustainMs);
-          });
           if(sig!==prevChordSig){
             prevChordSig=sig;
-            // Paint only on chord change
+            // Highlight active keys
+            notes.forEach(({m})=>{
+              setActive(p=>new Set([...p,m]));
+              pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),sustainMs);
+            });
+            // Paint
             const idx=idxRef.current++;
             if(!sessionStart.current)sessionStart.current=now;
             const startMs=now-sessionStart.current;
@@ -2917,6 +3047,7 @@ Composition rules:
       micStreamRef.current=stream;
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      micAcRef.current=ac;
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=2048;
@@ -2952,7 +3083,7 @@ Composition rules:
           // Play and highlight
           playNote(snapped,notes[0].v,sustainMs);
           setActive(p=>new Set([...p,snapped]));
-          setTimeout(()=>setActive(p=>{const s=new Set(p);s.delete(snapped);return s;}),Math.min(sustainMs,1000));
+          pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(snapped);return s;}),Math.min(sustainMs,1000));
           // Paint
           const idx=idxRef.current++;
           if(!sessionStart.current)sessionStart.current=now;
@@ -3002,7 +3133,7 @@ Composition rules:
           types:[{description:'Audio recording',accept:{[file.type||'audio/mp4']:['.'+ext]}}]
         });
         const w=await handle.createWritable();
-        await w.write(audioBlob);
+        await w.write(recBlob);
         await w.close();
         setAudioShareMsg({tone:'ok',text:t('saved')});
         return;
@@ -3013,7 +3144,7 @@ Composition rules:
     }
     // 3. Anchor download — Firefox, older browsers, ultimate fallback
     try{
-      const url=URL.createObjectURL(audioBlob);
+      const url=URL.createObjectURL(recBlob);
       const a=document.createElement('a');
       a.href=url;a.download=finalName;a.rel='noopener';
       document.body.appendChild(a);a.click();document.body.removeChild(a);
@@ -3334,7 +3465,7 @@ Composition rules:
           const byDur={};
           for(const{m,dur}of midis){const t=Math.min(dur,800);(byDur[t]||(byDur[t]=[])).push(m);}
           for(const[t,ms]of Object.entries(byDur)){
-            setTimeout(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
+            pushTimer(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
           }
         }}
       >
@@ -3608,7 +3739,7 @@ Composition rules:
         </div>
       </div>
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.12</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.25</div>
     </div>
   );
 }
