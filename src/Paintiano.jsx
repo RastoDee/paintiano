@@ -1734,7 +1734,7 @@ const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered,
       onTouchEnd={(e)=>{e.preventDefault();if(!disabled)releaseNote(midi);}}
       onTouchCancel={()=>{if(!disabled)releaseNote(midi);}}
       onContextMenu={(e)=>e.preventDefault()}
-      style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:isActive?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
+      style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:isActive?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
       {midi%12===0?'C'+(Math.floor(midi/12)-1):''}
     </div>
   );
@@ -1759,7 +1759,7 @@ const BlackKey = memo(function BlackKey({midi, lw, snapped, isActive, isHovered,
       onTouchEnd={(e)=>{e.preventDefault();if(!disabled)releaseNote(midi);}}
       onTouchCancel={()=>{if(!disabled)releaseNote(midi);}}
       onContextMenu={(e)=>e.preventDefault()}
-      style={{position:'absolute',left:(lw+0.65)*WKW,top:0,width:BKW,height:BKH,background:bkBg,borderRadius:'0 0 4px 4px',border:'1px solid rgba(0,0,0,.7)',cursor:busy&&!playing?'default':'pointer',zIndex:2,boxShadow:isActive?'none':'2px 5px 10px rgba(0,0,0,.85)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}/>
+      style={{position:'absolute',left:(lw+0.65)*WKW,top:0,width:BKW,height:BKH,background:bkBg,borderRadius:'0 0 4px 4px',border:'1px solid rgba(0,0,0,.7)',cursor:busy&&!playing?'default':'pointer',zIndex:2,boxShadow:isActive?'none':'2px 5px 10px rgba(0,0,0,.85)',transition:'background .08s ease',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}/>
   );
 });
 
@@ -3996,7 +3996,7 @@ Composition rules:
         )}
       </div>
       {composeMode && (
-      <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',paddingBottom:4}}>
+      <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',paddingBottom:4,touchAction:'pan-x',WebkitOverflowScrolling:'touch'}}>
         <div style={{position:'relative',width:PW,height:WKH,userSelect:'none',opacity:loadedMode?0.25:(busy&&!playing?0.4:1),filter:loadedMode?'grayscale(0.6)':'none',pointerEvents:loadedMode?'none':'auto'}}>
           {WKEYS.map(({midi,wi})=>{
             const isActive=active.has(midi);
