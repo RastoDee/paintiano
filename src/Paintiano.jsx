@@ -1,5 +1,5 @@
 import * as Tone from "tone";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 
 const PHI = 1.6180339887;
 const IMG_TARGET_MS = 120000; // image transcription is exactly 2:00 regardless of grid
@@ -907,13 +907,18 @@ function pixelsToImageEvents(px,nc,nr,table){
 
 const BKS=new Set([1,3,6,8,10]);
 const{w:WKEYS,b:BKEYS}=(()=>{const w=[],b=[];let wi=0;for(let m=21;m<=108;m++){const pc=m%12;if(!BKS.has(pc))w.push({midi:m,wi:wi++});else b.push({midi:m,lw:wi-1});}return{w,b};})();
-// Pixel x-position of a MIDI key on the keyboard strip. WKW=26 px per white key.
+// Keyboard dimensions, used by both the parent layout and the memo'd key
+// components. Constants — hoisted out of the render body so the key components
+// can read them without props.
+const WKW=26, WKH=88, BKW=16, BKH=54;
+const PW=WKEYS.length*WKW;
+// Pixel x-position of a MIDI key on the keyboard strip. WKW px per white key.
 // Black keys sit between whites at offset +0.65 — same constant the JSX uses below.
 const midiToKeyX = (midi) => {
   const w = WKEYS.find(k => k.midi === midi);
-  if (w) return w.wi * 26;
+  if (w) return w.wi * WKW;
   const b = BKEYS.find(k => k.midi === midi);
-  if (b) return (b.lw + 0.65) * 26;
+  if (b) return (b.lw + 0.65) * WKW;
   return null;
 };
 // Scientific pitch notation for a MIDI number. Middle C (MIDI 60) → "C4".
@@ -937,14 +942,20 @@ const I18N = {
     sing:'🎤 SING', singing:'🎤',
     listen:'🔊 LISTEN', listening:'🔊 LISTENING…',
     play:'▶ play', pause:'⏸ pause', resume:'▶ resume',
-    print:'🖨 print', clear:'clear', loop:'⟳ loop', undo:'↩',
+    print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', loop:'⟳ loop', undo:'↩',
     recArm:'⏺ rec', recStop:'⏹ rec…',
     share:'share', save:'save', saving:'saving…', saved:'saved ✓',
     chordsPlay:'chords · tap to play',
+    nameThisPiece:'name this piece…',
+    sizeWeb:'Web / Social', sizeWebHint:'~4× · fast · share online',
+    sizePrint:'Print A1 · 300 DPI', sizePrintHint:'~20× · large file · print-ready',
+    saveLongPressHint:'long-press the image', saveLongPressTail:'for Save to Photos · or an iOS screenshot (Side + Vol↑) at screen resolution',
+    saveRightClickHint:'right-click the image', saveRightClickTail:'and choose "Save image as…"',
+    saveAlternative:'alternative:', saveAlternatives:'alternatives:',
     sLeft:'s left',
     loadingPiano:' loading piano…', grandPiano:' grand piano', synthPiano:' synth piano',
     listenHint:'point this device\'s mic at another playing music — same-phone audio is suppressed by iOS',
-    micDenied:'Microphone access denied.', micUnavailable:'Microphone not available in this browser.',
+    micDenied:'Microphone access denied. To enable: iOS Settings → Safari → Microphone, or tap the lock icon in your browser\'s address bar. Reload after changing.', micUnavailable:'Microphone not available in this browser.',
     recUnsupported:'Recording not supported in this browser.',
     recTooShort:'Recording was too short — hold rec for at least a second.',
     searchGuide:'search the guide…', noMatches:'No matches for',
@@ -968,14 +979,20 @@ const I18N = {
     sing:'🎤 SINGEN', singing:'🎤',
     listen:'🔊 LAUSCHEN', listening:'🔊 LAUSCHT…',
     play:'▶ spielen', pause:'⏸ pause', resume:'▶ weiter',
-    print:'🖨 drucken', clear:'löschen', loop:'⟳ schleife', undo:'↩',
+    print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', loop:'⟳ schleife', undo:'↩',
     recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
     share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓',
     chordsPlay:'akkorde · zum spielen tippen',
+    nameThisPiece:'dieses stück benennen…',
+    sizeWeb:'Web / Social', sizeWebHint:'~4× · schnell · online teilen',
+    sizePrint:'Druck A1 · 300 DPI', sizePrintHint:'~20× · große datei · druckfertig',
+    saveLongPressHint:'lange auf das bild drücken', saveLongPressTail:'für „in fotos sichern" · oder iOS-screenshot (Seite + Lauter) in bildschirmauflösung',
+    saveRightClickHint:'rechtsklick aufs bild', saveRightClickTail:'und „bild speichern unter…" wählen',
+    saveAlternative:'alternative:', saveAlternatives:'alternativen:',
     sLeft:'s übrig',
     loadingPiano:' klavier lädt…', grandPiano:' flügel', synthPiano:' synth-klavier',
     listenHint:'mikrofon dieses geräts auf ein anderes richten, das musik spielt — eigenes audio wird von iOS unterdrückt',
-    micDenied:'Mikrofonzugriff verweigert.', micUnavailable:'Mikrofon nicht verfügbar.',
+    micDenied:'Mikrofonzugriff verweigert. Aktivieren: iOS Einstellungen → Safari → Mikrofon, oder auf das Schloss-Symbol in der Adressleiste tippen. Danach Seite neu laden.', micUnavailable:'Mikrofon nicht verfügbar.',
     recUnsupported:'Aufnahme wird nicht unterstützt.',
     recTooShort:'Aufnahme zu kurz — mindestens eine Sekunde halten.',
     searchGuide:'anleitung durchsuchen…', noMatches:'Keine Treffer für',
@@ -999,14 +1016,20 @@ const I18N = {
     sing:'🎤 CHANTER', singing:'🎤',
     listen:'🔊 ÉCOUTER', listening:'🔊 ÉCOUTE…',
     play:'▶ jouer', pause:'⏸ pause', resume:'▶ reprendre',
-    print:'🖨 imprimer', clear:'effacer', loop:'⟳ boucle', undo:'↩',
+    print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', loop:'⟳ boucle', undo:'↩',
     recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
     share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓',
     chordsPlay:'accords · appuyer pour jouer',
+    nameThisPiece:'nommer cette pièce…',
+    sizeWeb:'Web / Social', sizeWebHint:'~4× · rapide · partager en ligne',
+    sizePrint:'Impression A1 · 300 DPI', sizePrintHint:'~20× · gros fichier · prêt à imprimer',
+    saveLongPressHint:'appui long sur l\'image', saveLongPressTail:'pour « enregistrer dans photos » · ou capture iOS (Côté + Vol↑) en résolution écran',
+    saveRightClickHint:'clic droit sur l\'image', saveRightClickTail:'et choisir « enregistrer l\'image sous… »',
+    saveAlternative:'alternative :', saveAlternatives:'alternatives :',
     sLeft:'s restant',
     loadingPiano:' piano en chargement…', grandPiano:' piano à queue', synthPiano:' piano synthé',
     listenHint:'pointez le micro de cet appareil vers un autre qui joue de la musique — l\'audio interne est supprimé par iOS',
-    micDenied:'Accès au microphone refusé.', micUnavailable:'Microphone non disponible.',
+    micDenied:'Accès au microphone refusé. Pour activer : Réglages iOS → Safari → Microphone, ou toucher l\'icône cadenas dans la barre d\'adresse. Recharger ensuite.', micUnavailable:'Microphone non disponible.',
     recUnsupported:'Enregistrement non supporté.',
     recTooShort:'Enregistrement trop court — tenir au moins une seconde.',
     searchGuide:'rechercher dans le guide…', noMatches:'Aucun résultat pour',
@@ -1030,14 +1053,20 @@ const I18N = {
     sing:'🎤 CANTAR', singing:'🎤',
     listen:'🔊 ESCUCHAR', listening:'🔊 ESCUCHANDO…',
     play:'▶ tocar', pause:'⏸ pausa', resume:'▶ continuar',
-    print:'🖨 imprimir', clear:'borrar', loop:'⟳ bucle', undo:'↩',
+    print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', loop:'⟳ bucle', undo:'↩',
     recArm:'⏺ grabar', recStop:'⏹ graba…',
     share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓',
     chordsPlay:'acordes · pulsar para tocar',
+    nameThisPiece:'nombrar esta pieza…',
+    sizeWeb:'Web / Social', sizeWebHint:'~4× · rápido · compartir en línea',
+    sizePrint:'Impresión A1 · 300 DPI', sizePrintHint:'~20× · archivo grande · listo para imprimir',
+    saveLongPressHint:'mantén pulsada la imagen', saveLongPressTail:'para guardar en fotos · o captura iOS (Lateral + Vol↑) a resolución de pantalla',
+    saveRightClickHint:'clic derecho en la imagen', saveRightClickTail:'y elige "guardar imagen como…"',
+    saveAlternative:'alternativa:', saveAlternatives:'alternativas:',
     sLeft:'s restante',
     loadingPiano:' cargando piano…', grandPiano:' piano de cola', synthPiano:' piano sintetizador',
     listenHint:'apunta el micrófono de este dispositivo a otro que esté reproduciendo música — iOS suprime el audio del mismo teléfono',
-    micDenied:'Acceso al micrófono denegado.', micUnavailable:'Micrófono no disponible.',
+    micDenied:'Acceso al micrófono denegado. Para activar: Ajustes iOS → Safari → Micrófono, o toca el icono de candado en la barra de direcciones. Recarga después.', micUnavailable:'Micrófono no disponible.',
     recUnsupported:'Grabación no compatible.',
     recTooShort:'Grabación demasiado corta — mantener al menos un segundo.',
     searchGuide:'buscar en la guía…', noMatches:'Sin resultados para',
@@ -1309,6 +1338,10 @@ const SONG_LIBRARY = [
 ];
 
 const MOODS = ['funny','sad','aggressive','dreamy','love','nostalgic','calm','excited','crazy'];
+// Pre-built once at module load — MOOD names are language-independent, so the
+// <option> elements don't depend on any component state. Allocating these on
+// every render allocated 9 React elements per render for no reason.
+const MOOD_OPTIONS = MOODS.map(m => <option key={m} value={m}>{m}</option>);
 
 // Searchable in-app guide. Each entry: title, body, plus keywords to widen
 // the match surface for the search box. Sections are independent — order
@@ -1669,6 +1702,65 @@ function rerollSong(song) {
   };
 }
 
+// ─── Memoized keyboard keys ───────────────────────────────────────────────
+// The keyboard renders 52 white + 36 black keys. Before this extraction those
+// 88 divs re-rendered on every parent state change — including the 5-15Hz
+// `disp` tick during playback. Now each key has primitive props plus stable
+// callback refs only; React.memo skips reconciliation when nothing relevant
+// for THAT key changed.
+//
+// pressNote / releaseNote / setHoveredKey come from useCallback/useState and
+// have stable identity. pressInfo is a ref. snapped/busy/loadedMode are
+// primitives. The on-mouse/on-touch handlers are recreated per render of the
+// child, but that's fine — they only matter when the child actually renders,
+// which memo gates.
+
+const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered, isPending, hoverColor, busy, playing, loadedMode, pressNote, releaseNote, setHoveredKey, pressInfo}){
+  const wkBg = isActive
+    ? 'linear-gradient(180deg,#c9a84c,#a88830)'
+    : isPending
+      ? 'rgba(201,168,76,.3)'
+      : isHovered && hoverColor
+        ? `linear-gradient(180deg,rgba(${hoverColor[0]},${hoverColor[1]},${hoverColor[2]},0.28),rgba(${hoverColor[0]},${hoverColor[1]},${hoverColor[2]},0.18) 60%,rgba(240,235,220,1))`
+        : 'rgba(240,235,220,1)';
+  const disabled = busy || loadedMode;
+  return (
+    <div
+      onMouseDown={(e)=>{if(!disabled)pressNote(midi,e);}}
+      onMouseUp={()=>{if(!disabled)releaseNote(midi);}}
+      onMouseEnter={()=>{if(!busy)setHoveredKey(midi);}}
+      onMouseLeave={()=>{setHoveredKey(null);if(!disabled&&pressInfo.current[snapped])releaseNote(midi);}}
+      onTouchStart={(e)=>{e.preventDefault();if(!disabled)pressNote(midi,e);}}
+      onTouchEnd={(e)=>{e.preventDefault();if(!disabled)releaseNote(midi);}}
+      onTouchCancel={()=>{if(!disabled)releaseNote(midi);}}
+      style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:isActive?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
+      {midi%12===0?'C'+(Math.floor(midi/12)-1):''}
+    </div>
+  );
+});
+
+const BlackKey = memo(function BlackKey({midi, lw, snapped, isActive, isHovered, hoverColor, outOfScale, busy, playing, loadedMode, pressNote, releaseNote, setHoveredKey, pressInfo}){
+  const bkBg = isActive
+    ? 'linear-gradient(180deg,#7a5a00,#5a4000)'
+    : isHovered && hoverColor
+      ? `linear-gradient(180deg,rgba(${hoverColor[0]},${hoverColor[1]},${hoverColor[2]},0.7),rgba(${hoverColor[0]},${hoverColor[1]},${hoverColor[2]},0.4) 60%,#0a0a0a)`
+      : outOfScale
+        ? 'linear-gradient(180deg,#2a2a2a,#1a1a1a)'
+        : 'linear-gradient(180deg,#1a1a1a,#0a0a0a)';
+  const disabled = busy || loadedMode;
+  return (
+    <div
+      onMouseDown={(e)=>{if(!disabled)pressNote(midi,e);}}
+      onMouseUp={()=>{if(!disabled)releaseNote(midi);}}
+      onMouseEnter={()=>{if(!busy)setHoveredKey(midi);}}
+      onMouseLeave={()=>{setHoveredKey(null);if(!disabled&&pressInfo.current[snapped])releaseNote(midi);}}
+      onTouchStart={(e)=>{e.preventDefault();if(!disabled)pressNote(midi,e);}}
+      onTouchEnd={(e)=>{e.preventDefault();if(!disabled)releaseNote(midi);}}
+      onTouchCancel={()=>{if(!disabled)releaseNote(midi);}}
+      style={{position:'absolute',left:(lw+0.65)*WKW,top:0,width:BKW,height:BKH,background:bkBg,borderRadius:'0 0 4px 4px',border:'1px solid rgba(0,0,0,.7)',cursor:busy&&!playing?'default':'pointer',zIndex:2,boxShadow:isActive?'none':'2px 5px 10px rgba(0,0,0,.85)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}/>
+  );
+});
+
 export default function Paintiano() {
   const canvasRef    = useRef(null);
   const audioElRef   = useRef(null); // real audio playback in audio mode
@@ -1729,8 +1821,8 @@ export default function Paintiano() {
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);
-  const [lang, setLang] = useState(()=>localStorage.getItem('paintiano_lang')||'EN');
-  const t = (key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key;
+  const [lang, setLang] = useState(()=>{try{return localStorage.getItem('paintiano_lang')||'EN';}catch(_){return 'EN';}});
+  const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -1742,12 +1834,14 @@ export default function Paintiano() {
   const [debugMsg,  setDebugMsg]  = useState('');
   const [errInfo,   setErrInfo]   = useState(false);
 
-  // Auto-dismiss errors after a few seconds so they don't linger
+  // Auto-dismiss only informational warnings (errInfo=true, gold 𝄞). Serious
+  // errors (errInfo=false, red ✕) block work and stay until the user
+  // acknowledges them via the × button — they shouldn't vanish unnoticed.
   useEffect(()=>{
-    if(!err)return;
+    if(!err||!errInfo)return;
     const t=setTimeout(()=>{setErr('');setErrInfo(false);},6000);
     return()=>clearTimeout(t);
-  },[err]);
+  },[err,errInfo]);
 
   const [working,   setWorking]   = useState(false);
   const [wLabel,    setWLabel]    = useState('');
@@ -1786,6 +1880,19 @@ export default function Paintiano() {
   // Scale-snap is now hidden behind an advanced toggle. With 88 keys available
   // the user generally wants the real chromatic piano; snap is opt-in.
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // Tap-to-arm clear: first tap arms (red + label changes), second tap within
+  // 3 seconds actually clears. Auto-disarms if user doesn't follow through.
+  const [clearArmed, setClearArmed] = useState(false);
+  const clearArmRef = useRef(null);
+  // Same pattern for the demo link: if the canvas has content, ask once before
+  // replacing it with Für Elise. Empty canvas → demo fires immediately.
+  const [demoArmed, setDemoArmed] = useState(false);
+  const demoArmRef = useRef(null);
+  // A12: track which text input has focus so we can show a visible focus ring.
+  // Single string ('comp'|'guide'|null) keeps it cheap. The existing
+  // inputFocus.current ref is a boolean for piano-shortcut suppression — that
+  // stays as-is, this is a separate concern.
+  const [focusedInput, setFocusedInput] = useState(null);
   const [hoveredKey,   setHoveredKey]   = useState(null);
   const [playbackSpeed,setPlaybackSpeed]= useState(1);
   const [holdPaused,   setHoldPaused]   = useState(false); // true while button is held during playback
@@ -1815,6 +1922,15 @@ export default function Paintiano() {
   const [currentMood, setCurrentMood] = useState(null);
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
+  // Mood-hint flash: when the user taps a disabled morph/vary, the mood
+  // selector briefly pulses with a label above it pointing them there.
+  const [moodHint, setMoodHint] = useState(false);
+  const moodHintRef = useRef(null);
+  const flashMoodHint = useCallback(()=>{
+    setMoodHint(true);
+    if(moodHintRef.current) clearTimeout(moodHintRef.current);
+    moodHintRef.current = setTimeout(()=>{setMoodHint(false); moodHintRef.current=null;}, 2500);
+  },[]);
   const [compositionName, setCompositionName] = useState('');
   const loopModeRef = useRef(false);
   const [varySource, setVarySource] = useState(null);
@@ -1836,7 +1952,7 @@ export default function Paintiano() {
 
   // Cleanup the compose-commit debounce on unmount so it can't fire commit()
   // against a torn-down state tree.
-  useEffect(()=>()=>{clearTimeout(kbTimer.current);},[]);
+  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);},[]);
 
   useEffect(()=>{
     let dead=false;
@@ -2010,8 +2126,7 @@ export default function Paintiano() {
     if (!wrap) return;
     const c4 = WKEYS.find(k => k.midi === 60);
     if (!c4) return;
-    const WKW_LOCAL = 26;
-    const target = c4.wi * WKW_LOCAL - wrap.clientWidth / 2 + WKW_LOCAL / 2;
+    const target = c4.wi * WKW - wrap.clientWidth / 2 + WKW / 2;
     wrap.scrollLeft = Math.max(0, target);
   },[composeMode]);
 
@@ -2327,11 +2442,45 @@ export default function Paintiano() {
   useEffect(()=>{
     const map={a:60,w:61,s:62,e:63,d:64,f:65,t:66,g:67,y:68,h:69,u:70,j:71,k:72,o:73,l:74,p:75};
     const held=new Set();
-    const dn=e=>{if(inputFocus.current)return;if(e.key==='Backspace'&&composeMode){e.preventDefault();undoLast();return;}if(e.key===' '){e.preventDefault();handlePauseClickRef.current?.();return;}if(e.key==='Enter'){e.preventDefault();if(!composeMode){setComposeMode(true);}else{setComposeMode(false);}return;}const m=map[e.key];if(m&&!held.has(e.key)){held.add(e.key);pressNote(m);}};
+    // Skip the global keyboard piano shortcuts when focus is on an interactive
+    // element that handles Enter/Space itself (any button, link, role=button).
+    // Otherwise Space would both click the focused button AND trigger pause.
+    const isInteractive=()=>{
+      const a=document.activeElement;
+      if(!a||a===document.body)return false;
+      const tag=a.tagName;
+      if(tag==='BUTTON'||tag==='A')return true;
+      if(a.getAttribute&&a.getAttribute('role')==='button')return true;
+      return false;
+    };
+    const dn=e=>{
+      if(inputFocus.current)return;
+      if(e.key==='Backspace'&&composeMode){e.preventDefault();undoLast();return;}
+      if((e.key===' '||e.key==='Enter')&&isInteractive())return;
+      if(e.key===' '){e.preventDefault();handlePauseClickRef.current?.();return;}
+      if(e.key==='Enter'){e.preventDefault();if(!composeMode){setComposeMode(true);}else{setComposeMode(false);}return;}
+      const m=map[e.key];if(m&&!held.has(e.key)){held.add(e.key);pressNote(m);}
+    };
     const up=e=>held.delete(e.key);
     window.addEventListener('keydown',dn);window.addEventListener('keyup',up);
     return()=>{window.removeEventListener('keydown',dn);window.removeEventListener('keyup',up);};
   },[pressNote,composeMode,undoLast]);
+
+  // A1: Escape closes the topmost open modal. Order matches z-index: preview is
+  // on top (1100), then morphMenu / sizePicker / guide / about / pickMode.
+  useEffect(()=>{
+    const onEsc=(e)=>{
+      if(e.key!=='Escape')return;
+      if(preview){e.preventDefault();if(preview){try{URL.revokeObjectURL(preview.url);}catch(_){}}setPreview(null);return;}
+      if(showMorphMenu){e.preventDefault();setShowMorphMenu(false);return;}
+      if(showSizePicker){e.preventDefault();setShowSizePicker(false);return;}
+      if(showGuide){e.preventDefault();setShowGuide(false);setGuideQuery('');return;}
+      if(showAbout){e.preventDefault();setShowAbout(false);return;}
+      if(pickMode){e.preventDefault();setPickMode(null);return;}
+    };
+    window.addEventListener('keydown',onEsc);
+    return()=>window.removeEventListener('keydown',onEsc);
+  },[preview,showMorphMenu,showSizePicker,showGuide,showAbout,pickMode]);
 
   const clear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -3216,8 +3365,13 @@ Composition rules:
   };
 
   const{N,BW,BH,CW,CH}=grid;
-  const WKW=26,WKH=88,BKW=16,BKH=54,PW=WKEYS.length*WKW;
   const pct=info?Math.round(disp/Math.max(1,chords.length)*100):null;
+  // Pre-build a Set so each of the 88 white keys can do O(1) `.has()`
+  // instead of pending.includes() which would be O(88 * len(pending)).
+  const pendingSet = useMemo(() => new Set(pending), [pending]);
+  // Pre-compute the active scale's pitch-class set (or null when scale is
+  // disabled) so the 36 black keys don't each call paintScalePCs() twice.
+  const paintScaleSet = paintScale!=='off' ? paintScalePCs(paintScale) : null;
   const pianoColor={loading:'rgba(207,197,168,.35)',ready:'rgba(90,190,110,.55)',error:'rgba(201,168,76,.55)'};
   const pianoLabel={loading:t('loadingPiano'),ready:t('grandPiano'),error:t('synthPiano')};
   const changeLang=(l)=>{setLang(l);try{localStorage.setItem('paintiano_lang',l);}catch(_){}}
@@ -3314,7 +3468,21 @@ Composition rules:
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'48px 16px 220px':'48px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)',touchAction:'manipulation'}}>
       <div style={{textAlign:'center',marginBottom:18}}>
         <h1 style={{fontSize:'2.2rem',fontWeight:300,letterSpacing:'.18em',margin:'0 0 4px',color:'rgba(201,168,76,.9)',paddingLeft:'.18em'}}>Paintiano</h1>
-        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.7,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}><span onClick={()=>setShowAbout(true)} style={{cursor:'pointer',paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)',opacity:1}}>{t('concept')}</span> <span onClick={busy?undefined:demoPlay} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.55)',color:busy?'rgba(201,168,76,.25)':'rgba(201,168,76,.85)',opacity:1}}>{t('demo')}</span> <span onClick={()=>setShowGuide(true)} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>{t('guide')}</span><span style={{marginLeft:18,opacity:1}}><button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} style={{padding:'1px 5px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.45)',borderRadius:2,cursor:'pointer',fontSize:'.45rem',fontFamily:'inherit',letterSpacing:'.1em'}}>{lang}</button></span></p>
+        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.7,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}><span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)',opacity:1}}>{t('concept')}</span> <span onClick={()=>{
+          if(busy)return;
+          if(demoArmed){
+            if(demoArmRef.current){clearTimeout(demoArmRef.current);demoArmRef.current=null;}
+            setDemoArmed(false);
+            demoPlay();
+          }else if(!chords.length){
+            // Empty canvas — fire immediately, no confirm needed
+            demoPlay();
+          }else{
+            // Has content — ask once before replacing
+            setDemoArmed(true);
+            demoArmRef.current=setTimeout(()=>{setDemoArmed(false);demoArmRef.current=null;},3000);
+          }
+        }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.55)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.85)',opacity:1,transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span> <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>{t('guide')}</span><span style={{marginLeft:18,opacity:1}}><button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} style={{padding:'1px 5px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.45)',borderRadius:2,cursor:'pointer',fontSize:'.45rem',fontFamily:'inherit',letterSpacing:'.1em'}}>{lang}</button></span></p>
         <div style={{fontSize:'.55rem',letterSpacing:'.1em',opacity:.8,color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
       </div>
 
@@ -3334,17 +3502,23 @@ Composition rules:
       <div style={{display:'flex',gap:6,marginBottom:12,width:'100%',maxWidth:480,alignItems:'stretch'}}>
         <select
           value={songQ}
-          onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);aiMidi(e.target.value);}}}
+          onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);aiMidi(e.target.value);if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);}}}
           disabled={busy}
           title=""
-          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid rgba(201,168,76,.3)',borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:busy?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize'}}>
+          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid '+(moodHint?'rgba(220,170,255,.9)':'rgba(201,168,76,.3)'),borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':moodHint?'rgba(220,170,255,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:busy?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize',boxShadow:moodHint?'0 0 16px rgba(220,150,255,.35)':'none',transition:'border-color .2s ease, color .2s ease, box-shadow .2s ease'}}>
           <option value="">✦ {t('selectMood').replace('✦ ','')}</option>
           {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
-          {MOODS.map(m=><option key={m} value={m}>{m}</option>)}
+          {MOOD_OPTIONS}
         </select>
-        <button onClick={()=>chords.length&&!busy&&currentMood&&setShowMorphMenu(true)} disabled={!chords.length||busy||!currentMood} title={!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy?'rgba(220,170,255,.9)':'rgba(220,150,255,.2)'})}>{t('morph')}</button>
         <button onClick={()=>{
-          if(busy||!varySource)return;
+          if(busy)return;
+          if(!currentMood){flashMoodHint();return;}
+          if(!chords.length)return;
+          setShowMorphMenu(true);
+        }} title={!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy?'rgba(220,170,255,.9)':'rgba(220,150,255,.35)'})}>{t('morph')}</button>
+        <button onClick={()=>{
+          if(busy)return;
+          if(!varySource){flashMoodHint();return;}
           const varied=rerollSong(varySource);
           if(!varied)return;
           setVarySource(varied);
@@ -3356,7 +3530,7 @@ Composition rules:
           setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
           setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
           setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
-        }} disabled={!varySource||busy} title={!varySource?t('pickMoodFirst'):t('reroll')} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.2)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy?1:.35}}>{t('vary')}</button>
+        }} title={!varySource?t('pickMoodFirst'):t('reroll')} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy?'rgba(255,210,140,.9)':'rgba(255,200,120,.35)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy?1:.55}}>{t('vary')}</button>
       </div>
 
       <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,alignItems:'center'}}>
@@ -3379,7 +3553,7 @@ Composition rules:
 
       {preview && (
         <div onClick={closePreview} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1100,padding:10,overflow:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="image preview" style={{maxWidth:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
             <div style={{letterSpacing:'.12em',color:'rgba(201,168,76,.85)',fontSize:'.65rem',textAlign:'center'}}>🖨 {preview.w}×{preview.h}{preview.dpi?` · ${preview.dpi}dpi`:''}{preview.label?' · '+preview.label:''} · {(preview.size/1024/1024).toFixed(1)} MB</div>
             {compositionName.trim()&&(<div style={{fontSize:'.6rem',color:'rgba(201,168,76,.6)',textAlign:'center',letterSpacing:'.08em'}}>{compositionName}</div>)}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'center'}}>
@@ -3402,7 +3576,9 @@ Composition rules:
             <img src={preview.url} alt={preview.filename} style={{maxWidth:'100%',maxHeight:'50vh',border:'1px solid rgba(201,168,76,.25)',borderRadius:4,display:'block',WebkitTouchCallout:'default'}}/>
             <div style={{fontSize:'.5rem',color:'rgba(180,170,150,.4)',textAlign:'center',wordBreak:'break-all',padding:'0 8px',maxWidth:340}}>{preview.filename}</div>
             <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 14px',maxWidth:340,lineHeight:1.5}}>
-              alternatives: <b>long-press the image</b> for Save to Photos · or an iOS screenshot (Side + Vol↑) at screen resolution
+              {(typeof navigator!=='undefined'&&navigator.share)
+                ? <>{t('saveAlternatives')} <b>{t('saveLongPressHint')}</b> {t('saveLongPressTail')}</>
+                : <>{t('saveAlternative')} <b>{t('saveRightClickHint')}</b> {t('saveRightClickTail')}</>}
             </div>
             <button onClick={closePreview} style={{padding:'8px 22px',background:'transparent',color:'rgba(207,197,168,.6)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:'.55rem',textTransform:'uppercase',marginTop:4}}>close</button>
           </div>
@@ -3411,7 +3587,7 @@ Composition rules:
 
       {pickMode && (
         <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:'.65rem'}}>
               {pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):t('imageInput')}
             </div>
@@ -3446,8 +3622,9 @@ Composition rules:
       )}
 
       {err && (
-        <div style={{width:'100%',maxWidth:480,marginBottom:10,fontSize:'.6rem',lineHeight:1.5,textAlign:'left',padding:'8px 12px',borderRadius:2,maxHeight:240,overflow:'auto',wordBreak:'break-word',fontFamily:'monospace',color:errInfo?'rgba(201,168,76,.85)':'rgba(255,100,80,.85)',border:errInfo?'1px solid rgba(201,168,76,.25)':'1px solid rgba(255,100,80,.2)'}}>
-          {errInfo?'𝄞 ':'✕ '}{err}
+        <div role={errInfo?'status':'alert'} aria-live={errInfo?'polite':'assertive'} style={{width:'100%',maxWidth:480,marginBottom:10,fontSize:'.6rem',lineHeight:1.5,textAlign:'left',padding:'8px 12px',borderRadius:2,maxHeight:240,overflow:'auto',wordBreak:'break-word',fontFamily:'monospace',color:errInfo?'rgba(201,168,76,.85)':'rgba(255,100,80,.85)',border:errInfo?'1px solid rgba(201,168,76,.25)':'1px solid rgba(255,100,80,.2)',display:'flex',alignItems:'flex-start',gap:8}}>
+          <span style={{flex:1}}>{errInfo?'𝄞 ':'✕ '}{err}</span>
+          <button onClick={()=>{setErr('');setErrInfo(false);}} aria-label="dismiss" style={{flexShrink:0,background:'transparent',border:'none',color:'inherit',opacity:.5,cursor:'pointer',fontSize:'.85rem',lineHeight:1,padding:'0 4px',fontFamily:'inherit'}}>×</button>
         </div>
       )}
 
@@ -3533,9 +3710,9 @@ Composition rules:
           <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} style={{display:'block',maxWidth:'100%',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal'}}/>
-        <canvas ref={visualizerRef} width={CW} height={CH} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
-        <canvas ref={highlightCanvasRef} width={CW} height={CH} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',maxWidth:'100%',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal'}}/>
+        <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
+        <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {chords.length===0&&(
           <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
             <div style={{opacity:composeMode?.22:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':'inherit'}}>
@@ -3553,27 +3730,28 @@ Composition rules:
 
       {showSizePicker && (
         <div onClick={()=>setShowSizePicker(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'#0a0a14',border:'1px solid rgba(200,160,255,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export size" style={{background:'#0a0a14',border:'1px solid rgba(200,160,255,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:'rgba(200,160,255,.75)',fontSize:'.65rem'}}>
               🖨 {t('print').replace('🖨 ','')}</div>
             <input
               type="text"
               value={compositionName}
               onChange={e=>setCompositionName(e.target.value)}
-              onFocus={()=>{inputFocus.current=true;}}
-              onBlur={()=>{inputFocus.current=false;}}
-              placeholder="name this piece…"
+              onFocus={()=>{inputFocus.current=true;setFocusedInput('comp');}}
+              onBlur={()=>{inputFocus.current=false;setFocusedInput(null);}}
+              placeholder={t('nameThisPiece')}
               maxLength={80}
-              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:'.72rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14}}
+              aria-label={t('nameThisPiece')}
+              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid '+(focusedInput==='comp'?'rgba(201,168,76,.85)':'rgba(201,168,76,.35)'),borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:'.72rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14,boxShadow:focusedInput==='comp'?'0 0 0 2px rgba(201,168,76,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
             />
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:'.72rem'}}>
-                🖥 {t('sizeWeb')||'Web / Social'}
-                <div style={{fontSize:'.52rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>~4× · fast · share online</div>
+                🖥 {t('sizeWeb')}
+                <div style={{fontSize:'.52rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
               </button>
               <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:'.72rem'}}>
-                🖨 {t('sizePrint')||'Print A1 · 300 DPI'}
-                <div style={{fontSize:'.52rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>~20× · large file · print-ready</div>
+                🖨 {t('sizePrint')}
+                <div style={{fontSize:'.52rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
               </button>
               <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.6rem',marginTop:4}}>
                 {t('cancel')}
@@ -3585,9 +3763,9 @@ Composition rules:
 
       {showAbout && (
         <div onClick={()=>setShowAbout(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
-            <button onClick={()=>setShowAbout(false)} style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-            <div style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
+            <button onClick={()=>setShowAbout(false)} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
+            <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
             {CONCEPT_I18N[lang]||CONCEPT_I18N.EN}
             <button onClick={()=>setShowAbout(false)} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
           </div>
@@ -3596,22 +3774,23 @@ Composition rules:
 
       {showGuide && (
         <div onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
-            <button onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-            <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
+            <button onClick={()=>{setShowGuide(false);setGuideQuery('');}} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
+            <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
             <input
               type="search"
               value={guideQuery}
               onChange={e=>setGuideQuery(e.target.value)}
-              onFocus={()=>{inputFocus.current=true;}}
-              onBlur={()=>{inputFocus.current=false;}}
+              onFocus={()=>{inputFocus.current=true;setFocusedInput('guide');}}
+              onBlur={()=>{inputFocus.current=false;setFocusedInput(null);}}
               placeholder={t('searchGuide')}
               autoCapitalize="off"
               autoComplete="off"
               spellCheck={false}
               inputMode="search"
               enterKeyHint="search"
-              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid rgba(140,200,255,.3)',borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:'.78rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none'}}
+              aria-label={t('searchGuide')}
+              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:'.78rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
             />
             {(() => {
               const matches = getGuide(lang).filter(e => guideMatch(e, guideQuery));
@@ -3632,7 +3811,7 @@ Composition rules:
 
       {showMorphMenu && (
         <div onClick={()=>setShowMorphMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(220,150,255,.35)',borderRadius:8,padding:'22px 18px'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="morph mood" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(220,150,255,.35)',borderRadius:8,padding:'22px 18px'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:'rgba(220,170,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>✦ morph {currentMood} into…</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {MOODS.filter(m=>m!==currentMood).map(m=>(
@@ -3734,74 +3913,92 @@ Composition rules:
           const label=spd===0.5?'½×':spd===1?'1×':`${spd}×`;
           return(
             <span style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 8px',border:'1px solid rgba(201,168,76,.2)',borderRadius:5}} title="playback speed">
-              <button onClick={()=>setSpd(1)} style={{padding:'4px 7px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:4,cursor:spd===1?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit'}}>{label}</button>
+              <button onClick={()=>setSpd(1)} aria-label="reset speed to 1×" style={{padding:'4px 7px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:4,cursor:spd===1?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit'}}>{label}</button>
               <input type="range" min={lo} max={2} step={0.05} value={spd}
                 onChange={e=>setSpd(parseFloat(e.target.value))}
+                aria-label="playback speed"
                 style={{width:80,accentColor:GOLD,cursor:'pointer'}}/>
             </span>
           );
         })()}
-        <button onClick={clear} style={{padding:'7px 10px',background:'transparent',color:'rgba(207,197,168,.65)',border:'1px solid rgba(207,197,168,.35)',borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>{t('clear')}</button>
+        <button onClick={()=>{
+          if(clearArmed){
+            // Second tap — actually clear
+            if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
+            setClearArmed(false);
+            clear();
+          }else{
+            // First tap — arm. If the canvas is already empty, skip the dance.
+            if(!chords.length){clear();return;}
+            setClearArmed(true);
+            clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
+          }
+        }} style={{padding:'7px 10px',background:clearArmed?'rgba(220,90,90,.15)':'transparent',color:clearArmed?'rgba(255,140,120,.95)':'rgba(207,197,168,.65)',border:'1px solid '+(clearArmed?'rgba(255,90,90,.55)':'rgba(207,197,168,.35)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem',transition:'background .15s ease, color .15s ease, border-color .15s ease'}}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
         {composeMode&&(
-          <button onClick={undoLast} disabled={!chords.length||playing} title="remove last chord (Backspace)" style={{padding:'7px 10px',background:'transparent',color:chords.length&&!playing?'rgba(207,197,168,.65)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!playing?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:5,cursor:chords.length&&!playing?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>↩</button>
+          <button onClick={undoLast} disabled={!chords.length||playing} aria-label="remove last chord" title="remove last chord (Backspace)" style={{padding:'7px 10px',background:'transparent',color:chords.length&&!playing?'rgba(207,197,168,.65)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!playing?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:5,cursor:chords.length&&!playing?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>↩</button>
         )}
       </div>
-      <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',paddingBottom:4,display:composeMode?'block':'none'}}>
+      {composeMode && (
+      <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',paddingBottom:4}}>
         <div style={{position:'relative',width:PW,height:WKH,userSelect:'none',opacity:loadedMode?0.25:(busy&&!playing?0.4:1),filter:loadedMode?'grayscale(0.6)':'none',pointerEvents:loadedMode?'none':'auto'}}>
           {WKEYS.map(({midi,wi})=>{
+            const isActive=active.has(midi);
+            const isHovered=hoveredKey===midi&&!busy&&!isActive;
             const snapped=paintSnapMidi(midi,paintScale);
-            const isHovered=hoveredKey===midi&&!busy&&!active.has(midi);
-            const [hr,hg,hb]=isHovered?gc(snapped,88).slice(0,3):[0,0,0];
-            const wkBg=active.has(midi)
-              ?'linear-gradient(180deg,#c9a84c,#a88830)'
-              :pending.includes(midi)
-                ?'rgba(201,168,76,.3)'
-                :isHovered
-                  ?`linear-gradient(180deg,rgba(${hr},${hg},${hb},0.28),rgba(${hr},${hg},${hb},0.18) 60%,rgba(240,235,220,1))`
-                  :'rgba(240,235,220,1)';
+            // hoverColor is only computed when hovered, so most renders skip gc()
+            const hoverColor=isHovered?gc(snapped,88).slice(0,3):null;
             return(
-            <div key={midi}
-              onMouseDown={e=>!busy&&!loadedMode&&pressNote(midi,e)}
-              onMouseUp={()=>!busy&&!loadedMode&&releaseNote(midi)}
-              onMouseEnter={()=>!busy&&setHoveredKey(midi)}
-              onMouseLeave={()=>{setHoveredKey(null);if(!busy&&!loadedMode&&pressInfo.current[paintSnapMidi(midi,paintScale)])releaseNote(midi);}}
-              onTouchStart={e=>{e.preventDefault();if(!busy&&!loadedMode)pressNote(midi,e);}}
-              onTouchEnd={e=>{e.preventDefault();if(!busy&&!loadedMode)releaseNote(midi);}}
-              onTouchCancel={e=>{if(!busy&&!loadedMode)releaseNote(midi);}}
-              style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:active.has(midi)?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
-              {midi%12===0?'C'+(Math.floor(midi/12)-1):''}
-            </div>
+              <WhiteKey
+                key={midi}
+                midi={midi}
+                wi={wi}
+                snapped={snapped}
+                isActive={isActive}
+                isHovered={isHovered}
+                isPending={pendingSet.has(midi)}
+                hoverColor={hoverColor}
+                busy={busy}
+                playing={playing}
+                loadedMode={loadedMode}
+                pressNote={pressNote}
+                releaseNote={releaseNote}
+                setHoveredKey={setHoveredKey}
+                pressInfo={pressInfo}
+              />
             );
           })}
           {BKEYS.map(({midi,lw})=>{
+            const isActive=active.has(midi);
+            const isHovered=hoveredKey===midi&&!busy&&!isActive;
             const snapped=paintSnapMidi(midi,paintScale);
-            const isHovered=hoveredKey===midi&&!busy&&!active.has(midi);
-            const [hr,hg,hb]=isHovered?gc(snapped,88).slice(0,3):[0,0,0];
-            const outOfScale=paintScale!=='off'&&paintScalePCs(paintScale)&&!paintScalePCs(paintScale).includes(midi%12);
-            const bkBg=active.has(midi)
-              ?'linear-gradient(180deg,#7a5a00,#5a4000)'
-              :isHovered
-                ?`linear-gradient(180deg,rgba(${hr},${hg},${hb},0.7),rgba(${hr},${hg},${hb},0.4) 60%,#0a0a0a)`
-                :outOfScale
-                  ?'linear-gradient(180deg,#2a2a2a,#1a1a1a)'
-                  :'linear-gradient(180deg,#1a1a1a,#0a0a0a)';
+            const hoverColor=isHovered?gc(snapped,88).slice(0,3):null;
+            const outOfScale=paintScaleSet!==null&&!paintScaleSet.includes(midi%12);
             return(
-            <div key={midi}
-              onMouseDown={e=>!busy&&!loadedMode&&pressNote(midi,e)}
-              onMouseUp={()=>!busy&&!loadedMode&&releaseNote(midi)}
-              onMouseEnter={()=>!busy&&setHoveredKey(midi)}
-              onMouseLeave={()=>{setHoveredKey(null);if(!busy&&!loadedMode&&pressInfo.current[paintSnapMidi(midi,paintScale)])releaseNote(midi);}}
-              onTouchStart={e=>{e.preventDefault();if(!busy&&!loadedMode)pressNote(midi,e);}}
-              onTouchEnd={e=>{e.preventDefault();if(!busy&&!loadedMode)releaseNote(midi);}}
-              onTouchCancel={e=>{if(!busy&&!loadedMode)releaseNote(midi);}}
-              style={{position:'absolute',left:(lw+0.65)*WKW,top:0,width:BKW,height:BKH,background:bkBg,borderRadius:'0 0 4px 4px',border:'1px solid rgba(0,0,0,.7)',cursor:busy&&!playing?'default':'pointer',zIndex:2,boxShadow:active.has(midi)?'none':'2px 5px 10px rgba(0,0,0,.85)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}/>
+              <BlackKey
+                key={midi}
+                midi={midi}
+                lw={lw}
+                snapped={snapped}
+                isActive={isActive}
+                isHovered={isHovered}
+                hoverColor={hoverColor}
+                outOfScale={outOfScale}
+                busy={busy}
+                playing={playing}
+                loadedMode={loadedMode}
+                pressNote={pressNote}
+                releaseNote={releaseNote}
+                setHoveredKey={setHoveredKey}
+                pressInfo={pressInfo}
+              />
             );
           })}
         </div>
       </div>
+      )}
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.27</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.44</div>
     </div>
   );
 }
