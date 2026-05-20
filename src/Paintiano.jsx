@@ -943,7 +943,7 @@ const I18N = {
     chordsPlay:'chords · tap to play',
     sLeft:'s left',
     loadingPiano:' loading piano…', grandPiano:' grand piano', synthPiano:' synth piano',
-    listenHint:'best with external speaker or another device — iOS suppresses same-phone audio',
+    listenHint:'point this device\'s mic at another playing music — same-phone audio is suppressed by iOS',
     micDenied:'Microphone access denied.', micUnavailable:'Microphone not available in this browser.',
     recUnsupported:'Recording not supported in this browser.',
     recTooShort:'Recording was too short — hold rec for at least a second.',
@@ -974,7 +974,7 @@ const I18N = {
     chordsPlay:'akkorde · zum spielen tippen',
     sLeft:'s übrig',
     loadingPiano:' klavier lädt…', grandPiano:' flügel', synthPiano:' synth-klavier',
-    listenHint:'am besten mit externem lautsprecher — iOS unterdrückt eigenes audio',
+    listenHint:'mikrofon dieses geräts auf ein anderes richten, das musik spielt — eigenes audio wird von iOS unterdrückt',
     micDenied:'Mikrofonzugriff verweigert.', micUnavailable:'Mikrofon nicht verfügbar.',
     recUnsupported:'Aufnahme wird nicht unterstützt.',
     recTooShort:'Aufnahme zu kurz — mindestens eine Sekunde halten.',
@@ -1005,7 +1005,7 @@ const I18N = {
     chordsPlay:'accords · appuyer pour jouer',
     sLeft:'s restant',
     loadingPiano:' piano en chargement…', grandPiano:' piano à queue', synthPiano:' piano synthé',
-    listenHint:'idéal avec un haut-parleur externe — iOS supprime l\'audio interne',
+    listenHint:'pointez le micro de cet appareil vers un autre qui joue de la musique — l\'audio interne est supprimé par iOS',
     micDenied:'Accès au microphone refusé.', micUnavailable:'Microphone non disponible.',
     recUnsupported:'Enregistrement non supporté.',
     recTooShort:'Enregistrement trop court — tenir au moins une seconde.',
@@ -1036,7 +1036,7 @@ const I18N = {
     chordsPlay:'acordes · pulsar para tocar',
     sLeft:'s restante',
     loadingPiano:' cargando piano…', grandPiano:' piano de cola', synthPiano:' piano sintetizador',
-    listenHint:'mejor con altavoz externo — iOS suprime el audio propio',
+    listenHint:'apunta el micrófono de este dispositivo a otro que esté reproduciendo música — iOS suprime el audio del mismo teléfono',
     micDenied:'Acceso al micrófono denegado.', micUnavailable:'Micrófono no disponible.',
     recUnsupported:'Grabación no compatible.',
     recTooShort:'Grabación demasiado corta — mantener al menos un segundo.',
@@ -1143,7 +1143,53 @@ const SONGS=[
   {keys:['amazing grace','amazing'],title:'Amazing Grace',artist:'Traditional',n:[[55,0,400,70],[60,800,200,70],[64,1000,400,75],[60,1400,200,70],[64,1600,200,70],[62,1800,400,75],[60,2200,400,75],[55,2600,400,70]]},
 ];
 
-function fftMag(buf){const N=buf.length,re=new Float32Array(N),im=new Float32Array(N);for(let i=0;i<N;i++)re[i]=buf[i]*(0.5-0.5*Math.cos(2*Math.PI*i/N));for(let i=1,j=0;i<N;i++){let bit=N>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}for(let len=2;len<=N;len<<=1){const ang=2*Math.PI/len;for(let i=0;i<N;i+=len){let cr=1,ci=0;const wR=Math.cos(ang),wI=-Math.sin(ang);for(let k=0;k<len/2;k++){const vR=re[i+k+len/2]*cr-im[i+k+len/2]*ci,vI=re[i+k+len/2]*ci+im[i+k+len/2]*cr;re[i+k+len/2]=re[i+k]-vR;im[i+k+len/2]=im[i+k]-vI;re[i+k]+=vR;im[i+k]+=vI;const nr=cr*wR-ci*wI;ci=cr*wI+ci*wR;cr=nr;}}}const mag=new Float32Array(N/2);for(let i=0;i<N/2;i++)mag[i]=Math.sqrt(re[i]*re[i]+im[i]*im[i]);return mag;}
+// Reusable FFT buffers — sized for the largest caller (mic-listen uses N=4096).
+// fftMag is always run synchronously by a single caller that consumes the
+// returned `mag` before the next fftMag call, so module-level sharing is safe.
+const _FFT_MAX = 4096;
+const _FFT_RE  = new Float32Array(_FFT_MAX);
+const _FFT_IM  = new Float32Array(_FFT_MAX);
+const _FFT_MAG = new Float32Array(_FFT_MAX / 2);
+
+function fftMag(buf) {
+  const N = buf.length;
+  const re = _FFT_RE, im = _FFT_IM;
+  // Re-init the buffers for this call. im is fully zeroed; re is overwritten
+  // by the Hann-windowed input below.
+  for (let i = 0; i < N; i++) { re[i] = buf[i] * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / N)); im[i] = 0; }
+  // Bit-reversal permutation
+  for (let i = 1, j = 0; i < N; i++) {
+    let bit = N >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+  }
+  // Iterative Cooley-Tukey
+  for (let len = 2; len <= N; len <<= 1) {
+    const ang = 2 * Math.PI / len;
+    for (let i = 0; i < N; i += len) {
+      let cr = 1, ci = 0;
+      const wR = Math.cos(ang), wI = -Math.sin(ang);
+      for (let k = 0; k < len / 2; k++) {
+        const vR = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci;
+        const vI = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr;
+        re[i + k + len / 2] = re[i + k] - vR;
+        im[i + k + len / 2] = im[i + k] - vI;
+        re[i + k] += vR;
+        im[i + k] += vI;
+        const nr = cr * wR - ci * wI;
+        ci = cr * wI + ci * wR;
+        cr = nr;
+      }
+    }
+  }
+  // Magnitude — first N/2 bins. We return a subarray (a view into _FFT_MAG),
+  // which is allocation-free; callers must finish reading before fftMag is
+  // called again.
+  const mag = _FFT_MAG;
+  for (let i = 0; i < N / 2; i++) mag[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]);
+  return mag.subarray(0, N / 2);
+}
 function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
 // Reusable typed-array buffers — module-level so transcribeAudio doesn't
 // allocate ~15K Float32Arrays during a long file import. JS is single-threaded
@@ -1788,6 +1834,10 @@ export default function Paintiano() {
   const loadedMode = !!info && !composeMode && !micPainting && !micListening;
   const composedModeRef = useRef(false);
 
+  // Cleanup the compose-commit debounce on unmount so it can't fire commit()
+  // against a torn-down state tree.
+  useEffect(()=>()=>{clearTimeout(kbTimer.current);},[]);
+
   useEffect(()=>{
     let dead=false;
     let s=null;
@@ -1868,7 +1918,10 @@ export default function Paintiano() {
       ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
       ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
-      lastPaintRef.current={...prev,pending,disp:lim};
+      // Mutate in place — the ref isn't React state, identity doesn't matter,
+      // and this skips an object spread on every keystroke during compose.
+      prev.pending = pending;
+      prev.disp = lim;
       return;
     }
     const canAppend =
@@ -2062,6 +2115,9 @@ export default function Paintiano() {
   // Reads everything through refs so the callback stays stable.
   useEffect(() => {
     let raf;
+    // Cache the highlight color per chord. The reduce-and-slice was running
+    // 60×/sec on a value that only changes when the chord changes.
+    let cachedIdx = -1, cachedR = 0, cachedG = 0, cachedB = 0;
     const tick = () => {
       const canvas = highlightCanvasRef.current;
       // Early-out when idle — no playback, nothing to highlight. Skips the
@@ -2090,16 +2146,20 @@ export default function Paintiano() {
             const ch = cell ? cell.h : BH;
             // Pulse: smooth sine wave 0→1→0 over 600ms
             const pulse = (Math.sin(performance.now() / 600 * Math.PI * 2 - Math.PI / 2) + 1) / 2;
-            // Derive colour from the chord's highest-velocity note
-            const note = chord.n.reduce((a, b) => b.v > a.v ? b : a, chord.n[0]);
-            const [r, g, b] = gc(note.m, note.v).slice(0, 3);
+            // Recompute color only when the chord changes.
+            if (chord.idx !== cachedIdx) {
+              cachedIdx = chord.idx;
+              const note = chord.n.reduce((a, b) => b.v > a.v ? b : a, chord.n[0]);
+              const c = gc(note.m, note.v);
+              cachedR = c[0]; cachedG = c[1]; cachedB = c[2];
+            }
             const alpha = 0.35 + pulse * 0.55;
             const lw = 1.5 + pulse * 1.5;
-            ctx.strokeStyle = `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+            ctx.strokeStyle = `rgba(${cachedR},${cachedG},${cachedB},${alpha.toFixed(3)})`;
             ctx.lineWidth = lw;
             ctx.strokeRect(cx + lw / 2, cy + lw / 2, cw - lw, ch - lw);
             // Inner glow fill
-            ctx.fillStyle = `rgba(${r},${g},${b},${(pulse * 0.07).toFixed(3)})`;
+            ctx.fillStyle = `rgba(${cachedR},${cachedG},${cachedB},${(pulse * 0.07).toFixed(3)})`;
             ctx.fillRect(cx + lw, cy + lw, cw - lw * 2, ch - lw * 2);
           }
         }
@@ -2219,7 +2279,7 @@ export default function Paintiano() {
     pressInfo.current[midi]={pressTime:performance.now(),vel};
     if(!pendingRef.current.includes(midi)){pendingRef.current=[...pendingRef.current,midi];setPending([...pendingRef.current]);}
     clearTimeout(kbTimer.current);kbTimer.current=setTimeout(commit,KB_WIN);
-    setActive(p=>new Set([...p,midi]));
+    setActive(p=>{const s=new Set(p);s.add(midi);return s;});
   },[playNote,commit,paintScale]);
 
   // Release: compute actual hold duration, patch the chord's note durMs.
@@ -2716,7 +2776,7 @@ Composition rules:
               return{m,scaledDur};
             });
             // Batch add all notes in this chord in one state update
-            setActive(p=>new Set([...p,...midis.map(x=>x.m)]));
+            setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
             // Group removes by clamped duration to minimise state updates
             const byDur={};
             for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
@@ -2757,7 +2817,7 @@ Composition rules:
             if(viewMode!=='audio') playNote(m,v,scaledDur);
             return{m,scaledDur};
           });
-          setActive(p=>new Set([...p,...midis.map(x=>x.m)]));
+          setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
           const byDur={};
           for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
           for(const[t,ms]of Object.entries(byDur)){
@@ -3015,7 +3075,7 @@ Composition rules:
             prevChordSig=sig;
             // Highlight active keys
             notes.forEach(({m})=>{
-              setActive(p=>new Set([...p,m]));
+              setActive(p=>{const s=new Set(p);s.add(m);return s;});
               pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),sustainMs);
             });
             // Paint
@@ -3082,7 +3142,7 @@ Composition rules:
           const notes=[{m:snapped,v:Math.max(50,Math.min(120,Math.round(top.mag*110))),durMs:sustainMs}];
           // Play and highlight
           playNote(snapped,notes[0].v,sustainMs);
-          setActive(p=>new Set([...p,snapped]));
+          setActive(p=>{const s=new Set(p);s.add(snapped);return s;});
           pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(snapped);return s;}),Math.min(sustainMs,1000));
           // Paint
           const idx=idxRef.current++;
@@ -3251,7 +3311,7 @@ Composition rules:
   };
 
   return (
-    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'48px 16px 220px':'48px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)'}}>
+    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'48px 16px 220px':'48px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)',touchAction:'manipulation'}}>
       <div style={{textAlign:'center',marginBottom:18}}>
         <h1 style={{fontSize:'2.2rem',fontWeight:300,letterSpacing:'.18em',margin:'0 0 4px',color:'rgba(201,168,76,.9)',paddingLeft:'.18em'}}>Paintiano</h1>
         <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.7,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}><span onClick={()=>setShowAbout(true)} style={{cursor:'pointer',paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)',opacity:1}}>{t('concept')}</span> <span onClick={busy?undefined:demoPlay} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.55)',color:busy?'rgba(201,168,76,.25)':'rgba(201,168,76,.85)',opacity:1}}>{t('demo')}</span> <span onClick={()=>setShowGuide(true)} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>{t('guide')}</span><span style={{marginLeft:18,opacity:1}}><button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} style={{padding:'1px 5px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.45)',borderRadius:2,cursor:'pointer',fontSize:'.45rem',fontFamily:'inherit',letterSpacing:'.1em'}}>{lang}</button></span></p>
@@ -3301,7 +3361,7 @@ Composition rules:
 
       <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,alignItems:'center'}}>
         <div style={{display:'flex',gap:4,justifyContent:'center'}}>
-          <input ref={refMidi} type="file" accept=".mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
+          <input ref={refMidi} type="file" accept="audio/midi,audio/x-midi,application/octet-stream,.mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
           <button onClick={()=>{fullClear();setPickMode('midi');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:'rgba(140,180,255,.8)'})}>{t('midi')}</button>
           <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
           <button onClick={()=>{fullClear();setPickMode('audio');}} disabled={busy} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':t('audio')}</button>
@@ -3445,7 +3505,7 @@ Composition rules:
         </div>
       )}
 
-      <div style={{position:'relative',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center'}}
+      <div style={{position:'relative',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none'}}
         onClick={e=>{
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
@@ -3461,7 +3521,7 @@ Composition rules:
           if(!hit)return;
           Tone.start();
           const midis=hit.n.map(({m,v,durMs})=>{playNote(m,v,durMs||300);return{m,dur:durMs||300};});
-          setActive(p=>new Set([...p,...midis.map(x=>x.m)]));
+          setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
           const byDur={};
           for(const{m,dur}of midis){const t=Math.min(dur,800);(byDur[t]||(byDur[t]=[])).push(m);}
           for(const[t,ms]of Object.entries(byDur)){
@@ -3549,6 +3609,8 @@ Composition rules:
               autoCapitalize="off"
               autoComplete="off"
               spellCheck={false}
+              inputMode="search"
+              enterKeyHint="search"
               style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid rgba(140,200,255,.3)',borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:'.78rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none'}}
             />
             {(() => {
@@ -3617,7 +3679,7 @@ Composition rules:
             <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
           </div>
           {recBlob.type&&recBlob.type.includes('webm')&&(
-            <div style={{fontSize:'.48rem',color:'rgba(255,180,120,.55)',letterSpacing:'.04em'}}>webm/opus format · plays in Chrome, VLC — not Windows Media Player</div>
+            <div style={{fontSize:'.48rem',color:'rgba(255,180,120,.55)',letterSpacing:'.04em'}}>webm/opus format · plays in most apps and browsers; some older Windows players may not open it</div>
           )}
         </div>
       )}
@@ -3707,7 +3769,7 @@ Composition rules:
               onTouchStart={e=>{e.preventDefault();if(!busy&&!loadedMode)pressNote(midi,e);}}
               onTouchEnd={e=>{e.preventDefault();if(!busy&&!loadedMode)releaseNote(midi);}}
               onTouchCancel={e=>{if(!busy&&!loadedMode)releaseNote(midi);}}
-              style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:active.has(midi)?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease'}}>
+              style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:active.has(midi)?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
               {midi%12===0?'C'+(Math.floor(midi/12)-1):''}
             </div>
             );
@@ -3733,13 +3795,13 @@ Composition rules:
               onTouchStart={e=>{e.preventDefault();if(!busy&&!loadedMode)pressNote(midi,e);}}
               onTouchEnd={e=>{e.preventDefault();if(!busy&&!loadedMode)releaseNote(midi);}}
               onTouchCancel={e=>{if(!busy&&!loadedMode)releaseNote(midi);}}
-              style={{position:'absolute',left:(lw+0.65)*WKW,top:0,width:BKW,height:BKH,background:bkBg,borderRadius:'0 0 4px 4px',border:'1px solid rgba(0,0,0,.7)',cursor:busy&&!playing?'default':'pointer',zIndex:2,boxShadow:active.has(midi)?'none':'2px 5px 10px rgba(0,0,0,.85)',transition:'background .08s ease'}}/>
+              style={{position:'absolute',left:(lw+0.65)*WKW,top:0,width:BKW,height:BKH,background:bkBg,borderRadius:'0 0 4px 4px',border:'1px solid rgba(0,0,0,.7)',cursor:busy&&!playing?'default':'pointer',zIndex:2,boxShadow:active.has(midi)?'none':'2px 5px 10px rgba(0,0,0,.85)',transition:'background .08s ease',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}/>
             );
           })}
         </div>
       </div>
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.25</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.27</div>
     </div>
   );
 }
