@@ -1597,6 +1597,7 @@ export default function Paintiano() {
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
   const [err,       setErr]       = useState('');
+  const [debugMsg,  setDebugMsg]  = useState('');
   const [errInfo,   setErrInfo]   = useState(false);
 
   // Auto-dismiss errors after a few seconds so they don't linger
@@ -2532,15 +2533,14 @@ Composition rules:
         const el=audioElRef.current;
         if(el&&el.src){
           const seekSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
-          console.log('[audio] fromIdx=',fromIdx,'seekSec=',seekSec,'el.currentTime=',el.currentTime,'el.src=',el.src.slice(0,40));
+          setDebugMsg(`fromIdx=${fromIdx} seek=${seekSec.toFixed(1)}s cur=${el.currentTime.toFixed(1)}s`);
           el.playbackRate=playbackSpeedRef.current;
           el.currentTime=seekSec;
-          console.log('[audio] after seek el.currentTime=',el.currentTime);
-          el.play().catch(e=>console.log('[audio] play error',e));
+          el.play().catch(e=>setDebugMsg(m=>m+' ERR:'+e.message));
         } else {
-          console.log('[audio] no el or no src', el, el?.src);
+          setDebugMsg(`no el or src: el=${!!el} src=${el?.src?.slice(0,20)}`);
         }
-      }catch(e){console.log('[audio] exception',e);}
+      }catch(e){setDebugMsg('EX:'+e.message);}
     }
 
     if(viewMode==='image'&&pixelRef.current){
@@ -3264,16 +3264,8 @@ Composition rules:
               {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(info.dur/playbackSpeed-elapsedS));return remS+t('sLeft');})():info.dur+'s'}
             </span>
           </div>
+          {debugMsg&&<div style={{fontSize:'.48rem',color:'rgba(255,220,100,.8)',marginBottom:3,fontFamily:'monospace',letterSpacing:'.02em'}}>{debugMsg}</div>}
           <div
-            onClick={e=>{
-              if(!chords.length)return;
-              const rect=e.currentTarget.getBoundingClientRect();
-              const frac=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-              const idx=Math.floor(frac*chords.length);
-              stopAll();
-              resumeFromRef.current=idx;
-              startPlay();
-            }}
             onTouchStart={e=>{e.preventDefault();}}
             onTouchMove={e=>{
               if(!chords.length)return;
@@ -3289,8 +3281,18 @@ Composition rules:
             onTouchEnd={e=>{
               e.preventDefault();
               if(!chords.length)return;
+              // If no touchmove happened (tap not drag), calculate position from touch
+              if(e.changedTouches&&e.changedTouches[0]&&resumeFromRef.current===null){
+                const touch=e.changedTouches[0];
+                const rect=e.currentTarget.getBoundingClientRect();
+                const frac=Math.max(0,Math.min(1,(touch.clientX-rect.left)/rect.width));
+                const idx=Math.floor(frac*chords.length);
+                stopAll();
+                resumeFromRef.current=idx;
+              }
               startPlay();
             }}
+            onClick={e=>{e.preventDefault();}} // suppress iOS synthetic click after touch
             style={{height:8,background:'rgba(255,255,255,0.07)',borderRadius:4,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none'}}>
             <div style={{height:'100%',width:pct+'%',background:playing&&info?'rgba(90,190,110,.7)':'rgba(201,168,76,.5)',borderRadius:4,transition:'none'}}/>
           </div>
@@ -3591,7 +3593,7 @@ Composition rules:
         </div>
       </div>
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.02</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.3.04</div>
     </div>
   );
 }
