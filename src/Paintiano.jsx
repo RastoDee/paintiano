@@ -2994,8 +2994,8 @@ const GUIDE_I18N = {
    body:`The Play button starts and pauses playback (Space bar also works). Tap anywhere on the progress bar to jump to that position. Drag left or right to scrub live. Time remaining is shown during playback.`},
   {id:'loop', title:`⟳ Loop`, keywords:`loop repeat cycle mood continuous`,
    body:`Available during mood playback. Tap ⟳ LOOP to keep the piece repeating continuously. Tap again to turn off. The button highlights gold when active.`},
-  {id:'speed', title:`Playback speed`, keywords:`speed slow fast tempo rate slider 1x half`,
-   body:`The speed slider adjusts playback rate from 0.25× to 2×. Tap the speed label to reset to 1×. Changes take effect immediately during playback.`},
+  {id:'speed', title:`Playback speed`, keywords:`speed slow fast tempo rate buttons 1x half plus minus`,
+   body:`Tap − or + to nudge playback speed by 0.05× steps, anywhere from 0.25× to 2×. Hold either button to sweep continuously — the repeat accelerates after a second so you can cross the range fast and stop precisely. Tap the centre label to snap back to 1×. Changes take effect immediately during playback.`},
   {id:'mute', title:`🔊 / 🔇 Mute`, keywords:`mute silence audio sound volume off on speaker quiet`,
    body:`The speaker icon next to the Play button toggles all audio output (master mute). Tap once to silence the piano, playback, and any active recording bus; tap again to unmute. The painting continues to render normally — only sound is suppressed. Setting is remembered across sessions, so the app reopens in the same mute state.`},
   {id:'print', title:`🖨 Print (save the painting)`, keywords:`print export png image save painting picture size web print a1 dpi resolution`,
@@ -3048,8 +3048,8 @@ const GUIDE_I18N = {
    body:`Play startet und pausiert die Wiedergabe (Leertaste auch). Fortschrittsbalken antippen zum Springen. Links/rechts ziehen zum Live-Scrubben. Verbleibende Zeit wird angezeigt.`},
   {id:'loop', title:`⟳ Schleife`, keywords:`schleife wiederholen zyklus stimmung kontinuierlich`,
    body:`Bei Stimmungswiedergabe verfügbar. ⟳ SCHLEIFE antippen für kontinuierliche Wiederholung. Erneut antippen zum Ausschalten. Schaltfläche leuchtet gold.`},
-  {id:'speed', title:`Wiedergabegeschwindigkeit`, keywords:`geschwindigkeit langsam schnell tempo rate regler`,
-   body:`Der Geschwindigkeitsregler passt die Wiedergaberate von 0,25× bis 2× an. Beschriftung antippen zum Zurücksetzen auf 1×.`},
+  {id:'speed', title:`Wiedergabegeschwindigkeit`, keywords:`geschwindigkeit langsam schnell tempo rate tasten plus minus`,
+   body:`− oder + antippen, um die Wiedergabegeschwindigkeit in 0,05×-Schritten zwischen 0,25× und 2× zu ändern. Taste halten für stufenloses Durchlaufen — die Wiederholung beschleunigt nach einer Sekunde, sodass du schnell quer durch den Bereich fahren und präzise stoppen kannst. Mittlere Beschriftung antippen für Sprung zurück auf 1×.`},
   {id:'mute', title:`🔊 / 🔇 Ton aus`, keywords:`ton aus stumm audio sound lautstärke aus an lautsprecher leise`,
    body:`Das Lautsprecher-Symbol neben der Play-Taste schaltet die gesamte Audioausgabe stumm (Master-Mute). Einmal antippen, um Klavier, Wiedergabe und alle aktiven Aufnahme-Busse stummzuschalten; erneut antippen zum Aufheben. Das Gemälde wird weiterhin normal gerendert — nur der Ton wird unterdrückt. Einstellung wird über Sitzungen hinweg gespeichert.`},
   {id:'print', title:`🖨 Drucken (Gemälde speichern)`, keywords:`drucken exportieren png bild speichern gemälde web a1 dpi auflösung größe`,
@@ -3102,8 +3102,8 @@ const GUIDE_I18N = {
    body:`Le bouton Jouer démarre et met en pause la lecture (barre d'espace aussi). Appuyez sur la barre de progression pour sauter. Faites glisser pour scrubber en direct.`},
   {id:'loop', title:`⟳ Boucle`, keywords:`boucle répéter cycle humeur continu`,
    body:`Appuyez sur ⟳ BOUCLE pour répétition continue. Appuyez à nouveau pour désactiver. Le bouton s'illumine en or.`},
-  {id:'speed', title:`Vitesse de lecture`, keywords:`vitesse lent rapide tempo curseur`,
-   body:`Le curseur de vitesse ajuste la lecture de 0,25× à 2×. Appuyez sur le label pour revenir à 1×.`},
+  {id:'speed', title:`Vitesse de lecture`, keywords:`vitesse lent rapide tempo boutons plus moins`,
+   body:`Appuyez sur − ou + pour ajuster la vitesse de lecture par pas de 0,05× entre 0,25× et 2×. Maintenez l'un des boutons pour balayer en continu — la répétition s'accélère après une seconde, vous permettant de traverser la plage rapidement et de vous arrêter précisément. Appuyez sur l'étiquette centrale pour revenir à 1×.`},
   {id:'mute', title:`🔊 / 🔇 Couper le son`, keywords:`couper son muet audio volume silence haut-parleur arrêter`,
    body:`L'icône de haut-parleur à côté du bouton Lecture coupe toute la sortie audio (mute principal). Appuyer une fois pour couper le piano, la lecture et tout bus d'enregistrement actif ; appuyer à nouveau pour réactiver. La peinture continue à se rendre normalement — seul le son est supprimé. Le réglage est conservé entre les sessions.`},
   {id:'print', title:`🖨 Imprimer (sauvegarder la peinture)`, keywords:`imprimer exporter png image sauvegarder peinture web a1 dpi résolution taille`,
@@ -3156,8 +3156,8 @@ const GUIDE_I18N = {
    body:`El botón Tocar inicia y pausa la reproducción (barra espaciadora también). Pulsa la barra de progreso para saltar. Arrastra para scrubbing en vivo.`},
   {id:'loop', title:`⟳ Bucle`, keywords:`bucle repetir ciclo estado continuo`,
    body:`Pulsa ⟳ BUCLE para repetición continua. Pulsa de nuevo para desactivar. El botón se ilumina en dorado.`},
-  {id:'speed', title:`Velocidad de reproducción`, keywords:`velocidad lento rápido tempo control deslizante`,
-   body:`El control deslizante ajusta la velocidad de 0,25× a 2×. Pulsa la etiqueta para volver a 1×.`},
+  {id:'speed', title:`Velocidad de reproducción`, keywords:`velocidad lento rápido tempo botones más menos`,
+   body:`Pulsa − o + para ajustar la velocidad en pasos de 0,05× entre 0,25× y 2×. Mantén pulsado cualquier botón para barrer continuamente — la repetición se acelera tras un segundo, permitiéndote recorrer el rango rápidamente y detenerte con precisión. Pulsa la etiqueta central para volver a 1×.`},
   {id:'mute', title:`🔊 / 🔇 Silenciar`, keywords:`silenciar mudo audio sonido volumen apagar encender altavoz quieto`,
    body:`El icono de altavoz junto al botón Reproducir silencia toda la salida de audio (silencio maestro). Toca una vez para silenciar piano, reproducción y cualquier bus de grabación activo; toca de nuevo para reactivar. La pintura se sigue renderizando con normalidad — solo se suprime el sonido. El ajuste se conserva entre sesiones.`},
   {id:'print', title:`🖨 Imprimir (guardar la pintura)`, keywords:`imprimir exportar png imagen guardar pintura web a1 dpi resolución tamaño`,
@@ -3210,8 +3210,8 @@ const GUIDE_I18N = {
    body:`Tlačidlo Prehrať spúšťa a pauzuje prehrávanie (funguje aj medzerník). Ťukni kdekoľvek na progress bar pre skok na danú pozíciu. Ťahaj doľava alebo doprava pre živé prechádzanie. Zostávajúci čas sa zobrazuje počas prehrávania.`},
   {id:'loop', title:`⟳ Slučka`, keywords:`slučka opakovať cyklus nálada nepretržite`,
    body:`Dostupné počas prehrávania nálady. Ťukni ⟳ SLUČKA pre nepretržité opakovanie skladby. Ťukni znova pre vypnutie. Tlačidlo svieti zlato, keď je aktívne.`},
-  {id:'speed', title:`Rýchlosť prehrávania`, keywords:`rýchlosť pomaly rýchlo tempo posuvník 1x polovica`,
-   body:`Posuvník rýchlosti nastavuje tempo prehrávania od 0,25× do 2×. Ťukni na štítok rýchlosti pre návrat na 1×. Zmeny sa prejavia okamžite počas prehrávania.`},
+  {id:'speed', title:`Rýchlosť prehrávania`, keywords:`rýchlosť pomaly rýchlo tempo tlačidlá plus mínus`,
+   body:`Ťukni − alebo + pre úpravu rýchlosti prehrávania v krokoch 0,05× v rozsahu 0,25× až 2×. Podrž tlačidlo pre plynulé prechádzanie — opakovanie sa po sekunde zrýchli, takže môžeš rýchlo prejsť celý rozsah a presne zastaviť. Ťukni na štítok v strede pre návrat na 1×.`},
   {id:'mute', title:`🔊 / 🔇 Stlmiť`, keywords:`stlmiť ticho audio zvuk hlasitosť vyp zap reproduktor tichý`,
    body:`Ikona reproduktora vedľa tlačidla Prehrať prepína celý audio výstup (master mute). Ťukni raz pre stlmenie piána, prehrávania a každej aktívnej nahrávacej zbernice; ťukni znova pre obnovenie zvuku. Obraz sa naďalej vykresľuje normálne — len zvuk je potlačený. Nastavenie sa pamätá medzi reláciami, takže sa aplikácia otvorí v rovnakom stave stlmenia.`},
   {id:'print', title:`🖨 Tlač (uložiť obraz)`, keywords:`tlačiť exportovať png obrázok uložiť obraz fotografia veľkosť web tlač a1 dpi rozlíšenie`,
@@ -3716,6 +3716,7 @@ export default function Paintiano() {
   // 3 seconds actually clears. Auto-disarms if user doesn't follow through.
   const [clearArmed, setClearArmed] = useState(false);
   const clearArmRef = useRef(null);
+  const speedHoldRef = useRef(null);
   // Same pattern for the demo link: if the canvas has content, ask once before
   // replacing it with Für Elise. Empty canvas → demo fires immediately.
   const [demoArmed, setDemoArmed] = useState(false);
@@ -3848,7 +3849,7 @@ export default function Paintiano() {
 
   // Cleanup the compose-commit debounce on unmount so it can't fire commit()
   // against a torn-down state tree.
-  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);},[]);
+  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);},[]);
 
   useEffect(()=>{
     let dead=false;
@@ -6252,20 +6253,48 @@ Composition rules:
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
           const setSpd=setPlaybackSpeed;
-          const lo=0.25;
-          const label=spd===0.5?'½×':spd===1?'1×':`${spd}×`;
+          const LO=0.25, HI=2, STEP=0.05;
+          const label=spd===0.5?'½×':spd===1?'1×':`${(Math.round(spd*100)/100)}×`;
           // Lock speed during recording — changing rate mid-record desyncs the
           // recorded audio from the visual painting timing in the saved file.
           const lockSpeed = recording;
+          const clamp=(v)=>Math.max(LO,Math.min(HI,Math.round(v/STEP)*STEP));
+          const bump=(dir)=>setSpd(v=>clamp(v+dir*STEP));
+          // Long-press auto-repeat. Holds the same button to sweep through the
+          // range: 80ms repeat for the first second, then accelerates to 40ms.
+          const startHold=(dir)=>{
+            if(lockSpeed)return;
+            bump(dir);
+            const t0=Date.now();
+            const tick=()=>{
+              bump(dir);
+              const elapsed=Date.now()-t0;
+              const delay=elapsed>1000?40:80;
+              speedHoldRef.current=setTimeout(tick,delay);
+            };
+            speedHoldRef.current=setTimeout(tick,300);
+          };
+          const stopHold=()=>{
+            if(speedHoldRef.current){clearTimeout(speedHoldRef.current);speedHoldRef.current=null;}
+          };
+          const btnStyle=(enabled)=>({padding:'5px 9px',background:'transparent',color:enabled?GOLD:'rgba(201,168,76,.2)',border:'1px solid '+(enabled?'rgba(201,168,76,.35)':'rgba(201,168,76,.12)'),borderRadius:4,cursor:enabled?'pointer':'default',fontSize:'.7rem',lineHeight:1,letterSpacing:0,fontFamily:'inherit',minWidth:24,userSelect:'none',touchAction:'manipulation'});
+          const canDown = !lockSpeed && spd>LO+1e-6;
+          const canUp   = !lockSpeed && spd<HI-1e-6;
           return(
-            <span style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 8px',border:'1px solid rgba(201,168,76,.2)',borderRadius:5,opacity:lockSpeed?0.4:1}} title={lockSpeed?t('stopRecFirst'):'playback speed'}>
-              <button onClick={()=>setSpd(1)} disabled={lockSpeed||spd===1} aria-label="reset speed to 1×" style={{padding:'4px 7px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:4,cursor:(lockSpeed||spd===1)?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit'}}>{label}</button>
-              <input type="range" min={lo} max={2} step={0.05} value={spd}
-                onChange={e=>setSpd(parseFloat(e.target.value))}
-                disabled={lockSpeed}
-                aria-label="playback speed"
-                aria-valuetext={`${spd}× speed`}
-                style={{width:80,accentColor:GOLD,cursor:lockSpeed?'default':'pointer'}}/>
+            <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 4px',border:'1px solid rgba(201,168,76,.2)',borderRadius:5,opacity:lockSpeed?0.4:1}} title={lockSpeed?t('stopRecFirst'):'playback speed · tap +/− to nudge, hold to sweep'}>
+              <button
+                onPointerDown={e=>{e.preventDefault();startHold(-1);}}
+                onPointerUp={stopHold} onPointerLeave={stopHold} onPointerCancel={stopHold}
+                disabled={!canDown}
+                aria-label="slow down"
+                style={btnStyle(canDown)}>−</button>
+              <button onClick={()=>setSpd(1)} disabled={lockSpeed||spd===1} aria-label="reset speed to 1×" style={{padding:'4px 8px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:4,cursor:(lockSpeed||spd===1)?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit',minWidth:36,textAlign:'center'}}>{label}</button>
+              <button
+                onPointerDown={e=>{e.preventDefault();startHold(+1);}}
+                onPointerUp={stopHold} onPointerLeave={stopHold} onPointerCancel={stopHold}
+                disabled={!canUp}
+                aria-label="speed up"
+                style={btnStyle(canUp)}>+</button>
             </span>
           );
         })()}
