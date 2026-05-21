@@ -1,6 +1,9 @@
 import * as Tone from "tone";
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// §1  CONSTANTS & MATH UTILITIES
+// ─────────────────────────────────────────────────────────────────────────────
 const PHI = 1.6180339887;
 const IMG_TARGET_MS = 120000; // image transcription is exactly 2:00 regardless of grid
 const CWIN = 55;
@@ -88,6 +91,9 @@ const bwCol=(m,v=100)=>{
   return[r,g,b,0.7+(v/127)*0.3];
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// §2  MIDI / MUSIC-XML / AUDIO PARSERS
+// ─────────────────────────────────────────────────────────────────────────────
 function parseMidi(buf){
   const d=new Uint8Array(buf);let p=0;
   const u8=()=>d[p++];
@@ -476,6 +482,9 @@ function computeGrid(arg, opts){
   }
   return{N,BW,BH,CW,CH,cells,rows,totalQ};
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// §3  CANVAS DRAW FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
 // Block renderers — five artist-styled mark-making languages plus the
 // implicit mosaic default (no selection). drawBlock dispatches per-cell.
 //   picasso:   angular cubist shards with thin black contour outlines
@@ -2317,7 +2326,9 @@ const _midiToName = Array.from({length:128},(_,i)=>noteName(i));
 const _nameToMidi = Object.fromEntries(_midiToName.map((n,i)=>[n,i]));
 const LEGEND=[{n:'C',pc:0},{n:'G',pc:7},{n:'D',pc:2},{n:'A',pc:9},{n:'E',pc:4},{n:'B',pc:11},{n:'F#',pc:6},{n:'D♭',pc:1},{n:'A♭',pc:8},{n:'E♭',pc:3},{n:'B♭',pc:10},{n:'F',pc:5}];
 
-// ── i18n ──────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// §4  I18N — UI STRINGS, CONCEPT TEXT, GUIDE TEXT
+// ─────────────────────────────────────────────────────────────────────────────
 const LANGS = ['EN','DE','FR','ES'];
 const I18N = {
   EN:{
@@ -2559,6 +2570,9 @@ function b64ToArrayBuffer(b64){
 }
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// §5  BUILT-IN SONG DATA (SONGS & SONG_LIBRARY / MOODS)
+// ─────────────────────────────────────────────────────────────────────────────
 const SONGS=[
   {keys:['happy birthday','birthday'],title:'Happy Birthday',artist:'Traditional',n:[[55,0,375,70],[55,375,125,65],[57,500,500,75],[55,1000,500,75],[60,1500,500,80],[59,2000,1000,85],[55,3000,375,70],[55,3375,125,65],[57,3500,500,75],[55,4000,500,75],[62,4500,500,80],[60,5000,1000,85],[55,6000,375,70],[55,6375,125,65],[67,6500,500,75],[64,7000,500,75],[60,7500,500,80],[59,8000,500,75],[57,8500,1000,85],[65,9500,375,70],[65,9875,125,65],[64,10000,500,75],[60,10500,500,75],[62,11000,500,80],[60,11500,1000,85]]},
   {keys:['ode to joy','beethoven ode'],title:'Ode to Joy',artist:'Beethoven',n:[[64,0,380,75],[64,400,380,75],[65,800,380,75],[67,1200,380,80],[67,1600,380,80],[65,2000,380,75],[64,2400,380,75],[62,2800,380,70],[60,3200,380,75],[60,3600,380,75],[62,4000,380,75],[64,4400,500,80],[64,4800,500,85],[62,5300,300,70],[62,5600,800,75],[64,6400,380,75],[64,6800,380,75],[65,7200,380,75],[67,7600,380,80],[67,8000,380,80],[65,8400,380,75],[64,8800,380,75],[62,9200,380,70],[60,9600,380,75],[60,10000,380,75],[62,10400,380,75],[64,10800,380,80],[62,11200,500,85],[60,11700,300,70],[60,12000,800,80]]},
@@ -2745,8 +2759,13 @@ const MOOD_OPTIONS = MOODS.map(m => <option key={m} value={m}>{m}</option>);
 // Searchable in-app guide. Each entry: title, body, plus keywords to widen
 // the match surface for the search box. Sections are independent — order
 // only affects display when the search box is empty.
+// Each language is a thunk: JSX is only built on first access (when the user
+// opens the concept modal). The previous eager `EN: (<>...</>)` form ran four
+// language trees of `React.createElement` calls at every module load, allocating
+// hundreds of vnodes the user never saw. A tiny cache memoizes the result.
+const _conceptCache = {};
 const CONCEPT_I18N = {
-  EN: (<>
+  EN: () => (<>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmony vs Spectral</h3>
     <p style={{margin:'0 0 12px'}}>In both modes every note is painted as a block whose <em>hue</em> is determined by its pitch class (C, C♯, D…), whose <em>lightness</em> tracks its octave, and whose <em>saturation</em> follows velocity. What changes between the modes is the dictionary mapping pitch to hue.</p>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmony mode</strong> places the twelve pitch classes around the colour wheel in <em>Circle-of-Fifths</em> order. Notes a perfect fifth apart become hue neighbours; tonally distant notes sit on opposite sides. Anything written in a key paints in a tight cluster of related colours.</p>
@@ -2768,7 +2787,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Listen</strong> also uses the microphone, but is tuned for ambient music rather than voice. Play music from a speaker nearby — Paintiano detects the pitches and paints only when the chord changes, silently. Works best with an external speaker; on iOS, same-device speaker audio is suppressed by the OS.</p>
     <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>In all three live modes the canvas is a fixed golden-ratio frame. Block widths stay proportional to hold time, and rows shrink vertically as more chords are added — the painting densifies into finer detail rather than growing taller. Imported sources (MIDI, audio, score, image, mood) keep the original grow-with-content canvas.</p>
   </>),
-  DE: (<>
+  DE: () => (<>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmonie vs. Spektral</h3>
     <p style={{margin:'0 0 12px'}}>In beiden Modi wird jede Note als Block gemalt, dessen <em>Farbton</em> durch die Tonklasse bestimmt wird, dessen <em>Helligkeit</em> die Oktave verfolgt und dessen <em>Sättigung</em> der Lautstärke folgt.</p>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie-Modus</strong> ordnet die zwölf Tonklassen im Quintenzirkel um das Farbrad an. Töne, die eine Quinte auseinanderliegen, werden Farb-Nachbarn; tonal entfernte Töne liegen gegenüber.</p>
@@ -2788,7 +2807,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Lauschen</strong> verwendet ebenfalls das Mikrofon, ist jedoch für Umgebungsmusik optimiert. Musik von einem Lautsprecher abspielen — Paintiano erkennt die Akkorde und malt nur bei Akkordwechsel, ohne eigenen Ton. Am besten mit externem Lautsprecher; auf iOS wird internes Audio unterdrückt.</p>
     <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>In allen drei Live-Modi ist die Leinwand ein fester Rahmen im goldenen Schnitt. Die Blockbreite bleibt proportional zur Haltedauer, und die Zeilen werden mit jedem weiteren Akkord vertikal schmaler — das Bild verdichtet sich in feinere Details statt höher zu wachsen. Importierte Quellen (MIDI, Audio, Partitur, Bild, Stimmung) behalten die ursprüngliche mitwachsende Leinwand.</p>
   </>),
-  FR: (<>
+  FR: () => (<>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Harmonie vs Spectral</h3>
     <p style={{margin:'0 0 12px'}}>Dans les deux modes, chaque note est peinte comme un bloc dont la <em>teinte</em> est déterminée par sa classe de hauteur, dont la <em>luminosité</em> suit son octave, et dont la <em>saturation</em> suit la vélocité.</p>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Mode Harmonie</strong> place les douze classes de hauteur autour de la roue des couleurs dans l'ordre du cercle des quintes. Les notes à une quinte de distance deviennent voisines en teinte.</p>
@@ -2808,7 +2827,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Écouter</strong> utilise aussi le microphone, mais est optimisé pour la musique ambiante. Jouez de la musique depuis un haut-parleur — Paintiano détecte les accords et ne peint qu'au changement d'harmonie. Idéal avec un haut-parleur externe ; sur iOS, l'audio interne est supprimé par le système.</p>
     <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>Dans les trois modes en direct, la toile est un cadre fixe au nombre d'or. La largeur des blocs reste proportionnelle au temps de maintien, et les rangées rétrécissent verticalement à mesure que des accords s'ajoutent — la peinture se densifie en détails plus fins plutôt que de s'allonger. Les sources importées (MIDI, audio, partition, image, ambiance) conservent la toile qui grandit avec le contenu.</p>
   </>),
-  ES: (<>
+  ES: () => (<>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Armonía vs Espectral</h3>
     <p style={{margin:'0 0 12px'}}>En ambos modos cada nota se pinta como un bloque cuyo <em>tono</em> lo determina su clase de altura, cuya <em>luminosidad</em> sigue su octava, y cuya <em>saturación</em> sigue la velocidad.</p>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Modo Armonía</strong> coloca las doce clases de tono alrededor de la rueda de color en orden del círculo de quintas. Las notas separadas una quinta se convierten en vecinas de tono.</p>
@@ -2829,6 +2848,14 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>En los tres modos en vivo el lienzo es un marco fijo en proporción áurea. El ancho de los bloques permanece proporcional al tiempo de pulsación, y las filas se hacen más finas verticalmente con cada acorde añadido — la pintura se densifica en detalles más finos en lugar de alargarse. Las fuentes importadas (MIDI, audio, partitura, imagen, estado de ánimo) mantienen el lienzo original que crece con el contenido.</p>
   </>),
 };
+// Lazily build (and cache) the concept JSX for a given language. First call
+// invokes the thunk; subsequent calls hit the cache. Falls back to EN if the
+// language code is unknown so consumers never see undefined.
+function getConcept(lang){
+  if(_conceptCache[lang]) return _conceptCache[lang];
+  const fn = CONCEPT_I18N[lang] || CONCEPT_I18N.EN;
+  return (_conceptCache[lang] = fn());
+}
 
 const GUIDE_I18N = {
   EN: [
@@ -3126,6 +3153,9 @@ function rerollSong(song) {
 // child, but that's fine — they only matter when the child actually renders,
 // which memo gates.
 
+// ─────────────────────────────────────────────────────────────────────────────
+// §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
+// ─────────────────────────────────────────────────────────────────────────────
 const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered, isPending, hoverColor, busy, playing, loadedMode, pressNote, releaseNote, setHoveredKey, pressInfo}){
   const wkBg = isActive
     ? 'linear-gradient(180deg,#c9a84c,#a88830)'
@@ -3174,6 +3204,9 @@ const BlackKey = memo(function BlackKey({midi, lw, snapped, isActive, isHovered,
   );
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// §7  MAIN COMPONENT — Paintiano
+// ─────────────────────────────────────────────────────────────────────────────
 export default function Paintiano() {
   const canvasRef    = useRef(null);
   const audioElRef   = useRef(null); // real audio playback in audio mode
@@ -5649,7 +5682,7 @@ Composition rules:
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
             <button onClick={()=>setShowAbout(false)} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
             <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
-            {CONCEPT_I18N[lang]||CONCEPT_I18N.EN}
+            {getConcept(lang)}
             <button onClick={()=>setShowAbout(false)} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
           </div>
         </div>
