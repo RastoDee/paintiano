@@ -2381,7 +2381,9 @@ const I18N = {
     stopRecFirst:'stop recording to use playback controls',
     stopListenFirst:'stop listening first', stopSingFirst:'stop singing first',
     scaleBtn:'⚙ scale',
-    midiInput:'♬ MIDI INPUT', audioInput:'♫ AUDIO INPUT', scoreInput:'𝄞 SCORE INPUT', imageInput:'🖼 IMAGE INPUT',
+    midiInput:'♬ MIDI INPUT', audioInput:'♫ AUDIO INPUT', scoreInput:'𝄞 SCORE INPUT', imageInput:'🖼 IMAGE INPUT', micInput:'🎙 MIC INPUT',
+    micVoiceHint:'sing, hum or whistle · snaps to C major · monophonic',
+    micMusicHint:'play music from a nearby speaker · paints on chord changes',
     builtInSample:'▶ built-in sample', chooseFile:'📁 choose file', cancel:'cancel',
     close:'close',
   },
@@ -2421,7 +2423,9 @@ const I18N = {
     stopRecFirst:'aufnahme stoppen für wiedergabe',
     stopListenFirst:'erst lauschen stoppen', stopSingFirst:'erst singen stoppen',
     scaleBtn:'⚙ tonart',
-    midiInput:'♬ MIDI EINGABE', audioInput:'♫ AUDIO EINGABE', scoreInput:'𝄞 PARTITUR EINGABE', imageInput:'🖼 BILD EINGABE',
+    midiInput:'♬ MIDI EINGABE', audioInput:'♫ AUDIO EINGABE', scoreInput:'𝄞 PARTITUR EINGABE', imageInput:'🖼 BILD EINGABE', micInput:'🎙 MIKRO EINGABE',
+    micVoiceHint:'singen, summen oder pfeifen · auf C-Dur eingerastet · monophon',
+    micMusicHint:'musik aus nahem lautsprecher · malt bei akkordwechsel',
     builtInSample:'▶ integriertes beispiel', chooseFile:'📁 datei wählen', cancel:'abbrechen',
     close:'schließen',
   },
@@ -2461,7 +2465,9 @@ const I18N = {
     stopRecFirst:'arrêter l\'enregistrement pour contrôler',
     stopListenFirst:'arrêter l\'écoute d\'abord', stopSingFirst:'arrêter le chant d\'abord',
     scaleBtn:'⚙ gamme',
-    midiInput:'♬ ENTRÉE MIDI', audioInput:'♫ ENTRÉE AUDIO', scoreInput:'𝄞 ENTRÉE PARTITION', imageInput:'🖼 ENTRÉE IMAGE',
+    midiInput:'♬ ENTRÉE MIDI', audioInput:'♫ ENTRÉE AUDIO', scoreInput:'𝄞 ENTRÉE PARTITION', imageInput:'🖼 ENTRÉE IMAGE', micInput:'🎙 ENTRÉE MICRO',
+    micVoiceHint:'chanter, fredonner ou siffler · ancré en do majeur · monophonique',
+    micMusicHint:'musique d\'un haut-parleur proche · peint aux changements d\'accord',
     builtInSample:'▶ exemple intégré', chooseFile:'📁 choisir fichier', cancel:'annuler',
     close:'fermer',
   },
@@ -2501,7 +2507,9 @@ const I18N = {
     stopRecFirst:'detener grabación para controlar',
     stopListenFirst:'detener escucha primero', stopSingFirst:'detener canto primero',
     scaleBtn:'⚙ escala',
-    midiInput:'♬ ENTRADA MIDI', audioInput:'♫ ENTRADA AUDIO', scoreInput:'𝄞 ENTRADA PARTITURA', imageInput:'🖼 ENTRADA IMAGEN',
+    midiInput:'♬ ENTRADA MIDI', audioInput:'♫ ENTRADA AUDIO', scoreInput:'𝄞 ENTRADA PARTITURA', imageInput:'🖼 ENTRADA IMAGEN', micInput:'🎙 ENTRADA MICRO',
+    micVoiceHint:'canta, tararea o silba · ajustado a do mayor · monofónico',
+    micMusicHint:'música de un altavoz cercano · pinta en cambios de acorde',
     builtInSample:'▶ ejemplo integrado', chooseFile:'📁 elegir archivo', cancel:'cancelar',
     close:'cerrar',
   },
@@ -5713,54 +5721,21 @@ Composition rules:
           disabled={!composeMode && (busy || micPainting || micListening)}
           title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('compose')}
           style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':(busy||micPainting||micListening)?'rgba(140,220,180,.2)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':(busy||micPainting||micListening)?'rgba(140,220,180,.25)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
-          {/* Combined MIC mode. One button to toggle the microphone-driven
-              painting. When active, two sub-buttons appear that let the user
-              switch between Voice (sing-style) and Music (listen-style)
-              behaviors. The chosen preset persists across sessions. */}
+          {/* MIC mode. Tap when inactive to open a picker (Voice vs Music).
+              Tap when active to stop. Mirrors the MIDI/Audio picker UX. */}
           <button onClick={()=>{
             if(busy && !micActive) return;
-            // Mutex: if compose is on, do nothing.
             if(!micActive && composeMode) return;
-            
             if(micActive){
-              // Turn the mic mode off entirely.
               if(micPainting) stopMicPainting();
               if(micListening) stopMicListening();
               return;
             }
-            // Activate using the remembered preset.
-            if(micPreset==='music') startMicListening();
-            else startMicPainting();
+            setPickMode('mic');
           }}
           disabled={!micActive && (busy || composeMode)}
           title={micActive?t('micActive'):busy?t('stopRecFirst'):t('mic')}
           style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:micActive?'rgba(180,160,220,.7)':(busy||composeMode)?'rgba(180,160,220,.2)':'rgba(180,160,220,.4)',color:micActive?'rgba(210,190,250,1)':(busy||composeMode)?'rgba(180,160,220,.25)':'rgba(190,170,230,.8)',background:micActive?'rgba(140,120,200,.1)':'transparent'})}>{micActive?t('micActive'):t('mic')}</button>
-          {micActive && (
-            <>
-              {/* Voice sub-button — switches preset to 'voice' (Sing behavior) */}
-              <button onClick={()=>{
-                if(busy) return;
-                if(micPreset==='voice') return; // already in this preset
-                setMicPreset('voice');
-                if(micListening) stopMicListening();
-                startMicPainting();
-              }}
-              disabled={busy||micPreset==='voice'}
-              title={busy?t('stopRecFirst'):t('voicePreset')}
-              style={btn({fontSize:'.55rem',padding:'5px 8px',flexShrink:0,borderColor:micPreset==='voice'?'rgba(255,100,100,.7)':busy?'rgba(255,140,140,.15)':'rgba(255,140,140,.3)',color:micPreset==='voice'?'rgba(255,100,100,1)':busy?'rgba(255,160,160,.25)':'rgba(255,160,160,.55)',background:micPreset==='voice'?'rgba(255,60,60,.1)':'transparent'})}>{t('voicePreset')}</button>
-              {/* Music sub-button — switches preset to 'music' (Listen behavior) */}
-              <button onClick={()=>{
-                if(busy) return;
-                if(micPreset==='music') return;
-                setMicPreset('music');
-                if(micPainting) stopMicPainting();
-                startMicListening();
-              }}
-              disabled={busy||micPreset==='music'}
-              title={busy?t('stopRecFirst'):t('musicPreset')}
-              style={btn({fontSize:'.55rem',padding:'5px 8px',flexShrink:0,borderColor:micPreset==='music'?'rgba(100,200,255,.7)':busy?'rgba(100,180,255,.15)':'rgba(100,180,255,.3)',color:micPreset==='music'?'rgba(120,210,255,1)':busy?'rgba(140,200,255,.25)':'rgba(140,200,255,.55)',background:micPreset==='music'?'rgba(60,160,255,.1)':'transparent'})}>{t('musicPreset')}</button>
-            </>
-          )}
         </div>
       </div>
 
@@ -5802,8 +5777,37 @@ Composition rules:
         <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:'.65rem'}}>
-              {pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):t('imageInput')}
+              {pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):t('imageInput')}
             </div>
+            {pickMode==='mic' ? (
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <button onClick={()=>{
+                setMicPreset('voice');
+                if(micListening) stopMicListening();
+                startMicPainting();
+                setPickMode(null);
+              }} style={{padding:'12px',background:'transparent',color:'rgba(255,140,140,.9)',border:'1px solid rgba(255,140,140,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
+                {t('voicePreset')}
+              </button>
+              <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
+                {t('micVoiceHint')}
+              </div>
+              <button onClick={()=>{
+                setMicPreset('music');
+                if(micPainting) stopMicPainting();
+                startMicListening();
+                setPickMode(null);
+              }} style={{padding:'12px',background:'transparent',color:'rgba(140,200,255,.9)',border:'1px solid rgba(100,180,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
+                {t('musicPreset')}
+              </button>
+              <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
+                {t('micMusicHint')}
+              </div>
+              <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.6rem',marginTop:4}}>
+                {t('cancel')}
+              </button>
+            </div>
+            ) : (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <button onClick={()=>{
                 if(pickMode==='midi') loadSampleMidi();
@@ -5830,6 +5834,7 @@ Composition rules:
                 {t('cancel')}
               </button>
             </div>
+            )}
           </div>
         </div>
       )}
