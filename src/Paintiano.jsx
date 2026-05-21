@@ -476,16 +476,21 @@ function computeGrid(arg, opts){
   }
   return{N,BW,BH,CW,CH,cells,rows,totalQ};
 }
-// Block renderers — three artist-styled mark-making languages plus the
+// Block renderers — five artist-styled mark-making languages plus the
 // implicit mosaic default (no selection). drawBlock dispatches per-cell.
 //   picasso:   angular cubist shards with thin black contour outlines
-//   rembrandt: chiaroscuro impasto — shadow + bristles + ridge highlight + sparkle
 //   kusama:    flat color field + many small dots in contrasting color +
 //              occasional infinity-net curve
 //   vangogh:   ribbons of pure pigment, frayed bristle ends, parallel flow
 //   kandinsky: concentric-circle eye + lines + triangles + dot constellations
+//   pollock:   per-cell renders the mosaic default; a separate post-pass
+//              drawPollockOverlay() paints canvas-wide drips + splatters
+//              IGNORING cell boundaries (the key trick that solves the
+//              per-cell-architecture limitation)
 //   mosaic:    the implicit default — sharp rectangles + thin halo, used when
 //              no artist is explicitly selected. Not exposed in the toggle.
+// (drawRembrandt remains in the source for reference but is no longer wired
+// into the dispatcher — removed from the style picker.)
 
 // Seeded RNG helper — same seed → same marks → no flicker between repaints.
 // Uses a module-level state holder rather than a per-call closure so the hot
@@ -501,6 +506,149 @@ function _seedRnd(bx,by,BW,BH){
 
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;sorted.forEach((note,i)=>{const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;ctx.fillStyle=`rgba(${r},${g},${b},${(a*.18).toFixed(3)})`;ctx.fillRect(bx-2,y-2,BW+4,bh+4);ctx.fillStyle=`rgba(${r},${g},${b},${a.toFixed(3)})`;ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);});if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}}
+
+// Dim mosaic — same crisp φ-rectangle structure as default, but each voice
+// painted at reduced alpha (~50%) so colors are visible but subdued. Used
+// as the Pollock substrate: the mosaic provides color context underneath
+// without competing with the drip lines on top.
+function drawBlockMosaicDim(ctx,bx,by,notes,gc,BW,BH){
+  const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
+  sorted.forEach((note,i)=>{
+    const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;
+    // Halo at very low alpha
+    ctx.fillStyle=`rgba(${r},${g},${b},${(a*0.10).toFixed(3)})`;
+    ctx.fillRect(bx-2,y-2,BW+4,bh+4);
+    // Main tile at ~50% of normal alpha
+    ctx.fillStyle=`rgba(${r},${g},${b},${(a*0.50).toFixed(3)})`;
+    ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);
+  });
+  if(n>1){
+    ctx.fillStyle='rgba(4,4,10,0.50)';
+    for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);
+  }
+}
+
+// Pebble mosaic — authentic Byzantine/cobblestone substrate. Each voice slice
+// is packed with many small irregular rounded tile-fragments on a hex-offset
+// grid. Each pebble is a 5-7 vertex rounded polygon with slight color drift,
+// outlined in dark grout. Used as the Pollock substrate so the painting has
+// the dense colorful tessellation seen in real mosaic+Pollock pieces.
+function drawBlockMosaicPebble(ctx,bx,by,notes,gc,BW,BH){
+  const sorted=[...notes].sort((a,b)=>b.m-a.m), n=sorted.length, bh=BH/n;
+  const rnd = _seedRnd(bx, by, BW, BH);
+
+  sorted.forEach((note,vi)=>{
+    const[r,g,b,a] = gc(note.m, note.v);
+    const yOff = by + vi*bh;
+
+    // Soft halo for ambient color edge
+    ctx.fillStyle = `rgba(${r},${g},${b},${(a*0.18).toFixed(3)})`;
+    ctx.fillRect(bx-2, yOff-2, BW+4, bh+4);
+
+    // Tile size — small relative to the cell, scales with cell dim
+    const tileSize = Math.max(2.5, Math.min(BW, bh) * 0.08);
+    // Hex-offset grid for organic packing
+    const cols = Math.max(5, Math.ceil(BW / tileSize));
+    const rows = Math.max(5, Math.ceil(bh / (tileSize * 0.86))); // √3/2 hex spacing
+    const cellW = BW / cols;
+    const cellH = bh / rows;
+
+    for(let row=0; row<rows; row++){
+      const yRowOffset = (row % 2) * cellW * 0.5; // hex offset alternating rows
+      for(let col=0; col<cols; col++){
+        // Pebble center with jitter
+        const cx = bx + col*cellW + cellW*0.5 + yRowOffset + (rnd()-0.5)*cellW*0.35;
+        const cy = yOff + row*cellH + cellH*0.5 + (rnd()-0.5)*cellH*0.35;
+        // Pebble radius — size variation
+        const sizeRoll = rnd();
+        const radX = (sizeRoll < 0.15 ? tileSize*0.65
+                    : sizeRoll < 0.85 ? tileSize*0.92
+                    : tileSize*1.20)
+                    * (0.9 + rnd()*0.25);
+        const radY = radX * (0.7 + rnd()*0.55);
+        const tileRot = rnd()*Math.PI;
+
+        // Per-tile color drift — hue + luminosity variation per pebble
+        const lumShift = (rnd()-0.5) * 35;
+        const hueShift = (rnd()-0.5) * 30;
+        const tR = Math.max(0,Math.min(255, Math.round(r + lumShift + hueShift)));
+        const tG = Math.max(0,Math.min(255, Math.round(g + lumShift)));
+        const tB = Math.max(0,Math.min(255, Math.round(b + lumShift - hueShift)));
+
+        // 5-7 vertex irregular pebble polygon
+        const vertCount = 5 + Math.floor(rnd()*3);
+        ctx.beginPath();
+        for(let v=0; v<vertCount; v++){
+          const t = v/vertCount;
+          const angle = t * Math.PI * 2 + tileRot;
+          const rPerturb = 0.78 + rnd()*0.30;
+          const lx = Math.cos(angle) * radX * rPerturb;
+          const ly = Math.sin(angle) * radY * rPerturb;
+          const x = cx + lx;
+          const y = cy + ly;
+          if(v===0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${tR},${tG},${tB},${a.toFixed(3)})`;
+        ctx.fill();
+        // Dark grout outline between pebbles
+        ctx.strokeStyle = `rgba(4,2,8,${(a*0.72).toFixed(3)})`;
+        ctx.lineWidth = 0.5 + rnd()*0.3;
+        ctx.stroke();
+      }
+    }
+  });
+}
+
+// Fuzzy mosaic — softened version of the default mosaic substrate, used UNDER
+// the Pollock drip overlay. The original mosaic tile structure is suggested
+// but not crisply drawn: each voice color is painted as a wide soft radial
+// blob centered on its voice slice, bleeding past cell boundaries into
+// neighbors. Adjacent colors composite optically — no sharp tile edges,
+// no grout grid. Reads as the original mosaic seen through frosted glass.
+function drawBlockMosaicFuzzy(ctx,bx,by,notes,gc,BW,BH){
+  const sorted=[...notes].sort((a,b)=>b.m-a.m), n=sorted.length, bh=BH/n;
+
+  sorted.forEach((note,vi)=>{
+    const[r,g,b,a] = gc(note.m, note.v);
+    const yOff = by + vi*bh;
+    const cx = bx + BW * 0.5;
+    const cy = yOff + bh * 0.5;
+    // Blob radius — large enough to bleed well past cell boundaries.
+    // Uses max(BW, bh) so even narrow cells get full coverage.
+    const radius = Math.max(BW, bh) * 0.85;
+
+    // Soft radial: opaque core at center, fully transparent at the bleed edge
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    grad.addColorStop(0,    `rgba(${r},${g},${b},${(a*0.98).toFixed(3)})`);
+    grad.addColorStop(0.35, `rgba(${r},${g},${b},${(a*0.78).toFixed(3)})`);
+    grad.addColorStop(0.70, `rgba(${r},${g},${b},${(a*0.32).toFixed(3)})`);
+    grad.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = grad;
+    // Paint across the cell with margin for bleed
+    ctx.fillRect(bx - BW*0.3, yOff - bh*0.3, BW*1.6, bh*1.6);
+  });
+}
+
+// Pollock raw-canvas substrate — cream/off-white background that simulates the
+// raw unprimed canvas Pollock dripped onto. Each cell paints solid cream over
+// the dark canvas, plus a very faint hint of the chord's color so different
+// paintings have subtle tonal variation. The cream is the dominant background;
+// the dense drip overlay paints on top.
+function drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH){
+  // Solid cream base — covers the dark paintiano canvas with raw-canvas off-white
+  ctx.fillStyle = '#f2ede0';
+  ctx.fillRect(bx-2, by-2, BW+4, BH+4);
+  // Very faint chord-color hint — barely visible, just gives painting tonal variation
+  const sorted=[...notes].sort((a,b)=>b.m-a.m), n=sorted.length, bh=BH/n;
+  sorted.forEach((note,i)=>{
+    const[r,g,b]=gc(note.m, note.v);
+    const y = by + i*bh;
+    ctx.fillStyle = `rgba(${r},${g},${b},0.06)`;
+    ctx.fillRect(bx, y, BW, bh);
+  });
+}
 
 function drawRembrandt(ctx,bx,by,notes,gc,BW,BH){
   // Rembrandt — chunky, sculptural, BLENDED. Opposite of Van Gogh in nearly
@@ -623,140 +771,6 @@ function drawRembrandt(ctx,bx,by,notes,gc,BW,BH){
         rough(lightOffsetX*0.5+(rnd()-0.5)*length*0.2, -width*0.22, length*0.06, width*0.035);
       }
       ctx.restore();
-    }
-  });
-}
-
-function drawPicasso(ctx,bx,by,notes,gc,BW,BH){
-  // Flat geometric collage with occasional 3D accents (~20% of shapes).
-  // Shapes: rectangles, squares, triangles, parallelograms, trapezoids,
-  // diamonds. All hard-edged flat fills — no gradients, no radial light.
-  // 3D accent = dark depth face on one side (isometric box illusion).
-  // Shapes bleed freely past cell boundaries. Fully distinct from Rembrandt
-  // (painterly/organic) and Monet (soft dabs) — sharp, architectural, 2D.
-
-  const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
-  const rnd=_seedRnd(bx,by,BW,BH);
-
-  sorted.forEach((note,vi)=>{
-    const[r,g,b,a]=gc(note.m,note.v);
-    const yo=by+vi*bh;
-    const x1=bx,y1=yo,x2=bx+BW,y2=yo+bh;
-    const w=BW,h=bh;
-
-    const shapeCount=3+Math.floor(rnd()*5); // 3–7 shapes per voice cell
-
-    for(let s=0;s<shapeCount;s++){
-      // Flat fill colour — uniform tone shift, no gradient
-      const tone=(rnd()>0.5?1:-1)*(12+rnd()*68);
-      const rJ=Math.max(0,Math.min(255,Math.round(r+tone)));
-      const gJ=Math.max(0,Math.min(255,Math.round(g+tone)));
-      const bJ=Math.max(0,Math.min(255,Math.round(b+tone)));
-      ctx.fillStyle=`rgba(${rJ},${gJ},${bJ},${(0.78+rnd()*0.22).toFixed(2)})`;
-
-      // Origin — can bleed 35% outside cell
-      const ox=x1+w*(rnd()*1.35-0.18);
-      const oy=y1+h*(rnd()*1.35-0.18);
-
-      // Size: 25% large, 37% medium, 38% small
-      const sizeScale=rnd()<0.25?0.55+rnd()*0.55
-                     :rnd()<0.5 ?0.22+rnd()*0.32
-                                :0.07+rnd()*0.18;
-      const sw=w*sizeScale*(0.5+rnd()*1.0);
-      const sh=h*sizeScale*(0.5+rnd()*1.0);
-
-      const shapeType=rnd();
-
-      // ── Draw flat shape ────────────────────────────────────────────
-      ctx.beginPath();
-      if(shapeType<0.22){
-        // RECTANGLE / SQUARE
-        ctx.rect(ox, oy, sw, sh);
-      } else if(shapeType<0.44){
-        // TRIANGLE — 3 variants
-        const tv=rnd();
-        if(tv<0.33){
-          ctx.moveTo(ox,oy); ctx.lineTo(ox+sw,oy); ctx.lineTo(ox,oy+sh);
-        } else if(tv<0.66){
-          ctx.moveTo(ox+sw*0.5,oy); ctx.lineTo(ox+sw,oy+sh); ctx.lineTo(ox,oy+sh);
-        } else {
-          ctx.moveTo(ox+sw*(0.15+rnd()*0.35),oy);
-          ctx.lineTo(ox+sw,oy+sh*(0.25+rnd()*0.5));
-          ctx.lineTo(ox,oy+sh);
-        }
-        ctx.closePath();
-      } else if(shapeType<0.62){
-        // PARALLELOGRAM
-        const skew=sw*(0.18+rnd()*0.32)*(rnd()>0.5?1:-1);
-        ctx.moveTo(ox+skew,oy); ctx.lineTo(ox+sw+skew,oy);
-        ctx.lineTo(ox+sw-skew,oy+sh); ctx.lineTo(ox-skew,oy+sh);
-        ctx.closePath();
-      } else if(shapeType<0.80){
-        // TRAPEZOID
-        const inset=sw*(0.08+rnd()*0.28);
-        ctx.moveTo(ox+inset,oy); ctx.lineTo(ox+sw-inset,oy);
-        ctx.lineTo(ox+sw,oy+sh); ctx.lineTo(ox,oy+sh);
-        ctx.closePath();
-      } else {
-        // DIAMOND
-        ctx.moveTo(ox+sw*0.5,oy); ctx.lineTo(ox+sw,oy+sh*0.5);
-        ctx.lineTo(ox+sw*0.5,oy+sh); ctx.lineTo(ox,oy+sh*0.5);
-        ctx.closePath();
-      }
-      ctx.fill();
-
-      // ── Occasional 3D depth face (~20% of shapes, medium+ size) ────
-      if(rnd()<0.20 && sizeScale>0.18){
-        const depth=2+rnd()*5;
-        const dr=Math.max(0,Math.min(255,Math.round(rJ*0.52)));
-        const dg=Math.max(0,Math.min(255,Math.round(gJ*0.52)));
-        const db=Math.max(0,Math.min(255,Math.round(bJ*0.52)));
-        ctx.fillStyle=`rgba(${dr},${dg},${db},${(0.55+rnd()*0.3).toFixed(2)})`;
-        if(shapeType<0.22){
-          // Right face of rectangle
-          ctx.beginPath();
-          ctx.moveTo(ox+sw,oy); ctx.lineTo(ox+sw+depth,oy-depth);
-          ctx.lineTo(ox+sw+depth,oy+sh-depth); ctx.lineTo(ox+sw,oy+sh);
-          ctx.closePath(); ctx.fill();
-          // Bottom face
-          ctx.beginPath();
-          ctx.moveTo(ox,oy+sh); ctx.lineTo(ox+sw,oy+sh);
-          ctx.lineTo(ox+sw+depth,oy+sh-depth); ctx.lineTo(ox+depth,oy+sh-depth);
-          ctx.closePath(); ctx.fill();
-        } else {
-          // For other shapes: simple dark offset shadow shape
-          ctx.globalAlpha=0.35;
-          ctx.beginPath();
-          if(shapeType<0.44){
-            const tv2=rnd();
-            if(tv2<0.33){ctx.moveTo(ox+depth,oy+depth);ctx.lineTo(ox+sw+depth,oy+depth);ctx.lineTo(ox+depth,oy+sh+depth);}
-            else{ctx.moveTo(ox+sw*0.5+depth,oy+depth);ctx.lineTo(ox+sw+depth,oy+sh+depth);ctx.lineTo(ox+depth,oy+sh+depth);}
-          } else if(shapeType<0.62){
-            const sk2=sw*(0.18+rnd()*0.32)*(rnd()>0.5?1:-1);
-            ctx.moveTo(ox+sk2+depth,oy+depth);ctx.lineTo(ox+sw+sk2+depth,oy+depth);
-            ctx.lineTo(ox+sw-sk2+depth,oy+sh+depth);ctx.lineTo(ox-sk2+depth,oy+sh+depth);
-          } else if(shapeType<0.80){
-            const in2=sw*(0.08+rnd()*0.28);
-            ctx.moveTo(ox+in2+depth,oy+depth);ctx.lineTo(ox+sw-in2+depth,oy+depth);
-            ctx.lineTo(ox+sw+depth,oy+sh+depth);ctx.lineTo(ox+depth,oy+sh+depth);
-          } else {
-            ctx.moveTo(ox+sw*0.5+depth,oy+depth);ctx.lineTo(ox+sw+depth,oy+sh*0.5+depth);
-            ctx.lineTo(ox+sw*0.5+depth,oy+sh+depth);ctx.lineTo(ox+depth,oy+sh*0.5+depth);
-          }
-          ctx.closePath();
-          ctx.fillStyle=`rgba(0,0,0,0.3)`;
-          ctx.fill();
-          ctx.globalAlpha=1.0;
-        }
-      }
-
-      // Thin pencil outline on medium+ shapes
-      if(sizeScale>0.2){
-        ctx.strokeStyle=`rgba(0,0,0,${(0.10+rnd()*0.16).toFixed(2)})`;
-        ctx.lineWidth=0.4+rnd()*0.5;
-        ctx.lineJoin='miter';
-        ctx.stroke();
-      }
     }
   });
 }
@@ -913,183 +927,23 @@ function drawKusama(ctx,bx,by,notes,gc,BW,BH){
   }
 }
 
-function drawVanGogh(ctx,bx,by,notes,gc,BW,BH){
-  // Van Gogh — RIBBONS OF PURE PIGMENT. Pushed away from Rembrandt's blended
-  // sculptural impasto:
-  //
-  // • Strokes are LONGER and NARROWER (length 1.5-3× cell, ribbon-like)
-  // • AGGRESSIVE overflow — origins can be 40% past cell boundaries
-  // • Each bristle is a SINGLE solid color (no gradient along length)
-  // • Adjacent bristles within one stroke can be quite different colors —
-  //   pure pigments side-by-side, contrast through neighboring not blending
-  // • Flow vectors are MORE PARALLEL (30-90° offset, not 72-180°) so cell
-  //   reads as wind/grain direction, not chaos
-  // • Frayed ends: 4-6 hairs per terminus, longer (up to 3× stroke width)
-  // • Density: 8-15 strokes per voice; some anchors, some accents
-  //
-  // Where Rembrandt fades-tones-within-a-stroke (sfumato), Van Gogh keeps
-  // each ribbon a flat unbroken color and lets neighboring ribbons clash.
-  const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
-  const rnd=_seedRnd(bx,by,BW,BH);
-  // Two flow directions, mostly parallel — Van Gogh's strokes align with
-  // the "wind" or grain they depict
-  const flowA = rnd()*Math.PI*2;
-  const flowB = flowA + (Math.PI*0.17 + rnd()*Math.PI*0.33); // 30-90° offset
-
-  sorted.forEach((note,vi)=>{
-    const[r,g,b,a]=gc(note.m,note.v);
-    const yOff=by+vi*bh;
-    const strokeCount = 8 + Math.floor(rnd()*8); // 8-15 strokes per voice
-
-    for(let k=0;k<strokeCount;k++){
-      // Origin can bleed 40% past voice slice — aggressive overflow
-      const cx = bx + (rnd()*1.4 - 0.20) * BW;
-      const cy = yOff + (rnd()*1.4 - 0.20) * bh;
-      // Bias toward flow A so the cell has a dominant grain
-      const baseAngle = (rnd()<0.70 ? flowA : flowB) + (rnd()-0.5)*0.32;
-      // Stroke variety: rare anchor (12%), normal (70%), accent stab (18%)
-      const variant = rnd();
-      const anchor = variant < 0.12;
-      const accent = variant > 0.82;
-      const baseLen = Math.max(BW,bh);
-      // Longer, more ribbon-like
-      const length = anchor ? baseLen*(2.2+rnd()*0.8)
-                  : accent  ? baseLen*(0.40+rnd()*0.30)
-                            : baseLen*(1.2+rnd()*1.2);
-      // Narrower than before
-      const widthMul = anchor ? 1.4 : accent ? 0.65 : 0.85;
-      const strokeW = bh * (0.13+rnd()*0.13) * widthMul;
-      // Curvature: S-stroke or C-stroke
-      const curvSign = rnd()<0.4 ? -1 : 1;
-      const curvAmt = length * (0.30 + rnd()*0.45) * curvSign;
-      const cosA = Math.cos(baseAngle), sinA = Math.sin(baseAngle);
-      const x0 = cx - cosA*length/2;
-      const y0 = cy - sinA*length/2;
-      const x1 = cx + cosA*length/2;
-      const y1 = cy + sinA*length/2;
-      const px1x = cx - cosA*length/6 + (-sinA)*curvAmt*0.55;
-      const px1y = cy - sinA*length/6 + ( cosA)*curvAmt*0.55;
-      const px2x = cx + cosA*length/6 + (-sinA)*curvAmt*0.55;
-      const px2y = cy + sinA*length/6 + ( cosA)*curvAmt*0.55;
-
-      // 1) SHADOW — thin, dark
-      const shadowR = Math.round(r*0.32), shadowG = Math.round(g*0.32), shadowB = Math.round(b*0.32);
-      ctx.strokeStyle = `rgba(${shadowR},${shadowG},${shadowB},${(a*0.40).toFixed(3)})`;
-      ctx.lineWidth = strokeW * 1.05;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(x0 + strokeW*0.15, y0 + strokeW*0.18);
-      ctx.bezierCurveTo(
-        px1x + strokeW*0.15, px1y + strokeW*0.18,
-        px2x + strokeW*0.15, px2y + strokeW*0.18,
-        x1 + strokeW*0.15, y1 + strokeW*0.18
-      );
-      ctx.stroke();
-
-      // 2) BODY — multiple PURE-COLOR bristles, each a single solid tone.
-      // The tone CAN be quite different between neighboring bristles — that
-      // pure-pigment-side-by-side clash is Van Gogh's color signature.
-      const layers = 3 + Math.floor(rnd()*3); // 3-5 bristles per stroke
-      for(let bi=0; bi<layers; bi++){
-        const offset = (bi/(layers-1) - 0.5) * strokeW * 0.65;
-        const nx = -sinA * offset;
-        const ny =  cosA * offset;
-        // Per-bristle tone shift — can be substantial (±55) so neighbors
-        // clash visibly. NO blending along the length.
-        const tone = (rnd()-0.5)*55;
-        const rJ = Math.max(0,Math.min(255,Math.round(r+tone)));
-        const gJ = Math.max(0,Math.min(255,Math.round(g+tone)));
-        const bJ = Math.max(0,Math.min(255,Math.round(b+tone)));
-        ctx.strokeStyle = `rgba(${rJ},${gJ},${bJ},${(a*0.95).toFixed(3)})`;
-        ctx.lineWidth = strokeW * 0.28;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(x0+nx, y0+ny);
-        ctx.bezierCurveTo(px1x+nx, px1y+ny, px2x+nx, px2y+ny, x1+nx, y1+ny);
-        ctx.stroke();
-      }
-
-      // 3) HIGHLIGHT RIDGE — pure color, brighter, single curve along upper edge
-      const hR = Math.min(255, Math.round(r*1.55 + 25));
-      const hG = Math.min(255, Math.round(g*1.55 + 25));
-      const hB = Math.min(255, Math.round(b*1.55 + 25));
-      ctx.strokeStyle = `rgba(${hR},${hG},${hB},${(a*0.60).toFixed(3)})`;
-      ctx.lineWidth = strokeW * 0.16;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      const hnx = -sinA * (-strokeW*0.28);
-      const hny =  cosA * (-strokeW*0.28);
-      ctx.moveTo(x0+hnx, y0+hny);
-      ctx.bezierCurveTo(px1x+hnx, px1y+hny, px2x+hnx, px2y+hny, x1+hnx, y1+hny);
-      ctx.stroke();
-
-      // 4) FRAYED ENDS — MORE hairs, LONGER, more aggressive than before.
-      const endHairs = 4 + Math.floor(rnd()*3); // 4-6 hairs per terminus
-      const tx1 = 3*(x1 - px2x), ty1 = 3*(y1 - px2y);
-      const tlen1 = Math.sqrt(tx1*tx1 + ty1*ty1) || 1;
-      const txN1 = tx1/tlen1, tyN1 = ty1/tlen1;
-      const tx0 = 3*(px1x - x0), ty0 = 3*(px1y - y0);
-      const tlen0 = Math.sqrt(tx0*tx0 + ty0*ty0) || 1;
-      const txN0 = -tx0/tlen0, tyN0 = -ty0/tlen0;
-      for(let h=0; h<endHairs; h++){
-        const hairLen = strokeW * (1.5 + rnd()*2.5);
-        const hairOffset = (rnd()-0.5) * strokeW * 0.85;
-        const hairTone = (rnd()-0.5)*45;
-        const hrJ = Math.max(0,Math.min(255,Math.round(r+hairTone)));
-        const hgJ = Math.max(0,Math.min(255,Math.round(g+hairTone)));
-        const hbJ = Math.max(0,Math.min(255,Math.round(b+hairTone)));
-        ctx.strokeStyle = `rgba(${hrJ},${hgJ},${hbJ},${(a*0.70).toFixed(3)})`;
-        ctx.lineWidth = strokeW * 0.08;
-        ctx.lineCap = 'round';
-        const tailNx = -tyN1 * hairOffset, tailNy = txN1 * hairOffset;
-        ctx.beginPath();
-        ctx.moveTo(x1+tailNx, y1+tailNy);
-        ctx.lineTo(x1 + txN1*hairLen + tailNx, y1 + tyN1*hairLen + tailNy);
-        ctx.stroke();
-        if(rnd()<0.65){
-          const headNx = -tyN0 * hairOffset, headNy = txN0 * hairOffset;
-          ctx.beginPath();
-          ctx.moveTo(x0+headNx, y0+headNy);
-          ctx.lineTo(x0 + txN0*hairLen*0.75 + headNx, y0 + tyN0*hairLen*0.75 + headNy);
-          ctx.stroke();
-        }
-      }
-
-      // 5) RARE SPECK — small wet-pigment highlight along stroke
-      if(rnd()<0.15){
-        const t = 0.25 + rnd()*0.5;
-        const u = 1-t;
-        const speckX = u*u*u*x0 + 3*u*u*t*px1x + 3*u*t*t*px2x + t*t*t*x1;
-        const speckY = u*u*u*y0 + 3*u*u*t*px1y + 3*u*t*t*px2y + t*t*t*y1;
-        ctx.fillStyle = `rgba(255,250,${Math.min(255,Math.round(b*1.3+80))},0.82)`;
-        ctx.beginPath();
-        ctx.arc(speckX, speckY, strokeW*0.10 + rnd()*strokeW*0.08, 0, Math.PI*2);
-        ctx.fill();
-      }
-    }
-  });
-}
-
 function drawKandinsky(ctx,bx,by,notes,gc,BW,BH){
-  // Kandinsky — abstract geometric composition. Lines as protagonists,
-  // concentric circles as anchors, sharp triangles and dot clusters as
-  // accents. Diverges from Picasso (filled polygons), Van Gogh (curved
-  // strokes), Monet (soft dabs), Rembrandt (impasto blobs) by using
-  // line-based linear elements no other style features.
+  // Kandinsky — abstract geometric composition with a varied shape vocabulary.
+  // Each voice ALWAYS paints the concentric-circle "eye" (foundation), then
+  // randomly picks a subset of 2-3 ACCENT shapes from a larger pool. Different
+  // voices/cells pick different combos, giving the painting visible variation
+  // instead of every cell looking identical.
   //
   // Per voice:
-  // • One concentric-circle "eye" — 3-5 nested rings, alternating tones
-  // • 2-4 straight LINES crossing through/near the cell — different angles,
-  //   widths, occasionally tipped with an arrow or hook
-  // • 1-2 sharp triangle accents (filled or open chevron)
-  // • Occasional dot constellation — 3-5 dots in a line or arc
-  // • Rare black line cutting across for contrast (Kandinsky's signature)
+  // • Foundation: concentric-circle "eye" + optional center dot
+  // • 2-3 random accents from the pool of 11 shape types:
+  //     straightLines, triangles, dotConstellation, wavyLine, pieSlice,
+  //     zigzag, crescent, concentricSquares, halfDisc, star, dashedLine
   //
   // Cell-wide compositional axis means voices share rough diagonal direction
   // so the cell reads coordinated, not chaotic.
   const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
   const rnd=_seedRnd(bx,by,BW,BH);
-  // Cell-wide composition axis (slight tilt, mostly diagonal)
   const cellAxis = (rnd()*Math.PI*2);
 
   sorted.forEach((note,vi)=>{
@@ -1098,34 +952,28 @@ function drawKandinsky(ctx,bx,by,notes,gc,BW,BH){
     const centerX = bx + BW*0.5;
     const centerY = yOff + bh*0.5;
     const minDim = Math.min(BW, bh);
-    // Voice-level angle offset from cell axis
     const voiceAngle = cellAxis + (vi - n/2) * 0.35 + (rnd()-0.5)*0.4;
 
-    // === 1. CONCENTRIC CIRCLE EYE ===
-    // Position offset from center
+    // === FOUNDATION: CONCENTRIC-CIRCLE EYE ===
     const eyeX = centerX + (rnd()-0.5) * BW * 0.45;
     const eyeY = yOff + bh*0.5 + (rnd()-0.5) * bh * 0.4;
     const eyeMaxR = minDim * (0.30 + rnd()*0.20);
-    const rings = 3 + Math.floor(rnd()*3); // 3-5 rings
+    const rings = 3 + Math.floor(rnd()*3);
     for(let ri = rings-1; ri >= 0; ri--){
       const ringR = eyeMaxR * ((ri+1) / rings);
-      // Alternate tones: light, dark, base, light...
       const tonePattern = ri % 3;
       let rJ, gJ, bJ;
       if(tonePattern === 0){
-        // Slight darker (base)
         const t = -15 - rnd()*15;
         rJ = Math.max(0,Math.min(255,Math.round(r+t)));
         gJ = Math.max(0,Math.min(255,Math.round(g+t)));
         bJ = Math.max(0,Math.min(255,Math.round(b+t)));
       } else if(tonePattern === 1){
-        // Lighter highlight
         const t = 30 + rnd()*30;
         rJ = Math.max(0,Math.min(255,Math.round(r+t)));
         gJ = Math.max(0,Math.min(255,Math.round(g+t)));
         bJ = Math.max(0,Math.min(255,Math.round(b+t)));
       } else {
-        // Saturated base
         rJ = r; gJ = g; bJ = b;
       }
       ctx.fillStyle = `rgba(${rJ},${gJ},${bJ},${a.toFixed(3)})`;
@@ -1133,127 +981,7 @@ function drawKandinsky(ctx,bx,by,notes,gc,BW,BH){
       ctx.arc(eyeX, eyeY, ringR, 0, Math.PI*2);
       ctx.fill();
     }
-
-    // === 2. STRAIGHT LINES through the cell ===
-    const lineCount = 2 + Math.floor(rnd()*3); // 2-4 lines
-    for(let li=0; li<lineCount; li++){
-      const lineAngle = voiceAngle + (rnd()-0.5)*Math.PI*0.8;
-      const lineLen = Math.max(BW,bh) * (0.8 + rnd()*0.8); // can bleed past cell
-      // Origin somewhere in the cell, mostly around the eye
-      const ox = eyeX + (rnd()-0.5) * BW * 0.7;
-      const oy = eyeY + (rnd()-0.5) * bh * 0.7;
-      const cosL = Math.cos(lineAngle), sinL = Math.sin(lineAngle);
-      const x1 = ox - cosL * lineLen/2;
-      const y1 = oy - sinL * lineLen/2;
-      const x2 = ox + cosL * lineLen/2;
-      const y2 = oy + sinL * lineLen/2;
-      // Line thickness varies — some are thin, some are bold
-      const lineW = minDim * (0.015 + rnd()*0.06); // ~1.5-7.5% of cell dim
-      // Color: 70% chance use voice tone variation, 25% chance pure white,
-      // 5% chance pure black for high-contrast Kandinsky accent
-      const lineRoll = rnd();
-      let lineColor;
-      if(lineRoll < 0.05){
-        lineColor = `rgba(8,4,12,${(a*0.92).toFixed(3)})`;
-      } else if(lineRoll < 0.30){
-        lineColor = `rgba(245,238,220,${(a*0.85).toFixed(3)})`;
-      } else {
-        const t = (rnd()-0.5)*50;
-        const lrJ = Math.max(0,Math.min(255,Math.round(r+t)));
-        const lgJ = Math.max(0,Math.min(255,Math.round(g+t)));
-        const lbJ = Math.max(0,Math.min(255,Math.round(b+t)));
-        lineColor = `rgba(${lrJ},${lgJ},${lbJ},${a.toFixed(3)})`;
-      }
-      ctx.strokeStyle = lineColor;
-      ctx.lineWidth = lineW;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-
-      // 30% chance: add arrow tip or hook at one end
-      if(rnd() < 0.30){
-        const tipSize = lineW * 4;
-        // Pick end (with arrow direction continuing the line)
-        const tipX = x2, tipY = y2;
-        // Perpendicular vector
-        const px = -sinL, py = cosL;
-        // Arrowhead — small V at the tip pointing back along the line
-        ctx.beginPath();
-        ctx.moveTo(tipX, tipY);
-        ctx.lineTo(tipX - cosL*tipSize + px*tipSize*0.6, tipY - sinL*tipSize + py*tipSize*0.6);
-        ctx.moveTo(tipX, tipY);
-        ctx.lineTo(tipX - cosL*tipSize - px*tipSize*0.6, tipY - sinL*tipSize - py*tipSize*0.6);
-        ctx.stroke();
-      }
-    }
-
-    // === 3. TRIANGLE ACCENTS ===
-    const triCount = 1 + Math.floor(rnd()*2); // 1-2 triangles
-    for(let ti=0; ti<triCount; ti++){
-      // Position on opposite side from the eye
-      const tx = centerX + (eyeX < centerX ? 1 : -1) * BW * (0.15 + rnd()*0.2);
-      const ty = yOff + bh * (0.25 + rnd()*0.5);
-      const triSize = minDim * (0.18 + rnd()*0.22);
-      const triRot = rnd() * Math.PI * 2;
-      // Tone shift for triangle
-      const triTone = (rnd()-0.5)*80;
-      const trJ = Math.max(0,Math.min(255,Math.round(r+triTone)));
-      const tgJ = Math.max(0,Math.min(255,Math.round(g+triTone)));
-      const tbJ = Math.max(0,Math.min(255,Math.round(b+triTone)));
-      ctx.save();
-      ctx.translate(tx, ty);
-      ctx.rotate(triRot);
-      ctx.beginPath();
-      ctx.moveTo(0, -triSize/2);
-      ctx.lineTo(triSize/2, triSize/2);
-      ctx.lineTo(-triSize/2, triSize/2);
-      ctx.closePath();
-      // 70% filled, 30% open chevron outline
-      if(rnd() < 0.7){
-        ctx.fillStyle = `rgba(${trJ},${tgJ},${tbJ},${(a*0.92).toFixed(3)})`;
-        ctx.fill();
-      } else {
-        ctx.strokeStyle = `rgba(${trJ},${tgJ},${tbJ},${a.toFixed(3)})`;
-        ctx.lineWidth = minDim*0.025;
-        ctx.lineJoin = 'round';
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // === 4. DOT CONSTELLATION (occasional) ===
-    if(rnd() < 0.45){
-      const dotCount = 3 + Math.floor(rnd()*4); // 3-6 dots
-      const dotPathAngle = voiceAngle + (rnd()-0.5)*Math.PI*0.5;
-      const dotStartX = centerX + (rnd()-0.5)*BW*0.5;
-      const dotStartY = yOff + bh*0.3 + rnd()*bh*0.5;
-      const dotSpacing = minDim * (0.06 + rnd()*0.06);
-      const dotSize = minDim * (0.025 + rnd()*0.025);
-      const cosD = Math.cos(dotPathAngle), sinD = Math.sin(dotPathAngle);
-      for(let di=0; di<dotCount; di++){
-        const dx = dotStartX + cosD * dotSpacing * di;
-        const dy = dotStartY + sinD * dotSpacing * di;
-        // Dot color rotates between voice color, white, black
-        const dotRoll = (di + Math.floor(rnd()*3)) % 3;
-        let dotColor;
-        if(dotRoll === 0){
-          dotColor = `rgba(${r},${g},${b},${a.toFixed(3)})`;
-        } else if(dotRoll === 1){
-          dotColor = `rgba(245,238,220,${(a*0.9).toFixed(3)})`;
-        } else {
-          dotColor = `rgba(8,4,12,${(a*0.85).toFixed(3)})`;
-        }
-        ctx.fillStyle = dotColor;
-        ctx.beginPath();
-        ctx.arc(dx, dy, dotSize, 0, Math.PI*2);
-        ctx.fill();
-      }
-    }
-
-    // === 5. CENTER DOT in the eye ===
-    // Kandinsky's eyes often have a contrasting tiny dot at center
+    // Center dot (optional)
     if(rnd() < 0.55){
       const centerDotR = eyeMaxR * 0.08;
       ctx.fillStyle = rnd() < 0.5 ? 'rgba(8,4,12,0.95)' : 'rgba(245,238,220,0.95)';
@@ -1261,20 +989,1090 @@ function drawKandinsky(ctx,bx,by,notes,gc,BW,BH){
       ctx.arc(eyeX, eyeY, centerDotR, 0, Math.PI*2);
       ctx.fill();
     }
+
+    // === SHAPE POOL — accent shape functions ===
+    // Each is a small inline function that paints one shape using the voice's
+    // colors and the cell-wide axis. They share rnd state for determinism.
+    const shapeFns = {
+      straightLines: () => {
+        const lineCount = 1 + Math.floor(rnd()*2); // 1-2 lines (reduced from 2-4)
+        for(let li=0; li<lineCount; li++){
+          const lineAngle = voiceAngle + (rnd()-0.5)*Math.PI*0.8;
+          const lineLen = Math.max(BW,bh) * (0.7 + rnd()*0.7);
+          const ox = eyeX + (rnd()-0.5) * BW * 0.7;
+          const oy = eyeY + (rnd()-0.5) * bh * 0.7;
+          const cosL = Math.cos(lineAngle), sinL = Math.sin(lineAngle);
+          const x1 = ox - cosL * lineLen/2;
+          const y1 = oy - sinL * lineLen/2;
+          const x2 = ox + cosL * lineLen/2;
+          const y2 = oy + sinL * lineLen/2;
+          const lineW = minDim * (0.015 + rnd()*0.05);
+          const lineRoll = rnd();
+          let lineColor;
+          if(lineRoll < 0.05){
+            lineColor = `rgba(8,4,12,${(a*0.92).toFixed(3)})`;
+          } else if(lineRoll < 0.30){
+            lineColor = `rgba(245,238,220,${(a*0.85).toFixed(3)})`;
+          } else {
+            const t = (rnd()-0.5)*50;
+            lineColor = `rgba(${Math.max(0,Math.min(255,Math.round(r+t)))},${Math.max(0,Math.min(255,Math.round(g+t)))},${Math.max(0,Math.min(255,Math.round(b+t)))},${a.toFixed(3)})`;
+          }
+          ctx.strokeStyle = lineColor;
+          ctx.lineWidth = lineW;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          // 30% arrow tip
+          if(rnd() < 0.30){
+            const tipSize = lineW * 4;
+            const px = -sinL, py = cosL;
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - cosL*tipSize + px*tipSize*0.6, y2 - sinL*tipSize + py*tipSize*0.6);
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - cosL*tipSize - px*tipSize*0.6, y2 - sinL*tipSize - py*tipSize*0.6);
+            ctx.stroke();
+          }
+        }
+      },
+      triangle: () => {
+        const tx = centerX + (rnd()-0.5) * BW * 0.6;
+        const ty = yOff + bh * (0.25 + rnd()*0.5);
+        const triSize = minDim * (0.22 + rnd()*0.25);
+        const triRot = rnd() * Math.PI * 2;
+        const triTone = (rnd()-0.5)*80;
+        const trJ = Math.max(0,Math.min(255,Math.round(r+triTone)));
+        const tgJ = Math.max(0,Math.min(255,Math.round(g+triTone)));
+        const tbJ = Math.max(0,Math.min(255,Math.round(b+triTone)));
+        ctx.save();
+        ctx.translate(tx, ty);
+        ctx.rotate(triRot);
+        ctx.beginPath();
+        ctx.moveTo(0, -triSize/2);
+        ctx.lineTo(triSize/2, triSize/2);
+        ctx.lineTo(-triSize/2, triSize/2);
+        ctx.closePath();
+        if(rnd() < 0.7){
+          ctx.fillStyle = `rgba(${trJ},${tgJ},${tbJ},${(a*0.92).toFixed(3)})`;
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = `rgba(${trJ},${tgJ},${tbJ},${a.toFixed(3)})`;
+          ctx.lineWidth = minDim*0.025;
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+        }
+        ctx.restore();
+      },
+      dotConstellation: () => {
+        const dotCount = 3 + Math.floor(rnd()*4);
+        const dotPathAngle = voiceAngle + (rnd()-0.5)*Math.PI*0.5;
+        const dotStartX = centerX + (rnd()-0.5)*BW*0.5;
+        const dotStartY = yOff + bh*0.3 + rnd()*bh*0.5;
+        const dotSpacing = minDim * (0.06 + rnd()*0.06);
+        const dotSize = minDim * (0.025 + rnd()*0.025);
+        const cosD = Math.cos(dotPathAngle), sinD = Math.sin(dotPathAngle);
+        for(let di=0; di<dotCount; di++){
+          const dx = dotStartX + cosD * dotSpacing * di;
+          const dy = dotStartY + sinD * dotSpacing * di;
+          const dotRoll = (di + Math.floor(rnd()*3)) % 3;
+          let dotColor;
+          if(dotRoll === 0){
+            dotColor = `rgba(${r},${g},${b},${a.toFixed(3)})`;
+          } else if(dotRoll === 1){
+            dotColor = `rgba(245,238,220,${(a*0.9).toFixed(3)})`;
+          } else {
+            dotColor = `rgba(8,4,12,${(a*0.85).toFixed(3)})`;
+          }
+          ctx.fillStyle = dotColor;
+          ctx.beginPath();
+          ctx.arc(dx, dy, dotSize, 0, Math.PI*2);
+          ctx.fill();
+        }
+      },
+      wavyLine: () => {
+        const wavLen = Math.min(BW, bh) * (0.70 + rnd()*0.30);
+        const wavAng = voiceAngle + (rnd()-0.5)*0.6;
+        const wavX = centerX + (rnd()-0.5) * BW * 0.4;
+        const wavY = yOff + bh*0.5 + (rnd()-0.5) * bh * 0.4;
+        const cosW = Math.cos(wavAng), sinW = Math.sin(wavAng);
+        const perpX = -sinW, perpY = cosW;
+        const amp = Math.min(BW, bh) * (0.07 + rnd()*0.06);
+        const cycles = 1.5 + rnd()*1.5;
+        const wavTone = (rnd()-0.5)*60;
+        const wR = Math.max(0,Math.min(255,Math.round(r+wavTone)));
+        const wG = Math.max(0,Math.min(255,Math.round(g+wavTone)));
+        const wB = Math.max(0,Math.min(255,Math.round(b+wavTone)));
+        ctx.strokeStyle = rnd() < 0.18 ? `rgba(245,238,220,${(a*0.85).toFixed(3)})` : `rgba(${wR},${wG},${wB},${a.toFixed(3)})`;
+        ctx.lineWidth = minDim * (0.018 + rnd()*0.020);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        const segs = 20;
+        for(let s=0; s<=segs; s++){
+          const t = s/segs;
+          const baseX = wavX + cosW * (t - 0.5) * wavLen;
+          const baseY = wavY + sinW * (t - 0.5) * wavLen;
+          const wave = Math.sin(t * cycles * Math.PI * 2) * amp;
+          const px = baseX + perpX * wave;
+          const py = baseY + perpY * wave;
+          if(s === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      },
+      pieSlice: () => {
+        const psR = minDim * (0.28 + rnd()*0.25);
+        const psX = bx + BW * (0.15 + rnd()*0.70);
+        const psY = yOff + bh * (0.15 + rnd()*0.70);
+        const startA = rnd() * Math.PI * 2;
+        const sweep = (0.35 + rnd()*0.55) * Math.PI;
+        const psTone = (rnd()-0.5)*70;
+        const pR = Math.max(0,Math.min(255,Math.round(r+psTone)));
+        const pG = Math.max(0,Math.min(255,Math.round(g+psTone)));
+        const pB = Math.max(0,Math.min(255,Math.round(b+psTone)));
+        ctx.fillStyle = `rgba(${pR},${pG},${pB},${(a*0.88).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.moveTo(psX, psY);
+        ctx.arc(psX, psY, psR, startA, startA + sweep);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = `rgba(8,4,12,${(a*0.75).toFixed(3)})`;
+        ctx.lineWidth = minDim * 0.018;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      },
+      zigzag: () => {
+        const zgSteps = 3 + Math.floor(rnd()*3);
+        const zgLen = Math.min(BW, bh) * 0.22;
+        const zgAng = voiceAngle + (rnd()-0.5)*0.4;
+        const zgCos = Math.cos(zgAng), zgSin = Math.sin(zgAng);
+        const zgPerpX = -zgSin, zgPerpY = zgCos;
+        const zgAmp = zgLen * 0.85;
+        let zgX = bx + BW * (0.20 + rnd()*0.60);
+        let zgY = yOff + bh * (0.20 + rnd()*0.60);
+        ctx.strokeStyle = rnd() < 0.4 ? 'rgba(8,4,12,0.92)' : `rgba(245,238,220,${(a*0.85).toFixed(3)})`;
+        ctx.lineWidth = minDim * (0.022 + rnd()*0.020);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(zgX, zgY);
+        for(let zi=0; zi<zgSteps; zi++){
+          const dir = zi % 2 === 0 ? 1 : -1;
+          zgX += zgCos * zgLen + zgPerpX * zgAmp * dir;
+          zgY += zgSin * zgLen + zgPerpY * zgAmp * dir;
+          ctx.lineTo(zgX, zgY);
+        }
+        ctx.stroke();
+      },
+      crescent: () => {
+        // Open arc / partial ring — rainbow fragment
+        const crX = bx + BW * (0.20 + rnd()*0.60);
+        const crY = yOff + bh * (0.20 + rnd()*0.60);
+        const crR = minDim * (0.22 + rnd()*0.18);
+        const crStart = rnd() * Math.PI * 2;
+        const crSweep = (0.4 + rnd()*0.6) * Math.PI;
+        const crTone = (rnd()-0.5)*60;
+        const crR2 = Math.max(0,Math.min(255,Math.round(r+crTone)));
+        const crG2 = Math.max(0,Math.min(255,Math.round(g+crTone)));
+        const crB2 = Math.max(0,Math.min(255,Math.round(b+crTone)));
+        ctx.strokeStyle = `rgba(${crR2},${crG2},${crB2},${a.toFixed(3)})`;
+        ctx.lineWidth = minDim * (0.035 + rnd()*0.04);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(crX, crY, crR, crStart, crStart + crSweep);
+        ctx.stroke();
+      },
+      concentricSquares: () => {
+        // Nested rectangles — the square version of the eye
+        const sqX = centerX + (rnd()-0.5) * BW * 0.5;
+        const sqY = yOff + bh*0.5 + (rnd()-0.5) * bh * 0.5;
+        const sqMaxR = minDim * (0.22 + rnd()*0.15);
+        const sqRings = 3 + Math.floor(rnd()*2);
+        const sqRot = rnd() * Math.PI * 0.5;
+        for(let si = sqRings-1; si >= 0; si--){
+          const sqR = sqMaxR * ((si+1) / sqRings);
+          const tone = (si % 2 === 0) ? -20 : 30;
+          const sR = Math.max(0,Math.min(255,Math.round(r+tone)));
+          const sG = Math.max(0,Math.min(255,Math.round(g+tone)));
+          const sB = Math.max(0,Math.min(255,Math.round(b+tone)));
+          ctx.save();
+          ctx.translate(sqX, sqY);
+          ctx.rotate(sqRot);
+          ctx.fillStyle = `rgba(${sR},${sG},${sB},${a.toFixed(3)})`;
+          ctx.fillRect(-sqR, -sqR, sqR*2, sqR*2);
+          ctx.restore();
+        }
+      },
+      halfDisc: () => {
+        // Half-filled circle (half-moon)
+        const hdX = bx + BW * (0.20 + rnd()*0.60);
+        const hdY = yOff + bh * (0.25 + rnd()*0.50);
+        const hdR = minDim * (0.20 + rnd()*0.18);
+        const hdRot = rnd() * Math.PI * 2;
+        const hdTone = (rnd()-0.5)*80;
+        const hR = Math.max(0,Math.min(255,Math.round(r+hdTone)));
+        const hG = Math.max(0,Math.min(255,Math.round(g+hdTone)));
+        const hB = Math.max(0,Math.min(255,Math.round(b+hdTone)));
+        ctx.fillStyle = `rgba(${hR},${hG},${hB},${(a*0.90).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(hdX, hdY, hdR, hdRot, hdRot + Math.PI);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = `rgba(8,4,12,${(a*0.70).toFixed(3)})`;
+        ctx.lineWidth = minDim * 0.015;
+        ctx.stroke();
+      },
+      star: () => {
+        // 5-point star
+        const stX = bx + BW * (0.20 + rnd()*0.60);
+        const stY = yOff + bh * (0.20 + rnd()*0.60);
+        const stOuter = minDim * (0.15 + rnd()*0.10);
+        const stInner = stOuter * 0.45;
+        const stRot = rnd() * Math.PI * 2;
+        const stTone = (rnd()-0.5)*60;
+        const sR = Math.max(0,Math.min(255,Math.round(r+stTone)));
+        const sG = Math.max(0,Math.min(255,Math.round(g+stTone)));
+        const sB = Math.max(0,Math.min(255,Math.round(b+stTone)));
+        ctx.fillStyle = `rgba(${sR},${sG},${sB},${(a*0.92).toFixed(3)})`;
+        ctx.beginPath();
+        for(let k=0; k<10; k++){
+          const angK = stRot + k * Math.PI / 5;
+          const radK = (k % 2 === 0) ? stOuter : stInner;
+          const px = stX + Math.cos(angK) * radK;
+          const py = stY + Math.sin(angK) * radK;
+          if(k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = `rgba(8,4,12,${(a*0.72).toFixed(3)})`;
+        ctx.lineWidth = minDim * 0.012;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      },
+      dashedLine: () => {
+        // Long dashed line (musical staff cousin, more rhythmic)
+        const dlAng = voiceAngle + (rnd()-0.5)*Math.PI*0.6;
+        const dlLen = Math.max(BW, bh) * (0.7 + rnd()*0.5);
+        const dlX = centerX + (rnd()-0.5) * BW * 0.5;
+        const dlY = yOff + bh*0.5 + (rnd()-0.5) * bh * 0.5;
+        const cosDL = Math.cos(dlAng), sinDL = Math.sin(dlAng);
+        const dashCount = 5 + Math.floor(rnd()*5);
+        const dashLen = dlLen / (dashCount * 1.8);
+        const gapLen = dashLen * 0.8;
+        ctx.strokeStyle = rnd() < 0.35 ? `rgba(245,238,220,${(a*0.85).toFixed(3)})` : `rgba(8,4,12,${(a*0.88).toFixed(3)})`;
+        ctx.lineWidth = minDim * (0.018 + rnd()*0.015);
+        ctx.lineCap = 'round';
+        for(let di=0; di<dashCount; di++){
+          const t0 = -0.5 + (di * (dashLen+gapLen)) / dlLen;
+          const t1 = t0 + dashLen / dlLen;
+          const px0 = dlX + cosDL * t0 * dlLen;
+          const py0 = dlY + sinDL * t0 * dlLen;
+          const px1 = dlX + cosDL * t1 * dlLen;
+          const py1 = dlY + sinDL * t1 * dlLen;
+          ctx.beginPath();
+          ctx.moveTo(px0, py0);
+          ctx.lineTo(px1, py1);
+          ctx.stroke();
+        }
+      },
+    };
+
+    // === RANDOM SUBSET PICK ===
+    // Per voice, pick 2-3 random shapes from the pool. Different voices/cells
+    // pick different combos, giving the painting variation.
+    const poolKeys = Object.keys(shapeFns);
+    const pickCount = 2 + Math.floor(rnd()*2); // 2-3 shapes
+    // Fisher-Yates partial shuffle
+    const shuffled = poolKeys.slice();
+    for(let i=shuffled.length-1; i>0; i--){
+      const j = Math.floor(rnd() * (i+1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    for(let p=0; p<pickCount && p<shuffled.length; p++){
+      shapeFns[shuffled[p]]();
+    }
   });
 }
 
 function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
-  if(style==='picasso')return drawPicasso(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='rembrandt')return drawRembrandt(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='picasso') return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
   if(style==='kusama')return drawKusama(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='vangogh')return drawVanGogh(ctx,bx,by,notes,gc,BW,BH);
   if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
   return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
+}
+
+// Pollock canvas-wide drip overlay. Painted on the cream substrate to simulate
+// real Pollock dense drip painting (modeled on works like Number 17A). Far
+// more dense than my earlier sparse version: many drip passes accumulating
+// with chord count, mixed thick/thin line characters, intense speckling,
+// limited bold palette (black dominant, white, red, yellow, grey, teal).
+//
+// Each pass is seeded independently (passIndex + sessionSeed + canvas dims)
+// so passes freeze as chord count grows; new chords unlock more passes layered
+// on top. Re-randomized on Clear/Vary.
+//
+// Per pass: a long curving drip line (style varies — thick smooth / thin
+// spidery / loop-back) + dense bead chain + heavy splatter cloud + occasional
+// fat blob where paint pooled.
+function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(lim === 0 || !chords || chords.length === 0) return;
+  const ss = sessionSeed|0;
+  const N = Math.min(lim, chords.length);
+  const isBW = mode==='bw';
+  const toGrey = (r,g,b) => { const v=Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; };
+
+  const _dc = [
+    {col:'rgba(15,12,18,',    wt: 0.28, rgb:[15,12,18]},
+    {col:'rgba(245,240,228,', wt: 0.10, rgb:[245,240,228]},
+    {col:'rgba(190,40,35,',   wt: 0.06, rgb:[190,40,35]},
+    {col:'rgba(235,200,55,',  wt: 0.05, rgb:[235,200,55]},
+    {col:'rgba(140,140,140,', wt: 0.04, rgb:[140,140,140]},
+    {col:'rgba(40,130,130,',  wt: 0.03, rgb:[40,130,130]},
+    {col:'rgba(180,150,70,',  wt: 0.02, rgb:[180,150,70]},
+    {col:'rgba(40,140,60,',   wt: 0.07, rgb:[40,140,60]},
+    {col:'rgba(40,70,190,',   wt: 0.07, rgb:[40,70,190]},
+    {col:'rgba(130,40,170,',  wt: 0.06, rgb:[130,40,170]},
+    {col:'rgba(220,100,30,',  wt: 0.06, rgb:[220,100,30]},
+    {col:'rgba(180,40,100,',  wt: 0.05, rgb:[180,40,100]},
+    {col:'rgba(60,160,180,',  wt: 0.05, rgb:[60,160,180]},
+    {col:'rgba(100,180,80,',  wt: 0.04, rgb:[100,180,80]},
+    {col:'rgba(200,80,160,',  wt: 0.02, rgb:[200,80,160]},
+  ];
+  // B/W: keep red (wt:0.03) and yellow (wt:0.02) as rare accents, rest grey
+  const dripColors = isBW ? _dc.map((c,i)=>{
+    if(i===2) return{col:c.col,wt:0.03,rgb:c.rgb};
+    if(i===3) return{col:c.col,wt:0.02,rgb:c.rgb};
+    const[v]=toGrey(...c.rgb); return{col:`rgba(${v},${v},${v},`,wt:c.wt,rgb:[v,v,v]};
+  }) : _dc;
+
+  // Compute average RGB + velocity for a chord -- used to bias palette and scale thickness.
+  const chordStats = (chord) => {
+    const notes = chord.n || chord.notes || (Array.isArray(chord) ? chord : null);
+    if(!notes || !notes.length) return null;
+    let avgR=0, avgG=0, avgB=0, avgV=0, count=0;
+    for(const note of notes){
+      const m = note.m !== undefined ? note.m : note;
+      const v = note.v !== undefined ? note.v : 100;
+      const [r,g,b] = gc(m, v);
+      avgR += r; avgG += g; avgB += b; avgV += v;
+      count++;
+    }
+    if(!count) return null;
+    return {
+      r: avgR/count, g: avgG/count, b: avgB/count,
+      v: avgV/count,
+    };
+  };
+
+  // Bias the palette weights toward whichever palette color is closest to
+  // the given chord color. The closest color gets a 3× boost; the second
+  // closest gets 1.5×; others keep their base weight.
+  const biasedWeights = (chordCol) => {
+    if(!chordCol) return dripColors.map(c => c.wt);
+    const dists = dripColors.map(c => {
+      const dr = c.rgb[0] - chordCol.r;
+      const dg = c.rgb[1] - chordCol.g;
+      const db = c.rgb[2] - chordCol.b;
+      return Math.sqrt(dr*dr + dg*dg + db*db);
+    });
+    // Rank palette indices by distance ascending
+    const indexed = dists.map((d,i)=>({d,i})).sort((a,b)=>a.d-b.d);
+    const boosts = new Array(dripColors.length).fill(1);
+    boosts[indexed[0].i] = 8.0;
+    if(indexed.length > 1) boosts[indexed[1].i] = 3.0;
+    if(indexed.length > 2) boosts[indexed[2].i] = 1.5;
+    return dripColors.map((c,i) => c.wt * boosts[i]);
+  };
+
+  const pickColor = (rnd, weights) => {
+    const total = weights.reduce((a,b)=>a+b, 0);
+    let r = rnd() * total;
+    for(let i=0; i<dripColors.length; i++){
+      r -= weights[i];
+      if(r < 0) return dripColors[i].col;
+    }
+    return dripColors[0].col;
+  };
+
+  // Pass count grows steeply with song length. Short songs are sparse (so the
+  // music structure shows), long songs build true Pollock density. Curve:
+  //   10 chords → 8 passes, 30 → 25, 60 → 55, 100 → 95, 150 → 135, 250+ → 200 (cap)
+  const passCount = Math.min(200,
+    N < 30 ? Math.ceil(N * 0.85)
+    : N < 80 ? 25 + Math.floor((N-30) * 0.85)
+    : N < 200 ? 68 + Math.floor((N-80) * 0.90)
+    : 176 + Math.floor((N-200) * 0.48)
+  );
+
+  // Map pass index → chord index. The first pass corresponds to the first
+  // chord, last pass corresponds to the latest chord, evenly distributed.
+  // This way each pass "represents" a specific chord in the music -- its color
+  // and velocity drive the drip's appearance.
+  const chordForPass = (passIdx) => {
+    if(passCount <= 1) return chords[N-1];
+    const t = passIdx / (passCount - 1);
+    const ci = Math.min(N-1, Math.floor(t * (N - 1)));
+    return chords[ci];
+  };
+
+  // Sample a point along the polyline at parameter t (0..1)
+  const sampleAt = (points, t) => {
+    const segIdx = Math.min(points.length-2, Math.floor(t * (points.length-1)));
+    const segT = (t * (points.length-1)) - segIdx;
+    const p0 = points[segIdx];
+    const p1 = points[segIdx+1] || points[segIdx];
+    return { x: p0.x + (p1.x - p0.x)*segT, y: p0.y + (p1.y - p0.y)*segT };
+  };
+
+  for(let p=0; p<passCount; p++){
+    // Per-pass seed: passIndex + sessionSeed
+    const rnd = _seedRnd(p+1, ss, CW, CH);
+
+    // === CHORD-DRIVEN PROPERTIES ===
+    // Each pass corresponds to a chord. Color is biased toward that chord's
+    // averaged color; line thickness scales with that chord's velocity.
+    const chord = chordForPass(p);
+    const stats = chord ? chordStats(chord) : null;
+    const weights = biasedWeights(stats);
+    const colBase = pickColor(rnd, weights);
+    // Velocity scaling: low velocity (40) → 0.55× thickness, max (127) → 1.45×
+    const vNorm = stats ? Math.max(0, Math.min(1, (stats.v - 30) / 90)) : 0.5;
+    const velScale = 0.55 + vNorm * 0.90;
+
+    // Line character -- picks one of 4 styles per pass for variety
+    const styleRoll = rnd();
+    const lineStyle = styleRoll < 0.30 ? 'thick'        // bold smooth trail
+                    : styleRoll < 0.65 ? 'thin'          // spidery scribble
+                    : styleRoll < 0.85 ? 'loopy'         // curling loops
+                    : 'wide';                            // pooled wide trail
+
+    // === DRIP PATH ===
+    // Start/end positions. Most lines span the canvas (in from one edge,
+    // out the other). Some "loopy" lines stay closer to a center.
+    const padding = Math.max(CW, CH) * 0.3;
+    let x0, y0, x1, y1;
+    if(lineStyle === 'loopy'){
+      // Loopy lines center somewhere in canvas, smaller span
+      const cx = rnd()*CW, cy = rnd()*CH;
+      const reach = Math.min(CW, CH) * (0.3 + rnd()*0.3);
+      const a1 = rnd()*Math.PI*2;
+      const a2 = a1 + Math.PI + (rnd()-0.5)*1.5;
+      x0 = cx + Math.cos(a1)*reach;
+      y0 = cy + Math.sin(a1)*reach;
+      x1 = cx + Math.cos(a2)*reach;
+      y1 = cy + Math.sin(a2)*reach;
+    } else {
+      // Standard cross-canvas span
+      const startSide = Math.floor(rnd()*4);
+      if(startSide === 0){
+        x0 = rnd()*CW; y0 = -padding;
+        x1 = rnd()*CW; y1 = CH + padding;
+      } else if(startSide === 1){
+        x0 = CW + padding; y0 = rnd()*CH;
+        x1 = -padding; y1 = rnd()*CH;
+      } else if(startSide === 2){
+        x0 = rnd()*CW; y0 = CH + padding;
+        x1 = rnd()*CW; y1 = -padding;
+      } else {
+        x0 = -padding; y0 = rnd()*CH;
+        x1 = CW + padding; y1 = rnd()*CH;
+      }
+    }
+
+    // Build polyline -- segment count varies by style (loopy = more segments)
+    const segs = lineStyle === 'loopy' ? 12 + Math.floor(rnd()*6)
+               : 8 + Math.floor(rnd()*5);
+    const points = [];
+    const lineDx = x1-x0, lineDy = y1-y0;
+    const lineLen = Math.sqrt(lineDx*lineDx + lineDy*lineDy) || 1;
+    const perpX = -lineDy/lineLen, perpY = lineDx/lineLen;
+    // Wobble amount varies with style
+    const wobScale = lineStyle === 'thick' ? 0.18
+                   : lineStyle === 'thin'  ? 0.28
+                   : lineStyle === 'loopy' ? 0.45
+                   : 0.20;
+    for(let s=0; s<=segs; s++){
+      const t = s/segs;
+      const lx = x0 + lineDx*t;
+      const ly = y0 + lineDy*t;
+      const wobAmp = Math.sin(t*Math.PI) * Math.min(CW, CH) * wobScale;
+      // For loopy lines, add some longitudinal jitter too
+      let lxJ = lx, lyJ = ly;
+      if(lineStyle === 'loopy'){
+        const jitT = (rnd()-0.5)*0.15;
+        lxJ = lx + lineDx*jitT;
+        lyJ = ly + lineDy*jitT;
+      }
+      const wob = (rnd()-0.5) * 2 * wobAmp;
+      points.push({x: lxJ + perpX*wob, y: lyJ + perpY*wob});
+    }
+
+    // === STROKE THE LINE ===
+    // Width depends on line style
+    let lineWidth, lineAlpha;
+    if(lineStyle === 'thick'){
+      lineWidth = Math.min(CW, CH) * (0.010 + rnd()*0.012) * velScale;
+      lineAlpha = 0.92;
+    } else if(lineStyle === 'thin'){
+      lineWidth = Math.min(CW, CH) * (0.0025 + rnd()*0.0035) * velScale;
+      lineAlpha = 0.90;
+    } else if(lineStyle === 'loopy'){
+      lineWidth = Math.min(CW, CH) * (0.004 + rnd()*0.006) * velScale;
+      lineAlpha = 0.92;
+    } else { // wide
+      lineWidth = Math.min(CW, CH) * (0.014 + rnd()*0.014) * velScale;
+      lineAlpha = 0.88;
+    }
+    ctx.strokeStyle = colBase + lineAlpha.toFixed(2) + ')';
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for(let i=1; i<points.length-1; i++){
+      const mid = {x:(points[i].x+points[i+1].x)/2, y:(points[i].y+points[i+1].y)/2};
+      ctx.quadraticCurveTo(points[i].x, points[i].y, mid.x, mid.y);
+    }
+    ctx.lineTo(points[points.length-1].x, points[points.length-1].y);
+    ctx.stroke();
+
+    // === BEADS -- small dots along the line ===
+    // Count scales with line style: thick/wide get more beads
+    const beadCount = lineStyle === 'thin' ? 4 + Math.floor(rnd()*5)
+                    : lineStyle === 'loopy' ? 8 + Math.floor(rnd()*8)
+                    : 12 + Math.floor(rnd()*10);
+    for(let b=0; b<beadCount; b++){
+      const t = b / beadCount + (rnd()-0.5)*0.02;
+      const pt = sampleAt(points, Math.max(0, Math.min(1, t)));
+      const drift = lineWidth * (0.3 + rnd()*1.5);
+      const angle = rnd()*Math.PI*2;
+      const beadRadius = lineWidth * (0.35 + rnd()*0.75);
+      ctx.fillStyle = colBase + (0.85 + rnd()*0.10).toFixed(2) + ')';
+      ctx.beginPath();
+      ctx.arc(pt.x + Math.cos(angle)*drift, pt.y + Math.sin(angle)*drift, beadRadius, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // === DENSE SPECKLE CLOUD -- many tiny micro-specks around the line ===
+    // Real Pollock has hundreds of micro-specks; this is where the painting
+    // gets its scattered-paint texture.
+    const speckCount = lineStyle === 'wide' ? 60 + Math.floor(rnd()*40)
+                     : lineStyle === 'thick' ? 50 + Math.floor(rnd()*40)
+                     : 35 + Math.floor(rnd()*30);
+    for(let sp=0; sp<speckCount; sp++){
+      const t = rnd();
+      const pt = sampleAt(points, t);
+      // Specks fly farther than beads
+      const flyDist = lineWidth * (1.5 + rnd()*12);
+      const flyAngle = rnd() * Math.PI * 2;
+      const sx = pt.x + Math.cos(flyAngle) * flyDist;
+      const sy = pt.y + Math.sin(flyAngle) * flyDist;
+      // Speck size -- most are tiny pinpoints
+      const sizeRoll = rnd();
+      const speckRadius = sizeRoll < 0.85 ? lineWidth * (0.10 + rnd()*0.25)  // tiny
+                       : sizeRoll < 0.97 ? lineWidth * (0.35 + rnd()*0.55)   // small
+                       : lineWidth * (0.7 + rnd()*1.2);                       // occasional bigger
+      ctx.fillStyle = colBase + (0.70 + rnd()*0.25).toFixed(2) + ')';
+      ctx.beginPath();
+      ctx.arc(sx, sy, speckRadius, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // === FAT BLOBS -- 0-2 per pass where paint pooled ===
+    // Wide-style lines get more blobs; thin/loopy rarely get them.
+    const blobCount = lineStyle === 'wide' ? 2 + Math.floor(rnd()*2)
+                    : lineStyle === 'thick' ? 1 + Math.floor(rnd()*2)
+                    : Math.floor(rnd()*1.5);
+    for(let bl=0; bl<blobCount; bl++){
+      const t = 0.2 + rnd()*0.6;
+      const pt = sampleAt(points, t);
+      const blobRadius = lineWidth * (1.8 + rnd()*2.5);
+      ctx.fillStyle = colBase + '0.92)';
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, blobRadius, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+// Kandinsky canvas-wide CONTOUR overlay. Layered on top of the per-cell
+// Kandinsky composition. Draws large geometric shapes as OUTLINES ONLY
+// (no fills) in varied Kandinsky-palette colors, crossing cell boundaries
+// to unify the painting. Same threshold-based freeze pattern as Pollock:
+// shapes accumulate as chord count grows; new chords unlock new shapes,
+// existing ones never reshuffle. Re-randomized on Clear/Vary via sessionSeed.
+//
+// Shape vocabulary (contour-only):
+//   • Large outlined triangles spanning multiple cells
+//   • Large concentric-circle rings (no fill, just stroked rings)
+//   • Long diagonal lines crossing the canvas
+//   • Outlined arc/crescent fragments
+//   • Outlined zigzag lightning paths
+// Miró canvas-wide overlay -- biomorphic surrealist composition.
+// Visual vocabulary from the reference: thin black connector lines strung
+// with dots/nodes, bold flat shapes (stars, crescents, eyes, biomorphic
+// blobs, triangles) in Miró's signature palette (black, red, blue, yellow
+// on a near-white textured ground). Light red/blue washes for atmosphere.
+//
+// Architecture: same as Kandinsky/Pollock -- one pass per chord, seeded
+// from (passIndex + sessionSeed, 0, 0). Colors driven by gc() note mapping.
+// Miró palette is fixed (black dominant + red/blue/yellow accents) but chord
+// color biases which accent appears. Mode param for b/w support.
+// Miró canvas-wide overlay -- combining both Constellations paintings.
+// Dark textured ground (deep brown/black) packed edge-to-edge with shapes:
+// connector lines + bead nodes, concentric-ring targets, stars/spikes,
+// biomorphic blobs, eyes, crescents, triangles. Full Miró palette -- black,
+// red, green, blue, yellow, orange -- driven by gc() note-color mapping.
+// Same freeze/seed/chord architecture as Pollock/Kandinsky.
+function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim||!chords||!chords.length) return;
+  const ss=sessionSeed|0;
+  const N=Math.min(lim,chords.length);
+  const D=Math.min(CW,CH);
+  const isBW=mode==='bw';
+  const grey=(r,g,b)=>{const v=Math.round(r*0.299+g*0.587+b*0.114);return[v,v,v];};
+  const _pal=[[60,110,70],[200,55,40],[100,55,130],[50,90,150],[210,170,30],[220,200,170],[15,8,18],[180,80,50]];
+  const pal=isBW?_pal.map(([r,g,b])=>grey(r,g,b)):_pal;
+  const pickColor=(r,g,b,hint,rnd)=>{
+    const lum=(r*0.299+g*0.587+b*0.114)/255;
+    let c;
+    if(hint%3===0){if(lum<0.25)c=pal[6];else if(lum<0.45)c=pal[3];else if(lum<0.65)c=pal[0];else if(lum<0.85)c=pal[4];else c=pal[5];}
+    else if(hint%3===1){if(r>g&&r>b)c=pal[1];else if(g>r&&g>b)c=pal[0];else if(b>r&&b>g)c=pal[2];else c=pal[7];}
+    else{c=pal[hint%pal.length];}
+    return[Math.max(0,Math.min(255,c[0]+Math.round((rnd()-0.5)*28))),Math.max(0,Math.min(255,c[1]+Math.round((rnd()-0.5)*28))),Math.max(0,Math.min(255,c[2]+Math.round((rnd()-0.5)*28)))];
+  };
+  const MAX_PLANES=Math.min(chords.length,Math.min(300,chords.length<=30?chords.length:chords.length<=80?30+Math.floor((chords.length-30)*0.60):chords.length<=200?60+Math.floor((chords.length-80)*0.50):120+Math.floor((chords.length-200)*0.60)));
+  const paintCount=Math.min(MAX_PLANES,Math.round(lim*(MAX_PLANES/chords.length)));
+  let planes=[[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}]];
+  for(let cut=0;cut<MAX_PLANES-1;cut++){
+    const cr=_seedRnd(cut+1,ss,0,0);
+    let bigIdx=0,bigArea=0;
+    for(let pi=0;pi<planes.length;pi++){const p=planes[pi];let xMin=1,xMax=0,yMin=1,yMax=0;for(const v of p){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;}const ar=(xMax-xMin)*(yMax-yMin);if(ar>bigArea){bigArea=ar;bigIdx=pi;}}
+    const target=planes[bigIdx];let xMin=1,xMax=0,yMin=1,yMax=0;for(const v of target){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;}
+    const cutAng=cr()*Math.PI*2,pivX=xMin+(xMax-xMin)*(0.28+cr()*0.44),pivY=yMin+(yMax-yMin)*(0.28+cr()*0.44);
+    const nX=-Math.sin(cutAng),nY=Math.cos(cutAng);
+    const sA=[],sB=[];
+    for(let i=0;i<target.length;i++){const v=target[i],next=target[(i+1)%target.length];const dv=(v.x-pivX)*nX+(v.y-pivY)*nY,dn=(next.x-pivX)*nX+(next.y-pivY)*nY;if(dv>=0)sA.push(v);else sB.push(v);if((dv>=0)!==(dn>=0)){const t=dv/(dv-dn);const ip={x:v.x+(next.x-v.x)*t,y:v.y+(next.y-v.y)*t};sA.push(ip);sB.push({...ip});}}
+    if(sA.length>=3&&sB.length>=3)planes.splice(bigIdx,1,sA,sB);
+  }
+  planes.slice(0,paintCount).forEach((poly,pIdx)=>{
+    const scaled=poly.map(v=>({x:v.x*CW,y:v.y*CH}));
+    const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/MAX_PLANES)))];
+    const notes=chord.n||chord.notes||[];
+    let aR=0,aG=0,aB=0,aA=0,aV=0,c=0;
+    for(const note of notes){const m=note.m!==undefined?note.m:note;const v=note.v!==undefined?note.v:80;const[r,g,b,a]=gc(m,v);aR+=r;aG+=g;aB+=b;aA+=(a||0.9);aV+=v;c++;}
+    if(!c){aR=120;aG=100;aB=160;aA=0.9;aV=80;c=1;}
+    const cR=aR/c,cG=aG/c,cB=aB/c,cA=Math.min(1,aA/c),energy=Math.max(0,Math.min(1,(aV/c-30)/90));
+    const rnd=_seedRnd(pIdx+500,ss,0,0);
+    let xMin=CW,xMax=0,yMin=CH,yMax=0,cX=0,cY=0;
+    for(const v of scaled){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;cX+=v.x;cY+=v.y;}
+    cX/=scaled.length;cY/=scaled.length;
+    const reach=Math.sqrt((xMax-xMin)**2+(yMax-yMin)**2),minDim=Math.min(xMax-xMin,yMax-yMin);
+    const[pR,pG,pB]=pickColor(cR,cG,cB,pIdx,rnd);
+    const buildPath=()=>{ctx.beginPath();ctx.moveTo(scaled[0].x,scaled[0].y);for(let i=1;i<scaled.length;i++)ctx.lineTo(scaled[i].x,scaled[i].y);ctx.closePath();};
+    buildPath();ctx.fillStyle=`rgba(${Math.round(cR)},${Math.round(cG)},${Math.round(cB)},${(Math.min(0.97,0.80+energy*0.17)).toFixed(2)})`;ctx.fill();
+    ctx.save();buildPath();ctx.clip();
+    const grainAng=rnd()*Math.PI*2,cosG=Math.cos(grainAng),sinG=Math.sin(grainAng);
+    const gap=Math.max(1.5,minDim*0.06),sLen=Math.max(3,minDim*0.20),sW=Math.max(0.6,minDim*0.022);
+    const rows=Math.ceil(reach*2/gap)+2;
+    const noteColors=notes.length?notes.map(n=>{const m=n.m!==undefined?n.m:n;const v=n.v!==undefined?n.v:80;return gc(m,v);}):[[[cR,cG,cB,cA]]];
+    for(let ri=-rows;ri<=rows;ri++){const off=ri*gap+(rnd()-0.5)*gap*0.4;const nInRow=Math.ceil(reach/sLen)+1;for(let si=-nInRow;si<=nInRow;si++){const along=si*sLen*0.85+(rnd()-0.5)*sLen*0.3;const x0=cX+cosG*along+(-sinG)*off,y0=cY+sinG*along+cosG*off;const len=sLen*(0.7+rnd()*0.6);const nc=noteColors[Math.floor(rnd()*noteColors.length)];const[nr,ng,nb]=nc;const tj=(rnd()-0.5)*22;const sR2=Math.max(0,Math.min(255,Math.round(nr+tj))),sG2=Math.max(0,Math.min(255,Math.round(ng+tj*0.8))),sB2=Math.max(0,Math.min(255,Math.round(nb+tj*0.6)));ctx.strokeStyle=`rgba(${sR2},${sG2},${sB2},${(0.55+rnd()*0.28).toFixed(2)})`;ctx.lineWidth=sW*(0.7+rnd()*0.5);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x0-cosG*len*0.5,y0-sinG*len*0.5);ctx.lineTo(x0+cosG*len*0.5,y0+sinG*len*0.5);ctx.stroke();}}
+    ctx.restore();
+    if(rnd()<0.25+energy*0.20){ctx.save();buildPath();ctx.clip();const patNc=noteColors[Math.floor(rnd()*noteColors.length)];const useContrast=rnd()<0.35;const patC=useContrast?[Math.round(patNc[0]),Math.round(patNc[1]),Math.round(patNc[2])]:(isBW?[30,30,30]:[15,8,18]);const patA=(0.75+rnd()*0.18).toFixed(2);if(rnd()<0.55){ctx.fillStyle=`rgba(${patC[0]},${patC[1]},${patC[2]},${patA})`;const dg=Math.max(3,minDim*0.12),dr=dg*(0.22+rnd()*0.12);for(let dy=yMin;dy<yMax;dy+=dg){const ro=(Math.round((dy-yMin)/dg)%2)*dg*0.5;for(let dx=xMin;dx<xMax;dx+=dg){ctx.beginPath();ctx.arc(dx+ro,dy,dr,0,Math.PI*2);ctx.fill();}}}else{ctx.strokeStyle=`rgba(${patC[0]},${patC[1]},${patC[2]},${patA})`;const sg=Math.max(2,minDim*0.09);ctx.lineWidth=sg*0.28;const sa=rnd()*Math.PI,cosS=Math.cos(sa),sinS=Math.sin(sa);const cnt=Math.ceil(reach*2/sg)+2;for(let st=-cnt;st<cnt;st++){const off=st*sg;ctx.beginPath();ctx.moveTo(cX+(-sinS)*off-cosS*reach,cY+cosS*off-sinS*reach);ctx.lineTo(cX+(-sinS)*off+cosS*reach,cY+cosS*off+sinS*reach);ctx.stroke();}}ctx.restore();}
+    const jS=D*0.003;ctx.beginPath();ctx.moveTo(scaled[0].x+(rnd()-0.5)*jS,scaled[0].y+(rnd()-0.5)*jS);for(let i=1;i<scaled.length;i++){const prev=scaled[i-1],cur=scaled[i];for(let s=1;s<=3;s++){const t=s/3;ctx.lineTo(prev.x+(cur.x-prev.x)*t+(rnd()-0.5)*jS,prev.y+(cur.y-prev.y)*t+(rnd()-0.5)*jS);}}ctx.closePath();
+    ctx.strokeStyle=isBW?`rgba(20,20,20,${(0.82+energy*0.15).toFixed(2)})`:(rnd()<0.88?`rgba(15,8,18,${(0.82+energy*0.15).toFixed(2)})`:`rgba(200,55,40,0.88)`);
+    ctx.lineWidth=Math.max(0.8,D*(0.003+energy*0.004));ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+  });
+}
+
+function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
+  if(!lim||!chords||!chords.length) return;
+  const ss=sessionSeed|0;
+  const chordColor=(chord)=>{
+    const notes=chord.n||chord.notes||(Array.isArray(chord)?chord:null);
+    if(!notes||!notes.length) return[120,140,200,0.9,80];
+    let aR=0,aG=0,aB=0,aA=0,aV=0,c=0;
+    for(const note of notes){const m=note.m!==undefined?note.m:note;const v=note.v!==undefined?note.v:80;const[r,g,b,a]=gc(m,v);aR+=r;aG+=g;aB+=b;aA+=(a||0.9);aV+=v;c++;}
+    return[aR/c,aG/c,aB/c,Math.min(1,aA/c),aV/c];
+  };
+  const MAX_RECTS=Math.min(chords.length,
+    chords.length<=200 ? chords.length
+    :chords.length<=300 ? 250
+    :chords.length<=400 ? 300
+    :chords.length<=600 ? 400
+    :chords.length<=800 ? 600
+    :700
+  );
+  const paintCount=Math.min(MAX_RECTS,Math.max(1,Math.round(lim*(MAX_RECTS/chords.length))));
+  let rects=[{x:0,y:0,w:1,h:1}];
+  for(let cut=0;cut<MAX_RECTS-1;cut++){
+    const cr=_seedRnd(cut+200,ss,0,0);
+    let bigIdx=0,bigArea=0;
+    for(let i=0;i<rects.length;i++){const a=rects[i].w*rects[i].h;if(a>bigArea){bigArea=a;bigIdx=i;}}
+    const r=rects[bigIdx];
+    const splitPos=0.30+cr()*0.40;
+    let r1,r2;
+    if(r.w>=r.h){const sw=r.w*splitPos;r1={x:r.x,y:r.y,w:sw,h:r.h};r2={x:r.x+sw,y:r.y,w:r.w-sw,h:r.h};}
+    else{const sh=r.h*splitPos;r1={x:r.x,y:r.y,w:r.w,h:sh};r2={x:r.x,y:r.y+sh,w:r.w,h:r.h-sh};}
+    rects.splice(bigIdx,1,r1,r2);
+  }
+  rects.forEach((rect,pIdx)=>{
+    const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
+    if(pIdx>=paintCount){ctx.fillStyle='#04040a';ctx.fillRect(bx,by,BW,BH);return;}
+    const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/MAX_RECTS)))];
+    const[cR,cG,cB,cA,cV]=chordColor(chord);
+    const energy=Math.max(0,Math.min(1,(cV-30)/90));
+    const rnd=_seedRnd(pIdx+800,ss,0,0);
+    const r=Math.round(cR),g=Math.round(cG),b=Math.round(cB);
+    ctx.fillStyle=`rgba(${r},${g},${b},${(0.88+energy*0.10).toFixed(2)})`;ctx.fillRect(bx,by,BW,BH);
+    const sR=Math.round(cR*0.65),sG=Math.round(cG*0.65),sB=Math.round(cB*0.65);
+    const sg=ctx.createLinearGradient(bx,by,bx+BW*0.55,by);sg.addColorStop(0,`rgba(${sR},${sG},${sB},0.55)`);sg.addColorStop(0.6,`rgba(${sR},${sG},${sB},0.15)`);sg.addColorStop(1,`rgba(${sR},${sG},${sB},0)`);ctx.fillStyle=sg;ctx.fillRect(bx,by,BW,BH);
+    const hR=Math.min(255,Math.round(cR*1.2+12)),hG=Math.min(255,Math.round(cG*1.2+12)),hB=Math.min(255,Math.round(cB*1.2+12));
+    const tg=ctx.createLinearGradient(bx,by,bx,by+BH*0.45);tg.addColorStop(0,`rgba(${hR},${hG},${hB},0.38)`);tg.addColorStop(1,`rgba(${hR},${hG},${hB},0)`);ctx.fillStyle=tg;ctx.fillRect(bx,by,BW,BH);
+    const ribCount=2+Math.floor(rnd()*2);
+    const rR2=Math.round(cR*0.45),rG2=Math.round(cG*0.45),rB2=Math.round(cB*0.45);
+    ctx.strokeStyle=`rgba(${rR2},${rG2},${rB2},0.48)`;ctx.lineWidth=Math.max(0.8,Math.min(BW,BH)*0.012);ctx.lineCap='round';
+    for(let ri=1;ri<=ribCount;ri++){const rx=bx+BW*(ri/(ribCount+1)),pinch=BW*0.04;ctx.beginPath();ctx.moveTo(rx,by+BH*0.10);ctx.bezierCurveTo(rx-pinch,by+BH*0.35,rx-pinch,by+BH*0.65,rx,by+BH*0.90);ctx.stroke();}
+    const dcr=rnd();let dotR,dotG,dotB;
+    if(dcr<0.45){dotR=12;dotG=8;dotB=18;}else if(dcr<0.80){dotR=245;dotG=240;dotB=228;}else{dotR=Math.max(0,Math.min(255,255-r));dotG=Math.max(0,Math.min(255,255-g));dotB=Math.max(0,Math.min(255,255-b));}
+    const dotCount=Math.max(3,Math.round(10+energy*15+Math.min(BW*BH/600,25)));
+    const baseRadius=Math.min(BW,BH)*0.055;
+    ctx.fillStyle=`rgba(${dotR},${dotG},${dotB},0.88)`;
+    for(let k=0;k<dotCount;k++){const sr=rnd();const dr=sr<0.05?baseRadius*(2.2+rnd()*1.2):sr<0.40?baseRadius*(1.1+rnd()*0.5):baseRadius*(0.35+rnd()*0.45);ctx.beginPath();ctx.arc(bx+(rnd()*1.05-0.025)*BW,by+(rnd()*1.05-0.025)*BH,dr,0,Math.PI*2);ctx.fill();}
+    if(rnd()<0.15&&Math.min(BW,BH)>15){const luma=0.299*cR+0.587*cG+0.114*cB;ctx.strokeStyle=luma>128?'rgba(12,8,18,0.62)':'rgba(245,240,228,0.62)';ctx.lineWidth=Math.max(0.8,Math.min(BW,BH)*0.007);ctx.lineCap='round';ctx.lineJoin='round';const ptCount=4+Math.floor(rnd()*3);ctx.beginPath();ctx.moveTo(bx+rnd()*BW*0.3,by+rnd()*BH);for(let pi=0;pi<ptCount;pi++){const t1=(pi+0.5)/ptCount,t2=(pi+1)/ptCount;ctx.quadraticCurveTo(bx+t1*BW,by+rnd()*BH,bx+t2*BW,by+rnd()*BH);}ctx.stroke();}
+    ctx.strokeStyle='rgba(4,4,10,0.60)';ctx.lineWidth=Math.max(0.5,Math.min(CW,CH)*0.002);ctx.lineJoin='round';ctx.strokeRect(bx+0.5,by+0.5,BW-1,BH-1);
+  });
+}
+
+function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim||!chords||!chords.length) return;
+  const ss=sessionSeed|0;
+  const N=Math.min(lim,chords.length);
+  const isBW=mode==='bw';
+  const D=Math.min(CW,CH);
+
+  // Full Miró palette
+  const BLK  = isBW?[14,12,16]  :[14,12,16];
+  const RED  = isBW?[90,85,82]  :[215,38,30];
+  const GRN  = isBW?[80,85,80]  :[40,150,55];
+  const BLU  = isBW?[75,80,110] :[28,65,200];
+  const YEL  = isBW?[170,165,140]:[225,195,25];
+  const ORA  = isBW?[130,120,100]:[220,105,20];
+  const SKIN = isBW?[180,170,155]:[205,165,120]; // warm tan/skin
+  const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+  // Pick accent from gc() chord color
+  const accent=(r,g,b)=>{
+    if(isBW){const p=[RED,BLU,YEL,ORA];return p[Math.floor(Math.random()*p.length)];}
+    if(r>180&&g<100&&b<100) return RED;
+    if(g>r&&g>b) return GRN;
+    if(b>r&&b>g) return BLU;
+    if(r>160&&g>140&&b<80) return YEL;
+    if(r>160&&g>80&&b<80) return ORA;
+    return [RED,GRN,BLU,YEL,ORA][Math.floor(Math.random()*5)];
+  };
+
+  // Chord color helper
+  const chordRGB=(chord)=>{
+    const notes=chord.n||chord.notes||[];
+    if(!notes.length) return[120,100,180];
+    let aR=0,aG=0,aB=0,c=0;
+    for(const n of notes){
+      const m=n.m!==undefined?n.m:n,v=n.v!==undefined?n.v:80;
+      const[r,g,b]=gc(m,v);aR+=r;aG+=g;aB+=b;c++;
+    }
+    return[aR/c,aG/c,aB/c];
+  };
+
+  // 1. DARK TEXTURED GROUND -- speckled brown/black field
+  ctx.fillStyle=rgba([28,18,12],1);
+  ctx.fillRect(0,0,CW,CH);
+  const speckRnd=_seedRnd(9999,ss,0,0);
+  const speckCount=Math.round(CW*CH*0.0018);
+  for(let i=0;i<speckCount;i++){
+    const sx=speckRnd()*CW,sy=speckRnd()*CH;
+    const sc=speckRnd();
+    const col=sc<0.5?rgba([185,155,110],0.10+speckRnd()*0.12)
+              :sc<0.8?rgba([210,175,130],0.07+speckRnd()*0.08)
+              :rgba([120,90,60],0.15+speckRnd()*0.10);
+    const r=speckRnd()*2.5+0.5;
+    ctx.fillStyle=col;
+    ctx.beginPath();ctx.arc(sx,sy,r,0,Math.PI*2);ctx.fill();
+  }
+
+  // Dense pass count -- fills canvas like Constellations series
+  const passCount=Math.min(N,Math.min(500,
+    N<20  ? N
+    :N<60  ? 20+Math.floor((N-20)*1.2)
+    :N<150 ? 68+Math.floor((N-60)*1.0)
+    :N<500 ? 158+Math.floor((N-150)*0.48)
+    :350+Math.floor((N-500)*0.50)
+  ));
+
+  // 2. SHAPES -- one constellation unit per pass
+  for(let p=0;p<passCount;p++){
+    const rnd=_seedRnd(p+900,ss,0,0);
+    const chord=chords[Math.min(N-1,Math.floor((p/(Math.max(1,passCount-1)))*(N-1)))];
+    const[cR,cG,cB]=chordRGB(chord);
+    const ac=accent(cR,cG,cB);
+    const ax=CW*(0.03+rnd()*0.94);
+    const ay=CH*(0.03+rnd()*0.94);
+    const roll=rnd();
+
+    if(roll<0.22){
+      // -- CONNECTOR LINE + BEAD NODES --
+      const segs=2+Math.floor(rnd()*5);
+      const pts=[{x:ax,y:ay}];
+      for(let s=0;s<segs;s++)
+        pts.push({x:pts[s].x+(rnd()-0.5)*CW*0.20,y:pts[s].y+(rnd()-0.5)*CH*0.20});
+      ctx.strokeStyle=rgba(BLK,0.85);
+      ctx.lineWidth=Math.max(0.8,D*0.004);ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
+      for(let s=1;s<pts.length;s++) ctx.lineTo(pts[s].x,pts[s].y);
+      ctx.stroke();
+      for(let s=0;s<pts.length;s++){
+        const big=rnd()<0.30,col=rnd()<0.22?ac:BLK;
+        const r=big?D*(0.016+rnd()*0.014):D*(0.005+rnd()*0.007);
+        ctx.fillStyle=rgba(col,0.95);
+        ctx.beginPath();ctx.arc(pts[s].x,pts[s].y,r,0,Math.PI*2);ctx.fill();
+      }
+
+    }else if(roll<0.38){
+      // -- CONCENTRIC RINGS (target / bull's-eye) -- Constellations signature
+      const rings=2+Math.floor(rnd()*3);
+      const outerR=D*(0.022+rnd()*0.040);
+      const cols=[ac,BLK,YEL,ac,BLK];
+      for(let k=rings;k>=0;k--){
+        const r=outerR*(k/rings);
+        ctx.fillStyle=rgba(cols[k%cols.length],0.92);
+        ctx.beginPath();ctx.arc(ax,ay,r,0,Math.PI*2);ctx.fill();
+      }
+      // Pupil
+      ctx.fillStyle=rgba(BLK,0.95);
+      ctx.beginPath();ctx.arc(ax,ay,outerR*0.15,0,Math.PI*2);ctx.fill();
+
+    }else if(roll<0.52){
+      // -- SPIKY STAR / CROSS --
+      const arms=4+Math.floor(rnd()*5);
+      const outerR=D*(0.016+rnd()*0.028);
+      const innerR=outerR*(0.18+rnd()*0.20);
+      const col=rnd()<0.55?BLK:ac;
+      ctx.strokeStyle=rgba(col,0.90);
+      ctx.lineWidth=Math.max(0.8,D*0.004);ctx.lineCap='round';
+      for(let k=0;k<arms;k++){
+        const a=k*(Math.PI*2/arms)+(rnd()-0.5)*0.25;
+        ctx.beginPath();
+        ctx.moveTo(ax+Math.cos(a)*innerR,ay+Math.sin(a)*innerR);
+        ctx.lineTo(ax+Math.cos(a)*outerR,ay+Math.sin(a)*outerR);
+        ctx.stroke();
+      }
+      ctx.fillStyle=rgba(rnd()<0.5?ac:BLK,0.92);
+      ctx.beginPath();ctx.arc(ax,ay,D*0.007,0,Math.PI*2);ctx.fill();
+
+    }else if(roll<0.64){
+      // -- BIOMORPHIC BLOB --
+      const bR=D*(0.022+rnd()*0.055);
+      const nPts=5+Math.floor(rnd()*5);
+      const pts2=[];
+      for(let k=0;k<nPts;k++){
+        const a=k*(Math.PI*2/nPts)+(rnd()-0.5)*0.7;
+        pts2.push({x:ax+Math.cos(a)*bR*(0.45+rnd()*0.85),y:ay+Math.sin(a)*bR*(0.45+rnd()*0.85)});
+      }
+      ctx.beginPath();ctx.moveTo(pts2[0].x,pts2[0].y);
+      for(let k=0;k<pts2.length;k++){
+        const cur=pts2[k],next=pts2[(k+1)%pts2.length];
+        ctx.quadraticCurveTo(cur.x,cur.y,(cur.x+next.x)/2,(cur.y+next.y)/2);
+      }
+      ctx.closePath();
+      ctx.fillStyle=rgba(rnd()<0.55?ac:SKIN,0.88);ctx.fill();
+      ctx.strokeStyle=rgba(BLK,0.75);ctx.lineWidth=Math.max(0.5,D*0.003);ctx.stroke();
+
+    }else if(roll<0.74){
+      // -- EYE (almond) --
+      const ew=D*(0.030+rnd()*0.038),eh=ew*(0.35+rnd()*0.28);
+      ctx.save();ctx.translate(ax,ay);ctx.rotate(rnd()*Math.PI);
+      ctx.beginPath();ctx.ellipse(0,0,ew,eh,0,0,Math.PI*2);
+      ctx.fillStyle=rgba(SKIN,0.90);ctx.fill();
+      ctx.strokeStyle=rgba(BLK,0.90);ctx.lineWidth=Math.max(0.8,D*0.004);ctx.stroke();
+      const ir=eh*(0.52+rnd()*0.15);
+      ctx.beginPath();ctx.arc(0,0,ir,0,Math.PI*2);
+      ctx.fillStyle=rgba(ac,0.90);ctx.fill();
+      ctx.strokeStyle=rgba(BLK,0.75);ctx.lineWidth=Math.max(0.5,D*0.002);ctx.stroke();
+      ctx.beginPath();ctx.arc(0,0,ir*0.40,0,Math.PI*2);
+      ctx.fillStyle=rgba(BLK,0.95);ctx.fill();
+      ctx.restore();
+
+    }else if(roll<0.83){
+      // -- CRESCENT --
+      const cr=D*(0.018+rnd()*0.030);
+      const col=rnd()<0.50?ac:BLK;
+      const sa=rnd()*Math.PI*2;
+      ctx.fillStyle=rgba(col,0.88);
+      ctx.beginPath();
+      ctx.arc(ax,ay,cr,sa,sa+Math.PI*1.55);
+      ctx.arc(ax+Math.cos(sa+Math.PI*0.78)*cr*0.55,ay+Math.sin(sa+Math.PI*0.78)*cr*0.55,cr*0.72,sa+Math.PI*1.55,sa,true);
+      ctx.closePath();ctx.fill();
+
+    }else{
+      // -- TRIANGLE --
+      const ts=D*(0.018+rnd()*0.030);
+      const rot=rnd()*Math.PI*2;
+      ctx.fillStyle=rgba(rnd()<0.60?ac:BLK,0.90);
+      ctx.beginPath();
+      for(let k=0;k<3;k++){
+        const a=rot+k*(Math.PI*2/3);
+        k===0?ctx.moveTo(ax+Math.cos(a)*ts,ay+Math.sin(a)*ts):ctx.lineTo(ax+Math.cos(a)*ts,ay+Math.sin(a)*ts);
+      }
+      ctx.closePath();ctx.fill();
+      ctx.strokeStyle=rgba(BLK,0.65);ctx.lineWidth=Math.max(0.5,D*0.002);ctx.stroke();
+    }
+  }
+}
+
+function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode){
+  if(chordCount === 0) return;
+  const ss = sessionSeed|0;
+  const isBW = mode==='bw';
+
+  const TH_TRI    = [2, 6, 12, 20, 32, 48];
+  const TH_RING   = [4, 11, 22, 38, 60];
+  const TH_LINE   = [1, 4, 8, 13, 19, 27, 38, 52, 70];
+  const TH_ARC    = [7, 18, 32, 50];
+  const TH_ZIG    = [10, 24, 42];
+
+  const countFor = (thresholds) => {
+    let count = 0;
+    for(const t of thresholds){ if(chordCount >= t) count++; else break; }
+    return count;
+  };
+
+  // Kandinsky palette -- always colored even in B/W mode (intentional)
+  const lineColors = [
+    'rgba(225, 60, 50, 0.92)',     // saturated red
+    'rgba(240, 180, 30, 0.92)',    // golden yellow
+    'rgba(40, 70, 200, 0.92)',     // saturated blue
+    'rgba(180, 60, 200, 0.90)',    // purple
+    'rgba(245, 238, 220, 0.90)',   // cream white
+    'rgba(8, 4, 12, 0.92)',        // near-black
+    'rgba(50, 160, 80, 0.90)',     // forest green
+    'rgba(240, 130, 40, 0.92)',    // orange
+  ];
+
+  // === 1. LARGE OUTLINED TRIANGLES ===
+  const triCount = countFor(TH_TRI);
+  for(let i=0; i<triCount; i++){
+    const rnd = _seedRnd(1000+i, ss, CW, CH);
+    const sizeScale = 0.28 + rnd()*0.45;
+    const baseSize = Math.min(CW, CH) * sizeScale;
+    const cx = rnd()*CW;
+    const cy = rnd()*CH;
+    const rot = rnd()*Math.PI*2;
+    const elongate = 0.6 + rnd()*0.8;
+    const v = [];
+    for(let k=0; k<3; k++){
+      const a = rot + k*(Math.PI*2/3) + (rnd()-0.5)*0.4;
+      v.push({ x: cx + Math.cos(a)*baseSize*elongate, y: cy + Math.sin(a)*baseSize });
+    }
+    ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+    ctx.lineWidth = Math.max(1.5, Math.min(CW,CH)*(0.004 + rnd()*0.004));
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(v[0].x, v[0].y);
+    ctx.lineTo(v[1].x, v[1].y);
+    ctx.lineTo(v[2].x, v[2].y);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // === 2. LARGE CONCENTRIC CIRCLE RINGS (no fill) ===
+  const ringCount = countFor(TH_RING);
+  for(let i=0; i<ringCount; i++){
+    const rnd = _seedRnd(2000+i, ss, CW, CH);
+    const cx = CW*0.10 + rnd()*CW*0.80;
+    const cy = CH*0.10 + rnd()*CH*0.80;
+    const outerR = Math.min(CW, CH) * (0.10 + rnd()*0.12);
+    const nestedRings = 2 + Math.floor(rnd()*3); // 2-4 nested
+    // Pick 2 colors and alternate
+    const c1 = lineColors[Math.floor(rnd()*lineColors.length)];
+    const c2 = lineColors[Math.floor(rnd()*lineColors.length)];
+    for(let k=0; k<nestedRings; k++){
+      const ringR = outerR * (1 - k * 0.65/nestedRings);
+      ctx.strokeStyle = k % 2 === 0 ? c1 : c2;
+      ctx.lineWidth = Math.max(1.5, Math.min(CW,CH)*(0.003 + rnd()*0.003));
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringR, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+
+  // === 3. LONG DIAGONAL LINES ===
+  const lineCount = countFor(TH_LINE);
+  ctx.lineCap = 'round';
+  for(let i=0; i<lineCount; i++){
+    const rnd = _seedRnd(3000+i, ss, CW, CH);
+    const angle = rnd() * Math.PI;
+    const cx = rnd()*CW;
+    const cy = rnd()*CH;
+    const length = Math.max(CW, CH) * (0.5 + rnd()*0.7);
+    ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+    ctx.lineWidth = Math.max(1, Math.min(CW,CH)*(0.0025 + rnd()*0.003));
+    ctx.beginPath();
+    ctx.moveTo(cx - Math.cos(angle)*length/2, cy - Math.sin(angle)*length/2);
+    ctx.lineTo(cx + Math.cos(angle)*length/2, cy + Math.sin(angle)*length/2);
+    ctx.stroke();
+  }
+
+  // === 4. ARC / CRESCENT FRAGMENTS ===
+  const arcCount = countFor(TH_ARC);
+  ctx.lineCap = 'round';
+  for(let i=0; i<arcCount; i++){
+    const rnd = _seedRnd(4000+i, ss, CW, CH);
+    const cx = CW*0.15 + rnd()*CW*0.70;
+    const cy = CH*0.15 + rnd()*CH*0.70;
+    const arcR = Math.min(CW, CH) * (0.12 + rnd()*0.15);
+    const startA = rnd() * Math.PI * 2;
+    const sweep = (0.4 + rnd()*0.8) * Math.PI;
+    ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+    ctx.lineWidth = Math.max(2, Math.min(CW,CH)*(0.005 + rnd()*0.005));
+    ctx.beginPath();
+    ctx.arc(cx, cy, arcR, startA, startA + sweep);
+    ctx.stroke();
+  }
+
+  // === 5. BIG ZIGZAG LIGHTNING ===
+  const zigCount = countFor(TH_ZIG);
+  for(let i=0; i<zigCount; i++){
+    const rnd = _seedRnd(5000+i, ss, CW, CH);
+    const segCount = 4 + Math.floor(rnd()*4);
+    const segLen = Math.min(CW, CH) * (0.08 + rnd()*0.06);
+    const baseAng = rnd() * Math.PI * 2;
+    const cosA = Math.cos(baseAng), sinA = Math.sin(baseAng);
+    const perpX = -sinA, perpY = cosA;
+    const amp = segLen * 0.9;
+    let zx = rnd()*CW;
+    let zy = rnd()*CH;
+    ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+    ctx.lineWidth = Math.max(1.8, Math.min(CW,CH)*(0.004 + rnd()*0.003));
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(zx, zy);
+    for(let k=0; k<segCount; k++){
+      const dir = k % 2 === 0 ? 1 : -1;
+      zx += cosA * segLen + perpX * amp * dir;
+      zy += sinA * segLen + perpY * amp * dir;
+      ctx.lineTo(zx, zy);
+    }
+    ctx.stroke();
+  }
 }
 
 // Convert a downsampled-image pixel array into musical events using a given hue→pitch table
 // (COF for harmony mode, SPEC_HUE for spectral mode). Pure: same input + same table → same output.
+
 function pixelsToImageEvents(px,nc,nr,table){
   // Time dilation: distribute the canvas of cells across exactly IMG_TARGET_MS.
   // noteDur slightly overshoots msPerBlock for legato between cells.
@@ -2038,8 +2836,8 @@ const GUIDE_I18N = {
    body:`Paintiano paints music as a φ-proportioned grid of coloured blocks, and plays paintings back as music. Pick a source — Compose, Sing, MIDI, Audio, Score, Image, or a mood — and the canvas fills as you play. Hit Play to hear it, Print to save the painting, Rec (image mode only) to capture the audio.`},
   {id:'modes', title:`Harmony vs Spectral`, keywords:`colour color mode hue palette circle fifths chromatic`,
    body:`Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly.`},
-  {id:'style', title:`Painting style: Picasso / Rembrandt / Kusama / Van Gogh / Kandinsky`, keywords:`style picasso rembrandt kusama van gogh kandinsky cubist polka dots impressionist chiaroscuro impasto brush stroke artist abstract geometric`,
-   body:`Optional artist-style overlay. With nothing selected the canvas uses the mosaic default (sharp φ-rectangles + halo). Picasso (analytical cubism) fractures each chord into geometric planes. Rembrandt layers impasto brushstrokes with chiaroscuro lighting. Kusama paints each cell as a flat color field with many small dots in contrasting colors and occasional infinity-net curves. Van Gogh streaks ribbons of pure pigment with frayed bristle ends. Kandinsky composes concentric-circle eyes with crossing lines and sharp triangles. Tap the active artist again to deselect. Switches instantly.`},
+  {id:'style', title:`Painting style: Picasso / Kusama / Van Gogh / Kandinsky / Pollock`, keywords:`style picasso kusama van gogh kandinsky pollock cubist polka dots impressionist brush stroke drip splatter artist abstract geometric`,
+   body:`Optional artist-style overlay. With nothing selected the canvas uses the mosaic default (sharp φ-rectangles + halo). Picasso (analytical cubism) fractures each chord into geometric planes. Kusama paints each cell as a flat color field with many small dots in contrasting colors and occasional infinity-net curves. Van Gogh streaks ribbons of pure pigment with frayed bristle ends. Kandinsky composes concentric-circle eyes with crossing lines and sharp triangles. Pollock keeps the mosaic substrate visible and overlays canvas-wide drip lines + splatter dots + bead chains in black, white, yellow and rare red — the splatters ignore cell boundaries entirely. Tap the active artist again to deselect. Switches instantly.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test example sample replace confirm`,
    body:`Tap DEMO to play a built-in Für Elise excerpt. The keyboard surfaces automatically so you can watch the keys light up. If you already have content loaded, DEMO needs two taps — first one shows "replace current?", second confirms. Press CLEAR to leave demo mode.`},
   {id:'compose', title:`Compose with the keyboard`, keywords:`compose keyboard piano live record keys play undo backspace enter space chord name recognise frame canvas fixed golden ratio`,
@@ -2088,8 +2886,8 @@ const GUIDE_I18N = {
    body:`Paintiano malt Musik als φ-proportioniertes Raster farbiger Blöcke und spielt Gemälde als Musik ab. Wähle eine Quelle — Komponieren, Singen, MIDI, Audio, Partitur, Bild oder eine Stimmung — und die Leinwand füllt sich beim Spielen. Play tippen zum Hören, Drucken zum Speichern.`},
   {id:'modes', title:`Harmonie vs. Spektral`, keywords:`farbe modus farbton palette quintenzirkel chromatisch`,
    body:`Zwei Farbgrammatiken für dieselbe Musik. Harmonie ordnet die Tonklassen im Quintenzirkel um das Farbrad an — verwandte Tonarten clustern in ähnlichen Farben. Spektral verteilt sie in gleichmäßigen 30°-Schritten — ein Halbton, eine Farbe. Jederzeit wechselbar.`},
-  {id:'style', title:`Malstil: Picasso / Rembrandt / Kusama / Van Gogh / Kandinsky`, keywords:`stil picasso rembrandt kusama van gogh kandinsky kubismus punkte impressionismus chiaroscuro impasto pinselstrich abstrakt`,
-   body:`Optionaler Künstlerstil. Ohne Auswahl verwendet die Leinwand den Mosaik-Standard. Picasso zerlegt jeden Akkord in geometrische Ebenen. Rembrandt schichtet Impasto-Pinselstriche mit Chiaroscuro-Beleuchtung. Kusama malt jede Zelle als flaches Farbfeld mit vielen kleinen Punkten in Kontrastfarben und gelegentlichen Unendlichkeitsnetz-Kurven. Van Gogh malt Bänder aus reinem Pigment mit ausgefransten Borstenenden. Kandinsky komponiert konzentrische Augen mit Linien und Dreiecken. Aktiven Stil erneut antippen zum Abwählen.`},
+  {id:'style', title:`Malstil: Picasso / Kusama / Van Gogh / Kandinsky / Pollock`, keywords:`stil picasso kusama van gogh kandinsky pollock kubismus punkte impressionismus pinselstrich tropfen spritzer abstrakt`,
+   body:`Optionaler Künstlerstil. Ohne Auswahl verwendet die Leinwand den Mosaik-Standard. Picasso zerlegt jeden Akkord in geometrische Ebenen. Kusama malt jede Zelle als flaches Farbfeld mit vielen kleinen Punkten in Kontrastfarben und gelegentlichen Unendlichkeitsnetz-Kurven. Van Gogh malt Bänder aus reinem Pigment mit ausgefransten Borstenenden. Kandinsky komponiert konzentrische Augen mit Linien und Dreiecken. Pollock lässt das Mosaik-Substrat sichtbar und legt leinwandweite Tropflinien, Spritzpunkte und Perlenketten in Schwarz, Weiß, Gelb und seltenem Rot darüber — die Spritzer ignorieren Zellgrenzen vollständig. Aktiven Stil erneut antippen zum Abwählen.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test beispiel ersetzen bestätigen`,
    body:`DEMO antippen, um einen integrierten Für-Elise-Ausschnitt abzuspielen. Die Tastatur erscheint automatisch. Wenn bereits Inhalt geladen ist, benötigt DEMO zwei Tipps — der erste zeigt "aktuelles ersetzen?", der zweite bestätigt. LÖSCHEN drücken, um den Demo-Modus zu verlassen.`},
   {id:'compose', title:`Mit der Tastatur komponieren`, keywords:`komponieren tastatur klavier live aufnehmen tasten spielen rückgängig akkord rahmen leinwand fest goldener schnitt`,
@@ -2138,8 +2936,8 @@ const GUIDE_I18N = {
    body:`Paintiano peint la musique sous forme de grille de blocs colorés aux proportions φ, et joue les peintures en tant que musique. Choisissez une source — Composer, Chanter, MIDI, Audio, Partition, Image ou une humeur — et la toile se remplit. Appuyez sur Jouer pour l'entendre, Imprimer pour sauvegarder.`},
   {id:'modes', title:`Harmonie vs Spectral`, keywords:`couleur mode teinte palette cercle des quintes chromatique`,
    body:`Deux grammaires de couleurs pour la même musique. L'harmonie place les classes de hauteur autour de la roue chromatique dans l'ordre du cercle des quintes. Le spectral les répartit en pas de 30°. Changeable à tout moment.`},
-  {id:'style', title:`Style pictural : Picasso / Rembrandt / Kusama / Van Gogh / Kandinsky`, keywords:`style picasso rembrandt kusama van gogh kandinsky cubisme pois impressionnisme clair-obscur impasto pinceau abstrait`,
-   body:`Superposition de style artistique optionnelle. Sans sélection, mosaïque par défaut. Picasso fragmente chaque accord en plans géométriques. Rembrandt superpose des coups de pinceau impasto avec clair-obscur. Kusama peint chaque cellule comme un aplat de couleur recouvert de nombreux petits points dans des couleurs contrastées, avec parfois des courbes de réseau infini. Van Gogh peint des rubans de pigment pur aux bords effilochés. Kandinsky compose des cercles concentriques avec lignes et triangles. Appuyer à nouveau pour désélectionner.`},
+  {id:'style', title:`Style pictural : Picasso / Kusama / Van Gogh / Kandinsky / Pollock`, keywords:`style picasso kusama van gogh kandinsky pollock cubisme pois impressionnisme pinceau goutte éclaboussure abstrait`,
+   body:`Superposition de style artistique optionnelle. Sans sélection, mosaïque par défaut. Picasso fragmente chaque accord en plans géométriques. Kusama peint chaque cellule comme un aplat de couleur recouvert de nombreux petits points dans des couleurs contrastées, avec parfois des courbes de réseau infini. Van Gogh peint des rubans de pigment pur aux bords effilochés. Kandinsky compose des cercles concentriques avec lignes et triangles. Pollock laisse le substrat mosaïque visible et superpose des coulures, des éclaboussures et des chapelets de perles à l'échelle de la toile en noir, blanc, jaune et rouge rare — les éclaboussures ignorent totalement les limites des cellules. Appuyer à nouveau pour désélectionner.`},
   {id:'demo', title:`Démo (Für Elise)`, keywords:`démo für elise beethoven test exemple remplacer confirmer`,
    body:`Appuyez sur DÉMO pour jouer un extrait de Für Elise intégré. Le clavier apparaît automatiquement. Si du contenu est déjà chargé, DÉMO nécessite deux appuis — le premier affiche "remplacer ?", le second confirme. Appuyez sur EFFACER pour quitter le mode démo.`},
   {id:'compose', title:`Composer avec le clavier`, keywords:`composer clavier piano live enregistrer touches jouer annuler accord cadre toile fixe nombre or`,
@@ -2188,8 +2986,8 @@ const GUIDE_I18N = {
    body:`Paintiano pinta música como una cuadrícula de bloques de color con proporciones φ, y reproduce pinturas como música. Elige una fuente — Componer, Cantar, MIDI, Audio, Partitura, Imagen o un estado — y el lienzo se llena mientras tocas. Pulsa Tocar para escuchar, Imprimir para guardar.`},
   {id:'modes', title:`Armonía vs Espectral`, keywords:`color modo tono paleta círculo de quintas cromático`,
    body:`Dos gramáticas de color para la misma música. Armonía coloca las clases de tono en el círculo de quintas alrededor de la rueda de color. Espectral los espacía en pasos de 30°. Cambia en cualquier momento.`},
-  {id:'style', title:`Estilo pictórico: Picasso / Rembrandt / Kusama / Van Gogh / Kandinsky`, keywords:`estilo picasso rembrandt kusama van gogh kandinsky cubismo lunares impresionismo claroscuro impasto pincelada abstracto`,
-   body:`Superposición de estilo artístico opcional. Sin selección, mosaico por defecto. Picasso fragmenta cada acorde en planos geométricos. Rembrandt superpone pinceladas impasto con claroscuro. Kusama pinta cada celda como un campo de color plano con muchos puntos pequeños en colores contrastantes y curvas de red infinita ocasionales. Van Gogh pinta listones de pigmento puro con bordes deshilachados. Kandinsky compone círculos concéntricos con líneas y triángulos. Toca el artista activo de nuevo para deseleccionar.`},
+  {id:'style', title:`Estilo pictórico: Picasso / Kusama / Van Gogh / Kandinsky / Pollock`, keywords:`estilo picasso kusama van gogh kandinsky pollock cubismo lunares impresionismo pincelada goteo salpicadura abstracto`,
+   body:`Superposición de estilo artístico opcional. Sin selección, mosaico por defecto. Picasso fragmenta cada acorde en planos geométricos. Kusama pinta cada celda como un campo de color plano con muchos puntos pequeños en colores contrastantes y curvas de red infinita ocasionales. Van Gogh pinta listones de pigmento puro con bordes deshilachados. Kandinsky compone círculos concéntricos con líneas y triángulos. Pollock deja visible el sustrato del mosaico y superpone líneas de goteo, salpicaduras y cadenas de perlas a escala del lienzo en negro, blanco, amarillo y rojo raro — las salpicaduras ignoran completamente los límites de las celdas. Toca el artista activo de nuevo para deseleccionar.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven prueba ejemplo reemplazar confirmar`,
    body:`Pulsa DEMO para reproducir un extracto de Für Elise integrado. El teclado aparece automáticamente. Si ya hay contenido cargado, DEMO requiere dos toques — el primero muestra "¿reemplazar?", el segundo confirma. Pulsa BORRAR para salir del modo demo.`},
   {id:'compose', title:`Componer con el teclado`, keywords:`componer teclado piano en vivo grabar teclas tocar deshacer acorde marco lienzo fijo proporción áurea`,
@@ -2430,16 +3228,24 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
+      const PALETTE_VERSION='2';
+      const savedVersion=localStorage.getItem('paintiano_palette_version');
+      if(savedVersion!==PALETTE_VERSION){localStorage.removeItem('paintiano_custom_palette');localStorage.setItem('paintiano_palette_version',PALETTE_VERSION);return null;}
       const raw=localStorage.getItem('paintiano_custom_palette');
       if(!raw)return null;
       const arr=JSON.parse(raw);
-      if(Array.isArray(arr) && arr.length===12) return arr;
+      if(!Array.isArray(arr)||arr.length!==12)return null;
+      if(arr.every(h=>h==='#888888'))return null;
+      return arr;
     }catch(_){}
     return null;
   });
+  const defaultCustomPalette=useMemo(()=>Array.from({length:12},()=>'#888888'),[]);
+  const activePalette=customPalette||defaultCustomPalette;
   useEffect(()=>{
     if(!customPalette)return;
-    try{ localStorage.setItem('paintiano_custom_palette', JSON.stringify(customPalette)); }catch(_){}
+    if(customPalette.every(h=>h==='#888888'))return;
+    try{localStorage.setItem('paintiano_custom_palette',JSON.stringify(customPalette));}catch(_){}
   },[customPalette]);
   // Modal open state for the palette editor
   const [showPaletteEditor, setShowPaletteEditor] = useState(false);
@@ -2548,13 +3354,38 @@ export default function Paintiano() {
   const [composeMode, setComposeMode] = useState(false);
   // Block style: which artist's mark-making language renders each chord.
   // null (default) = implicit mosaic — sharp φ-rectangles. 'picasso' = cubist
-  // shards with contour lines, 'rembrandt' = chiaroscuro impasto brushstrokes,
-  // 'kusama' = fields of contrasting polka dots on flat color, 'vangogh' =
-  // ribbons of pure pigment, 'kandinsky' = geometric composition with
-  // circles/lines/triangles. Clicking the active artist a second time
-  // deselects, returning to mosaic. Only affects music-mode rendering;
-  // image-mode ignores this.
+  // shards with contour lines, 'kusama' = fields of contrasting polka dots on
+  // flat color, 'vangogh' = ribbons of pure pigment, 'kandinsky' = geometric
+  // composition with circles/lines/triangles, 'pollock' = mosaic substrate
+  // with canvas-wide drip-and-splatter overlay (drips ignore cell boundaries).
+  // Clicking the active artist a second time deselects, returning to mosaic.
+  // Only affects music-mode rendering; image-mode ignores this.
   const [style, setStyle] = useState(null);
+  // Pollock/Kandinsky overlay seed — DERIVED FROM CHORD CONTENT, not random.
+  // Same song → same hash → same painting (deterministic). Different chords
+  // (load a new song, or Vary) → different hash → different painting.
+  // No random state, no reshuffle needed: the painting follows the music.
+  const pollockSessionSeed = useMemo(() => {
+    if(!chords || !chords.length) return 0;
+    // FNV-1a-ish hash over each chord's pitches and velocities.
+    let h = 2166136261 >>> 0;
+    for(let i=0; i<chords.length; i++){
+      const ch = chords[i];
+      const notes = ch.n || ch.notes || (Array.isArray(ch) ? ch : null);
+      if(!notes) continue;
+      h ^= (i+1);
+      h = Math.imul(h, 16777619);
+      for(const note of notes){
+        const m = note.m !== undefined ? note.m : note;
+        const v = note.v !== undefined ? note.v : 100;
+        h ^= (m & 0xff);
+        h = Math.imul(h, 16777619);
+        h ^= (v & 0xff);
+        h = Math.imul(h, 16777619);
+      }
+    }
+    return (h >>> 0);
+  }, [chords]);
   // Demo mode: true while a Für Elise demo session is active. Locks the
   // play action (Stop still works because it's the same button in playing state)
   // so the demo can't be re-triggered without an explicit clear.
@@ -2639,10 +3470,10 @@ export default function Paintiano() {
 
   const gc = useCallback((m,v)=>{
     if(mode==='bw') return bwCol(m,v);
-    if(mode==='custom' && customPalette) return customCol(m,v,customPalette);
+    if(mode==='custom') return customCol(m,v,activePalette);
     if(mode==='spectral') return specCol(m,v);
     return harmCol(m,v);
-  },[mode,customPalette]);
+  },[mode,activePalette]);
 
   useEffect(()=>{
     const cv=canvasRef.current;if(!cv)return;
@@ -2697,8 +3528,10 @@ export default function Paintiano() {
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
-      ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'){
+        ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
+        ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
+      }
       if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
       // Mutate in place — the ref isn't React state, identity doesn't matter,
       // and this skips an object spread on every keystroke during compose.
@@ -2718,7 +3551,8 @@ export default function Paintiano() {
       prev.anim===anim &&
       prev.playing===playing &&
       lim>=prev.disp &&
-      lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)); // sanity bound: skip giant jumps
+      lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
@@ -2726,7 +3560,26 @@ export default function Paintiano() {
       ctx.strokeStyle='rgba(255,255,255,0.025)';ctx.lineWidth=.5;
       for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*BW,0);ctx.lineTo(i*BW,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*BH);ctx.lineTo(CW,i*BH);ctx.stroke();}
       for(let i=0;i<lim;i++) drawOne(chords[i]);
-      if(!info&&!playing){
+      // Pollock global drip overlay — runs AFTER all cells have rendered.
+      // Drips ignore cell boundaries and unify the painting under the splatter.
+      if(style==='pollock' && lim>0){
+        drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+      }
+      if(style==='picasso' && lim>0){
+        drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+      }
+      if(style==='kusama' && lim>0){
+        drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed);
+      }
+      if(style==='miro' && lim>0){
+        drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+      }
+      // Kandinsky canvas-wide contour overlay — large outlined shapes in
+      // varied colors layered over the per-cell Kandinsky composition.
+      if(style==='kandinsky' && lim>0){
+        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode);
+      }
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -2735,7 +3588,7 @@ export default function Paintiano() {
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,holdPaused]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,holdPaused,pollockSessionSeed]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -2979,7 +3832,9 @@ export default function Paintiano() {
         const chords = chordsRef.current;
         const grid = gridRef.current;
         const gc = gcRef.current;
-        if (isPlaying && d > 0 && chords.length && grid && gc) {
+        const style = lastPaintRef.current?.style ?? null;
+        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky';
+        if (isPlaying && d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
             const cell = grid.cells && grid.cells[chord.idx];
@@ -3616,8 +4471,8 @@ Composition rules:
           // Process pixels into events using the current mode's hue→pitch table.
           // B/W uses harmony's hue table — same music as harmony, but the canvas
           // renders monochrome because gc() returns greys in bw mode.
-          const hueTable = mode==='custom' && customPalette
-            ? customPalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; })
+          const hueTable = mode==='custom'
+            ? activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; })
             : (mode==='spectral'?SPEC_HUE:COF);
           const evts=pixelsToImageEvents(px,nc,nr,hueTable);
           stopAll();
@@ -3649,19 +4504,19 @@ Composition rules:
     if(viewMode!=='image'||!pixelRef.current)return;
     // Use mode+palette signature so swapping individual swatches in custom mode
     // also forces a re-transcribe (not just mode-to-mode changes).
-    const sig = mode + (mode==='custom' && customPalette ? '|' + customPalette.join(',') : '');
+    const sig = mode + (mode==='custom' ? '|' + activePalette.join(',') : '');
     if(pixelRef.current.lastSig===sig)return;
     pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
     const{nc,nr,px}=pixelRef.current;
-    const hueTable = mode==='custom' && customPalette
-      ? customPalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; })
+    const hueTable = mode==='custom'
+      ? activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; })
       : (mode==='spectral'?SPEC_HUE:COF);
     const evts=pixelsToImageEvents(px,nc,nr,hueTable);
     stopAll();
     setChords(evts);setDisp(evts.length);
     idxRef.current=evts.length;setStamp(s=>s+1);
-  },[mode,viewMode,stopAll,customPalette]);
+  },[mode,viewMode,stopAll,activePalette]);
 
   const loadSampleImage=useCallback(()=>{
     try{
@@ -4087,6 +4942,7 @@ Composition rules:
       const COMMIT_INTERVAL=800; // 800ms — longer for smoother flow
       const RMS_THRESHOLD=0.003; // very low — iOS same-device mic+speaker signal is weak
       let prevChordSig=''; // chord-change detection
+      let prevChordStart=performance.now(); // when current chord started
       const tick=()=>{
         if(!listenStreamRef.current){stopMicListening();return;}
         analyser.getFloatTimeDomainData(buf);
@@ -4104,17 +4960,20 @@ Composition rules:
           // an 800ms re-render rhythm with no visible benefit.
           const sig=notes.map(n=>n.m).sort().join(',');
           if(sig!==prevChordSig){
+            // Duration = how long the previous chord was held
+            const heldMs=now-prevChordStart;
+            prevChordStart=now;
             prevChordSig=sig;
             // Highlight active keys
             notes.forEach(({m})=>{
               setActive(p=>{const s=new Set(p);s.add(m);return s;});
               pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),sustainMs);
             });
-            // Paint
+            // Paint — durQ proportional to how long chord was held, like Compose
             const idx=idxRef.current++;
             if(!sessionStart.current)sessionStart.current=now;
             const startMs=now-sessionStart.current;
-            const durQ=snapDurQ(COMMIT_INTERVAL/500);
+            const durQ=Math.max(0.25,Math.min(4,heldMs/500));
             setChords(p=>{const next=[...p,{n:notes,idx,startMs,recorded:true,durQ}];return next;});
             setDisp(p=>p+1);
           }
@@ -4166,6 +5025,7 @@ Composition rules:
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=600; // emit a chord every 600ms for smoother flow
       const RMS_THRESHOLD=0.06; // minimum RMS energy — ignores ambient noise / silence
+      let prevNoteStart=performance.now(); // track how long each note is held
       const tick=()=>{
         if(!micStreamRef.current){stopMicPainting();return;}
         analyser.getFloatTimeDomainData(buf);
@@ -4175,7 +5035,9 @@ Composition rules:
         const pitches=pickPitches(mag,sr,0.20);
         const now=performance.now();
         if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
+          const heldMs=now-prevNoteStart;
           lastCommit=now;
+          prevNoteStart=now;
           // Monophonic — take only the strongest pitch
           const top=pitches[0];
           // Scale-snap to C major
@@ -4186,11 +5048,11 @@ Composition rules:
           playNote(snapped,notes[0].v,sustainMs);
           setActive(p=>{const s=new Set(p);s.add(snapped);return s;});
           pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(snapped);return s;}),Math.min(sustainMs,1000));
-          // Paint
+          // Paint — durQ proportional to how long note was held, like Compose
           const idx=idxRef.current++;
           if(!sessionStart.current)sessionStart.current=now;
           const startMs=now-sessionStart.current;
-          const durQ=snapDurQ(COMMIT_INTERVAL/500);
+          const durQ=Math.max(0.25,Math.min(4,heldMs/500));
           setChords(p=>{const next=[...p,{n:notes,idx,startMs,recorded:true,durQ}];return next;});
           setDisp(p=>p+1);
         }
@@ -4311,6 +5173,25 @@ Composition rules:
           else if(cell)drawBlock(hctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
           else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(hctx,col*BW,row*BH,notes,gc,BW,BH,style);}
         });
+        // Pollock global drip overlay — drawn over all rendered cells.
+        // hctx is already scaled; pass canvas-space CW/CH so the splatters
+        // span the painting at export resolution.
+        if(style==='pollock' && chords.length>0){
+          drawPollockOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+        }
+        if(style==='picasso' && chords.length>0){
+          drawPicassoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+        }
+        if(style==='kusama' && chords.length>0){
+          drawKusamaOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed);
+        }
+        if(style==='miro' && chords.length>0){
+          drawMiroOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+        }
+        // Kandinsky canvas-wide contour overlay.
+        if(style==='kandinsky' && chords.length>0){
+          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode);
+        }
       }
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
       if(!blob){setErr('Print: could not encode image.');setErrInfo(false);return;}
@@ -4383,15 +5264,8 @@ Composition rules:
         <div style={{display:'flex',border:'1px solid rgba(201,168,76,.25)',borderRadius:2,overflow:'hidden',flexShrink:0}}>
           {['harmony','spectral','bw','custom'].map(m=>(
             <button key={m} onClick={()=>{
-              if(m==='custom' && !customPalette){
-                // First-ever pick of Custom: seed palette from whatever mode
-                // is currently active. Captures hue at default lightness/sat
-                // so the editor opens with sensible starting colors.
-                const seedTable = (mode==='spectral') ? SPEC_HUE : COF;
-                const seed = seedTable.map(h => rgbToHex(fromHsl(h, 80, 55)));
-                setCustomPalette(seed);
-              }
-              setMode(m);
+              if(canvasRef.current){canvasRef.current.style.opacity='0';}
+              setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
             }} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(207,197,168,.45)'}}>{t(m)}</button>
           ))}
         </div>
@@ -4401,8 +5275,11 @@ Composition rules:
       </div>
       <div style={{display:'flex',gap:10,marginBottom:10,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
         <div style={{display:'flex',border:'1px solid rgba(180,140,255,.28)',borderRadius:2,overflow:'hidden',flexShrink:0}} title="painting style — tap again to deselect (mosaic default)">
-          {[['picasso','picasso'],['rembrandt','rembrandt'],['kusama','kusama'],['vangogh','van gogh'],['kandinsky','kandinsky']].map(([k,label])=>(
-            <button key={k} onClick={()=>setStyle(style===k?null:k)} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 10px',background:style===k?'rgba(180,140,255,.16)':'transparent',color:style===k?'rgba(210,170,255,.95)':'rgba(207,197,168,.45)'}}>{label}</button>
+          {[['picasso','picasso'],['kusama','kusama'],['pollock','pollock'],['kandinsky','kandinsky'],['miro','miro']].map(([k,label])=>(
+            <button key={k} onClick={()=>{
+              if(canvasRef.current){canvasRef.current.style.opacity='0';}
+              setTimeout(()=>{setStyle(style===k?null:k);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+            }} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 10px',background:style===k?'rgba(180,140,255,.16)':'transparent',color:style===k?'rgba(210,170,255,.95)':'rgba(207,197,168,.45)'}}>{label}</button>
           ))}
         </div>
       </div>
@@ -4460,6 +5337,7 @@ Composition rules:
             if(busy)return;
             // Soft-lock: if another creation mode is on, do nothing.
             if(!composeMode&&(micPainting||micListening))return;
+            if(!composeMode&&(micPainting||micListening))return;
             if(!composeMode){
               const owner = draftOwnerRef.current;
               if(owner==='compose'){
@@ -4489,6 +5367,7 @@ Composition rules:
             if(busy && !micActive) return;
             // Mutex: if compose is on, do nothing.
             if(!micActive && composeMode) return;
+            
             if(micActive){
               // Turn the mic mode off entirely.
               if(micPainting) stopMicPainting();
@@ -4682,7 +5561,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',maxWidth:'100%',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal'}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',maxWidth:'100%',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease'}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {chords.length===0&&(
@@ -4733,7 +5612,7 @@ Composition rules:
         </div>
       )}
 
-      {showPaletteEditor && customPalette && (
+      {showPaletteEditor && (
         <div onClick={()=>setShowPaletteEditor(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-palette-title" style={{maxWidth:420,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'24px 22px',color:'rgba(207,197,168,.88)',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
             <button onClick={()=>setShowPaletteEditor(false)} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
@@ -4741,9 +5620,9 @@ Composition rules:
             <div style={{display:'grid',gridTemplateColumns:'repeat(4, 1fr)',gap:10,marginBottom:18}}>
               {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].map((label,pc)=>(
                 <label key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,cursor:'pointer'}}>
-                  <div style={{position:'relative',width:60,height:60,borderRadius:6,background:customPalette[pc],border:'2px solid rgba(207,197,168,.25)',boxShadow:'0 2px 6px rgba(0,0,0,.4)'}}>
-                    <input type="color" value={customPalette[pc]} onChange={e=>{
-                      const next=customPalette.slice();
+                  <div style={{position:'relative',width:60,height:60,borderRadius:6,background:activePalette[pc],border:'2px solid rgba(207,197,168,.25)',boxShadow:'0 2px 6px rgba(0,0,0,.4)'}}>
+                    <input type="color" value={activePalette[pc]} onChange={e=>{
+                      const next=activePalette.slice();
                       next[pc]=e.target.value;
                       setCustomPalette(next);
                     }} style={{position:'absolute',inset:0,opacity:0,cursor:'pointer',width:'100%',height:'100%'}} aria-label={label}/>
@@ -5003,7 +5882,7 @@ Composition rules:
       </div>
       )}
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.4.07</div>
+      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.4.08</div>
     </div>
   );
 }
