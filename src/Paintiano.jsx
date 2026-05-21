@@ -192,10 +192,17 @@ const PAINT_SCALES = {
 };
 const PAINT_SCALE_KEYS = ['off','cmaj','amin','gmaj','emin','dmaj','fmaj','dmin'];
 
+// Cache of pitch-class arrays per scale key. There are only 8 possible scales
+// (PAINT_SCALE_KEYS), each maps to a stable PC array. Pre-computing once at
+// module load avoids 88+ per-render `.map()` allocations during keyboard render
+// (paintSnapMidi → paintScalePCs runs per-key) and the 5-15Hz playback tick.
+const _PAINT_SCALE_PC_CACHE = {};
 function paintScalePCs(scaleKey){
+  if(scaleKey in _PAINT_SCALE_PC_CACHE) return _PAINT_SCALE_PC_CACHE[scaleKey];
   const s = PAINT_SCALES[scaleKey];
-  if(!s || !s.scale) return null;
-  return s.scale.map(o => (o + s.root) % 12);
+  const pcs = (!s || !s.scale) ? null : s.scale.map(o => (o + s.root) % 12);
+  _PAINT_SCALE_PC_CACHE[scaleKey] = pcs;
+  return pcs;
 }
 function paintSnapMidi(midi, scaleKey){
   const pcs = paintScalePCs(scaleKey);
@@ -1304,7 +1311,14 @@ function drawKandinsky(ctx,bx,by,notes,gc,BW,BH){
 }
 
 function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
-  if(style==='picasso') return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='picasso'){
+    // Picasso has its own canvas-wide cubist plane overlay that supplies all
+    // color. The per-block drawer just keeps the dark canvas underneath —
+    // previously this used the cream substrate from Pollock, which produced
+    // an unwanted white background showing through gaps between planes.
+    ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2);
+    return;
+  }
   if(style==='kusama')return drawKusama(ctx,bx,by,notes,gc,BW,BH);
   if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,gc,BW,BH);
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
@@ -2588,13 +2602,21 @@ const SONGS=[
 // Reusable FFT buffers — sized for the largest caller (mic-listen uses N=4096).
 // fftMag is always run synchronously by a single caller that consumes the
 // returned `mag` before the next fftMag call, so module-level sharing is safe.
+// Buffers are lazily allocated on first fftMag call (~48 KB total) so users
+// who never trigger mic-listen / mic-paint / audio import pay zero memory cost
+// for them on page load.
 const _FFT_MAX = 4096;
-const _FFT_RE  = new Float32Array(_FFT_MAX);
-const _FFT_IM  = new Float32Array(_FFT_MAX);
-const _FFT_MAG = new Float32Array(_FFT_MAX / 2);
+let _FFT_RE  = null;
+let _FFT_IM  = null;
+let _FFT_MAG = null;
 
 function fftMag(buf) {
   const N = buf.length;
+  if (_FFT_RE === null) {
+    _FFT_RE  = new Float32Array(_FFT_MAX);
+    _FFT_IM  = new Float32Array(_FFT_MAX);
+    _FFT_MAG = new Float32Array(_FFT_MAX / 2);
+  }
   const re = _FFT_RE, im = _FFT_IM;
   // Re-init the buffers for this call. im is fully zeroed; re is overwritten
   // by the Hann-windowed input below.
@@ -2636,7 +2658,9 @@ function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;
 // Reusable typed-array buffers — module-level so transcribeAudio doesn't
 // allocate ~15K Float32Arrays during a long file import. JS is single-threaded
 // and transcribeAudio runs sequentially, so the shared state is safe.
-const _TRANS_FRAME = new Float32Array(2048);
+// Lazily allocated on first call (~8 KB) — users who never import audio pay
+// zero memory cost for it on page load.
+let _TRANS_FRAME = null;
 
 async function transcribeAudio(audioBuf, onP) {
   const sr = audioBuf.sampleRate;
@@ -2649,6 +2673,7 @@ async function transcribeAudio(audioBuf, onP) {
   const FRAME = 2048, HOP = 512;
   const total = Math.floor((data.length - FRAME) / HOP);
   const active = {}, notes = [];
+  if (_TRANS_FRAME === null) _TRANS_FRAME = new Float32Array(FRAME);
   const frame = _TRANS_FRAME;
   for (let f = 0; f < total; f++) {
     // Copy the next FRAME samples into the reusable buffer — was data.slice()
@@ -3204,6 +3229,174 @@ const BlackKey = memo(function BlackKey({midi, lw, snapped, isActive, isHovered,
   );
 });
 
+// Custom hook: focus-trap + focus-restore for modal dialogs.
+// Behaviour:
+//   1. On mount, snapshot the currently-focused element. Move focus into the
+//      modal panel (first focusable child, falling back to the panel itself).
+//   2. While the modal is open, intercept Tab/Shift+Tab on the panel and
+//      cycle through its focusable descendants instead of escaping to the
+//      background (which is hidden behind the modal but still tabbable).
+//   3. On unmount, restore focus to the previously-focused element so keyboard
+//      users return to the trigger button after closing.
+// The Escape key is already handled by a global keydown listener in Paintiano,
+// so this hook deliberately does NOT handle Escape.
+function useModalFocusTrap(panelRef){
+  useEffect(()=>{
+    const panel = panelRef.current;
+    if(!panel) return;
+    const previousActive = (typeof document!=='undefined') ? document.activeElement : null;
+    const focusableSelector = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    // Initial focus — first focusable descendant, or the panel itself
+    const getFocusables = ()=>Array.from(panel.querySelectorAll(focusableSelector)).filter(el=>el.offsetParent!==null||el===document.activeElement);
+    const initial = getFocusables();
+    if(initial.length){
+      // Use a microtask so React has finished mounting before we focus
+      Promise.resolve().then(()=>{try{initial[0].focus();}catch(_){}});
+    }else{
+      // Make the panel itself focusable as fallback
+      if(!panel.hasAttribute('tabindex')) panel.setAttribute('tabindex','-1');
+      Promise.resolve().then(()=>{try{panel.focus();}catch(_){}});
+    }
+    const onKey = (e)=>{
+      if(e.key!=='Tab') return;
+      const focusables = getFocusables();
+      if(!focusables.length){ e.preventDefault(); return; }
+      const first = focusables[0], last = focusables[focusables.length-1];
+      const active = document.activeElement;
+      if(e.shiftKey){
+        // Shift+Tab — wrap from first back to last
+        if(active===first||!panel.contains(active)){
+          e.preventDefault();
+          try{last.focus();}catch(_){}
+        }
+      }else{
+        // Tab — wrap from last back to first
+        if(active===last||!panel.contains(active)){
+          e.preventDefault();
+          try{first.focus();}catch(_){}
+        }
+      }
+    };
+    panel.addEventListener('keydown', onKey);
+    return ()=>{
+      panel.removeEventListener('keydown', onKey);
+      // Restore focus to the element that had it before the modal opened.
+      // Guard against the element having been removed (e.g. the trigger
+      // button was inside a conditionally-rendered branch that's now gone).
+      if(previousActive && typeof previousActive.focus === 'function' && document.contains(previousActive)){
+        try{previousActive.focus();}catch(_){}
+      }
+    };
+  },[panelRef]);
+}
+
+// Self-contained concept-text modal. Lifted out of the main JSX so the modal
+// only reconciles when (lang, t, onClose) actually change — previously it
+// re-rendered on every Paintiano render including the 5-15Hz `disp` tick
+// during playback even when not visible. `React.memo` plus stable t/onClose
+// references from the parent skip reconciliation entirely.
+const AboutModal = memo(function AboutModal({onClose, t, lang}){
+  const panelRef = useRef(null);
+  useModalFocusTrap(panelRef);
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
+        <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
+        <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
+        {getConcept(lang)}
+        <button onClick={onClose} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
+      </div>
+    </div>
+  );
+});
+
+// Self-contained searchable guide modal. Same memoization rationale as
+// AboutModal — without this lift, opening the guide and then leaving it open
+// during playback would reconcile its full subtree (input + filtered details
+// list) on every 5-15Hz `disp` tick. Now it only reconciles when one of its
+// actual props changes (query, focus, lang, t, onClose).
+const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus}){
+  const panelRef = useRef(null);
+  useModalFocusTrap(panelRef);
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
+        <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
+        <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
+        <input
+          type="search"
+          value={guideQuery}
+          onChange={e=>setGuideQuery(e.target.value)}
+          onFocus={()=>{inputFocus.current=true;setFocusedInput('guide');}}
+          onBlur={()=>{inputFocus.current=false;setFocusedInput(null);}}
+          placeholder={t('searchGuide')}
+          autoCapitalize="off"
+          autoComplete="off"
+          spellCheck={false}
+          inputMode="search"
+          enterKeyHint="search"
+          aria-label={t('searchGuide')}
+          style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:'.78rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
+        />
+        {(() => {
+          const matches = getGuide(lang).filter(e => guideMatch(e, guideQuery));
+          if (matches.length === 0) {
+            return <p style={{textAlign:'center',opacity:.5,fontStyle:'italic',padding:'20px 0'}}>{t('noMatches')} "{guideQuery}".</p>;
+          }
+          return matches.map(entry => (
+            <details key={entry.id} open={!!guideQuery.trim()} style={{marginBottom:6,border:'1px solid rgba(207,197,168,.08)',borderRadius:4,padding:'2px 0',background:'rgba(255,255,255,0.012)'}}>
+              <summary style={{cursor:'pointer',padding:'9px 12px',color:'rgba(140,200,255,.92)',fontWeight:500,fontSize:'.82rem',letterSpacing:'.02em',listStyle:'none',userSelect:'none'}}>{entry.title}</summary>
+              <p style={{margin:0,padding:'2px 14px 12px',color:'rgba(207,197,168,.82)',fontSize:'.76rem',lineHeight:1.65}}>{entry.body}</p>
+            </details>
+          ));
+        })()}
+        <button onClick={onClose} style={{display:'block',margin:'20px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
+      </div>
+    </div>
+  );
+});
+
+// Self-contained palette editor modal. Same memo rationale as the other two —
+// while the editor is open, the parent's 5-15Hz `disp` tick during playback
+// would otherwise reconcile the swatch grid every frame. With memo, the modal
+// only reconciles when (activePalette, setCustomPalette, t, onClose) change,
+// i.e. when the user actually picks a color.
+const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activePalette, setCustomPalette}){
+  const panelRef = useRef(null);
+  useModalFocusTrap(panelRef);
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-palette-title" style={{maxWidth:420,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'24px 22px',color:'rgba(207,197,168,.88)',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
+        <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
+        <div id="paintiano-palette-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('paletteEditorTitle')}</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4, 1fr)',gap:10,marginBottom:18}}>
+          {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].map((label,pc)=>(
+            <label key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,cursor:'pointer'}}>
+              <div style={{position:'relative',width:60,height:60,borderRadius:6,background:activePalette[pc],border:'2px solid rgba(207,197,168,.25)',boxShadow:'0 2px 6px rgba(0,0,0,.4)'}}>
+                <input type="color" value={activePalette[pc]} onChange={e=>{
+                  const next=activePalette.slice();
+                  next[pc]=e.target.value;
+                  setCustomPalette(next);
+                }} style={{position:'absolute',inset:0,opacity:0,cursor:'pointer',width:'100%',height:'100%'}} aria-label={label}/>
+              </div>
+              <span style={{fontSize:'.65rem',letterSpacing:'.06em',color:'rgba(207,197,168,.7)'}}>{label}</span>
+            </label>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18}}>
+          <button onClick={()=>{
+            // Clear all: reset every pitch class to neutral light grey.
+            // The user starts from a blank slate and picks each color
+            // themselves — no implicit harmony or spectral seed.
+            setCustomPalette(Array(12).fill('#cccccc'));
+          }} style={{padding:'8px 16px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.3)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('resetPalette')}</button>
+          <button onClick={onClose} style={{padding:'8px 22px',background:'rgba(201,168,76,.15)',color:GOLD,border:'1px solid rgba(201,168,76,.45)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.12em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // §7  MAIN COMPONENT — Paintiano
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3282,6 +3475,9 @@ export default function Paintiano() {
   },[customPalette]);
   // Modal open state for the palette editor
   const [showPaletteEditor, setShowPaletteEditor] = useState(false);
+  // Stable close callback so PaletteEditorModal's React.memo can skip
+  // reconciliation when the parent re-renders for unrelated reasons.
+  const closePaletteEditor = useCallback(()=>setShowPaletteEditor(false),[]);
   const [chords,    setChords]    = useState([]);
   const [disp,      setDisp]      = useState(0);
   const [active,    setActive]    = useState(new Set());
@@ -3320,6 +3516,14 @@ export default function Paintiano() {
   const [wPct,      setWPct]      = useState(0);
   const [midiBlob,  setMidiBlob]  = useState(null);
   const [midiName,  setMidiName]  = useState('');
+  // Which source produced the current canvas content?
+  // Values: 'midi' | 'audio' | 'score' | 'image' | 'mood' | null
+  // Set at the success point of each loader (so a failed parse doesn't leave a
+  // false marker). Cleared by clear()/fullClear() and at the start of each
+  // load. Used to highlight the matching source picker so users see at a
+  // glance which source is currently active. The 'mood' value is implicit
+  // via the mood <select> showing its own value, so we use null in that case.
+  const [loadedSource, setLoadedSource] = useState(null);
   const [recording, setRecording] = useState(false);
   const [micPainting, setMicPainting] = useState(false);
   const [micListening, setMicListening] = useState(false);
@@ -3425,10 +3629,17 @@ export default function Paintiano() {
   const [demoMode, setDemoMode] = useState(false);
   // Inline "concept" modal: explains Harmony/Spectral and image transcription.
   const [showAbout, setShowAbout] = useState(false);
+  // Stable callback for AboutModal — without useCallback the modal's React.memo
+  // would never hit because every parent render would pass a fresh () => …
+  // function. Identity is stable since setShowAbout is a useState setter.
+  const closeAbout = useCallback(()=>setShowAbout(false),[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
   // Inline "guide" modal: searchable how-to entries covering every feature.
   const [showGuide, setShowGuide] = useState(false);
   const [guideQuery, setGuideQuery] = useState('');
+  // Stable composite-close callback for GuideModal (same memo rationale as
+  // closeAbout). Closes the modal and clears the search query in one action.
+  const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');},[]);
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [currentMood, setCurrentMood] = useState(null);
   const [loopMode,    setLoopMode]    = useState(false);
@@ -3459,6 +3670,22 @@ export default function Paintiano() {
   // on the keyboard or running a live mic mode. Locks the keyboard so a stray
   // tap can't clobber the loaded composition. Cleared by clear()/fullClear().
   const loadedMode = !!info && !composeMode && !micPainting && !micListening;
+  // L5: A composite "input-source pickers are locked" predicate. The four
+  // source pickers (MIDI / audio / score / image) all need the same guard:
+  // user is already doing something (busy) or already in a creative mode
+  // whose draft we shouldn't clobber (composeMode / micPainting / micListening).
+  // Also locked during recording (L6/L7): loading a new source calls
+  // fullClear()→stopAll(), which would strand the MediaRecorder with no
+  // audio input, producing a truncated / silent saved file.
+  // Centralizing here both fixes the missing `disabled` attribute and removes
+  // four-way repetition in the JSX.
+  const sourcePickerLocked = busy || composeMode || micPainting || micListening || recording;
+  // "Which source is the current canvas content from?" — used to highlight the
+  // matching picker button so the user can see at a glance whether the loaded
+  // composition is from MIDI / audio / score / image / mood. Mood-loaded
+  // content is highlighted via the mood <select> dropdown value, not a picker
+  // button. Compose / mic-painted content has no picker button to highlight.
+  const activeSource = loadedSource;
   const composedModeRef = useRef(false);
 
   // === Creative mode draft stashes ===
@@ -3695,6 +3922,9 @@ export default function Paintiano() {
       ripplesRef.current.push({ x, y, r, g, b, born: performance.now() });
       // Cap to last 80 to bound memory if many notes pile up
       if (ripplesRef.current.length > 80) ripplesRef.current.splice(0, ripplesRef.current.length - 80);
+      // Wake the visualizer loop — it stops itself when there's nothing to
+      // animate, so a fresh ripple needs to kick it back into life.
+      wakeVisualizerRef.current?.();
     }
     try{
       const gain=Math.max(0.01,Math.min(1,vel/127)),dur=Math.max(0.05,durMs/1000);
@@ -3734,7 +3964,15 @@ export default function Paintiano() {
   const chordsRef   = useRef([]);
   const gridRef     = useRef(null);
   const gcRef       = useRef(null);
-  useEffect(()=>{ playingRef.current=playing; },[playing]);
+  useEffect(()=>{
+    playingRef.current=playing;
+    // Restart the self-terminating animation loops when playback resumes.
+    // (They stop themselves when not playing to let the browser idle-throttle.)
+    if(playing){
+      wakeVisualizerRef.current?.();
+      wakeHighlightRef.current?.();
+    }
+  },[playing]);
   useEffect(()=>{ dispRef.current=disp; },[disp]);
   useEffect(()=>{ chordsRef.current=chords; },[chords]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
@@ -3798,17 +4036,24 @@ export default function Paintiano() {
   },[]);
 
 
-  // Visualizer animation loop — runs always; cheap when no ripples
+  // Visualizer animation loop — self-terminating. Previously it ran a 60Hz
+  // rAF for the entire page lifetime, just early-exiting on idle ticks. That
+  // prevented mobile browsers from idle-throttling and kept the CPU warm even
+  // when the user wasn't interacting. Now the loop stops scheduling itself
+  // when there's nothing to draw, and producers (playNote → ripple push,
+  // play state going true) call `wakeVisualizer()` to restart it.
+  const visualizerRunningRef = useRef(false);
+  const visualizerRafRef = useRef(0);
+  const wakeVisualizerRef = useRef(null);
   useEffect(() => {
-    let raf;
     const tick = () => {
       const canvas = visualizerRef.current;
+      // If there's nothing to do, stop scheduling. Producers will wake us.
+      if (!ripplesRef.current.length && !playingRef.current) {
+        visualizerRunningRef.current = false;
+        return;
+      }
       if (canvas) {
-        // Skip all canvas work when idle — no ripples and not playing
-        if(!ripplesRef.current.length && !playingRef.current){
-          raf = requestAnimationFrame(tick);
-          return;
-        }
         const ctx = canvas.getContext('2d');
         const w = canvas.width, h = canvas.height;
         ctx.clearRect(0, 0, w, h);
@@ -3834,40 +4079,59 @@ export default function Paintiano() {
           return true;
         });
       }
-      raf = requestAnimationFrame(tick);
+      visualizerRafRef.current = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // Wake function: idempotent — if already running, do nothing.
+    const wake = () => {
+      if (visualizerRunningRef.current) return;
+      visualizerRunningRef.current = true;
+      visualizerRafRef.current = requestAnimationFrame(tick);
+    };
+    wakeVisualizerRef.current = wake;
+    return () => {
+      cancelAnimationFrame(visualizerRafRef.current);
+      visualizerRunningRef.current = false;
+    };
   }, []);
 
   // Playback highlight loop — draws an animated pulsing border on the
   // currently-playing block. Runs on its own canvas overlay (zIndex 3)
   // so it never disturbs the main paint or the ripple visualizer.
   // Reads everything through refs so the callback stays stable.
+  // Self-terminating (see visualizer loop above): the loop stops scheduling
+  // when playback ends so the page doesn't keep a 60Hz wake-up running.
+  // The `playing` effect (further below) calls wakeHighlightRef.current()
+  // when playback starts.
+  const highlightRunningRef = useRef(false);
+  const highlightRafRef = useRef(0);
+  const wakeHighlightRef = useRef(null);
   useEffect(() => {
-    let raf;
     // Cache the highlight color per chord. The reduce-and-slice was running
     // 60×/sec on a value that only changes when the chord changes.
     let cachedIdx = -1, cachedR = 0, cachedG = 0, cachedB = 0;
     const tick = () => {
       const canvas = highlightCanvasRef.current;
-      // Early-out when idle — no playback, nothing to highlight. Skips the
-      // 60Hz clearRect-and-state-read churn that was burning CPU on phone.
+      // Stop when not playing — but first clear any lingering highlight from
+      // the previous tick so the canvas doesn't freeze on the last-drawn frame.
       if (!playingRef.current) {
-        raf = requestAnimationFrame(tick);
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        cachedIdx = -1;
+        highlightRunningRef.current = false;
         return;
       }
       if (canvas) {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const isPlaying = playingRef.current;
         const d = dispRef.current;
         const chords = chordsRef.current;
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
         const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky';
-        if (isPlaying && d > 0 && chords.length && grid && gc && !isOverlay) {
+        if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
             const cell = grid.cells && grid.cells[chord.idx];
@@ -3897,10 +4161,18 @@ export default function Paintiano() {
           }
         }
       }
-      raf = requestAnimationFrame(tick);
+      highlightRafRef.current = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const wake = () => {
+      if (highlightRunningRef.current) return;
+      highlightRunningRef.current = true;
+      highlightRafRef.current = requestAnimationFrame(tick);
+    };
+    wakeHighlightRef.current = wake;
+    return () => {
+      cancelAnimationFrame(highlightRafRef.current);
+      highlightRunningRef.current = false;
+    };
   }, []);
 
   const stopAll = useCallback(()=>{
@@ -4150,7 +4422,7 @@ export default function Paintiano() {
     };
     const dn=e=>{
       if(inputFocus.current)return;
-      if(e.key==='Backspace'&&composeMode){e.preventDefault();undoLast();return;}
+      if(e.key==='Backspace'&&composeMode&&!busy&&!recording){e.preventDefault();undoLast();return;}
       if((e.key===' '||e.key==='Enter')&&isInteractive())return;
       if(e.key===' '){e.preventDefault();handlePauseClickRef.current?.();return;}
       if(e.key==='Enter'){e.preventDefault();if(!composeMode){setComposeMode(true);}else{setComposeMode(false);}return;}
@@ -4159,7 +4431,7 @@ export default function Paintiano() {
     const up=e=>held.delete(e.key);
     window.addEventListener('keydown',dn);window.addEventListener('keyup',up);
     return()=>{window.removeEventListener('keydown',dn);window.removeEventListener('keyup',up);};
-  },[pressNote,composeMode,undoLast]);
+  },[pressNote,composeMode,undoLast,busy,recording]);
 
   // A1: Escape closes the topmost open modal. Order matches z-index: preview is
   // on top (1100), then morphMenu / sizePicker / guide / about / pickMode.
@@ -4225,6 +4497,7 @@ export default function Paintiano() {
     // If in a creative mode, canvas stays in that mode (owner persists).
     if(!composeMode&&!micPainting&&!micListening) draftOwnerRef.current=null;
     setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
+    setLoadedSource(null);
     pixelRef.current=null;setViewMode('paint');
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
@@ -4252,6 +4525,7 @@ export default function Paintiano() {
     setChords([]);idxRef.current=0;setPending([]);pendingRef.current=[];
     pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
     setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
+    setLoadedSource(null);
     pixelRef.current=null;setViewMode('paint');setStamp(s=>s+1);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
@@ -4285,7 +4559,7 @@ export default function Paintiano() {
   },[stashDraft]);
 
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     const r=new FileReader();
     r.onload=evt=>{
       try{
@@ -4295,6 +4569,7 @@ export default function Paintiano() {
         const mName=file.name.replace(/\.midi?$/i,'').replace(/[_-]/g,' ');
         stopAll();applyEvents(evts,mName);
         setCompositionName(mName);
+        setLoadedSource('midi');
         if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
       }catch(e){setErr('MIDI parse error: '+e.message);setErrInfo(false);}
     };
@@ -4302,7 +4577,7 @@ export default function Paintiano() {
   };
 
   const loadAudio=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -4324,6 +4599,7 @@ export default function Paintiano() {
       setAudioBlobAndRef(blob);setAudioName(file.name);
       applyEvents(evts,aName);
       setViewMode('audio');viewModeRef.current='audio';
+      setLoadedSource('audio');
     }catch(e){setErr('Audio: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -4333,7 +4609,7 @@ export default function Paintiano() {
   // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
+    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -4362,6 +4638,7 @@ export default function Paintiano() {
       setScoreName(sName);
       setCompositionName(sName);
       applyEvents(evts,sName);
+      setLoadedSource('score');
     }catch(e){setErr('Score: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -4374,6 +4651,7 @@ export default function Paintiano() {
       const evts=toChords(raw,div,temps);
       if(!evts.length){setErr('Sample MIDI: no notes.');setErrInfo(false);return;}
       stopAll();applyEvents(evts,SAMPLE_MIDI_NAME);
+      setLoadedSource('midi');
       if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
   },[stopAll,applyEvents]);
@@ -4394,6 +4672,7 @@ export default function Paintiano() {
       setAudioBlobAndRef(blob);setAudioName('Liebestraum No.3 — Liszt.mp3');
       applyEvents(evts,SAMPLE_AUDIO_NAME);
       setViewMode('audio');viewModeRef.current='audio';
+      setLoadedSource('audio');
     }catch(e){setErr('Sample audio: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -4409,6 +4688,7 @@ export default function Paintiano() {
       const evts=parseMusicXml(xmlText);
       if(!evts.length){setErr('Sample score: no notes found.');setErrInfo(false);return;}
       applyEvents(evts,SAMPLE_SCORE_NAME);
+      setLoadedSource('score');
     }catch(e){setErr('Sample score: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -4481,7 +4761,7 @@ Composition rules:
     const file=e.target.files[0];if(!file)return;e.target.value='';
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
-    setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
+    setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     const r=new FileReader();
     r.onerror=()=>{setErr('Could not read image.');setErrInfo(false);};
     r.onload=evt=>{
@@ -4524,6 +4804,7 @@ Composition rules:
           setInfo({title:file.name.replace(/\.[^.]+$/,''),count:evts.length,dur:Math.round(IMG_TARGET_MS/1000)});
           idxRef.current=evts.length;setStamp(s=>s+1);
           setPlaybackSpeed(1);playbackSpeedRef.current=1;
+          setLoadedSource('image');
         }catch(e){setErr('Image: '+e.message);setErrInfo(false);}
       };
       img.src=evt.target.result;
@@ -4779,7 +5060,7 @@ Composition rules:
     setInfo(inf);infoRef.current=inf;
     setDisp(0);idxRef.current=wi.length;
     setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;setStamp(s=>s+1);
-    setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
+    setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     setComposeMode(false);setPickMode(null);setCurrentMood(null);setVarySource(null);setSongQ('');
     setDemoMode(true);
     resumeFromRef.current=0;
@@ -5159,7 +5440,11 @@ Composition rules:
   const pendingSet = useMemo(() => new Set(pending), [pending]);
   // Pre-compute the active scale's pitch-class set (or null when scale is
   // disabled) so the 36 black keys don't each call paintScalePCs() twice.
-  const paintScaleSet = paintScale!=='off' ? paintScalePCs(paintScale) : null;
+  // useMemo so this doesn't run on every render (e.g. the 5-15Hz disp tick).
+  const paintScaleSet = useMemo(
+    () => paintScale!=='off' ? paintScalePCs(paintScale) : null,
+    [paintScale]
+  );
   const pianoColor={loading:'rgba(207,197,168,.35)',ready:'rgba(90,190,110,.55)',error:'rgba(201,168,76,.55)'};
   const pianoLabel={loading:t('loadingPiano'),ready:t('grandPiano'),error:t('synthPiano')};
   const changeLang=(l)=>{setLang(l);try{localStorage.setItem('paintiano_lang',l);}catch(_){}}
@@ -5273,7 +5558,7 @@ Composition rules:
 
   return (
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'48px 16px 220px':'48px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)',touchAction:'manipulation'}}>
-      <div style={{textAlign:'center',marginBottom:18}}>
+      <header style={{textAlign:'center',marginBottom:18}}>
         <h1 style={{fontSize:'2.2rem',fontWeight:300,letterSpacing:'.18em',margin:'0 0 4px',color:'rgba(201,168,76,.9)',paddingLeft:'.18em'}}>Paintiano</h1>
         <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.7,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}><span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)',opacity:1}}>{t('concept')}</span> <span onClick={()=>{
           if(busy)return;
@@ -5289,9 +5574,9 @@ Composition rules:
             setDemoArmed(true);
             demoArmRef.current=setTimeout(()=>{setDemoArmed(false);demoArmRef.current=null;},3000);
           }
-        }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.55)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.85)',opacity:1,transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span> <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>{t('guide')}</span><span style={{marginLeft:18,opacity:1}}><button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} style={{padding:'1px 5px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.45)',borderRadius:2,cursor:'pointer',fontSize:'.45rem',fontFamily:'inherit',letterSpacing:'.1em'}}>{lang}</button></span></p>
+        }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.55)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.85)',opacity:1,transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span> <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>{t('guide')}</span><span style={{marginLeft:18,opacity:1}}><button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} aria-label={`switch language (currently ${lang})`} title={`switch language (currently ${lang})`} style={{padding:'4px 10px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.45)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em'}}>{lang}</button></span></p>
         <div style={{fontSize:'.55rem',letterSpacing:'.1em',opacity:.8,color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
-      </div>
+      </header>
 
       <div style={{display:'flex',gap:10,marginBottom:6,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
         <div style={{display:'flex',border:'1px solid rgba(201,168,76,.25)',borderRadius:2,overflow:'hidden',flexShrink:0}}>
@@ -5321,20 +5606,23 @@ Composition rules:
         <select
           value={songQ}
           onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);aiMidi(e.target.value);if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);}}}
-          disabled={busy||composeMode||micPainting||micListening}
-          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid '+(moodHint?'rgba(220,170,255,.9)':'rgba(201,168,76,.3)'),borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':moodHint?'rgba(220,170,255,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:(busy||composeMode||micPainting||micListening)?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize',boxShadow:moodHint?'0 0 16px rgba(220,150,255,.35)':'none',transition:'border-color .2s ease, color .2s ease, box-shadow .2s ease'}}>
+          onFocus={()=>setFocusedInput('mood')}
+          onBlur={()=>setFocusedInput(null)}
+          disabled={sourcePickerLocked}
+          title={recording?t('stopRecFirst'):undefined}
+          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid '+(moodHint?'rgba(220,170,255,.9)':focusedInput==='mood'?'rgba(201,168,76,.85)':'rgba(201,168,76,.3)'),borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':moodHint?'rgba(220,170,255,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:sourcePickerLocked?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize',boxShadow:moodHint?'0 0 16px rgba(220,150,255,.35)':focusedInput==='mood'?'0 0 0 2px rgba(201,168,76,.25)':'none',transition:'border-color .2s ease, color .2s ease, box-shadow .2s ease'}}>
           <option value="">✦ {t('selectMood').replace('✦ ','')}</option>
           {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
           {MOOD_OPTIONS}
         </select>
         <button onClick={()=>{
-          if(busy||composeMode||micPainting||micListening)return;
+          if(sourcePickerLocked)return;
           if(!currentMood){flashMoodHint();return;}
           if(!chords.length)return;
           setShowMorphMenu(true);
-        }} title={!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!busy&&!composeMode&&!micPainting&&!micListening?'rgba(220,170,255,.9)':'rgba(220,150,255,.35)'})}>{t('morph')}</button>
+        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!sourcePickerLocked?'rgba(220,170,255,.9)':'rgba(220,150,255,.35)'})}>{t('morph')}</button>
         <button onClick={()=>{
-          if(busy||composeMode||micPainting||micListening)return;
+          if(sourcePickerLocked)return;
           if(!varySource){flashMoodHint();return;}
           const varied=rerollSong(varySource);
           if(!varied)return;
@@ -5347,7 +5635,7 @@ Composition rules:
           setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
           setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
           setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
-        }} title={!varySource?t('pickMoodFirst'):t('reroll')} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!busy&&!composeMode&&!micPainting&&!micListening?'rgba(255,210,140,.9)':'rgba(255,200,120,.35)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!busy&&!composeMode&&!micPainting&&!micListening?1:.55}}>{t('vary')}</button>
+        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{...btn({fontSize:'.58rem',borderColor:'rgba(255,200,120,.45)',color:varySource&&!sourcePickerLocked?'rgba(255,210,140,.9)':'rgba(255,200,120,.35)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!sourcePickerLocked?1:.55}}>{t('vary')}</button>
       </div>
 
       <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,alignItems:'center'}}>
@@ -5357,19 +5645,18 @@ Composition rules:
               their work-in-progress, and the existing flows already do that
               silently. Easier to just gate the buttons. */}
           <input ref={refMidi} type="file" accept="audio/midi,audio/x-midi,application/octet-stream,.mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('midi');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(120,160,255,.4)',color:(busy||composeMode||micPainting||micListening)?'rgba(140,180,255,.25)':'rgba(140,180,255,.8)'})}>{t('midi')}</button>
+          <button onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('midi');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('midi')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:activeSource==='midi'?'rgba(140,180,255,.85)':'rgba(120,160,255,.4)',color:sourcePickerLocked?'rgba(140,180,255,.25)':activeSource==='midi'?'rgba(180,210,255,1)':'rgba(140,180,255,.8)',background:activeSource==='midi'?'rgba(120,160,255,.12)':'transparent'})}>{t('midi')}</button>
           <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('audio');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:(busy||composeMode||micPainting||micListening)?'rgba(255,180,100,.25)':'rgba(255,180,100,.85)'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':t('audio')}</button>
+          <button onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('audio');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('audio')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:activeSource==='audio'?'rgba(255,180,100,.85)':'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:sourcePickerLocked?'rgba(255,180,100,.25)':activeSource==='audio'?'rgba(255,210,140,1)':'rgba(255,180,100,.85)',background:activeSource==='audio'?'rgba(255,160,80,.12)':'transparent'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':t('audio')}</button>
           <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('score');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':(busy||composeMode||micPainting||micListening)?'rgba(210,150,255,.25)':'rgba(210,150,255,.85)'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':t('score')}</button>
+          <button onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('score');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('score')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:activeSource==='score'?'rgba(210,150,255,.85)':'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':sourcePickerLocked?'rgba(210,150,255,.25)':activeSource==='score'?'rgba(230,180,255,1)':'rgba(210,150,255,.85)',background:activeSource==='score'?'rgba(200,120,255,.12)':'transparent'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':t('score')}</button>
           <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
-          <button onClick={()=>{if(busy||composeMode||micPainting||micListening)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('image');}} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(200,140,255,.4)',color:(busy||composeMode||micPainting||micListening)?'rgba(210,160,255,.25)':'rgba(210,160,255,.85)'})}>{t('image')}</button>
+          <button onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('image');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('image')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:activeSource==='image'?'rgba(210,160,255,.85)':'rgba(200,140,255,.4)',color:sourcePickerLocked?'rgba(210,160,255,.25)':activeSource==='image'?'rgba(230,190,255,1)':'rgba(210,160,255,.85)',background:activeSource==='image'?'rgba(200,140,255,.12)':'transparent'})}>{t('image')}</button>
         </div>
         <div style={{display:'flex',gap:4,justifyContent:'center'}}>
           <button onClick={()=>{
             if(busy)return;
             // Soft-lock: if another creation mode is on, do nothing.
-            if(!composeMode&&(micPainting||micListening))return;
             if(!composeMode&&(micPainting||micListening))return;
             if(!composeMode){
               const owner = draftOwnerRef.current;
@@ -5391,7 +5678,10 @@ Composition rules:
               }
               setComposeMode(true);
             } else setComposeMode(false);
-          }} style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':(micPainting||micListening)?'rgba(140,220,180,.2)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':(micPainting||micListening)?'rgba(140,220,180,.25)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
+          }}
+          disabled={!composeMode && (busy || micPainting || micListening)}
+          title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('compose')}
+          style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':(busy||micPainting||micListening)?'rgba(140,220,180,.2)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':(busy||micPainting||micListening)?'rgba(140,220,180,.25)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
           {/* Combined MIC mode. One button to toggle the microphone-driven
               painting. When active, two sub-buttons appear that let the user
               switch between Voice (sing-style) and Music (listen-style)
@@ -5410,7 +5700,10 @@ Composition rules:
             // Activate using the remembered preset.
             if(micPreset==='music') startMicListening();
             else startMicPainting();
-          }} style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:micActive?'rgba(180,160,220,.7)':composeMode?'rgba(180,160,220,.2)':'rgba(180,160,220,.4)',color:micActive?'rgba(210,190,250,1)':composeMode?'rgba(180,160,220,.25)':'rgba(190,170,230,.8)',background:micActive?'rgba(140,120,200,.1)':'transparent'})}>{micActive?t('micActive'):t('mic')}</button>
+          }}
+          disabled={!micActive && (busy || composeMode)}
+          title={micActive?t('micActive'):busy?t('stopRecFirst'):t('mic')}
+          style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:micActive?'rgba(180,160,220,.7)':(busy||composeMode)?'rgba(180,160,220,.2)':'rgba(180,160,220,.4)',color:micActive?'rgba(210,190,250,1)':(busy||composeMode)?'rgba(180,160,220,.25)':'rgba(190,170,230,.8)',background:micActive?'rgba(140,120,200,.1)':'transparent'})}>{micActive?t('micActive'):t('mic')}</button>
           {micActive && (
             <>
               {/* Voice sub-button — switches preset to 'voice' (Sing behavior) */}
@@ -5420,7 +5713,10 @@ Composition rules:
                 setMicPreset('voice');
                 if(micListening) stopMicListening();
                 startMicPainting();
-              }} style={btn({fontSize:'.55rem',padding:'5px 8px',flexShrink:0,borderColor:micPreset==='voice'?'rgba(255,100,100,.7)':'rgba(255,140,140,.3)',color:micPreset==='voice'?'rgba(255,100,100,1)':'rgba(255,160,160,.55)',background:micPreset==='voice'?'rgba(255,60,60,.1)':'transparent'})}>{t('voicePreset')}</button>
+              }}
+              disabled={busy||micPreset==='voice'}
+              title={busy?t('stopRecFirst'):t('voicePreset')}
+              style={btn({fontSize:'.55rem',padding:'5px 8px',flexShrink:0,borderColor:micPreset==='voice'?'rgba(255,100,100,.7)':busy?'rgba(255,140,140,.15)':'rgba(255,140,140,.3)',color:micPreset==='voice'?'rgba(255,100,100,1)':busy?'rgba(255,160,160,.25)':'rgba(255,160,160,.55)',background:micPreset==='voice'?'rgba(255,60,60,.1)':'transparent'})}>{t('voicePreset')}</button>
               {/* Music sub-button — switches preset to 'music' (Listen behavior) */}
               <button onClick={()=>{
                 if(busy) return;
@@ -5428,7 +5724,10 @@ Composition rules:
                 setMicPreset('music');
                 if(micPainting) stopMicPainting();
                 startMicListening();
-              }} style={btn({fontSize:'.55rem',padding:'5px 8px',flexShrink:0,borderColor:micPreset==='music'?'rgba(100,200,255,.7)':'rgba(100,180,255,.3)',color:micPreset==='music'?'rgba(120,210,255,1)':'rgba(140,200,255,.55)',background:micPreset==='music'?'rgba(60,160,255,.1)':'transparent'})}>{t('musicPreset')}</button>
+              }}
+              disabled={busy||micPreset==='music'}
+              title={busy?t('stopRecFirst'):t('musicPreset')}
+              style={btn({fontSize:'.55rem',padding:'5px 8px',flexShrink:0,borderColor:micPreset==='music'?'rgba(100,200,255,.7)':busy?'rgba(100,180,255,.15)':'rgba(100,180,255,.3)',color:micPreset==='music'?'rgba(120,210,255,1)':busy?'rgba(140,200,255,.25)':'rgba(140,200,255,.55)',background:micPreset==='music'?'rgba(60,160,255,.1)':'transparent'})}>{t('musicPreset')}</button>
             </>
           )}
         </div>
@@ -5530,37 +5829,78 @@ Composition rules:
           </div>
           {debugMsg&&<div style={{fontSize:'.48rem',color:'rgba(255,220,100,.8)',marginBottom:3,fontFamily:'monospace',letterSpacing:'.02em'}}>{debugMsg}</div>}
           <div
-            onTouchStart={e=>{e.preventDefault();}}
-            onTouchMove={e=>{
+            role="slider"
+            aria-label="playback position"
+            aria-valuemin={0}
+            aria-valuemax={Math.max(0,chords.length-1)}
+            aria-valuenow={Math.min(disp,Math.max(0,chords.length-1))}
+            aria-valuetext={`chord ${Math.min(disp,chords.length)} of ${chords.length}`}
+            tabIndex={chords.length?0:-1}
+            onPointerDown={e=>{
               if(!chords.length)return;
               e.preventDefault();
-              const touch=e.touches[0];
+              // Capture so subsequent moves/up fire even if the pointer leaves
+              // the track — matches native <input type=range> drag behaviour.
+              try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
               const rect=e.currentTarget.getBoundingClientRect();
-              const frac=Math.max(0,Math.min(1,(touch.clientX-rect.left)/rect.width));
+              const frac=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
               const idx=Math.min(Math.floor(frac*chords.length),chords.length-1);
               stopAll();
               resumeFromRef.current=idx;
               setDisp(idx);
             }}
-            onTouchEnd={e=>{
-              e.preventDefault();
+            onPointerMove={e=>{
+              // Only drag-scrub while pointer is captured (i.e. button held).
+              // Pointer-capture is the cross-browser way to detect "is this a
+              // drag" without tracking mousedown state manually.
               if(!chords.length)return;
-              if(e.changedTouches&&e.changedTouches[0]&&resumeFromRef.current===null){
-                const touch=e.changedTouches[0];
-                const rect=e.currentTarget.getBoundingClientRect();
-                const frac=Math.max(0,Math.min(1,(touch.clientX-rect.left)/rect.width));
-                const idx=Math.min(Math.floor(frac*chords.length),chords.length-1);
-                stopAll();
-                resumeFromRef.current=idx;
-              }
+              if(!e.currentTarget.hasPointerCapture||!e.currentTarget.hasPointerCapture(e.pointerId))return;
+              e.preventDefault();
+              const rect=e.currentTarget.getBoundingClientRect();
+              const frac=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+              const idx=Math.min(Math.floor(frac*chords.length),chords.length-1);
+              setDisp(idx);
+              resumeFromRef.current=idx;
+            }}
+            onPointerUp={e=>{
+              if(!chords.length)return;
+              try{e.currentTarget.releasePointerCapture(e.pointerId);}catch(_){}
               const idx=resumeFromRef.current;
               startPlay();
-              // If startPlay was blocked (busy), preserve position for Resume
               if(resumeFromRef.current===null&&idx!==null)resumeFromRef.current=idx;
             }}
-            onClick={e=>{e.preventDefault();}} // suppress iOS synthetic click after touch
-            style={{height:8,background:'rgba(255,255,255,0.07)',borderRadius:4,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none'}}>
-            <div style={{height:'100%',width:pct+'%',background:playing&&info?'rgba(90,190,110,.7)':'rgba(201,168,76,.5)',borderRadius:4,transition:'none'}}/>
+            onKeyDown={e=>{
+              if(!chords.length)return;
+              const cur=Math.min(disp,chords.length-1);
+              const step=Math.max(1,Math.floor(chords.length/20)); // ~5% jumps for PgUp/PgDn
+              let next=cur;
+              switch(e.key){
+                case 'ArrowLeft':  case 'ArrowDown':  next=cur-1;          break;
+                case 'ArrowRight': case 'ArrowUp':    next=cur+1;          break;
+                case 'PageDown':                      next=cur-step;       break;
+                case 'PageUp':                        next=cur+step;       break;
+                case 'Home':                          next=0;              break;
+                case 'End':                           next=chords.length-1;break;
+                case 'Enter': case ' ':
+                  // Enter/Space toggles play/pause from the slider — mirrors
+                  // native <input type=range> behaviour where space activates.
+                  e.preventDefault();
+                  if(playing){stopAll();}else{startPlay();}
+                  return;
+                default: return;
+              }
+              e.preventDefault();
+              next=Math.max(0,Math.min(chords.length-1,next));
+              if(next!==cur){
+                stopAll();
+                resumeFromRef.current=next;
+                setDisp(next);
+              }
+            }}
+            style={{position:'relative',height:10,background:'rgba(255,255,255,0.07)',borderRadius:5,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none',outline:focusedInput==='seek'?'2px solid rgba(201,168,76,.55)':'none',outlineOffset:2}}
+            onFocus={()=>setFocusedInput('seek')}
+            onBlur={()=>setFocusedInput(null)}>
+            <div style={{height:'100%',width:pct+'%',background:playing&&info?'rgba(90,190,110,.7)':'rgba(201,168,76,.5)',borderRadius:5,transition:'none',pointerEvents:'none'}}/>
           </div>
         </div>
       )}
@@ -5646,83 +5986,27 @@ Composition rules:
       )}
 
       {showPaletteEditor && (
-        <div onClick={()=>setShowPaletteEditor(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-palette-title" style={{maxWidth:420,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'24px 22px',color:'rgba(207,197,168,.88)',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
-            <button onClick={()=>setShowPaletteEditor(false)} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-            <div id="paintiano-palette-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('paletteEditorTitle')}</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4, 1fr)',gap:10,marginBottom:18}}>
-              {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].map((label,pc)=>(
-                <label key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,cursor:'pointer'}}>
-                  <div style={{position:'relative',width:60,height:60,borderRadius:6,background:activePalette[pc],border:'2px solid rgba(207,197,168,.25)',boxShadow:'0 2px 6px rgba(0,0,0,.4)'}}>
-                    <input type="color" value={activePalette[pc]} onChange={e=>{
-                      const next=activePalette.slice();
-                      next[pc]=e.target.value;
-                      setCustomPalette(next);
-                    }} style={{position:'absolute',inset:0,opacity:0,cursor:'pointer',width:'100%',height:'100%'}} aria-label={label}/>
-                  </div>
-                  <span style={{fontSize:'.65rem',letterSpacing:'.06em',color:'rgba(207,197,168,.7)'}}>{label}</span>
-                </label>
-              ))}
-            </div>
-            <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18}}>
-              <button onClick={()=>{
-                // Clear all: reset every pitch class to neutral light grey.
-                // The user starts from a blank slate and picks each color
-                // themselves — no implicit harmony or spectral seed.
-                setCustomPalette(Array(12).fill('#cccccc'));
-              }} style={{padding:'8px 16px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.3)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('resetPalette')}</button>
-              <button onClick={()=>setShowPaletteEditor(false)} style={{padding:'8px 22px',background:'rgba(201,168,76,.15)',color:GOLD,border:'1px solid rgba(201,168,76,.45)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.12em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
-            </div>
-          </div>
-        </div>
+        <PaletteEditorModal
+          onClose={closePaletteEditor}
+          t={t}
+          activePalette={activePalette}
+          setCustomPalette={setCustomPalette}
+        />
       )}
 
-      {showAbout && (
-        <div onClick={()=>setShowAbout(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
-            <button onClick={()=>setShowAbout(false)} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-            <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
-            {getConcept(lang)}
-            <button onClick={()=>setShowAbout(false)} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
-          </div>
-        </div>
-      )}
+      {showAbout && <AboutModal onClose={closeAbout} t={t} lang={lang} />}
 
       {showGuide && (
-        <div onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
-            <button onClick={()=>{setShowGuide(false);setGuideQuery('');}} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-            <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
-            <input
-              type="search"
-              value={guideQuery}
-              onChange={e=>setGuideQuery(e.target.value)}
-              onFocus={()=>{inputFocus.current=true;setFocusedInput('guide');}}
-              onBlur={()=>{inputFocus.current=false;setFocusedInput(null);}}
-              placeholder={t('searchGuide')}
-              autoCapitalize="off"
-              autoComplete="off"
-              spellCheck={false}
-              inputMode="search"
-              enterKeyHint="search"
-              aria-label={t('searchGuide')}
-              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:'.78rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
-            />
-            {(() => {
-              const matches = getGuide(lang).filter(e => guideMatch(e, guideQuery));
-              if (matches.length === 0) {
-                return <p style={{textAlign:'center',opacity:.5,fontStyle:'italic',padding:'20px 0'}}>{t('noMatches')} "{guideQuery}".</p>;
-              }
-              return matches.map(entry => (
-                <details key={entry.id} open={!!guideQuery.trim()} style={{marginBottom:6,border:'1px solid rgba(207,197,168,.08)',borderRadius:4,padding:'2px 0',background:'rgba(255,255,255,0.012)'}}>
-                  <summary style={{cursor:'pointer',padding:'9px 12px',color:'rgba(140,200,255,.92)',fontWeight:500,fontSize:'.82rem',letterSpacing:'.02em',listStyle:'none',userSelect:'none'}}>{entry.title}</summary>
-                  <p style={{margin:0,padding:'2px 14px 12px',color:'rgba(207,197,168,.82)',fontSize:'.76rem',lineHeight:1.65}}>{entry.body}</p>
-                </details>
-              ));
-            })()}
-            <button onClick={()=>{setShowGuide(false);setGuideQuery('');}} style={{display:'block',margin:'20px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
-          </div>
-        </div>
+        <GuideModal
+          onClose={closeGuide}
+          t={t}
+          lang={lang}
+          guideQuery={guideQuery}
+          setGuideQuery={setGuideQuery}
+          focusedInput={focusedInput}
+          setFocusedInput={setFocusedInput}
+          inputFocus={inputFocus}
+        />
       )}
 
       {showMorphMenu && (
@@ -5758,7 +6042,7 @@ Composition rules:
       {/* Bottom dock: only docks to the viewport during playback (so you can
           watch the canvas animate while the piano stays visible). When not
           playing, it flows in normal document order. */}
-      <div style={(playing||chords.length>0||composeMode)?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
+      <div role="region" aria-label="playback controls" style={(playing||chords.length>0||composeMode)?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(
         <div style={{fontSize:'.48rem',letterSpacing:'.08em',color:'rgba(100,200,255,.35)',textAlign:'center',marginBottom:4,lineHeight:1.5}}>
@@ -5810,15 +6094,15 @@ Composition rules:
           {holdPaused?t('resume'):playing?t('pause'):t('play')}
         </button>
         {currentMood&&(
-          <button onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} style={{padding:'7px 10px',background:loopMode?'rgba(201,168,76,.1)':'transparent',color:loopMode?GOLD:'rgba(201,168,76,.6)',border:'1px solid '+(loopMode?'rgba(201,168,76,.5)':'rgba(201,168,76,.3)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{t('loop')}</button>
+          <button onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'7px 10px',background:loopMode?'rgba(201,168,76,.1)':'transparent',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.6)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.5)':'rgba(201,168,76,.3)'),borderRadius:5,cursor:recording?'default':'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{t('loop')}</button>
         )}
         {viewMode!=='image'&&(
-          <button onClick={()=>chords.length&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!chords.length||busy||micPainting||micListening} style={{padding:'7px 10px',background:'transparent',color:chords.length&&!micPainting&&!micListening?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(chords.length&&!micPainting&&!micListening?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:chords.length&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          <button onClick={()=>chords.length&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!chords.length||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'7px 10px',background:'transparent',color:chords.length&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(chords.length&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:chords.length&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
             {t('print')}
           </button>
         )}
         {viewMode==='image'&&chords.length>0&&(
-          <button onClick={recording?stopRecord:startRecord} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:chords.length||recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}} title={recording?'stop recording':'record audio output'}>
+          <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
             {recording?t('recStop'):t('recArm')}
           </button>
         )}
@@ -5827,33 +6111,48 @@ Composition rules:
           const setSpd=setPlaybackSpeed;
           const lo=0.25;
           const label=spd===0.5?'½×':spd===1?'1×':`${spd}×`;
+          // Lock speed during recording — changing rate mid-record desyncs the
+          // recorded audio from the visual painting timing in the saved file.
+          const lockSpeed = recording;
           return(
-            <span style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 8px',border:'1px solid rgba(201,168,76,.2)',borderRadius:5}} title="playback speed">
-              <button onClick={()=>setSpd(1)} aria-label="reset speed to 1×" style={{padding:'4px 7px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:4,cursor:spd===1?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit'}}>{label}</button>
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 8px',border:'1px solid rgba(201,168,76,.2)',borderRadius:5,opacity:lockSpeed?0.4:1}} title={lockSpeed?t('stopRecFirst'):'playback speed'}>
+              <button onClick={()=>setSpd(1)} disabled={lockSpeed||spd===1} aria-label="reset speed to 1×" style={{padding:'4px 7px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:4,cursor:(lockSpeed||spd===1)?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit'}}>{label}</button>
               <input type="range" min={lo} max={2} step={0.05} value={spd}
                 onChange={e=>setSpd(parseFloat(e.target.value))}
+                disabled={lockSpeed}
                 aria-label="playback speed"
-                style={{width:80,accentColor:GOLD,cursor:'pointer'}}/>
+                aria-valuetext={`${spd}× speed`}
+                style={{width:80,accentColor:GOLD,cursor:lockSpeed?'default':'pointer'}}/>
             </span>
           );
         })()}
-        <button onClick={()=>{
-          if(clearArmed){
-            // Second tap — actually clear
-            if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
-            setClearArmed(false);
-            clear();
-          }else{
-            // First tap — arm only if there's something worth protecting.
-            // Empty chords AND empty pending = nothing on canvas, clear immediately.
-            if(!chords.length&&!pending.length){clear();return;}
-            setClearArmed(true);
-            clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
-          }
-        }} style={{padding:'7px 10px',background:clearArmed?'rgba(220,90,90,.15)':'transparent',color:clearArmed?'rgba(255,140,120,.95)':'rgba(207,197,168,.65)',border:'1px solid '+(clearArmed?'rgba(255,90,90,.55)':'rgba(207,197,168,.35)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem',transition:'background .15s ease, color .15s ease, border-color .15s ease'}}>{clearArmed?t('clearConfirm'):t('clear')}</button>
+        <button
+          onClick={()=>{
+            // L3: clear() doesn't gracefully handle being called while recording —
+            // it stops playback (the recorder's audio source) but leaves the
+            // recorder running with no input, producing a silent / truncated
+            // file. Block clear during recording; the user must stop the
+            // recording explicitly first.
+            if(recording)return;
+            if(clearArmed){
+              // Second tap — actually clear
+              if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
+              setClearArmed(false);
+              clear();
+            }else{
+              // First tap — arm only if there's something worth protecting.
+              // Empty chords AND empty pending = nothing on canvas, clear immediately.
+              if(!chords.length&&!pending.length){clear();return;}
+              setClearArmed(true);
+              clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
+            }
+          }}
+          disabled={recording}
+          title={recording?t('stopRecFirst'):undefined}
+          style={{padding:'7px 10px',background:clearArmed?'rgba(220,90,90,.15)':'transparent',color:recording?'rgba(207,197,168,.2)':clearArmed?'rgba(255,140,120,.95)':'rgba(207,197,168,.65)',border:'1px solid '+(recording?'rgba(207,197,168,.12)':clearArmed?'rgba(255,90,90,.55)':'rgba(207,197,168,.35)'),borderRadius:5,cursor:recording?'default':'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem',transition:'background .15s ease, color .15s ease, border-color .15s ease'}}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
         {composeMode&&(
-          <button onClick={undoLast} disabled={!chords.length||playing} aria-label="remove last chord" title="remove last chord (Backspace)" style={{padding:'7px 10px',background:'transparent',color:chords.length&&!playing?'rgba(207,197,168,.65)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!playing?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:5,cursor:chords.length&&!playing?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>↩</button>
+          <button onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{padding:'7px 10px',background:'transparent',color:chords.length&&!busy&&!recording?'rgba(207,197,168,.65)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!busy&&!recording?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:5,cursor:chords.length&&!busy&&!recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>↩</button>
         )}
       </div>
       {composeMode && (
@@ -5915,7 +6214,7 @@ Composition rules:
       </div>
       )}
       </div>
-      <div style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.4.08</div>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.4.24</footer>
     </div>
   );
 }
