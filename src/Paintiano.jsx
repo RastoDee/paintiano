@@ -5729,7 +5729,7 @@ Composition rules:
             <button key={m} onClick={()=>{
               if(canvasRef.current){canvasRef.current.style.opacity='0';}
               setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-            }} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(207,197,168,.45)'}}>{t(m)}</button>
+            }} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(230,222,196,.7)'}}>{t(m)}</button>
           ))}
         </div>
         {mode==='custom' && (
@@ -5742,9 +5742,9 @@ Composition rules:
             <button key={k} onClick={()=>{
               if(canvasRef.current){canvasRef.current.style.opacity='0';}
               setTimeout(()=>{setStyle(style===k?null:k);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-            }} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 10px',background:style===k?'rgba(180,140,255,.16)':'transparent',color:style===k?'rgba(210,170,255,.95)':'rgba(207,197,168,.45)'}}>{label}</button>
+            }} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 10px',background:style===k?'rgba(180,140,255,.16)':'transparent',color:style===k?'rgba(210,170,255,.95)':'rgba(230,222,196,.7)'}}>{label}</button>
           ))}
-        </div><button onClick={()=>setRandomMode(v=>!v)} title={randomMode?'random ON · tap to turn off · next Play will produce a new variation':'random OFF · tap to enable · next Play will produce a unique variation'} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{padding:'5px 9px',background:randomMode?'rgba(255,200,120,.12)':'transparent',color:randomMode?'rgba(255,210,140,.95)':'rgba(207,197,168,.45)',border:'1px solid '+(randomMode?'rgba(255,200,120,.55)':'rgba(180,140,255,.28)'),borderRadius:2,cursor:'pointer',fontSize:'.58rem',letterSpacing:'.06em',fontFamily:'inherit',flexShrink:0}}>🎲</button>
+        </div><button onClick={()=>setRandomMode(v=>!v)} title={randomMode?'random ON · tap to turn off · next Play will produce a new variation':'random OFF · tap to enable · next Play will produce a unique variation'} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{padding:'5px 9px',background:randomMode?'rgba(255,200,120,.12)':'transparent',color:randomMode?'rgba(255,210,140,.95)':'rgba(230,222,196,.7)',border:'1px solid '+(randomMode?'rgba(255,200,120,.55)':'rgba(180,140,255,.28)'),borderRadius:2,cursor:'pointer',fontSize:'.58rem',letterSpacing:'.06em',fontFamily:'inherit',flexShrink:0}}>🎲</button>
       </div>
 
       <div style={{display:'flex',gap:6,marginBottom:12,width:'100%',maxWidth:480,alignItems:'stretch'}}>
@@ -5780,7 +5780,7 @@ Composition rules:
           setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
           setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
           setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
-        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{...btn({fontSize:'.58rem',borderColor:'rgba(220,150,255,.45)',color:varySource&&!sourcePickerLocked?'rgba(220,170,255,.9)':'rgba(220,150,255,.35)'}),padding:'5px 10px',flexShrink:0,opacity:varySource&&!sourcePickerLocked?1:.55}}>{t('vary')}</button>
+        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:varySource&&!sourcePickerLocked?'rgba(220,170,255,.9)':'rgba(220,150,255,.35)'})}>{t('vary')}</button>
       </div>
 
       <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,alignItems:'center'}}>
