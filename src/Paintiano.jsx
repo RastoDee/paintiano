@@ -3408,7 +3408,7 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
             // Clear all: reset every pitch class to neutral light grey.
             // The user starts from a blank slate and picks each color
             // themselves — no implicit harmony or spectral seed.
-            setCustomPalette(Array(12).fill('#cccccc'));
+            setCustomPalette(Array(12).fill('#888888'));
           }} style={{padding:'8px 16px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.3)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('resetPalette')}</button>
           <button onClick={onClose} style={{padding:'8px 22px',background:'rgba(201,168,76,.15)',color:GOLD,border:'1px solid rgba(201,168,76,.45)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.12em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
         </div>
