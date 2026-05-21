@@ -4176,6 +4176,7 @@ export default function Paintiano() {
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setViewMode('paint');
     setInfo(null);
+    setLoadedSource(null);
     setStamp(s=>s+1);
   },[]);
 
@@ -5750,7 +5751,7 @@ Composition rules:
       <div style={{display:'flex',gap:6,marginBottom:12,width:'100%',maxWidth:480,alignItems:'stretch'}}>
         <select
           value={songQ}
-          onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);aiMidi(e.target.value);if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);}}}
+          onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);setLoadedSource(null);aiMidi(e.target.value);if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);}}}
           onFocus={()=>setFocusedInput('mood')}
           onBlur={()=>setFocusedInput(null)}
           disabled={sourcePickerLocked}
@@ -5819,7 +5820,7 @@ Composition rules:
                 // whatever loaded content (MIDI/audio/score/image/mood) was there.
                 resetCanvasForDraft('compose');
                 setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
-                audioBlobRef.current=null;setCurrentMood(null);setVarySource(null);setSongQ('');
+                audioBlobRef.current=null;setCurrentMood(null);setVarySource(null);setSongQ('');setLoadedSource(null);
               }
               setComposeMode(true);
             } else setComposeMode(false);
