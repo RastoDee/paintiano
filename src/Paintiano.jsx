@@ -3842,6 +3842,13 @@ export default function Paintiano() {
   const composeStashRef = useRef(null);
   const singStashRef    = useRef(null);
   const listenStashRef  = useRef(null);
+  // State mirror of composeStashRef so the Compose button can show a "draft
+  // saved" visual when the user has stepped away from an in-progress canvas.
+  // True iff composeStashRef.current holds a non-empty snapshot.
+  const [hasComposeDraft, setHasComposeDraft] = useState(false);
+  // Sing and Listen are presets of the unified MIC mode and share one draft.
+  // True iff either stash slot holds a non-empty snapshot.
+  const [hasMicDraft, setHasMicDraft] = useState(false);
   // Which creative mode (if any) authored the chords currently on canvas.
   // 'compose'|'sing'|'listen'|null. Used to know whose stash to update.
   const draftOwnerRef = useRef(null);
@@ -4081,6 +4088,11 @@ export default function Paintiano() {
       // unaffected: releaseNote calls triggerRelease at the user's release
       // moment, cutting the note before this tail finishes.
       const tailS=Math.min(Math.max(dur*0.4,1.5),3.0);
+      // Defensive context resume. Even when the sampler is loaded, scheduling
+      // a triggerAttackRelease into a suspended context produces silence on
+      // iOS — the symptom users see as "sound randomly disappears." Cheap to
+      // call and a no-op when already running.
+      try{const _ac=Tone.getContext().rawContext;if(_ac&&_ac.state==='suspended')_ac.resume().catch(()=>{});}catch(_){}
       if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
       if(ac.state==='suspended')ac.resume();
@@ -4137,12 +4149,13 @@ export default function Paintiano() {
     const cur = chordsRef.current;
     if(!cur || !cur.length) return;
     const snapshot = {chords:cur.slice(), idxCounter:idxRef.current, sessionStart:sessionStart.current};
-    if(owner==='compose') composeStashRef.current = snapshot;
+    if(owner==='compose'){composeStashRef.current = snapshot; setHasComposeDraft(true);}
     else if(owner==='sing' || owner==='listen'){
       // Sing and Listen share one draft (presets of unified MIC mode). Save
       // to both slots so either preset can restore on next entry.
       singStashRef.current = snapshot;
       listenStashRef.current = snapshot;
+      setHasMicDraft(true);
     }
   },[]);
   // restoreStash: load the saved draft for `owner` onto the canvas. Returns
@@ -4321,6 +4334,26 @@ export default function Paintiano() {
     };
   }, []);
 
+  // iOS audio unlock. Tone.start() is fire-and-forget and returns a Promise
+  // that we never await — on iOS Safari/Chrome (both WebKit) the rawContext
+  // can remain in 'suspended' state for a moment after Tone says it's started,
+  // and any note scheduled in that window plays into silence even though the
+  // app keeps running. Call this from every user-gesture audio entrypoint to
+  // (a) kick Tone's promise, and (b) synchronously poke the rawContext awake.
+  // Cheap to call repeatedly; no-op when context is already running.
+  const unlockAudio = useCallback(()=>{
+    try{Tone.start();}catch(_){}
+    try{
+      const ac=Tone.getContext().rawContext;
+      if(ac&&ac.state==='suspended'){
+        // Fire-and-forget: iOS sometimes resolves the resume promise late
+        // (or never) but the side effect of *calling* resume marks the
+        // context as user-activated, which is what we need.
+        ac.resume().catch(()=>{});
+      }
+    }catch(_){}
+  },[]);
+
   const stopAll = useCallback(()=>{
     genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
     try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
@@ -4440,7 +4473,7 @@ export default function Paintiano() {
     // duration from how long the key is held (see releaseNote).
     midi = paintSnapMidi(midi, paintScale);
     const vel = event && typeof event === 'object' ? velocityFromEvent(event) : 88;
-    Tone.start();playNote(midi,vel,2500);
+    unlockAudio();playNote(midi,vel,2500);
     pressInfo.current[midi]={pressTime:performance.now(),vel};
     if(!pendingRef.current.includes(midi)){pendingRef.current=[...pendingRef.current,midi];setPending([...pendingRef.current]);}
     clearTimeout(kbTimer.current);kbTimer.current=setTimeout(commit,KB_WIN);
@@ -4624,11 +4657,13 @@ export default function Paintiano() {
     // mode, wipe loaded content but never the stashes.
     if(composeMode){
       composeStashRef.current=null;
+      setHasComposeDraft(false);
     } else if(micPainting || micListening){
       // Sing and Listen are presets of the unified MIC mode and share a draft —
       // wipe both stash slots together.
       singStashRef.current=null;
       listenStashRef.current=null;
+      setHasMicDraft(false);
     }
     // For sing/listen: keep mic streams running — just wipe canvas
     if(!micPainting&&!micListening){
@@ -5046,7 +5081,7 @@ Composition rules:
     const grid=gridRef.current;
     const info=infoRef.current;
     const viewMode=viewModeRef.current;
-    if(busy||!chords.length)return;Tone.start();
+    if(busy||!chords.length)return;unlockAudio();
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
     if(!isResume)setRndSalt(randomModeRef.current?((Math.random()*0xffffffff)>>>0):0);
@@ -5190,7 +5225,7 @@ Composition rules:
   },[busy,playNote,stopAll]);
 
   const demoPlay=useCallback(()=>{
-    if(busy)return;Tone.start();
+    if(busy)return;unlockAudio();
     // Stash any active creative draft before the demo takes over the canvas.
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
@@ -5268,7 +5303,7 @@ Composition rules:
   const startRecord=()=>{
     if(!chords.length||recording||playing)return;
     if(!window.MediaRecorder){setErr(t('recUnsupported'));setErrInfo(false);return;}
-    Tone.start();
+    unlockAudio();
     const rawCtx=Tone.getContext().rawContext;
     const streamDest=rawCtx.createMediaStreamDestination();
     recStreamDestRef.current=streamDest;
@@ -5482,7 +5517,7 @@ Composition rules:
         draftOwnerRef.current='sing';
         composedModeRef.current=true;
       }
-      Tone.start();
+      unlockAudio();
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=600; // emit a chord every 600ms for smoother flow
       const RMS_THRESHOLD=0.06; // minimum RMS energy — ignores ambient noise / silence
@@ -5827,8 +5862,8 @@ Composition rules:
             } else setComposeMode(false);
           }}
           disabled={!composeMode && (busy || micPainting || micListening)}
-          title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('compose')}
-          style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':(busy||micPainting||micListening)?'rgba(140,220,180,.2)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':(busy||micPainting||micListening)?'rgba(140,220,180,.25)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
+          title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')}
+          style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':(busy||micPainting||micListening)?'rgba(140,220,180,.2)':hasComposeDraft?'rgba(140,220,180,.5)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':(busy||micPainting||micListening)?'rgba(140,220,180,.25)':hasComposeDraft?'rgba(170,235,200,.95)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':hasComposeDraft?'rgba(140,220,180,.04)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
           {/* MIC mode. Tap when inactive to open a picker (Voice vs Music).
               Tap when active to stop. Mirrors the MIDI/Audio picker UX. */}
           <button onClick={()=>{
@@ -5842,8 +5877,8 @@ Composition rules:
             setPickMode('mic');
           }}
           disabled={!micActive && (busy || composeMode)}
-          title={micActive?t('micActive'):busy?t('stopRecFirst'):t('mic')}
-          style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:micActive?(micPreset==='voice'?'rgba(255,140,140,.7)':'rgba(100,180,255,.7)'):(busy||composeMode)?'rgba(180,160,220,.2)':'rgba(180,160,220,.4)',color:micActive?(micPreset==='voice'?'rgba(255,120,120,1)':'rgba(140,210,255,1)'):(busy||composeMode)?'rgba(180,160,220,.25)':'rgba(190,170,230,.8)',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.1)':'rgba(60,160,255,.1)'):'transparent'})}>{micActive?t('micActive'):t('mic')}</button>
+          title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')}
+          style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:micActive?(micPreset==='voice'?'rgba(255,140,140,.7)':'rgba(100,180,255,.7)'):(busy||composeMode)?'rgba(180,160,220,.2)':hasMicDraft?'rgba(180,160,220,.55)':'rgba(180,160,220,.4)',color:micActive?(micPreset==='voice'?'rgba(255,120,120,1)':'rgba(140,210,255,1)'):(busy||composeMode)?'rgba(180,160,220,.25)':hasMicDraft?'rgba(210,190,245,.95)':'rgba(190,170,230,.8)',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.1)':'rgba(60,160,255,.1)'):hasMicDraft?'rgba(180,160,220,.04)':'transparent'})}>{micActive?t('micActive'):t('mic')}</button>
         </div>
       </div>
 
@@ -6064,7 +6099,7 @@ Composition rules:
             return segs.some(s=>tx>=s.x&&tx<=s.x+s.w&&ty>=s.y&&ty<=s.y+s.h);
           });
           if(!hit)return;
-          Tone.start();
+          unlockAudio();
           const midis=hit.n.map(({m,v,durMs})=>{playNote(m,v,durMs||300);return{m,dur:durMs||300};});
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
           const byDur={};
@@ -6241,7 +6276,7 @@ Composition rules:
           <button onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'7px 10px',background:loopMode?'rgba(201,168,76,.1)':'transparent',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.6)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.5)':'rgba(201,168,76,.3)'),borderRadius:5,cursor:recording?'default':'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{t('loop')}</button>
         )}
         {viewMode!=='image'&&(
-          <button onClick={()=>disp&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!disp||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'7px 10px',background:'transparent',color:disp&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+(disp&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:disp&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          <button onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'7px 10px',background:'transparent',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
             {t('print')}
           </button>
         )}
@@ -6317,7 +6352,9 @@ Composition rules:
               // to protect, clear immediately. Loaded but not-yet-played sources
               // (e.g. just picked a Mood) count as empty: chords is populated but
               // disp is 0 since playback hasn't rendered any blocks yet.
-              if(!disp&&!pending.length){clear();return;}
+              // In compose mode disp stays 0 but chords IS the painting — count it.
+              const hasPainting = disp>0 || (composedModeRef.current && chords.length>0);
+              if(!hasPainting&&!pending.length){clear();return;}
               setClearArmed(true);
               clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
             }
