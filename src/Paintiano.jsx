@@ -5755,7 +5755,7 @@ Composition rules:
           onBlur={()=>setFocusedInput(null)}
           disabled={sourcePickerLocked}
           title={recording?t('stopRecFirst'):undefined}
-          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid '+(moodHint?'rgba(220,170,255,.9)':focusedInput==='mood'?'rgba(201,168,76,.85)':'rgba(201,168,76,.3)'),borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':moodHint?'rgba(220,170,255,.95)':'rgba(207,197,168,.4)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:sourcePickerLocked?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize',boxShadow:moodHint?'0 0 16px rgba(220,150,255,.35)':focusedInput==='mood'?'0 0 0 2px rgba(201,168,76,.25)':'none',transition:'border-color .2s ease, color .2s ease, box-shadow .2s ease'}}>
+          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid '+(moodHint?'rgba(220,170,255,.9)':focusedInput==='mood'?'rgba(201,168,76,.85)':'rgba(201,168,76,.3)'),borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':moodHint?'rgba(220,170,255,.95)':'rgba(230,222,196,.6)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:sourcePickerLocked?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize',boxShadow:moodHint?'0 0 16px rgba(220,150,255,.35)':focusedInput==='mood'?'0 0 0 2px rgba(201,168,76,.25)':'none',transition:'border-color .2s ease, color .2s ease, box-shadow .2s ease'}}>
           <option value="">✦ {t('selectMood').replace('✦ ','')}</option>
           {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
           {MOOD_OPTIONS}
@@ -5765,7 +5765,7 @@ Composition rules:
           if(!currentMood){flashMoodHint();return;}
           if(!chords.length)return;
           setShowMorphMenu(true);
-        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!sourcePickerLocked?'rgba(220,170,255,.9)':'rgba(220,150,255,.35)'})}>{t('morph')}</button>
+        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!sourcePickerLocked?'rgba(220,170,255,.9)':'rgba(220,170,255,.6)'})}>{t('morph')}</button>
         <button onClick={()=>{
           if(sourcePickerLocked)return;
           if(!varySource){flashMoodHint();return;}
@@ -5780,7 +5780,7 @@ Composition rules:
           setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
           setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
           setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
-        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:varySource&&!sourcePickerLocked?'rgba(220,170,255,.9)':'rgba(220,150,255,.35)'})}>{t('vary')}</button>
+        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:varySource&&!sourcePickerLocked?'rgba(220,170,255,.9)':'rgba(220,170,255,.6)'})}>{t('vary')}</button>
       </div>
 
       <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,alignItems:'center'}}>
