@@ -3863,6 +3863,15 @@ export default function Paintiano() {
     let s=null;
     const init=()=>{
       if(s||dead)return;
+      // First user gesture in the session — also use it to unlock the audio
+      // context. iOS WebKit requires Tone.start() (or rawContext.resume())
+      // to be called from inside a gesture handler; just creating the
+      // Sampler does NOT count. Without this, scheduling notes a few
+      // seconds later still hits a suspended context and produces silence —
+      // especially when the user's first action is Compose (which doesn't
+      // explicitly call play/demo before the first keypress).
+      try{Tone.start();}catch(_){}
+      try{const ac=Tone.getContext().rawContext;if(ac&&ac.state==='suspended')ac.resume().catch(()=>{});}catch(_){}
       s=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
         onload:()=>{if(!dead){samplerOk.current=true;setPiano('ready');}},
         onerror:()=>{if(!dead){
@@ -4361,6 +4370,13 @@ export default function Paintiano() {
     try{
       const ac=Tone.getContext().rawContext;
       if(ac&&ac.state==='suspended'){
+        // The context was suspended. Any triggerAttackRelease() calls made
+        // before this moment got queued at Tone.now() (which was frozen),
+        // and would all fire at once when resume completes. Cancel those
+        // scheduled events on the sampler before resuming — otherwise the
+        // user's first audible event is a phantom replay of every silent
+        // keypress they made before the context unlocked.
+        try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
         // Fire-and-forget: iOS sometimes resolves the resume promise late
         // (or never) but the side effect of *calling* resume marks the
         // context as user-activated, which is what we need.
@@ -4623,7 +4639,7 @@ export default function Paintiano() {
       if(e.key==='Backspace'&&composeMode&&!busy&&!recording){e.preventDefault();undoLast();return;}
       if((e.key===' '||e.key==='Enter')&&isInteractive())return;
       if(e.key===' '){e.preventDefault();handlePauseClickRef.current?.();return;}
-      if(e.key==='Enter'){e.preventDefault();if(!composeMode){setComposeMode(true);}else{setComposeMode(false);}return;}
+      if(e.key==='Enter'){e.preventDefault();if(!composeMode){unlockAudio();setComposeMode(true);}else{setComposeMode(false);}return;}
       const m=map[e.key];if(m&&!held.has(e.key)){held.add(e.key);pressNote(m);}
     };
     const up=e=>held.delete(e.key);
@@ -5276,6 +5292,7 @@ Composition rules:
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       try{if(audioElRef.current)audioElRef.current.pause();}catch(_){}
       try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current=null;}}catch(_){}
+      setActive(new Set());
       setPlaying(false);setAnim(false);
     }else if(holdPaused){
       setHoldPaused(false);
@@ -5860,6 +5877,11 @@ Composition rules:
             // Soft-lock: if another creation mode is on, do nothing.
             if(!composeMode&&(micPainting||micListening))return;
             if(!composeMode){
+              // Unlock audio from this gesture. The first piano keypress could
+              // come moments later, and on iOS the context must already be
+              // user-activated by then — entering the mode is itself an
+              // audio-intent signal, treat it as such.
+              unlockAudio();
               const owner = draftOwnerRef.current;
               if(owner==='compose'){
                 // Re-entering compose with chords still on canvas — no stash
