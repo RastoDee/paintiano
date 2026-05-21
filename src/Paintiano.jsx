@@ -4138,6 +4138,21 @@ export default function Paintiano() {
   useEffect(()=>{ infoRef.current=info; },[info]);
   useEffect(()=>{ loopModeRef.current=loopMode; },[loopMode]);
 
+  // When leaving Compose mode, clear the held-key visualization. The `active`
+  // set tracks keys currently pressed; if the user exits Compose mid-press
+  // (e.g. taps a Mood, Sing/Listen, or the Compose toggle itself), the gold
+  // "held" highlight would otherwise stick to those keys on the next return.
+  // Also drop the pending chord buffer for the same reason.
+  useEffect(()=>{
+    if(!composeMode){
+      setActive(new Set());
+      setPending([]);
+      pendingRef.current=[];
+      pressInfo.current={};
+      clearTimeout(kbTimer.current);
+    }
+  },[composeMode]);
+
   // === Draft stash helpers ===
   // stashDraft: snapshot current chord array under the slot of the mode that
   // authored it. Only stashes recorded content (composedModeRef.current true);
@@ -4359,6 +4374,9 @@ export default function Paintiano() {
     try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
     try{if(audioElRef.current){audioElRef.current.pause();}}catch(_){}
     try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
+    // Release any keys highlighted by the just-cancelled release timers.
+    // Without this they linger gold even though no note is sounding.
+    setActive(new Set());
     setPlaying(false);setAnim(false);
     setHoldPaused(false);resumeFromRef.current=null;
   },[]);
@@ -4376,6 +4394,7 @@ export default function Paintiano() {
           try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
           try{if(audioElRef.current)audioElRef.current.pause();}catch(_){}
           try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current=null;}}catch(_){}
+          setActive(new Set());
           setPlaying(false);setAnim(false);
         }
       }else{
