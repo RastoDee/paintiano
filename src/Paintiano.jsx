@@ -6284,8 +6284,11 @@ Composition rules:
               clear();
             }else{
               // First tap — arm only if there's something worth protecting.
-              // Empty chords AND empty pending = nothing on canvas, clear immediately.
-              if(!chords.length&&!pending.length){clear();return;}
+              // Visually empty canvas (no painted blocks AND no held keys) = nothing
+              // to protect, clear immediately. Loaded but not-yet-played sources
+              // (e.g. just picked a Mood) count as empty: chords is populated but
+              // disp is 0 since playback hasn't rendered any blocks yet.
+              if(!disp&&!pending.length){clear();return;}
               setClearArmed(true);
               clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
             }
