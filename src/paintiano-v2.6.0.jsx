@@ -2812,7 +2812,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', backToSetup:'setup',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', backToSetup:'setup', backToCanvas:'canvas',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all',
     selectMood:'✦ select a mood…', morph:'✦ morph', vary:'✦ vary',
@@ -2855,7 +2855,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', backToSetup:'setup',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', backToSetup:'setup', backToCanvas:'leinwand',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen',
     selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'✦ variieren',
@@ -2898,7 +2898,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', backToSetup:'réglage',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', backToSetup:'réglage', backToCanvas:'toile',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer',
     selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'✦ varier',
@@ -2941,7 +2941,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', backToSetup:'inicio',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', backToSetup:'inicio', backToCanvas:'lienzo',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo',
     selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'✦ variar',
@@ -2984,7 +2984,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', backToSetup:'nastavenie',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', backToSetup:'nastavenie', backToCanvas:'plátno',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť',
     selectMood:'✦ vyber náladu…', morph:'✦ morf', vary:'✦ variácia',
@@ -3747,7 +3747,7 @@ function morphSongs(songA, songB) {
 
 // Reroll: transform a piece with random transposition, octave swaps, and
 // rhythmic jitter. Preserves structure & beat positions, varies surface details.
-function rerollSong(song) {
+function rerollSong(song, structureStable) {
   if (!song) return null;
   // Random transpose ±5 semitones, guaranteed nonzero
   let t;
@@ -3756,23 +3756,26 @@ function rerollSong(song) {
     const midi = name2midi(n.note);
     if (!midi) return n;
     let newMidi = midi + t;
-    // 15% chance of octave swap for non-bass notes — adds register variety
-    if (midi > 48 && Math.random() < 0.15) {
+    // Octave swaps + rhythmic jitter change the chord GROUPING (= structure).
+    // When structureStable (Random OFF) we keep them off so only pitch — and
+    // therefore only COLOR — changes; the painting's composition is preserved.
+    if (!structureStable && midi > 48 && Math.random() < 0.15) {
       newMidi += Math.random() < 0.5 ? -12 : 12;
     }
     // Clamp to full piano range after all transformations
     newMidi = Math.max(21, Math.min(108, newMidi));
-    // Subtle rhythmic jitter
-    const durMul = 0.85 + Math.random() * 0.3;
+    const durMul = structureStable ? 1 : (0.85 + Math.random() * 0.3);
     return {
       note: noteName(newMidi),
-      dur: Math.max(0.25, n.dur * durMul),
+      dur: structureStable ? n.dur : Math.max(0.25, n.dur * durMul),
       beat: n.beat
     };
   });
   return {
     notes: newNotes,
-    tempo: Math.max(50, song.tempo + (Math.floor(Math.random() * 21) - 10)),
+    // Tempo changes scale startMs and reshuffle chord grouping → structure.
+    // Keep tempo fixed when structureStable.
+    tempo: structureStable ? song.tempo : Math.max(50, song.tempo + (Math.floor(Math.random() * 21) - 10)),
     title: song.title
   };
 }
@@ -4231,7 +4234,14 @@ export default function Paintiano() {
   // Same song → same hash → same painting (deterministic). Different chords
   // (load a new song, or Vary) → different hash → different painting.
   // No random state, no reshuffle needed: the painting follows the music.
+  // When Random is OFF, VARY should change only colors + sound, NOT the picture
+  // structure. Since the structure seed is derived from the chords (which VARY
+  // transposes), we freeze it: structureSeedLock holds the seed value to keep.
+  // It's set by VARY (Random off), and cleared when Random turns on, on a new
+  // mood/source, or on Clear.
+  const [structureSeedLock, setStructureSeedLock] = useState(null);
   const pollockSessionSeed = useMemo(() => {
+    if(structureSeedLock!=null) return structureSeedLock>>>0;
     if(!chords || !chords.length) return 0;
     // FNV-1a-ish hash over each chord's pitches and velocities.
     let h = 2166136261 >>> 0;
@@ -4251,7 +4261,7 @@ export default function Paintiano() {
       }
     }
     return (h >>> 0) ^ (rndSalt>>>0);
-  }, [chords, rndSalt]);
+  }, [chords, rndSalt, structureSeedLock]);
   // Append a fresh random salt and make it current (used by Play-from-start and
   // Loop replays when Random is on). Truncates any "future" entries if the user
   // had stepped Back, so the timeline stays linear.
@@ -5294,7 +5304,7 @@ export default function Paintiano() {
     pixelRef.current=null;setViewMode('paint');setStamp(s=>s+1);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
-    setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);
+    setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);
     setComposeMode(false);setDemoMode(false);setLoopMode(false);loopModeRef.current=false;
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
   },[stopAll]);
@@ -6343,13 +6353,34 @@ Composition rules:
   // means picking Audio/Score/Image jumps straight to the canvas and shows the
   // transcription progress above it, instead of appearing to hang on setup.
   const [stayActive, setStayActive] = useState(false);
-  const isActiveView = playing || chords.length>0 || composeMode || micActive || working || stayActive;
+  // forceSetup lets "← Setup" show the setup panel WITHOUT destroying the
+  // current painting — so you can change a setting or return to the canvas. It
+  // overrides isActiveView; the "→ Canvas" resume button and picking a new
+  // mood/source clear it.
+  const [forceSetup, setForceSetup] = useState(false);
+  const hasContent = chords.length>0 || composeMode || micActive;
+  const isActiveView = !forceSetup && (playing || chords.length>0 || composeMode || micActive || working || stayActive);
   // Latch stayActive whenever we're genuinely active (content on canvas, a live
   // mode, or processing). Once latched, Clear can empty the canvas without
   // bouncing back to setup; only "← Setup" un-latches it.
   useEffect(()=>{
     if(playing||chords.length>0||composeMode||micActive||working){ setStayActive(true); }
   },[playing,chords.length,composeMode,micActive,working]);
+  // Any newly-started activity (processing a file, entering compose/mic, or
+  // playback beginning) returns us to the canvas even if we were parked on the
+  // setup panel via "← Setup".
+  useEffect(()=>{
+    if(working||composeMode||micActive||playing){ setForceSetup(false); }
+  },[working,composeMode,micActive,playing]);
+  // When we (re)enter the canvas view, the <canvas> element may have just
+  // remounted blank (it's gated by isActiveView). Bump stamp so the paint
+  // effect re-runs and repaints the existing painting onto the fresh canvas.
+  useEffect(()=>{
+    if(isActiveView){ requestAnimationFrame(()=>setStamp(s=>s+1)); }
+  },[isActiveView]);
+  // Turning Random ON releases any structure lock VARY set — Random means a
+  // genuinely fresh take (structure included) on the next reroll/play.
+  useEffect(()=>{ if(randomMode) setStructureSeedLock(null); },[randomMode]);
   const isSetupView = !isActiveView;
 
   return (
@@ -6390,6 +6421,13 @@ Composition rules:
       {isSetupView && (
       <div className="pf-fade" style={{width:'100%',maxWidth:560,display:'flex',flexDirection:'column',gap:14,marginBottom:18}}>
 
+        {/* Resume — when you parked the current painting via "← Setup", this
+            returns to the canvas without changing anything. Only shown when
+            there's still content to go back to. */}
+        {forceSetup && hasContent && (
+          <button className="pf-lift" onClick={()=>setForceSetup(false)} style={{display:'inline-flex',alignSelf:'flex-start',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(201,168,76,.12)',color:PF.gold2,border:'1px solid rgba(201,168,76,.4)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToCanvas')}</button>
+        )}
+
         {/* ── MOOD HERO CTA ── pick a feeling, AI composes. MORPH/VARY are not
             shown here: they need a mood already playing, so they live in the
             active-view strip that appears once you've picked one. ── */}
@@ -6397,7 +6435,7 @@ Composition rules:
           <span style={{position:'absolute',left:16,fontSize:'1rem',color:PF.gold,pointerEvents:'none',zIndex:1}}>✦</span>
           <select
             value={songQ}
-            onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);setLoadedSource(null);aiMidi(e.target.value);if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);}}}
+            onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setStructureSeedLock(null);setForceSetup(false);setCurrentMood(e.target.value);setVarySource(s);setLoadedSource(null);aiMidi(e.target.value);if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);}}}
             onFocus={()=>setFocusedInput('mood')}
             onBlur={()=>setFocusedInput(null)}
             disabled={sourcePickerLocked}
@@ -6419,6 +6457,7 @@ Composition rules:
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
               {['harmony','spectral','bw','custom'].map(m=>(
               <button key={m} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+                setForceSetup(false);
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
               }} style={{padding:'10px 0',textAlign:'center',fontSize:'.62rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'all .18s',border:'1px solid transparent',color:mode===m?PF.bg:PF.muted,background:mode===m?PF.gold:PF.card2,boxShadow:mode===m?'0 3px 12px rgba(240,192,64,.35)':'none'}}>{t(m)}</button>
@@ -6435,6 +6474,7 @@ Composition rules:
             <div style={{display:'flex',gap:6,flexWrap:'wrap',rowGap:8}} title="painting style — tap again to deselect (mosaic default)">
               {[['picasso','picasso'],['kusama','kusama'],['pollock','pollock'],['kandinsky','kandinsky'],['miro','miro'],['mondrian','mondrian'],['rothko','rothko'],['matisse','matisse']].map(([k,label])=>(
                 <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>{
+                  setForceSetup(false);
                   if(canvasRef.current){canvasRef.current.style.opacity='0';}
                   setTimeout(()=>{setStyle(style===k?null:k);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
                 }} style={{flexShrink:0,padding:'8px 13px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:PF.muted,background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:'rgba(242,238,232,.08)'),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{label}</button>
@@ -6497,7 +6537,7 @@ Composition rules:
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
         <div style={{display:'flex',justifyContent:'flex-start',marginBottom:8}}>
-          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);if(composeMode)setComposeMode(false);if(micPainting)stopMicPainting();if(micListening)stopMicListening();clear();setStripOpen(false);setStayActive(false);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);stopAll();setStripOpen(false);setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
         </div>
         <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:'.5rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
           <span>{t('colorLabel')} · {t('styleLabel')}</span>
@@ -6522,9 +6562,14 @@ Composition rules:
               const varyBlocked = composeMode||micPainting||micListening||recording||working;
               if(varyBlocked) return;
               if(!varySource||!chords.length){flashMoodHint();return;}
-              const varied=rerollSong(varySource);
+              const varied=rerollSong(varySource, !randomMode);
               if(!varied)return;
               const wasPlaying=playing;
+              // Random OFF → keep the picture STRUCTURE, change only colors+sound:
+              // freeze the seed too (belt-and-braces with the pitch-only reroll).
+              // Random ON → fresh structure: clear the lock.
+              if(randomMode){ setStructureSeedLock(null); }
+              else { setStructureSeedLock(pollockSessionSeed>>>0); }
               setVarySource(varied);
               stopAll();
               const evts=noteArr2events(varied.notes,varied.tempo);
@@ -6888,6 +6933,7 @@ Composition rules:
                   const morphed=morphSongs(a,b);
                   if(!morphed){setErr('Could not morph');return;}
                   setVarySource(morphed);
+                  setStructureSeedLock(null);
                   setShowMorphMenu(false);
                   stopAll();
                   const evts=noteArr2events(morphed.notes,morphed.tempo);
