@@ -5334,7 +5334,7 @@ export default function Paintiano() {
   },[stashDraft]);
 
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     const r=new FileReader();
     r.onload=evt=>{
       try{
@@ -5345,6 +5345,7 @@ export default function Paintiano() {
         stopAll();applyEvents(evts,mName);
         setCompositionName(mName);
         setLoadedSource('midi');
+        setPickMode(null);
         if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
       }catch(e){setErr('MIDI parse error: '+e.message);setErrInfo(false);}
     };
@@ -5352,7 +5353,7 @@ export default function Paintiano() {
   };
 
   const loadAudio=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -5374,7 +5375,7 @@ export default function Paintiano() {
       setAudioBlobAndRef(blob);setAudioName(file.name);
       applyEvents(evts,aName);
       setViewMode('audio');viewModeRef.current='audio';
-      setLoadedSource('audio');
+      setLoadedSource('audio');setPickMode(null);
     }catch(e){setErr('Audio: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -5384,7 +5385,7 @@ export default function Paintiano() {
   // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -5413,7 +5414,7 @@ export default function Paintiano() {
       setScoreName(sName);
       setCompositionName(sName);
       applyEvents(evts,sName);
-      setLoadedSource('score');
+      setLoadedSource('score');setPickMode(null);
     }catch(e){setErr('Score: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -5447,7 +5448,7 @@ export default function Paintiano() {
       setAudioBlobAndRef(blob);setAudioName('Liebestraum No.3 — Liszt.mp3');
       applyEvents(evts,SAMPLE_AUDIO_NAME);
       setViewMode('audio');viewModeRef.current='audio';
-      setLoadedSource('audio');
+      setLoadedSource('audio');setPickMode(null);
     }catch(e){setErr('Sample audio: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -5463,7 +5464,7 @@ export default function Paintiano() {
       const evts=parseMusicXml(xmlText);
       if(!evts.length){setErr('Sample score: no notes found.');setErrInfo(false);return;}
       applyEvents(evts,SAMPLE_SCORE_NAME);
-      setLoadedSource('score');
+      setLoadedSource('score');setPickMode(null);
     }catch(e){setErr('Sample score: '+e.message);setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[stopAll,applyEvents]);
@@ -5533,7 +5534,7 @@ Composition rules:
 
 
   const loadImage=useCallback(e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';
+    const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
     setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
@@ -5580,6 +5581,7 @@ Composition rules:
           idxRef.current=evts.length;setStamp(s=>s+1);
           setPlaybackSpeed(1);playbackSpeedRef.current=1;
           setLoadedSource('image');
+          setPickMode(null);
         }catch(e){setErr('Image: '+e.message);setErrInfo(false);}
       };
       img.src=evt.target.result;
@@ -6488,10 +6490,6 @@ Composition rules:
           {/* SOURCE — input tiles */}
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('sourceLabel')}</div>
-            <input ref={refMidi} type="file" accept="audio/midi,audio/x-midi,application/octet-stream,.mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-            <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-            <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-            <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
               <button className="pf-tool pf-midi" onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('midi');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:sourcePickerLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{t('midi').replace(/[^A-Za-z]/g,'')}</span></button>
               <button className="pf-tool pf-audio" onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('audio');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:working&&wLabel.includes('audio')?PF.gold:sourcePickerLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^A-Za-z]/g,'')}</span></button>
@@ -6648,6 +6646,16 @@ Composition rules:
         </div>
       )}
 
+      {/* Hidden file inputs — mounted ALWAYS (not inside the setup-view gate) so
+          their refs are live whenever "Choose file" calls .click(), even on a
+          fresh start. Previously they lived inside {isSetupView && …}; on a fresh
+          load before any content, view timing could leave the ref stale so the
+          file dialog never opened (it only worked after a sample had mounted them). */}
+      <input ref={refMidi} type="file" accept="audio/midi,audio/x-midi,application/octet-stream,.mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
+      <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
+      <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
+      <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
+
       {pickMode && (
         <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
@@ -6701,7 +6709,11 @@ Composition rules:
                 else if(pickMode==='audio') refAudio.current?.click();
                 else if(pickMode==='score') refScore.current?.click();
                 else refImage.current?.click();
-                setPickMode(null);
+                // NOTE: do NOT setPickMode(null) here — doing so in the same tick
+                // unmounts the hidden <input> before the browser's file dialog
+                // opens, cancelling it (Choose File appeared to do nothing). The
+                // loaders (loadMidi/loadAudio/loadScore/loadImage) close the modal
+                // via setPickMode(null) once a file is actually selected.
               }} style={{padding:'12px',background:'transparent',color:'rgba(201,168,76,.85)',border:'1px solid rgba(201,168,76,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
                 {t('chooseFile')}
               </button>
