@@ -5564,6 +5564,7 @@ Composition rules:
             ? activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; })
             : (mode==='spectral'?SPEC_HUE:COF);
           const evts=pixelsToImageEvents(px,nc,nr,hueTable);
+          if(!evts || !evts.length){setErr('Image produced no notes — try a more colorful image.');setErrInfo(false);setPickMode(null);return;}
           stopAll();
           // Explicit canvas clear — when loading consecutive images, both
           // downsample to 192×120 so canvas.width/height don't change, which
@@ -6372,8 +6373,8 @@ Composition rules:
   // playback beginning) returns us to the canvas even if we were parked on the
   // setup panel via "← Setup".
   useEffect(()=>{
-    if(working||composeMode||micActive||playing){ setForceSetup(false); }
-  },[working,composeMode,micActive,playing]);
+    if(working||composeMode||micActive||playing||chords.length>0){ setForceSetup(false); }
+  },[working,composeMode,micActive,playing,chords.length]);
   // When we (re)enter the canvas view, the <canvas> element may have just
   // remounted blank (it's gated by isActiveView). Bump stamp so the paint
   // effect re-runs and repaints the existing painting onto the fresh canvas.
