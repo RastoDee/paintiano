@@ -5304,7 +5304,7 @@ export default function Paintiano() {
     pixelRef.current=null;setViewMode('paint');setStamp(s=>s+1);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
-    setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);
+    setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);setForceSetup(false);
     setComposeMode(false);setDemoMode(false);setLoopMode(false);loopModeRef.current=false;
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
   },[stopAll]);
@@ -5334,7 +5334,7 @@ export default function Paintiano() {
   },[stashDraft]);
 
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     const r=new FileReader();
     r.onload=evt=>{
       try{
@@ -5536,7 +5536,7 @@ Composition rules:
     const file=e.target.files[0];if(!file)return;e.target.value='';
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
-    setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     const r=new FileReader();
     r.onerror=()=>{setErr('Could not read image.');setErrInfo(false);};
     r.onload=evt=>{
