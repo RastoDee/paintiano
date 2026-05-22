@@ -5410,6 +5410,16 @@ export default function Paintiano() {
   // stop playback and blank the canvas back to the start (disp=0). For compose
   // / mic the "painting" IS the chord draft, so fall through to full clear().
   const clearCanvas = useCallback(()=>{
+    // Voice/Music mic mode: the mic stream is still live and the capture loop
+    // appends new chords continuously. If we only wipe the canvas, the next
+    // detected sound instantly repaints — so Clear appears to do nothing. Stop
+    // the mic too for a clean, predictable blank slate; re-tap MIC to resume.
+    if(micPainting||micListening){
+      if(micPainting) stopMicPaintingRef.current?.();
+      if(micListening) stopMicListeningRef.current?.();
+      clear();
+      return;
+    }
     const isLoaded = !composeMode && !micPainting && !micListening && chordsRef.current.length>0;
     if(isLoaded){
       stopAll();
