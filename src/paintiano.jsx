@@ -3299,7 +3299,7 @@ const MOODS = ['funny','sad','aggressive','dreamy','love','nostalgic','calm','ex
 // Pre-built once at module load — MOOD names are language-independent, so the
 // <option> elements don't depend on any component state. Allocating these on
 // every render allocated 9 React elements per render for no reason.
-const MOOD_OPTIONS = MOODS.map(m => <option key={m} value={m}>{m}</option>);
+const MOOD_OPTIONS = MOODS.map(m => <option key={m} value={m} style={{color:'#1a1320',background:'#ffffff'}}>{m}</option>);
 
 // Searchable in-app guide. Each entry: title, body, plus keywords to widen
 // the match surface for the search box. Sections are independent — order
@@ -6441,8 +6441,8 @@ Composition rules:
             disabled={sourcePickerLocked}
             title={recording?t('stopRecFirst'):undefined}
             style={{flex:1,minWidth:0,background:'transparent',border:'none',borderRadius:14,padding:'15px 40px',color:songQ?PF.cream:moodHint?'rgba(220,170,255,.95)':'rgba(242,238,232,.55)',fontSize:'.95rem',fontFamily:"'Cormorant Garamond',serif",fontStyle:songQ?'normal':'italic',outline:'none',opacity:sourcePickerLocked?0.4:1,letterSpacing:'.02em',cursor:'pointer',appearance:'none',textTransform:'capitalize',position:'relative',zIndex:1,textAlign:'left'}}>
-            <option value="">{t('selectMood').replace('✦ ','')}</option>
-            {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
+            <option value="" style={{color:'#1a1320',background:'#ffffff'}}>{t('selectMood').replace('✦ ','')}</option>
+            {currentMood&&currentMood.includes(' → ')&&<option value="" disabled style={{color:'#6b5b7a',background:'#ffffff'}}>{currentMood}</option>}
             {MOOD_OPTIONS}
           </select>
           <span style={{position:'absolute',right:16,fontSize:'.7rem',color:PF.gold,pointerEvents:'none'}}>▾</span>
