@@ -3927,7 +3927,14 @@ export default function Paintiano() {
     // is unchanged, append only the newly-revealed blocks instead of re-running
     // every artist-style draw from chord 0. Cuts an O(N²) playback into O(N).
     const prev = lastPaintRef.current;
-    const lim = anim?disp:playing?disp:holdPaused?disp:composedModeRef.current?chords.length:disp<chords.length?disp:chords.length;
+    // Paint horizon. During active animation/playback show progressive build
+    // (lim=disp). On pause/stop, behaviour depends on source:
+    //   - Live-composed (Compose/MIC): canvas is the artifact the user just
+    //     made and saw fully — show ALL chords on pause/stop.
+    //   - Imported (MIDI/audio/score/image/mood): canvas builds during
+    //     playback, hasn't been "seen" yet — show only played-so-far so the
+    //     user can still hit Play to watch it build.
+    const lim = anim?disp:playing?disp:composedModeRef.current?chords.length:disp<chords.length?disp:chords.length;
     // Fast path: if only `pending` changed (keypress preview in compose mode),
     // skip the full repaint — just redraw the next-block preview.
     const onlyPendingChanged =
@@ -3944,8 +3951,11 @@ export default function Paintiano() {
       prev.info===info &&
       prev.holdPaused===holdPaused &&
       prev.pending!==pending;
-    if(onlyPendingChanged){
-      // Clear just the next-block cell and redraw preview
+    if(onlyPendingChanged && composeMode){
+      // Clear just the next-block cell and redraw preview. composeMode guard:
+      // outside compose, idxRef.current === chords.length, and pi % len wraps
+      // to 0 — which would erase the FIRST committed chord. The preview only
+      // makes sense while the user is actively composing anyway.
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
@@ -4009,7 +4019,7 @@ export default function Paintiano() {
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,holdPaused,pollockSessionSeed]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,holdPaused,pollockSessionSeed,composeMode]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
