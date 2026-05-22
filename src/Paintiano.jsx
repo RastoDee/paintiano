@@ -10,6 +10,42 @@ const CWIN = 55;
 const KB_WIN = 65;
 const DN = 25, DB = 16, DH = 26;
 const GOLD = '#c9a84c';
+// ── v2.6.0 Playful design tokens ────────────────────────────────────────────
+// Layered dark surfaces + bright cream text + saturated accents. Used across
+// the redesigned control panel. Buttons lift + glow on interaction.
+const PF = {
+  bg:'#0e0c14', card:'#161320', card2:'#1d1929', card3:'#231f31',
+  gold:'#f0c040', gold2:'#ffd96e',
+  cream:'#f2eee8', muted:'rgba(242,238,232,0.42)', faint:'rgba(242,238,232,0.1)',
+  blue:'#5b9cf6', purple:'#a97ff5', green:'#4ecb8d', orange:'#f47c3c', pink:'#f06292',
+};
+// Built once at module load — referenced by the render so the style string
+// isn't re-interpolated on every React render (which thrashes during playback
+// when setDisp fires many times per second).
+const PF_STYLE = `
+        @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
+        .pf-fade { animation: pf-fadeUp .5s ease both; }
+        .pf-tool { transition: all .18s; }
+        .pf-tool .pf-glyph { transition: transform .18s; display:inline-block; }
+        .pf-tool:hover { transform: translateY(-2px); }
+        .pf-tool:hover .pf-glyph { transform: scale(1.2); }
+        .pf-lift { transition: all .18s; }
+        .pf-lift:hover { transform: translateY(-1px); }
+        .pf-chip { transition: all .18s; }
+        .pf-chip:hover { transform: translateY(-1px); }
+        .pf-dice:hover { transform: rotate(20deg) translateY(-1px) !important; }
+        .pf-midi:hover  { background:rgba(91,156,246,.12)!important; border-color:${PF.blue}!important; box-shadow:0 4px 16px rgba(91,156,246,.22); }
+        .pf-audio:hover { background:rgba(244,124,60,.12)!important; border-color:${PF.orange}!important; box-shadow:0 4px 16px rgba(244,124,60,.22); }
+        .pf-score:hover { background:rgba(169,127,245,.12)!important; border-color:${PF.purple}!important; box-shadow:0 4px 16px rgba(169,127,245,.22); }
+        .pf-image:hover { background:rgba(78,203,141,.12)!important; border-color:${PF.green}!important; box-shadow:0 4px 16px rgba(78,203,141,.22); }
+        .pf-compose:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(78,203,141,.25); }
+        .pf-mic:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(169,127,245,.22); }
+        .pf-morph:hover { transform: translateY(-1px); box-shadow:0 4px 16px rgba(169,127,245,.4); }
+        .pf-vary:hover { transform: translateY(-1px); box-shadow:0 4px 16px rgba(244,124,60,.4); }
+        .pf-moodcta:hover { border-color:${PF.gold2}!important; transform: translateY(-1px); box-shadow:0 6px 24px rgba(240,192,64,.18); }
+        .pf-tab:hover:not(.pf-tab-on) { background:${PF.card3}!important; color:${PF.cream}!important; }
+        .pf-artist:hover:not(.pf-artist-on) { color:${PF.cream}!important; border-color:rgba(242,238,232,.25)!important; transform:translateY(-1px); }
+`;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
 // "API in artifacts" feature; bump here when Anthropic publishes a newer one.
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
@@ -71,8 +107,11 @@ const customCol=(m,v=100,palette)=>{
   const octDelta=(Math.max(0,Math.min(8,Math.floor(m/12)-1))-5)*3;  // -15..+9
   const l=Math.max(8,Math.min(92,l0+octDelta));
   // Velocity: gentle saturation modulation around user's chosen saturation.
+  // BUT if the swatch is greyscale (s0===0, e.g. the unset #888888 default or a
+  // deliberately grey pick), keep it grey — adding saturation to a hue-less
+  // color resurrects hue 0 (red) and renders as stray pink. Grey stays grey.
   const velMod=(v/127-0.5)*15;  // -7.5..+7.5
-  const s=Math.max(0,Math.min(100,s0+velMod));
+  const s=s0<=0.5 ? 0 : Math.max(0,Math.min(100,s0+velMod));
   const[rr,gg,bb]=fromHsl(h0,s,l);
   return[rr,gg,bb,0.7+(v/127)*0.3];
 };
@@ -519,6 +558,12 @@ function _seedRnd(bx,by,BW,BH){
   _RND_STATE[0] = ((bx*73)^(by*113)^(BW*271)^(BH*947))>>>0;
   return _rnd;
 }
+// Per-painting seed for per-cell renderers that need a stable whole-painting
+// choice (e.g. which Mondrian variant). Set by the paint loop from the session
+// seed before drawing cells; read inside drawBlock callees. Single-threaded, so
+// safe as a module global like _RND_STATE.
+let _artistSeed = 0;
+function _setArtistSeed(s){ _artistSeed = s>>>0; }
 
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;sorted.forEach((note,i)=>{const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;ctx.fillStyle=`rgba(${r},${g},${b},${(a*.18).toFixed(3)})`;ctx.fillRect(bx-2,y-2,BW+4,bh+4);ctx.fillStyle=`rgba(${r},${g},${b},${a.toFixed(3)})`;ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);});if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}}
@@ -1310,7 +1355,272 @@ function drawKandinsky(ctx,bx,by,notes,gc,BW,BH){
   });
 }
 
+// Mondrian — re-reads the chord cell as a De Stijl composition. The φ-grid is
+// already the subject; Mondrian makes it explicit. Each cell is recursively
+// subdivided into asymmetric rectangles separated by thick black lines, and a
+// few rectangles are flooded with quantized primaries (red/blue/yellow) drawn
+// from the voice colors; the rest stay white/off-white. Deterministic per cell.
+// Mondrian — two variants, chosen stably per painting from _artistSeed so a
+// given piece always renders the same way (re-rolls on Vary/new mood):
+//   • CLASSIC (Composition with Red/Yellow/Blue): warm-white fields, THICK
+//     black lines, a few saturated primary blocks. Sparse, architectural.
+//   • BOOGIE (Broadway Boogie Woogie): no black — YELLOW lines segmented with
+//     small red/blue/grey squares, dense and rhythmic. Literally music-named.
+// Recursive guillotine partition; note count drives how busy the cell is.
+function drawMondrian(ctx,bx,by,notes,gc,BW,BH){
+  const rnd=_seedRnd(bx,by,BW,BH);
+  const boogie = ((_artistSeed>>>3)&1)===1;          // stable per painting
+  const n=Math.max(1,notes.length);
+  const sorted=[...notes].sort((a,b)=>b.m-a.m);
+  // Boost a gc() color toward Mondrian's bold, flat, saturated character while
+  // KEEPING its hue — so the block color tracks the active color mode (Harmony /
+  // Spectral / B&W / custom) exactly like Pollock and Kandinsky do, instead of
+  // snapping to fixed primaries.
+  const bold=(r,g,bl)=>{
+    // Greyscale (B/W mode, or a grey custom swatch) has no hue to boost — the
+    // 255/mx stretch would blow every grey up to white, destroying the dark↔
+    // light range. Detect near-grey and pass it through untouched.
+    if(Math.max(r,g,bl)-Math.min(r,g,bl) <= 6) return [Math.round(r),Math.round(g),Math.round(bl)];
+    const mx=Math.max(r,g,bl,1), k=255/mx;       // stretch brightest channel to full
+    let R=r*k, G=g*k, B=bl*k, m2=Math.max(R,G,B);
+    const pull=(c)=>c===m2?c:c*0.72;             // deepen the non-dominant channels
+    return [Math.round(Math.min(255,pull(R))),Math.round(Math.min(255,pull(G))),Math.round(Math.min(255,pull(B)))];
+  };
+
+  if(!boogie){
+    // ── CLASSIC ──
+    ctx.fillStyle='#f4f1e8'; ctx.fillRect(bx-1,by-1,BW+2,BH+2);
+    const cuts=Math.min(5,2+Math.floor(n*0.7)+Math.floor(rnd()*2));
+    let rects=[[bx,by,BW,BH]];
+    for(let c=0;c<cuts;c++){
+      let bi=0,barea=0; rects.forEach((rc,i)=>{const a=rc[2]*rc[3];if(a>barea){barea=a;bi=i;}});
+      const [rx,ry,rw,rh]=rects[bi];
+      const horizontal = rw<rh ? true : rw>rh ? false : rnd()<0.5;
+      const t=0.30+rnd()*0.40; rects.splice(bi,1);
+      if(horizontal){const h1=Math.round(rh*t); rects.push([rx,ry,rw,h1],[rx,ry+h1,rw,rh-h1]);}
+      else{const w1=Math.round(rw*t); rects.push([rx,ry,w1,rh],[rx+w1,ry,rw-w1,rh]);}
+    }
+    rects.forEach((rc,i)=>{
+      const [rx,ry,rw,rh]=rc, roll=rnd();
+      if(roll<0.40 && sorted.length){
+        const note=sorted[i%sorted.length], [r,g,bl]=gc(note.m,note.v), [pr,pg,pb]=bold(r,g,bl);
+        ctx.fillStyle=`rgb(${pr},${pg},${pb})`; ctx.fillRect(rx,ry,rw,rh);
+      } else if(roll<0.47){ ctx.fillStyle='#141109'; ctx.fillRect(rx,ry,rw,rh); }
+    });
+    const lw=Math.max(2,Math.round(Math.min(BW,BH)*0.07));
+    ctx.fillStyle='#0d0b08';
+    rects.forEach(rc=>{const [rx,ry,rw,rh]=rc; ctx.fillRect(rx,ry,rw,lw); ctx.fillRect(rx,ry+rh-lw,rw,lw); ctx.fillRect(rx,ry,lw,rh); ctx.fillRect(rx+rw-lw,ry,lw,rh);});
+    ctx.fillRect(bx-1,by-1,BW+2,lw); ctx.fillRect(bx-1,by+BH-lw,BW+2,lw+1); ctx.fillRect(bx-1,by-1,lw,BH+2); ctx.fillRect(bx+BW-lw,by-1,lw,BH+2);
+    return;
+  }
+
+  // ── BOOGIE WOOGIE ──
+  ctx.fillStyle='#f1ede2'; ctx.fillRect(bx-1,by-1,BW+2,BH+2);
+  // Colors derived from the chord via gc() so the cell tracks the color mode.
+  // LINE color = bold() of the brightest voice (Boogie's "yellow" lines become
+  // whatever the dominant hue is; in B&W they read as light grey). BEADS and
+  // SQUARES pull from individual voices, boosted bold.
+  const voiceBold=(i)=>{ const nt=sorted[i%Math.max(1,sorted.length)]||{m:60,v:80}; const[r,g,bl]=gc(nt.m,nt.v); return bold(r,g,bl); };
+  const lineC = (()=>{ const c=voiceBold(0); return `rgb(${c[0]},${c[1]},${c[2]})`; })();
+  // a few large off-white blocks first (the "buildings")
+  const blocks=Math.min(3,1+Math.floor(n*0.4));
+  for(let i=0;i<blocks;i++){
+    const bw2=BW*(0.25+rnd()*0.30), bh2=BH*(0.18+rnd()*0.28);
+    const bxx=bx+rnd()*(BW-bw2), byy=by+rnd()*(BH-bh2);
+    ctx.fillStyle='#fbfaf4'; ctx.fillRect(bxx,byy,bw2,bh2);
+  }
+  // grid lines in the dominant chord color
+  const lw=Math.max(2,Math.round(Math.min(BW,BH)*0.05));
+  const vlines=2+Math.floor(rnd()*2)+Math.floor(n*0.3), hlines=2+Math.floor(rnd()*2)+Math.floor(n*0.3);
+  const vxs=[], hys=[];
+  for(let i=0;i<vlines;i++){const x=bx+ (i+0.5+ (rnd()-0.5)*0.5)*(BW/vlines); vxs.push(x); ctx.fillStyle=lineC; ctx.fillRect(x,by,lw,BH);}
+  for(let i=0;i<hlines;i++){const y=by+ (i+0.5+ (rnd()-0.5)*0.5)*(BH/hlines); hys.push(y); ctx.fillStyle=lineC; ctx.fillRect(bx,y,BW,lw);}
+  // colored beads along the lines — each bead a (bold) voice color
+  const beadOn=(x,y)=>{ const c=voiceBold(Math.floor(rnd()*Math.max(1,sorted.length))); const s=lw*(1.1+rnd()*1.4); ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`; ctx.fillRect(x-(s-lw)/2,y-(s-lw)/2,s,s); };
+  vxs.forEach(x=>{ const beads=2+Math.floor(rnd()*3); for(let b=0;b<beads;b++){ if(rnd()<0.7) beadOn(x, by+rnd()*BH); } });
+  hys.forEach(y=>{ const beads=2+Math.floor(rnd()*3); for(let b=0;b<beads;b++){ if(rnd()<0.7) beadOn(bx+rnd()*BW, y); } });
+  // bigger squares at intersections, with a contrasting inner accent — both
+  // from voice colors so they follow the palette.
+  if(sorted.length){
+    const bigs=1+Math.floor(rnd()*2);
+    for(let i=0;i<bigs;i++){
+      const x=vxs[Math.floor(rnd()*vxs.length)]||bx+BW/2, y=hys[Math.floor(rnd()*hys.length)]||by+BH/2;
+      const s=Math.min(BW,BH)*(0.12+rnd()*0.10);
+      const oc=voiceBold(i), ic=voiceBold(i+1);
+      ctx.fillStyle=`rgb(${oc[0]},${oc[1]},${oc[2]})`; ctx.fillRect(x-s/2,y-s/2,s,s);
+      ctx.fillStyle=`rgb(${ic[0]},${ic[1]},${ic[2]})`; ctx.fillRect(x-s/5,y-s/5,s*0.4,s*0.4);
+    }
+  }
+}
+
+// Rothko — large luminous color fields stacked on a related deep ground, the
+// way the mockups read: 2–3 big rectangles that nearly fill the cell, colors
+// MORE saturated than the source (they glow, not mute), strong contrast
+// between stacked fields, and soft cloudy edges where the ground bleeds
+// through. Colors come from gc() so the cell tracks the active color mode.
+function drawRothko(ctx,bx,by,notes,gc,BW,BH){
+  const rnd=_seedRnd(bx,by,BW,BH);
+  const sorted=[...notes].sort((a,b)=>b.m-a.m), n=sorted.length;
+
+  // Saturation booster — opposite of muting: stretch the brightest channel to
+  // full and deepen the others, so fields glow like Rothko's stained washes.
+  const lume=(r,g,b,boost)=>{
+    const mx=Math.max(r,g,b,1), k=(255*boost)/mx;
+    let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);
+    const pull=(c)=>c===m2?c:c*0.7;
+    return [Math.min(255,pull(R)),Math.min(255,pull(G)),Math.min(255,pull(B))];
+  };
+  const voiceCol=(i)=>{ const nt=sorted[((i%Math.max(1,n))+n)%Math.max(1,n)]||{m:60,v:80}; const[r,g,b]=gc(nt.m,nt.v); return [r,g,b]; };
+
+  // GROUND — a deep, rich version of the LOWEST voice (the brooding maroon /
+  // dark violet surround in the refs), not a muddy average.
+  let gr=40,gg=22,gb=34;
+  if(n){ const [r,g,b]=voiceCol(n-1); const d=lume(r,g,b,0.5); gr=Math.round(d[0]*0.6+10); gg=Math.round(d[1]*0.6+6); gb=Math.round(d[2]*0.6+12); }
+  ctx.fillStyle=`rgb(${gr},${gg},${gb})`; ctx.fillRect(bx-1,by-1,BW+2,BH+2);
+
+  // FIELDS — 2 (or 3 for dense chords). They nearly fill the cell with small
+  // margins; each field a different voice so stacked fields contrast strongly.
+  const fields = n>=4 ? 3 : 2;
+  const marginX = BW*0.07;
+  const gap = BH*0.05;
+  const topPad = BH*0.06, botPad = BH*0.06;
+  const usableH = BH - topPad - botPad - gap*(fields-1);
+  // asymmetric heights (Rothko rarely splits evenly) — random weights
+  const weights=[]; let wsum=0;
+  for(let f=0;f<fields;f++){ const w=0.8+rnd()*0.8; weights.push(w); wsum+=w; }
+
+  // Field with a SOLID opaque core and a soft rim on all four sides. Core is
+  // drawn once at full strength; the rim is a band of fading rectangles just
+  // inside each edge so the field dissolves into the ground without thinning
+  // the whole field (which would let the dark ground dominate).
+  const drawField=(fx,fy,fw,fh,col)=>{
+    const [r,g,b]=col; const R=r|0,G=g|0,B=b|0;
+    const rimX=Math.max(4,fw*0.12), rimY=Math.max(4,fh*0.12);
+    // 1) solid core
+    ctx.fillStyle=`rgb(${R},${G},${B})`;
+    ctx.fillRect(fx+rimX, fy+rimY, fw-2*rimX, fh-2*rimY);
+    // 2) feather each side outward with fading alpha steps
+    const STEPS=14;
+    for(let s=0;s<STEPS;s++){
+      const t=s/STEPS;                 // 0 at core edge → 1 at outer edge
+      const a=(1-t)*(1-t)*0.9;         // strong near core, →0 at rim
+      ctx.fillStyle=`rgba(${R},${G},${B},${a.toFixed(3)})`;
+      const ox=rimX*t, oy=rimY*t;
+      // top rim
+      ctx.fillRect(fx+rimX-ox, fy+rimY-oy, fw-2*(rimX-ox), oy+1);
+      // bottom rim
+      ctx.fillRect(fx+rimX-ox, fy+fh-rimY+oy-1, fw-2*(rimX-ox), oy+1);
+      // left rim
+      ctx.fillRect(fx+rimX-ox, fy+rimY-oy, ox+1, fh-2*(rimY-oy));
+      // right rim
+      ctx.fillRect(fx+fw-rimX+ox-1, fy+rimY-oy, ox+1, fh-2*(rimY-oy));
+    }
+    // 3) faint outer halo so colour seeps into the ground (luminous bleed)
+    const hg=ctx.createRadialGradient(fx+fw/2,fy+fh/2,Math.min(fw,fh)*0.25, fx+fw/2,fy+fh/2,Math.max(fw,fh)*0.7);
+    hg.addColorStop(0,`rgba(${R},${G},${B},0.14)`);
+    hg.addColorStop(1,`rgba(${R},${G},${B},0)`);
+    ctx.fillStyle=hg; ctx.fillRect(fx-fw*0.12,fy-fh*0.12,fw*1.24,fh*1.24);
+  };
+
+  let cy=by+topPad;
+  for(let f=0;f<fields;f++){
+    const fh=usableH*(weights[f]/wsum);
+    const baseCol=voiceCol(f);
+    // glow: brighter for upper fields, deeper for lower (Rothko's light logic)
+    const boost = 1.05 - f*0.12;
+    const col=lume(baseCol[0],baseCol[1],baseCol[2], Math.max(0.7,boost));
+    drawField(bx+marginX, cy, BW-2*marginX, fh, col);
+    cy += fh + gap;
+  }
+}
+
+// Matisse — paper cut-outs, mixing two of his signatures per the refs:
+//   • NESTED FRAME (Jazz plates): concentric flat-color rectangle borders with
+//     an organic white figure / blob in the center panel.
+//   • SCATTERED CUT-OUTS: free organic blobs, four-point stars and leaf fronds
+//     strewn on a contrasting ground.
+// Per cell, one mode is chosen (stable via cell seed); both use flat opaque
+// color straight from the voice palette.
+function drawMatisse(ctx,bx,by,notes,gc,BW,BH){
+  // Seed includes _artistSeed so Random (🎲) / Vary actually re-roll Matisse —
+  // previously the seed was pure cell position, so re-rolling changed nothing.
+  _RND_STATE[0] = ((bx*73)^(by*113)^(BW*271)^(BH*947)^(_artistSeed*2654435761))>>>0;
+  const rnd=_rnd;
+  const sorted=[...notes].sort((a,b)=>b.m-a.m), n=Math.max(1,sorted.length);
+  const col=(i)=>{ const nt=sorted[((i%n)+n)%n]||{m:60,v:70}; const[r,g,b]=gc(nt.m,nt.v); return [r,g,b]; };
+
+  // organic scissored blob
+  const blob=(cx,cy,rad,wob,pts)=>{ ctx.beginPath();
+    for(let i=0;i<=pts;i++){ const ang=(i/pts)*Math.PI*2; const rr=rad*(1+wob*Math.sin(ang*(2+Math.floor(rnd()*3))+rnd()*3));
+      const x=cx+Math.cos(ang)*rr, y=cy+Math.sin(ang)*rr*0.92; if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.closePath();ctx.fill(); };
+  const star=(cx,cy,rad)=>{ ctx.beginPath();
+    for(let i=0;i<8;i++){ const ang=(i/8)*Math.PI*2 - Math.PI/2; const rr=(i%2===0)?rad:rad*0.36;
+      const x=cx+Math.cos(ang)*rr, y=cy+Math.sin(ang)*rr; if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.closePath();ctx.fill(); };
+  const leaf=(cx,cy,len,wid,rot)=>{ ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
+    ctx.beginPath();ctx.moveTo(0,-len*0.5); ctx.bezierCurveTo(wid,-len*0.2,wid,len*0.3,0,len*0.5); ctx.bezierCurveTo(-wid,len*0.3,-wid,-len*0.2,0,-len*0.5);
+    ctx.closePath();ctx.fill();ctx.restore(); };
+  // Algae/coral frond — branching curved arm (a very Matisse cut-out form)
+  const algae=(cx,cy,scale,rot)=>{ ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
+    ctx.beginPath();
+    const lobes=3+Math.floor(rnd()*3);
+    ctx.moveTo(0,scale*0.9);
+    for(let i=0;i<=lobes;i++){ const t=i/lobes; const y=scale*(0.9-1.8*t); const w=scale*(0.5*Math.sin(t*Math.PI)+0.12);
+      ctx.quadraticCurveTo(w*1.6, y+scale*0.1, w*0.2, y-scale*0.18); }
+    for(let i=lobes;i>=0;i--){ const t=i/lobes; const y=scale*(0.9-1.8*t); const w=scale*(0.5*Math.sin(t*Math.PI)+0.12);
+      ctx.quadraticCurveTo(-w*1.6, y+scale*0.1, -w*0.2, y-scale*0.18); }
+    ctx.closePath();ctx.fill();ctx.restore(); };
+
+  // Composition mode now depends on the (re-rollable) seed, not cell position.
+  const nested = rnd()<0.5;
+
+  if(nested && n>=1){
+    // ── NESTED FRAME ── concentric rectangles in successive voice colors
+    const layers=Math.min(4, 2+Math.floor(n*0.6));
+    let ix=bx, iy=by, iw=BW, ih=BH;
+    for(let l=0;l<layers;l++){
+      const [r,g,b]=col(l);
+      ctx.fillStyle=`rgb(${r},${g},${b})`;
+      ctx.fillRect(ix,iy,iw,ih);
+      const insx=iw*(0.10+rnd()*0.08), insy=ih*(0.10+rnd()*0.08);
+      ix+=insx; iy+=insy; iw-=2*insx; ih-=2*insy;
+      if(iw<6||ih<6) break;
+    }
+    // organic figure in the innermost panel — white, or a contrasting voice
+    const figCol = rnd()<0.6 ? [244,241,232] : col(n);
+    ctx.fillStyle=`rgb(${figCol[0]|0},${figCol[1]|0},${figCol[2]|0})`;
+    const cx=ix+iw/2, cy=iy+ih/2, rad=Math.min(iw,ih)*0.42;
+    const fk=Math.floor(rnd()*3);
+    if(fk===0) blob(cx,cy,rad,0.30,9+Math.floor(rnd()*3));
+    else if(fk===1){ blob(cx,cy-rad*0.4,rad*0.6,0.25,8); blob(cx,cy+rad*0.5,rad*0.8,0.30,9); } // figure
+    else algae(cx,cy,rad*1.1,(rnd()-0.5)*0.8);
+    return;
+  }
+
+  // ── SCATTERED CUT-OUTS ── flat ground + strewn shapes
+  let gr=22,gg=20,gb=26;
+  { const [r,g,b]=col(n-1); gr=Math.round(r*0.5); gg=Math.round(g*0.5); gb=Math.round(b*0.5); }
+  ctx.fillStyle=`rgb(${gr},${gg},${gb})`; ctx.fillRect(bx-1,by-1,BW+2,BH+2);
+  // shape count varies with the seed so density differs between re-rolls
+  sorted.forEach((note,vi)=>{
+    const [r,g,b]=gc(note.m,note.v);
+    ctx.fillStyle=`rgb(${r},${g},${b})`;
+    const cx=bx+BW*(0.18+rnd()*0.64), cy=by+BH*((vi+0.5)/n + (rnd()-0.5)*0.18), base=Math.min(BW,BH/n)*0.6;
+    const kind=Math.floor(rnd()*4);
+    if(kind===0) blob(cx,cy,base*(0.7+rnd()*0.5),0.24+rnd()*0.14,9+Math.floor(rnd()*4));
+    else if(kind===1) star(cx,cy,base*(0.8+rnd()*0.5));
+    else if(kind===2) leaf(cx,cy,base*(1.6+rnd()*0.7),base*(0.45+rnd()*0.25),(rnd()-0.5)*2.2);
+    else algae(cx,cy,base*(1.0+rnd()*0.5),(rnd()-0.5)*2.4);
+    if(rnd()<0.35 && n>1){ const o=col(vi+1); ctx.fillStyle=`rgb(${o[0]},${o[1]},${o[2]})`;
+      const ak=Math.floor(rnd()*2);
+      if(ak===0) blob(bx+BW*(0.15+rnd()*0.7), by+BH*(0.15+rnd()*0.7), base*0.32,0.3,7);
+      else star(bx+BW*(0.15+rnd()*0.7), by+BH*(0.15+rnd()*0.7), base*0.3);
+    }
+  });
+}
 function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
+  if(style==='mondrian')return drawMondrian(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='rothko')return drawRothko(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='matisse')return drawMatisse(ctx,bx,by,notes,gc,BW,BH);
   if(style==='picasso'){
     // Picasso has its own canvas-wide cubist plane overlay that supplies all
     // color. The per-block drawer just keeps the dark canvas underneath —
@@ -1324,6 +1634,161 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
   return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
+}
+
+// ── Shared helper for the Kusama-style overlays (Rothko, Matisse) ──
+// Builds a recursive guillotine partition of the WHOLE canvas (normalized
+// 0..1), splitting the largest rect each step. The rect COUNT is capped and
+// scaled to track length so long tracks get more regions but never collapse
+// into a fine pixel grid (same idea as drawKusamaOverlay). Returns the rect
+// list plus the paintCount (how many are "revealed" at the current lim).
+//
+// PERF: the partition geometry depends only on (chordCount, ss, seedBase,
+// capScale) — NOT on lim. During playback this is called every frame with a
+// growing lim, so without caching we rebuilt the whole O(n²) partition ~7×/sec,
+// which starved the audio scheduler. We memoize the rect array keyed on the
+// stable inputs; only paintCount (cheap) recomputes per frame.
+let _partCache = { key:'', rects:null, MAX_RECTS:0 };
+function _partitionCanvas(chords, lim, ss, seedBase, capScale){
+  const cs = capScale||1;
+  const cn = chords.length;
+  const MAX_RECTS=Math.max(2,Math.min(cn,Math.round((
+    cn<=60 ? cn
+    :cn<=120 ? 60+Math.floor((cn-60)*0.5)
+    :cn<=300 ? 90+Math.floor((cn-120)*0.30)
+    :cn<=600 ? 144+Math.floor((cn-300)*0.12)
+    :180
+  )*cs)));
+  const paintCount=Math.min(MAX_RECTS,Math.max(1,Math.round(lim*(MAX_RECTS/cn))));
+  const key = cn+'|'+(ss|0)+'|'+seedBase+'|'+cs;
+  if(_partCache.key===key && _partCache.rects){
+    return {rects:_partCache.rects, MAX_RECTS:_partCache.MAX_RECTS, paintCount};
+  }
+  let rects=[{x:0,y:0,w:1,h:1}];
+  for(let cut=0;cut<MAX_RECTS-1;cut++){
+    const cr=_seedRnd(cut+seedBase,ss,0,0);
+    let bigIdx=0,bigArea=0;
+    for(let i=0;i<rects.length;i++){const a=rects[i].w*rects[i].h;if(a>bigArea){bigArea=a;bigIdx=i;}}
+    const r=rects[bigIdx];
+    const splitPos=0.32+cr()*0.36;
+    let r1,r2;
+    if(r.w>=r.h){const sw=r.w*splitPos;r1={x:r.x,y:r.y,w:sw,h:r.h};r2={x:r.x+sw,y:r.y,w:r.w-sw,h:r.h};}
+    else{const sh=r.h*splitPos;r1={x:r.x,y:r.y,w:r.w,h:sh};r2={x:r.x,y:r.y+sh,w:r.w,h:r.h-sh};}
+    rects.splice(bigIdx,1,r1,r2);
+  }
+  _partCache = { key, rects, MAX_RECTS };
+  return {rects, MAX_RECTS, paintCount};
+}
+// Sample a representative color for the rect at index pIdx by mapping it back
+// onto a chord in the piece — same mapping Kusama uses.
+function _rectChordColor(chords, pIdx, MAX_RECTS, gc){
+  const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/MAX_RECTS)))];
+  const notes=chord.n||chord.notes||(Array.isArray(chord)?chord:null);
+  if(!notes||!notes.length) return [120,100,140];
+  let R=0,G=0,B=0,c=0;
+  for(const note of notes){const m=note.m!==undefined?note.m:note,v=note.v!==undefined?note.v:80;const[r,g,b]=gc(m,v);R+=r;G+=g;B+=b;c++;}
+  return [R/c,G/c,B/c];
+}
+
+// Rothko canvas-wide overlay. Instead of the rigid per-cell square grid (which
+// goes pixely on long tracks), Rothko renders on the capped recursive
+// partition: a composition of large, soft, luminous color fields filling the
+// whole canvas. Each region = one big stained rectangle with feathered edges,
+// colored from a sampled chord. Long tracks read as one unified Rothko.
+function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim||!chords||!chords.length) return;
+  const ss=sessionSeed|0;
+  const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,1200,0.18);
+  const lume=(r,g,b,boost)=>{const mx=Math.max(r,g,b,1),k=(255*boost)/mx;let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);const pull=(x)=>x===m2?x:x*0.7;return[Math.min(255,pull(R)),Math.min(255,pull(G)),Math.min(255,pull(B))];};
+  ctx.fillStyle='#0c0a12'; ctx.fillRect(0,0,CW,CH);
+  rects.forEach((rect,pIdx)=>{
+    const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
+    if(pIdx>=paintCount){ return; }
+    const rnd=_seedRnd(pIdx+1500,ss,0,0);
+    const base=_rectChordColor(chords,pIdx,MAX_RECTS,gc);
+    const gC=lume(base[0],base[1],base[2],0.42);
+    ctx.fillStyle=`rgb(${gC[0]|0},${gC[1]|0},${gC[2]|0})`; ctx.fillRect(bx,by,BW,BH);
+    const col=lume(base[0],base[1],base[2], 0.95+rnd()*0.12);
+    const R=col[0]|0,G=col[1]|0,B=col[2]|0;
+    const rimX=Math.max(3,BW*0.10), rimY=Math.max(3,BH*0.12);
+    if(BW-2*rimX<=2||BH-2*rimY<=2){ ctx.fillStyle=`rgb(${R},${G},${B})`; ctx.fillRect(bx,by,BW,BH); return; }
+    ctx.fillStyle=`rgb(${R},${G},${B})`;
+    ctx.fillRect(bx+rimX, by+rimY, BW-2*rimX, BH-2*rimY);
+    const STEPS=12;
+    for(let s=0;s<STEPS;s++){const t=s/STEPS,a=(1-t)*(1-t)*0.9,ox=rimX*t,oy=rimY*t;
+      ctx.fillStyle=`rgba(${R},${G},${B},${a.toFixed(3)})`;
+      ctx.fillRect(bx+rimX-ox, by+rimY-oy, BW-2*(rimX-ox), oy+1);
+      ctx.fillRect(bx+rimX-ox, by+BH-rimY+oy-1, BW-2*(rimX-ox), oy+1);
+      ctx.fillRect(bx+rimX-ox, by+rimY-oy, ox+1, BH-2*(rimY-oy));
+      ctx.fillRect(bx+BW-rimX+ox-1, by+rimY-oy, ox+1, BH-2*(rimY-oy));
+    }
+  });
+}
+
+// Matisse canvas-wide overlay. Like Mondrian's Classic/Boogie split, Matisse
+// commits to ONE of its two signatures per painting (stable from the session
+// seed, re-rolls on Vary/Random):
+//   • NESTED FRAME (Jazz plates): each region = concentric flat-color borders
+//     in successive voice colors with an organic figure in the centre panel.
+//   • SCATTERED CUT-OUTS: each region = a flat saturated ground with one large
+//     strewn organic shape (blob / star / leaf / algae frond).
+function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim||!chords||!chords.length) return;
+  const ss=sessionSeed|0;
+  const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,2400,0.34);
+  // whole-painting mode choice (stable per painting, re-rolls on Vary/Random)
+  const nestedMode = ((ss>>>5)&1)===1;
+  ctx.fillStyle='#16120a'; ctx.fillRect(0,0,CW,CH);
+  const blob=(rnd,cx,cy,rad,wob,pts)=>{ctx.beginPath();for(let i=0;i<=pts;i++){const ang=(i/pts)*Math.PI*2;const rr=rad*(1+wob*Math.sin(ang*(2+Math.floor(rnd()*3))+rnd()*3));const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr*0.92;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.fill();};
+  const star=(cx,cy,rad)=>{ctx.beginPath();for(let i=0;i<8;i++){const ang=(i/8)*Math.PI*2-Math.PI/2;const rr=(i%2===0)?rad:rad*0.36;const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.fill();};
+  const leaf=(cx,cy,len,wid,rot)=>{ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();ctx.moveTo(0,-len*0.5);ctx.bezierCurveTo(wid,-len*0.2,wid,len*0.3,0,len*0.5);ctx.bezierCurveTo(-wid,len*0.3,-wid,-len*0.2,0,-len*0.5);ctx.closePath();ctx.fill();ctx.restore();};
+  const algae=(rnd,cx,cy,scale,rot)=>{ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();const lobes=3+Math.floor(rnd()*3);ctx.moveTo(0,scale*0.9);for(let i=0;i<=lobes;i++){const t=i/lobes;const y=scale*(0.9-1.8*t);const w=scale*(0.5*Math.sin(t*Math.PI)+0.12);ctx.quadraticCurveTo(w*1.6,y+scale*0.1,w*0.2,y-scale*0.18);}for(let i=lobes;i>=0;i--){const t=i/lobes;const y=scale*(0.9-1.8*t);const w=scale*(0.5*Math.sin(t*Math.PI)+0.12);ctx.quadraticCurveTo(-w*1.6,y+scale*0.1,-w*0.2,y-scale*0.18);}ctx.closePath();ctx.fill();ctx.restore();};
+  rects.forEach((rect,pIdx)=>{
+    const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
+    if(pIdx>=paintCount){ return; }
+    const rnd=_seedRnd(pIdx+2500,ss,0,0);
+    const base=_rectChordColor(chords,pIdx,MAX_RECTS,gc);
+
+    if(nestedMode){
+      // ── NESTED FRAME ── concentric voice-color rectangles + centre figure
+      const layers=Math.min(4,2+Math.floor(Math.min(BW,BH)/60));
+      let ix=bx,iy=by,iw=BW,ih=BH;
+      for(let l=0;l<layers;l++){
+        const c=_rectChordColor(chords,(pIdx+l)%MAX_RECTS,MAX_RECTS,gc);
+        // alternate brightness per ring so borders read distinctly
+        const f=(l%2===0)?1.0:0.7;
+        ctx.fillStyle=`rgb(${Math.min(255,Math.round(c[0]*f))},${Math.min(255,Math.round(c[1]*f))},${Math.min(255,Math.round(c[2]*f))})`;
+        ctx.fillRect(ix,iy,iw,ih);
+        const insx=iw*(0.12+rnd()*0.05), insy=ih*(0.12+rnd()*0.05);
+        ix+=insx; iy+=insy; iw-=2*insx; ih-=2*insy;
+        if(iw<6||ih<6) break;
+      }
+      if(Math.min(BW,BH)<10) return;
+      // organic figure in the innermost panel — white or a contrasting voice
+      const fig = rnd()<0.6 ? [244,241,232] : _rectChordColor(chords,(pIdx+5)%MAX_RECTS,MAX_RECTS,gc);
+      ctx.fillStyle=`rgb(${fig[0]|0},${fig[1]|0},${fig[2]|0})`;
+      const cx=ix+iw/2, cy=iy+ih/2, rad=Math.min(iw,ih)*0.42;
+      const fk=Math.floor(rnd()*3);
+      if(fk===0) blob(rnd,cx,cy,rad*(0.9+rnd()*0.2),0.28,9+Math.floor(rnd()*3));
+      else if(fk===1){ blob(rnd,cx,cy-rad*0.4,rad*0.6,0.25,8); blob(rnd,cx,cy+rad*0.5,rad*0.8,0.30,9); }
+      else algae(rnd,cx,cy,rad*1.05,(rnd()-0.5)*0.8);
+      return;
+    }
+
+    // ── SCATTERED CUT-OUTS ── flat ground + one strewn shape
+    const gr=Math.round(base[0]*0.7),gg=Math.round(base[1]*0.7),gb=Math.round(base[2]*0.7);
+    ctx.fillStyle=`rgb(${gr},${gg},${gb})`; ctx.fillRect(bx,by,BW,BH);
+    if(Math.min(BW,BH)<8) return;
+    const sib=_rectChordColor(chords,(pIdx+3)%MAX_RECTS,MAX_RECTS,gc);
+    const sr=Math.min(255,Math.round(sib[0]*1.05+10)),sg=Math.min(255,Math.round(sib[1]*1.05+10)),sb=Math.min(255,Math.round(sib[2]*1.05+10));
+    ctx.fillStyle=`rgb(${sr},${sg},${sb})`;
+    const cx=bx+BW*(0.4+rnd()*0.2), cy=by+BH*(0.4+rnd()*0.2), rad=Math.min(BW,BH)*0.42;
+    const kind=Math.floor(rnd()*4);
+    if(kind===0) blob(rnd,cx,cy,rad*(0.85+rnd()*0.3),0.26+rnd()*0.12,9+Math.floor(rnd()*3));
+    else if(kind===1) star(cx,cy,rad*(0.9+rnd()*0.25));
+    else if(kind===2) leaf(cx,cy,Math.min(BW,BH)*(1.3+rnd()*0.4),rad*0.6,(rnd()-0.5)*2.2);
+    else algae(rnd,cx,cy,rad*(1.1+rnd()*0.3),(rnd()-0.5)*2.4);
+  });
 }
 
 // Pollock canvas-wide drip overlay. Painted on the cream substrate to simulate
@@ -2347,6 +2812,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', backToSetup:'setup',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all',
     selectMood:'✦ select a mood…', morph:'✦ morph', vary:'✦ vary',
@@ -2389,6 +2855,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', backToSetup:'setup',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen',
     selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'✦ variieren',
@@ -2431,6 +2898,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', backToSetup:'réglage',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer',
     selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'✦ varier',
@@ -2473,6 +2941,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', backToSetup:'inicio',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo',
     selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'✦ variar',
@@ -2515,6 +2984,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', backToSetup:'nastavenie',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť',
     selectMood:'✦ vyber náladu…', morph:'✦ morf', vary:'✦ variácia',
@@ -3588,6 +4058,13 @@ export default function Paintiano() {
   // Tracks the last full-paint snapshot so playback can append incrementally
   // instead of re-running every artist-style draw from chord 0 on each `disp` tick.
   const lastPaintRef  = useRef({disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false});
+  // Throttle the expensive canvas-wide overlay repaint during playback. The
+  // overlay (Pollock/Picasso/Kusama/Miró/Kandinsky/Rothko/Matisse) is redrawn
+  // from scratch each frame; at ~7 frames/sec on a long track that starves the
+  // audio scheduler. We cap overlay repaints to ~9fps while playing — the
+  // reveal still looks smooth but the main thread stays free for audio. Audio
+  // timing itself is untouched (separate setTimeout chain).
+  const lastOverlayPaintRef = useRef(0);
   // Intro reveal animation: tracks the RAF id so it can be cancelled by clear()
   // or a subsequent load before the previous animation finishes.
   const introRafRef   = useRef(null);
@@ -3632,7 +4109,14 @@ export default function Paintiano() {
   const [paintVel,  setPaintVel]  = useState(88);
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
-  const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(()=>{try{const v=localStorage.getItem('paintiano_random')==='1';randomModeRef.current=v;return v;}catch(_){return false;}});const [rndSalt,setRndSalt]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  // Variation history for Random mode prev/next navigation. saltHistory holds
+  // the sequence of random salts that have been shown; saltIdxRef points at the
+  // current one. Play-from-start and Loop append+advance (fresh variation);
+  // Prev/Next step the index so you can browse back to a variation you liked.
+  const saltHistoryRef = useRef([0]);
+  const saltIdxRef = useRef(0);
+  const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
   const [lang, setLang] = useState(()=>{try{return localStorage.getItem('paintiano_lang')||'EN';}catch(_){return 'EN';}});
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
   const [anim,      setAnim]      = useState(false);
@@ -3768,6 +4252,20 @@ export default function Paintiano() {
     }
     return (h >>> 0) ^ (rndSalt>>>0);
   }, [chords, rndSalt]);
+  // Append a fresh random salt and make it current (used by Play-from-start and
+  // Loop replays when Random is on). Truncates any "future" entries if the user
+  // had stepped Back, so the timeline stays linear.
+  const advanceVariation = useCallback(()=>{
+    const salt=(Math.random()*0xffffffff)>>>0;
+    const hist=saltHistoryRef.current.slice(0, saltIdxRef.current+1);
+    hist.push(salt);
+    // Cap history so it can't grow unbounded over a long looping session.
+    if(hist.length>200) hist.splice(0, hist.length-200);
+    saltHistoryRef.current=hist;
+    saltIdxRef.current=hist.length-1;
+    setRndSalt(salt);
+    setVariationPos(saltIdxRef.current);
+  },[]);
   // Demo mode: true while a Für Elise demo session is active. Locks the
   // play action (Stop still works because it's the same button in playing state)
   // so the demo can't be re-triggered without an explicit clear.
@@ -3781,12 +4279,19 @@ export default function Paintiano() {
   const [showSizePicker, setShowSizePicker] = useState(false);
   // Inline "guide" modal: searchable how-to entries covering every feature.
   const [showGuide, setShowGuide] = useState(false);
+  // v2.6.0: in active view, Color/Style live in a strip that's collapsed by
+  // default (canvas gets the room) and expands on tap.
+  const [stripOpen, setStripOpen] = useState(false);
   const [guideQuery, setGuideQuery] = useState('');
   // Stable composite-close callback for GuideModal (same memo rationale as
   // closeAbout). Closes the modal and clears the search query in one action.
   const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');},[]);
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [currentMood, setCurrentMood] = useState(null);
+  // When a mood is picked the view flips to active and the setup panel (with
+  // MORPH/VARY) is replaced by the collapsed strip. Auto-open the strip on
+  // mood-select so those mood-refinement controls stay immediately reachable.
+  useEffect(()=>{ if(currentMood) setStripOpen(true); },[currentMood]);
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
   // Mood-hint flash: when the user taps a disabled morph/vary, the mood
@@ -3861,17 +4366,14 @@ export default function Paintiano() {
   useEffect(()=>{
     let dead=false;
     let s=null;
-    const init=()=>{
+    // Build the sampler shortly after mount rather than hanging it off the
+    // first global pointerdown. The old global-pointerdown approach ran on the
+    // user's very first tap and competed with the native <select>, so the mood
+    // dropdown needed two taps to open. Audio-context unlocking still happens
+    // in-gesture via unlockAudio() inside the action handlers (play/compose/etc),
+    // so deferring the sampler load here costs nothing.
+    const buildSampler=()=>{
       if(s||dead)return;
-      // First user gesture in the session — also use it to unlock the audio
-      // context. iOS WebKit requires Tone.start() (or rawContext.resume())
-      // to be called from inside a gesture handler; just creating the
-      // Sampler does NOT count. Without this, scheduling notes a few
-      // seconds later still hits a suspended context and produces silence —
-      // especially when the user's first action is Compose (which doesn't
-      // explicitly call play/demo before the first keypress).
-      try{Tone.start();}catch(_){}
-      try{const ac=Tone.getContext().rawContext;if(ac&&ac.state==='suspended')ac.resume().catch(()=>{});}catch(_){}
       s=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
         onload:()=>{if(!dead){samplerOk.current=true;setPiano('ready');}},
         onerror:()=>{if(!dead){
@@ -3881,12 +4383,11 @@ export default function Paintiano() {
         }},
       }).toDestination();
       samplerRef.current=s;
-      window.removeEventListener('pointerdown',init);
-      window.removeEventListener('keydown',init);
     };
-    window.addEventListener('pointerdown',init,{once:true});
-    window.addEventListener('keydown',init,{once:true});
-    return()=>{dead=true;window.removeEventListener('pointerdown',init);window.removeEventListener('keydown',init);try{s&&s.dispose();}catch(_){}samplerRef.current=null;samplerOk.current=false;};
+    const idleId = (typeof requestIdleCallback!=='undefined')
+      ? requestIdleCallback(buildSampler,{timeout:1200})
+      : setTimeout(buildSampler,300);
+    return()=>{dead=true;try{if(typeof cancelIdleCallback!=='undefined'&&typeof idleId==='number')cancelIdleCallback(idleId);}catch(_){}try{clearTimeout(idleId);}catch(_){}try{s&&s.dispose();}catch(_){}samplerRef.current=null;samplerOk.current=false;};
   },[]);
 
   const gc = useCallback((m,v)=>{
@@ -3910,6 +4411,8 @@ export default function Paintiano() {
       // Stopped: leave whatever pixels the animation painted
       return;
     }
+    // Per-painting seed for renderers needing a stable whole-painting choice.
+    _setArtistSeed(pollockSessionSeed);
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
@@ -3983,10 +4486,24 @@ export default function Paintiano() {
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
+      // Overlay styles repaint the whole canvas every frame. During active
+      // playback that's too costly ~7×/sec on long tracks, so throttle it to
+      // ~9fps. Always allow the paint when paused/stopped or on the final
+      // frame so the finished painting is fully rendered.
+      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse';
+      const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
+      if(isOverlayStyle && playing && lim<chords.length && (nowMs-lastOverlayPaintRef.current)<110){
+        // Skip this overlay repaint — keep last frame on canvas. Record disp so
+        // the next allowed repaint covers the gap.
+        prev.disp = lim; prev.pending = pending;
+        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused};
+        return;
+      }
+      lastOverlayPaintRef.current = nowMs;
       ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
       ctx.strokeStyle='rgba(255,255,255,0.025)';ctx.lineWidth=.5;
       for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*BW,0);ctx.lineTo(i*BW,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*BH);ctx.lineTo(CW,i*BH);ctx.stroke();}
@@ -4010,7 +4527,13 @@ export default function Paintiano() {
       if(style==='kandinsky' && lim>0){
         drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'){
+      if(style==='rothko' && lim>0){
+        drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+      }
+      if(style==='matisse' && lim>0){
+        drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+      }
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -4727,9 +5250,10 @@ export default function Paintiano() {
     pixelRef.current=null;setViewMode('paint');
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
-    if(!micPainting&&!micListening){
-      setCurrentMood(null);setVarySource(null);setSongQ('');
-    }
+    // NOTE: intentionally NOT clearing currentMood / varySource / songQ here.
+    // Clear wipes the CANVAS but keeps the current settings (mood, color, style)
+    // so you can replay the same mood. The file loaders reset the mood
+    // themselves before loading new content, so they don't rely on this.
     setDisp(0);setErr('');setStamp(s=>s+1);
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
     // After clear in a creative mode, mark the canvas as draft-owned by that
@@ -4738,6 +5262,21 @@ export default function Paintiano() {
     else if(micPainting) { composedModeRef.current=true; draftOwnerRef.current='sing'; }
     else if(micListening) { composedModeRef.current=true; draftOwnerRef.current='listen'; }
   },[stopAll,micPainting,micListening,composeMode]);
+
+  // Clear from the painting view. For a LOADED source (mood / MIDI / audio /
+  // score / image) we keep the music (chords) so Play can repaint it — we just
+  // stop playback and blank the canvas back to the start (disp=0). For compose
+  // / mic the "painting" IS the chord draft, so fall through to full clear().
+  const clearCanvas = useCallback(()=>{
+    const isLoaded = !composeMode && !micPainting && !micListening && chordsRef.current.length>0;
+    if(isLoaded){
+      stopAll();
+      setDisp(0); idxRef.current=chordsRef.current.length;
+      setStamp(s=>s+1);            // force a repaint to the blank-canvas state
+      return;
+    }
+    clear();
+  },[stopAll,clear,composeMode,micPainting,micListening]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -5129,7 +5668,10 @@ Composition rules:
     if(busy||!chords.length)return;unlockAudio();
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
-    if(!isResume)setRndSalt(randomModeRef.current?((Math.random()*0xffffffff)>>>0):0);
+    if(!isResume){
+      if(randomModeRef.current){ advanceVariation(); }
+      else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
+    }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
 
     // Audio mode: play via Web Audio API BufferSourceNode - supports precise offset natively
@@ -5267,7 +5809,7 @@ Composition rules:
       };
       step();
     }
-  },[busy,playNote,stopAll]);
+  },[busy,playNote,stopAll,advanceVariation]);
 
   const demoPlay=useCallback(()=>{
     if(busy)return;unlockAudio();
@@ -5713,6 +6255,7 @@ Composition rules:
           hctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;hctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
         }
       }else{
+        _setArtistSeed(pollockSessionSeed);
         chords.forEach(({n:notes,idx})=>{
           const cell=grid.cells&&grid.cells[idx];
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
@@ -5737,6 +6280,12 @@ Composition rules:
         // Kandinsky canvas-wide contour overlay.
         if(style==='kandinsky' && chords.length>0){
           drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode);
+        }
+        if(style==='rothko' && chords.length>0){
+          drawRothkoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+        }
+        if(style==='matisse' && chords.length>0){
+          drawMatisseOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
         }
       }
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
@@ -5784,154 +6333,241 @@ Composition rules:
     setPreview(null);
   };
 
+  // ── v2.6.0 view state ───────────────────────────────────────────────
+  // Setup view: idle, nothing on canvas, no live mode — show the full bright
+  // control panel (Source / Mood / Color / Style). This is where exploration
+  // and onboarding happen.
+  // Active view: a painting exists, playback is running, a creation mode is
+  // live, OR a source file is being processed (working) — collapse the setup
+  // panel and give the screen to the canvas + transport. Including `working`
+  // means picking Audio/Score/Image jumps straight to the canvas and shows the
+  // transcription progress above it, instead of appearing to hang on setup.
+  const [stayActive, setStayActive] = useState(false);
+  const isActiveView = playing || chords.length>0 || composeMode || micActive || working || stayActive;
+  // Latch stayActive whenever we're genuinely active (content on canvas, a live
+  // mode, or processing). Once latched, Clear can empty the canvas without
+  // bouncing back to setup; only "← Setup" un-latches it.
+  useEffect(()=>{
+    if(playing||chords.length>0||composeMode||micActive||working){ setStayActive(true); }
+  },[playing,chords.length,composeMode,micActive,working]);
+  const isSetupView = !isActiveView;
+
   return (
-    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:(playing||chords.length>0||composeMode)?'48px 16px 220px':'48px 16px',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",color:'rgba(207,197,168,.85)',touchAction:'manipulation'}}>
+    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?'48px 16px 220px':'48px 16px',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE}}/>
+      <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <nav style={{display:'flex',gap:18,fontSize:'.6rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
+          <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)'}}>{t('concept')}</span>
+          <span onClick={()=>{
+            if(busy)return;
+            if(demoArmed){
+              if(demoArmRef.current){clearTimeout(demoArmRef.current);demoArmRef.current=null;}
+              setDemoArmed(false);
+              demoPlay();
+            }else if(!chords.length){
+              demoPlay();
+            }else{
+              setDemoArmed(true);
+              demoArmRef.current=setTimeout(()=>{setDemoArmed(false);demoArmRef.current=null;},3000);
+            }
+          }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.55)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.85)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
+          <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)'}}>{t('guide')}</span>
+        </nav>
+        <button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} aria-label={`switch language (currently ${lang})`} title={`switch language (currently ${lang})`} style={{padding:'5px 13px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.14em'}}>{lang}</button>
+      </div>
       <header style={{textAlign:'center',marginBottom:18}}>
-        <h1 style={{fontSize:'2.2rem',fontWeight:300,letterSpacing:'.18em',margin:'0 0 4px',color:'rgba(201,168,76,.9)',paddingLeft:'.18em'}}>Paintiano</h1>
-        <p style={{fontSize:'.6rem',letterSpacing:'.3em',opacity:.7,margin:'0 0 4px',textTransform:'uppercase',paddingLeft:'.3em'}}><span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:1,borderBottom:'1px dotted rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)',opacity:1}}>{t('concept')}</span> <span onClick={()=>{
-          if(busy)return;
-          if(demoArmed){
-            if(demoArmRef.current){clearTimeout(demoArmRef.current);demoArmRef.current=null;}
-            setDemoArmed(false);
-            demoPlay();
-          }else if(!chords.length){
-            // Empty canvas — fire immediately, no confirm needed
-            demoPlay();
-          }else{
-            // Has content — ask once before replacing
-            setDemoArmed(true);
-            demoArmRef.current=setTimeout(()=>{setDemoArmed(false);demoArmRef.current=null;},3000);
-          }
-        }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.55)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.85)',opacity:1,transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span> <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',marginLeft:6,paddingBottom:1,borderBottom:'1px dotted rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)',opacity:1}}>{t('guide')}</span><span style={{marginLeft:18,opacity:1}}><button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} aria-label={`switch language (currently ${lang})`} title={`switch language (currently ${lang})`} style={{padding:'4px 10px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.45)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em'}}>{lang}</button></span></p>
-        <div style={{fontSize:'.55rem',letterSpacing:'.1em',opacity:.8,color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
       </header>
 
-      <div style={{display:'flex',gap:10,marginBottom:6,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
-        <div style={{display:'flex',border:'1px solid rgba(201,168,76,.25)',borderRadius:2,overflow:'hidden',flexShrink:0}}>
-          {['harmony','spectral','bw','custom'].map(m=>(
-            <button key={m} onClick={()=>{
+      {/* ─────────────────────────────────────────────────────────────
+          v2.6.0 control panel. Grouped into four labelled sections:
+          Source → Color → Style → Mood. Layout/skin only — every button
+          handler is identical to v2.5.0. Sections separated by spacing +
+          hairline dividers; labels are tiny and faded (recede for return
+          users, orient first-timers). lbl() / divider markup inline.
+          ───────────────────────────────────────────────────────────── */}
+      {isSetupView && (
+      <div className="pf-fade" style={{width:'100%',maxWidth:560,display:'flex',flexDirection:'column',gap:14,marginBottom:18}}>
+
+        {/* ── MOOD HERO CTA ── pick a feeling, AI composes. MORPH/VARY are not
+            shown here: they need a mood already playing, so they live in the
+            active-view strip that appears once you've picked one. ── */}
+        <div style={{position:'relative',display:'flex',alignItems:'center',background:PF.card,border:`2px solid ${PF.gold}`,borderRadius:14,overflow:'hidden'}} className="pf-moodcta">
+          <span style={{position:'absolute',left:16,fontSize:'1rem',color:PF.gold,pointerEvents:'none',zIndex:1}}>✦</span>
+          <select
+            value={songQ}
+            onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);setLoadedSource(null);aiMidi(e.target.value);if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);}}}
+            onFocus={()=>setFocusedInput('mood')}
+            onBlur={()=>setFocusedInput(null)}
+            disabled={sourcePickerLocked}
+            title={recording?t('stopRecFirst'):undefined}
+            style={{flex:1,minWidth:0,background:'transparent',border:'none',borderRadius:14,padding:'15px 40px',color:songQ?PF.cream:moodHint?'rgba(220,170,255,.95)':'rgba(242,238,232,.55)',fontSize:'.95rem',fontFamily:"'Cormorant Garamond',serif",fontStyle:songQ?'normal':'italic',outline:'none',opacity:sourcePickerLocked?0.4:1,letterSpacing:'.02em',cursor:'pointer',appearance:'none',textTransform:'capitalize',position:'relative',zIndex:1,textAlign:'left'}}>
+            <option value="">{t('selectMood').replace('✦ ','')}</option>
+            {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
+            {MOOD_OPTIONS}
+          </select>
+          <span style={{position:'absolute',right:16,fontSize:'.7rem',color:PF.gold,pointerEvents:'none'}}>▾</span>
+        </div>
+
+        {/* ── MAIN PANEL ── color · style · source ── */}
+        <div style={{background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:20,padding:20,display:'flex',flexDirection:'column',gap:18}}>
+
+          {/* COLOR MODE */}
+          <div>
+            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('colorLabel')}</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+              {['harmony','spectral','bw','custom'].map(m=>(
+              <button key={m} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+                if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+              }} style={{padding:'10px 0',textAlign:'center',fontSize:'.62rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'all .18s',border:'1px solid transparent',color:mode===m?PF.bg:PF.muted,background:mode===m?PF.gold:PF.card2,boxShadow:mode===m?'0 3px 12px rgba(240,192,64,.35)':'none'}}>{t(m)}</button>
+              ))}
+            </div>
+            {mode==='custom' && (
+              <button onClick={()=>setShowPaletteEditor(true)} aria-label={t('editPalette')} title={t('editPalette')} className="pf-lift" style={{marginTop:8,padding:'8px 14px',borderRadius:10,border:`1px solid ${PF.gold}`,background:'transparent',color:PF.gold,cursor:'pointer',fontFamily:'inherit',fontSize:'.62rem',letterSpacing:'.08em'}}>✏ {t('editPalette')}</button>
+            )}
+          </div>
+
+          {/* ARTIST STYLE */}
+          <div>
+            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('styleLabel')}</div>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap',rowGap:8}} title="painting style — tap again to deselect (mosaic default)">
+              {[['picasso','picasso'],['kusama','kusama'],['pollock','pollock'],['kandinsky','kandinsky'],['miro','miro'],['mondrian','mondrian'],['rothko','rothko'],['matisse','matisse']].map(([k,label])=>(
+                <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>{
+                  if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                  setTimeout(()=>{setStyle(style===k?null:k);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+                }} style={{flexShrink:0,padding:'8px 13px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:PF.muted,background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:'rgba(242,238,232,.08)'),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{label}</button>
+              ))}
+              <button onClick={()=>setRandomMode(v=>!v)} className="pf-artist pf-dice" title={randomMode?'random ON · tap to turn off · next Play will produce a new variation':'random OFF · tap to enable · next Play will produce a unique variation'} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+            </div>
+          </div>
+
+          <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
+
+          {/* SOURCE — input tiles */}
+          <div>
+            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('sourceLabel')}</div>
+            <input ref={refMidi} type="file" accept="audio/midi,audio/x-midi,application/octet-stream,.mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
+            <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
+            <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
+            <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
+              <button className="pf-tool pf-midi" onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('midi');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:sourcePickerLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{t('midi').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-audio" onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('audio');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:working&&wLabel.includes('audio')?PF.gold:sourcePickerLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-score" onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('score');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:working&&wLabel.includes('score')?PF.purple:sourcePickerLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('image');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:sourcePickerLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{t('image').replace(/[^A-Za-z]/g,'')}</span></button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:8}}>
+              <button className="pf-compose" onClick={()=>{
+                if(busy)return;
+                if(!composeMode&&(micPainting||micListening))return;
+                if(!composeMode){
+                  unlockAudio();
+                  const owner = draftOwnerRef.current;
+                  if(owner==='compose'){ setComposeMode(true); return; }
+                  if(owner) stashDraft(owner);
+                  if(!restoreStash('compose')){
+                    resetCanvasForDraft('compose');
+                    setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
+                    audioBlobRef.current=null;setCurrentMood(null);setVarySource(null);setSongQ('');setLoadedSource(null);
+                  }
+                  setComposeMode(true);
+                } else setComposeMode(false);
+              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:PF.green,background:composeMode?'linear-gradient(135deg,#255e46,#3a8a66)':hasComposeDraft?'linear-gradient(135deg,#1e4d38,#2d6e52)':'linear-gradient(135deg,#18331f,#1e4d38)',border:'1px solid '+(composeMode?'rgba(78,203,141,.6)':'rgba(78,203,141,.25)'),opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>♪ {composeMode?t('composing').replace(/[^A-Za-z ]/g,''):t('compose').replace(/[^A-Za-z ]/g,'')}</button>
+              <button className="pf-mic" onClick={()=>{
+                if(busy && !micActive) return;
+                if(!micActive && composeMode) return;
+                if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); return; }
+                setPickMode('mic');
+              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):PF.purple,background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(169,127,245,.12)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(169,127,245,.25)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^A-Za-z ]/g,''):t('mic').replace(/[^A-Za-z ]/g,'')}</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      )}
+
+      {/* ── Active-view strip ── Color + Style stay reachable while a painting
+          is on the canvas, without the full setup panel. Collapsed by default
+          so the canvas keeps the room; tap the header to expand. ── */}
+      {isActiveView && (
+      <div style={{width:'100%',maxWidth:480,marginBottom:12}}>
+        {/* Back to setup — abandons the current mood/source and returns to the
+            clean setup screen. clear() resets chords + mood + source, which
+            flips isActiveView back to false. */}
+        <div style={{display:'flex',justifyContent:'flex-start',marginBottom:8}}>
+          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);if(composeMode)setComposeMode(false);if(micPainting)stopMicPainting();if(micListening)stopMicListening();clear();setStripOpen(false);setStayActive(false);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+        </div>
+        <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:'.5rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
+          <span>{t('colorLabel')} · {t('styleLabel')}</span>
+          <span style={{fontSize:'.7rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
+        </button>
+        {stripOpen && (
+        <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
+          {/* Morph / Vary — only meaningful for a mood-based painting */}
+          {currentMood && (
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            <button className="pf-morph" onClick={()=>{
+              if(sourcePickerLocked)return;
+              if(!currentMood){flashMoodHint();return;}
+              if(!chords.length)return;
+              setShowMorphMenu(true);
+            }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:'.64rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:chords.length&&currentMood&&!sourcePickerLocked?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.3)',opacity:chords.length&&currentMood&&!sourcePickerLocked?1:.55,transition:'all .18s'}}>{t('morph')}</button>
+            <button className="pf-vary" onClick={()=>{
+              // VARY is allowed while PLAYING (no need to pause first), but not
+              // during compose/mic/recording/processing, and not on an empty
+              // canvas. If it was playing, restart from the beginning with the
+              // new variation; if NOT playing, just load it (don't auto-play).
+              const varyBlocked = composeMode||micPainting||micListening||recording||working;
+              if(varyBlocked) return;
+              if(!varySource||!chords.length){flashMoodHint();return;}
+              const varied=rerollSong(varySource);
+              if(!varied)return;
+              const wasPlaying=playing;
+              setVarySource(varied);
+              stopAll();
+              const evts=noteArr2events(varied.notes,varied.tempo);
+              if(!evts.length){setErr('Variation produced no notes');return;}
+              applyEvents(evts,varied.title+' ·');
+              const bytes=encodeMidi(evts,varied.tempo||100);
+              setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
+              setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
+              setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
+              // Only restart playback if it was already playing. When stopped,
+              // VARY just loads the new variation (canvas blank, ready to Play).
+              if(wasPlaying){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
+            }} disabled={composeMode||micPainting||micListening||recording||working||!chords.length} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:'.64rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?1:.55,transition:'all .18s'}}>{t('vary')}</button>
+          </div>
+          )}
+          {/* Color */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+            {['harmony','spectral','bw','custom'].map(m=>(
+            <button key={m} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
               if(canvasRef.current){canvasRef.current.style.opacity='0';}
               setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-            }} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 16px',background:mode===m?'rgba(201,168,76,.18)':'transparent',color:mode===m?GOLD:'rgba(230,222,196,.7)'}}>{t(m)}</button>
-          ))}
+            }} style={{padding:'8px 0',textAlign:'center',fontSize:'.6rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'all .18s',border:'1px solid transparent',color:mode===m?PF.bg:PF.muted,background:mode===m?PF.gold:PF.card2,boxShadow:mode===m?'0 3px 12px rgba(240,192,64,.35)':'none'}}>{t(m)}</button>
+            ))}
+          </div>
+          {mode==='custom' && (
+            <button onClick={()=>setShowPaletteEditor(true)} aria-label={t('editPalette')} title={t('editPalette')} className="pf-lift" style={{padding:'7px 12px',borderRadius:10,border:`1px solid ${PF.gold}`,background:'transparent',color:PF.gold,cursor:'pointer',fontFamily:'inherit',fontSize:'.6rem',letterSpacing:'.08em',alignSelf:'flex-start'}}>✏ {t('editPalette')}</button>
+          )}
+          {/* Style */}
+          <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap',rowGap:6,flex:1}} title="painting style — tap again to deselect (mosaic default)">
+              {[['picasso','picasso'],['kusama','kusama'],['pollock','pollock'],['kandinsky','kandinsky'],['miro','miro'],['mondrian','mondrian'],['rothko','rothko'],['matisse','matisse']].map(([k,label])=>(
+                <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>{
+                  if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                  setTimeout(()=>{setStyle(style===k?null:k);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+                }} style={{flexShrink:0,padding:'7px 12px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:PF.muted,background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:'rgba(242,238,232,.08)'),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{label}</button>
+              ))}
+            </div>
+            <button onClick={()=>setRandomMode(v=>!v)} className="pf-dice" title={randomMode?'random ON · tap to turn off':'random OFF · tap to enable'} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'.95rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+          </div>
         </div>
-        {mode==='custom' && (
-          <button onClick={()=>setShowPaletteEditor(true)} aria-label={t('editPalette')} title={t('editPalette')} style={{...btn(),fontSize:'.7rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(201,168,76,.4)',color:GOLD}}>✏</button>
         )}
       </div>
-      <div style={{display:'flex',gap:10,marginBottom:10,justifyContent:'center',flexWrap:'nowrap',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
-        <div style={{display:'flex',border:'1px solid rgba(180,140,255,.28)',borderRadius:2,overflow:'hidden',flexShrink:0}} title="painting style — tap again to deselect (mosaic default)">
-          {[['picasso','picasso'],['kusama','kusama'],['pollock','pollock'],['kandinsky','kandinsky'],['miro','miro']].map(([k,label])=>(
-            <button key={k} onClick={()=>{
-              if(canvasRef.current){canvasRef.current.style.opacity='0';}
-              setTimeout(()=>{setStyle(style===k?null:k);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-            }} style={{...btn(),fontSize:'.58rem',border:'none',borderRadius:0,padding:'5px 10px',background:style===k?'rgba(180,140,255,.16)':'transparent',color:style===k?'rgba(210,170,255,.95)':'rgba(230,222,196,.7)'}}>{label}</button>
-          ))}
-        </div><button onClick={()=>setRandomMode(v=>!v)} title={randomMode?'random ON · tap to turn off · next Play will produce a new variation':'random OFF · tap to enable · next Play will produce a unique variation'} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{padding:'5px 9px',background:randomMode?'rgba(255,200,120,.12)':'transparent',color:randomMode?'rgba(255,210,140,.95)':'rgba(230,222,196,.7)',border:'1px solid '+(randomMode?'rgba(255,200,120,.55)':'rgba(180,140,255,.28)'),borderRadius:2,cursor:'pointer',fontSize:'.58rem',letterSpacing:'.06em',fontFamily:'inherit',flexShrink:0}}>🎲</button>
-      </div>
-
-      <div style={{display:'flex',gap:6,marginBottom:12,width:'100%',maxWidth:480,alignItems:'stretch'}}>
-        <select
-          value={songQ}
-          onChange={e=>{if(e.target.value){const s=findSong(e.target.value);setCurrentMood(e.target.value);setVarySource(s);setLoadedSource(null);aiMidi(e.target.value);if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);}}}
-          onFocus={()=>setFocusedInput('mood')}
-          onBlur={()=>setFocusedInput(null)}
-          disabled={sourcePickerLocked}
-          title={recording?t('stopRecFirst'):undefined}
-          style={{flex:1,minWidth:0,background:'rgba(14,10,22,0.95)',border:'1px solid '+(moodHint?'rgba(220,170,255,.9)':focusedInput==='mood'?'rgba(201,168,76,.85)':'rgba(201,168,76,.3)'),borderRadius:3,padding:'5px 10px',color:songQ?'rgba(207,197,168,.95)':moodHint?'rgba(220,170,255,.95)':'rgba(230,222,196,.6)',fontSize:'.7rem',outline:'none',fontFamily:'inherit',opacity:sourcePickerLocked?0.4:1,letterSpacing:'.03em',cursor:'pointer',appearance:'auto',textTransform:'capitalize',boxShadow:moodHint?'0 0 16px rgba(220,150,255,.35)':focusedInput==='mood'?'0 0 0 2px rgba(201,168,76,.25)':'none',transition:'border-color .2s ease, color .2s ease, box-shadow .2s ease'}}>
-          <option value="">✦ {t('selectMood').replace('✦ ','')}</option>
-          {currentMood&&currentMood.includes(' → ')&&<option value="" disabled>{currentMood}</option>}
-          {MOOD_OPTIONS}
-        </select>
-        <button onClick={()=>{
-          if(sourcePickerLocked)return;
-          if(!currentMood){flashMoodHint();return;}
-          if(!chords.length)return;
-          setShowMorphMenu(true);
-        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:chords.length&&currentMood&&!sourcePickerLocked?'rgba(220,170,255,.9)':'rgba(220,170,255,.6)'})}>{t('morph')}</button>
-        <button onClick={()=>{
-          if(sourcePickerLocked)return;
-          if(!varySource){flashMoodHint();return;}
-          const varied=rerollSong(varySource);
-          if(!varied)return;
-          setVarySource(varied);
-          stopAll();
-          const evts=noteArr2events(varied.notes,varied.tempo);
-          if(!evts.length){setErr('Variation produced no notes');return;}
-          applyEvents(evts,varied.title+' ·');
-          const bytes=encodeMidi(evts,varied.tempo||100);
-          setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
-          setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
-          setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
-        }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:'rgba(220,150,255,.45)',color:varySource&&!sourcePickerLocked?'rgba(220,170,255,.9)':'rgba(220,170,255,.6)'})}>{t('vary')}</button>
-      </div>
-
-      <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,alignItems:'center'}}>
-        <div style={{display:'flex',gap:4,justifyContent:'center'}}>
-          {/* Lock content-load buttons when the user is in an active creation
-              mode (compose / sing / listen). Loading a file would clobber
-              their work-in-progress, and the existing flows already do that
-              silently. Easier to just gate the buttons. */}
-          <input ref={refMidi} type="file" accept="audio/midi,audio/x-midi,application/octet-stream,.mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
-          <button onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('midi');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('midi')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:activeSource==='midi'?'rgba(140,180,255,.85)':'rgba(120,160,255,.4)',color:sourcePickerLocked?'rgba(140,180,255,.25)':activeSource==='midi'?'rgba(180,210,255,1)':'rgba(140,180,255,.8)',background:activeSource==='midi'?'rgba(120,160,255,.12)':'transparent'})}>{t('midi')}</button>
-          <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
-          <button onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('audio');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('audio')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:activeSource==='audio'?'rgba(255,180,100,.85)':'rgba(255,160,80,.4)',color:working&&wLabel.includes('audio')?GOLD:sourcePickerLocked?'rgba(255,180,100,.25)':activeSource==='audio'?'rgba(255,210,140,1)':'rgba(255,180,100,.85)',background:activeSource==='audio'?'rgba(255,160,80,.12)':'transparent'})}>{working&&wLabel.includes('audio')?'⟳ '+wPct+'%':t('audio')}</button>
-          <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
-          <button onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('score');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('score')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:activeSource==='score'?'rgba(210,150,255,.85)':'rgba(200,120,255,.4)',color:working&&wLabel.includes('score')?'rgba(210,150,255,.95)':sourcePickerLocked?'rgba(210,150,255,.25)':activeSource==='score'?'rgba(230,180,255,1)':'rgba(210,150,255,.85)',background:activeSource==='score'?'rgba(200,120,255,.12)':'transparent'})}>{working&&wLabel.includes('score')?'⟳ '+wPct+'%':t('score')}</button>
-          <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
-          <button onClick={()=>{if(sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('image');}} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):t('image')} style={btn({fontSize:'.58rem',padding:'5px 10px',flexShrink:0,borderColor:activeSource==='image'?'rgba(210,160,255,.85)':'rgba(200,140,255,.4)',color:sourcePickerLocked?'rgba(210,160,255,.25)':activeSource==='image'?'rgba(230,190,255,1)':'rgba(210,160,255,.85)',background:activeSource==='image'?'rgba(200,140,255,.12)':'transparent'})}>{t('image')}</button>
-        </div>
-        <div style={{display:'flex',gap:4,justifyContent:'center'}}>
-          <button onClick={()=>{
-            if(busy)return;
-            // Soft-lock: if another creation mode is on, do nothing.
-            if(!composeMode&&(micPainting||micListening))return;
-            if(!composeMode){
-              // Unlock audio from this gesture. The first piano keypress could
-              // come moments later, and on iOS the context must already be
-              // user-activated by then — entering the mode is itself an
-              // audio-intent signal, treat it as such.
-              unlockAudio();
-              const owner = draftOwnerRef.current;
-              if(owner==='compose'){
-                // Re-entering compose with chords still on canvas — no stash
-                // ever happened (nothing took them away), so just resume.
-                setComposeMode(true);
-                return;
-              }
-              // Switching FROM a different mode (or from imported content).
-              // Stash the other mode's draft if any, then restore compose stash.
-              if(owner) stashDraft(owner);
-              if(!restoreStash('compose')){
-                // No compose stash to return to — start a fresh canvas, wiping
-                // whatever loaded content (MIDI/audio/score/image/mood) was there.
-                resetCanvasForDraft('compose');
-                setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
-                audioBlobRef.current=null;setCurrentMood(null);setVarySource(null);setSongQ('');setLoadedSource(null);
-              }
-              setComposeMode(true);
-            } else setComposeMode(false);
-          }}
-          disabled={!composeMode && (busy || micPainting || micListening)}
-          title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')}
-          style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:composeMode?'rgba(140,220,180,.6)':(busy||micPainting||micListening)?'rgba(140,220,180,.2)':hasComposeDraft?'rgba(140,220,180,.5)':'rgba(140,220,180,.4)',color:composeMode?'rgba(170,245,210,.98)':(busy||micPainting||micListening)?'rgba(140,220,180,.25)':hasComposeDraft?'rgba(170,235,200,.95)':'rgba(140,220,180,.85)',background:composeMode?'rgba(140,220,180,.1)':hasComposeDraft?'rgba(140,220,180,.04)':'transparent'})}>{composeMode?t('composing'):t('compose')}</button>
-          {/* MIC mode. Tap when inactive to open a picker (Voice vs Music).
-              Tap when active to stop. Mirrors the MIDI/Audio picker UX. */}
-          <button onClick={()=>{
-            if(busy && !micActive) return;
-            if(!micActive && composeMode) return;
-            if(micActive){
-              if(micPainting) stopMicPainting();
-              if(micListening) stopMicListening();
-              return;
-            }
-            setPickMode('mic');
-          }}
-          disabled={!micActive && (busy || composeMode)}
-          title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')}
-          style={btn({fontSize:'.58rem',padding:'5px 26px',flexShrink:0,borderColor:micActive?(micPreset==='voice'?'rgba(255,140,140,.7)':'rgba(100,180,255,.7)'):(busy||composeMode)?'rgba(180,160,220,.2)':hasMicDraft?'rgba(180,160,220,.55)':'rgba(180,160,220,.4)',color:micActive?(micPreset==='voice'?'rgba(255,120,120,1)':'rgba(140,210,255,1)'):(busy||composeMode)?'rgba(180,160,220,.25)':hasMicDraft?'rgba(210,190,245,.95)':'rgba(190,170,230,.8)',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.1)':'rgba(60,160,255,.1)'):hasMicDraft?'rgba(180,160,220,.04)':'transparent'})}>{micActive?t('micActive'):t('mic')}</button>
-        </div>
-      </div>
+      )}
 
       {preview && (
         <div onClick={closePreview} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1100,padding:10,overflow:'auto'}}>
@@ -6135,6 +6771,7 @@ Composition rules:
         </div>
       )}
 
+      {isActiveView && (<>
       <div style={{position:'relative',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none'}}
         onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
@@ -6180,6 +6817,7 @@ Composition rules:
       <div style={{marginBottom:10,fontSize:'.57rem',letterSpacing:'.18em',opacity:.6,textAlign:'center',textTransform:'uppercase'}}>
         music → φ painting
       </div>
+      </>)}
 
 
       {showSizePicker && (
@@ -6272,7 +6910,8 @@ Composition rules:
       {/* Bottom dock: only docks to the viewport during playback (so you can
           watch the canvas animate while the piano stays visible). When not
           playing, it flows in normal document order. */}
-      <div role="region" aria-label="playback controls" style={(playing||chords.length>0||composeMode)?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
+      {isActiveView && (
+      <div role="region" aria-label="playback controls" style={isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(
         <div style={{fontSize:'.48rem',letterSpacing:'.08em',color:'rgba(100,200,255,.35)',textAlign:'center',marginBottom:4,lineHeight:1.5}}>
@@ -6317,17 +6956,21 @@ Composition rules:
           {t('scaleBtn')}
         </button>
         <button
+          className="pf-lift"
           onClick={handlePauseClick}
           disabled={recording||micListening||micPainting||(!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)}
           title={recording?t('stopRecFirst'):micListening?t('stopListenFirst'):micPainting?t('stopSingFirst'):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):t('pause')}
-          style={{padding:'7px 10px',background:holdPaused?'rgba(90,190,110,.08)':'transparent',color:recording||micListening||micPainting?'rgba(90,190,110,.2)':chords.length?(playing||holdPaused?'rgba(90,190,110,.7)':(demoMode?'rgba(90,190,110,.2)':'rgba(90,190,110,.95)')):'rgba(90,190,110,.25)',border:'1px solid '+(recording||micListening||micPainting?'rgba(90,190,110,.15)':chords.length&&!(demoMode&&!playing&&!holdPaused)?'rgba(90,190,110,.55)':'rgba(90,190,110,.2)'),borderRadius:5,cursor:recording||micListening||micPainting?'default':'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          style={{padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:recording||micListening||micPainting?'default':'pointer',border:'none',color:'#0e120e',background:(recording||micListening||micPainting||!chords.length||(demoMode&&!playing&&!holdPaused))?'rgba(78,203,141,.25)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||micListening||micPainting||!chords.length||(demoMode&&!playing&&!holdPaused))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||micListening||micPainting||!chords.length||(demoMode&&!playing&&!holdPaused))?.6:1,transition:'all .18s'}}>
           {holdPaused?t('resume'):playing?t('pause'):t('play')}
-        </button><button onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'7px 9px',background:muted?'rgba(220,90,90,.1)':'transparent',color:muted?'rgba(255,120,120,.9)':'rgba(201,168,76,.7)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.3)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
+        </button><button className="pf-lift" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
         {currentMood&&(
-          <button onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'7px 10px',background:loopMode?'rgba(201,168,76,.1)':'transparent',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.6)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.5)':'rgba(201,168,76,.3)'),borderRadius:5,cursor:recording?'default':'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{t('loop')}</button>
+          <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
+        )}
+        {randomMode&&style&&chords.length>0&&!recording&&(
+          <button className="pf-lift" onClick={()=>{if(playing||holdPaused)advanceVariation();}} disabled={!(playing||holdPaused)} title={(playing||holdPaused)?'next painting — jump to a new variation':'play to browse variations'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:(playing||holdPaused)?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:(playing||holdPaused)?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+((playing||holdPaused)?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:(playing||holdPaused)?'pointer':'default',fontFamily:'inherit',fontSize:'.55rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
         )}
         {viewMode!=='image'&&(
-          <button onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'7px 10px',background:'transparent',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.88)':'rgba(180,140,255,.2)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.45)':'rgba(180,140,255,.18)'),borderRadius:5,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          <button className="pf-lift" onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'8px 14px',background:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(169,127,245,.14)':'rgba(28,24,40,.5)',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.92)':'rgba(180,140,255,.25)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.5)':'rgba(180,140,255,.18)'),borderRadius:22,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>
             {t('print')}
           </button>
         )}
@@ -6363,18 +7006,18 @@ Composition rules:
           const stopHold=()=>{
             if(speedHoldRef.current){clearTimeout(speedHoldRef.current);speedHoldRef.current=null;}
           };
-          const btnStyle=(enabled)=>({padding:'5px 9px',background:'transparent',color:enabled?GOLD:'rgba(201,168,76,.2)',border:'1px solid '+(enabled?'rgba(201,168,76,.35)':'rgba(201,168,76,.12)'),borderRadius:4,cursor:enabled?'pointer':'default',fontSize:'.7rem',lineHeight:1,letterSpacing:0,fontFamily:'inherit',minWidth:24,userSelect:'none',touchAction:'manipulation'});
+          const btnStyle=(enabled)=>({padding:'5px 9px',background:enabled?'rgba(28,24,40,.6)':'transparent',color:enabled?GOLD:'rgba(201,168,76,.2)',border:'1px solid '+(enabled?'rgba(201,168,76,.35)':'rgba(201,168,76,.12)'),borderRadius:14,cursor:enabled?'pointer':'default',fontSize:'.7rem',lineHeight:1,letterSpacing:0,fontFamily:'inherit',minWidth:24,userSelect:'none',touchAction:'manipulation'});
           const canDown = !lockSpeed && spd>LO+1e-6;
           const canUp   = !lockSpeed && spd<HI-1e-6;
           return(
-            <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 4px',border:'1px solid rgba(201,168,76,.2)',borderRadius:5,opacity:lockSpeed?0.4:1}} title={lockSpeed?t('stopRecFirst'):'playback speed · tap +/− to nudge, hold to sweep'}>
+            <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 4px',border:'1px solid rgba(201,168,76,.2)',borderRadius:22,background:'rgba(28,24,40,.4)',opacity:lockSpeed?0.4:1}} title={lockSpeed?t('stopRecFirst'):'playback speed · tap +/− to nudge, hold to sweep'}>
               <button
                 onPointerDown={e=>{e.preventDefault();startHold(-1);}}
                 onPointerUp={stopHold} onPointerLeave={stopHold} onPointerCancel={stopHold}
                 disabled={!canDown}
                 aria-label="slow down"
                 style={btnStyle(canDown)}>−</button>
-              <button onClick={()=>setSpd(1)} disabled={lockSpeed||spd===1} aria-label="reset speed to 1×" style={{padding:'4px 8px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:4,cursor:(lockSpeed||spd===1)?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit',minWidth:36,textAlign:'center'}}>{label}</button>
+              <button onClick={()=>setSpd(1)} disabled={lockSpeed||spd===1} aria-label="reset speed to 1×" style={{padding:'4px 8px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:14,cursor:(lockSpeed||spd===1)?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit',minWidth:36,textAlign:'center'}}>{label}</button>
               <button
                 onPointerDown={e=>{e.preventDefault();startHold(+1);}}
                 onPointerUp={stopHold} onPointerLeave={stopHold} onPointerCancel={stopHold}
@@ -6396,7 +7039,7 @@ Composition rules:
               // Second tap — actually clear
               if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
               setClearArmed(false);
-              clear();
+              clearCanvas();
             }else{
               // First tap — arm only if there's something worth protecting.
               // Visually empty canvas (no painted blocks AND no held keys) = nothing
@@ -6405,17 +7048,18 @@ Composition rules:
               // disp is 0 since playback hasn't rendered any blocks yet.
               // In compose mode disp stays 0 but chords IS the painting — count it.
               const hasPainting = disp>0 || (composedModeRef.current && chords.length>0);
-              if(!hasPainting&&!pending.length){clear();return;}
+              if(!hasPainting&&!pending.length){clearCanvas();return;}
               setClearArmed(true);
               clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
             }
           }}
+          className="pf-lift"
           disabled={recording}
           title={recording?t('stopRecFirst'):undefined}
-          style={{padding:'7px 10px',background:clearArmed?'rgba(220,90,90,.15)':'transparent',color:recording?'rgba(207,197,168,.2)':clearArmed?'rgba(255,140,120,.95)':'rgba(207,197,168,.65)',border:'1px solid '+(recording?'rgba(207,197,168,.12)':clearArmed?'rgba(255,90,90,.55)':'rgba(207,197,168,.35)'),borderRadius:5,cursor:recording?'default':'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem',transition:'background .15s ease, color .15s ease, border-color .15s ease'}}>{clearArmed?t('clearConfirm'):t('clear')}</button>
+          style={{padding:'8px 14px',background:clearArmed?'rgba(220,90,90,.18)':'rgba(28,24,40,.5)',color:recording?'rgba(207,197,168,.2)':clearArmed?'rgba(255,140,120,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(recording?'rgba(207,197,168,.12)':clearArmed?'rgba(255,90,90,.55)':'rgba(207,197,168,.3)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',transition:'background .15s ease, color .15s ease, border-color .15s ease'}}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
         {composeMode&&(
-          <button onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{padding:'7px 10px',background:'transparent',color:chords.length&&!busy&&!recording?'rgba(207,197,168,.65)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!busy&&!recording?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:5,cursor:chords.length&&!busy&&!recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.55rem'}}>↩</button>
+          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{padding:'8px 13px',background:'rgba(28,24,40,.5)',color:chords.length&&!busy&&!recording?'rgba(207,197,168,.7)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!busy&&!recording?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:22,cursor:chords.length&&!busy&&!recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.6rem'}}>↩</button>
         )}
       </div>
       {composeMode && (
@@ -6477,7 +7121,8 @@ Composition rules:
       </div>
       )}
       </div>
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.5.0</footer>
+      )}
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.0</footer>
     </div>
   );
 }
