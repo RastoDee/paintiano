@@ -5986,6 +5986,19 @@ Composition rules:
   },[busy,stopAll,startPlay,fullClear,stashDraft]);
 
   const handlePauseClick=useCallback(()=>{
+    // If a live mic mode is active (Voice=micPainting or Music=micListening),
+    // the Play button stops it and plays back the canvas just captured — mic-stop
+    // preserves chords. One tap instead of forcing a manual mic-stop before Play.
+    if(micPainting||micListening){
+      if(micPainting) stopMicPaintingRef.current?.();
+      if(micListening) stopMicListeningRef.current?.();
+      if(chordsRef.current.length){
+        resumeFromRef.current=null;
+        // Defer so the mic teardown (setState) settles before playback starts.
+        setTimeout(()=>{ startPlayRef.current?.(); },0);
+      }
+      return;
+    }
     if(playing){
       resumeFromRef.current=disp;
       setHoldPaused(true);
@@ -6002,7 +6015,7 @@ Composition rules:
       resumeFromRef.current=null;
       startPlay();
     }
-  },[playing,holdPaused,busy,disp,demoMode,startPlay]);
+  },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening]);
   useEffect(()=>{handlePauseClickRef.current=handlePauseClick;},[handlePauseClick]);
   useEffect(()=>{startPlayRef.current=startPlay;},[startPlay]);
 
@@ -6134,6 +6147,14 @@ Composition rules:
     setMicListening(false);
     stopMicVol();
   },[stopMicVol]);
+
+  // Refs so handlePauseClick (defined earlier in the file) can stop a live mic
+  // mode before starting playback. The Play button now does mic-stop + play in
+  // one tap instead of being disabled while the mic is capturing.
+  const stopMicPaintingRef = useRef(null);
+  const stopMicListeningRef = useRef(null);
+  useEffect(()=>{stopMicPaintingRef.current=stopMicPainting;},[stopMicPainting]);
+  useEffect(()=>{stopMicListeningRef.current=stopMicListening;},[stopMicListening]);
 
   const startMicListening=useCallback(async()=>{
     if(micListening){stopMicListening();return;}
@@ -7159,9 +7180,9 @@ Composition rules:
         <button
           className="pf-lift"
           onClick={handlePauseClick}
-          disabled={recording||micListening||micPainting||(!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)}
-          title={recording?t('stopRecFirst'):micListening?t('stopListenFirst'):micPainting?t('stopSingFirst'):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):t('pause')}
-          style={{padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:recording||micListening||micPainting?'default':'pointer',border:'none',color:'#0e120e',background:(recording||micListening||micPainting||!chords.length||(demoMode&&!playing&&!holdPaused))?'rgba(78,203,141,.25)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||micListening||micPainting||!chords.length||(demoMode&&!playing&&!holdPaused))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||micListening||micPainting||!chords.length||(demoMode&&!playing&&!holdPaused))?.6:1,transition:'all .18s'}}>
+          disabled={recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
+          title={recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
+          style={{padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'default':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.25)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.6:1,transition:'all .18s'}}>
           {holdPaused?t('resume'):playing?t('pause'):t('play')}
         </button><button className="pf-lift" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
         {currentMood&&(
