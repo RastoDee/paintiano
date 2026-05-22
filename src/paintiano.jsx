@@ -39,7 +39,7 @@ const PF_STYLE = `
         .pf-score:hover { background:rgba(169,127,245,.12)!important; border-color:${PF.purple}!important; box-shadow:0 4px 16px rgba(169,127,245,.22); }
         .pf-image:hover { background:rgba(78,203,141,.12)!important; border-color:${PF.green}!important; box-shadow:0 4px 16px rgba(78,203,141,.22); }
         .pf-compose:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(78,203,141,.25); }
-        .pf-mic:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(169,127,245,.22); }
+        .pf-mic:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(240,106,166,.22); }
         .pf-morph:hover { transform: translateY(-1px); box-shadow:0 4px 16px rgba(169,127,245,.4); }
         .pf-vary:hover { transform: translateY(-1px); box-shadow:0 4px 16px rgba(244,124,60,.4); }
         .pf-moodcta:hover { border-color:${PF.gold2}!important; transform: translateY(-1px); box-shadow:0 6px 24px rgba(240,192,64,.18); }
@@ -53,6 +53,7 @@ const S_BASE = "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/salamander/";
 const S_URLS = {"A0":"A0.mp3","C1":"C1.mp3","D#1":"Ds1.mp3","F#1":"Fs1.mp3","A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3","A5":"A5.mp3","C6":"C6.mp3","D#6":"Ds6.mp3","F#6":"Fs6.mp3","A6":"A6.mp3","C7":"C7.mp3","D#7":"Ds7.mp3","F#7":"Fs7.mp3","A7":"A7.mp3","C8":"C8.mp3"};
 
 const m2f = m => 440 * Math.pow(2, (m - 69) / 12);
+
 const wlToRgb = wl => {
   let r=0,g=0,b=0;
   if(wl>=380&&wl<440){r=(440-wl)/60;b=1}else if(wl>=440&&wl<490){g=(wl-440)/50;b=1}
@@ -80,7 +81,17 @@ const harmCol=(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],75+(v/127)*15,octL(m));
 const SPEC_HUE=Array.from({length:12},(_,pc)=>pc*30);
 const specCol=(m,v=100)=>{const h=SPEC_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
 
-// Parse a #rrggbb hex string into [r,g,b] (0-255). Defaults to [128,128,128].
+// Fast RGBA string helper — avoids repeated template-string + toFixed allocations
+// in the hot inner draw loops. Rounds alpha to 3 decimal places inline.
+// Guards against non-finite alpha (undefined/NaN) which would produce an invalid
+// CSS color string and silently blank the fill — clamps to a valid 0..1 range.
+const _rgbaStr=(r,g,b,a)=>{
+  let A=Math.round((a*1000))/1000;
+  if(!Number.isFinite(A)) A=1;
+  else if(A<0) A=0; else if(A>1) A=1;
+  return `rgba(${r|0},${g|0},${b|0},${A})`;
+};
+const _rgbStr=(r,g,b)=>`rgb(${r|0},${g|0},${b|0})`;
 const hexToRgb=(hex)=>{
   if(typeof hex!=='string')return[128,128,128];
   let h=hex.replace('#','');
@@ -566,23 +577,36 @@ let _artistSeed = 0;
 function _setArtistSeed(s){ _artistSeed = s>>>0; }
 
 // Sharp φ-rectangle look — implicit default when no artist style selected.
-function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;sorted.forEach((note,i)=>{const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;ctx.fillStyle=`rgba(${r},${g},${b},${(a*.18).toFixed(3)})`;ctx.fillRect(bx-2,y-2,BW+4,bh+4);ctx.fillStyle=`rgba(${r},${g},${b},${a.toFixed(3)})`;ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);});if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}}
+function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
+  // notes are pre-sorted by caller (drawOne) when possible; sort defensively
+  const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
+  const n=sorted.length,bh=BH/n;
+  for(let i=0;i<n;i++){
+    const note=sorted[i];
+    const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;
+    ctx.fillStyle=_rgbaStr(r,g,b,a*.18);
+    ctx.fillRect(bx-2,y-2,BW+4,bh+4);
+    ctx.fillStyle=_rgbaStr(r,g,b,a);
+    ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);
+  }
+  if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}
+}
 
 // Dim mosaic — same crisp φ-rectangle structure as default, but each voice
 // painted at reduced alpha (~50%) so colors are visible but subdued. Used
 // as the Pollock substrate: the mosaic provides color context underneath
 // without competing with the drip lines on top.
 function drawBlockMosaicDim(ctx,bx,by,notes,gc,BW,BH){
-  const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
-  sorted.forEach((note,i)=>{
+  const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
+  const n=sorted.length,bh=BH/n;
+  for(let i=0;i<n;i++){
+    const note=sorted[i];
     const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;
-    // Halo at very low alpha
-    ctx.fillStyle=`rgba(${r},${g},${b},${(a*0.10).toFixed(3)})`;
+    ctx.fillStyle=_rgbaStr(r,g,b,a*0.10);
     ctx.fillRect(bx-2,y-2,BW+4,bh+4);
-    // Main tile at ~50% of normal alpha
-    ctx.fillStyle=`rgba(${r},${g},${b},${(a*0.50).toFixed(3)})`;
+    ctx.fillStyle=_rgbaStr(r,g,b,a*0.50);
     ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);
-  });
+  }
   if(n>1){
     ctx.fillStyle='rgba(4,4,10,0.50)';
     for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);
@@ -2812,7 +2836,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', backToSetup:'setup', backToCanvas:'canvas',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', backToSetup:'setup', backToCanvas:'canvas', newSource:'new',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all',
     selectMood:'✦ select a mood…', morph:'✦ morph', vary:'✦ vary',
@@ -2855,7 +2879,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', backToSetup:'setup', backToCanvas:'leinwand',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen',
     selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'✦ variieren',
@@ -2898,7 +2922,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', backToSetup:'réglage', backToCanvas:'toile',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer',
     selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'✦ varier',
@@ -2941,7 +2965,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', backToSetup:'inicio', backToCanvas:'lienzo',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo',
     selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'✦ variar',
@@ -2984,7 +3008,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', backToSetup:'nastavenie', backToCanvas:'plátno',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť',
     selectMood:'✦ vyber náladu…', morph:'✦ morf', vary:'✦ variácia',
@@ -4068,6 +4092,16 @@ export default function Paintiano() {
   // reveal still looks smooth but the main thread stays free for audio. Audio
   // timing itself is untouched (separate setTimeout chain).
   const lastOverlayPaintRef = useRef(0);
+  // ── OFFSCREEN SUBSTRATE CACHE ──────────────────────────────────────────────
+  // For overlay styles (pollock/picasso/kusama/miro/kandinsky/rothko/matisse)
+  // the per-cell substrate underneath the canvas-wide overlay is IDENTICAL from
+  // frame to frame for a given chord set — only the overlay changes as `lim`
+  // grows. Previously every throttled overlay repaint re-ran drawOne for ALL
+  // revealed cells from chord 0 (O(N) per frame → O(N²) per playback). We cache
+  // the substrate into an offscreen canvas and only draw newly-revealed cells
+  // into it incrementally, then blit it (one GPU-accelerated drawImage) before
+  // running the overlay. Substrate cost per frame drops to O(new cells only).
+  const substrateRef = useRef({canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0});
   // Intro reveal animation: tracks the RAF id so it can be cancelled by clear()
   // or a subsequent load before the previous animation finishes.
   const introRafRef   = useRef(null);
@@ -4371,7 +4405,7 @@ export default function Paintiano() {
 
   // Cleanup the compose-commit debounce on unmount so it can't fire commit()
   // against a torn-down state tree.
-  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);},[]);
+  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};},[]);
 
   useEffect(()=>{
     let dead=false;
@@ -4409,7 +4443,8 @@ export default function Paintiano() {
 
   useEffect(()=>{
     const cv=canvasRef.current;if(!cv)return;
-    const{N,BW,BH,CW,CH}=grid,ctx=cv.getContext('2d');
+    const{N,BW,BH,CW,CH}=grid;
+    const ctx=cv.getContext('2d');
     // Image mode: keep the canvas transparent so the original painting shows through
     // unobstructed. The 96×60 pixel mosaic that used to render here was useful as
     // a "what the algorithm sees" preview, but it obscured the artwork on a phone-sized
@@ -4432,8 +4467,14 @@ export default function Paintiano() {
         if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
         else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
       }else{
-        const si=idx%(N*N),col=si%N,row=Math.floor(si/N);
-        drawBlock(ctx,col*BW,row*BH,notes,gc,BW,BH,style);
+        // No precomputed cell yet (one-render gap between commit's setChords and
+        // the grid-recompute effect's setGrid). Instead of the tiny default-grid
+        // BW×BH corner block, lay the chord out across the FULL canvas width so
+        // the first note fills a sensible slice rather than flashing in the corner.
+        const total=Math.max(1,chords.length);
+        const fw=Math.max(2,Math.floor(CW/total));
+        const fx=idx*fw;
+        drawBlock(ctx,fx,0,notes,gc,fw,CH,style);
       }
     };
     // Fast path: if only `disp` advanced during playback and every other input
@@ -4514,6 +4555,71 @@ export default function Paintiano() {
         return;
       }
       lastOverlayPaintRef.current = nowMs;
+      if(isOverlayStyle && lim>0){
+        // ── CACHED-SUBSTRATE PATH ──
+        // Build (or incrementally extend) the offscreen substrate, then blit it
+        // and run only the canvas-wide overlay on top. Substrate cells are
+        // identical frame-to-frame; only newly-revealed cells need drawing.
+        const sub=substrateRef.current;
+        // Cache key: anything that invalidates the whole substrate. Note `lim`
+        // is intentionally NOT in the key — growth is handled incrementally.
+        const subKey=`${CW}x${CH}|${style}|${mode}|${stamp}|${pollockSessionSeed}`;
+        let sctx=sub.ctx;
+        if(sub.key!==subKey||sub.CW!==CW||sub.CH!==CH||!sub.canvas){
+          // (Re)allocate offscreen canvas. Reuse the existing element when only
+          // the key changed but dimensions match, to avoid GC churn.
+          if(!sub.canvas||sub.CW!==CW||sub.CH!==CH){
+            const oc=(typeof OffscreenCanvas!=='undefined')
+              ? new OffscreenCanvas(Math.max(1,CW),Math.max(1,CH))
+              : Object.assign(document.createElement('canvas'),{width:Math.max(1,CW),height:Math.max(1,CH)});
+            sub.canvas=oc; sctx=oc.getContext('2d');
+            sub.ctx=sctx; sub.CW=CW; sub.CH=CH;
+          }
+          // Fresh substrate: paint background + grid, reset reveal counter.
+          sctx.fillStyle='#04040a';sctx.fillRect(0,0,CW,CH);
+          sctx.strokeStyle='rgba(255,255,255,0.025)';sctx.lineWidth=.5;
+          for(let i=0;i<=N;i++){sctx.beginPath();sctx.moveTo(i*BW,0);sctx.lineTo(i*BW,CH);sctx.stroke();sctx.beginPath();sctx.moveTo(0,i*BH);sctx.lineTo(CW,i*BH);sctx.stroke();}
+          sub.key=subKey; sub.builtTo=0;
+        }
+        // If playback rewound (lim < builtTo), the cached cells past lim are
+        // stale-but-harmless — they're hidden under the overlay which only
+        // paints up to `lim`. But to be correct on scrub-back we rebuild when
+        // lim drops below what we've drawn.
+        if(lim<sub.builtTo){
+          sctx.fillStyle='#04040a';sctx.fillRect(0,0,CW,CH);
+          sctx.strokeStyle='rgba(255,255,255,0.025)';sctx.lineWidth=.5;
+          for(let i=0;i<=N;i++){sctx.beginPath();sctx.moveTo(i*BW,0);sctx.lineTo(i*BW,CH);sctx.stroke();sctx.beginPath();sctx.moveTo(0,i*BH);sctx.lineTo(CW,i*BH);sctx.stroke();}
+          sub.builtTo=0;
+        }
+        // Draw only the newly-revealed substrate cells into the offscreen canvas.
+        _setArtistSeed(pollockSessionSeed);
+        for(let i=sub.builtTo;i<lim;i++){
+          const chord=chords[i];const{n:notes,idx}=chord;
+          const cell=grid.cells&&grid.cells[idx];
+          if(cell){
+            if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style));
+            else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
+          }else{
+            const si=idx%(N*N),col=si%N,row=Math.floor(si/N);
+            drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style);
+          }
+        }
+        sub.builtTo=Math.max(sub.builtTo,lim);
+        // Blit the cached substrate to the visible canvas in one operation.
+        ctx.clearRect(0,0,CW,CH);
+        ctx.drawImage(sub.canvas,0,0);
+        // Run the canvas-wide overlay on top (this is the only per-frame cost
+        // that legitimately scales with lim).
+        if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed);
+        else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode);
+        else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused};
+        return;
+      }
       ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
       ctx.strokeStyle='rgba(255,255,255,0.025)';ctx.lineWidth=.5;
       for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*BW,0);ctx.lineTo(i*BW,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*BH);ctx.lineTo(CW,i*BH);ctx.stroke();}
@@ -4569,9 +4675,15 @@ export default function Paintiano() {
   useEffect(()=>{
     if(!chords.length)return;
     if(!chords.some(c=>c.recorded))return;
-    const sig=chords.map(c=>`${c.idx}:${c.durQ}`).join(',');
-    if(sig===gridSigRef.current)return;
-    gridSigRef.current=sig;
+    // Fast O(n) hash over (idx, durQ) pairs — avoids string allocation of .join()
+    let sig=0;
+    for(let i=0;i<chords.length;i++){
+      const c=chords[i];
+      sig=(Math.imul(sig,31)+c.idx*1000+(c.durQ||0)*100)>>>0;
+    }
+    const sigStr=sig.toString(36)+'_'+chords.length;
+    if(sigStr===gridSigRef.current)return;
+    gridSigRef.current=sigStr;
     const evs=chords.map(c=>({durQ:c.durQ!=null?c.durQ:snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
     // liveMode: compose / sing / listen produce a fixed-frame painting that
     // shrinks rows as content grows. Imported content (MIDI/audio/score/mood/
@@ -4929,7 +5041,7 @@ export default function Paintiano() {
   },[]);
 
   const stopAll = useCallback(()=>{
-    genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
+    genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];timersSet.current.clear();
     try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
     try{if(audioElRef.current){audioElRef.current.pause();}}catch(_){}
     try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
@@ -4964,18 +5076,20 @@ export default function Paintiano() {
     return()=>document.removeEventListener('visibilitychange',onHide);
   },[]);
 
-  // Schedule a timeout and remember its id so stopAll can cancel it. The id
-  // is removed from the tracking array once it fires (preventing unbounded
-  // growth on long playbacks — previously the array kept every fired id until
-  // stopAll). genRef.current is captured so the callback can self-cancel if
+  // Schedule a timeout and remember its id so stopAll can cancel it.
+  // Uses a Set internally for O(1) delete on fire instead of O(n) filter.
+  // genRef.current is captured so the callback can self-cancel if
   // playback has been stopped + restarted.
+  const timersSet = useRef(new Set());
   const pushTimer = useCallback((fn,ms)=>{
     const gen=genRef.current;
     const id=setTimeout(()=>{
-      timers.current=timers.current.filter(t=>t!==id);
+      timersSet.current.delete(id);
       if(genRef.current!==gen)return;
       fn();
     },ms);
+    timersSet.current.add(id);
+    // Keep timers.current in sync for stopAll (which iterates it)
     timers.current.push(id);
     return id;
   },[]);
@@ -5016,7 +5130,25 @@ export default function Paintiano() {
     const maxMs=Math.max(...notes.map(n=>n.durMs));
     const durQ=Math.max(0.2,Math.min(4,maxMs/500));
     composedModeRef.current=true;
-    setChords(p=>[...p,{n:notes,idx,startMs,recorded:true,durQ}]);
+    // commit always runs in a fresh tick (scheduled via setTimeout in pressNote),
+    // so chordsRef.current is up to date here. Build the next chord list, compute
+    // its live grid synchronously, and set both — closing the one-render gap that
+    // otherwise flashed the new note as a tiny default-grid corner block before
+    // the reactive [chords] grid effect could land setGrid.
+    const nextChords=[...chordsRef.current,{n:notes,idx,startMs,recorded:true,durQ}];
+    chordsRef.current=nextChords;
+    try{
+      const evs=nextChords.map(c=>({durQ:c.durQ!=null?c.durQ:1}));
+      const newGrid=computeGrid(evs,{liveMode:true});
+      gridRef.current=newGrid;
+      if(!playingRef.current) setGrid(newGrid);
+      // Pre-set the grid signature so the reactive [chords] effect recognizes
+      // this layout as already-computed and skips a redundant recompute.
+      let sig=0;
+      for(let i=0;i<nextChords.length;i++){const c=nextChords[i];sig=(Math.imul(sig,31)+c.idx*1000+(c.durQ||0)*100)>>>0;}
+      gridSigRef.current=sig.toString(36)+'_'+nextChords.length;
+    }catch(_){}
+    setChords(nextChords);
   },[paintDur]);
 
   // Derive velocity from a pointer/touch event. Priorities:
@@ -5316,7 +5448,11 @@ export default function Paintiano() {
     // explicitly CLEARs it from inside that mode.
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current = null;
-    events.forEach(ev=>{if(ev.durQ==null){const md=Math.max(...ev.n.map(n=>n.durMs||0),0);ev.durQ=md>0?snapDurQ(md/500):1;}});
+    events.forEach(ev=>{
+      if(ev.durQ==null){const md=Math.max(...ev.n.map(n=>n.durMs||0),0);ev.durQ=md>0?snapDurQ(md/500):1;}
+      // Pre-sort notes high→low so draw functions (mosaic, dim, etc.) skip the sort
+      if(ev.n.length>1) ev.n=[...ev.n].sort((a,b)=>b.m-a.m);
+    });
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
     pixelRef.current=null;setViewMode('paint');setOriginalImgUrl(null);
@@ -6373,8 +6509,8 @@ Composition rules:
   // playback beginning) returns us to the canvas even if we were parked on the
   // setup panel via "← Setup".
   useEffect(()=>{
-    if(working||composeMode||micActive||playing||chords.length>0){ setForceSetup(false); }
-  },[working,composeMode,micActive,playing,chords.length]);
+    if(working||composeMode||micActive||playing){ setForceSetup(false); }
+  },[working,composeMode,micActive,playing]);
   // When we (re)enter the canvas view, the <canvas> element may have just
   // remounted blank (it's gated by isActiveView). Bump stamp so the paint
   // effect re-runs and repaints the existing painting onto the fresh canvas.
@@ -6513,13 +6649,13 @@ Composition rules:
                   }
                   setComposeMode(true);
                 } else setComposeMode(false);
-              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:PF.green,background:composeMode?'linear-gradient(135deg,#255e46,#3a8a66)':hasComposeDraft?'linear-gradient(135deg,#1e4d38,#2d6e52)':'linear-gradient(135deg,#18331f,#1e4d38)',border:'1px solid '+(composeMode?'rgba(78,203,141,.6)':'rgba(78,203,141,.25)'),opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>♪ {composeMode?t('composing').replace(/[^A-Za-z ]/g,''):t('compose').replace(/[^A-Za-z ]/g,'')}</button>
+              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}♪ {composeMode?t('composing').replace(/[^A-Za-z ]/g,''):t('compose').replace(/[^A-Za-z ]/g,'')}</button>
               <button className="pf-mic" onClick={()=>{
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
                 if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); return; }
                 setPickMode('mic');
-              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):PF.purple,background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(169,127,245,.12)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(169,127,245,.25)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^A-Za-z ]/g,''):t('mic').replace(/[^A-Za-z ]/g,'')}</button>
+              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^A-Za-z ]/g,''):t('mic').replace(/[^A-Za-z ]/g,'')}</button>
             </div>
           </div>
 
@@ -6535,8 +6671,14 @@ Composition rules:
         {/* Back to setup — abandons the current mood/source and returns to the
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
-        <div style={{display:'flex',justifyContent:'flex-start',marginBottom:8}}>
-          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);stopAll();setStripOpen(false);setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,position:'relative'}}>
+          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);stopAll();if(composeMode){if(draftOwnerRef.current==='compose')stashDraft('compose');setComposeMode(false);}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+          {/* New file of the SAME source type — load another file without
+              leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
+              Only for file sources; to switch TYPE, use ← Setup. */}
+          {loadedSource && (
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode(loadedSource);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={t('newSource')+' '+t(loadedSource).replace(/[^A-Za-z]/g,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {t('newSource')} {t(loadedSource).replace(/[^A-Za-z]/g,'')}</button>
+          )}
         </div>
         <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:'.5rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
           <span>{t('colorLabel')} · {t('styleLabel')}</span>
