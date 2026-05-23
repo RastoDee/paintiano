@@ -7873,7 +7873,7 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?'48px 16px 220px':'48px 16px',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?'12px 16px 220px':'48px 16px',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE}}/>
       <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <nav style={{display:'flex',gap:18,fontSize:'.6rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
@@ -7895,9 +7895,9 @@ Composition rules:
         </nav>
         <button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} aria-label={`switch language (currently ${lang})`} title={`switch language (currently ${lang})`} style={{padding:'5px 13px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.14em'}}>{lang}</button>
       </div>
-      <header style={{textAlign:'center',marginBottom:18}}>
-        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
-        <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
+      <header style={{textAlign:'center',marginBottom:isActiveView?8:18}}>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
+        {!isActiveView && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
 
       {/* ─────────────────────────────────────────────────────────────
