@@ -3824,7 +3824,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', inspiredBy:'inspired by {artist}', backToSetup:'setup', backToCanvas:'canvas', newSource:'new',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', backToSetup:'setup', backToCanvas:'canvas', newSource:'new',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all',
     selectMood:'✦ select a mood…', morph:'✦ morph', vary:'✦ vary',
@@ -3854,7 +3854,7 @@ const I18N = {
     recUnsupported:'Recording not supported in this browser.',
     recTooShort:'Recording was too short — hold rec for at least a second.',
     searchGuide:'search the guide…', noMatches:'No matches for',
-    guideTitle:'guide', conceptTitle:'concept', gsec_start:'getting started', gsec_sources:'sources', gsec_playing:'while playing', gsec_output:'save & share', gsec_more:'more',
+    guideTitle:'guide', conceptTitle:'concept', gsec_start:'getting started', gsec_sources:'sources', gsec_playing:'while playing', gsec_output:'save & share', gsec_more:'more', fsNormal:'A', fsLarge:'A+', fsLabel:'text size',
     pickMoodFirst:'pick a mood first', morphInto:'morph current mood into another', morphTitle:'morph {mood} into…',
     reroll:'reroll: a fresh take',
     demoMode:'demo mode — clear to play again',
@@ -3869,7 +3869,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', inspiredBy:'inspiriert von {artist}', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen',
     selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'✦ variieren',
@@ -3899,7 +3899,7 @@ const I18N = {
     recUnsupported:'Aufnahme wird nicht unterstützt.',
     recTooShort:'Aufnahme zu kurz — mindestens eine Sekunde halten.',
     searchGuide:'anleitung durchsuchen…', noMatches:'Keine Treffer für',
-    guideTitle:'anleitung', conceptTitle:'konzept', gsec_start:'erste schritte', gsec_sources:'quellen', gsec_playing:'beim abspielen', gsec_output:'speichern & teilen', gsec_more:'mehr',
+    guideTitle:'anleitung', conceptTitle:'konzept', gsec_start:'erste schritte', gsec_sources:'quellen', gsec_playing:'beim abspielen', gsec_output:'speichern & teilen', gsec_more:'mehr', fsNormal:'A', fsLarge:'A+', fsLabel:'schriftgröße',
     pickMoodFirst:'zuerst stimmung wählen', morphInto:'aktuelle stimmung transformieren', morphTitle:'{mood} verwandeln in…',
     reroll:'neu würfeln',
     demoMode:'demo-modus — löschen zum erneuten spielen',
@@ -3914,7 +3914,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', inspiredBy:'inspiré par {artist}', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer',
     selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'✦ varier',
@@ -3944,7 +3944,7 @@ const I18N = {
     recUnsupported:'Enregistrement non supporté.',
     recTooShort:'Enregistrement trop court — tenir au moins une seconde.',
     searchGuide:'rechercher dans le guide…', noMatches:'Aucun résultat pour',
-    guideTitle:'guide', conceptTitle:'concept', gsec_start:'pour commencer', gsec_sources:'sources', gsec_playing:'pendant la lecture', gsec_output:'enregistrer & partager', gsec_more:'plus',
+    guideTitle:'guide', conceptTitle:'concept', gsec_start:'pour commencer', gsec_sources:'sources', gsec_playing:'pendant la lecture', gsec_output:'enregistrer & partager', gsec_more:'plus', fsNormal:'A', fsLarge:'A+', fsLabel:'taille du texte',
     pickMoodFirst:'choisir d\'abord une humeur', morphInto:'transformer l\'humeur actuelle', morphTitle:'transformer {mood} en…',
     reroll:'relancer',
     demoMode:'mode démo — effacer pour rejouer',
@@ -3959,7 +3959,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', inspiredBy:'inspirado en {artist}', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo',
     selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'✦ variar',
@@ -3989,7 +3989,7 @@ const I18N = {
     recUnsupported:'Grabación no compatible.',
     recTooShort:'Grabación demasiado corta — mantener al menos un segundo.',
     searchGuide:'buscar en la guía…', noMatches:'Sin resultados para',
-    guideTitle:'guía', conceptTitle:'concepto', gsec_start:'primeros pasos', gsec_sources:'fuentes', gsec_playing:'durante la reproducción', gsec_output:'guardar & compartir', gsec_more:'más',
+    guideTitle:'guía', conceptTitle:'concepto', gsec_start:'primeros pasos', gsec_sources:'fuentes', gsec_playing:'durante la reproducción', gsec_output:'guardar & compartir', gsec_more:'más', fsNormal:'A', fsLarge:'A+', fsLabel:'tamaño del texto',
     pickMoodFirst:'primero elegir un estado', morphInto:'transformar el estado actual', morphTitle:'transformar {mood} en…',
     reroll:'relanzar',
     demoMode:'modo demo — borrar para volver a tocar',
@@ -4004,7 +4004,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', inspiredBy:'inšpirované {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť',
     selectMood:'✦ vyber náladu…', morph:'✦ morf', vary:'✦ variácia',
@@ -4034,7 +4034,7 @@ const I18N = {
     recUnsupported:'Nahrávanie nie je v tomto prehliadači podporované.',
     recTooShort:'Nahrávka bola príliš krátka — podrž rec aspoň sekundu.',
     searchGuide:'hľadať v príručke…', noMatches:'Žiadne výsledky pre',
-    guideTitle:'príručka', conceptTitle:'koncept', gsec_start:'začíname', gsec_sources:'zdroje', gsec_playing:'počas prehrávania', gsec_output:'uložiť & zdieľať', gsec_more:'viac',
+    guideTitle:'príručka', conceptTitle:'koncept', gsec_start:'začíname', gsec_sources:'zdroje', gsec_playing:'počas prehrávania', gsec_output:'uložiť & zdieľať', gsec_more:'viac', fsNormal:'A', fsLarge:'A+', fsLabel:'veľkosť textu',
     pickMoodFirst:'najprv vyber náladu', morphInto:'morfovať súčasnú náladu do inej', morphTitle:'plynule prejdi z {mood} do…',
     reroll:'prehodiť: čerstvé prevedenie',
     demoMode:'režim demo — vyčisti pre nové prehratie',
@@ -4541,6 +4541,30 @@ function getConcept(lang){
   const fn = CONCEPT_I18N[lang] || CONCEPT_I18N.EN;
   return (_conceptCache[lang] = fn());
 }
+// Recursively clone a React element tree, multiplying any inline `rem` / `em`
+// font-size by `scale`. Used by the Concept & Guide "Large" reading mode — the
+// content is authored with absolute `rem` sizes (which don't inherit), so a
+// wrapper font-size or CSS `zoom` won't reliably enlarge it across browsers.
+// Walking the tree and scaling the actual values does, and it reflows correctly.
+function scaleFontTree(node, scale){
+  if(scale===1 || node==null || typeof node!=='object') return node;
+  if(Array.isArray(node)) return node.map(c=>scaleFontTree(c,scale));
+  if(!node.props) return node;
+  const p=node.props;
+  const newProps={};
+  // Scale an explicit inline rem/em font-size (headings, lists carry these).
+  if(p.style && typeof p.style.fontSize==='string'){
+    const m=p.style.fontSize.match(/^([\d.]+)(rem|em)$/);
+    if(m){ newProps.style={...p.style, fontSize:(parseFloat(m[1])*scale)+m[2]}; }
+  }
+  // Recurse into children.
+  let kids=p.children;
+  if(kids!=null){
+    kids=Array.isArray(kids)?kids.map(c=>scaleFontTree(c,scale)):scaleFontTree(kids,scale);
+  }
+  if(Object.keys(newProps).length===0 && kids===p.children) return node;
+  return React.cloneElement(node, newProps, kids!=null?kids:p.children);
+}
 
 const GUIDE_I18N = {
   EN: [
@@ -4550,8 +4574,8 @@ const GUIDE_I18N = {
    body:`Paintiano is a two-way translator between music and visual art. A piece of music *is* a painting under one grammar; a painting *is* a piece of music under the same grammar inverted. Same colour wheel, same pitch wheel, same act of perception. The app exists to prove this. ◆ Your first move depends on which direction you want to translate. To go from music to painting: pick a source that produces notes — Compose at the keyboard, MIC (Voice to sing/hum, or Music to capture ambient sound), upload a MIDI / audio / score file, or pick a Mood and let the AI compose for you. To go from painting to music: upload an Image, and hear how the canvas reads under the colour↔pitch grammar. ◆ Two choices shape every painting: colour mode (Harmony or Spectral — see modes) and optionally an artist style (eight of them — see styles). The mapping is deterministic on purpose: the same music always produces the same painting, so what you see is a reading of the music, not a decoration. The 🎲 Random toggle lets you opt out — with an artist selected it gives a new variation on every Play; with no artist it shuffles across all eight styles. ◆ A few orientations worth knowing up front. Live modes (Compose, MIC) paint into a fixed golden-ratio frame — as you add more chords, every row gets thinner, so the painting densifies rather than grows taller. The canvas is a compositional space, not a timeline. ◆ Imported sources (MIDI, audio, score, image, mood) use a canvas that grows with content — they are transcripts of an existing artefact, not in-the-moment compositions. ◆ Artist styles are not visual filters. Each one is a different answer to the question "what does this music look like?" — Pollock keeps the underlying mosaic visible and drips across it; Miró abandons the grid for scattered constellation shapes. Switch styles freely; the underlying colour grammar stays the same. ◆ When in doubt: pick a Mood, hit Play, watch a painting build itself. Then try the same mood in Spectral instead of Harmony, then try a style. That single loop teaches the rest of the app.`},
   {id:'modes', title:`Harmony vs Spectral`, keywords:`colour color mode hue palette circle fifths chromatic`,
    body:`Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly.`},
-  {id:'style', title:`Painting styles (8)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubist polka dots drip splatter constellation collage cut-out grid colour field fields artist abstract geometric phase variation inspired by`,
-   body:`Optional overlays, each a different reading of the same notes. With nothing selected the canvas is the mosaic default (sharp φ-rectangles). Eight styles: ◆ Cubist (inspired by Picasso) — angular analytic planes, or a synthetic cut-paper collage. ◆ Dots (inspired by polka-dot art) — dots on colour blocks, or an all-over shimmering dot-field. ◆ Drip (inspired by Pollock) — the mosaic stays visible under canvas-wide drips and splatter that ignore cell boundaries. ◆ Cosmic (inspired by Kandinsky) — a free scatter of triangles/rings/arcs, or an orderly Bauhaus grid. ◆ Constellation (inspired by Miró) — dense dark constellations, or a bright sparse field of a few bold shapes. ◆ Grid (inspired by Mondrian) — De Stijl block grids, sparse late grids, or Boogie-Woogie colour tracks. ◆ Fields (inspired by Rothko) — soft stacked colour fields bleeding into one another. ◆ Cut-out (inspired by Matisse) — nested colour panels, or a big paper cut-out collage. ◆ Most styles hold more than one composition; with 🎲 Random on, Vary/next re-rolls between them. Tap the active style again to deselect. Switches instantly.`},
+  {id:'style', title:`Painting styles (8 artists)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubist polka dots drip splatter constellation collage cut-out grid colour field artist abstract geometric phase variation`,
+   body:`Optional artist overlays. With nothing selected the canvas is the mosaic default (sharp φ-rectangles). Eight styles, each a different reading of the same notes: ◆ Picasso — cubist planes (angular analytic shards, or a synthetic cut-paper collage). ◆ Kusama — polka dots on colour blocks, or an all-over shimmering dot-field. ◆ Pollock — the mosaic stays visible under canvas-wide drips and splatter that ignore cell boundaries. ◆ Kandinsky — a free cosmic scatter of triangles/rings/arcs, or an orderly Bauhaus grid. ◆ Miró — dense dark Constellations, or a bright sparse field of a few bold shapes. ◆ Mondrian — De Stijl block grids, sparse late grids, or Boogie-Woogie colour tracks. ◆ Rothko — soft stacked colour fields bleeding into one another. ◆ Matisse — nested colour panels, or a big paper cut-out collage. ◆ Most styles hold more than one composition; with 🎲 Random on, Vary/next re-rolls between them. Tap the active style again to deselect. Switches instantly.`},
   {id:'random', title:`🎲 Random &amp; Shuffle`, keywords:`random shuffle determinism seed reroll variation same music different painting fresh dice unique play next style cycle`,
    body:`Sits at the end of the style row. By default the same music makes the same painting — the seed behind every overlay is a hash of the notes. Tap 🎲 to toggle it (button glows amber). The toggle itself doesn't change the current painting; the change happens on the next Play (from the start) or the "next ›" control. ◆ With an artist selected, Random re-rolls that artist into a fresh variation each time — and since most styles hold several distinct compositions, a re-roll can change the whole structure, not just colours. ◆ With NO artist selected, 🎲 becomes Shuffle: every Play / next paints a different artist style at random (mosaic excluded). The drawn style shows a light outline in the row — tap it to keep that artist and leave shuffle. ◆ Switching style or colour mode never re-rolls; only Play / next does. Setting is remembered across sessions.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test example sample replace confirm`,
@@ -4604,8 +4628,8 @@ const GUIDE_I18N = {
    body:`Paintiano ist ein wechselseitiger Übersetzer zwischen Musik und bildender Kunst. Ein Musikstück ist ein Gemälde unter einer Grammatik; ein Gemälde ist ein Musikstück unter derselben Grammatik invertiert. Dasselbe Farbrad, derselbe Tonkreis, derselbe Akt der Wahrnehmung. Die App existiert, um das zu beweisen. ◆ Dein erster Schritt hängt davon ab, in welche Richtung du übersetzen möchtest. Von Musik zu Gemälde: wähle eine Quelle, die Noten erzeugt — Komponieren an der Tastatur, MIKRO (Stimme zum Singen/Summen oder Musik für Umgebungsklang), eine MIDI- / Audio- / Partitur-Datei hochladen oder eine Stimmung wählen und die KI komponieren lassen. Von Gemälde zu Musik: lade ein Bild hoch und höre, wie die Leinwand unter der Farbe↔Tonhöhe-Grammatik gelesen wird. ◆ Zwei Entscheidungen prägen jedes Gemälde: der Farbmodus (Harmonie oder Spektral — siehe Modi) und optional ein Künstlerstil (acht davon — siehe Stile). Das Mapping ist absichtlich deterministisch: dieselbe Musik erzeugt immer dasselbe Gemälde — was du siehst, ist eine Lesung der Musik, keine Dekoration. Der 🎲 Zufallsschalter erlaubt es, davon abzuweichen — mit ausgewähltem Künstler gibt es bei jedem Play eine neue Variation; ohne Künstler mischt er über alle acht Stile. ◆ Ein paar Orientierungen vorab. Live-Modi (Komponieren, MIKRO) malen in einen festen Goldener-Schnitt-Rahmen — je mehr Akkorde du hinzufügst, desto dünner werden alle Zeilen, das Gemälde verdichtet sich, statt höher zu wachsen. Die Leinwand ist ein Kompositionsraum, keine Zeitachse. ◆ Importierte Quellen (MIDI, Audio, Partitur, Bild, Stimmung) verwenden eine Leinwand, die mit dem Inhalt wächst — sie sind Transkripte eines bestehenden Artefakts, keine Spontankompositionen. ◆ Künstlerstile sind keine visuellen Filter. Jeder ist eine andere Antwort auf die Frage "wie sieht diese Musik aus?" — Pollock lässt das Mosaik-Substrat sichtbar und tropft darüber; Miró verlässt das Raster zugunsten verstreuter Konstellationsformen. Stile frei wechseln; die Farbgrammatik darunter bleibt dieselbe. ◆ Im Zweifel: Stimmung wählen, Play drücken, zuschauen, wie sich ein Gemälde aufbaut. Dann dieselbe Stimmung in Spektral statt Harmonie versuchen, dann einen Stil. Diese eine Schleife lehrt den Rest der App.`},
   {id:'modes', title:`Harmonie vs. Spektral`, keywords:`farbe modus farbton palette quintenzirkel chromatisch`,
    body:`Zwei Farbgrammatiken für dieselbe Musik. Harmonie ordnet die Tonklassen im Quintenzirkel um das Farbrad an — verwandte Tonarten clustern in ähnlichen Farben. Spektral verteilt sie in gleichmäßigen 30°-Schritten — ein Halbton, eine Farbe. Jederzeit wechselbar.`},
-  {id:'style', title:`Malstile (8)`, keywords:`stil picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubismus punkte tropfen spritzer konstellation collage scherenschnitt raster farbfeld abstrakt geometrisch phase variation`,
-   body:`Optionale Overlays, jedes eine andere Lesart derselben Noten. Ohne Auswahl ist die Leinwand das Standard-Mosaik (scharfe φ-Rechtecke). Acht Stile: ◆ Kubismus (inspiriert von Picasso) — kantige analytische Flächen oder eine synthetische Scherenschnitt-Collage. ◆ Punkte (inspiriert von Punktkunst) — Punkte auf Farbblöcken oder ein flächendeckendes schimmerndes Punktfeld. ◆ Tropfen (inspiriert von Pollock) — das Mosaik bleibt sichtbar unter leinwandweiten Tropfen und Spritzern, die Zellgrenzen ignorieren. ◆ Kosmisch (inspiriert von Kandinsky) — eine freie Streuung aus Dreiecken/Ringen/Bögen oder ein geordnetes Bauhaus-Raster. ◆ Konstellation (inspiriert von Miró) — dichte dunkle Konstellationen oder ein helles, sparsames Feld weniger kräftiger Formen. ◆ Raster (inspiriert von Mondrian) — De-Stijl-Blockraster, sparsame Spätraster oder Boogie-Woogie-Farbspuren. ◆ Farbfelder (inspiriert von Rothko) — weiche gestapelte Farbfelder, die ineinander verlaufen. ◆ Scherenschnitt (inspiriert von Matisse) — verschachtelte Farbpaneele oder eine große Scherenschnitt-Collage. ◆ Die meisten Stile besitzen mehr als eine Komposition; bei aktivem 🎲 Zufall würfeln Variieren/weiter zwischen ihnen. Aktiven Stil erneut antippen zum Abwählen. Wechselt sofort.`},
+  {id:'style', title:`Malstile (8 Künstler)`, keywords:`stil picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubismus punkte tropfen spritzer konstellation collage scherenschnitt raster farbfeld abstrakt geometrisch phase variation`,
+   body:`Optionale Künstler-Overlays. Ohne Auswahl ist die Leinwand das Standard-Mosaik (scharfe φ-Rechtecke). Acht Stile, jeder eine andere Lesart derselben Noten: ◆ Picasso — kubistische Flächen (kantige analytische Splitter oder eine synthetische Scherenschnitt-Collage). ◆ Kusama — Punkte auf Farbblöcken oder ein flächendeckendes schimmerndes Punktfeld. ◆ Pollock — das Mosaik bleibt sichtbar unter leinwandweiten Tropfen und Spritzern, die Zellgrenzen ignorieren. ◆ Kandinsky — eine freie kosmische Streuung aus Dreiecken/Ringen/Bögen oder ein geordnetes Bauhaus-Raster. ◆ Miró — dichte dunkle Konstellationen oder ein helles, sparsames Feld weniger kräftiger Formen. ◆ Mondrian — De-Stijl-Blockraster, sparsame Spätraster oder Boogie-Woogie-Farbspuren. ◆ Rothko — weiche gestapelte Farbfelder, die ineinander verlaufen. ◆ Matisse — verschachtelte Farbpaneele oder eine große Scherenschnitt-Collage. ◆ Die meisten Stile besitzen mehr als eine Komposition; bei aktivem 🎲 Zufall würfeln Variieren/weiter zwischen ihnen. Aktiven Stil erneut antippen zum Abwählen. Wechselt sofort.`},
   {id:'random', title:`🎲 Zufall &amp; Mischen`, keywords:`zufall mischen shuffle determinismus seed neu würfeln variation gleiche musik unterschiedliches gemälde frisch einzigartig play spielen weiter stil wechseln`,
    body:`Sitzt am Ende der Stilzeile. Standardmäßig erzeugt dieselbe Musik dasselbe Gemälde — der Seed jedes Overlays ist ein Hash der Noten. 🎲 antippen zum Umschalten (Button leuchtet bernsteinfarben). Das Umschalten selbst ändert das aktuelle Gemälde nicht; die Änderung erfolgt beim nächsten Play (vom Anfang) oder über „weiter ›". ◆ Mit ausgewähltem Künstler würfelt Zufall diesen Stil jedes Mal in eine neue Variation — und da die meisten Stile mehrere eigenständige Kompositionen besitzen, kann ein Neu-Würfeln die ganze Struktur ändern, nicht nur Farben. ◆ OHNE ausgewählten Künstler wird 🎲 zum Mischen: jedes Play / weiter malt einen zufällig anderen Künstlerstil (Mosaik ausgenommen). Der gezogene Stil zeigt eine helle Umrandung in der Zeile — antippen, um diesen Künstler zu behalten und das Mischen zu verlassen. ◆ Stil- oder Farbmoduswechsel würfeln nie neu; nur Play / weiter. Einstellung wird über Sitzungen hinweg gespeichert.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test beispiel ersetzen bestätigen`,
@@ -4658,8 +4682,8 @@ const GUIDE_I18N = {
    body:`Paintiano est un traducteur bidirectionnel entre musique et art visuel. Un morceau de musique est une peinture sous une grammaire ; une peinture est un morceau de musique sous la même grammaire inversée. Même roue chromatique, même cercle des hauteurs, même acte de perception. L'application existe pour le prouver. ◆ Votre premier geste dépend de la direction dans laquelle vous voulez traduire. De la musique à la peinture : choisissez une source qui produit des notes — Composer au clavier, MICRO (Voix pour chanter/fredonner, ou Musique pour capter un son ambiant), charger un fichier MIDI / audio / partition, ou choisir une Humeur et laisser l'IA composer pour vous. De la peinture à la musique : chargez une Image, et entendez comment la toile se lit sous la grammaire couleur↔hauteur. ◆ Deux choix façonnent chaque peinture : le mode couleur (Harmonie ou Spectral — voir modes) et optionnellement un style pictural (huit en tout — voir styles). L'association est délibérément déterministe : la même musique produit toujours la même peinture — ce que vous voyez est une lecture de la musique, pas une décoration. Le bouton 🎲 Aléatoire permet de rompre cela — avec un artiste sélectionné, une nouvelle variation à chaque Lecture ; sans artiste, il mélange les huit styles. ◆ Quelques repères à connaître d'emblée. Les modes en direct (Composer, MICRO) peignent dans un cadre fixe au nombre d'or — à mesure que vous ajoutez des accords, chaque rangée s'amincit, la peinture se densifie plutôt que de s'allonger. La toile est un espace compositionnel, pas une frise chronologique. ◆ Les sources importées (MIDI, audio, partition, image, humeur) utilisent une toile qui grandit avec le contenu — ce sont des transcriptions d'un artefact existant, pas des compositions de l'instant. ◆ Les styles d'artistes ne sont pas des filtres visuels. Chacun est une réponse différente à la question "à quoi cette musique ressemble-t-elle ?" — Pollock laisse le substrat mosaïque visible et coule par-dessus ; Miró abandonne la grille pour des formes de constellation dispersées. Changez librement de style ; la grammaire couleur sous-jacente reste la même. ◆ En cas de doute : choisissez une Humeur, appuyez sur Lecture, regardez une peinture se construire. Puis essayez la même humeur en Spectral plutôt qu'Harmonie, puis un style. Cette seule boucle enseigne le reste de l'app.`},
   {id:'modes', title:`Harmonie vs Spectral`, keywords:`couleur mode teinte palette cercle des quintes chromatique`,
    body:`Deux grammaires de couleurs pour la même musique. L'harmonie place les classes de hauteur autour de la roue chromatique dans l'ordre du cercle des quintes. Le spectral les répartit en pas de 30°. Changeable à tout moment.`},
-  {id:'style', title:`Styles picturaux (8)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubisme pois goutte éclaboussure constellation collage papier découpé grille champ couleur abstrait géométrique phase variation`,
-   body:`Calques optionnels, chacun une lecture différente des mêmes notes. Sans sélection, la toile est la mosaïque par défaut (rectangles φ nets). Huit styles : ◆ Cubiste (inspiré par Picasso) — plans analytiques anguleux, ou collage synthétique de papiers découpés. ◆ Pois (inspiré par l'art à pois) — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile. ◆ Coulure (inspiré par Pollock) — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules. ◆ Cosmique (inspiré par Kandinsky) — une dispersion libre de triangles/cercles/arcs, ou une grille Bauhaus ordonnée. ◆ Constellation (inspiré par Miró) — denses constellations sombres, ou un champ clair et épuré de quelques formes franches. ◆ Grille (inspiré par Mondrian) — grilles De Stijl, grilles tardives épurées, ou pistes de couleur Boogie-Woogie. ◆ Champs (inspiré par Rothko) — champs de couleur empilés et fondus l'un dans l'autre. ◆ Découpage (inspiré par Matisse) — panneaux de couleur imbriqués, ou un grand collage de papiers découpés. ◆ La plupart des styles renferment plus d'une composition ; avec 🎲 Aléatoire activé, Varier/suivant alterne entre elles. Appuyer à nouveau sur le style actif pour le désélectionner. Bascule instantanée.`},
+  {id:'style', title:`Styles picturaux (8 artistes)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubisme pois goutte éclaboussure constellation collage papier découpé grille champ couleur abstrait géométrique phase variation`,
+   body:`Calques d'artistes optionnels. Sans sélection, la toile est la mosaïque par défaut (rectangles φ nets). Huit styles, chacun une lecture différente des mêmes notes : ◆ Picasso — plans cubistes (éclats analytiques anguleux, ou collage synthétique de papiers découpés). ◆ Kusama — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile. ◆ Pollock — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules. ◆ Kandinsky — une dispersion cosmique libre de triangles/cercles/arcs, ou une grille Bauhaus ordonnée. ◆ Miró — denses Constellations sombres, ou un champ clair et épuré de quelques formes franches. ◆ Mondrian — grilles De Stijl, grilles tardives épurées, ou pistes de couleur Boogie-Woogie. ◆ Rothko — champs de couleur empilés et fondus l'un dans l'autre. ◆ Matisse — panneaux de couleur imbriqués, ou un grand collage de papiers découpés. ◆ La plupart des styles renferment plus d'une composition ; avec 🎲 Aléatoire activé, Varier/suivant alterne entre elles. Appuyer à nouveau sur le style actif pour le désélectionner. Bascule instantanée.`},
   {id:'random', title:`🎲 Aléatoire &amp; Mélange`, keywords:`aléatoire mélange shuffle hasard déterminisme graine seed relancer variation même musique peinture différente frais unique dé jouer play suivant style cycle`,
    body:`Situé à la fin de la ligne des styles. Par défaut, la même musique produit la même peinture — la graine de chaque calque est un hash des notes. Appuyer 🎲 pour basculer (le bouton s'illumine en ambre). La bascule elle-même ne change pas la peinture actuelle ; le changement survient à la prochaine Lecture (depuis le début) ou via « suivant › ». ◆ Avec un artiste sélectionné, Aléatoire relance ce style en une nouvelle variation à chaque fois — et comme la plupart des styles renferment plusieurs compositions distinctes, une relance peut changer toute la structure, pas seulement les couleurs. ◆ SANS artiste sélectionné, 🎲 devient un Mélange : chaque Lecture / suivant peint un style d'artiste différent au hasard (mosaïque exclue). Le style tiré apparaît avec un contour clair dans la ligne — appuyez dessus pour conserver cet artiste et quitter le mélange. ◆ Changer de style ou de mode couleur ne relance jamais ; seule la Lecture / suivant le fait. Le réglage est conservé entre les sessions.`},
   {id:'demo', title:`Démo (Für Elise)`, keywords:`démo für elise beethoven test exemple remplacer confirmer`,
@@ -4712,8 +4736,8 @@ const GUIDE_I18N = {
    body:`Paintiano es un traductor bidireccional entre música y arte visual. Una pieza musical es una pintura bajo una gramática; una pintura es una pieza musical bajo la misma gramática invertida. La misma rueda cromática, el mismo círculo de alturas, el mismo acto de percepción. La aplicación existe para demostrarlo. ◆ Tu primer paso depende de en qué dirección quieras traducir. De música a pintura: elige una fuente que produzca notas — Componer en el teclado, MICRO (Voz para cantar/tararear, o Música para captar sonido ambiente), cargar un archivo MIDI / audio / partitura, o elegir un Estado y dejar que la IA componga por ti. De pintura a música: carga una Imagen, y escucha cómo se lee el lienzo bajo la gramática color↔altura. ◆ Dos elecciones modelan cada pintura: el modo de color (Armonía o Espectral — ver modos) y opcionalmente un estilo pictórico (ocho en total — ver estilos). El mapeo es deliberadamente determinista: la misma música produce siempre la misma pintura — lo que ves es una lectura de la música, no una decoración. El interruptor 🎲 Aleatorio permite romper esto — con un artista seleccionado, una variación nueva en cada Reproducción; sin artista, mezcla los ocho estilos. ◆ Unas pocas orientaciones que conviene saber de entrada. Los modos en vivo (Componer, MICRO) pintan en un marco fijo con proporción áurea — a medida que añades más acordes, cada fila se adelgaza, la pintura se densifica en vez de crecer en altura. El lienzo es un espacio compositivo, no una línea de tiempo. ◆ Las fuentes importadas (MIDI, audio, partitura, imagen, estado) usan un lienzo que crece con el contenido — son transcripciones de un artefacto existente, no composiciones del momento. ◆ Los estilos de artista no son filtros visuales. Cada uno es una respuesta distinta a la pregunta "¿a qué se parece esta música?" — Pollock deja visible el sustrato del mosaico y gotea por encima; Miró abandona la cuadrícula por formas de constelación dispersas. Cambia de estilo libremente; la gramática de color subyacente sigue siendo la misma. ◆ En caso de duda: elige un Estado, pulsa Tocar, observa cómo se construye una pintura. Luego prueba el mismo estado en Espectral en lugar de Armonía, luego un estilo. Ese único bucle enseña el resto de la app.`},
   {id:'modes', title:`Armonía vs Espectral`, keywords:`color modo tono paleta círculo de quintas cromático`,
    body:`Dos gramáticas de color para la misma música. Armonía coloca las clases de tono en el círculo de quintas alrededor de la rueda de color. Espectral los espacía en pasos de 30°. Cambia en cualquier momento.`},
-  {id:'style', title:`Estilos pictóricos (8)`, keywords:`estilo picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubismo lunares goteo salpicadura constelación collage papel recortado cuadrícula campo color abstracto geométrico fase variación`,
-   body:`Capas opcionales, cada una una lectura distinta de las mismas notas. Sin selección, el lienzo es el mosaico por defecto (rectángulos φ nítidos). Ocho estilos: ◆ Cubista (inspirado en Picasso) — planos analíticos angulosos, o collage sintético de papel recortado. ◆ Lunares (inspirado en el arte de lunares) — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo. ◆ Goteo (inspirado en Pollock) — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas. ◆ Cósmico (inspirado en Kandinsky) — una dispersión libre de triángulos/anillos/arcos, o una cuadrícula Bauhaus ordenada. ◆ Constelación (inspirado en Miró) — densas constelaciones oscuras, o un campo claro y disperso de unas pocas formas rotundas. ◆ Cuadrícula (inspirado en Mondrian) — cuadrículas De Stijl, cuadrículas tardías dispersas, o pistas de color Boogie-Woogie. ◆ Campos (inspirado en Rothko) — campos de color apilados que se funden entre sí. ◆ Recorte (inspirado en Matisse) — paneles de color anidados, o un gran collage de papel recortado. ◆ La mayoría de los estilos contienen más de una composición; con 🎲 Aleatorio activo, Variar/siguiente alterna entre ellas. Toca el estilo activo de nuevo para deseleccionar. Cambia al instante.`},
+  {id:'style', title:`Estilos pictóricos (8 artistas)`, keywords:`estilo picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubismo lunares goteo salpicadura constelación collage papel recortado cuadrícula campo color abstracto geométrico fase variación`,
+   body:`Capas de artista opcionales. Sin selección, el lienzo es el mosaico por defecto (rectángulos φ nítidos). Ocho estilos, cada uno una lectura distinta de las mismas notas: ◆ Picasso — planos cubistas (esquirlas analíticas angulosas, o collage sintético de papel recortado). ◆ Kusama — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo. ◆ Pollock — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas. ◆ Kandinsky — una dispersión cósmica libre de triángulos/anillos/arcos, o una cuadrícula Bauhaus ordenada. ◆ Miró — densas Constelaciones oscuras, o un campo claro y disperso de unas pocas formas rotundas. ◆ Mondrian — cuadrículas De Stijl, cuadrículas tardías dispersas, o pistas de color Boogie-Woogie. ◆ Rothko — campos de color apilados que se funden entre sí. ◆ Matisse — paneles de color anidados, o un gran collage de papel recortado. ◆ La mayoría de los estilos contienen más de una composición; con 🎲 Aleatorio activo, Variar/siguiente alterna entre ellas. Toca el estilo activo de nuevo para deseleccionar. Cambia al instante.`},
   {id:'random', title:`🎲 Aleatorio &amp; Mezcla`, keywords:`aleatorio mezcla shuffle determinismo semilla seed relanzar variación misma música pintura diferente fresco único dado tocar play siguiente estilo ciclo`,
    body:`Situado al final de la fila de estilos. Por defecto, la misma música produce la misma pintura — la semilla de cada superposición es un hash de las notas. Toca 🎲 para alternarlo (el botón brilla en ámbar). La pulsación en sí no cambia la pintura actual; el cambio ocurre en el siguiente Tocar (desde el principio) o con «siguiente ›». ◆ Con un artista seleccionado, Aleatorio relanza ese estilo en una variación nueva cada vez — y como la mayoría de los estilos contienen varias composiciones distintas, un relance puede cambiar toda la estructura, no solo los colores. ◆ SIN artista seleccionado, 🎲 se vuelve Mezcla: cada Tocar / siguiente pinta un estilo de artista distinto al azar (mosaico excluido). El estilo elegido muestra un contorno claro en la fila — tócalo para conservar ese artista y salir de la mezcla. ◆ Cambiar de estilo o de modo de color nunca relanza; solo Tocar / siguiente. El ajuste se conserva entre sesiones.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven prueba ejemplo reemplazar confirmar`,
@@ -4766,8 +4790,8 @@ const GUIDE_I18N = {
    body:`Paintiano je obojsmerný prekladateľ medzi hudbou a vizuálnym umením. Hudobná skladba *je* obraz pod jednou gramatikou; obraz *je* hudobná skladba pod tou istou gramatikou invertovanou. Ten istý farebný kruh, ten istý kruh tónov, ten istý akt vnímania. Aplikácia existuje preto, aby to dokázala. ◆ Tvoj prvý ťah závisí od toho, ktorým smerom chceš prekladať. Z hudby na obraz: vyber zdroj, ktorý produkuje noty — Komponuj na klaviatúre, MIKRO (Hlas pre spev/hum, alebo Hudba pre zachytenie ambientného zvuku), nahraj MIDI / audio / partitúru, alebo vyber Náladu a nechaj AI komponovať za teba. Z obrazu na hudbu: nahraj Obraz a vypočuj si, ako sa plátno číta pod gramatikou farba↔výška. ◆ Dve voľby formujú každý obraz: farebný režim (Harmónia alebo Spektrum — pozri režimy) a voliteľne maliarsky štýl (osem z nich — pozri štýly). Mapovanie je zámerne deterministické: tá istá hudba vždy vytvorí ten istý obraz, takže to, čo vidíš, je čítanie hudby, nie dekorácia. Prepínač 🎲 Náhoda ti umožňuje sa tomu vyhnúť — s vybraným umelcom nová variácia pri každom Prehratí; bez umelca mieša všetkých osem štýlov. ◆ Pár orientácií, ktoré sa oplatí poznať vopred. Živé režimy (Komponovať, MIKRO) maľujú do fixného rámu v zlatom reze — keď pridávaš akordy, každý riadok sa stenčí, takže obraz sa zhusťuje, namiesto aby rástol do výšky. Plátno je kompozičný priestor, nie časová os. ◆ Importované zdroje (MIDI, audio, partitúra, obraz, nálada) používajú plátno, ktoré rastie s obsahom — sú to prepisy existujúceho artefaktu, nie kompozície v okamihu. ◆ Maliarske štýly nie sú vizuálne filtre. Každý je iná odpoveď na otázku „ako vyzerá táto hudba?" — Pollock necháva mozaikový podklad viditeľný a kvapká cezeň; Miró opúšťa mriežku v prospech rozosiatych tvarov súhvezdí. Slobodne meň štýly; farebná gramatika pod nimi zostáva tá istá. ◆ Keď neviete: vyber Náladu, ťukni Prehrať, sleduj, ako sa obraz buduje sám. Potom skús tú istú náladu v Spektre namiesto Harmónie, potom štýl. Tá jedna slučka ťa naučí zvyšok aplikácie.`},
   {id:'modes', title:`Harmónia vs Spektrum`, keywords:`farba režim odtieň paleta kvintový kruh chromatický`,
    body:`Dve farebné gramatiky pre tú istú hudbu. Harmónia rozmiestňuje triedy tónov okolo farebného kruhu v poradí Kvintového kruhu — príbuzné tóniny sa zhlukujú v podobných farbách. Spektrum ich rozmiestňuje v rovnomerných krokoch 30° — jedna farba na poltón. Prepínaj kedykoľvek; tie isté noty sa okamžite premaľujú.`},
-  {id:'style', title:`Maliarske štýly (8)`, keywords:`štýl picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubizmus bodky kvapky striekanie súhvezdia koláž vystrihovaný papier mriežka farebné pole umelec abstraktný geometrický fáza variácia`,
-   body:`Voliteľné prekrytia, každé iné čítanie tých istých nôt. Bez výberu je plátno predvolená mozaika (ostré φ-obdĺžniky). Osem štýlov: ◆ Kubizmus (inšpirované Picassom) — hranaté analytické plochy, alebo syntetická koláž z vystrihovaného papiera. ◆ Bodky (inšpirované bodkovým umením) — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno. ◆ Kvapky (inšpirované Pollockom) — mozaika zostáva viditeľná pod kvapkami a striekancami, ktoré ignorujú hranice buniek. ◆ Kozmické (inšpirované Kandinským) — voľný rozptyl trojuholníkov/prstencov/oblúkov, alebo usporiadaná Bauhaus mriežka. ◆ Súhvezdie (inšpirované Mirom) — husté tmavé konštelácie, alebo svetlé riedke pole zopár výrazných tvarov. ◆ Mriežka (inšpirované Mondrianom) — De Stijl mriežky, riedke neskoré mriežky, alebo farebné dráhy Boogie-Woogie. ◆ Polia (inšpirované Rothkom) — mäkké navrstvené farebné polia, ktoré sa do seba prelievajú. ◆ Výstrižok (inšpirované Matissom) — vnorené farebné panely, alebo veľká koláž z vystrihovaného papiera. ◆ Väčšina štýlov obsahuje viac než jednu kompozíciu; pri zapnutej 🎲 Náhode Variovať/ďalej medzi nimi preroluje. Ťukni na aktívny štýl znova pre zrušenie výberu. Prepína okamžite.`},
+  {id:'style', title:`Maliarske štýly (8 umelcov)`, keywords:`štýl picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubizmus bodky kvapky striekanie súhvezdia koláž vystrihovaný papier mriežka farebné pole umelec abstraktný geometrický fáza variácia`,
+   body:`Voliteľné umelecké prekrytia. Bez výberu je plátno predvolená mozaika (ostré φ-obdĺžniky). Osem štýlov, každý iné čítanie tých istých nôt: ◆ Picasso — kubistické plochy (hranaté analytické úlomky, alebo syntetická koláž z vystrihovaného papiera). ◆ Kusama — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno. ◆ Pollock — mozaika zostáva viditeľná pod kvapkami a striekancami, ktoré ignorujú hranice buniek. ◆ Kandinsky — voľný kozmický rozptyl trojuholníkov/prstencov/oblúkov, alebo usporiadaná Bauhaus mriežka. ◆ Miró — husté tmavé Konštelácie, alebo svetlé riedke pole zopár výrazných tvarov. ◆ Mondrian — De Stijl mriežky, riedke neskoré mriežky, alebo farebné dráhy Boogie-Woogie. ◆ Rothko — mäkké navrstvené farebné polia, ktoré sa do seba prelievajú. ◆ Matisse — vnorené farebné panely, alebo veľká koláž z vystrihovaného papiera. ◆ Väčšina štýlov obsahuje viac než jednu kompozíciu; pri zapnutej 🎲 Náhode Variovať/ďalej medzi nimi preroluje. Ťukni na aktívny štýl znova pre zrušenie výberu. Prepína okamžite.`},
   {id:'random', title:`🎲 Náhoda &amp; Miešanie`, keywords:`náhoda miešanie shuffle determinizmus seed prehodiť variácia rovnaká hudba iný obraz čerstvé kocka unikátne prehrať ďalej štýl cyklus`,
    body:`Nachádza sa na konci radu štýlov. Štandardne tá istá hudba produkuje ten istý obraz — seed za každým prekrytím je hash nôt. Ťukni 🎲 pre prepnutie (tlačidlo svieti jantárovo). Samotné prepnutie nezmení aktuálny obraz; zmena nastane pri ďalšom Prehrať (od začiatku) alebo cez „ďalej ›". ◆ S vybraným umelcom Náhoda preroluje tento štýl do novej variácie zakaždým — a keďže väčšina štýlov obsahuje viacero odlišných kompozícií, prerolovanie môže zmeniť celú štruktúru, nielen farby. ◆ BEZ vybraného umelca sa 🎲 stáva Miešaním: každé Prehrať / ďalej namaľuje náhodne iný umelecký štýl (mozaika vynechaná). Vytiahnutý štýl má v rade svetlý obrys — ťukni naň, aby si ponechal tohto umelca a opustil miešanie. ◆ Prepínanie štýlu alebo farebného režimu nikdy nepriehadzuje; len Prehrať / ďalej. Nastavenie sa pamätá medzi reláciami.`},
   {id:'demo', title:`Demo (Pre Elišku)`, keywords:`demo pre elišku für elise beethoven test príklad ukážka nahradiť potvrdiť`,
@@ -5056,15 +5080,20 @@ function useModalFocusTrap(panelRef){
 // re-rendered on every Paintiano render including the 5-15Hz `disp` tick
 // during playback even when not visible. `React.memo` plus stable t/onClose
 // references from the parent skip reconciliation entirely.
-const AboutModal = memo(function AboutModal({onClose, t, lang}){
+const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setReadScale}){
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:22,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
-        {getConcept(lang)}
+        <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:14,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
+        <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(201,168,76,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
+        <style>{`#pf-concept-body{font-size:${(0.78*readScale).toFixed(3)}rem;}
+#pf-concept-body h3{font-size:${(1*readScale).toFixed(3)}rem !important;}
+#pf-concept-body p,#pf-concept-body li{font-size:${(0.82*readScale).toFixed(3)}rem !important;line-height:1.65;}
+#pf-concept-body strong,#pf-concept-body em{font-size:inherit !important;}`}</style>
+        <div id="pf-concept-body">{getConcept(lang)}</div>
         <button onClick={onClose} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
       </div>
     </div>
@@ -5076,7 +5105,7 @@ const AboutModal = memo(function AboutModal({onClose, t, lang}){
 // during playback would reconcile its full subtree (input + filtered details
 // list) on every 5-15Hz `disp` tick. Now it only reconciles when one of its
 // actual props changes (query, focus, lang, t, onClose).
-const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus}){
+const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale}){
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
   return (
@@ -5084,6 +5113,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
         <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
+        <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(140,200,255,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(140,200,255,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
         <input
           type="search"
           value={guideQuery}
@@ -5099,6 +5129,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
           aria-label={t('searchGuide')}
           style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:'.78rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
         />
+        <div>
         {(() => {
           const matches = orderedGuide(lang).filter(e => guideMatch(e, guideQuery));
           if (matches.length === 0) {
@@ -5109,18 +5140,19 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
             return (
             <Fragment key={entry.id}>
               {sec && (
-                <div style={{margin:'16px 0 7px',padding:'0 4px',fontSize:'.58rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(140,200,255,.55)'}}>{t('gsec_'+sec)}</div>
+                <div style={{margin:'16px 0 7px',padding:'0 4px',fontSize:(0.58*readScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(140,200,255,.55)'}}>{t('gsec_'+sec)}</div>
               )}
               <details open={!!guideQuery.trim()} style={{marginBottom:6,border:'1px solid rgba(207,197,168,.08)',borderRadius:4,padding:'2px 0',background:'rgba(255,255,255,0.012)'}}>
-                <summary style={{cursor:'pointer',padding:'9px 12px',color:'rgba(140,200,255,.92)',fontWeight:500,fontSize:'.82rem',letterSpacing:'.02em',listStyle:'none',userSelect:'none'}}>{entry.title}</summary>
+                <summary style={{cursor:'pointer',padding:'9px 12px',color:'rgba(140,200,255,.92)',fontWeight:500,fontSize:(0.82*readScale)+'rem',letterSpacing:'.02em',listStyle:'none',userSelect:'none'}}>{entry.title}</summary>
                 {entry.body.split('◆').map((para,i)=>(
-                  <p key={i} style={{margin:i===0?0:'8px 0 0',padding:'2px 14px 12px',color:'rgba(207,197,168,.82)',fontSize:'.76rem',lineHeight:1.65}}>{para.trim()}</p>
+                  <p key={i} style={{margin:i===0?0:'8px 0 0',padding:'2px 14px 12px',color:'rgba(207,197,168,.82)',fontSize:(0.76*readScale)+'rem',lineHeight:1.65}}>{para.trim()}</p>
                 ))}
               </details>
             </Fragment>
             );
           });
         })()}
+        </div>
         <button onClick={onClose} style={{display:'block',margin:'20px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
       </div>
     </div>
@@ -5289,14 +5321,6 @@ export default function Paintiano() {
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
   const [lang, setLang] = useState(()=>{try{return localStorage.getItem('paintiano_lang')||'EN';}catch(_){return 'EN';}});
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
-  // Descriptive style labels shown on the chips (the internal keys —
-  // picasso/kusama/… — stay unchanged everywhere in the logic). This keeps the
-  // feature branded by what it DOES rather than by a protected artist name,
-  // while STYLE_INSPIRED supplies a small "inspired by …" caption for context.
-  // Kusama is a living, brand-protective artist, so she's attributed
-  // generically ("polka-dot art") rather than by name.
-  const STYLE_LABELS = {picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Cosmic',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out'};
-  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'polka-dot art',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse'};
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -5513,6 +5537,10 @@ export default function Paintiano() {
   const [showSizePicker, setShowSizePicker] = useState(false);
   // Inline "guide" modal: searchable how-to entries covering every feature.
   const [showGuide, setShowGuide] = useState(false);
+  // Reading-text size for the Concept & Guide panels (accessibility — larger
+  // type for older readers). 1 = Normal, 1.25 = Large. Applied via CSS zoom on
+  // the content wrapper so text AND spacing scale proportionally with one prop.
+  const [readScale, setReadScale] = useState(1);
   // v2.6.0: in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
   const [stripOpen, setStripOpen] = useState(false);
@@ -8001,14 +8029,15 @@ Composition rules:
           {/* ARTIST STYLE */}
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('styleLabel')}</div>
-            <div style={{display:'flex',gap:6,flexWrap:'wrap',rowGap:8}} title="painting style — tap again to deselect (mosaic default)">
-              {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
-                <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{flexShrink:0,padding:'8px 13px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:(shuffleStyle===k?PF.cream:PF.muted),background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr) auto',gap:6,rowGap:8,alignItems:'center'}} title="painting style — tap again to deselect (mosaic default)">
+              {[['picasso','picasso'],['kusama','kusama'],['pollock','pollock'],['kandinsky','kandinsky'],['miro','miro'],['mondrian','mondrian'],['rothko','rothko'],['matisse','matisse']].map(([k,label],i)=>(
+                <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{gridColumn:(i%4)+1,width:'100%',padding:'8px 6px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:(shuffleStyle===k?PF.cream:PF.muted),background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
               ))}
               {/* Random 🎲: with an artist selected it re-rolls that artist's
                   variation; with NO artist it shuffles across all artist styles
-                  (each Play/Next paints a different one). Always enabled. */}
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off · next Play produces a new variation':'shuffle ON · each Play/Next paints a different artist style · tap to turn off'):(style?'random OFF · tap to enable · next Play produces a unique variation':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+                  (each Play/Next paints a different one). Always enabled. Sits in
+                  the 5th column on row 2 — NOT part of the equal-width 4-chip grid. */}
+              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off · next Play produces a new variation':'shuffle ON · each Play/Next paints a different artist style · tap to turn off'):(style?'random OFF · tap to enable · next Play produces a unique variation':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{gridColumn:5,gridRow:2,flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
             </div>
           </div>
 
@@ -8080,9 +8109,6 @@ Composition rules:
           <span>{t('colorLabel')} · {t('styleLabel')}</span>
           <span style={{fontSize:'.7rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
         </button>
-        {style && STYLE_INSPIRED[style] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:'.5rem',letterSpacing:'.12em',color:'rgba(230,222,196,.32)',fontStyle:'italic',textTransform:'none'}}>{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
-        )}
         {stripOpen && (
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
           {/* Morph / Vary — only meaningful for a mood-based painting */}
@@ -8139,9 +8165,9 @@ Composition rules:
           )}
           {/* Style */}
           <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
-            <div style={{display:'flex',gap:6,flexWrap:'wrap',rowGap:6,flex:1}} title="painting style — tap again to deselect (mosaic default)">
-              {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
-                <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{flexShrink:0,padding:'7px 12px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:(shuffleStyle===k?PF.cream:PF.muted),background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,rowGap:6,flex:1}} title="painting style — tap again to deselect (mosaic default)">
+              {[['picasso','picasso'],['kusama','kusama'],['pollock','pollock'],['kandinsky','kandinsky'],['miro','miro'],['mondrian','mondrian'],['rothko','rothko'],['matisse','matisse']].map(([k,label])=>(
+                <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{width:'100%',padding:'7px 6px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:(shuffleStyle===k?PF.cream:PF.muted),background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
               ))}
             </div>
             <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'.95rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
@@ -8466,7 +8492,7 @@ Composition rules:
         />
       )}
 
-      {showAbout && <AboutModal onClose={closeAbout} t={t} lang={lang} />}
+      {showAbout && <AboutModal onClose={closeAbout} t={t} lang={lang} readScale={readScale} setReadScale={setReadScale} />}
 
       {showGuide && (
         <GuideModal
@@ -8478,6 +8504,8 @@ Composition rules:
           focusedInput={focusedInput}
           setFocusedInput={setFocusedInput}
           inputFocus={inputFocus}
+          readScale={readScale}
+          setReadScale={setReadScale}
         />
       )}
 
@@ -8759,7 +8787,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.7</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.8</footer>
     </div>
   );
 }
