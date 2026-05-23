@@ -7492,7 +7492,12 @@ Composition rules:
         if(now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
           const mag=fftMag(buf);
-          const pitches=pickPitches(mag,sr,0.05);
+          // Read sampleRate live: a freshly-created AudioContext can report 0 (or
+          // a stale value) on the first entry until it's fully running, which made
+          // pickPitches compute garbage frequencies → no pitches → first Music
+          // session never painted. Fall back to a sane default if it's not ready.
+          const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
+          const pitches=pickPitches(mag,liveSr,0.05);
           if(pitches.length>0){
             const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:0}));
             const sig=notes.map(n=>n.m).sort((a,b)=>a-b).join(',');
@@ -7587,7 +7592,8 @@ Composition rules:
         if(now-lastSample>SAMPLE_INTERVAL){
           lastSample=now;
           const mag=fftMag(buf);
-          const pitches=pickPitches(mag,sr,0.20);
+          const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
+          const pitches=pickPitches(mag,liveSr,0.20);
           if(pitches.length>0){
             const snapped=paintSnapMidi(pitches[0].midi,'cmaj');
             const v=Math.max(50,Math.min(120,Math.round(pitches[0].mag*110)));
@@ -8681,7 +8687,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.5</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.6</footer>
     </div>
   );
 }
