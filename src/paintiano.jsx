@@ -5442,7 +5442,10 @@ export default function Paintiano() {
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
   // no artist + Random on, the painting shuffles across artist styles).
   const selectStyle = useCallback((k)=>{
-    setForceSetup(false);
+    // Just change the style. Do NOT force a view change here: setting
+    // forceSetup=false used to yank the user to an EMPTY canvas when they
+    // changed style in setup with no source loaded. View transitions are
+    // handled by isActiveView (content present) + the activity effects.
     if(canvasRef.current){canvasRef.current.style.opacity='0';}
     setTimeout(()=>{
       setStyle(prev=>{
@@ -8320,6 +8323,11 @@ Composition rules:
         <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',maxWidth:'100%',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease'}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
+        {micActive && (
+          <div aria-hidden="true" style={{position:'absolute',top:10,right:10,zIndex:5,padding:'5px 10px',borderRadius:8,pointerEvents:'none',fontSize:'.6rem',fontWeight:700,fontFamily:"monospace",color:'#fff',background:'rgba(0,0,0,.6)',border:'1px solid rgba(255,255,255,.3)'}}>
+            lvl {Math.round((micVolLevel||0)*100)} · n {chords.length}
+          </div>
+        )}
         {micActive && (
           <div aria-hidden="true" style={{position:'absolute',top:10,left:10,zIndex:4,display:'inline-flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:20,pointerEvents:'none',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
             <span style={{width:7,height:7,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
