@@ -4498,8 +4498,11 @@ export default function Paintiano() {
   const [pickMode,  setPickMode]  = useState(null); // 'midi' | 'audio' | null
   const [preview,   setPreview]   = useState(null); // {url, filename, w, h, size, file}
   const [previewMsg,setPreviewMsg]= useState(null); // in-modal status text
-  const [paintDur,  setPaintDur]  = useState(500);
-  const [paintVel,  setPaintVel]  = useState(88);
+  // paintDur is read by the playback-timing path (below) but never changed at
+  // runtime — the UI control that used to set it was removed. Kept as a plain
+  // const at its former default so the timing math is unaffected. paintVel was
+  // fully dead (never read, never set) and has been removed.
+  const paintDur = 500;
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
@@ -4520,7 +4523,6 @@ export default function Paintiano() {
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
   const [err,       setErr]       = useState('');
-  const [debugMsg,  setDebugMsg]  = useState('');
   const [errInfo,   setErrInfo]   = useState(false);
 
   // Auto-dismiss only informational warnings (errInfo=true, gold 𝄞). Serious
@@ -7336,7 +7338,6 @@ Composition rules:
               {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(info.dur/playbackSpeed-elapsedS));return remS+t('sLeft');})():info.dur+'s'}
             </span>
           </div>
-          {debugMsg&&<div style={{fontSize:'.48rem',color:'rgba(255,220,100,.8)',marginBottom:3,fontFamily:'monospace',letterSpacing:'.02em'}}>{debugMsg}</div>}
           <div
             role="slider"
             aria-label="playback position"
@@ -7794,7 +7795,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.2</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.3</footer>
     </div>
   );
 }
