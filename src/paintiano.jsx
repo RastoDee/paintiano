@@ -7341,13 +7341,19 @@ Composition rules:
     setMicVolLevel(0);
   },[]);
 
-  const startMicVol=useCallback(async()=>{
+  const startMicVol=useCallback(async(existingStream)=>{
     if(micVolActive){stopMicVol();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      // Reuse the capture stream when given one. Opening a SECOND getUserMedia
+      // for the meter raced the capture stream on iOS — on the first Music entry
+      // the capture analyser ended up silent (no painting) until a Voice↔Music
+      // cycle settled the mic. A clone keeps the meter's node graph independent
+      // without grabbing the mic a second time.
+      const stream = existingStream ? existingStream.clone() : await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){}
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=256;
@@ -7427,7 +7433,7 @@ Composition rules:
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
       setMicListening(true);
-      startMicVol();
+      startMicVol(listenStreamRef.current);
       stopAll();
       // Continuation (sibling preset or re-entering): preserve canvas.
       // Fresh entry: restore listen stash or start blank.
@@ -7531,7 +7537,7 @@ Composition rules:
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
       setMicPainting(true);
-      startMicVol();
+      startMicVol(micStreamRef.current);
       stopAll();
       if(!continuation){
         if(!restoreStash('sing')){
