@@ -6570,10 +6570,15 @@ export default function Paintiano() {
     // If in a creative mode, wipe ONLY that mode's stash (and the canvas).
     // Other modes' drafts stay safely in their slots. If not in any creative
     // mode, wipe loaded content but never the stashes.
-    if(composeMode){
+    // Wipe the draft of whatever creation owns this canvas — keyed on
+    // draftOwnerRef, which persists after the session STOPS (live flags don't).
+    // Without this, clearing a stopped mic/compose session left the MIC/COMPOSE
+    // button still glowing "draft saved" even though the draft was gone.
+    const _owner = composeMode ? 'compose' : (micPainting||micListening) ? 'sing' : draftOwnerRef.current;
+    if(_owner==='compose'){
       composeStashRef.current=null;
       setHasComposeDraft(false);
-    } else if(micPainting || micListening){
+    } else if(_owner==='sing' || _owner==='listen'){
       // Sing and Listen are presets of the unified MIC mode and share a draft —
       // wipe both stash slots together.
       singStashRef.current=null;
