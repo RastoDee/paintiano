@@ -7647,6 +7647,9 @@ Composition rules:
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
       setMicPainting(true);
+      // Same as compose: freeze the artist seed so the overlay (esp. Kusama
+      // dots) doesn't re-randomise as sung notes accumulate. Skip on Random.
+      if(!continuation && !randomMode){ setStructureSeedLock((pollockSessionSeed>>>0)||1); }
       startMicVol();
       stopAll();
       if(!continuation){
@@ -7719,7 +7722,7 @@ Composition rules:
       setErr(t('micDenied'));setErrInfo(false);
       setMicPainting(false);
     }
-  },[micPainting,stopMicPainting,playNote,stopAll]);
+  },[micPainting,stopMicPainting,playNote,stopAll,randomMode,pollockSessionSeed]);
   //   1. navigator.share({files}) — iOS Safari, Android Chrome (share sheet)
   //   2. showSaveFilePicker — Chrome/Edge desktop (native save dialog)
   //   3. Anchor <a download> click — Firefox / older browsers / fallback
@@ -8044,7 +8047,7 @@ Composition rules:
                   variation; with NO artist it shuffles across all artist styles
                   (each Play/Next paints a different one). Always enabled. Sits in
                   the 5th column on row 2 — NOT part of the equal-width 4-chip grid. */}
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off · next Play produces a new variation':'shuffle ON · each Play/Next paints a different artist style · tap to turn off'):(style?'random OFF · tap to enable · next Play produces a unique variation':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{gridColumn:5,gridRow:2,flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off · next Play produces a new variation':'shuffle ON · each Play/Next paints a different artist style · tap to turn off'):(style?'random OFF · tap to enable · next Play produces a unique variation':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{gridColumn:5,gridRow:2,flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
             </div>
           </div>
 
@@ -8066,6 +8069,13 @@ Composition rules:
                 if(!composeMode){
                   unlockAudio();
                   stopAll();
+                  // Live composing grows `chords` note-by-note. The artist seed is
+                  // a hash of all notes, so without locking it the overlay (esp.
+                  // Kusama's all-over dot-field) re-randomises on every keystroke.
+                  // Freeze the seed for the session (unless Random is on, which is
+                  // meant to re-roll) so existing marks stay put and new notes just
+                  // extend the painting.
+                  if(!randomMode){ setStructureSeedLock((pollockSessionSeed>>>0)||1); }
                   const owner = draftOwnerRef.current;
                   if(owner==='compose'){ setComposeMode(true); return; }
                   if(owner) stashDraft(owner);
@@ -8180,7 +8190,7 @@ Composition rules:
                 <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{width:'100%',padding:'7px 6px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:(shuffleStyle===k?PF.cream:PF.muted),background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
               ))}
             </div>
-            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'.95rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'.95rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
           </div>
         </div>
         )}
