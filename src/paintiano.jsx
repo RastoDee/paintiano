@@ -3826,6 +3826,7 @@ const I18N = {
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all',
     selectMood:'✦ select a mood…', morph:'✦ morph', vary:'✦ vary',
+    moodNames:{funny:'funny',sad:'sad',aggressive:'aggressive',dreamy:'dreamy',love:'love',nostalgic:'nostalgic',calm:'calm',excited:'excited',crazy:'crazy',hopeful:'hopeful'},
     midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 SCORE', image:'🖼 IMAGE',
     compose:'♪ COMPOSE', composing:'♪ COMPOSING',
     sing:'🎤 SING', singing:'🎤',
@@ -3851,7 +3852,7 @@ const I18N = {
     recTooShort:'Recording was too short — hold rec for at least a second.',
     searchGuide:'search the guide…', noMatches:'No matches for',
     guideTitle:'guide', conceptTitle:'concept', gsec_start:'getting started', gsec_sources:'sources', gsec_playing:'while playing', gsec_output:'save & share', gsec_more:'more',
-    pickMoodFirst:'pick a mood first', morphInto:'morph current mood into another',
+    pickMoodFirst:'pick a mood first', morphInto:'morph current mood into another', morphTitle:'morph {mood} into…',
     reroll:'reroll: a fresh take',
     demoMode:'demo mode — clear to play again',
     stopRecFirst:'stop recording to use playback controls',
@@ -3869,6 +3870,7 @@ const I18N = {
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen',
     selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'✦ variieren',
+    moodNames:{funny:'lustig',sad:'traurig',aggressive:'aggressiv',dreamy:'verträumt',love:'liebe',nostalgic:'nostalgisch',calm:'ruhig',excited:'aufgeregt',crazy:'verrückt',hopeful:'hoffnungsvoll'},
     midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITUR', image:'🖼 BILD',
     compose:'♪ KOMPONIEREN', composing:'♪ KOMPONIERT…',
     sing:'🎤 SINGEN', singing:'🎤',
@@ -3894,7 +3896,7 @@ const I18N = {
     recTooShort:'Aufnahme zu kurz — mindestens eine Sekunde halten.',
     searchGuide:'anleitung durchsuchen…', noMatches:'Keine Treffer für',
     guideTitle:'anleitung', conceptTitle:'konzept', gsec_start:'erste schritte', gsec_sources:'quellen', gsec_playing:'beim abspielen', gsec_output:'speichern & teilen', gsec_more:'mehr',
-    pickMoodFirst:'zuerst stimmung wählen', morphInto:'aktuelle stimmung transformieren',
+    pickMoodFirst:'zuerst stimmung wählen', morphInto:'aktuelle stimmung transformieren', morphTitle:'{mood} verwandeln in…',
     reroll:'neu würfeln',
     demoMode:'demo-modus — löschen zum erneuten spielen',
     stopRecFirst:'aufnahme stoppen für wiedergabe',
@@ -3912,6 +3914,7 @@ const I18N = {
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer',
     selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'✦ varier',
+    moodNames:{funny:'drôle',sad:'triste',aggressive:'agressif',dreamy:'rêveur',love:'amour',nostalgic:'nostalgique',calm:'calme',excited:'excité',crazy:'fou',hopeful:"plein d'espoir"},
     midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITION', image:'🖼 IMAGE',
     compose:'♪ COMPOSER', composing:'♪ COMPOSITION…',
     sing:'🎤 CHANTER', singing:'🎤',
@@ -3937,7 +3940,7 @@ const I18N = {
     recTooShort:'Enregistrement trop court — tenir au moins une seconde.',
     searchGuide:'rechercher dans le guide…', noMatches:'Aucun résultat pour',
     guideTitle:'guide', conceptTitle:'concept', gsec_start:'pour commencer', gsec_sources:'sources', gsec_playing:'pendant la lecture', gsec_output:'enregistrer & partager', gsec_more:'plus',
-    pickMoodFirst:'choisir d\'abord une humeur', morphInto:'transformer l\'humeur actuelle',
+    pickMoodFirst:'choisir d\'abord une humeur', morphInto:'transformer l\'humeur actuelle', morphTitle:'transformer {mood} en…',
     reroll:'relancer',
     demoMode:'mode démo — effacer pour rejouer',
     stopRecFirst:'arrêter l\'enregistrement pour contrôler',
@@ -3955,6 +3958,7 @@ const I18N = {
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo',
     selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'✦ variar',
+    moodNames:{funny:'divertido',sad:'triste',aggressive:'agresivo',dreamy:'soñador',love:'amor',nostalgic:'nostálgico',calm:'tranquilo',excited:'emocionado',crazy:'loco',hopeful:'esperanzado'},
     midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITURA', image:'🖼 IMAGEN',
     compose:'♪ COMPONER', composing:'♪ COMPONIENDO…',
     sing:'🎤 CANTAR', singing:'🎤',
@@ -3980,7 +3984,7 @@ const I18N = {
     recTooShort:'Grabación demasiado corta — mantener al menos un segundo.',
     searchGuide:'buscar en la guía…', noMatches:'Sin resultados para',
     guideTitle:'guía', conceptTitle:'concepto', gsec_start:'primeros pasos', gsec_sources:'fuentes', gsec_playing:'durante la reproducción', gsec_output:'guardar & compartir', gsec_more:'más',
-    pickMoodFirst:'primero elegir un estado', morphInto:'transformar el estado actual',
+    pickMoodFirst:'primero elegir un estado', morphInto:'transformar el estado actual', morphTitle:'transformar {mood} en…',
     reroll:'relanzar',
     demoMode:'modo demo — borrar para volver a tocar',
     stopRecFirst:'detener grabación para controlar',
@@ -3998,6 +4002,7 @@ const I18N = {
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť',
     selectMood:'✦ vyber náladu…', morph:'✦ morf', vary:'✦ variácia',
+    moodNames:{funny:'veselá',sad:'smutná',aggressive:'agresívna',dreamy:'snová',love:'láska',nostalgic:'nostalgická',calm:'pokojná',excited:'vzrušená',crazy:'šialená',hopeful:'nádejná'},
     midi:'♬ MIDI', audio:'♫ AUDIO', score:'𝄞 PARTITÚRA', image:'🖼 OBRAZ',
     compose:'♪ KOMPONOVAŤ', composing:'♪ KOMPONUJEM',
     sing:'🎤 SPIEVAŤ', singing:'🎤',
@@ -4023,7 +4028,7 @@ const I18N = {
     recTooShort:'Nahrávka bola príliš krátka — podrž rec aspoň sekundu.',
     searchGuide:'hľadať v príručke…', noMatches:'Žiadne výsledky pre',
     guideTitle:'príručka', conceptTitle:'koncept', gsec_start:'začíname', gsec_sources:'zdroje', gsec_playing:'počas prehrávania', gsec_output:'uložiť & zdieľať', gsec_more:'viac',
-    pickMoodFirst:'najprv vyber náladu', morphInto:'morfovať súčasnú náladu do inej',
+    pickMoodFirst:'najprv vyber náladu', morphInto:'morfovať súčasnú náladu do inej', morphTitle:'plynule prejdi z {mood} do…',
     reroll:'prehodiť: čerstvé prevedenie',
     demoMode:'režim demo — vyčisti pre nové prehratie',
     stopRecFirst:'najprv zastav nahrávanie pre použitie ovládania',
@@ -4314,7 +4319,7 @@ const MOODS = ['funny','sad','aggressive','dreamy','love','nostalgic','calm','ex
 // Pre-built once at module load — MOOD names are language-independent, so the
 // <option> elements don't depend on any component state. Allocating these on
 // every render allocated 9 React elements per render for no reason.
-const MOOD_OPTIONS = MOODS.map(m => <option key={m} value={m} style={{color:'#1a1320',background:'#ffffff'}}>{m}</option>);
+
 
 // Searchable in-app guide. Each entry: title, body, plus keywords to widen
 // the match surface for the search box. Sections are independent — order
@@ -6877,11 +6882,12 @@ export default function Paintiano() {
     if(!song){setErr('Song not found in library.');return;}
     const evts=noteArr2events(song.notes,song.tempo);
     if(!evts.length){setErr('No notes.');return;}
-    applyEvents(evts,song.title);
+    const dispTitle=((t('moodNames')||{})[title])||song.title;
+    applyEvents(evts,dispTitle);
     const bytes=encodeMidi(evts,song.tempo||120);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
-  },[working,stopAll,applyEvents]);
+  },[working,stopAll,applyEvents,t]);
 
   const aiCompose=useCallback(async(overrideMood)=>{
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
@@ -7926,7 +7932,7 @@ Composition rules:
             style={{flex:1,minWidth:0,background:'transparent',border:'none',borderRadius:14,padding:'15px 40px',color:songQ?PF.cream:moodHint?'rgba(220,170,255,.95)':'rgba(242,238,232,.55)',fontSize:'.95rem',fontFamily:"'Cormorant Garamond',serif",fontStyle:songQ?'normal':'italic',outline:'none',opacity:sourcePickerLocked?0.4:1,letterSpacing:'.02em',cursor:'pointer',appearance:'none',textTransform:'capitalize',position:'relative',zIndex:1,textAlign:'left'}}>
             <option value="" style={{color:'#1a1320',background:'#ffffff'}}>{t('selectMood').replace('✦ ','')}</option>
             {currentMood&&currentMood.includes(' → ')&&<option value="" disabled style={{color:'#6b5b7a',background:'#ffffff'}}>{currentMood}</option>}
-            {MOOD_OPTIONS}
+            {MOODS.map(m=>{const mn=t('moodNames');return <option key={m} value={m} style={{color:'#1a1320',background:'#ffffff'}}>{(mn&&mn[m])||m}</option>;})}
           </select>
           <span style={{position:'absolute',right:16,fontSize:'.7rem',color:PF.gold,pointerEvents:'none'}}>▾</span>
         </div>
@@ -7971,10 +7977,10 @@ Composition rules:
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('sourceLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;setPickMode('midi');}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^A-Za-z]/g,'')}</span></button>
-              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;setPickMode('audio');}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^A-Za-z]/g,'')}</span></button>
-              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;setPickMode('score');}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^A-Za-z]/g,'')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;setPickMode('midi');}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;setPickMode('audio');}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;setPickMode('score');}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:8}}>
               <button className="pf-compose" onClick={()=>{
@@ -7993,13 +7999,13 @@ Composition rules:
                   }
                   setComposeMode(true);
                 } else setComposeMode(false);
-              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}♪ {composeMode?t('composing').replace(/[^A-Za-z ]/g,''):t('compose').replace(/[^A-Za-z ]/g,'')}</button>
+              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}♪ {composeMode?t('composing').replace(/[^\p{L} ]/gu,''):t('compose').replace(/[^\p{L} ]/gu,'')}</button>
               <button className="pf-mic" onClick={()=>{
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
                 if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); return; }
                 setPickMode('mic');
-              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^A-Za-z ]/g,''):t('mic').replace(/[^A-Za-z ]/g,'')}</button>
+              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
             </div>
           </div>
 
@@ -8021,7 +8027,7 @@ Composition rules:
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
           {loadedSource && (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode(loadedSource);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={t('newSource')+' '+t(loadedSource).replace(/[^A-Za-z]/g,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {t('newSource')} {t(loadedSource).replace(/[^A-Za-z]/g,'')}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode(loadedSource);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={t('newSource')+' '+t(loadedSource).replace(/[^\p{L}]/gu,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {t('newSource')} {t(loadedSource).replace(/[^\p{L}]/gu,'')}</button>
           )}
           {/* New MOOD — opens an inline mood picker right over the canvas (no
               jump back to setup); picking one loads it immediately. */}
@@ -8233,7 +8239,7 @@ Composition rules:
         </div>
       )}
 
-      {(() => { const seekTitle = info ? info.title : (composeMode ? t('compose').replace(/[^A-Za-z ]/g,'') : t('mic').replace(/[^A-Za-z ]/g,'')); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
+      {(() => { const seekTitle = info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : t('mic').replace(/[^\p{L} ]/gu,'')); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
         <div style={{width:Math.min(CW,typeof window!=='undefined'?window.innerWidth-32:480),marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',marginBottom:4}}>
             <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60%',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>
@@ -8354,7 +8360,7 @@ Composition rules:
         {micActive && (
           <div aria-hidden="true" style={{position:'absolute',top:10,left:10,zIndex:4,display:'inline-flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:20,pointerEvents:'none',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
             <span style={{width:7,height:7,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
-            🎙 {micPreset==='voice'?t('voicePreset').replace(/[^A-Za-z]/g,''):t('musicPreset').replace(/[^A-Za-z]/g,'')}
+            🎙 {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')}
           </div>
         )}
         {chords.length===0&&(
@@ -8450,7 +8456,7 @@ Composition rules:
                   if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
                   setMoodHint(false);
                 }} style={{padding:'12px 10px',background: m===currentMood?'rgba(201,168,76,.18)':'rgba(201,168,76,.07)',color:PF.gold2,border:'1px solid rgba(201,168,76,.3)',borderRadius:4,cursor:'pointer',fontFamily:'inherit',fontSize:'.72rem',letterSpacing:'.06em',textTransform:'capitalize'}}>
-                  {m}
+                  {(t('moodNames')||{})[m]||m}
                 </button>
               ))}
             </div>
@@ -8461,7 +8467,7 @@ Composition rules:
       {showMorphMenu && (
         <div onClick={()=>setShowMorphMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="morph mood" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(220,150,255,.35)',borderRadius:8,padding:'22px 18px'}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:'rgba(220,170,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>✦ morph {currentMood} into…</div>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:'rgba(220,170,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>✦ {t('morphTitle').replace('{mood}',(t('moodNames')||{})[currentMood]||currentMood||'')}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {MOODS.filter(m=>m!==currentMood).map(m=>(
                 <button key={m} onClick={()=>{
@@ -8474,13 +8480,17 @@ Composition rules:
                   stopAll();
                   const evts=noteArr2events(morphed.notes,morphed.tempo);
                   if(!evts.length){setErr('Morph produced no notes');return;}
-                  applyEvents(evts,morphed.title);
+                  // Display title uses TRANSLATED mood names; morphSongs builds it
+                  // from raw English keys (it has no access to t()).
+                  const mn=t('moodNames')||{};
+                  const morphTitleDisp=(mn[currentMood]||currentMood)+' → '+(mn[m]||m);
+                  applyEvents(evts,morphTitleDisp);
                   setCurrentMood(currentMood+' → '+m);
                   const bytes=encodeMidi(evts,morphed.tempo||100);
                   setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                   setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
                 }} style={{padding:'12px 10px',background:'rgba(220,150,255,.08)',color:'rgba(220,180,255,.9)',border:'1px solid rgba(220,150,255,.3)',borderRadius:4,cursor:'pointer',fontFamily:'inherit',fontSize:'.72rem',letterSpacing:'.06em',textTransform:'capitalize'}}>
-                  {m}
+                  {(t('moodNames')||{})[m]||m}
                 </button>
               ))}
             </div>
@@ -8704,7 +8714,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.6</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.7</footer>
     </div>
   );
 }
