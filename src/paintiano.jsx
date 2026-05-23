@@ -5319,6 +5319,11 @@ export default function Paintiano() {
   useEffect(()=>{
     try{ localStorage.setItem('paintiano_mic_preset', micPreset); }catch(_){}
   },[micPreset]);
+  // True once the user has actually launched a mic session (Voice or Music) in
+  // this app session. Lets the MIC dialog highlight the LAST-USED preset when
+  // reopened — without pre-highlighting the bare localStorage default before the
+  // user has ever used the mic.
+  const [micUsed, setMicUsed] = useState(false);
   // Derived: any mic mode active?
   const micActive = micPainting || micListening;
   const [micVolActive, setMicVolActive] = useState(false);
@@ -6703,7 +6708,7 @@ export default function Paintiano() {
   },[stashDraft]);
 
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     const r=new FileReader();
     r.onload=evt=>{
       try{
@@ -6722,7 +6727,7 @@ export default function Paintiano() {
   };
 
   const loadAudio=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -6754,7 +6759,7 @@ export default function Paintiano() {
   // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();
     try{
       const buf=await file.arrayBuffer();
@@ -6910,6 +6915,7 @@ Composition rules:
 
   const loadImage=useCallback(e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
     setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
@@ -7951,10 +7957,10 @@ Composition rules:
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('sourceLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;armSwitch('midi',()=>{if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('midi');});}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^A-Za-z]/g,'')}</span></button>
-              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;armSwitch('audio',()=>{if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('audio');});}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^A-Za-z]/g,'')}</span></button>
-              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;armSwitch('score',()=>{if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('score');});}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^A-Za-z]/g,'')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;armSwitch('image',()=>{if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('image');});}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;setPickMode('midi');}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;setPickMode('audio');}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;setPickMode('score');}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^A-Za-z]/g,'')}</span></button>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:8}}>
               <button className="pf-compose" onClick={()=>{
@@ -8134,23 +8140,23 @@ Composition rules:
             {pickMode==='mic' ? (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <button onClick={()=>{
-                setMicPreset('voice');
+                setMicPreset('voice');setMicUsed(true);
                 if(micListening) stopMicListening();
                 startMicPainting();
                 setPickMode(null);
-              }} style={{padding:'12px',background:(micActive&&micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+((micActive&&micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micActive&&micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
-                {(micActive&&micPreset==='voice')?'● ':''}{t('voicePreset')}
+              }} style={{padding:'12px',background:((micActive||micUsed)&&micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+(((micActive||micUsed)&&micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:((micActive||micUsed)&&micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
+                {((micActive||micUsed)&&micPreset==='voice')?'● ':''}{t('voicePreset')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micVoiceHint')}
               </div>
               <button onClick={()=>{
-                setMicPreset('music');
+                setMicPreset('music');setMicUsed(true);
                 if(micPainting) stopMicPainting();
                 startMicListening();
                 setPickMode(null);
-              }} style={{padding:'12px',background:(micActive&&micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+((micActive&&micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micActive&&micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
-                {(micActive&&micPreset==='music')?'● ':''}{t('musicPreset')}
+              }} style={{padding:'12px',background:((micActive||micUsed)&&micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+(((micActive||micUsed)&&micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:((micActive||micUsed)&&micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
+                {((micActive||micUsed)&&micPreset==='music')?'● ':''}{t('musicPreset')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micMusicHint')}
@@ -8162,6 +8168,8 @@ Composition rules:
             ) : (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <button onClick={()=>{
+                if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
+                if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
                 if(pickMode==='midi') loadSampleMidi();
                 else if(pickMode==='audio') loadSampleAudio();
                 else if(pickMode==='score') loadSampleScore();
@@ -8329,11 +8337,6 @@ Composition rules:
         <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',maxWidth:'100%',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease'}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
-        {micActive && (
-          <div aria-hidden="true" style={{position:'absolute',top:10,right:10,zIndex:5,padding:'5px 10px',borderRadius:8,pointerEvents:'none',fontSize:'.6rem',fontWeight:700,fontFamily:"monospace",color:'#fff',background:'rgba(0,0,0,.6)',border:'1px solid rgba(255,255,255,.3)'}}>
-            lvl {Math.round((micVolLevel||0)*100)} · n {chords.length}
-          </div>
-        )}
         {micActive && (
           <div aria-hidden="true" style={{position:'absolute',top:10,left:10,zIndex:4,display:'inline-flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:20,pointerEvents:'none',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
             <span style={{width:7,height:7,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
