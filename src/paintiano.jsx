@@ -3830,7 +3830,7 @@ const I18N = {
     mic:'🎙 MIC', micActive:'🎙 LIVE',
     voicePreset:'🎤 voice', musicPreset:'🔊 music',
     play:'▶ play', pause:'⏸ pause', resume:'▶ resume', mute:'mute audio', unmute:'unmute audio', randomOn:'random ON', randomOff:'random OFF',
-    print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', loop:'⟳ loop', undo:'↩',
+    print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', switchConfirm:'clean canvas?', loop:'⟳ loop', undo:'↩',
     recArm:'⏺ rec', recStop:'⏹ rec…',
     share:'share', save:'save', saving:'saving…', saved:'saved ✓',
     chordsPlay:'chords · tap to play',
@@ -3873,7 +3873,7 @@ const I18N = {
     mic:'🎙 MIKRO', micActive:'🎙 LIVE',
     voicePreset:'🎤 stimme', musicPreset:'🔊 musik',
     play:'▶ spielen', pause:'⏸ pause', resume:'▶ weiter', mute:'ton aus', unmute:'ton an', randomOn:'zufall AN', randomOff:'zufall AUS',
-    print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', loop:'⟳ schleife', undo:'↩',
+    print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', switchConfirm:'leinwand leeren?', loop:'⟳ schleife', undo:'↩',
     recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
     share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓',
     chordsPlay:'akkorde · zum spielen tippen',
@@ -3916,7 +3916,7 @@ const I18N = {
     mic:'🎙 MICRO', micActive:'🎙 LIVE',
     voicePreset:'🎤 voix', musicPreset:'🔊 musique',
     play:'▶ jouer', pause:'⏸ pause', resume:'▶ reprendre', mute:'couper le son', unmute:'activer le son', randomOn:'aléatoire ON', randomOff:'aléatoire OFF',
-    print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', loop:'⟳ boucle', undo:'↩',
+    print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', switchConfirm:'vider la toile ?', loop:'⟳ boucle', undo:'↩',
     recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
     share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓',
     chordsPlay:'accords · appuyer pour jouer',
@@ -3959,7 +3959,7 @@ const I18N = {
     mic:'🎙 MICRO', micActive:'🎙 EN VIVO',
     voicePreset:'🎤 voz', musicPreset:'🔊 música',
     play:'▶ tocar', pause:'⏸ pausa', resume:'▶ continuar', mute:'silenciar', unmute:'activar sonido', randomOn:'aleatorio ON', randomOff:'aleatorio OFF',
-    print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', loop:'⟳ bucle', undo:'↩',
+    print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', switchConfirm:'¿limpiar lienzo?', loop:'⟳ bucle', undo:'↩',
     recArm:'⏺ grabar', recStop:'⏹ graba…',
     share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓',
     chordsPlay:'acordes · pulsar para tocar',
@@ -4002,7 +4002,7 @@ const I18N = {
     mic:'🎙 MIKRO', micActive:'🎙 LIVE',
     voicePreset:'🎤 hlas', musicPreset:'🔊 hudba',
     play:'▶ prehrať', pause:'⏸ pauza', resume:'▶ pokračovať', mute:'stlmiť zvuk', unmute:'zapnúť zvuk', randomOn:'náhoda ZAP', randomOff:'náhoda VYP',
-    print:'🖨 tlačiť', clear:'vyčistiť', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', loop:'⟳ slučka', undo:'↩',
+    print:'🖨 tlačiť', clear:'vyčistiť', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', switchConfirm:'vyčistiť plátno?', loop:'⟳ slučka', undo:'↩',
     recArm:'⏺ nahrať', recStop:'⏹ nahr…',
     share:'zdieľať', save:'uložiť', saving:'ukladám…', saved:'uložené ✓',
     chordsPlay:'akordy · ťukni pre hranie',
@@ -4300,9 +4300,14 @@ const SONG_LIBRARY = [
   { mood:'crazy', title:'Crazy', tempo:140, notes:[
     {note:'C2',dur:0.5,beat:0},{note:'G3',dur:0.25,beat:0.5},{note:'F#2',dur:0.25,beat:0.75},{note:'A1',dur:1,beat:1},{note:'E3',dur:0.5,beat:2},{note:'Bb1',dur:0.5,beat:2.5},{note:'D2',dur:0.25,beat:3},{note:'F2',dur:0.25,beat:3.25},{note:'A2',dur:0.5,beat:3.5},{note:'B1',dur:2,beat:4},{note:'C#3',dur:0.5,beat:6},{note:'G1',dur:0.5,beat:6.5},{note:'D3',dur:1,beat:7},{note:'Eb2',dur:0.5,beat:8},{note:'A2',dur:0.5,beat:8.5},{note:'C2',dur:0.5,beat:9},{note:'G2',dur:0.5,beat:9.5},{note:'F2',dur:1,beat:10},{note:'B2',dur:0.5,beat:11},{note:'D2',dur:0.5,beat:11.5},{note:'A1',dur:0.25,beat:12},{note:'D2',dur:0.25,beat:12.25},{note:'G2',dur:0.25,beat:12.5},{note:'C3',dur:0.25,beat:12.75},{note:'F#3',dur:1,beat:13},{note:'A1',dur:0.5,beat:14},{note:'Eb2',dur:0.5,beat:14.5},{note:'C2',dur:1,beat:15},{note:'G1',dur:1,beat:16},{note:'D2',dur:0.5,beat:17},{note:'A2',dur:0.5,beat:17.5},{note:'Bb1',dur:1,beat:18},{note:'F2',dur:0.5,beat:19},{note:'C#3',dur:0.5,beat:19.5},{note:'E2',dur:0.5,beat:20},{note:'B2',dur:0.5,beat:20.5},{note:'G2',dur:0.5,beat:21},{note:'D3',dur:0.5,beat:21.5},{note:'F#2',dur:1,beat:22},{note:'A1',dur:0.5,beat:23},{note:'Eb3',dur:0.5,beat:23.5},{note:'C2',dur:0.25,beat:24},{note:'F2',dur:0.25,beat:24.25},{note:'Bb2',dur:0.25,beat:24.5},{note:'Eb3',dur:0.25,beat:24.75},{note:'G#1',dur:1,beat:25},{note:'D2',dur:0.5,beat:26},{note:'A2',dur:0.5,beat:26.5},{note:'E3',dur:1,beat:27},{note:'C#2',dur:1,beat:28},{note:'F2',dur:0.5,beat:29},{note:'B2',dur:0.5,beat:29.5},{note:'A1',dur:0.5,beat:30},{note:'Eb2',dur:0.5,beat:30.5},{note:'G2',dur:0.5,beat:31},{note:'C3',dur:0.5,beat:31.5},{note:'C5',dur:0.25,beat:0},{note:'A5',dur:0.25,beat:0.25},{note:'Eb4',dur:0.25,beat:0.5},{note:'F#5',dur:0.25,beat:0.75},{note:'B5',dur:0.5,beat:1},{note:'D4',dur:0.5,beat:1.5},{note:'A6',dur:0.5,beat:2},{note:'Bb3',dur:0.5,beat:2.5},{note:'E5',dur:0.25,beat:3},{note:'F5',dur:0.25,beat:3.25},{note:'F#5',dur:0.25,beat:3.5},{note:'G5',dur:0.25,beat:3.75},{note:'C5',dur:0.5,beat:4},{note:'C#5',dur:0.5,beat:4},{note:'D5',dur:0.5,beat:4},{note:'B6',dur:0.5,beat:4.5},{note:'A4',dur:1,beat:5},{note:'Eb6',dur:0.25,beat:6},{note:'D6',dur:0.25,beat:6.25},{note:'C#6',dur:0.25,beat:6.5},{note:'C6',dur:0.25,beat:6.75},{note:'B5',dur:0.25,beat:7},{note:'Bb5',dur:0.25,beat:7.25},{note:'A5',dur:0.25,beat:7.5},{note:'G#5',dur:0.25,beat:7.75},{note:'G3',dur:0.5,beat:8},{note:'A6',dur:0.5,beat:8.5},{note:'Bb3',dur:0.5,beat:9},{note:'B6',dur:0.5,beat:9.5},{note:'C4',dur:0.5,beat:10},{note:'D6',dur:0.5,beat:10.5},{note:'Eb4',dur:0.5,beat:11},{note:'F#6',dur:0.5,beat:11.5},{note:'C4',dur:0.25,beat:12},{note:'C#4',dur:0.25,beat:12.25},{note:'D4',dur:0.25,beat:12.5},{note:'Eb4',dur:0.25,beat:12.75},{note:'E4',dur:0.25,beat:13},{note:'F4',dur:0.25,beat:13.25},{note:'F#4',dur:0.25,beat:13.5},{note:'G4',dur:0.25,beat:13.75},{note:'G#4',dur:0.25,beat:14},{note:'A4',dur:0.25,beat:14.25},{note:'Bb4',dur:0.25,beat:14.5},{note:'B4',dur:0.25,beat:14.75},{note:'C5',dur:0.5,beat:15},{note:'A6',dur:0.5,beat:15.5},{note:'E5',dur:0.125,beat:16},{note:'F5',dur:0.125,beat:16.125},{note:'E5',dur:0.125,beat:16.25},{note:'F5',dur:0.125,beat:16.375},{note:'E5',dur:0.125,beat:16.5},{note:'F5',dur:0.125,beat:16.625},{note:'E5',dur:0.5,beat:16.75},{note:'A3',dur:0.5,beat:17},{note:'D6',dur:0.5,beat:17.5},{note:'Bb4',dur:0.25,beat:18},{note:'B4',dur:0.25,beat:18.25},{note:'C5',dur:0.25,beat:18.5},{note:'C#5',dur:0.25,beat:18.75},{note:'D5',dur:0.5,beat:19},{note:'Eb6',dur:0.5,beat:19.5},{note:'F5',dur:0.25,beat:20},{note:'G5',dur:0.25,beat:20},{note:'A5',dur:0.25,beat:20},{note:'B3',dur:0.5,beat:20.5},{note:'C7',dur:0.5,beat:21},{note:'A2',dur:0.5,beat:21.5},{note:'Eb5',dur:0.25,beat:22},{note:'E5',dur:0.25,beat:22.25},{note:'F5',dur:0.25,beat:22.5},{note:'F#5',dur:0.25,beat:22.75},{note:'G5',dur:1,beat:23},{note:'A6',dur:0.25,beat:24},{note:'G6',dur:0.25,beat:24.25},{note:'F#6',dur:0.25,beat:24.5},{note:'F6',dur:0.25,beat:24.75},{note:'E6',dur:0.25,beat:25},{note:'Eb6',dur:0.25,beat:25.25},{note:'D6',dur:0.25,beat:25.5},{note:'C#6',dur:0.25,beat:25.75},{note:'C6',dur:0.25,beat:26},{note:'B5',dur:0.25,beat:26.25},{note:'Bb5',dur:0.25,beat:26.5},{note:'A5',dur:0.25,beat:26.75},{note:'Ab5',dur:0.25,beat:27},{note:'G5',dur:0.25,beat:27.25},{note:'F#5',dur:0.25,beat:27.5},{note:'F5',dur:0.25,beat:27.75},{note:'A3',dur:0.5,beat:28},{note:'E6',dur:0.5,beat:28.5},{note:'D4',dur:0.5,beat:29},{note:'Bb6',dur:0.5,beat:29.5},{note:'C5',dur:0.125,beat:30},{note:'D5',dur:0.125,beat:30.125},{note:'Eb5',dur:0.125,beat:30.25},{note:'F5',dur:0.125,beat:30.375},{note:'F#5',dur:0.125,beat:30.5},{note:'G5',dur:0.125,beat:30.625},{note:'A5',dur:0.125,beat:30.75},{note:'B5',dur:0.125,beat:30.875},{note:'C6',dur:1,beat:31},{note:'A2',dur:1,beat:31},{note:'E5',dur:1,beat:31},{note:'G#6',dur:1,beat:31}
   ]},
+  { mood:'hopeful', title:'Hopeful', tempo:96, notes:[
+    {note:'D2',dur:2,beat:0},{note:'A2',dur:2,beat:2},{note:'A1',dur:2,beat:4},{note:'E2',dur:2,beat:6},{note:'B1',dur:2,beat:8},{note:'F#2',dur:2,beat:10},{note:'G1',dur:2,beat:12},{note:'D2',dur:2,beat:14},{note:'D2',dur:2,beat:16},{note:'A2',dur:2,beat:18},{note:'G1',dur:2,beat:20},{note:'D2',dur:2,beat:22},{note:'A1',dur:2,beat:24},{note:'E2',dur:2,beat:26},{note:'A1',dur:2,beat:28},{note:'D2',dur:2,beat:30},
+    {note:'D3',dur:2,beat:0},{note:'F#3',dur:2,beat:0},{note:'A3',dur:2,beat:0},{note:'E3',dur:2,beat:2},{note:'A3',dur:2,beat:2},{note:'C#4',dur:2,beat:2},{note:'A3',dur:2,beat:4},{note:'C#4',dur:2,beat:4},{note:'E4',dur:2,beat:4},{note:'E3',dur:2,beat:6},{note:'G#3',dur:2,beat:6},{note:'B3',dur:2,beat:6},{note:'B3',dur:2,beat:8},{note:'D4',dur:2,beat:8},{note:'F#4',dur:2,beat:8},{note:'F#3',dur:2,beat:10},{note:'A3',dur:2,beat:10},{note:'C#4',dur:2,beat:10},{note:'G3',dur:2,beat:12},{note:'B3',dur:2,beat:12},{note:'D4',dur:2,beat:12},{note:'D3',dur:2,beat:14},{note:'F#3',dur:2,beat:14},{note:'A3',dur:2,beat:14},{note:'D3',dur:2,beat:16},{note:'F#3',dur:2,beat:16},{note:'A3',dur:2,beat:16},{note:'A3',dur:2,beat:18},{note:'C#4',dur:2,beat:18},{note:'E4',dur:2,beat:18},{note:'G3',dur:2,beat:20},{note:'B3',dur:2,beat:20},{note:'D4',dur:2,beat:20},{note:'D3',dur:2,beat:22},{note:'F#3',dur:2,beat:22},{note:'A3',dur:2,beat:22},{note:'A3',dur:2,beat:24},{note:'C#4',dur:2,beat:24},{note:'E4',dur:2,beat:24},{note:'E3',dur:2,beat:26},{note:'G#3',dur:2,beat:26},{note:'B3',dur:2,beat:26},{note:'A3',dur:2,beat:28},{note:'C#4',dur:2,beat:28},{note:'E4',dur:2,beat:28},{note:'D3',dur:2,beat:30},{note:'F#3',dur:2,beat:30},{note:'A3',dur:2,beat:30},
+    {note:'D4',dur:1,beat:0},{note:'E4',dur:1,beat:1},{note:'F#4',dur:1.5,beat:2},{note:'A4',dur:0.5,beat:3.5},{note:'E4',dur:2,beat:4},{note:'F#4',dur:1,beat:6},{note:'G#4',dur:1,beat:7},{note:'B4',dur:2,beat:8},{note:'A4',dur:1,beat:10},{note:'F#4',dur:1,beat:11},{note:'A4',dur:1.5,beat:12},{note:'G4',dur:0.5,beat:13.5},{note:'F#4',dur:2,beat:14},{note:'A4',dur:1,beat:16},{note:'B4',dur:1,beat:17},{note:'C#5',dur:1.5,beat:18},{note:'E5',dur:0.5,beat:19.5},{note:'D5',dur:2,beat:20},{note:'B4',dur:1,beat:22},{note:'A4',dur:1,beat:23},{note:'C#5',dur:1,beat:24},{note:'B4',dur:1,beat:25},{note:'A4',dur:1,beat:26},{note:'G#4',dur:1,beat:27},{note:'A4',dur:1.5,beat:28},{note:'F#4',dur:0.5,beat:29.5},{note:'D4',dur:2,beat:30}
+  ]},
 ];
 
-const MOODS = ['funny','sad','aggressive','dreamy','love','nostalgic','calm','excited','crazy'];
+const MOODS = ['funny','sad','aggressive','dreamy','love','nostalgic','calm','excited','crazy','hopeful'];
 // Pre-built once at module load — MOOD names are language-independent, so the
 // <option> elements don't depend on any component state. Allocating these on
 // every render allocated 9 React elements per render for no reason.
@@ -5354,6 +5359,12 @@ export default function Paintiano() {
   // replacing it with Für Elise. Empty canvas → demo fires immediately.
   const [demoArmed, setDemoArmed] = useState(false);
   const demoArmRef = useRef(null);
+  // Source-switch arm — only guards a CREATION canvas (Compose/MIC), which the
+  // user hand-made and can't reload. Loaded sources (MIDI/Audio/Score/Image/mood)
+  // switch immediately. First tap on a different tile arms it (shows "clean
+  // canvas?"); second tap of the same tile within 3s switches + cleans.
+  const [switchArmed, setSwitchArmed] = useState(null); // tile key or null
+  const switchArmRef = useRef(null);
   // A12: track which text input has focus so we can show a visible focus ring.
   // Single string ('comp'|'guide'|null) keeps it cheap. The existing
   // inputFocus.current ref is a boolean for piano-shortcut suppression — that
@@ -5557,7 +5568,7 @@ export default function Paintiano() {
 
   // Cleanup the compose-commit debounce on unmount so it can't fire commit()
   // against a torn-down state tree.
-  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};},[]);
+  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);if(switchArmRef.current)clearTimeout(switchArmRef.current);substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};},[]);
 
   useEffect(()=>{
     let dead=false;
@@ -6217,6 +6228,12 @@ export default function Paintiano() {
 
   const stopAll = useCallback(()=>{
     genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];timersSet.current.clear();
+    // Cancel any pending keyboard-commit timer + preview. Without this, a key
+    // pressed just before Play (within the commit window) would fire its commit
+    // mid-playback and append a stray chord to the composition.
+    clearTimeout(kbTimer.current);
+    if(pendingRef.current.length){pendingRef.current=[];setPending([]);}
+    pressInfo.current={};
     try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
     try{if(audioElRef.current){audioElRef.current.pause();}}catch(_){}
     try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
@@ -6572,10 +6589,11 @@ export default function Paintiano() {
     pixelRef.current=null;setViewMode('paint');
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
-    // NOTE: intentionally NOT clearing currentMood / varySource / songQ here.
-    // Clear wipes the CANVAS but keeps the current settings (mood, color, style)
-    // so you can replay the same mood. The file loaders reset the mood
-    // themselves before loading new content, so they don't rely on this.
+    // Clear is a full reset of the loaded content: drop the loaded source AND
+    // the mood markers so that returning to setup shows nothing highlighted.
+    // (Stashed Compose/MIC drafts live in their own refs and are untouched —
+    // their "draft saved" glow is correct because they're recoverable.)
+    setCurrentMood(null);setVarySource(null);setSongQ('');
     setDisp(0);setErr('');setStamp(s=>s+1);
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
     // After clear in a creative mode, mark the canvas as draft-owned by that
@@ -6605,14 +6623,11 @@ export default function Paintiano() {
     // still a Compose/MIC draft, marked by draftOwnerRef. Treat that as a
     // creation (full clear), NOT a loaded source — otherwise Clear would keep
     // the chords and the painting would reappear on replay.
-    const inCreation = composeMode || draftOwnerRef.current==='sing' || draftOwnerRef.current==='listen' || draftOwnerRef.current==='compose';
-    const isLoaded = !inCreation && chordsRef.current.length>0;
-    if(isLoaded){
-      stopAll();
-      setDisp(0); idxRef.current=chordsRef.current.length;
-      setStamp(s=>s+1);            // force a repaint to the blank-canvas state
-      return;
-    }
+    // For everything else (loaded MIDI/Score/Audio/Image/mood OR empty), do a
+    // full clear() too: it drops the loaded source and chords so the source tile
+    // no longer shows as active when returning to setup. (Previously this branch
+    // only blanked disp while keeping chords + loadedSource, which left the
+    // source highlighted/active in setup after Clear.)
     clear();
   },[stopAll,clear,composeMode,micPainting,micListening]);
 
@@ -6636,6 +6651,25 @@ export default function Paintiano() {
     setComposeMode(false);setDemoMode(false);setLoopMode(false);loopModeRef.current=false;
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
   },[stopAll]);
+
+  // Guard switching away from a CREATION canvas (Compose/MIC) — content the user
+  // hand-made and can't reload. A loaded source (MIDI/Audio/Score/Image/mood) is
+  // NOT guarded (reloadable) and switches immediately. Detection uses persistent
+  // refs (composedModeRef + a creation draftOwner + chords) which survive the
+  // "← Setup" transition that turns composeMode/micPainting off. First tap arms
+  // the tile ("clean canvas?"), second tap of the same tile within 3s runs it.
+  const armSwitch = useCallback((key, run)=>{
+    const owner = draftOwnerRef.current;
+    const isCreation = owner==='compose' || owner==='sing' || owner==='listen';
+    const atRisk = composedModeRef.current && isCreation && chordsRef.current.length>0;
+    if(!atRisk){ run(); return; }
+    if(switchArmRef.current){ clearTimeout(switchArmRef.current); switchArmRef.current=null; }
+    setSwitchArmed(prev=>{
+      if(prev===key){ run(); return null; }
+      switchArmRef.current=setTimeout(()=>{ setSwitchArmed(null); switchArmRef.current=null; },3000);
+      return key;
+    });
+  },[]);
 
   const applyEvents = useCallback((events,title)=>{
     if(!events.length)return;
@@ -7374,6 +7408,7 @@ Composition rules:
       listenStreamRef.current=stream;
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      ac.resume&&ac.resume().catch(()=>{}); // iOS: a fresh AudioContext starts suspended; an analyser on a suspended context reads silence
       listenAcRef.current=ac;
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
@@ -7477,6 +7512,7 @@ Composition rules:
       micStreamRef.current=stream;
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      ac.resume&&ac.resume().catch(()=>{}); // iOS: resume immediately so the analyser receives real audio, not silence
       micAcRef.current=ac;
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
@@ -7890,10 +7926,10 @@ Composition rules:
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('sourceLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('midi');}} disabled={importTileLocked} title={recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{t('midi').replace(/[^A-Za-z]/g,'')}</span></button>
-              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('audio');}} disabled={importTileLocked} title={recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^A-Za-z]/g,'')}</span></button>
-              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('score');}} disabled={importTileLocked} title={recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^A-Za-z]/g,'')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('image');}} disabled={importTileLocked} title={recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{t('image').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;armSwitch('midi',()=>{if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('midi');});}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;armSwitch('audio',()=>{if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('audio');});}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;armSwitch('score',()=>{if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('score');});}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^A-Za-z]/g,'')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;armSwitch('image',()=>{if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode('image');});}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^A-Za-z]/g,'')}</span></button>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:8}}>
               <button className="pf-compose" onClick={()=>{
@@ -7901,6 +7937,7 @@ Composition rules:
                 if(!composeMode&&(micPainting||micListening))return;
                 if(!composeMode){
                   unlockAudio();
+                  stopAll();
                   const owner = draftOwnerRef.current;
                   if(owner==='compose'){ setComposeMode(true); return; }
                   if(owner) stashDraft(owner);
@@ -7934,7 +7971,7 @@ Composition rules:
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,position:'relative'}}>
-          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);stopAll();if(composeMode){if(draftOwnerRef.current==='compose')stashDraft('compose');setComposeMode(false);}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);stopAll();if(composeMode){if(draftOwnerRef.current==='compose')stashDraft('compose');setComposeMode(false);}if(micPainting||micListening){if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen')stashDraft(draftOwnerRef.current);}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
@@ -8076,8 +8113,8 @@ Composition rules:
                 if(micListening) stopMicListening();
                 startMicPainting();
                 setPickMode(null);
-              }} style={{padding:'12px',background:(micActive&&micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+((micActive&&micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micActive&&micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
-                {(micActive&&micPreset==='voice')?'● ':''}{t('voicePreset')}
+              }} style={{padding:'12px',background:(micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+((micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
+                {(micPreset==='voice')?'● ':''}{t('voicePreset')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micVoiceHint')}
@@ -8087,8 +8124,8 @@ Composition rules:
                 if(micPainting) stopMicPainting();
                 startMicListening();
                 setPickMode(null);
-              }} style={{padding:'12px',background:(micActive&&micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+((micActive&&micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micActive&&micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
-                {(micActive&&micPreset==='music')?'● ':''}{t('musicPreset')}
+              }} style={{padding:'12px',background:(micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+((micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
+                {(micPreset==='music')?'● ':''}{t('musicPreset')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micMusicHint')}
@@ -8105,7 +8142,7 @@ Composition rules:
                 else if(pickMode==='score') loadSampleScore();
                 else loadSampleImage();
                 setPickMode(null);
-              }} style={{padding:'12px',background:'transparent',color:pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':'rgba(210,160,255,.85)',border:'1px solid '+(pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':'rgba(200,140,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
+              }} style={{padding:'12px',background:'transparent',color:pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
                 {t('builtInSample')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
