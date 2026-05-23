@@ -45,6 +45,9 @@ const PF_STYLE = `
         .pf-moodcta:hover { border-color:${PF.gold2}!important; transform: translateY(-1px); box-shadow:0 6px 24px rgba(240,192,64,.18); }
         .pf-tab:hover:not(.pf-tab-on) { background:${PF.card3}!important; color:${PF.cream}!important; }
         .pf-artist:hover:not(.pf-artist-on) { color:${PF.cream}!important; border-color:rgba(242,238,232,.25)!important; transform:translateY(-1px); }
+        .pf-artist, .pf-dice { outline:none!important; -webkit-tap-highlight-color:transparent; }
+        .pf-artist:focus, .pf-artist:focus-visible, .pf-dice:focus, .pf-dice:focus-visible { outline:none!important; box-shadow:none; }
+        .pf-artist-on:focus, .pf-artist-on:focus-visible { box-shadow:0 3px 10px rgba(240,192,64,.3)!important; }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
 // "API in artifacts" feature; bump here when Anthropic publishes a newer one.
@@ -7367,19 +7370,13 @@ Composition rules:
     setMicVolLevel(0);
   },[]);
 
-  const startMicVol=useCallback(async(existingStream)=>{
+  const startMicVol=useCallback(async()=>{
     if(micVolActive){stopMicVol();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{
-      // Reuse the capture stream when given one. Opening a SECOND getUserMedia
-      // for the meter raced the capture stream on iOS — on the first Music entry
-      // the capture analyser ended up silent (no painting) until a Voice↔Music
-      // cycle settled the mic. A clone keeps the meter's node graph independent
-      // without grabbing the mic a second time.
-      const stream = existingStream ? existingStream.clone() : await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
-      try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){}
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=256;
@@ -7459,7 +7456,7 @@ Composition rules:
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
       setMicListening(true);
-      startMicVol(listenStreamRef.current);
+      startMicVol();
       stopAll();
       // Continuation (sibling preset or re-entering): preserve canvas.
       // Fresh entry: restore listen stash or start blank.
@@ -7568,7 +7565,7 @@ Composition rules:
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
       setMicPainting(true);
-      startMicVol(micStreamRef.current);
+      startMicVol();
       stopAll();
       if(!continuation){
         if(!restoreStash('sing')){
