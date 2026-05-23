@@ -1726,127 +1726,126 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   const cn=chords.length;
-  // Field count: 2–4, scaling slowly. Rothko canvases stay sparse no matter how
-  // long the piece is — more music = different colors, not more rectangles.
-  const FIELDS = cn<=4 ? Math.max(1,cn)
-              : cn<=24 ? 2
-              : cn<=80 ? 3
-              : 4;
+  // Field count 2–9, scaling with song length (more music → richer stack).
+  const FIELDS = cn<=2 ? Math.max(1,cn)
+              : cn<=8  ? 2
+              : cn<=20 ? 3
+              : cn<=45 ? 4
+              : cn<=90 ? 5
+              : cn<=160? 6
+              : cn<=280? 7
+              : cn<=500? 8
+              : 9;
   const lume=(r,g,b,boost)=>{const mx=Math.max(r,g,b,1),k=(255*boost)/mx;let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);const pull=(x)=>x===m2?x:x*0.7;return[Math.min(255,pull(R)),Math.min(255,pull(G)),Math.min(255,pull(B))];};
 
-  // Ground: a deep saturated wash sampled from the whole piece, darkened — the
-  // canvas color the floating fields sit on. Rothko grounds are never neutral.
+  // Ground: a deep saturated wash sampled from the whole piece, darkened.
   const gBase=_rectChordColor(chords,0,Math.max(1,FIELDS),gc);
   const gnd=lume(gBase[0],gBase[1],gBase[2],0.30);
   ctx.fillStyle=`rgb(${gnd[0]|0},${gnd[1]|0},${gnd[2]|0})`; ctx.fillRect(0,0,CW,CH);
 
-  // Outer margins — fields float inside the canvas, never touching the edge.
-  const marginX=CW*0.10, marginTop=CH*0.07, marginBot=CH*0.07;
+  const marginX=CW*0.08, marginTop=CH*0.06, marginBot=CH*0.06;
   const innerX=marginX, innerW=CW-2*marginX;
   const innerY=marginTop, innerH=CH-marginTop-marginBot;
-  // Gap between stacked fields (the ground shows through).
-  const gap=Math.max(6, innerH*0.035);
 
-  // Uneven field heights from the seed (stable per painting, re-rolls on Vary).
+  // ── Layout chooser (stable per painting, re-rolls on Vary) ──
+  // 0 = vertical stack (classic Rothko), 1 = horizontal row, 2 = grid.
+  const lr=_seedRnd(99,ss,0,0);
+  const layoutRoll=lr();
+  // Grid only when there are enough fields to make rows×cols sensible.
+  const layout = FIELDS<=2 ? 0
+               : layoutRoll<0.62 ? 0
+               : layoutRoll<0.82 ? 1
+               : 2;
   const wr=_seedRnd(7,ss,0,0);
-  const weights=[];
-  for(let i=0;i<FIELDS;i++) weights.push(0.7+wr()*0.9);
-  const wsum=weights.reduce((a,b)=>a+b,0);
-  const totalGap=gap*(FIELDS-1);
-  const availH=innerH-totalGap;
 
-  // Reveal progressively: how many fields are visible at the current lim.
+  // Build the list of field rects {x,y,w,h} based on the chosen layout.
+  const fieldRects=[];
+  if(layout===0){
+    // Vertical stack — uneven heights.
+    const gap=Math.max(6,innerH*0.030);
+    const weights=[];for(let i=0;i<FIELDS;i++)weights.push(0.7+wr()*0.9);
+    const wsum=weights.reduce((a,b)=>a+b,0), availH=innerH-gap*(FIELDS-1);
+    let cy=innerY;
+    for(let f=0;f<FIELDS;f++){const fh=availH*(weights[f]/wsum);fieldRects.push({x:innerX,y:cy,w:innerW,h:fh});cy+=fh+gap;}
+  }else if(layout===1){
+    // Horizontal row — uneven widths.
+    const gap=Math.max(6,innerW*0.030);
+    const weights=[];for(let i=0;i<FIELDS;i++)weights.push(0.7+wr()*0.9);
+    const wsum=weights.reduce((a,b)=>a+b,0), availW=innerW-gap*(FIELDS-1);
+    let cx=innerX;
+    for(let f=0;f<FIELDS;f++){const fw=availW*(weights[f]/wsum);fieldRects.push({x:cx,y:innerY,w:fw,h:innerH});cx+=fw+gap;}
+  }else{
+    // Grid — cols×rows that best fit FIELDS, uneven row heights & col widths.
+    const cols=Math.ceil(Math.sqrt(FIELDS)), rows=Math.ceil(FIELDS/cols);
+    const gapX=Math.max(5,innerW*0.025), gapY=Math.max(5,innerH*0.025);
+    const cw=(innerW-gapX*(cols-1))/cols, chh=(innerH-gapY*(rows-1))/rows;
+    for(let f=0;f<FIELDS;f++){
+      const r=Math.floor(f/cols), c=f%cols;
+      // jitter size a touch so the grid isn't mechanical
+      const jw=cw*(0.86+wr()*0.12), jh=chh*(0.86+wr()*0.12);
+      const ox=(cw-jw)*0.5, oy=(chh-jh)*0.5;
+      fieldRects.push({x:innerX+c*(cw+gapX)+ox, y:innerY+r*(chh+gapY)+oy, w:jw, h:jh});
+    }
+  }
+
+  // Reveal progressively top→bottom / left→right by field order.
   const revealed=Math.max(1,Math.min(FIELDS,Math.ceil(lim*(FIELDS/cn))));
 
-  let cy=innerY;
-  for(let f=0;f<FIELDS;f++){
-    const fh=availH*(weights[f]/wsum);
-    if(f>=revealed){ cy+=fh+gap; continue; }
+  // ── Per-field renderer: wavering, feathered, scumbled, frayed field drawn
+  // into rect {x,y,w,h}, optionally rotated by `angle` radians about its centre.
+  const drawField=(f, rect, angle)=>{
     const rnd=_seedRnd(f+1500,ss,0,0);
-    // Each field samples a chord from its slice of the piece, so the stack's
-    // colors progress through the music top→bottom.
     const sampled=_rectChordColor(chords, f, Math.max(1,FIELDS), gc);
     const col=lume(sampled[0],sampled[1],sampled[2], 0.92+rnd()*0.14);
     const R=col[0]|0,G=col[1]|0,B=col[2]|0;
 
-    // Slight per-field horizontal inset so the stack isn't perfectly aligned —
-    // Rothko's fields wander a little side to side.
-    const fx=innerX + innerW*0.02*(rnd()-0.5);
-    const fw=innerW*(0.97+rnd()*0.03);
-    const by=cy, bh=fh;
+    ctx.save();
+    if(angle){
+      const ccx=rect.x+rect.w/2, ccy=rect.y+rect.h/2;
+      ctx.translate(ccx,ccy); ctx.rotate(angle); ctx.translate(-ccx,-ccy);
+    }
+    const fx=rect.x + rect.w*0.02*(rnd()-0.5);
+    const fw=rect.w*(0.97+rnd()*0.03);
+    const by=rect.y, bh=rect.h;
 
-    // Soft glow halo under the field (a touch larger, dimmer) so it bleeds into
-    // the ground rather than sitting on a hard line.
+    // Halo bleed into the ground.
     const halo=lume(sampled[0],sampled[1],sampled[2],0.55);
     ctx.fillStyle=`rgba(${halo[0]|0},${halo[1]|0},${halo[2]|0},0.5)`;
     ctx.fillRect(fx-fw*0.02, by-bh*0.06, fw*1.04, bh*1.12);
 
-    const rimX=Math.max(4,fw*0.06), rimY=Math.max(6,bh*0.18);
+    const rimX=Math.max(4,fw*0.06), rimY=Math.max(6,bh*0.16);
     if(fw-2*rimX<=2||bh-2*rimY<=2){
-      ctx.fillStyle=`rgb(${R},${G},${B})`; ctx.fillRect(fx,by,fw,bh); cy+=fh+gap; continue;
+      ctx.fillStyle=`rgb(${R},${G},${B})`; ctx.fillRect(fx,by,fw,bh); ctx.restore(); return;
     }
-
-    // ── Rothko field as an IRREGULAR, BREATHING shape (not a crisp rectangle) ──
-    // The field's four edges waver, the feather softness varies along each edge,
-    // the surface is scumbled with thin tone passes, and the border frays into
-    // the ground. cx0/cy0 = inner core box; edges jitter around it.
     const cx0=fx+rimX, cy0=by+rimY, cw0=fw-2*rimX, ch0=bh-2*rimY;
-    // Per-edge wave: small low-frequency undulation seeded per field so each
-    // field's silhouette is unique but stable.
     const ej=_seedRnd(f+1701,ss,0,0);
     const phx=ej()*6.28, phy=ej()*6.28, ph2=ej()*6.28, ph3=ej()*6.28;
-    const wob=Math.min(rimX,rimY)*0.5; // edge wander amplitude
-    // Build the wavering core outline as a closed path of sampled edge points.
+    const wob=Math.min(rimX,rimY)*0.5;
+    const waver=(p,ph)=>Math.sin(p*Math.PI*2*1.5+ph)*0.6+Math.sin(p*Math.PI*2*2.7+ph*1.7)*0.4;
     const edgePt=(side,t)=>{
-      // t in 0..1 along the side; returns [x,y] on the wavering boundary.
-      const waver=(p,ph)=>Math.sin(p*Math.PI*2*1.5+ph)*0.6+Math.sin(p*Math.PI*2*2.7+ph*1.7)*0.4;
-      if(side===0){ // top, left→right
-        return [cx0+t*cw0, cy0 + waver(t,phy)*wob];
-      }else if(side===1){ // right, top→bottom
-        return [cx0+cw0 - waver(t,ph2)*wob*0.6, cy0+t*ch0];
-      }else if(side===2){ // bottom, right→left
-        return [cx0+(1-t)*cw0, cy0+ch0 - waver(1-t,ph3)*wob];
-      }else{ // left, bottom→top
-        return [cx0 + waver(1-t,phx)*wob*0.6, cy0+(1-t)*ch0];
-      }
+      if(side===0) return [cx0+t*cw0, cy0 + waver(t,phy)*wob];
+      if(side===1) return [cx0+cw0 - waver(t,ph2)*wob*0.6, cy0+t*ch0];
+      if(side===2) return [cx0+(1-t)*cw0, cy0+ch0 - waver(1-t,ph3)*wob];
+      return [cx0 + waver(1-t,phx)*wob*0.6, cy0+(1-t)*ch0];
     };
     const traceCore=(grow)=>{
-      // grow expands the outline outward (for feather rings). 0 = core.
-      ctx.beginPath();
-      const SEG=18;
-      let first=true;
+      ctx.beginPath(); const SEG=18; let first=true;
       for(let side=0;side<4;side++){
         for(let i=0;i<SEG;i++){
           let [x,y]=edgePt(side,i/SEG);
-          if(grow){
-            // push outward from field centre
-            const mx=cx0+cw0/2, my=cy0+ch0/2;
-            x+=(x-mx)/(cw0/2)*grow; y+=(y-my)/(ch0/2)*grow;
-          }
+          if(grow){const mx=cx0+cw0/2,my=cy0+ch0/2;x+=(x-mx)/(cw0/2)*grow;y+=(y-my)/(ch0/2)*grow;}
           if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
         }
       }
       ctx.closePath();
     };
-
-    // Feather: many outward rings, fading out — the soft Rothko border. Because
-    // the outline itself wavers, the feather is uneven along each edge.
     const RINGS=16;
     for(let s=RINGS;s>=1;s--){
-      const t=s/RINGS;
-      const grow=Math.max(rimX,rimY)*t;
-      const a=(1-t)*(1-t)*0.85;
-      ctx.fillStyle=`rgba(${R},${G},${B},${a.toFixed(3)})`;
-      traceCore(grow);
-      ctx.fill();
+      const t=s/RINGS, grow=Math.max(rimX,rimY)*t, a=(1-t)*(1-t)*0.85;
+      ctx.fillStyle=`rgba(${R},${G},${B},${a.toFixed(3)})`; traceCore(grow); ctx.fill();
     }
-    // Solid wavering core
-    ctx.fillStyle=`rgb(${R},${G},${B})`;
-    traceCore(0);
-    ctx.fill();
+    ctx.fillStyle=`rgb(${R},${G},${B})`; traceCore(0); ctx.fill();
 
-    // Scumbled surface — a few large soft translucent blotches of slightly
-    // lighter / darker tone, so the field glows unevenly instead of flat fill.
     const sc=_seedRnd(f+1801,ss,0,0);
     const passes=3+Math.floor(sc()*3);
     for(let p=0;p<passes;p++){
@@ -1855,14 +1854,9 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
       const px=cx0+cw0*(0.15+sc()*0.7), py=cy0+ch0*(0.15+sc()*0.7);
       const pr=Math.min(cw0,ch0)*(0.18+sc()*0.22);
       const grd=ctx.createRadialGradient(px,py,0,px,py,pr);
-      grd.addColorStop(0,`rgba(${cr},${cg},${cb},0.16)`);
-      grd.addColorStop(1,`rgba(${cr},${cg},${cb},0)`);
-      ctx.fillStyle=grd;
-      ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fill();
+      grd.addColorStop(0,`rgba(${cr},${cg},${cb},0.16)`);grd.addColorStop(1,`rgba(${cr},${cg},${cb},0)`);
+      ctx.fillStyle=grd; ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fill();
     }
-
-    // Frayed border bleed — short soft strokes leaking from the edge into the
-    // ground at random points, the stained-canvas Rothko fray.
     const fr=_seedRnd(f+1901,ss,0,0);
     const frays=10+Math.floor(fr()*10);
     for(let i=0;i<frays;i++){
@@ -1874,12 +1868,20 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
       const tx=ex+dx/dl*reach, ty=ey+dy/dl*reach;
       const ga=0.10+fr()*0.12;
       const grd=ctx.createRadialGradient(ex,ey,0,tx,ty,reach);
-      grd.addColorStop(0,`rgba(${R},${G},${B},${ga.toFixed(3)})`);
-      grd.addColorStop(1,`rgba(${R},${G},${B},0)`);
-      ctx.fillStyle=grd;
-      ctx.beginPath();ctx.arc(tx,ty,reach*0.7,0,Math.PI*2);ctx.fill();
+      grd.addColorStop(0,`rgba(${R},${G},${B},${ga.toFixed(3)})`);grd.addColorStop(1,`rgba(${R},${G},${B},0)`);
+      ctx.fillStyle=grd; ctx.beginPath();ctx.arc(tx,ty,reach*0.7,0,Math.PI*2);ctx.fill();
     }
-    cy+=fh+gap;
+    ctx.restore();
+  };
+
+  // Per-field gentle rotation. Stacked/row layouts get a very subtle tilt;
+  // the grid layout allows a touch more drift. Seeded per field.
+  const ar=_seedRnd(311,ss,0,0);
+  const maxTilt = layout===2 ? 0.10 : 0.045; // radians (~6° grid, ~2.5° else)
+  for(let f=0;f<FIELDS;f++){
+    if(f>=revealed) continue;
+    const angle=(ar()-0.5)*2*maxTilt;
+    drawField(f, fieldRects[f], angle);
   }
 }
 
@@ -2342,9 +2344,9 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
-  // capScale 0.16 keeps the region count low → big bold blocks like real Mondrian.
-  const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,2400,0.16);
+  const cn=chords.length;
   const isBW=mode==='bw';
+  const cream=isBW?'#ece9e2':'#f4f1e8';
   // Boost a gc() color toward Mondrian's flat saturated character, keeping hue.
   const bold=(r,g,bl)=>{
     if(Math.max(r,g,bl)-Math.min(r,g,bl)<=6) return [Math.round(r),Math.round(g),Math.round(bl)];
@@ -2352,39 +2354,206 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     const pull=c=>c===m2?c:c*0.72;
     return [Math.round(Math.min(255,pull(R))),Math.round(Math.min(255,pull(G))),Math.round(Math.min(255,pull(B)))];
   };
-  // Cream ground over the whole canvas.
-  ctx.fillStyle=isBW?'#ece9e2':'#f4f1e8'; ctx.fillRect(0,0,CW,CH);
-  // Fill revealed regions.
-  rects.forEach((rect,pIdx)=>{
-    if(pIdx>=paintCount) return;
-    const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
-    const rnd=_seedRnd(pIdx+2401,ss,0,0);
-    const roll=rnd();
-    if(roll<0.42){
-      // Bold saturated chord color
-      const base=_rectChordColor(chords,pIdx,MAX_RECTS,gc);
-      const[pr,pg,pb]=bold(base[0],base[1],base[2]);
-      ctx.fillStyle=`rgb(${pr},${pg},${pb})`; ctx.fillRect(bx,by,BW,BH);
-    }else if(roll<0.50){
-      // Occasional black block (Mondrian's dark accents)
-      ctx.fillStyle=isBW?'#1a1714':'#141109'; ctx.fillRect(bx,by,BW,BH);
+  // For Mondrian, pick the MOST SATURATED single voice of a chord rather than
+  // averaging (averaging spreads hues into a desaturated near-grey that reads as
+  // cream). Then force it bold/saturated so blocks always pop against the cream.
+  const chordCol=(pIdx,MAX)=>{
+    const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/Math.max(1,MAX))))];
+    const notes=chord && (chord.n||chord.notes||(Array.isArray(chord)?chord:null));
+    if(!notes||!notes.length){const[r,g,bl]=bold(150,40,30);return[r,g,bl];}
+    // Find the voice whose gc() color is most saturated (largest channel spread).
+    let best=null,bestSat=-1;
+    for(const note of notes){
+      const m=note.m!==undefined?note.m:note, v=note.v!==undefined?note.v:80;
+      const[r,g,b]=gc(m,v);
+      const sat=Math.max(r,g,b)-Math.min(r,g,b);
+      if(sat>bestSat){bestSat=sat;best=[r,g,b];}
     }
-    // else: leave cream
+    if(!best) best=[150,40,30];
+    // If even the best voice is near-grey (e.g. B/W mode), keep it; otherwise
+    // force full saturation so the block reads as a bold Mondrian color.
+    if(bestSat<=6) return [Math.round(best[0]),Math.round(best[1]),Math.round(best[2])];
+    // Push toward a pure, vivid hue: stretch brightest channel to 255, deepen others hard.
+    const mx=Math.max(best[0],best[1],best[2],1),k=255/mx;
+    let R=best[0]*k,G=best[1]*k,B=best[2]*k,m2=Math.max(R,G,B);
+    const pull=c=>c===m2?c:c*0.55; // harder pull than bold() → more saturated
+    return [Math.round(Math.min(255,pull(R))),Math.round(Math.min(255,pull(G))),Math.round(Math.min(255,pull(B)))];
+  };
+
+  // ── STYLE CHOOSER: commit to ONE of Mondrian's real phases per painting ──
+  // Stable from the session seed, re-rolls on Vary/Random.
+  //  A = Classic neoplastic block-grid (white-dominant, thick black lines, blocks)
+  //  B = Sparse late grid (mostly white, very few color blocks, thinner lines)
+  //  C = Boogie-Woogie (NO black — colored line-tracks of small alternating squares)
+  //  D = New York City line-grid (interwoven colored lines, no blocks, no black)
+  const sr=_seedRnd(555,ss,29,83);
+  sr();sr(); // warm up — first xorshift output after reseed is poorly distributed
+  const styleRoll=sr();
+  const phase = styleRoll<0.42 ? 'A' : styleRoll<0.62 ? 'B' : styleRoll<0.82 ? 'C' : 'D';
+
+  ctx.fillStyle='#04040a'; ctx.fillRect(0,0,CW,CH);
+
+  // ════════ A & B: block-grid phases (partition-based) ════════
+  if(phase==='A' || phase==='B'){
+    const sparse = phase==='B';
+    const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,2400, sparse?0.30:0.45);
+    const order = rects.map((r,i)=>i).sort((a,b)=>{
+      const ra=rects[a], rb=rects[b];
+      const rowA=Math.round(ra.y*12), rowB=Math.round(rb.y*12);
+      if(rowA!==rowB) return rowA-rowB;
+      return ra.x-rb.x;
+    });
+    const revealed=order.slice(0,paintCount);
+    const lw=sparse?Math.max(2,Math.round(Math.min(CW,CH)*0.009)):Math.max(3,Math.round(Math.min(CW,CH)*0.012));
+    // Fill thresholds: A is color-rich, B is white-dominant with sparse color.
+    const colorThresh = sparse?0.30:0.62, blackThresh = sparse?0.38:0.72;
+    // Seed ONE rng before the loop and advance it per block. Calling _seedRnd
+    // fresh per block used each seed's poorly-mixed FIRST output, which clustered
+    // badly — some session seeds produced ZERO color blocks (all-cream canvas).
+    // A single warmed sequence is properly uniform.
+    const fillRnd=_seedRnd(2401,ss,7,13);
+    fillRnd();fillRnd(); // warm up
+    let colorCount=0;
+    const fillChoice=[]; // decide all fills first so we can guarantee a color floor
+    revealed.forEach(()=>{
+      const roll=fillRnd();
+      let kind;
+      if(roll<colorThresh){kind='color';colorCount++;}
+      else if(roll<blackThresh){kind='black';}
+      else{kind='cream';}
+      fillChoice.push(kind);
+    });
+    // Color floor: a painting must never be totally empty. Ensure at least ~20%
+    // (min 2) of revealed blocks are colored — promote some cream blocks if needed.
+    const minColor=Math.max(2,Math.round(revealed.length*0.20));
+    if(colorCount<minColor){
+      for(let i=0;i<fillChoice.length && colorCount<minColor;i++){
+        if(fillChoice[i]==='cream'){fillChoice[i]='color';colorCount++;}
+      }
+    }
+    revealed.forEach((pIdx,k)=>{
+      const rect=rects[pIdx];
+      const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
+      const kind=fillChoice[k];
+      if(kind==='color'){const[pr,pg,pb]=chordCol(pIdx,MAX_RECTS);ctx.fillStyle=`rgb(${pr},${pg},${pb})`;}
+      else if(kind==='black'){ctx.fillStyle=isBW?'#1a1714':'#141109';}
+      else{ctx.fillStyle=cream;}
+      ctx.fillRect(bx,by,BW,BH);
+    });
+    ctx.fillStyle='#0d0b08';
+    revealed.forEach((pIdx)=>{
+      const rect=rects[pIdx];
+      const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
+      ctx.fillRect(bx,by,BW,lw);ctx.fillRect(bx,by+BH-lw,BW,lw);
+      ctx.fillRect(bx,by,lw,BH);ctx.fillRect(bx+BW-lw,by,lw,BH);
+    });
+    if(paintCount>=MAX_RECTS){
+      ctx.fillRect(0,0,CW,lw);ctx.fillRect(0,CH-lw,CW,lw);
+      ctx.fillRect(0,0,lw,CH);ctx.fillRect(CW-lw,0,lw,CH);
+    }
+    return;
+  }
+
+  // ════════ D: New York City line-grid (interwoven colored lines, no blocks) ════════
+  if(phase==='D'){
+    // Cream ground.
+    ctx.fillStyle=cream; ctx.fillRect(0,0,CW,CH);
+    // Number of lines scales gently with song length.
+    const nV = Math.max(3,Math.min(11, 3+Math.round(cn/120)));
+    const nH = Math.max(3,Math.min(11, 3+Math.round(cn/120)));
+    const totalLines=nV+nH;
+    const revealCount=Math.max(1,Math.min(totalLines,Math.ceil(lim*(totalLines/cn))));
+    const lw=Math.max(4,Math.round(Math.min(CW,CH)*0.014));
+    // Line colors: mostly the bold yellow-ish dominant, with occasional red/blue.
+    const lr=_seedRnd(701,ss,0,0);
+    // Build vertical then horizontal line positions (seeded, uneven spacing).
+    const vlines=[],hlines=[];
+    for(let i=0;i<nV;i++){const t=(i+0.5)/nV + (lr()-0.5)*0.06; vlines.push({x:t*CW, idx:i});}
+    for(let i=0;i<nH;i++){const t=(i+0.5)/nH + (lr()-0.5)*0.06; hlines.push({y:t*CH, idx:nV+i});}
+    const lineColorFor=(k)=>{
+      const c=chordCol(k%Math.max(1,cn), Math.max(1,cn));
+      // Bias toward a warm "yellow track" feel but keep chord hue.
+      return c;
+    };
+    let drawn=0;
+    // Interleave reveal: vertical, horizontal, vertical...
+    const seq=[];
+    for(let i=0;i<Math.max(nV,nH);i++){ if(i<nV)seq.push(['v',i]); if(i<nH)seq.push(['h',i]); }
+    seq.forEach(([type,i])=>{
+      if(drawn>=revealCount) return; drawn++;
+      if(type==='v'){
+        const L=vlines[i]; const[r,g,b]=lineColorFor(L.idx*7);
+        ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(L.x-lw/2,0,lw,CH);
+      }else{
+        const L=hlines[i]; const[r,g,b]=lineColorFor(L.idx*7);
+        ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,L.y-lw/2,CW,lw);
+      }
+    });
+    // Small accent squares where some lines cross (the NYC "blips").
+    const ar=_seedRnd(733,ss,0,0);
+    vlines.forEach(V=>hlines.forEach(H=>{
+      if(ar()<0.18){
+        const[r,g,b]=chordCol((V.idx+H.idx)%Math.max(1,cn),Math.max(1,cn));
+        const s=lw*1.6;
+        ctx.fillStyle=`rgb(${r},${g},${b})`;
+        ctx.fillRect(V.x-s/2,H.y-s/2,s,s);
+      }
+    }));
+    return;
+  }
+
+  // ════════ C: Boogie-Woogie (no black; colored square tracks) ════════
+  // White ground, a grid of "tracks" made of small alternating colored squares,
+  // plus a few larger color blocks at intersections — busy, rhythmic, jazzy.
+  ctx.fillStyle=cream; ctx.fillRect(0,0,CW,CH);
+  const nV = Math.max(4,Math.min(14, 4+Math.round(cn/90)));
+  const nH = Math.max(4,Math.min(14, 4+Math.round(cn/90)));
+  const cell=Math.max(8, Math.min(CW/nV, CH/nH)*0.5); // square size along tracks
+  const lr=_seedRnd(811,ss,0,0);
+  const vxs=[],hys=[];
+  for(let i=0;i<nV;i++) vxs.push((i+0.5)/nV*CW + (lr()-0.5)*CW*0.02);
+  for(let i=0;i<nH;i++) hys.push((i+0.5)/nH*CH + (lr()-0.5)*CH*0.02);
+  // Progressive reveal across the union of track segments.
+  const totalTracks=nV+nH;
+  const revealTracks=Math.max(1,Math.min(totalTracks,Math.ceil(lim*(totalTracks/cn))));
+  let t=0;
+  const drawTrackV=(x,seed)=>{
+    const tr=_seedRnd(seed,ss,0,0);
+    for(let y=cell*0.3; y<CH; y+=cell*1.0){
+      if(tr()<0.82){
+        const[r,g,b]=chordCol(Math.floor(y/cell)%Math.max(1,cn),Math.max(1,cn));
+        ctx.fillStyle=`rgb(${r},${g},${b})`;
+        ctx.fillRect(x-cell*0.42, y-cell*0.42, cell*0.84, cell*0.84);
+      }
+    }
+  };
+  const drawTrackH=(y,seed)=>{
+    const tr=_seedRnd(seed,ss,0,0);
+    for(let x=cell*0.3; x<CW; x+=cell*1.0){
+      if(tr()<0.82){
+        const[r,g,b]=chordCol(Math.floor(x/cell)%Math.max(1,cn),Math.max(1,cn));
+        ctx.fillStyle=`rgb(${r},${g},${b})`;
+        ctx.fillRect(x-cell*0.42, y-cell*0.42, cell*0.84, cell*0.84);
+      }
+    }
+  };
+  const seqC=[];
+  for(let i=0;i<Math.max(nV,nH);i++){ if(i<nV)seqC.push(['v',i]); if(i<nH)seqC.push(['h',i]); }
+  seqC.forEach(([type,i])=>{
+    if(t>=revealTracks) return; t++;
+    if(type==='v') drawTrackV(vxs[i], 900+i);
+    else drawTrackH(hys[i], 950+i);
   });
-  // Thick black De Stijl grid lines around every region.
-  const lw=Math.max(3,Math.round(Math.min(CW,CH)*0.012));
-  ctx.fillStyle='#0d0b08';
-  rects.forEach((rect,pIdx)=>{
-    if(pIdx>=paintCount) return;
-    const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
-    ctx.fillRect(bx,by,BW,lw);            // top
-    ctx.fillRect(bx,by+BH-lw,BW,lw);      // bottom
-    ctx.fillRect(bx,by,lw,BH);            // left
-    ctx.fillRect(bx+BW-lw,by,lw,BH);      // right
-  });
-  // Canvas border frame.
-  ctx.fillRect(0,0,CW,lw); ctx.fillRect(0,CH-lw,CW,lw);
-  ctx.fillRect(0,0,lw,CH); ctx.fillRect(CW-lw,0,lw,CH);
+  // A few larger solid blocks at random intersections (the bigger BW chords).
+  const br=_seedRnd(877,ss,0,0);
+  const bigCount=Math.min(revealTracks, 3+Math.floor(br()*4));
+  for(let k=0;k<bigCount;k++){
+    const vx=vxs[Math.floor(br()*nV)], hy=hys[Math.floor(br()*nH)];
+    const[r,g,b]=chordCol(Math.floor(br()*Math.max(1,cn)),Math.max(1,cn));
+    const s=cell*(1.4+br()*1.2);
+    ctx.fillStyle=`rgb(${r},${g},${b})`;
+    ctx.fillRect(vx-s/2, hy-s/2, s, s);
+  }
 }
 
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
@@ -4518,6 +4687,7 @@ export default function Paintiano() {
   // closeAbout). Closes the modal and clears the search query in one action.
   const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');},[]);
   const [showMorphMenu, setShowMorphMenu] = useState(false);
+  const [showMoodMenu, setShowMoodMenu] = useState(false);
   const [currentMood, setCurrentMood] = useState(null);
   // When a mood is picked the view flips to active and the setup panel (with
   // MORPH/VARY) is replaced by the collapsed strip. Auto-open the strip on
@@ -4724,7 +4894,7 @@ export default function Paintiano() {
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
@@ -5529,6 +5699,7 @@ export default function Paintiano() {
       if(preview){e.preventDefault();if(preview){try{URL.revokeObjectURL(preview.url);}catch(_){}}setPreview(null);return;}
       if(showPaletteEditor){e.preventDefault();setShowPaletteEditor(false);return;}
       if(showMorphMenu){e.preventDefault();setShowMorphMenu(false);return;}
+      if(showMoodMenu){e.preventDefault();setShowMoodMenu(false);return;}
       if(showSizePicker){e.preventDefault();setShowSizePicker(false);return;}
       if(showGuide){e.preventDefault();setShowGuide(false);setGuideQuery('');return;}
       if(showAbout){e.preventDefault();setShowAbout(false);return;}
@@ -5536,7 +5707,7 @@ export default function Paintiano() {
     };
     window.addEventListener('keydown',onEsc);
     return()=>window.removeEventListener('keydown',onEsc);
-  },[preview,showMorphMenu,showSizePicker,showGuide,showAbout,pickMode,showPaletteEditor]);
+  },[preview,showMorphMenu,showMoodMenu,showSizePicker,showGuide,showAbout,pickMode,showPaletteEditor]);
 
   // Release held keys when mode changes — switching out of compose (or into
   // mic painting/listening) should never leave stuck "active" keys behind.
@@ -6027,7 +6198,7 @@ Composition rules:
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
     if(!isResume){
-      if(randomModeRef.current){ advanceVariation(); }
+      if(randomModeRef.current){ setStructureSeedLock(null); advanceVariation(); }
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
@@ -6787,9 +6958,6 @@ Composition rules:
   useEffect(()=>{
     if(isActiveView){ requestAnimationFrame(()=>setStamp(s=>s+1)); }
   },[isActiveView]);
-  // Turning Random ON releases any structure lock VARY set — Random means a
-  // genuinely fresh take (structure included) on the next reroll/play.
-  useEffect(()=>{ if(randomMode) setStructureSeedLock(null); },[randomMode]);
   const isSetupView = !isActiveView;
 
   return (
@@ -6948,6 +7116,11 @@ Composition rules:
               Only for file sources; to switch TYPE, use ← Setup. */}
           {loadedSource && (
             <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode(loadedSource);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={t('newSource')+' '+t(loadedSource).replace(/[^A-Za-z]/g,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {t('newSource')} {t(loadedSource).replace(/[^A-Za-z]/g,'')}</button>
+          )}
+          {/* New MOOD — opens an inline mood picker right over the canvas (no
+              jump back to setup); picking one loads it immediately. */}
+          {!loadedSource && currentMood && (
+            <button onClick={()=>{if(recording)return;setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={t('newSource')+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {t('newSource')} {t('moodLabel')}</button>
           )}
         </div>
         <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:'.5rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
@@ -7347,6 +7520,34 @@ Composition rules:
         />
       )}
 
+      {showMoodMenu && (
+        <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:'.7rem',textTransform:'uppercase'}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {MOODS.map(m=>(
+                <button key={m} onClick={()=>{
+                  setShowMoodMenu(false);
+                  const s=findSong(m);
+                  setStructureSeedLock(null);
+                  setForceSetup(false);
+                  setCurrentMood(m);
+                  setVarySource(s);
+                  setLoadedSource(null);
+                  setSongQ(m);
+                  stopAll();
+                  aiMidi(m);
+                  if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
+                  setMoodHint(false);
+                }} style={{padding:'12px 10px',background: m===currentMood?'rgba(201,168,76,.18)':'rgba(201,168,76,.07)',color:PF.gold2,border:'1px solid rgba(201,168,76,.3)',borderRadius:4,cursor:'pointer',fontFamily:'inherit',fontSize:'.72rem',letterSpacing:'.06em',textTransform:'capitalize'}}>
+                  {m}
+                </button>
+              ))}
+            </div>
+            <button onClick={()=>setShowMoodMenu(false)} style={{display:'block',margin:'14px auto 0',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em'}}>cancel</button>
+          </div>
+        </div>
+      )}
       {showMorphMenu && (
         <div onClick={()=>setShowMorphMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="morph mood" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(220,150,255,.35)',borderRadius:8,padding:'22px 18px'}}>
