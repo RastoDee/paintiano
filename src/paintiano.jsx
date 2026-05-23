@@ -1714,39 +1714,173 @@ function _rectChordColor(chords, pIdx, MAX_RECTS, gc){
   return [R/c,G/c,B/c];
 }
 
-// Rothko canvas-wide overlay. Instead of the rigid per-cell square grid (which
-// goes pixely on long tracks), Rothko renders on the capped recursive
-// partition: a composition of large, soft, luminous color fields filling the
-// whole canvas. Each region = one big stained rectangle with feathered edges,
-// colored from a sampled chord. Long tracks read as one unified Rothko.
+// Rothko canvas-wide overlay. The classic Rothko is NOT a patchwork grid — it's
+// a small number of soft-edged horizontal color fields STACKED VERTICALLY,
+// centered within generous margins, hovering on a saturated ground. We build
+// that arrangement directly (instead of the recursive partition the other
+// overlays use): pick 2–4 fields whose count grows gently with track length,
+// stack them with uneven heights (Rothko rarely splits evenly), inset them from
+// the canvas edges, and feather every edge so the fields breathe like stained
+// washes. Fields reveal progressively as lim advances.
 function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
-  const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,1200,0.18);
+  const cn=chords.length;
+  // Field count: 2–4, scaling slowly. Rothko canvases stay sparse no matter how
+  // long the piece is — more music = different colors, not more rectangles.
+  const FIELDS = cn<=4 ? Math.max(1,cn)
+              : cn<=24 ? 2
+              : cn<=80 ? 3
+              : 4;
   const lume=(r,g,b,boost)=>{const mx=Math.max(r,g,b,1),k=(255*boost)/mx;let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);const pull=(x)=>x===m2?x:x*0.7;return[Math.min(255,pull(R)),Math.min(255,pull(G)),Math.min(255,pull(B))];};
-  ctx.fillStyle='#0c0a12'; ctx.fillRect(0,0,CW,CH);
-  rects.forEach((rect,pIdx)=>{
-    const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
-    if(pIdx>=paintCount){ return; }
-    const rnd=_seedRnd(pIdx+1500,ss,0,0);
-    const base=_rectChordColor(chords,pIdx,MAX_RECTS,gc);
-    const gC=lume(base[0],base[1],base[2],0.42);
-    ctx.fillStyle=`rgb(${gC[0]|0},${gC[1]|0},${gC[2]|0})`; ctx.fillRect(bx,by,BW,BH);
-    const col=lume(base[0],base[1],base[2], 0.95+rnd()*0.12);
+
+  // Ground: a deep saturated wash sampled from the whole piece, darkened — the
+  // canvas color the floating fields sit on. Rothko grounds are never neutral.
+  const gBase=_rectChordColor(chords,0,Math.max(1,FIELDS),gc);
+  const gnd=lume(gBase[0],gBase[1],gBase[2],0.30);
+  ctx.fillStyle=`rgb(${gnd[0]|0},${gnd[1]|0},${gnd[2]|0})`; ctx.fillRect(0,0,CW,CH);
+
+  // Outer margins — fields float inside the canvas, never touching the edge.
+  const marginX=CW*0.10, marginTop=CH*0.07, marginBot=CH*0.07;
+  const innerX=marginX, innerW=CW-2*marginX;
+  const innerY=marginTop, innerH=CH-marginTop-marginBot;
+  // Gap between stacked fields (the ground shows through).
+  const gap=Math.max(6, innerH*0.035);
+
+  // Uneven field heights from the seed (stable per painting, re-rolls on Vary).
+  const wr=_seedRnd(7,ss,0,0);
+  const weights=[];
+  for(let i=0;i<FIELDS;i++) weights.push(0.7+wr()*0.9);
+  const wsum=weights.reduce((a,b)=>a+b,0);
+  const totalGap=gap*(FIELDS-1);
+  const availH=innerH-totalGap;
+
+  // Reveal progressively: how many fields are visible at the current lim.
+  const revealed=Math.max(1,Math.min(FIELDS,Math.ceil(lim*(FIELDS/cn))));
+
+  let cy=innerY;
+  for(let f=0;f<FIELDS;f++){
+    const fh=availH*(weights[f]/wsum);
+    if(f>=revealed){ cy+=fh+gap; continue; }
+    const rnd=_seedRnd(f+1500,ss,0,0);
+    // Each field samples a chord from its slice of the piece, so the stack's
+    // colors progress through the music top→bottom.
+    const sampled=_rectChordColor(chords, f, Math.max(1,FIELDS), gc);
+    const col=lume(sampled[0],sampled[1],sampled[2], 0.92+rnd()*0.14);
     const R=col[0]|0,G=col[1]|0,B=col[2]|0;
-    const rimX=Math.max(3,BW*0.10), rimY=Math.max(3,BH*0.12);
-    if(BW-2*rimX<=2||BH-2*rimY<=2){ ctx.fillStyle=`rgb(${R},${G},${B})`; ctx.fillRect(bx,by,BW,BH); return; }
-    ctx.fillStyle=`rgb(${R},${G},${B})`;
-    ctx.fillRect(bx+rimX, by+rimY, BW-2*rimX, BH-2*rimY);
-    const STEPS=12;
-    for(let s=0;s<STEPS;s++){const t=s/STEPS,a=(1-t)*(1-t)*0.9,ox=rimX*t,oy=rimY*t;
-      ctx.fillStyle=`rgba(${R},${G},${B},${a.toFixed(3)})`;
-      ctx.fillRect(bx+rimX-ox, by+rimY-oy, BW-2*(rimX-ox), oy+1);
-      ctx.fillRect(bx+rimX-ox, by+BH-rimY+oy-1, BW-2*(rimX-ox), oy+1);
-      ctx.fillRect(bx+rimX-ox, by+rimY-oy, ox+1, BH-2*(rimY-oy));
-      ctx.fillRect(bx+BW-rimX+ox-1, by+rimY-oy, ox+1, BH-2*(rimY-oy));
+
+    // Slight per-field horizontal inset so the stack isn't perfectly aligned —
+    // Rothko's fields wander a little side to side.
+    const fx=innerX + innerW*0.02*(rnd()-0.5);
+    const fw=innerW*(0.97+rnd()*0.03);
+    const by=cy, bh=fh;
+
+    // Soft glow halo under the field (a touch larger, dimmer) so it bleeds into
+    // the ground rather than sitting on a hard line.
+    const halo=lume(sampled[0],sampled[1],sampled[2],0.55);
+    ctx.fillStyle=`rgba(${halo[0]|0},${halo[1]|0},${halo[2]|0},0.5)`;
+    ctx.fillRect(fx-fw*0.02, by-bh*0.06, fw*1.04, bh*1.12);
+
+    const rimX=Math.max(4,fw*0.06), rimY=Math.max(6,bh*0.18);
+    if(fw-2*rimX<=2||bh-2*rimY<=2){
+      ctx.fillStyle=`rgb(${R},${G},${B})`; ctx.fillRect(fx,by,fw,bh); cy+=fh+gap; continue;
     }
-  });
+
+    // ── Rothko field as an IRREGULAR, BREATHING shape (not a crisp rectangle) ──
+    // The field's four edges waver, the feather softness varies along each edge,
+    // the surface is scumbled with thin tone passes, and the border frays into
+    // the ground. cx0/cy0 = inner core box; edges jitter around it.
+    const cx0=fx+rimX, cy0=by+rimY, cw0=fw-2*rimX, ch0=bh-2*rimY;
+    // Per-edge wave: small low-frequency undulation seeded per field so each
+    // field's silhouette is unique but stable.
+    const ej=_seedRnd(f+1701,ss,0,0);
+    const phx=ej()*6.28, phy=ej()*6.28, ph2=ej()*6.28, ph3=ej()*6.28;
+    const wob=Math.min(rimX,rimY)*0.5; // edge wander amplitude
+    // Build the wavering core outline as a closed path of sampled edge points.
+    const edgePt=(side,t)=>{
+      // t in 0..1 along the side; returns [x,y] on the wavering boundary.
+      const waver=(p,ph)=>Math.sin(p*Math.PI*2*1.5+ph)*0.6+Math.sin(p*Math.PI*2*2.7+ph*1.7)*0.4;
+      if(side===0){ // top, left→right
+        return [cx0+t*cw0, cy0 + waver(t,phy)*wob];
+      }else if(side===1){ // right, top→bottom
+        return [cx0+cw0 - waver(t,ph2)*wob*0.6, cy0+t*ch0];
+      }else if(side===2){ // bottom, right→left
+        return [cx0+(1-t)*cw0, cy0+ch0 - waver(1-t,ph3)*wob];
+      }else{ // left, bottom→top
+        return [cx0 + waver(1-t,phx)*wob*0.6, cy0+(1-t)*ch0];
+      }
+    };
+    const traceCore=(grow)=>{
+      // grow expands the outline outward (for feather rings). 0 = core.
+      ctx.beginPath();
+      const SEG=18;
+      let first=true;
+      for(let side=0;side<4;side++){
+        for(let i=0;i<SEG;i++){
+          let [x,y]=edgePt(side,i/SEG);
+          if(grow){
+            // push outward from field centre
+            const mx=cx0+cw0/2, my=cy0+ch0/2;
+            x+=(x-mx)/(cw0/2)*grow; y+=(y-my)/(ch0/2)*grow;
+          }
+          if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
+        }
+      }
+      ctx.closePath();
+    };
+
+    // Feather: many outward rings, fading out — the soft Rothko border. Because
+    // the outline itself wavers, the feather is uneven along each edge.
+    const RINGS=16;
+    for(let s=RINGS;s>=1;s--){
+      const t=s/RINGS;
+      const grow=Math.max(rimX,rimY)*t;
+      const a=(1-t)*(1-t)*0.85;
+      ctx.fillStyle=`rgba(${R},${G},${B},${a.toFixed(3)})`;
+      traceCore(grow);
+      ctx.fill();
+    }
+    // Solid wavering core
+    ctx.fillStyle=`rgb(${R},${G},${B})`;
+    traceCore(0);
+    ctx.fill();
+
+    // Scumbled surface — a few large soft translucent blotches of slightly
+    // lighter / darker tone, so the field glows unevenly instead of flat fill.
+    const sc=_seedRnd(f+1801,ss,0,0);
+    const passes=3+Math.floor(sc()*3);
+    for(let p=0;p<passes;p++){
+      const lift=0.82+sc()*0.4;
+      const cr=Math.min(255,R*lift)|0, cg=Math.min(255,G*lift)|0, cb=Math.min(255,B*lift)|0;
+      const px=cx0+cw0*(0.15+sc()*0.7), py=cy0+ch0*(0.15+sc()*0.7);
+      const pr=Math.min(cw0,ch0)*(0.18+sc()*0.22);
+      const grd=ctx.createRadialGradient(px,py,0,px,py,pr);
+      grd.addColorStop(0,`rgba(${cr},${cg},${cb},0.16)`);
+      grd.addColorStop(1,`rgba(${cr},${cg},${cb},0)`);
+      ctx.fillStyle=grd;
+      ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fill();
+    }
+
+    // Frayed border bleed — short soft strokes leaking from the edge into the
+    // ground at random points, the stained-canvas Rothko fray.
+    const fr=_seedRnd(f+1901,ss,0,0);
+    const frays=10+Math.floor(fr()*10);
+    for(let i=0;i<frays;i++){
+      const side=Math.floor(fr()*4), tt=fr();
+      let [ex,ey]=edgePt(side,tt);
+      const mx=cx0+cw0/2, my=cy0+ch0/2;
+      const dx=(ex-mx), dy=(ey-my), dl=Math.hypot(dx,dy)||1;
+      const reach=(Math.max(rimX,rimY))*(0.5+fr()*1.1);
+      const tx=ex+dx/dl*reach, ty=ey+dy/dl*reach;
+      const ga=0.10+fr()*0.12;
+      const grd=ctx.createRadialGradient(ex,ey,0,tx,ty,reach);
+      grd.addColorStop(0,`rgba(${R},${G},${B},${ga.toFixed(3)})`);
+      grd.addColorStop(1,`rgba(${R},${G},${B},0)`);
+      ctx.fillStyle=grd;
+      ctx.beginPath();ctx.arc(tx,ty,reach*0.7,0,Math.PI*2);ctx.fill();
+    }
+    cy+=fh+gap;
+  }
 }
 
 // Matisse canvas-wide overlay. Like Mondrian's Classic/Boogie split, Matisse
@@ -2199,6 +2333,60 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   });
 }
 
+// Mondrian canvas-wide overlay. The per-cell drawMondrian goes pixely on long
+// songs because each chord's grid cell shrinks to a few px. Here we render ONE
+// De Stijl composition across the whole canvas on the capped recursive
+// partition (regions stay large no matter the song length): cream ground, big
+// rectangles, ~40% filled with bold chord colors (rest cream, a few black),
+// thick black grid lines between every region. Reveals progressively with lim.
+function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim||!chords||!chords.length) return;
+  const ss=sessionSeed|0;
+  // capScale 0.16 keeps the region count low → big bold blocks like real Mondrian.
+  const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,2400,0.16);
+  const isBW=mode==='bw';
+  // Boost a gc() color toward Mondrian's flat saturated character, keeping hue.
+  const bold=(r,g,bl)=>{
+    if(Math.max(r,g,bl)-Math.min(r,g,bl)<=6) return [Math.round(r),Math.round(g),Math.round(bl)];
+    const mx=Math.max(r,g,bl,1),k=255/mx;let R=r*k,G=g*k,B=bl*k,m2=Math.max(R,G,B);
+    const pull=c=>c===m2?c:c*0.72;
+    return [Math.round(Math.min(255,pull(R))),Math.round(Math.min(255,pull(G))),Math.round(Math.min(255,pull(B)))];
+  };
+  // Cream ground over the whole canvas.
+  ctx.fillStyle=isBW?'#ece9e2':'#f4f1e8'; ctx.fillRect(0,0,CW,CH);
+  // Fill revealed regions.
+  rects.forEach((rect,pIdx)=>{
+    if(pIdx>=paintCount) return;
+    const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
+    const rnd=_seedRnd(pIdx+2401,ss,0,0);
+    const roll=rnd();
+    if(roll<0.42){
+      // Bold saturated chord color
+      const base=_rectChordColor(chords,pIdx,MAX_RECTS,gc);
+      const[pr,pg,pb]=bold(base[0],base[1],base[2]);
+      ctx.fillStyle=`rgb(${pr},${pg},${pb})`; ctx.fillRect(bx,by,BW,BH);
+    }else if(roll<0.50){
+      // Occasional black block (Mondrian's dark accents)
+      ctx.fillStyle=isBW?'#1a1714':'#141109'; ctx.fillRect(bx,by,BW,BH);
+    }
+    // else: leave cream
+  });
+  // Thick black De Stijl grid lines around every region.
+  const lw=Math.max(3,Math.round(Math.min(CW,CH)*0.012));
+  ctx.fillStyle='#0d0b08';
+  rects.forEach((rect,pIdx)=>{
+    if(pIdx>=paintCount) return;
+    const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
+    ctx.fillRect(bx,by,BW,lw);            // top
+    ctx.fillRect(bx,by+BH-lw,BW,lw);      // bottom
+    ctx.fillRect(bx,by,lw,BH);            // left
+    ctx.fillRect(bx+BW-lw,by,lw,BH);      // right
+  });
+  // Canvas border frame.
+  ctx.fillRect(0,0,CW,lw); ctx.fillRect(0,CH-lw,CW,lw);
+  ctx.fillRect(0,0,lw,CH); ctx.fillRect(CW-lw,0,lw,CH);
+}
+
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
@@ -2210,12 +2398,11 @@ function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
     return[aR/c,aG/c,aB/c,Math.min(1,aA/c),aV/c];
   };
   const MAX_RECTS=Math.min(chords.length,
-    chords.length<=200 ? chords.length
-    :chords.length<=300 ? 250
-    :chords.length<=400 ? 300
-    :chords.length<=600 ? 400
-    :chords.length<=800 ? 600
-    :700
+    chords.length<=40  ? chords.length
+    :chords.length<=120 ? 40+Math.floor((chords.length-40)*0.45)
+    :chords.length<=300 ? 76+Math.floor((chords.length-120)*0.20)
+    :chords.length<=600 ? 112+Math.floor((chords.length-300)*0.08)
+    :136
   );
   const paintCount=Math.min(MAX_RECTS,Math.max(1,Math.round(lim*(MAX_RECTS/chords.length))));
   let rects=[{x:0,y:0,w:1,h:1}];
@@ -4545,7 +4732,7 @@ export default function Paintiano() {
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse';
+      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       if(isOverlayStyle && playing && lim<chords.length && (nowMs-lastOverlayPaintRef.current)<110){
         // Skip this overlay repaint — keep last frame on canvas. Record disp so
@@ -4592,22 +4779,30 @@ export default function Paintiano() {
           sub.builtTo=0;
         }
         // Draw only the newly-revealed substrate cells into the offscreen canvas.
+        // EXCEPTION: the full-canvas overlays (mondrian/rothko/matisse) paint
+        // their own complete ground over everything, so a per-cell substrate is
+        // wasted and — on long songs where cells are sub-pixel — bleeds through
+        // as a microscopic pixel grid. Skip cell drawing for those; the overlay
+        // alone owns the canvas.
+        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama';
         _setArtistSeed(pollockSessionSeed);
-        for(let i=sub.builtTo;i<lim;i++){
-          const chord=chords[i];const{n:notes,idx}=chord;
-          const cell=grid.cells&&grid.cells[idx];
-          if(cell){
-            if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style));
-            else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
-          }else{
-            const si=idx%(N*N),col=si%N,row=Math.floor(si/N);
-            drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style);
+        if(!fullCanvasOverlay){
+          for(let i=sub.builtTo;i<lim;i++){
+            const chord=chords[i];const{n:notes,idx}=chord;
+            const cell=grid.cells&&grid.cells[idx];
+            if(cell){
+              if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style));
+              else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
+            }else{
+              const si=idx%(N*N),col=si%N,row=Math.floor(si/N);
+              drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style);
+            }
           }
         }
         sub.builtTo=Math.max(sub.builtTo,lim);
         // Blit the cached substrate to the visible canvas in one operation.
         ctx.clearRect(0,0,CW,CH);
-        ctx.drawImage(sub.canvas,0,0);
+        if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0);
         // Run the canvas-wide overlay on top (this is the only per-frame cost
         // that legitimately scales with lim).
         if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
@@ -4617,6 +4812,7 @@ export default function Paintiano() {
         else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode);
         else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused};
         return;
       }
@@ -4649,7 +4845,10 @@ export default function Paintiano() {
       if(style==='matisse' && lim>0){
         drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'){
+      if(style==='mondrian' && lim>0){
+        drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+      }
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -4968,7 +5167,7 @@ export default function Paintiano() {
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky';
+        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian';
         if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
@@ -6203,43 +6402,61 @@ Composition rules:
         composedModeRef.current=true;
       }
       let lastCommit=performance.now();
-      const COMMIT_INTERVAL=800; // 800ms — longer for smoother flow
+      const COMMIT_INTERVAL=120; // sample chord identity frequently (was 800 — that quantized durations)
+      const MIN_HOLD_MS=180;     // ignore chords held shorter than this (transient flicker)
       const RMS_THRESHOLD=0.003; // very low — iOS same-device mic+speaker signal is weak
       let prevChordSig=''; // chord-change detection
       let prevChordStart=performance.now(); // when current chord started
+      let pendingNotes=null;     // the currently-sounding chord, awaiting its end to know duration
+      let pendingSig='';
+      const emitChord=(notes,heldMs)=>{
+        // Highlight active keys
+        const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
+        notes.forEach(({m})=>{
+          setActive(p=>{const s=new Set(p);s.add(m);return s;});
+          pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(sustainMs,1000));
+        });
+        const idx=idxRef.current++;
+        const now2=performance.now();
+        if(!sessionStart.current)sessionStart.current=now2;
+        const startMs=now2-sessionStart.current;
+        // Continuous durQ proportional to TRUE held duration — like Compose.
+        const durQ=Math.max(0.25,Math.min(4,heldMs/500));
+        const paintedNotes=notes.map(n=>({...n,durMs:Math.round(heldMs)}));
+        setChords(p=>{const next=[...p,{n:paintedNotes,idx,startMs,recorded:true,durQ}];return next;});
+        setDisp(p=>p+1);
+      };
       const tick=()=>{
         if(!listenStreamRef.current){stopMicListening();return;}
         analyser.getFloatTimeDomainData(buf);
         let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
-        if(rms<RMS_THRESHOLD){listenRafRef.current=requestAnimationFrame(tick);return;}
-        const mag=fftMag(buf);
-        const pitches=pickPitches(mag,sr,0.05);
         const now=performance.now();
-        if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
-          lastCommit=now;
-          const sustainMs=Math.round(COMMIT_INTERVAL*1.8);
-          const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:sustainMs}));
-          // Chord-change detection — highlight + paint only when harmony shifts.
-          // Re-firing setActive every commit for a sustained chord would cause
-          // an 800ms re-render rhythm with no visible benefit.
-          const sig=notes.map(n=>n.m).sort().join(',');
-          if(sig!==prevChordSig){
-            // Duration = how long the previous chord was held
+        if(rms<RMS_THRESHOLD){
+          // Silence — if a chord was sounding, end it now with its real duration.
+          if(pendingNotes){
             const heldMs=now-prevChordStart;
-            prevChordStart=now;
-            prevChordSig=sig;
-            // Highlight active keys
-            notes.forEach(({m})=>{
-              setActive(p=>{const s=new Set(p);s.add(m);return s;});
-              pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),sustainMs);
-            });
-            // Paint — durQ proportional to how long chord was held, like Compose
-            const idx=idxRef.current++;
-            if(!sessionStart.current)sessionStart.current=now;
-            const startMs=now-sessionStart.current;
-            const durQ=Math.max(0.25,Math.min(4,heldMs/500));
-            setChords(p=>{const next=[...p,{n:notes,idx,startMs,recorded:true,durQ}];return next;});
-            setDisp(p=>p+1);
+            if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
+            pendingNotes=null;pendingSig='';prevChordSig='';
+          }
+          listenRafRef.current=requestAnimationFrame(tick);return;
+        }
+        // Detect chord identity every ~120ms (cheap, frequent — decoupled from
+        // the old 800ms commit gate that quantized all durations equal).
+        if(now-lastCommit>COMMIT_INTERVAL){
+          lastCommit=now;
+          const mag=fftMag(buf);
+          const pitches=pickPitches(mag,sr,0.05);
+          if(pitches.length>0){
+            const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:0}));
+            const sig=notes.map(n=>n.m).sort((a,b)=>a-b).join(',');
+            if(sig!==pendingSig){
+              // Chord changed. Flush the PREVIOUS chord with its true held time.
+              if(pendingNotes){
+                const heldMs=now-prevChordStart;
+                if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
+              }
+              pendingNotes=notes;pendingSig=sig;prevChordStart=now;
+            }
           }
         }
         listenRafRef.current=requestAnimationFrame(tick);
@@ -6286,39 +6503,58 @@ Composition rules:
         composedModeRef.current=true;
       }
       unlockAudio();
-      let lastCommit=performance.now();
-      const COMMIT_INTERVAL=600; // emit a chord every 600ms for smoother flow
-      const RMS_THRESHOLD=0.06; // minimum RMS energy — ignores ambient noise / silence
-      let prevNoteStart=performance.now(); // track how long each note is held
+      let lastSample=performance.now();
+      const SAMPLE_INTERVAL=100; // sample pitch frequently (was 600 commit gate — quantized durations)
+      const MIN_HOLD_MS=160;     // ignore notes shorter than this
+      const RMS_THRESHOLD=0.06;  // minimum RMS energy — ignores ambient noise / silence
+      let pendingNote=null;      // {m,v} currently being sung, awaiting its end
+      let noteStart=performance.now();
+      const emitNote=(note,heldMs)=>{
+        const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
+        playNote(note.m,note.v,sustainMs);
+        setActive(p=>{const s=new Set(p);s.add(note.m);return s;});
+        pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(note.m);return s;}),Math.min(sustainMs,1000));
+        const idx=idxRef.current++;
+        const now2=performance.now();
+        if(!sessionStart.current)sessionStart.current=now2;
+        const startMs=now2-sessionStart.current;
+        const durQ=Math.max(0.25,Math.min(4,heldMs/500));
+        setChords(p=>{const next=[...p,{n:[{m:note.m,v:note.v,durMs:Math.round(heldMs)}],idx,startMs,recorded:true,durQ}];return next;});
+        setDisp(p=>p+1);
+      };
       const tick=()=>{
         if(!micStreamRef.current){stopMicPainting();return;}
         analyser.getFloatTimeDomainData(buf);
         let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
-        if(rms<RMS_THRESHOLD){micRafRef.current=requestAnimationFrame(tick);return;}
-        const mag=fftMag(buf);
-        const pitches=pickPitches(mag,sr,0.20);
         const now=performance.now();
-        if(pitches.length>0&&now-lastCommit>COMMIT_INTERVAL){
-          const heldMs=now-prevNoteStart;
-          lastCommit=now;
-          prevNoteStart=now;
-          // Monophonic — take only the strongest pitch
-          const top=pitches[0];
-          // Scale-snap to C major
-          const snapped=paintSnapMidi(top.midi,'cmaj');
-          const sustainMs=Math.round(COMMIT_INTERVAL*1.8);
-          const notes=[{m:snapped,v:Math.max(50,Math.min(120,Math.round(top.mag*110))),durMs:sustainMs}];
-          // Play and highlight
-          playNote(snapped,notes[0].v,sustainMs);
-          setActive(p=>{const s=new Set(p);s.add(snapped);return s;});
-          pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(snapped);return s;}),Math.min(sustainMs,1000));
-          // Paint — durQ proportional to how long note was held, like Compose
-          const idx=idxRef.current++;
-          if(!sessionStart.current)sessionStart.current=now;
-          const startMs=now-sessionStart.current;
-          const durQ=Math.max(0.25,Math.min(4,heldMs/500));
-          setChords(p=>{const next=[...p,{n:notes,idx,startMs,recorded:true,durQ}];return next;});
-          setDisp(p=>p+1);
+        if(rms<RMS_THRESHOLD){
+          // Silence ends the current note with its real duration.
+          if(pendingNote){
+            const heldMs=now-noteStart;
+            if(heldMs>=MIN_HOLD_MS) emitNote(pendingNote,heldMs);
+            pendingNote=null;
+          }
+          micRafRef.current=requestAnimationFrame(tick);return;
+        }
+        if(now-lastSample>SAMPLE_INTERVAL){
+          lastSample=now;
+          const mag=fftMag(buf);
+          const pitches=pickPitches(mag,sr,0.20);
+          if(pitches.length>0){
+            const snapped=paintSnapMidi(pitches[0].midi,'cmaj');
+            const v=Math.max(50,Math.min(120,Math.round(pitches[0].mag*110)));
+            if(!pendingNote || pendingNote.m!==snapped){
+              // Pitch changed — flush the previous sung note with its true length.
+              if(pendingNote){
+                const heldMs=now-noteStart;
+                if(heldMs>=MIN_HOLD_MS) emitNote(pendingNote,heldMs);
+              }
+              pendingNote={m:snapped,v};noteStart=now;
+            }else{
+              // Same pitch sustained — track the loudest velocity seen.
+              if(v>pendingNote.v) pendingNote.v=v;
+            }
+          }
         }
         micRafRef.current=requestAnimationFrame(tick);
       };
@@ -6466,6 +6702,9 @@ Composition rules:
         }
         if(style==='matisse' && chords.length>0){
           drawMatisseOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+        }
+        if(style==='mondrian' && chords.length>0){
+          drawMondrianOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
         }
       }
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
