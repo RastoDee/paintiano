@@ -5319,11 +5319,6 @@ export default function Paintiano() {
   useEffect(()=>{
     try{ localStorage.setItem('paintiano_mic_preset', micPreset); }catch(_){}
   },[micPreset]);
-  // True once the user has actually launched a mic session (Voice or Music) in
-  // this app session. Lets the MIC dialog highlight the LAST-USED preset when
-  // reopened — without pre-highlighting the bare localStorage default before the
-  // user has ever used the mic.
-  const [micUsed, setMicUsed] = useState(false);
   // Derived: any mic mode active?
   const micActive = micPainting || micListening;
   const [micVolActive, setMicVolActive] = useState(false);
@@ -6600,6 +6595,12 @@ export default function Paintiano() {
     setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
     pixelRef.current=null;setViewMode('paint');
+    // Invalidate the cached substrate canvas + last-paint signature. Without this,
+    // Clear emptied the chords but left the built-up substrate cache intact, so
+    // returning to the canvas (← Canvas) re-blitted the OLD painting even though
+    // there were no chords. Reset it exactly like the unmount cleanup does.
+    substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+    lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
     // Clear is a full reset of the loaded content: drop the loaded source AND
@@ -8156,23 +8157,23 @@ Composition rules:
             {pickMode==='mic' ? (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <button onClick={()=>{
-                setMicPreset('voice');setMicUsed(true);
+                setMicPreset('voice');
                 if(micListening) stopMicListening();
                 startMicPainting();
                 setPickMode(null);
-              }} style={{padding:'12px',background:((micActive||micUsed)&&micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+(((micActive||micUsed)&&micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:((micActive||micUsed)&&micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
-                {((micActive||micUsed)&&micPreset==='voice')?'● ':''}{t('voicePreset')}
+              }} style={{padding:'12px',background:((micActive||hasMicDraft)&&micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+(((micActive||hasMicDraft)&&micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:((micActive||hasMicDraft)&&micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
+                {((micActive||hasMicDraft)&&micPreset==='voice')?'● ':''}{t('voicePreset')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micVoiceHint')}
               </div>
               <button onClick={()=>{
-                setMicPreset('music');setMicUsed(true);
+                setMicPreset('music');
                 if(micPainting) stopMicPainting();
                 startMicListening();
                 setPickMode(null);
-              }} style={{padding:'12px',background:((micActive||micUsed)&&micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+(((micActive||micUsed)&&micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:((micActive||micUsed)&&micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
-                {((micActive||micUsed)&&micPreset==='music')?'● ':''}{t('musicPreset')}
+              }} style={{padding:'12px',background:((micActive||hasMicDraft)&&micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+(((micActive||hasMicDraft)&&micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:((micActive||hasMicDraft)&&micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
+                {((micActive||hasMicDraft)&&micPreset==='music')?'● ':''}{t('musicPreset')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micMusicHint')}
