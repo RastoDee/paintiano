@@ -7369,20 +7369,25 @@ Composition rules:
   },[micVolActive,stopMicVol]);
 
   const stopMicPainting=useCallback(()=>{
+    // Stash the captured draft so the MIC button shows a "draft saved" glow and
+    // the work is recoverable (mirrors Compose). stashDraft no-ops if the canvas
+    // isn't a recorded creation or is empty, so this is safe on every stop path.
+    if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
     if(micAcRef.current){try{micAcRef.current.close();}catch(_){}micAcRef.current=null;}
     setMicPainting(false);
     stopMicVol();
-  },[stopMicVol]);
+  },[stopMicVol,stashDraft]);
 
   const stopMicListening=useCallback(()=>{
+    if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
     if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
     if(listenAcRef.current){try{listenAcRef.current.close();}catch(_){}listenAcRef.current=null;}
     setMicListening(false);
     stopMicVol();
-  },[stopMicVol]);
+  },[stopMicVol,stashDraft]);
 
   // Refs so handlePauseClick (defined earlier in the file) can stop a live mic
   // mode before starting playback. The Play button now does mic-stop + play in
@@ -7408,8 +7413,13 @@ Composition rules:
       listenStreamRef.current=stream;
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
-      ac.resume&&ac.resume().catch(()=>{}); // iOS: a fresh AudioContext starts suspended; an analyser on a suspended context reads silence
       listenAcRef.current=ac;
+      // iOS: a fresh AudioContext starts suspended; an analyser on a suspended
+      // context reads silence — which is why the FIRST entry into Music painted
+      // nothing while later re-entries worked. Await the resume (we're already in
+      // an async fn, inside the button-tap gesture) so the tick loop below reads
+      // real audio from the very first frame.
+      try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){}
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=4096; // higher resolution for better pitch detection on complex music
@@ -7512,8 +7522,8 @@ Composition rules:
       micStreamRef.current=stream;
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
-      ac.resume&&ac.resume().catch(()=>{}); // iOS: resume immediately so the analyser receives real audio, not silence
       micAcRef.current=ac;
+      try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){} // iOS: await resume so the analyser reads real audio on the first frame
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=2048;
@@ -8113,8 +8123,8 @@ Composition rules:
                 if(micListening) stopMicListening();
                 startMicPainting();
                 setPickMode(null);
-              }} style={{padding:'12px',background:(micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+((micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
-                {(micPreset==='voice')?'● ':''}{t('voicePreset')}
+              }} style={{padding:'12px',background:(micActive&&micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+((micActive&&micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micActive&&micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
+                {(micActive&&micPreset==='voice')?'● ':''}{t('voicePreset')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micVoiceHint')}
@@ -8124,8 +8134,8 @@ Composition rules:
                 if(micPainting) stopMicPainting();
                 startMicListening();
                 setPickMode(null);
-              }} style={{padding:'12px',background:(micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+((micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
-                {(micPreset==='music')?'● ':''}{t('musicPreset')}
+              }} style={{padding:'12px',background:(micActive&&micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+((micActive&&micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:(micActive&&micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
+                {(micActive&&micPreset==='music')?'● ':''}{t('musicPreset')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micMusicHint')}
