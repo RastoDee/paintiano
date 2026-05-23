@@ -6629,6 +6629,11 @@ export default function Paintiano() {
       if(micPainting) stopMicPaintingRef.current?.();
       if(micListening) stopMicListeningRef.current?.();
       clear();
+      // stopMic* stashes the draft (sets the glow); Clear means discard, so
+      // explicitly drop the mic draft + glow + owner after clear runs.
+      singStashRef.current=null;listenStashRef.current=null;setHasMicDraft(false);
+      composeStashRef.current=null;setHasComposeDraft(false);
+      draftOwnerRef.current=null;
       return;
     }
     // A creation session may be active even when no mic stream is live: pressing
@@ -6642,6 +6647,12 @@ export default function Paintiano() {
     // only blanked disp while keeping chords + loadedSource, which left the
     // source highlighted/active in setup after Clear.)
     clear();
+    // Discard any stopped-session draft + glow too (a Compose/MIC draft whose
+    // live mode already ended). Without this the MIC/COMPOSE button kept its
+    // "draft saved" glow after clearing a stopped session.
+    singStashRef.current=null;listenStashRef.current=null;setHasMicDraft(false);
+    composeStashRef.current=null;setHasComposeDraft(false);
+    draftOwnerRef.current=null;
   },[stopAll,clear,composeMode,micPainting,micListening]);
 
   const fullClear = useCallback(()=>{
