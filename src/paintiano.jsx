@@ -3573,7 +3573,7 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode){
 // Convert a downsampled-image pixel array into musical events using a given hue→pitch table
 // (COF for harmony mode, SPEC_HUE for spectral mode). Pure: same input + same table → same output.
 
-function pixelsToImageEvents(px,nc,nr,table){
+function pixelsToImageEvents(px,nc,nr,table,colorMode){
   const CHORD_SIZE=6;
   const COL_STEP=4;                              // merge 4 adjacent columns per time-event
   const _nrBands=Math.floor(nr/CHORD_SIZE);
@@ -3639,7 +3639,10 @@ function pixelsToImageEvents(px,nc,nr,table){
   // octaveShift in semitones: light image → shift down, dark → shift up. 70% of
   // the deviation from 50% lightness is compensated; 30% of the brightness
   // character is preserved. ~±0.7 octave max at the extremes.
-  const octaveShift = Math.round(-((avgLight-50)/50) * 0.7 * 8); // semitones
+  // SPECTRAL also lifts the whole register up an octave: paired with the whole-
+  // tone scale this gives a bright, glassy, weightless voice clearly distinct
+  // from Harmony's warm middle register.
+  const octaveShift = Math.round(-((avgLight-50)/50) * 0.7 * 8) + (colorMode==='spectral'?12:0); // semitones
   // Saliency floor scales with the image's overall chroma so a vivid painting
   // doesn't get over-suppressed, but a monochrome one does.
   const salFloor=Math.max(28,avgChroma*0.85);
@@ -3648,8 +3651,44 @@ function pixelsToImageEvents(px,nc,nr,table){
   // least one voice instead of dropping out to silence).
   function pxToNote(idx, soft){
     const{r,g,b}=px[idx],[h,s,l]=toHsl(r,g,b);
+    // ── CUSTOM PALETTE GATE ──
+    // In Custom mode the palette is a FILTER, not just a remap: only colours the
+    // user actually put in the palette should sound — everything else is silence.
+    // So an all-pink palette over an image with no pink plays (almost) nothing,
+    // giving direct, tangible control ("I chose pink → I hear only the pink").
+    // We compare each pixel to the palette: a chromatic pixel must sit within a
+    // moderate hue window (~25°) of some palette swatch; an achromatic pixel
+    // (grey/white/black) only sounds if the palette itself contains a grey/near-
+    // neutral swatch. table[] here is the palette's hues (built in loadImage).
+    if (colorMode==='custom') {
+      const CUSTOM_HUE_TOL=25;                       // "medium" strictness
+      if (s < 12) {
+        // Achromatic pixel: only sounds if the palette has a neutral swatch.
+        if (!(table.__hasNeutral)) return null;
+      } else {
+        let md=Infinity;
+        for (const th of table){ const d=Math.min(Math.abs(h-th),360-Math.abs(h-th)); if(d<md) md=d; }
+        if (md > CUSTOM_HUE_TOL) return null;          // colour not in palette → silent
+      }
+    }
+    // ── B/W INVERSE MAPPING ──
+    // In music→painting, B/W maps each note to a GREY whose lightness rises with
+    // pitch (bwCol: low notes dark, high notes light). Image mode is the inverse
+    // translation, so here we read the painting the same way backwards: a pixel's
+    // LIGHTNESS drives the pitch directly — dark areas → low notes, light areas →
+    // high notes — ignoring hue entirely (B/W is about value, not colour). This
+    // makes a black-and-white reading a true mirror of the note→grey mapping
+    // rather than secretly using the colour wheel under a monochrome canvas.
+    if (colorMode==='bw') {
+      // Map lightness 0..100 → MIDI ~36..84 (4 octaves, C2-ish to C6-ish), the
+      // same span bwCol spreads pitch across. Pure black stays a protected deep
+      // bass note (like the chromatic dark path) so shadows anchor the low end.
+      const midiBW=Math.round(36 + (Math.max(0,Math.min(100,l))/100)*48);
+      const vBW=Math.round(45 + Math.abs(l-50)/50*45);   // extremes (black/white) louder than mid-grey
+      if (l < 12) return { m:Math.max(24,midiBW+octaveShift), v:vBW, durMs:noteDur, bass:true };
+      return { m:Math.max(24,Math.min(96,midiBW+octaveShift)), v:vBW, durMs:noteDur };
+    }
     // ── GRAYSCALE PATH ──
-    // Achromatic pixels (white / grey / black) carry no hue information but
     // they DO carry value information. Map them to pitch class C with octave
     // driven by lightness: black ≈ C2 (deep bass), mid-grey ≈ C5 (middle),
     // white ≈ C7 (high treble). This forms a structural backbone under the
@@ -3816,9 +3855,23 @@ function pixelsToImageEvents(px,nc,nr,table){
       if(corr>bestCorr){bestCorr=corr;bestKey=key;bestModeIsMajor=isMaj;}
     }
   }
+  // Scale choice depends on the COLOUR MODE so switching Harmony↔Spectral
+  // actually changes the mood. HARMONY/BW/CUSTOM keep the familiar major/minor
+  // diatonic — warm, resolved, song-like. SPECTRAL uses the WHOLE-TONE scale:
+  // six equal whole steps, no semitones, no leading tone, so it has no pull to a
+  // tonic at all — dreamy, weightless, shimmering (Debussy / spectral music). On
+  // the same painting this sounds unmistakably different from Harmony's grounded
+  // diatonic, not just a couple of swapped notes. Two transpositions exist; we
+  // pick the one anchored to the detected key so it still relates to the image.
   const MAJ_OFFSETS=[0,2,4,5,7,9,11];
   const MIN_OFFSETS=[0,2,3,5,7,8,10];
-  const scalePCs=(bestModeIsMajor?MAJ_OFFSETS:MIN_OFFSETS).map(o=>(o+bestKey)%12);
+  const WHOLE_OFFSETS=[0,2,4,6,8,10];            // whole-tone — dreamy, tonic-less, spectral
+  const isSpectral = colorMode==='spectral';
+  const baseOffsets = isSpectral
+    ? WHOLE_OFFSETS
+    : (bestModeIsMajor ? MAJ_OFFSETS : MIN_OFFSETS);
+  const scalePCs=baseOffsets.map(o=>(o+bestKey)%12);
+  const SCALE_LEN=scalePCs.length;               // 7 for diatonic, 6 for whole-tone
   function snapToScale(midi){
     const oct=Math.floor(midi/12);
     let bestPC=scalePCs[0],bestD=99;
@@ -3830,7 +3883,12 @@ function pixelsToImageEvents(px,nc,nr,table){
     if(notes.length<=1)return notes;
     const sorted=[...notes].sort((a,b)=>a.m-b.m);
     const anchor=sorted[Math.floor(sorted.length/2)].m;
-    return notes.map(n=>{if(n.bass)return n;let m=n.m;while(m>anchor+17)m-=12;while(m<anchor-17)m+=12;return{...n,m};});
+    // Harmony/BW/Custom pull voices into a close ±17-semitone cluster (warm,
+    // blended). Spectral keeps a much wider ±29 spread so chords stay open and
+    // airy — voices ring across two octaves like spaced bells, reinforcing the
+    // weightless whole-tone colour. Only the fold-distance changes; bass stays put.
+    const span = isSpectral ? 29 : 17;
+    return notes.map(n=>{if(n.bass)return n;let m=n.m;while(m>anchor+span)m-=12;while(m<anchor-span)m+=12;return{...n,m};});
   }
   function removeM2(notes){
     if(notes.length<=1)return notes;
@@ -3853,8 +3911,8 @@ function pixelsToImageEvents(px,nc,nr,table){
     const scaleIdx=scalePCs.indexOf(rootPc);
     if(scaleIdx<0)return notes;
     // Triad: scale degrees 1, 3, 5 (i.e. indices 0, 2, 4 in the 7-note scale)
-    const thirdPc=scalePCs[(scaleIdx+2)%7];
-    const fifthPc=scalePCs[(scaleIdx+4)%7];
+    const thirdPc=scalePCs[(scaleIdx+2)%SCALE_LEN];
+    const fifthPc=scalePCs[(scaleIdx+4)%SCALE_LEN];
     // Place third and fifth in the closest octave above the root
     const baseOct=Math.floor(root.m/12);
     let thirdM=baseOct*12+thirdPc; if(thirdM<=root.m)thirdM+=12;
@@ -3902,7 +3960,7 @@ function pixelsToImageEvents(px,nc,nr,table){
   // what stops the harmony jumping (G→D→A felt "chopped up"); instead it drifts
   // by common tones and small steps — the connected, hovering quality of
   // ambient/post-rock where each chord melts into the next.
-  function triadPCsOf(deg){ return [scalePCs[deg%7], scalePCs[(deg+2)%7], scalePCs[(deg+4)%7]]; }
+  function triadPCsOf(deg){ return [scalePCs[deg%SCALE_LEN], scalePCs[(deg+2)%SCALE_LEN], scalePCs[(deg+4)%SCALE_LEN]]; }
   function pickSmooth(cands, prevDeg){
     if(prevDeg==null) return cands[0];
     const prev=triadPCsOf(prevDeg);
@@ -3912,7 +3970,7 @@ function pixelsToImageEvents(px,nc,nr,table){
       // shared pitch classes (common tones) — more shared = smoother
       let shared=0; for(const p of t) if(prev.includes(p)) shared++;
       // root motion by circle-of-fifths closeness (small = smoother)
-      const rootMove=Math.min(((d-prevDeg)%7+7)%7,((prevDeg-d)%7+7)%7);
+      const rootMove=Math.min(((d-prevDeg)%SCALE_LEN+SCALE_LEN)%SCALE_LEN,((prevDeg-d)%SCALE_LEN+SCALE_LEN)%SCALE_LEN);
       const score=shared*2 - rootMove*0.5;
       if(score>bestScore){ bestScore=score; best=d; }
     }
@@ -3923,7 +3981,7 @@ function pixelsToImageEvents(px,nc,nr,table){
   function barChordPCs(barIdx){
     if(_barDegCache.has(barIdx)){
       const d=_barDegCache.get(barIdx);
-      return [scalePCs[d%7], scalePCs[(d+2)%7], scalePCs[(d+4)%7]];
+      return [scalePCs[d%SCALE_LEN], scalePCs[(d+2)%SCALE_LEN], scalePCs[(d+4)%SCALE_LEN]];
     }
     let deg;
     if(barIdx>=totalBars-1)      deg=0;             // final bar → tonic (resolve)
@@ -3948,7 +4006,7 @@ function pixelsToImageEvents(px,nc,nr,table){
     _prevDeg=deg;
     _barDegCache.set(barIdx, deg);
     // Triad = scale degrees deg, deg+2, deg+4 (root/third/fifth within the scale)
-    return [scalePCs[deg%7], scalePCs[(deg+2)%7], scalePCs[(deg+4)%7]];
+    return [scalePCs[deg%SCALE_LEN], scalePCs[(deg+2)%SCALE_LEN], scalePCs[(deg+4)%SCALE_LEN]];
   }
   // Nearest MIDI of a given pitch-class to a reference note.
   function nearestPc(pc, ref){
@@ -4019,8 +4077,13 @@ function pixelsToImageEvents(px,nc,nr,table){
   // kept diatonic. The remaining notes become quieter ACCOMPANIMENT voiced to
   // the current bar's chord. This gives a foreground line the ear can follow,
   // over moving harmony — the two biggest things plain scanning lacked.
-  const MEL_MIN=60;                                 // C4 — melody floor (lowered for a rounder, softer voice)
-  const MEL_MAX=79;                                 // G5 — melody ceiling (raised for a brighter, soaring top)
+  // Spectral lifts the melody register up too (~a fifth) so the soaring top line
+  // — the most audible voice — clearly sings higher than Harmony's. Combined with
+  // the octave-shifted accompaniment, whole-tone scale and wide voicing, the two
+  // colour modes now occupy distinctly different sonic worlds on the same image.
+  const MEL_LIFT = isSpectral ? 7 : 0;
+  const MEL_MIN=60+MEL_LIFT;                        // C4 (G4 in spectral) — melody floor
+  const MEL_MAX=79+MEL_LIFT;                        // G5 (D6 in spectral) — melody ceiling
   const MEL_SPAN=MEL_MAX-MEL_MIN;
   // Brightness range across the image's melody-source notes — used to map each
   // cell's brightness onto the melody register so the LINE TRACES THE IMAGE:
@@ -6214,6 +6277,8 @@ export default function Paintiano() {
   const [hoveredKey,   setHoveredKey]   = useState(null);
   const [playbackSpeed,setPlaybackSpeed]= useState(1);
   const [holdPaused,   setHoldPaused]   = useState(false); // true while button is held during playback
+  const holdPausedRef = useRef(false);
+  useEffect(()=>{ holdPausedRef.current=holdPaused; },[holdPaused]);
   // Compose mode: explicit toggle that surfaces the piano keyboard. Default OFF
   // so the keyboard doesn't clutter the canvas during normal playback / loaded
   // songs / image transcription. Auto-enabled by Für Elise demo. Auto-cleared
@@ -7896,10 +7961,14 @@ Composition rules:
           // Process pixels into events using the current mode's hue→pitch table.
           // B/W uses harmony's hue table — same music as harmony, but the canvas
           // renders monochrome because gc() returns greys in bw mode.
+          // In custom mode we also flag whether the palette contains any neutral
+          // (near-grey) swatch, so the Custom gate knows whether achromatic image
+          // pixels are allowed to sound at all.
           const hueTable = mode==='custom'
-            ? activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; })
+            ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
+                            { __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
             : (mode==='spectral'?SPEC_HUE:COF);
-          const evts=pixelsToImageEvents(px,nc,nr,hueTable);
+          const evts=pixelsToImageEvents(px,nc,nr,hueTable,mode);
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
           if(!evts || !evts.length){setErr(t('errs').imgNoNotes);setErrInfo(false);setPickMode(null);return;}
           // Explicit canvas clear — when loading consecutive images, both
@@ -7943,12 +8012,40 @@ Composition rules:
     pixelRef.current.lastMode=mode;
     const{nc,nr,px}=pixelRef.current;
     const hueTable = mode==='custom'
-      ? activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; })
+      ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
+                      { __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
       : (mode==='spectral'?SPEC_HUE:COF);
-    const evts=pixelsToImageEvents(px,nc,nr,hueTable);
-    stopAll();
-    setChords(evts);setDisp(evts.length);
-    idxRef.current=evts.length;setStamp(s=>s+1);
+    const evts=pixelsToImageEvents(px,nc,nr,hueTable,mode);
+    // Changing the colour mode re-transcribes the SAME painting through a new
+    // hue→pitch table, so the notes change but the structure/length do not. If a
+    // playback is in progress we must NOT stop it — like MIDI and live drawing,
+    // the colour change should flow on seamlessly from the current position, just
+    // in different tones. We capture where we are, swap in the new chords, and
+    // resume playback from that same index. Only when stopped do we reset to the
+    // top (ready to play from the start in the new colour).
+    if(playingRef.current){
+      const fromIdx=Math.min(dispRef.current||0, evts.length);
+      setChords(evts);chordsRef.current=evts;
+      setStamp(s=>s+1);
+      resumeFromRef.current=fromIdx;
+      // Defer so the new chords settle into state before the loop restarts.
+      // Clear the start-debounce so this programmatic resume always goes through
+      // (the debounce only exists to swallow double touch+click on the Play button).
+      lastStartPlayRef.current=0;
+      setTimeout(()=>{ startPlayRef.current?.(); }, 0);
+    }else if(holdPausedRef.current){
+      // Paused mid-piece: swap in the new colour's notes but KEEP the position so
+      // pressing Resume continues from where it was, now in the new tones. Don't
+      // restart playback (still paused) and don't reset disp to the end.
+      const keep=Math.min(dispRef.current||0, evts.length);
+      setChords(evts);chordsRef.current=evts;
+      setDisp(keep);setStamp(s=>s+1);
+      resumeFromRef.current=keep;
+    }else{
+      stopAll();
+      setChords(evts);setDisp(evts.length);
+      idxRef.current=evts.length;setStamp(s=>s+1);
+    }
   },[mode,viewMode,stopAll,activePalette]);
 
   const loadSampleImage=useCallback(()=>{
