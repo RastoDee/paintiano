@@ -3581,7 +3581,7 @@ function pixelsToImageEvents(px,nc,nr,table){
   const _nrBands=Math.floor(nr/CHORD_SIZE);
   const effCols=Math.ceil(nc/COL_STEP);          // 192/4 = 48 events per band → 960 total
   const msPerBlock=IMG_TARGET_MS/(_nrBands*effCols); // 120000/960 ≈ 125ms per chord
-  const noteDur=Math.round(msPerBlock*5);        // ~625ms sustain → ~5 chords overlap
+  const noteDur=Math.round(msPerBlock*7);        // ~875ms sustain → long overlapping ring (ambient legato)
   // ─── Color statistics pass ──
   // Find the dominant background hue and the average chroma so we can suppress
   // monochrome fields (e.g. Chagall's cobalt sky, Rothko-like color blocks) and
@@ -3822,7 +3822,12 @@ function pixelsToImageEvents(px,nc,nr,table){
   // that fits the detected mode. Accompaniment in each event is then voiced
   // toward THAT bar's chord, so the harmony actually moves (tension → release)
   // across the painting instead of sitting in one place.
-  const BAR_EVENTS=16;                              // 16 cells ≈ one bar (4 beats × 4)
+  // Harmonic rhythm: how many scan-cells share one chord. Larger = the harmony
+  // changes more slowly, so it floats in long planes rather than re-picking a
+  // chord every little strip of the canvas. 32 cells ≈ a slow ~4s harmonic pace
+  // at the fixed image tempo — the unhurried, drifting feel of ambient/post-rock
+  // (Sigur Rós etc.) where one chord is allowed to hang and resonate.
+  const BAR_EVENTS=32;                             // slow harmonic pace (was 16 — too restless)
   // Degree progressions (0-indexed scale degrees). Major: I–V–vi–IV (pop-classic,
   // always lands well). Minor: i–VI–III–VII (natural-minor staple).
   const PROG=bestModeIsMajor ? [0,4,5,3] : [0,5,2,6];
@@ -3839,28 +3844,57 @@ function pixelsToImageEvents(px,nc,nr,table){
   // tonic (I/i) and the bar before it sits on the dominant (V) — a V→I (or V→i)
   // authentic cadence — so the music lands instead of just stopping mid-phrase.
   const totalBars=Math.max(1, Math.ceil(evts.length / BAR_EVENTS));
+  // Smooth voice-leading helper: given a candidate set of scale degrees and the
+  // PREVIOUS bar's chosen degree, pick the candidate whose triad shares the most
+  // pitch classes with (and moves the least from) the previous chord. This is
+  // what stops the harmony jumping (G→D→A felt "chopped up"); instead it drifts
+  // by common tones and small steps — the connected, hovering quality of
+  // ambient/post-rock where each chord melts into the next.
+  function triadPCsOf(deg){ return [scalePCs[deg%7], scalePCs[(deg+2)%7], scalePCs[(deg+4)%7]]; }
+  function pickSmooth(cands, prevDeg){
+    if(prevDeg==null) return cands[0];
+    const prev=triadPCsOf(prevDeg);
+    let best=cands[0], bestScore=-Infinity;
+    for(const d of cands){
+      const t=triadPCsOf(d);
+      // shared pitch classes (common tones) — more shared = smoother
+      let shared=0; for(const p of t) if(prev.includes(p)) shared++;
+      // root motion by circle-of-fifths closeness (small = smoother)
+      const rootMove=Math.min(((d-prevDeg)%7+7)%7,((prevDeg-d)%7+7)%7);
+      const score=shared*2 - rootMove*0.5;
+      if(score>bestScore){ bestScore=score; best=d; }
+    }
+    return best;
+  }
+  let _prevDeg=null;                                // running previous chord degree
+  const _barDegCache=new Map();                     // barIdx → chosen degree (compute once per bar)
   function barChordPCs(barIdx){
+    if(_barDegCache.has(barIdx)){
+      const d=_barDegCache.get(barIdx);
+      return [scalePCs[d%7], scalePCs[(d+2)%7], scalePCs[(d+4)%7]];
+    }
     let deg;
     if(barIdx>=totalBars-1)      deg=0;             // final bar → tonic (resolve)
     else if(barIdx===totalBars-2) deg=4;            // penultimate bar → dominant (V)
     else {
-      // Base motion from the progression loop, then bend toward a bright or dark
-      // diatonic chord depending on this bar's brightness. The progression index
-      // keeps the harmonic rhythm directional; brightness picks WHICH colour of
-      // chord lands, so luminous and shadowed strips genuinely differ in mood.
+      // Brightness picks the chord PALETTE (bright vs dark vs grounded); within
+      // that palette, voice-leading picks the SPECIFIC chord that connects most
+      // smoothly to the previous one — so the harmony still follows the painting
+      // but transitions glide instead of jumping.
       const light=barLight[barIdx]!=null?barLight[barIdx]:0.5;  // 0 dark … 1 light
       const baseDeg=PROG[barIdx % PROG.length];
       if(light>0.62){
-        // luminous strip → bright chord; rotate through the bright set by position
-        deg=BRIGHT_DEGREES[barIdx % BRIGHT_DEGREES.length];
+        deg=pickSmooth(BRIGHT_DEGREES, _prevDeg);   // luminous strip → bright palette
       } else if(light<0.38){
-        // shadowed strip → darker chord
-        deg=DARK_DEGREES[barIdx % DARK_DEGREES.length];
+        deg=pickSmooth(DARK_DEGREES, _prevDeg);     // shadowed strip → darker palette
       } else {
-        // mid brightness → follow the natural progression (keeps it grounded)
-        deg=baseDeg;
+        // mid brightness → prefer the progression's chord, but if it lurches, let
+        // voice-leading nudge it toward something connected (kept grounded).
+        deg=pickSmooth([baseDeg, ...BRIGHT_DEGREES, ...DARK_DEGREES], _prevDeg);
       }
     }
+    _prevDeg=deg;
+    _barDegCache.set(barIdx, deg);
     // Triad = scale degrees deg, deg+2, deg+4 (root/third/fifth within the scale)
     return [scalePCs[deg%7], scalePCs[(deg+2)%7], scalePCs[(deg+4)%7]];
   }
@@ -3934,7 +3968,7 @@ function pixelsToImageEvents(px,nc,nr,table){
   // the current bar's chord. This gives a foreground line the ear can follow,
   // over moving harmony — the two biggest things plain scanning lacked.
   const MEL_MIN=60;                                 // C4 — melody floor (lowered for a rounder, softer voice)
-  const MEL_MAX=76;                                 // E5 — melody ceiling
+  const MEL_MAX=79;                                 // G5 — melody ceiling (raised for a brighter, soaring top)
   const MEL_SPAN=MEL_MAX-MEL_MIN;
   // Brightness range across the image's melody-source notes — used to map each
   // cell's brightness onto the melody register so the LINE TRACES THE IMAGE:
@@ -4072,9 +4106,11 @@ function pixelsToImageEvents(px,nc,nr,table){
       lastMel=melM;
     }
     // Melody velocity: softer overall, and higher notes are softened MORE so the
-    // top register doesn't sound shrill/telegraph-like. At C5 ~full, by E6 ~-25%.
+    // raised top register soars and shimmers rather than turning shrill. The
+    // stronger high-end roll-off (0.34) keeps the bright soaring notes airy and
+    // weightless — the floating top voice of ambient/post-rock.
     const heightFrac = Math.max(0, Math.min(1, (melM - MEL_MIN) / (MEL_SPAN||1)));
-    const melVel = Math.round((melSrc.v||80) * (0.92 - 0.25*heightFrac));
+    const melVel = Math.round((melSrc.v||80) * (0.90 - 0.34*heightFrac));
     const melody = melIsBass
       ? {...melSrc}                                   // keep its low pitch + velocity
       : {...melSrc, m:melM, v:Math.max(48,Math.min(104,melVel)), bass:false};
@@ -4122,7 +4158,11 @@ function pixelsToImageEvents(px,nc,nr,table){
       const bassM=nearestPc(barPCs[0], 40);          // low root (~E2 region)
       if(!accomp.some(n=>n.m===bassM)) accomp.push({...melSrc, m:bassM, v:Math.max(34,Math.round((melSrc.v||64)*0.55))});
     }
-    const voiceCap = intensity>0.6 ? 5 : intensity>0.3 ? 3 : 2;
+    // Voice density. Fewer simultaneous voices = more air and space between the
+    // notes, the open, uncluttered texture of ambient/post-rock. Even the busiest
+    // events stay leaner than before (was 5/3/2) so chords ring rather than pile
+    // up; calm events drop to a bare two-voice shimmer.
+    const voiceCap = intensity>0.6 ? 4 : intensity>0.3 ? 3 : 2;
     // Velocity swell: intense chords play louder overall (up to +22%).
     const intGain = 1 + 0.12*intensity;              // gentler swell (was 0.22) — softer, rounder
     // Keep accompaniment below the melody and dedup.
@@ -4167,7 +4207,7 @@ function pixelsToImageEvents(px,nc,nr,table){
   }
   // Merge identical consecutive chords for legato, capped at whole note
   const chordKey=ns=>ns.length?ns.map(n=>n.m).sort((a,b)=>a-b).join(','):'';
-  const MAX_RUN=4;
+  const MAX_RUN=8;                                 // hold a repeated chord longer — long sustained planes
   let mi=0;
   while(mi<evts.length){
     const key=chordKey(evts[mi].n);
