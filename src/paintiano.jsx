@@ -4152,7 +4152,7 @@ const I18N = {
     play:'▶ play', pause:'⏸ pause', resume:'▶ resume', mute:'mute audio', unmute:'unmute audio', randomOn:'random ON', randomOff:'random OFF',
     print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', switchConfirm:'clean canvas?', loop:'⟳ loop', undo:'↩',
     recArm:'⏺ rec', recStop:'⏹ rec…',
-    share:'share', save:'save', saving:'saving…', saved:'saved ✓', scoreExport:'score',
+    share:'share', save:'save', saving:'saving…', saved:'saved ✓', scoreExport:'score', scoreXmlHint:'opens in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exports the whole piece', exportScore:'score (xml)', exportScoreHint:'opens in MuseScore etc.', exportAudio:'audio', exportAudioHint:'plays & records the full piece', exportBoth:'both', exportBothHint:'score now, then records audio', exportNeedsPlay:'play first to export', rendering:'rendering audio…', renderFail:'audio render failed',
     chordsPlay:'chords · tap to play',
     nameThisPiece:'name this piece…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · fast · share online',
@@ -4197,7 +4197,7 @@ const I18N = {
     play:'▶ spielen', pause:'⏸ pause', resume:'▶ weiter', mute:'ton aus', unmute:'ton an', randomOn:'zufall AN', randomOff:'zufall AUS',
     print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', switchConfirm:'leinwand leeren?', loop:'⟳ schleife', undo:'↩',
     recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
-    share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓', scoreExport:'noten',
+    share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓', scoreExport:'noten', scoreXmlHint:'öffnet in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportiert das ganze Stück', exportScore:'noten (xml)', exportScoreHint:'öffnet in MuseScore usw.', exportAudio:'audio', exportAudioHint:'spielt & nimmt das Stück auf', exportBoth:'beides', exportBothHint:'noten jetzt, dann audio', exportNeedsPlay:'zuerst abspielen', rendering:'audio wird erzeugt…', renderFail:'audio-erzeugung fehlgeschlagen',
     chordsPlay:'akkorde · zum spielen tippen',
     nameThisPiece:'dieses stück benennen…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · schnell · online teilen',
@@ -4242,7 +4242,7 @@ const I18N = {
     play:'▶ jouer', pause:'⏸ pause', resume:'▶ reprendre', mute:'couper le son', unmute:'activer le son', randomOn:'aléatoire ON', randomOff:'aléatoire OFF',
     print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', switchConfirm:'vider la toile ?', loop:'⟳ boucle', undo:'↩',
     recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
-    share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓', scoreExport:'partition',
+    share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓', scoreExport:'partition', scoreXmlHint:'ouvre dans MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exporter', exportHint:'exporte tout le morceau', exportScore:'partition (xml)', exportScoreHint:'ouvre dans MuseScore etc.', exportAudio:'audio', exportAudioHint:'joue & enregistre le morceau', exportBoth:'les deux', exportBothHint:'partition puis audio', exportNeedsPlay:'jouez d\'abord', rendering:'rendu audio…', renderFail:'échec du rendu audio',
     chordsPlay:'accords · appuyer pour jouer',
     nameThisPiece:'nommer cette pièce…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rapide · partager en ligne',
@@ -4287,7 +4287,7 @@ const I18N = {
     play:'▶ tocar', pause:'⏸ pausa', resume:'▶ continuar', mute:'silenciar', unmute:'activar sonido', randomOn:'aleatorio ON', randomOff:'aleatorio OFF',
     print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', switchConfirm:'¿limpiar lienzo?', loop:'⟳ bucle', undo:'↩',
     recArm:'⏺ grabar', recStop:'⏹ graba…',
-    share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓', scoreExport:'partitura',
+    share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓', scoreExport:'partitura', scoreXmlHint:'abre en MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exportar', exportHint:'exporta toda la pieza', exportScore:'partitura (xml)', exportScoreHint:'abre en MuseScore etc.', exportAudio:'audio', exportAudioHint:'reproduce y graba la pieza', exportBoth:'ambos', exportBothHint:'partitura y luego audio', exportNeedsPlay:'reproduce primero', rendering:'renderizando audio…', renderFail:'fallo al renderizar audio',
     chordsPlay:'acordes · pulsar para tocar',
     nameThisPiece:'nombrar esta pieza…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rápido · compartir en línea',
@@ -4332,7 +4332,7 @@ const I18N = {
     play:'▶ prehrať', pause:'⏸ pauza', resume:'▶ pokračovať', mute:'stlmiť zvuk', unmute:'zapnúť zvuk', randomOn:'náhoda ZAP', randomOff:'náhoda VYP',
     print:'🖨 tlačiť', clear:'vyčistiť', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', switchConfirm:'vyčistiť plátno?', loop:'⟳ slučka', undo:'↩',
     recArm:'⏺ nahrať', recStop:'⏹ nahr…',
-    share:'zdieľať', save:'uložiť', saving:'ukladám…', saved:'uložené ✓', scoreExport:'noty',
+    share:'zdieľať', save:'uložiť', saving:'ukladám…', saved:'uložené ✓', scoreExport:'noty', scoreXmlHint:'otvorí v MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportuje celú skladbu', exportScore:'noty (xml)', exportScoreHint:'otvorí v MuseScore a pod.', exportAudio:'audio', exportAudioHint:'prehrá a nahrá celú skladbu', exportBoth:'oboje', exportBothHint:'noty hneď, potom audio', exportNeedsPlay:'najprv prehraj', rendering:'renderujem audio…', renderFail:'render audia zlyhal',
     chordsPlay:'akordy · ťukni pre hranie',
     nameThisPiece:'pomenuj túto skladbu…',
     sizeWeb:'Web / Sociálne', sizeWebHint:'~4× · rýchle · zdieľať online',
@@ -4646,6 +4646,95 @@ function encodeMusicXML(events,tempo,title){
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="3.1"><work><work-title>${safeTitle}</work-title></work><identification><encoding><software>Paintiano</software></encoding></identification><part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list><part id="P1">${body}</part></score-partwise>`;
 }
+
+// ─── Offline audio render ──────────────────────────────────────────────────
+// Render the whole piece to a WAV blob using Tone.Offline — this runs FASTER
+// than realtime and is independent of the on-screen playback, so EXPORT can
+// offer audio almost instantly after Play without "playing in REC mode". Uses
+// the same Salamander grand-piano sampler as live playback. Returns a Blob, or
+// null if rendering produced no audio (e.g. samples failed to load offline).
+function audioBufferToWav(abuf){
+  const numCh=abuf.numberOfChannels, len=abuf.length*numCh*2+44, sr=abuf.sampleRate;
+  const ab=new ArrayBuffer(len), view=new DataView(ab);
+  const wstr=(o,s)=>{for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i));};
+  wstr(0,'RIFF');view.setUint32(4,len-8,true);wstr(8,'WAVE');wstr(12,'fmt ');
+  view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,numCh,true);
+  view.setUint32(24,sr,true);view.setUint32(28,sr*numCh*2,true);view.setUint16(32,numCh*2,true);
+  view.setUint16(34,16,true);wstr(36,'data');view.setUint32(40,len-44,true);
+  let off=44;
+  const chans=[];for(let c=0;c<numCh;c++)chans.push(abuf.getChannelData(c));
+  for(let i=0;i<abuf.length;i++){
+    for(let c=0;c<numCh;c++){
+      let s=Math.max(-1,Math.min(1,chans[c][i]));
+      view.setInt16(off,s<0?s*0x8000:s*0x7fff,true);off+=2;
+    }
+  }
+  return new Blob([ab],{type:'audio/wav'});
+}
+async function renderAudioOffline(events,opts){
+  if(!events||!events.length) return null;
+  const speed=(opts&&opts.speed)||1;
+  // Total duration: last note end + tail, scaled by playback speed.
+  let endMs=0;
+  events.forEach(ev=>ev.n.forEach(n=>{ const e=(ev.startMs||0)+(n.durMs||500); if(e>endMs)endMs=e; }));
+  const tailS=3.0;
+  const durSec=Math.max(1, endMs/1000/speed + tailS);
+  try{
+    const buffer=await Tone.Offline(async (ctx)=>{
+      // Create the sampler INSIDE the offline context and wait for its own
+      // onload — Tone.loaded() tracks the global context, not this offline one,
+      // which is why samples appeared "unloaded" (silent) on iOS.
+      await new Promise((resolve)=>{
+        let done=false; const finish=()=>{ if(!done){done=true;resolve();} };
+        const sampler=new Tone.Sampler({
+          urls:S_URLS, baseUrl:S_BASE,
+          onload: finish, onerror: finish
+        }).toDestination();
+        // Safety timeout so a stuck load can't hang the render forever.
+        setTimeout(finish, 8000);
+        // Stash on ctx so it survives until scheduling below.
+        ctx._pf_sampler=sampler;
+      });
+      const sampler=ctx._pf_sampler;
+      const samplerReady = sampler && sampler.loaded;
+      events.forEach(ev=>{
+        const tSec=(ev.startMs||0)/1000/speed;
+        ev.n.forEach(n=>{
+          const gain=Math.max(0.01,Math.min(1,(n.v||88)/127));
+          const dur=Math.max(0.05,(n.durMs||500)/1000/speed);
+          const tail=Math.min(Math.max(dur*0.4,1.5),3.0);
+          if(samplerReady){
+            try{ sampler.triggerAttackRelease(Tone.Frequency(n.m,'midi').toNote(), dur+tail, tSec, gain); }catch(_){}
+          }else{
+            // Fallback: simple additive synth so audio is never silent even if
+            // the grand-piano samples fail to load in the offline context.
+            try{
+              const freq=440*Math.pow(2,(n.m-69)/12);
+              const fade=Math.min(dur+tail+.35,3.0), amp=gain*0.18;
+              const rawCtx=ctx.rawContext||ctx;
+              const master=rawCtx.createGain();
+              master.gain.setValueAtTime(amp,tSec);
+              master.gain.exponentialRampToValueAtTime(.0001,tSec+fade);
+              master.connect(rawCtx.destination);
+              [[1,1],[2,.5],[3,.25],[4,.1]].forEach(([h,w])=>{
+                const osc=rawCtx.createOscillator(),g=rawCtx.createGain();
+                osc.type='sine'; osc.frequency.value=freq*h; g.gain.value=w;
+                osc.connect(g); g.connect(master); osc.start(tSec); osc.stop(tSec+fade+.05);
+              });
+            }catch(_){}
+          }
+        });
+      });
+    }, durSec, 2, 44100);
+    const abuf=buffer.get ? buffer.get() : buffer;   // Tone.ToneAudioBuffer → AudioBuffer
+    // Guard: detect silence (samples may have failed to load in offline ctx).
+    let peak=0; const ch0=abuf.getChannelData(0);
+    for(let i=0;i<ch0.length;i+=997){ const a=Math.abs(ch0[i]); if(a>peak)peak=a; }
+    if(peak<0.0008) return null;                     // effectively silent → fail
+    return audioBufferToWav(abuf);
+  }catch(e){ return null; }
+}
+
 
 
 
@@ -5592,9 +5681,6 @@ export default function Paintiano() {
   const refScore     = useRef(null);
   const kbScrollRef  = useRef(null);
   const recorderRef      = useRef(null);
-  const recBeginRef      = useRef(null);
-  const recPauseRef      = useRef(null);
-  const recResumeRef     = useRef(null);
   const recChunksRef     = useRef([]);
   const recStreamDestRef = useRef(null);
   const micStreamRef     = useRef(null);
@@ -5774,6 +5860,10 @@ export default function Paintiano() {
   const [recordingName, setRecordingName] = useState('');
   const [audioShareMsg, setAudioShareMsg] = useState(null);
   const [scoreMsg, setScoreMsg] = useState(null);   // MusicXML export status
+  const [scoreBlob, setScoreBlob] = useState(null); // MusicXML blob (share row, like rec/print)
+  const [scoreFileName, setScoreFileName] = useState('');
+  const [exportPick, setExportPick] = useState(false); // EXPORT chooser (audio/score/both)
+  const [playedOnce, setPlayedOnce] = useState(false); // image actually played (gates EXPORT like Print's disp)
   // Auto-dismiss share status after a few seconds
   useEffect(()=>{
     if(!audioShareMsg||audioShareMsg.tone==='wait')return;
@@ -7095,7 +7185,7 @@ export default function Paintiano() {
         const cv=canvasRef.current;
         if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); }
       }catch(_){}
-      setDisp(0); setStamp(s=>s+1);
+      setDisp(0); setStamp(s=>s+1); setPlayedOnce(false);
       return;
     }
     // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
@@ -7450,7 +7540,7 @@ Composition rules:
           setDemoMode(false);
           setOriginalImgUrl(evt.target.result);
           setGrid({N:nc,BW,BH,CW:nc*BW,CH:nr*BH});setViewMode('image');
-          setChords(evts);setDisp(evts.length);
+          setChords(evts);setDisp(evts.length);setPlayedOnce(false);
           setInfo({title:file.name.replace(/\.[^.]+$/,''),count:evts.length,dur:Math.round(IMG_TARGET_MS/1000)});
           idxRef.current=evts.length;setStamp(s=>s+1);
           setPlaybackSpeed(1);playbackSpeedRef.current=1;
@@ -7559,12 +7649,7 @@ Composition rules:
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
-    // Auto-recording (image mode): a fresh recording on play-from-start, or
-    // continue the same one on resume. Deferred a tick so it attaches AFTER the
-    // stopAll() teardown above. EXPORT later hands over whatever was captured.
-    if(viewMode==='image'){
-      setTimeout(()=>{ try{ if(isResume) recResumeRef.current?.(); else recBeginRef.current?.(); }catch(_){} }, 0);
-    }
+    if(viewModeRef.current==='image') setPlayedOnce(true);
 
     // Audio mode: play via Web Audio API BufferSourceNode - supports precise offset natively
     if(viewMode==='audio'&&audioPCMRef.current){
@@ -7745,7 +7830,6 @@ Composition rules:
     if(playing){
       resumeFromRef.current=disp;
       setHoldPaused(true);
-      try{ recPauseRef.current?.(); }catch(_){}   // pause recording with playback
       genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       try{if(audioElRef.current)audioElRef.current.pause();}catch(_){}
@@ -7836,78 +7920,6 @@ Composition rules:
     }
     stopAll();
   },[stopAll]);
-
-  // ─── Auto-recording lifecycle (image mode) ────────────────────────────────
-  // Recording is no longer a separate spuštací mode: it rides along with normal
-  // playback. Play (from the start) begins a fresh recording; Pause pauses it;
-  // Resume continues the SAME recording across the gap; finalize builds the blob
-  // that EXPORT then offers. This makes EXPORT reactive — it just hands over what
-  // already played.
-  const autoRecActiveRef = useRef(false);   // a recording session is open
-  const recFinalizeCb = useRef(null);       // optional callback when blob is ready
-  // Begin a fresh recording attached to Tone master out. Replaces any prior one.
-  const recBegin=useCallback(()=>{
-    if(viewModeRef.current!=='image') return;       // only image play records
-    if(!window.MediaRecorder) return;
-    // Tear down any existing recorder first (Play-from-start = new recording).
-    try{ const old=recorderRef.current; if(old&&old.state!=='inactive'){ old._discard=true; old.stop(); } }catch(_){}
-    try{ if(recStreamDestRef.current){ Tone.getDestination().disconnect(recStreamDestRef.current); } }catch(_){}
-    let streamDest;
-    try{
-      const rawCtx=Tone.getContext().rawContext;
-      streamDest=rawCtx.createMediaStreamDestination();
-      recStreamDestRef.current=streamDest;
-      Tone.getDestination().connect(streamDest);
-    }catch(_){ return; }
-    const mimeType=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg'].find(tp=>{try{return MediaRecorder.isTypeSupported(tp);}catch(_){return false;}})||'';
-    let recorder;
-    try{recorder=new MediaRecorder(streamDest.stream,mimeType?{mimeType}:{});}
-    catch(_){try{recorder=new MediaRecorder(streamDest.stream);}catch(_2){return;}}
-    recChunksRef.current=[];
-    recorder.ondataavailable=e=>{if(e.data?.size>0)recChunksRef.current.push(e.data);};
-    recorder.onstop=()=>{
-      try{Tone.getDestination().disconnect(streamDest);}catch(_){}
-      if(recStreamDestRef.current===streamDest) recStreamDestRef.current=null;
-      if(recorder._discard){ return; }               // replaced by a new session
-      const mt=recorder.mimeType||'audio/mp4';
-      const blob=new Blob(recChunksRef.current,{type:mt});
-      const ext=mt.includes('ogg')?'ogg':mt.includes('mp4')?'m4a':'webm';
-      const name=(infoRef.current?.title||'paintiano').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').slice(0,50)+'.'+ext;
-      if(blob.size>=2000){ setRecBlob(blob); setRecName(name); }
-      autoRecActiveRef.current=false;
-      const cb=recFinalizeCb.current; recFinalizeCb.current=null; if(cb) cb(blob.size>=2000?blob:null);
-    };
-    recorderRef.current=recorder;
-    try{ recorder.start(200); autoRecActiveRef.current=true; setRecBlob(null); setRecName(''); }catch(_){}
-  },[]);
-  // Pause the in-progress recording (keeps the buffer for Resume).
-  const recPauseLive=useCallback(()=>{
-    const r=recorderRef.current;
-    try{ if(r&&r.state==='recording'){ r.pause(); } }catch(_){}
-  },[]);
-  // Resume a paused recording; if none is open, begin one.
-  const recResumeLive=useCallback(()=>{
-    if(viewModeRef.current!=='image') return;
-    const r=recorderRef.current;
-    if(r&&r.state==='paused'){ try{ r.resume(); return; }catch(_){} }
-    if(!autoRecActiveRef.current) recBegin();
-  },[recBegin]);
-  // Finalize the recording into recBlob; optional callback fires with the blob.
-  const recFinalize=useCallback((cb)=>{
-    const r=recorderRef.current;
-    if(r&&r.state!=='inactive'){
-      if(cb) recFinalizeCb.current=cb;
-      try{ if(r.state==='paused') r.resume(); }catch(_){}
-      try{ r.requestData(); }catch(_){}
-      try{ r.stop(); }catch(_){ if(cb){recFinalizeCb.current=null;cb(null);} }
-    }else{
-      if(cb) cb(null);
-    }
-  },[]);
-  useEffect(()=>{recBeginRef.current=recBegin;},[recBegin]);
-  useEffect(()=>{recPauseRef.current=recPauseLive;},[recPauseLive]);
-  useEffect(()=>{recResumeRef.current=recResumeLive;},[recResumeLive]);
-
 
   const stopMicVol=useCallback(()=>{
     if(micVolRef.current){
@@ -8211,7 +8223,16 @@ Composition rules:
     catch(e){ setScoreMsg({tone:'err',text:'Score export failed'}); return; }
     const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.musicxml';
     const blob=new Blob([xml],{type:'application/vnd.recordare.musicxml+xml'});
-    const file=new File([blob],finalName,{type:blob.type});
+    // Open a share/save panel (same pattern as Print and the recording row) so
+    // the user picks share-sheet → Save to Files, rather than a silent download.
+    setScoreMsg(null);
+    setScoreFileName(finalName);
+    setScoreBlob(blob);
+  },[chords,loadedSource,compositionName,recordingName,t]);
+  // Share/save the generated MusicXML via share-sheet → save-picker → download.
+  const shareScore=useCallback(async()=>{
+    if(!scoreBlob)return;
+    const file=new File([scoreBlob],scoreFileName||'Paintiano.musicxml',{type:scoreBlob.type});
     setScoreMsg({tone:'wait',text:t('saving')});
     if(navigator.share){
       try{
@@ -8221,7 +8242,41 @@ Composition rules:
     }
     if(window.showSaveFilePicker){
       try{
-        const handle=await window.showSaveFilePicker({suggestedName:finalName,types:[{description:'MusicXML score',accept:{'application/xml':['.musicxml','.xml']}}]});
+        const handle=await window.showSaveFilePicker({suggestedName:scoreFileName,types:[{description:'MusicXML score',accept:{'application/xml':['.musicxml','.xml']}}]});
+        const w=await handle.createWritable(); await w.write(scoreBlob); await w.close();
+        setScoreMsg({tone:'ok',text:t('saved')}); return;
+      }catch(e){ if(e?.name==='AbortError'){setScoreMsg({tone:'ok',text:'cancelled'});return;} }
+    }
+    try{
+      const url=URL.createObjectURL(scoreBlob);
+      const a=document.createElement('a'); a.href=url; a.download=scoreFileName; a.rel='noopener';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}},10000);
+      setScoreMsg({tone:'ok',text:'download started ✓'});
+    }catch(e){ setScoreMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')}); }
+  },[scoreBlob,scoreFileName,t]);
+  // Export audio via offline render — fast, silent, independent of playback.
+  const saveAudio=useCallback(async()=>{
+    const src=chordsRef.current&&chordsRef.current.length?chordsRef.current:chords;
+    if(!src||!src.length){setScoreMsg({tone:'err',text:t('noNotesGeneric')});return;}
+    const title=(compositionName||recordingName||'Paintiano').trim()||'Paintiano';
+    const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+    setScoreMsg({tone:'wait',text:t('rendering')});
+    let blob;
+    try{ blob=await renderAudioOffline(src,{speed:1}); }
+    catch(e){ blob=null; }
+    if(!blob){ setScoreMsg({tone:'err',text:t('renderFail')}); return; }
+    const file=new File([blob],finalName,{type:blob.type});
+    setScoreMsg({tone:'wait',text:t('saving')});
+    if(navigator.share){
+      try{
+        const canTry=!navigator.canShare||navigator.canShare({files:[file]});
+        if(canTry){ await navigator.share({files:[file],title:'Paintiano audio'}); setScoreMsg({tone:'ok',text:t('saved')}); return; }
+      }catch(e){ if(e?.name==='AbortError'){setScoreMsg({tone:'ok',text:'cancelled'});return;} }
+    }
+    if(window.showSaveFilePicker){
+      try{
+        const handle=await window.showSaveFilePicker({suggestedName:finalName,types:[{description:'WAV audio',accept:{'audio/wav':['.wav']}}]});
         const w=await handle.createWritable(); await w.write(blob); await w.close();
         setScoreMsg({tone:'ok',text:t('saved')}); return;
       }catch(e){ if(e?.name==='AbortError'){setScoreMsg({tone:'ok',text:'cancelled'});return;} }
@@ -9113,7 +9168,12 @@ Composition rules:
       {recBlob&&(
         <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <span style={{flex:1,fontSize:'.6rem',color:'rgba(255,140,120,.9)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{recName} · {(recBlob.size/1024).toFixed(0)}KB</span>
+            {(()=>{ const m=recName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:recName; const ext=m?m[2]:''; return (
+              <span style={{flex:1,display:'flex',alignItems:'center',gap:2,minWidth:0}}>
+                <input value={base} onChange={e=>setRecName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:'.6rem',color:'rgba(255,170,150,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(220,90,90,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
+                <span style={{fontSize:'.55rem',color:'rgba(255,140,120,.6)',flexShrink:0}}>{ext} · {(recBlob.size/1024).toFixed(0)}KB</span>
+              </span>
+            ); })()}
             {audioShareMsg&&<span style={{fontSize:'.5rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
             <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
             <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
@@ -9121,6 +9181,22 @@ Composition rules:
           {recBlob.type&&recBlob.type.includes('webm')&&(
             <div style={{fontSize:'.48rem',color:'rgba(255,180,120,.55)',letterSpacing:'.04em'}}>webm/opus format · plays in most apps and browsers; some older Windows players may not open it</div>
           )}
+        </div>
+      )}
+      {scoreBlob&&(
+        <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(120,200,160,.08)',border:'1px solid rgba(120,200,160,.25)',borderRadius:6}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            {(()=>{ const m=scoreFileName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:scoreFileName; const ext=m?m[2]:''; return (
+              <span style={{flex:1,display:'flex',alignItems:'center',gap:2,minWidth:0}}>
+                <input value={base} onChange={e=>setScoreFileName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:'.6rem',color:'rgba(160,230,195,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(120,200,160,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
+                <span style={{fontSize:'.55rem',color:'rgba(150,225,185,.6)',flexShrink:0}}>{ext} · {(scoreBlob.size/1024).toFixed(0)}KB</span>
+              </span>
+            ); })()}
+            {scoreMsg&&<span style={{fontSize:'.5rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{scoreMsg.text}</span>}
+            <button onClick={shareScore} style={{padding:'6px 14px',background:'rgba(120,200,160,.2)',color:'rgba(150,225,185,1)',border:'1px solid rgba(120,200,160,.5)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
+            <button onClick={()=>{setScoreBlob(null);setScoreFileName('');setScoreMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
+          </div>
+          <div style={{fontSize:'.48rem',color:'rgba(150,225,185,.55)',letterSpacing:'.04em'}}>{t('scoreXmlHint')}</div>
         </div>
       )}
       {/* Note-name readout */}
