@@ -3574,14 +3574,10 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode){
 // (COF for harmony mode, SPEC_HUE for spectral mode). Pure: same input + same table → same output.
 
 function pixelsToImageEvents(px,nc,nr,table){
-  // Time dilation: distribute the canvas of cells across exactly IMG_TARGET_MS.
-  // noteDur slightly overshoots msPerBlock for legato between cells.
   const CHORD_SIZE=6;
   const COL_STEP=4;                              // merge 4 adjacent columns per time-event
   const _nrBands=Math.floor(nr/CHORD_SIZE);
   const effCols=Math.ceil(nc/COL_STEP);          // 192/4 = 48 events per band → 960 total
-  const msPerBlock=IMG_TARGET_MS/(_nrBands*effCols); // 120000/960 ≈ 125ms per chord
-  const noteDur=Math.round(msPerBlock*7);        // ~875ms sustain → long overlapping ring (ambient legato)
   // ─── Color statistics pass ──
   // Find the dominant background hue and the average chroma so we can suppress
   // monochrome fields (e.g. Chagall's cobalt sky, Rothko-like color blocks) and
@@ -3590,9 +3586,19 @@ function pixelsToImageEvents(px,nc,nr,table){
   const hueHist=new Float32Array(36); // 10° bins, weighted by saturation
   let chSum=0,chN=0;
   let lSum=0,lN=0;                       // overall image lightness (all pixels)
-  for(const p of px){
+  let lSqSum=0;                          // for lightness variance → contrast
+  let edgeSum=0,edgeN=0;                 // local pixel-to-pixel change → "busyness"
+  let prevL=null;
+  for(let pi=0;pi<px.length;pi++){
+    const p=px[pi];
     const[hh,ss,ll]=toHsl(p.r,p.g,p.b);
-    lSum+=ll; lN++;
+    lSum+=ll; lSqSum+=ll*ll; lN++;
+    // Local contrast / busyness: how much lightness jumps from the previous
+    // pixel in the scan. A calm, flat field barely changes; a busy, detailed,
+    // high-contrast painting changes a lot. Reset at row starts to avoid the
+    // wrap-around jump skewing it.
+    if(prevL!=null && (pi%nc)!==0){ edgeSum+=Math.abs(ll-prevL); edgeN++; }
+    prevL=ll;
     if(ll<6||ll>94||ss<10)continue;
     hueHist[Math.floor(hh/10)%36]+=ss;
     chSum+=ss*Math.min(ll,100-ll)/50; chN++;
@@ -3601,12 +3607,35 @@ function pixelsToImageEvents(px,nc,nr,table){
   for(let i=0;i<36;i++)if(hueHist[i]>bgMax){bgMax=hueHist[i];bgBin=i;}
   const bgHue=bgBin*10+5;
   const avgChroma=chN?chSum/chN:25;
-  // Overall brightness of the image (0..100). Used to gently normalize the
-  // pitch register: a very light painting (white ground) would otherwise play
-  // the WHOLE piece too high, a dark one too low. We shift octaves toward the
-  // middle by MOST of the deviation from mid-grey, but keep a small part so a
-  // light image still sounds a touch brighter than a dark one (jemný rozdiel).
   const avgLight=lN?lSum/lN:50;          // mean lightness
+  // Global contrast = standard deviation of lightness (how much dark↔light range
+  // the painting spans). Busyness = mean local lightness change (how detailed /
+  // restless the surface is). Both feed the tempo + energy of the piece.
+  const lightVar=lN?Math.max(0,lSqSum/lN - avgLight*avgLight):0;
+  const contrast=Math.sqrt(lightVar);    // 0 (flat) … ~50 (extreme black↔white)
+  const busyness=edgeN?edgeSum/edgeN:0;  // 0 (smooth) … ~30+ (very detailed)
+  // ─── Tempo from image character ────────────────────────────────────────────
+  // The piece used to be a fixed 2:00 for EVERY image, so two utterly different
+  // paintings shared the same pulse and length and ended up sounding alike. Now
+  // the canvas's own ENERGY sets the pace: a vivid, high-contrast, busy painting
+  // (a wild Picasso) plays faster and a touch longer; a calm, muted, flat one
+  // (a quiet monochrome field) plays slower and more spacious. We map a 0..1
+  // "energy" score (saturation + contrast + busyness) to a total duration, kept
+  // within sane bounds so a piece is never tiny or endless.
+  const eChroma=Math.max(0,Math.min(1, avgChroma/55));
+  const eContrast=Math.max(0,Math.min(1, contrast/42));
+  const eBusy=Math.max(0,Math.min(1, busyness/22));
+  const energy=Math.max(0,Math.min(1, 0.45*eChroma + 0.35*eContrast + 0.20*eBusy));
+  // Duration: calm → longer & slower planes (up to ~2:40), energetic → tighter &
+  // quicker (down to ~1:30). Bounded both ways so it's always a real, finite piece.
+  const DUR_MIN=90000, DUR_MAX=160000;   // 1:30 … 2:40
+  // Inverse: more energy = shorter (faster feel). Calm spreads out.
+  const targetMs=Math.round(DUR_MAX - (DUR_MAX-DUR_MIN)*energy);
+  const msPerBlock=targetMs/(_nrBands*effCols);  // per-chord step now scales with energy
+  // Sustain: calm pieces ring longer (more legato/air), energetic ones shorter
+  // (more articulated). 5×–8× the block step.
+  const sustainMul=8 - 3*energy;
+  const noteDur=Math.round(msPerBlock*sustainMul);
   // octaveShift in semitones: light image → shift down, dark → shift up. 70% of
   // the deviation from 50% lightness is compensated; 30% of the brightness
   // character is preserved. ~±0.7 octave max at the extremes.
@@ -7859,7 +7888,12 @@ Composition rules:
           setOriginalImgUrl(evt.target.result);
           setGrid({N:nc,BW,BH,CW:nc*BW,CH:nr*BH});setViewMode('image');
           setChords(evts);setDisp(evts.length);setPlayedOnce(false);
-          setInfo({title:file.name.replace(/\.[^.]+$/,''),count:evts.length,dur:Math.round(IMG_TARGET_MS/1000)});
+          // Real duration now varies per image (tempo scales with the painting's
+          // energy), so derive it from the last event's timing rather than the
+          // old fixed 2:00 constant.
+          const lastEv=evts[evts.length-1];
+          const realDurMs=lastEv ? (lastEv.startMs + (lastEv.n?.[0]?.durMs||0)) : IMG_TARGET_MS;
+          setInfo({title:file.name.replace(/\.[^.]+$/,''),count:evts.length,dur:Math.round(realDurMs/1000)});
           idxRef.current=evts.length;setStamp(s=>s+1);
           setPlaybackSpeed(1);playbackSpeedRef.current=1;
           setLoadedSource('image');
