@@ -3589,10 +3589,8 @@ function pixelsToImageEvents(px,nc,nr,table){
   // being buried in a single-note drone from 60-70% of the canvas.
   const hueHist=new Float32Array(36); // 10° bins, weighted by saturation
   let chSum=0,chN=0;
-  let lSum=0,lN=0;                       // overall image lightness (all pixels)
   for(const p of px){
     const[hh,ss,ll]=toHsl(p.r,p.g,p.b);
-    lSum+=ll; lN++;
     if(ll<6||ll>94||ss<10)continue;
     hueHist[Math.floor(hh/10)%36]+=ss;
     chSum+=ss*Math.min(ll,100-ll)/50; chN++;
@@ -3601,16 +3599,6 @@ function pixelsToImageEvents(px,nc,nr,table){
   for(let i=0;i<36;i++)if(hueHist[i]>bgMax){bgMax=hueHist[i];bgBin=i;}
   const bgHue=bgBin*10+5;
   const avgChroma=chN?chSum/chN:25;
-  // Overall brightness of the image (0..100). Used to gently normalize the
-  // pitch register: a very light painting (white ground) would otherwise play
-  // the WHOLE piece too high, a dark one too low. We shift octaves toward the
-  // middle by MOST of the deviation from mid-grey, but keep a small part so a
-  // light image still sounds a touch brighter than a dark one (jemný rozdiel).
-  const avgLight=lN?lSum/lN:50;          // mean lightness
-  // octaveShift in semitones: light image → shift down, dark → shift up. 70% of
-  // the deviation from 50% lightness is compensated; 30% of the brightness
-  // character is preserved. ~±0.7 octave max at the extremes.
-  const octaveShift = Math.round(-((avgLight-50)/50) * 0.7 * 8); // semitones
   // Saliency floor scales with the image's overall chroma so a vivid painting
   // doesn't get over-suppressed, but a monochrome one does.
   const salFloor=Math.max(28,avgChroma*0.85);
@@ -3632,29 +3620,12 @@ function pixelsToImageEvents(px,nc,nr,table){
       // muddy mid-grey, so the visual extremes are also the sonic extremes.
       const contrast = Math.abs(l - 50) * 2; // 0 (mid-grey) … 100 (black/white)
       const v = Math.round(45 + (contrast/100) * 50); // 45 … 95
-      // Strong black dots become protected deep-bass notes: bass:true keeps them
-      // out of the melody and stops tightenChord from pulling them up, so they
-      // sound as occasional deep low tones under the chord (sparse, deliberate).
-      if (l < 12) return { m: midi, v, durMs: noteDur, bass:true };
-      return { m: Math.max(24,Math.min(96, midi+octaveShift)), v, durMs: noteDur };
+      return { m: midi, v, durMs: noteDur };
     }
     // ── CHROMATIC PATH ──
     // Saturated pixels at near-black or near-white extremes contain little
     // visible colour information, so we drop them; the grayscale branch above
     // already covers achromatic value extremes.
-    // DARK COLORED PIXELS (the blended black dots): after downscaling, a black
-    // dot mixes with its bright surround into a dark *colored* pixel, so it
-    // never hits the grayscale branch. Catch it here: a genuinely dark pixel
-    // becomes a protected deep-bass note (kept in key via its hue's pitch
-    // class), so black dots are heard as low tones instead of being lifted up.
-    if (l < 22) {
-      let pcd=0,mind=Infinity;
-      table.forEach((th,ti)=>{const dd=Math.min(Math.abs(h-th),360-Math.abs(h-th));if(dd<mind){mind=dd;pcd=ti;}});
-      const oct = l < 10 ? 1 : 2;                    // very dark → C1 region, dark → C2
-      const midi=Math.max(24,(oct+1)*12+pcd);        // deep but musical; keep off the rumble floor
-      const dv = Math.round(50 + (22-l)/22*40);      // darker → louder (50..90)
-      return { m:midi, v:dv, durMs:noteDur, bass:true };
-    }
     if (l < 6 || l > 94) return null;
     const dh=Math.min(Math.abs(h-bgHue),360-Math.abs(h-bgHue));
     const chroma=s*Math.min(l,100-l)/50; // 0..100
@@ -3675,7 +3646,7 @@ function pixelsToImageEvents(px,nc,nr,table){
     table.forEach((th,ti)=>{const d=Math.min(Math.abs(h-th),360-Math.abs(h-th));if(d<minD){minD=d;pc=ti;}});
     // Octave: lightness → register, compressed to 3..6
     const oct=Math.max(3,Math.min(6,3+Math.round((l-20)/72*3)));
-    const midi=Math.max(24,Math.min(96,(oct+1)*12+pc+octaveShift)); // gentle whole-image normalization
+    const midi=(oct+1)*12+pc;
     // Velocity: chroma drives dynamics. Background-hue cells are attenuated
     // so the non-background palette stays in foreground.
     let v = Math.round(38 + (chroma/100) * 68);
@@ -3730,29 +3701,12 @@ function pixelsToImageEvents(px,nc,nr,table){
   evts.forEach(ev=>ev.n.forEach(n=>pcCounts[n.m%12]++));
   const MAJOR_P=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
   const MINOR_P=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
-  // Colour temperature → mood bias. Warm hues (reds/oranges/yellows, ~0–60° &
-  // ~330–360°) lean MAJOR/bright; cool hues (greens/cyans/blues/violets,
-  // ~120–270°) lean MINOR/darker. Computed from the saturation-weighted hue
-  // histogram built in the stats pass. We turn it into a gentle multiplier on
-  // the major-vs-minor correlation so the pitch evidence still leads and colour
-  // only tips genuinely ambiguous cases (keeps harmony sound, adds mood).
-  let warmW=0,coolW=0;
-  for(let b=0;b<36;b++){
-    const hue=b*10+5, w=hueHist[b];
-    if(hue<60||hue>=330) warmW+=w;            // red→yellow + magenta/pink
-    else if(hue>=120&&hue<270) coolW+=w;      // green→blue→violet
-  }
-  const tempTotal=warmW+coolW;
-  const warmth=tempTotal>0 ? (warmW-coolW)/tempTotal : 0; // -1 cool … +1 warm
-  const majBias=1+0.06*warmth;                // ≤±6% nudge — a tiebreaker, not an override
-  const minBias=1-0.06*warmth;
   let bestKey=0,bestModeIsMajor=true,bestCorr=-Infinity;
   for(let key=0;key<12;key++){
     for(const isMaj of[true,false]){
       const prof=isMaj?MAJOR_P:MINOR_P;
       let corr=0;
       for(let i=0;i<12;i++)corr+=pcCounts[(i+key)%12]*prof[i];
-      corr*=isMaj?majBias:minBias;             // colour-temperature mood tiebreaker
       if(corr>bestCorr){bestCorr=corr;bestKey=key;bestModeIsMajor=isMaj;}
     }
   }
@@ -3770,7 +3724,7 @@ function pixelsToImageEvents(px,nc,nr,table){
     if(notes.length<=1)return notes;
     const sorted=[...notes].sort((a,b)=>a.m-b.m);
     const anchor=sorted[Math.floor(sorted.length/2)].m;
-    return notes.map(n=>{if(n.bass)return n;let m=n.m;while(m>anchor+17)m-=12;while(m<anchor-17)m+=12;return{...n,m};});
+    return notes.map(n=>{let m=n.m;while(m>anchor+17)m-=12;while(m<anchor-17)m+=12;return{...n,m};});
   }
   function removeM2(notes){
     if(notes.length<=1)return notes;
@@ -3807,211 +3761,13 @@ function pixelsToImageEvents(px,nc,nr,table){
     if(!existing.has(fifthM))result.push({...root,m:fifthM,v:Math.round((root.v||64)*0.68)});
     return result;
   }
-  // ─── Harmonic progression (deterministic, per-bar) ─────────────────────────
-  // Static per-cell triads gave harmony no direction. Instead we lay a diatonic
-  // chord progression over the piece: the canvas is divided into BARS (a fixed
-  // run of events), and each bar is assigned a scale degree from a progression
-  // that fits the detected mode. Accompaniment in each event is then voiced
-  // toward THAT bar's chord, so the harmony actually moves (tension → release)
-  // across the painting instead of sitting in one place.
-  const BAR_EVENTS=16;                              // 16 cells ≈ one bar (4 beats × 4)
-  // Degree progressions (0-indexed scale degrees). Major: I–V–vi–IV (pop-classic,
-  // always lands well). Minor: i–VI–III–VII (natural-minor staple).
-  const PROG=bestModeIsMajor ? [0,4,5,3] : [0,5,2,6];
-  // Cadence: give the piece a sense of arrival. The LAST bar resolves to the
-  // tonic (I/i) and the bar before it sits on the dominant (V) — a V→I (or V→i)
-  // authentic cadence — so the music lands instead of just stopping mid-phrase.
-  const totalBars=Math.max(1, Math.ceil(evts.length / BAR_EVENTS));
-  function barChordPCs(barIdx){
-    let deg;
-    if(barIdx>=totalBars-1)      deg=0;             // final bar → tonic (resolve)
-    else if(barIdx===totalBars-2) deg=4;            // penultimate bar → dominant (V)
-    else                          deg=PROG[barIdx % PROG.length];
-    // Triad = scale degrees deg, deg+2, deg+4 (root/third/fifth within the scale)
-    return [scalePCs[deg%7], scalePCs[(deg+2)%7], scalePCs[(deg+4)%7]];
-  }
-  // Nearest MIDI of a given pitch-class to a reference note.
-  function nearestPc(pc, ref){
-    const base=Math.floor(ref/12)*12+pc;
-    const cands=[base-12,base,base+12];
-    return cands.reduce((a,b)=>Math.abs(b-ref)<Math.abs(a-ref)?b:a);
-  }
-  // Voice an event's accompaniment to the bar chord: keep up to 3 chord tones
-  // near the mid register, dropping non-chord tones to the nearest chord tone.
-  function voiceToBarChord(notes, barPCs){
-    if(notes.length===0) return notes;
-    const set=new Set(barPCs);
-    return notes.map(n=>{
-      const pc=((n.m%12)+12)%12;
-      if(set.has(pc)) return n;                      // already a chord tone
-      // snap to nearest chord-tone pitch class
-      let best=barPCs[0],bd=99;
-      for(const c of barPCs){const d=Math.min(Math.abs(pc-c),12-Math.abs(pc-c));if(d<bd){bd=d;best=c;}}
-      return {...n, m:nearestPc(best, n.m)};
-    });
-  }
   for(const ev of evts){
-    // Capture brightness BEFORE tighten/snap collapse the octave spread: the
-    // most-salient note's raw MIDI still reflects the source pixel's lightness.
-    if(ev.n.length){ ev._bright=[...ev.n].sort((a,b)=>(b.v||0)-(a.v||0))[0].m; }
     ev.n=ev.n.map(n=>({...n,m:snapToScale(n.m)}));
     ev.n=tightenChord(ev.n);
     ev.n=removeM2(ev.n);
     const seen=new Set();
     ev.n=ev.n.filter(n=>seen.has(n.m)?false:(seen.add(n.m),true));
-  }
-  // ─── Melody extraction + progression voicing ───────────────────────────────
-  // For each event: the single most-salient (highest-velocity) note becomes the
-  // MELODY — lifted into a clear upper register, played at full strength, and
-  // kept diatonic. The remaining notes become quieter ACCOMPANIMENT voiced to
-  // the current bar's chord. This gives a foreground line the ear can follow,
-  // over moving harmony — the two biggest things plain scanning lacked.
-  const MEL_MIN=60;                                 // C4 — melody floor (lowered for a rounder, softer voice)
-  const MEL_MAX=76;                                 // E5 — melody ceiling
-  const MEL_SPAN=MEL_MAX-MEL_MIN;
-  // Brightness range across the image's melody-source notes — used to map each
-  // cell's brightness onto the melody register so the LINE TRACES THE IMAGE:
-  // bright regions push the tune up, dark regions pull it down. (A note's
-  // original octave was derived from pixel lightness upstream, so its raw MIDI
-  // is a faithful brightness proxy.)
-  let bMin=Infinity,bMax=-Infinity;
-  for(const ev of evts){ if(ev._bright==null) continue; if(ev._bright<bMin)bMin=ev._bright; if(ev._bright>bMax)bMax=ev._bright; }
-  if(!isFinite(bMin)){ bMin=0; bMax=1; }
-  const bRange=(bMax-bMin)||1;
-  let lastMel=null;                                 // mild smoothing of the contour
-  let repeatRun=0;                                  // consecutive same-pitch counter (anti-telegraph)
-  // Intensity reference: how "loud/dense" each event's source is, relative to the
-  // whole piece. Intense events (vivid, busy cells) will swell into FULL chords —
-  // root+third+fifth plus a doubled bass octave — for a strong, powerful sound;
-  // calm events stay sparse. Measured from summed source velocity.
-  const rawInt=evts.map(ev=>ev.n.reduce((a,n)=>a+(n.v||0),0));
-  const intSorted=rawInt.filter((_,i)=>evts[i].n.length).slice().sort((a,b)=>a-b);
-  const intLo=intSorted.length?intSorted[Math.floor(intSorted.length*0.3)]:0;
-  const intHi=intSorted.length?intSorted[Math.floor(intSorted.length*0.85)]:1;
-  const intRange=(intHi-intLo)||1;
-  for(let i=0;i<evts.length;i++){
-    const ev=evts[i];
-    if(!ev.n.length) continue;
-    const barPCs=barChordPCs(Math.floor(i/BAR_EVENTS));
-    // Pick melody = loudest note that ISN'T a protected bass note, so black-dot
-    // deep notes stay low. Fall back to loudest only if the cell is all-bass.
-    const sorted=[...ev.n].sort((a,b)=>(b.v||0)-(a.v||0));
-    const nonBass=sorted.filter(n=>!n.bass);
-    const melSrc=(nonBass.length?nonBass:sorted)[0];
-    let melPc=((melSrc.m%12)+12)%12;
-    // Target height from brightness: map this cell's brightness proxy into the
-    // melody band, so the melodic contour mirrors the painting's light/dark.
-    const bright=(((ev._bright!=null?ev._bright:melSrc.m))-bMin)/bRange; // 0 dark … 1 bright
-    const targetM=MEL_MIN + bright*MEL_SPAN;        // desired pitch height
-    // Place melPc at the octave whose pitch is nearest the brightness target,
-    // then blend lightly toward the previous note so the line is smooth but
-    // still clearly follows the image (70% contour, 30% smoothing).
-    let melM=melPc; while(melM<MEL_MIN) melM+=12; while(melM>MEL_MAX) melM-=12;
-    const aim = lastMel!=null ? (0.7*targetM + 0.3*lastMel) : targetM;
-    const cands=[melM-12,melM,melM+12].filter(m=>m>=MEL_MIN-12&&m<=MEL_MAX+12);
-    melM=cands.reduce((a,b)=>Math.abs(b-aim)<Math.abs(a-aim)?b:a);
-    melM=Math.max(MEL_MIN-12,Math.min(MEL_MAX+12,melM));
-    // Anti-repeat: a flat, uniform region maps every cell to the same pitch,
-    // which re-strikes one note rapidly (a "telegraph beep"). When the melody
-    // would repeat, walk to an adjacent SCALE tone instead, alternating up/down,
-    // so uniform areas become gentle stepwise motion rather than a stutter.
-    if(lastMel!=null && melM===lastMel){
-      repeatRun++;
-      // find scale-tone neighbours above and below within the melody band
-      const stepTone=(from,dir)=>{
-        let m=from+dir;
-        for(let g=0;g<12;g++,m+=dir){
-          const pc=((m%12)+12)%12;
-          if(scalePCs.includes(pc) && m>=MEL_MIN-12 && m<=MEL_MAX+12) return m;
-        }
-        return null;
-      };
-      const dir=(repeatRun%2===1)?1:-1;            // alternate direction each repeat
-      const alt=stepTone(melM,dir) ?? stepTone(melM,-dir);
-      if(alt!=null) melM=alt;
-      // Long fast repeats in the high register read as telegraph chatter. Every
-      // 3rd repeat, drop the melody onset entirely (a rest) so the line breathes.
-      if(repeatRun>=2 && (repeatRun%3===0)) ev._melRest=true;
-    } else {
-      repeatRun=0;
-    }
-    lastMel=melM;
-    const intensity=Math.max(0,Math.min(1,(rawInt[i]-intLo)/intRange)); // 0 calm … 1 intense
-    // All-dark cell (black dot, no colour): the melody source IS a bass note.
-    // Don't lift it into the treble — keep it deep where the pixel put it, the
-    // way the base version does. This is what stops black dots playing "high".
-    const melIsBass = !!melSrc.bass;
-    // Melody velocity: softer overall, and higher notes are softened MORE so the
-    // top register doesn't sound shrill/telegraph-like. At C5 ~full, by E6 ~-25%.
-    const heightFrac = Math.max(0, Math.min(1, (melM - MEL_MIN) / (MEL_SPAN||1)));
-    const melVel = Math.round((melSrc.v||80) * (0.92 - 0.25*heightFrac));
-    const melody = melIsBass
-      ? {...melSrc}                                   // keep its low pitch + velocity
-      : {...melSrc, m:melM, v:Math.max(48,Math.min(104,melVel))};
-    if(melIsBass){ lastMel=null; }                    // don't let it anchor the contour
-    // Accompaniment = the rest (minus the chosen melody note). Protected bass
-    // notes (black dots) are pulled OUT here so the chord voicing can't lift
-    // them up; they're re-added low at the end, fitting under the chord.
-    const rest=ev.n.filter(n=>n!==melSrc);
-    const bassNotes=rest.filter(n=>n.bass);
-    let accomp=voiceToBarChord(rest.filter(n=>!n.bass), barPCs);
-    // Seed the bar chord so harmony is always heard. On INTENSE events, seed the
-    // FULL triad (root+third+fifth) for a strong, full-bodied sound; on calmer
-    // ones, just root+fifth so they stay open and light.
-    const haveP=new Set(accomp.map(n=>((n.m%12)+12)%12));
-    const refLow=Math.min(melM-7, 64);
-    const seedPCs = intensity>0.5 ? [barPCs[0],barPCs[1],barPCs[2]] : [barPCs[0],barPCs[2]];
-    for(const pc of seedPCs){
-      if(!haveP.has(pc)){
-        accomp.push({...melSrc, m:nearestPc(pc, refLow), v:Math.max(30,Math.round((melSrc.v||64)*0.5))});
-        haveP.add(pc);
-      }
-    }
-    // Intense events get a DOUBLED BASS octave (root an octave down) for weight,
-    // and a wider voice cap so the chord fills out; calm events stay thin.
-    if(intensity>0.6){
-      const bassM=nearestPc(barPCs[0], 40);          // low root (~E2 region)
-      if(!accomp.some(n=>n.m===bassM)) accomp.push({...melSrc, m:bassM, v:Math.max(34,Math.round((melSrc.v||64)*0.55))});
-    }
-    const voiceCap = intensity>0.6 ? 5 : intensity>0.3 ? 3 : 2;
-    // Velocity swell: intense chords play louder overall (up to +22%).
-    const intGain = 1 + 0.12*intensity;              // gentler swell (was 0.22) — softer, rounder
-    // Keep accompaniment below the melody and dedup.
-    const seen=new Set();
-    const melActual=melody.m;
-    accomp=accomp
-      .map(n=>({...n, m:n.m>=melActual ? n.m-12 : n.m, v:Math.max(26,Math.min(100,Math.round((n.v||56)*0.78*intGain)))}))
-      .filter(n=>{const k=n.m; if(seen.has(k)||k<28)return false; seen.add(k); return true;})
-      .sort((a,b)=>b.m-a.m)                           // keep the fullest upper voices first
-      .slice(0,voiceCap);
-    // Re-add the protected black-dot bass: deep (C1–C2) on the bar root, at a
-    // velocity that sits UNDER the chord so it supports rather than dominates —
-    // sparse, deliberate low tones that fit the composition.
-    if(bassNotes.length){
-      const darkBassM = Math.max(24, 24 + ((barPCs[0]-0+12)%12)); // C1 octave (deep but clear)
-      const bv = Math.round(Math.min(...bassNotes.map(n=>n.v||70)) * 0.7); // softer than source
-      if(!accomp.some(n=>n.m===darkBassM) && melActual!==darkBassM){
-        accomp.push({ m:darkBassM, v:Math.max(28,Math.min(80,bv)), durMs:noteDur });
-      }
-    }
-    ev.n = ev._melRest ? [...accomp] : [melody, ...accomp];
-    if(ev._melRest && ev.n.length===0) ev.n=[melody]; // never fully silent
-  }
-  // Final melodic resolution: land the last sounding note on the tonic so the
-  // V→I cadence completes melodically too (the ear hears "home"). We move the
-  // top voice of the last non-empty event to the nearest tonic pitch within the
-  // melody band, keeping its velocity.
-  for(let i=evts.length-1;i>=0;i--){
-    if(evts[i].n.length){
-      const tonicPc=scalePCs[0];
-      const mel=evts[i].n[0];
-      let tm=tonicPc; while(tm<MEL_MIN) tm+=12; while(tm>MEL_MAX) tm-=12;
-      // nearest tonic octave to where the melody currently is
-      const cands=[tm-12,tm,tm+12].filter(m=>m>=MEL_MIN-12&&m<=MEL_MAX+12);
-      tm=cands.reduce((a,b)=>Math.abs(b-mel.m)<Math.abs(a-mel.m)?b:a);
-      evts[i].n[0]={...mel, m:tm};
-      break;
-    }
+    ev.n=harmonizeToTriad(ev.n);
   }
   // Merge identical consecutive chords for legato, capped at whole note
   const chordKey=ns=>ns.length?ns.map(n=>n.m).sort((a,b)=>a-b).join(','):'';
@@ -4055,7 +3811,6 @@ function pixelsToImageEvents(px,nc,nr,table){
     if(!ev.n.length){ sinceSound++; continue; }
     if(ev._playable===false){ continue; }        // merge-continuation: leave as held
     const isDownbeat=(i%BEAT)===0;
-    const isBarStart=(i%BAR_EVENTS)===0;          // first beat of a bar = chord change
     const s=sal[i];
     // Breath-rest: a dull, off-beat onset over a quiet stretch becomes a rest,
     // but never two rests in a row and never on a downbeat — keeps the pulse.
@@ -4063,44 +3818,15 @@ function pixelsToImageEvents(px,nc,nr,table){
       ev._playable=false; ev._rest=true; sinceSound++; continue;
     }
     sinceSound=0;
-    // Dynamics: bar-starts (where the harmony changes) get the strongest accent,
-    // other beats a lighter one, off-beats sit back. This makes the harmonic
-    // rhythm audible — the ear hears each chord change land on a strong beat.
+    // Dynamics: accent downbeats, lift salient cells, soften weak off-beats.
     let mul=1;
-    if(isBarStart) mul*=1.15;                     // bar downbeat — chord change (gentler)
-    else if(isDownbeat) mul*=1.06;                // other on-beats (gentler)
+    if(isDownbeat) mul*=1.18;                     // downbeat accent
     else if((i%BEAT)===2) mul*=1.04;              // secondary stress (the "and")
     else mul*=0.9;                                // weak off-beats sit back
     if(s>medSal) mul*=1.06; else mul*=0.96;       // salient cells a touch louder
     if(mul!==1){
       ev.n=ev.n.map(n=>({...n,v:Math.max(22,Math.min(120,Math.round((n.v||64)*mul)))}));
     }
-  }
-  // ─── Articulation from texture (deterministic) ─────────────────────────────
-  // Smooth, uniform stretches of the image play LEGATO (longer, connected notes);
-  // busy, high-contrast stretches play STACCATO (short, detached). We measure
-  // local "busyness" as the average absolute change in saliency to neighbouring
-  // events, normalise it across the piece, and scale each note's durMs: calm
-  // areas breathe, detailed areas feel crisp and energetic.
-  const texture=evts.map((ev,i)=>{
-    if(!ev.n.length) return 0;
-    let d=0,c=0;
-    for(let k=Math.max(0,i-2);k<=Math.min(evts.length-1,i+2);k++){
-      if(k===i) continue; d+=Math.abs(sal[i]-sal[k]); c++;
-    }
-    return c?d/c:0;
-  });
-  const texSorted=texture.filter((_,i)=>evts[i].n.length).slice().sort((a,b)=>a-b);
-  const texLo=texSorted.length?texSorted[Math.floor(texSorted.length*0.2)]:0;
-  const texHi=texSorted.length?texSorted[Math.floor(texSorted.length*0.8)]:1;
-  const texRange=(texHi-texLo)||1;
-  for(let i=0;i<evts.length;i++){
-    const ev=evts[i];
-    if(!ev.n.length||ev._playable===false) continue;
-    const t=Math.max(0,Math.min(1,(texture[i]-texLo)/texRange)); // 0 smooth … 1 busy
-    // Smooth (t→0): 1.4× legato. Busy (t→1): 0.6× staccato. Linear between.
-    const artMul=1.4 - 0.8*t;
-    ev.n=ev.n.map(n=>({...n, durMs:Math.max(90, Math.round((n.durMs||250)*artMul))}));
   }
   return evts;
 }
@@ -4137,7 +3863,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', inspiredBy:'inspired by {artist}', backToSetup:'setup', backToCanvas:'canvas', newSource:'new',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', backToSetup:'setup', backToCanvas:'canvas', newSource:'new',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all',
     selectMood:'✦ select a mood…', morph:'✦ morph', vary:'✦ vary',
@@ -4182,7 +3908,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', inspiredBy:'inspiriert von {artist}', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen',
     selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'✦ variieren',
@@ -4227,7 +3953,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', inspiredBy:'inspiré par {artist}', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer',
     selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'✦ varier',
@@ -4272,7 +3998,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', inspiredBy:'inspirado en {artist}', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo',
     selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'✦ variar',
@@ -4317,7 +4043,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', inspiredBy:'inšpirované {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť',
     selectMood:'✦ vyber náladu…', morph:'✦ morf', vary:'✦ variácia',
@@ -4658,16 +4384,16 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmony</strong> places the twelve pitch classes around the wheel in <em>Circle-of-Fifths</em> order. Notes a perfect fifth apart become hue neighbours; a piece in one key paints in a tight family of related colours.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> maps the same twelve in strict chromatic order at 30° steps — C is red, every semitone shifts one notch. A more literal "one colour per note", useful for picking out a melodic line.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Painting styles</h3>
-    <p style={{margin:'0 0 12px'}}>With nothing selected the canvas is the default <strong>mosaic</strong> — sharp φ-rectangles. Eight optional styles reinterpret the same notes:</p>
+    <p style={{margin:'0 0 12px'}}>With nothing selected the canvas is the default <strong>mosaic</strong> — sharp φ-rectangles. Eight optional artist styles reinterpret the same notes:</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubist</strong> (inspired by Picasso) — cubist planes; either angular analytic shards or a synthetic cut-paper collage.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Dots</strong> (inspired by Kusama) — polka dots on colour blocks, or an all-over dot-field that shimmers across a single tonal ground.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> (inspired by Pollock) — the mosaic stays visible under canvas-wide drip lines and splatter that ignore cell boundaries.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cosmic</strong> (inspired by Kandinsky) — a free cosmic scatter of triangles, rings and arcs, or an orderly Bauhaus grid.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Constellation</strong> (inspired by Miró) — dense dark Constellations, or a bright sparse field of a few bold shapes.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Grid</strong> (inspired by Mondrian) — De Stijl block grids, sparse late grids, or colour-track Boogie-Woogie.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Fields</strong> (inspired by Rothko) — soft stacked colour fields that bleed into one another.</li>
-      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> (inspired by Matisse) — nested colour panels, or a big free-form paper cut-out collage.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> — cubist planes; either angular analytic shards or a synthetic cut-paper collage.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kusama</strong> — polka dots on colour blocks, or an all-over dot-field that shimmers across a single tonal ground.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Pollock</strong> — the mosaic stays visible under canvas-wide drip lines and splatter that ignore cell boundaries.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kandinsky</strong> — a free cosmic scatter of triangles, rings and arcs, or an orderly Bauhaus grid.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Miró</strong> — dense dark Constellations, or a bright sparse field of a few bold shapes.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Mondrian</strong> — De Stijl block grids, sparse late grids, or colour-track Boogie-Woogie.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Rothko</strong> — soft stacked colour fields that bleed into one another.</li>
+      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Matisse</strong> — nested colour panels, or a big free-form paper cut-out collage.</li>
     </ul>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Tap the active style again to return to mosaic. Styles aren't filters — each is a different answer to "what does this music look like?"</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>Determinism &amp; 🎲 Random</h3>
@@ -4697,16 +4423,16 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie</strong> ordnet die zwölf Tonklassen im <em>Quintenzirkel</em> um das Farbrad an. Töne im Quintabstand werden Farb-Nachbarn; ein Stück in einer Tonart malt in einer engen Familie verwandter Farben.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spektral</strong> bildet dieselben zwölf in streng chromatischer Reihenfolge in 30°-Schritten ab — C ist Rot, jeder Halbton verschiebt um eine Stufe. Wörtlicher „eine Farbe pro Note", gut zum Herausfiltern einer Melodielinie.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Malstile</h3>
-    <p style={{margin:'0 0 12px'}}>Ohne Auswahl ist die Leinwand das Standard-<strong>Mosaik</strong> — scharfe φ-Rechtecke. Acht optionale Stile deuten dieselben Noten neu:</p>
+    <p style={{margin:'0 0 12px'}}>Ohne Auswahl ist die Leinwand das Standard-<strong>Mosaik</strong> — scharfe φ-Rechtecke. Acht optionale Künstlerstile deuten dieselben Noten neu:</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubismus</strong> (inspiriert von Picasso) — kubistische Flächen; entweder kantige analytische Splitter oder eine synthetische Scherenschnitt-Collage.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Punkte</strong> (inspiriert von Kusama) — Punkte auf Farbblöcken oder ein flächendeckendes, schimmerndes Punktfeld.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Tropfen</strong> (inspiriert von Pollock) — das Mosaik bleibt sichtbar unter leinwandweiten Tropflinien und Spritzern, die Zellgrenzen ignorieren.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kosmisch</strong> (inspiriert von Kandinsky) — eine freie kosmische Streuung aus Dreiecken, Ringen und Bögen, oder ein geordnetes Bauhaus-Raster.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Konstellation</strong> (inspiriert von Miró) — dichte dunkle Konstellationen oder ein helles, sparsames Feld weniger kräftiger Formen.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Raster</strong> (inspiriert von Mondrian) — De-Stijl-Blockraster, sparsame Spätraster oder Boogie-Woogie-Farbspuren.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Farbfelder</strong> (inspiriert von Rothko) — weiche gestapelte Farbfelder, die ineinander verlaufen.</li>
-      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Scherenschnitt</strong> (inspiriert von Matisse) — verschachtelte Farbpaneele oder eine große freie Scherenschnitt-Collage.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> — kubistische Flächen; entweder kantige analytische Splitter oder eine synthetische Scherenschnitt-Collage.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kusama</strong> — Punkte auf Farbblöcken oder ein flächendeckendes, schimmerndes Punktfeld.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Pollock</strong> — das Mosaik bleibt sichtbar unter leinwandweiten Tropflinien und Spritzern, die Zellgrenzen ignorieren.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kandinsky</strong> — eine freie kosmische Streuung aus Dreiecken, Ringen und Bögen, oder ein geordnetes Bauhaus-Raster.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Miró</strong> — dichte dunkle Konstellationen oder ein helles, sparsames Feld weniger kräftiger Formen.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Mondrian</strong> — De-Stijl-Blockraster, sparsame Spätraster oder Boogie-Woogie-Farbspuren.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Rothko</strong> — weiche gestapelte Farbfelder, die ineinander verlaufen.</li>
+      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Matisse</strong> — verschachtelte Farbpaneele oder eine große freie Scherenschnitt-Collage.</li>
     </ul>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Aktiven Stil erneut antippen für die Rückkehr zum Mosaik. Stile sind keine Filter — jeder ist eine andere Antwort auf „Wie sieht diese Musik aus?"</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>Determinismus &amp; 🎲 Zufall</h3>
@@ -4736,16 +4462,16 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie</strong> place les douze classes de hauteur autour de la roue dans l'ordre du <em>cercle des quintes</em>. Les notes à une quinte deviennent voisines en teinte ; un morceau dans une tonalité peint dans une famille resserrée de couleurs proches.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> mappe les douze en ordre chromatique strict par pas de 30° — Do est rouge, chaque demi-ton décale d'un cran. Plus littéral, « une couleur par note », utile pour suivre une ligne mélodique.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Styles picturaux</h3>
-    <p style={{margin:'0 0 12px'}}>Sans sélection, la toile est la <strong>mosaïque</strong> par défaut — des rectangles φ nets. Huit styles optionnels réinterprètent les mêmes notes :</p>
+    <p style={{margin:'0 0 12px'}}>Sans sélection, la toile est la <strong>mosaïque</strong> par défaut — des rectangles φ nets. Huit styles d'artistes optionnels réinterprètent les mêmes notes :</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubiste</strong> (inspiré par Picasso) — plans cubistes ; soit des éclats analytiques anguleux, soit un collage synthétique de papiers découpés.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Pois</strong> (inspiré par Kusama) — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Coulure</strong> (inspiré par Pollock) — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cosmique</strong> (inspiré par Kandinsky) — une dispersion cosmique libre de triangles, cercles et arcs, ou une grille Bauhaus ordonnée.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Constellation</strong> (inspiré par Miró) — denses Constellations sombres, ou un champ clair et épuré de quelques formes franches.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Grille</strong> (inspiré par Mondrian) — grilles De Stijl, grilles tardives épurées, ou pistes de couleur Boogie-Woogie.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Champs</strong> (inspiré par Rothko) — champs de couleur empilés et fondus l'un dans l'autre.</li>
-      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Découpage</strong> (inspiré par Matisse) — panneaux de couleur imbriqués, ou un grand collage de papiers découpés.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> — plans cubistes ; soit des éclats analytiques anguleux, soit un collage synthétique de papiers découpés.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kusama</strong> — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Pollock</strong> — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kandinsky</strong> — une dispersion cosmique libre de triangles, cercles et arcs, ou une grille Bauhaus ordonnée.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Miró</strong> — denses Constellations sombres, ou un champ clair et épuré de quelques formes franches.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Mondrian</strong> — grilles De Stijl, grilles tardives épurées, ou pistes de couleur Boogie-Woogie.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Rothko</strong> — champs de couleur empilés et fondus l'un dans l'autre.</li>
+      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Matisse</strong> — panneaux de couleur imbriqués, ou un grand collage de papiers découpés.</li>
     </ul>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Appuyer à nouveau sur le style actif pour revenir à la mosaïque. Les styles ne sont pas des filtres — chacun répond autrement à « à quoi ressemble cette musique ? »</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>Déterminisme &amp; 🎲 Aléatoire</h3>
@@ -4775,16 +4501,16 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Armonía</strong> coloca las doce clases de altura alrededor de la rueda en orden del <em>círculo de quintas</em>. Las notas a una quinta se vuelven vecinas de tono; una pieza en una tonalidad pinta en una familia estrecha de colores afines.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Espectral</strong> mapea las mismas doce en orden cromático estricto a pasos de 30° — Do es rojo, cada semitono desplaza un paso. Más literal, «un color por nota», útil para seguir una línea melódica.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Estilos pictóricos</h3>
-    <p style={{margin:'0 0 12px'}}>Sin selección, el lienzo es el <strong>mosaico</strong> por defecto — rectángulos φ nítidos. Ocho estilos opcionales reinterpretan las mismas notas:</p>
+    <p style={{margin:'0 0 12px'}}>Sin selección, el lienzo es el <strong>mosaico</strong> por defecto — rectángulos φ nítidos. Ocho estilos de artista opcionales reinterpretan las mismas notas:</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubista</strong> (inspirado en Picasso) — planos cubistas; o esquirlas analíticas angulosas, o un collage sintético de papel recortado.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Lunares</strong> (inspirado en Kusama) — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Goteo</strong> (inspirado en Pollock) — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cósmico</strong> (inspirado en Kandinsky) — una dispersión cósmica libre de triángulos, anillos y arcos, o una cuadrícula Bauhaus ordenada.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Constelación</strong> (inspirado en Miró) — densas Constelaciones oscuras, o un campo claro y disperso de unas pocas formas rotundas.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cuadrícula</strong> (inspirado en Mondrian) — cuadrículas De Stijl, cuadrículas tardías dispersas, o pistas de color Boogie-Woogie.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Campos</strong> (inspirado en Rothko) — campos de color apilados que se funden entre sí.</li>
-      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Recorte</strong> (inspirado en Matisse) — paneles de color anidados, o un gran collage de papel recortado.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> — planos cubistas; o esquirlas analíticas angulosas, o un collage sintético de papel recortado.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kusama</strong> — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Pollock</strong> — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kandinsky</strong> — una dispersión cósmica libre de triángulos, anillos y arcos, o una cuadrícula Bauhaus ordenada.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Miró</strong> — densas Constelaciones oscuras, o un campo claro y disperso de unas pocas formas rotundas.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Mondrian</strong> — cuadrículas De Stijl, cuadrículas tardías dispersas, o pistas de color Boogie-Woogie.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Rothko</strong> — campos de color apilados que se funden entre sí.</li>
+      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Matisse</strong> — paneles de color anidados, o un gran collage de papel recortado.</li>
     </ul>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Toca el estilo activo de nuevo para volver al mosaico. Los estilos no son filtros — cada uno responde distinto a «¿a qué se parece esta música?»</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>Determinismo &amp; 🎲 Aleatorio</h3>
@@ -4814,16 +4540,16 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmónia</strong> rozmiestňuje dvanásť tónov okolo kruhu v poradí <em>Kvintového kruhu</em>. Tóny vzdialené o čistú kvintu sa stávajú farebnými susedmi; skladba v jednej tónine sa namaľuje v tesnej rodine príbuzných farieb.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spektrum</strong> mapuje tých istých dvanásť v striktnom chromatickom poradí v krokoch 30° — C je červené, každý poltón posunie o jeden krok. Doslovnejšie „jedna farba na tón", užitočné pre sledovanie melodickej línie.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Maliarske štýly</h3>
-    <p style={{margin:'0 0 12px'}}>Bez výberu je plátno predvolená <strong>mozaika</strong> — ostré φ-obdĺžniky. Osem voliteľných štýlov interpretuje tie isté noty inak:</p>
+    <p style={{margin:'0 0 12px'}}>Bez výberu je plátno predvolená <strong>mozaika</strong> — ostré φ-obdĺžniky. Osem voliteľných umeleckých štýlov interpretuje tie isté noty inak:</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubizmus</strong> (inšpirované Picassom) — kubistické plochy; buď hranaté analytické úlomky, alebo syntetická koláž z vystrihovaného papiera.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Bodky</strong> (inšpirované Kusamou) — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kvapky</strong> (inšpirované Pollockom) — mozaika zostáva viditeľná pod kvapkajúcimi líniami a striekancami, ktoré ignorujú hranice buniek.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kozmické</strong> (inšpirované Kandinským) — voľný kozmický rozptyl trojuholníkov, prstencov a oblúkov, alebo usporiadaná Bauhaus mriežka.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Súhvezdie</strong> (inšpirované Mirom) — husté tmavé Konštelácie, alebo svetlé riedke pole zopár výrazných tvarov.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Mriežka</strong> (inšpirované Mondrianom) — De Stijl blokové mriežky, riedke neskoré mriežky, alebo farebné dráhy Boogie-Woogie.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Polia</strong> (inšpirované Rothkom) — mäkké navrstvené farebné polia, ktoré sa do seba prelievajú.</li>
-      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Výstrižok</strong> (inšpirované Matissom) — vnorené farebné panely, alebo veľká voľná koláž z vystrihovaného papiera.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> — kubistické plochy; buď hranaté analytické úlomky, alebo syntetická koláž z vystrihovaného papiera.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kusama</strong> — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Pollock</strong> — mozaika zostáva viditeľná pod kvapkajúcimi líniami a striekancami, ktoré ignorujú hranice buniek.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kandinsky</strong> — voľný kozmický rozptyl trojuholníkov, prstencov a oblúkov, alebo usporiadaná Bauhaus mriežka.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Miró</strong> — husté tmavé Konštelácie, alebo svetlé riedke pole zopár výrazných tvarov.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Mondrian</strong> — De Stijl blokové mriežky, riedke neskoré mriežky, alebo farebné dráhy Boogie-Woogie.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Rothko</strong> — mäkké navrstvené farebné polia, ktoré sa do seba prelievajú.</li>
+      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Matisse</strong> — vnorené farebné panely, alebo veľká voľná koláž z vystrihovaného papiera.</li>
     </ul>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Ťukni na aktívny štýl znova pre návrat k mozaike. Štýly nie sú filtre — každý je inou odpoveďou na „ako vyzerá táto hudba?"</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>Determinizmus &amp; 🎲 Náhoda</h3>
@@ -4887,8 +4613,8 @@ const GUIDE_I18N = {
    body:`Paintiano is a two-way translator between music and visual art. A piece of music *is* a painting under one grammar; a painting *is* a piece of music under the same grammar inverted. Same colour wheel, same pitch wheel, same act of perception. The app exists to prove this. ◆ Your first move depends on which direction you want to translate. To go from music to painting: pick a source that produces notes — Compose at the keyboard, MIC (Voice to sing/hum, or Music to capture ambient sound), upload a MIDI / audio / score file, or pick a Mood and let the AI compose for you. To go from painting to music: upload an Image, and hear how the canvas reads under the colour↔pitch grammar. ◆ Two choices shape every painting: colour mode (Harmony or Spectral — see modes) and optionally an artist style (eight of them — see styles). The mapping is deterministic on purpose: the same music always produces the same painting, so what you see is a reading of the music, not a decoration. The 🎲 Random toggle lets you opt out — with an artist selected it gives a new variation on every Play; with no artist it shuffles across all eight styles. ◆ A few orientations worth knowing up front. Live modes (Compose, MIC) paint into a fixed golden-ratio frame — as you add more chords, every row gets thinner, so the painting densifies rather than grows taller. The canvas is a compositional space, not a timeline. ◆ Imported sources (MIDI, audio, score, image, mood) use a canvas that grows with content — they are transcripts of an existing artefact, not in-the-moment compositions. ◆ Artist styles are not visual filters. Each one is a different answer to the question "what does this music look like?" — Pollock keeps the underlying mosaic visible and drips across it; Miró abandons the grid for scattered constellation shapes. Switch styles freely; the underlying colour grammar stays the same. ◆ When in doubt: pick a Mood, hit Play, watch a painting build itself. Then try the same mood in Spectral instead of Harmony, then try a style. That single loop teaches the rest of the app.`},
   {id:'modes', title:`Harmony vs Spectral`, keywords:`colour color mode hue palette circle fifths chromatic`,
    body:`Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly.`},
-  {id:'style', title:`Painting styles (8)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubist polka dots drip splatter constellation collage cut-out grid colour field fields artist abstract geometric phase variation inspired by`,
-   body:`Optional overlays, each a different reading of the same notes. With nothing selected the canvas is the mosaic default (sharp φ-rectangles). Eight styles: ◆ Cubist (inspired by Picasso) — angular analytic planes, or a synthetic cut-paper collage. ◆ Dots (inspired by Kusama) — dots on colour blocks, or an all-over shimmering dot-field. ◆ Drip (inspired by Pollock) — the mosaic stays visible under canvas-wide drips and splatter that ignore cell boundaries. ◆ Cosmic (inspired by Kandinsky) — a free scatter of triangles/rings/arcs, or an orderly Bauhaus grid. ◆ Constellation (inspired by Miró) — dense dark constellations, or a bright sparse field of a few bold shapes. ◆ Grid (inspired by Mondrian) — De Stijl block grids, sparse late grids, or Boogie-Woogie colour tracks. ◆ Fields (inspired by Rothko) — soft stacked colour fields bleeding into one another. ◆ Cut-out (inspired by Matisse) — nested colour panels, or a big paper cut-out collage. ◆ Most styles hold more than one composition; with 🎲 Random on, Vary/next re-rolls between them. Tap the active style again to deselect. Switches instantly.`},
+  {id:'style', title:`Painting styles (8 artists)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubist polka dots drip splatter constellation collage cut-out grid colour field artist abstract geometric phase variation`,
+   body:`Optional artist overlays. With nothing selected the canvas is the mosaic default (sharp φ-rectangles). Eight styles, each a different reading of the same notes: ◆ Picasso — cubist planes (angular analytic shards, or a synthetic cut-paper collage). ◆ Kusama — polka dots on colour blocks, or an all-over shimmering dot-field. ◆ Pollock — the mosaic stays visible under canvas-wide drips and splatter that ignore cell boundaries. ◆ Kandinsky — a free cosmic scatter of triangles/rings/arcs, or an orderly Bauhaus grid. ◆ Miró — dense dark Constellations, or a bright sparse field of a few bold shapes. ◆ Mondrian — De Stijl block grids, sparse late grids, or Boogie-Woogie colour tracks. ◆ Rothko — soft stacked colour fields bleeding into one another. ◆ Matisse — nested colour panels, or a big paper cut-out collage. ◆ Most styles hold more than one composition; with 🎲 Random on, Vary/next re-rolls between them. Tap the active style again to deselect. Switches instantly.`},
   {id:'random', title:`🎲 Random &amp; Shuffle`, keywords:`random shuffle determinism seed reroll variation same music different painting fresh dice unique play next style cycle`,
    body:`Sits at the end of the style row. By default the same music makes the same painting — the seed behind every overlay is a hash of the notes. Tap 🎲 to toggle it (button glows amber). The toggle itself doesn't change the current painting; the change happens on the next Play (from the start) or the "next ›" control. ◆ With an artist selected, Random re-rolls that artist into a fresh variation each time — and since most styles hold several distinct compositions, a re-roll can change the whole structure, not just colours. ◆ With NO artist selected, 🎲 becomes Shuffle: every Play / next paints a different artist style at random (mosaic excluded). The drawn style shows a light outline in the row — tap it to keep that artist and leave shuffle. ◆ Switching style or colour mode never re-rolls; only Play / next does. Setting is remembered across sessions.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test example sample replace confirm`,
@@ -4941,8 +4667,8 @@ const GUIDE_I18N = {
    body:`Paintiano ist ein wechselseitiger Übersetzer zwischen Musik und bildender Kunst. Ein Musikstück ist ein Gemälde unter einer Grammatik; ein Gemälde ist ein Musikstück unter derselben Grammatik invertiert. Dasselbe Farbrad, derselbe Tonkreis, derselbe Akt der Wahrnehmung. Die App existiert, um das zu beweisen. ◆ Dein erster Schritt hängt davon ab, in welche Richtung du übersetzen möchtest. Von Musik zu Gemälde: wähle eine Quelle, die Noten erzeugt — Komponieren an der Tastatur, MIKRO (Stimme zum Singen/Summen oder Musik für Umgebungsklang), eine MIDI- / Audio- / Partitur-Datei hochladen oder eine Stimmung wählen und die KI komponieren lassen. Von Gemälde zu Musik: lade ein Bild hoch und höre, wie die Leinwand unter der Farbe↔Tonhöhe-Grammatik gelesen wird. ◆ Zwei Entscheidungen prägen jedes Gemälde: der Farbmodus (Harmonie oder Spektral — siehe Modi) und optional ein Künstlerstil (acht davon — siehe Stile). Das Mapping ist absichtlich deterministisch: dieselbe Musik erzeugt immer dasselbe Gemälde — was du siehst, ist eine Lesung der Musik, keine Dekoration. Der 🎲 Zufallsschalter erlaubt es, davon abzuweichen — mit ausgewähltem Künstler gibt es bei jedem Play eine neue Variation; ohne Künstler mischt er über alle acht Stile. ◆ Ein paar Orientierungen vorab. Live-Modi (Komponieren, MIKRO) malen in einen festen Goldener-Schnitt-Rahmen — je mehr Akkorde du hinzufügst, desto dünner werden alle Zeilen, das Gemälde verdichtet sich, statt höher zu wachsen. Die Leinwand ist ein Kompositionsraum, keine Zeitachse. ◆ Importierte Quellen (MIDI, Audio, Partitur, Bild, Stimmung) verwenden eine Leinwand, die mit dem Inhalt wächst — sie sind Transkripte eines bestehenden Artefakts, keine Spontankompositionen. ◆ Künstlerstile sind keine visuellen Filter. Jeder ist eine andere Antwort auf die Frage "wie sieht diese Musik aus?" — Pollock lässt das Mosaik-Substrat sichtbar und tropft darüber; Miró verlässt das Raster zugunsten verstreuter Konstellationsformen. Stile frei wechseln; die Farbgrammatik darunter bleibt dieselbe. ◆ Im Zweifel: Stimmung wählen, Play drücken, zuschauen, wie sich ein Gemälde aufbaut. Dann dieselbe Stimmung in Spektral statt Harmonie versuchen, dann einen Stil. Diese eine Schleife lehrt den Rest der App.`},
   {id:'modes', title:`Harmonie vs. Spektral`, keywords:`farbe modus farbton palette quintenzirkel chromatisch`,
    body:`Zwei Farbgrammatiken für dieselbe Musik. Harmonie ordnet die Tonklassen im Quintenzirkel um das Farbrad an — verwandte Tonarten clustern in ähnlichen Farben. Spektral verteilt sie in gleichmäßigen 30°-Schritten — ein Halbton, eine Farbe. Jederzeit wechselbar.`},
-  {id:'style', title:`Malstile (8)`, keywords:`stil picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubismus punkte tropfen spritzer konstellation collage scherenschnitt raster farbfeld abstrakt geometrisch phase variation`,
-   body:`Optionale Overlays, jedes eine andere Lesart derselben Noten. Ohne Auswahl ist die Leinwand das Standard-Mosaik (scharfe φ-Rechtecke). Acht Stile: ◆ Kubismus (inspiriert von Picasso) — kantige analytische Flächen oder eine synthetische Scherenschnitt-Collage. ◆ Punkte (inspiriert von Kusama) — Punkte auf Farbblöcken oder ein flächendeckendes schimmerndes Punktfeld. ◆ Tropfen (inspiriert von Pollock) — das Mosaik bleibt sichtbar unter leinwandweiten Tropfen und Spritzern, die Zellgrenzen ignorieren. ◆ Kosmisch (inspiriert von Kandinsky) — eine freie Streuung aus Dreiecken/Ringen/Bögen oder ein geordnetes Bauhaus-Raster. ◆ Konstellation (inspiriert von Miró) — dichte dunkle Konstellationen oder ein helles, sparsames Feld weniger kräftiger Formen. ◆ Raster (inspiriert von Mondrian) — De-Stijl-Blockraster, sparsame Spätraster oder Boogie-Woogie-Farbspuren. ◆ Farbfelder (inspiriert von Rothko) — weiche gestapelte Farbfelder, die ineinander verlaufen. ◆ Scherenschnitt (inspiriert von Matisse) — verschachtelte Farbpaneele oder eine große Scherenschnitt-Collage. ◆ Die meisten Stile besitzen mehr als eine Komposition; bei aktivem 🎲 Zufall würfeln Variieren/weiter zwischen ihnen. Aktiven Stil erneut antippen zum Abwählen. Wechselt sofort.`},
+  {id:'style', title:`Malstile (8 Künstler)`, keywords:`stil picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubismus punkte tropfen spritzer konstellation collage scherenschnitt raster farbfeld abstrakt geometrisch phase variation`,
+   body:`Optionale Künstler-Overlays. Ohne Auswahl ist die Leinwand das Standard-Mosaik (scharfe φ-Rechtecke). Acht Stile, jeder eine andere Lesart derselben Noten: ◆ Picasso — kubistische Flächen (kantige analytische Splitter oder eine synthetische Scherenschnitt-Collage). ◆ Kusama — Punkte auf Farbblöcken oder ein flächendeckendes schimmerndes Punktfeld. ◆ Pollock — das Mosaik bleibt sichtbar unter leinwandweiten Tropfen und Spritzern, die Zellgrenzen ignorieren. ◆ Kandinsky — eine freie kosmische Streuung aus Dreiecken/Ringen/Bögen oder ein geordnetes Bauhaus-Raster. ◆ Miró — dichte dunkle Konstellationen oder ein helles, sparsames Feld weniger kräftiger Formen. ◆ Mondrian — De-Stijl-Blockraster, sparsame Spätraster oder Boogie-Woogie-Farbspuren. ◆ Rothko — weiche gestapelte Farbfelder, die ineinander verlaufen. ◆ Matisse — verschachtelte Farbpaneele oder eine große Scherenschnitt-Collage. ◆ Die meisten Stile besitzen mehr als eine Komposition; bei aktivem 🎲 Zufall würfeln Variieren/weiter zwischen ihnen. Aktiven Stil erneut antippen zum Abwählen. Wechselt sofort.`},
   {id:'random', title:`🎲 Zufall &amp; Mischen`, keywords:`zufall mischen shuffle determinismus seed neu würfeln variation gleiche musik unterschiedliches gemälde frisch einzigartig play spielen weiter stil wechseln`,
    body:`Sitzt am Ende der Stilzeile. Standardmäßig erzeugt dieselbe Musik dasselbe Gemälde — der Seed jedes Overlays ist ein Hash der Noten. 🎲 antippen zum Umschalten (Button leuchtet bernsteinfarben). Das Umschalten selbst ändert das aktuelle Gemälde nicht; die Änderung erfolgt beim nächsten Play (vom Anfang) oder über „weiter ›". ◆ Mit ausgewähltem Künstler würfelt Zufall diesen Stil jedes Mal in eine neue Variation — und da die meisten Stile mehrere eigenständige Kompositionen besitzen, kann ein Neu-Würfeln die ganze Struktur ändern, nicht nur Farben. ◆ OHNE ausgewählten Künstler wird 🎲 zum Mischen: jedes Play / weiter malt einen zufällig anderen Künstlerstil (Mosaik ausgenommen). Der gezogene Stil zeigt eine helle Umrandung in der Zeile — antippen, um diesen Künstler zu behalten und das Mischen zu verlassen. ◆ Stil- oder Farbmoduswechsel würfeln nie neu; nur Play / weiter. Einstellung wird über Sitzungen hinweg gespeichert.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test beispiel ersetzen bestätigen`,
@@ -4995,8 +4721,8 @@ const GUIDE_I18N = {
    body:`Paintiano est un traducteur bidirectionnel entre musique et art visuel. Un morceau de musique est une peinture sous une grammaire ; une peinture est un morceau de musique sous la même grammaire inversée. Même roue chromatique, même cercle des hauteurs, même acte de perception. L'application existe pour le prouver. ◆ Votre premier geste dépend de la direction dans laquelle vous voulez traduire. De la musique à la peinture : choisissez une source qui produit des notes — Composer au clavier, MICRO (Voix pour chanter/fredonner, ou Musique pour capter un son ambiant), charger un fichier MIDI / audio / partition, ou choisir une Humeur et laisser l'IA composer pour vous. De la peinture à la musique : chargez une Image, et entendez comment la toile se lit sous la grammaire couleur↔hauteur. ◆ Deux choix façonnent chaque peinture : le mode couleur (Harmonie ou Spectral — voir modes) et optionnellement un style pictural (huit en tout — voir styles). L'association est délibérément déterministe : la même musique produit toujours la même peinture — ce que vous voyez est une lecture de la musique, pas une décoration. Le bouton 🎲 Aléatoire permet de rompre cela — avec un artiste sélectionné, une nouvelle variation à chaque Lecture ; sans artiste, il mélange les huit styles. ◆ Quelques repères à connaître d'emblée. Les modes en direct (Composer, MICRO) peignent dans un cadre fixe au nombre d'or — à mesure que vous ajoutez des accords, chaque rangée s'amincit, la peinture se densifie plutôt que de s'allonger. La toile est un espace compositionnel, pas une frise chronologique. ◆ Les sources importées (MIDI, audio, partition, image, humeur) utilisent une toile qui grandit avec le contenu — ce sont des transcriptions d'un artefact existant, pas des compositions de l'instant. ◆ Les styles d'artistes ne sont pas des filtres visuels. Chacun est une réponse différente à la question "à quoi cette musique ressemble-t-elle ?" — Pollock laisse le substrat mosaïque visible et coule par-dessus ; Miró abandonne la grille pour des formes de constellation dispersées. Changez librement de style ; la grammaire couleur sous-jacente reste la même. ◆ En cas de doute : choisissez une Humeur, appuyez sur Lecture, regardez une peinture se construire. Puis essayez la même humeur en Spectral plutôt qu'Harmonie, puis un style. Cette seule boucle enseigne le reste de l'app.`},
   {id:'modes', title:`Harmonie vs Spectral`, keywords:`couleur mode teinte palette cercle des quintes chromatique`,
    body:`Deux grammaires de couleurs pour la même musique. L'harmonie place les classes de hauteur autour de la roue chromatique dans l'ordre du cercle des quintes. Le spectral les répartit en pas de 30°. Changeable à tout moment.`},
-  {id:'style', title:`Styles picturaux (8)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubisme pois goutte éclaboussure constellation collage papier découpé grille champ couleur abstrait géométrique phase variation`,
-   body:`Calques optionnels, chacun une lecture différente des mêmes notes. Sans sélection, la toile est la mosaïque par défaut (rectangles φ nets). Huit styles : ◆ Cubiste (inspiré par Picasso) — plans analytiques anguleux, ou collage synthétique de papiers découpés. ◆ Pois (inspiré par Kusama) — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile. ◆ Coulure (inspiré par Pollock) — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules. ◆ Cosmique (inspiré par Kandinsky) — une dispersion libre de triangles/cercles/arcs, ou une grille Bauhaus ordonnée. ◆ Constellation (inspiré par Miró) — denses constellations sombres, ou un champ clair et épuré de quelques formes franches. ◆ Grille (inspiré par Mondrian) — grilles De Stijl, grilles tardives épurées, ou pistes de couleur Boogie-Woogie. ◆ Champs (inspiré par Rothko) — champs de couleur empilés et fondus l'un dans l'autre. ◆ Découpage (inspiré par Matisse) — panneaux de couleur imbriqués, ou un grand collage de papiers découpés. ◆ La plupart des styles renferment plus d'une composition ; avec 🎲 Aléatoire activé, Varier/suivant alterne entre elles. Appuyer à nouveau sur le style actif pour le désélectionner. Bascule instantanée.`},
+  {id:'style', title:`Styles picturaux (8 artistes)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubisme pois goutte éclaboussure constellation collage papier découpé grille champ couleur abstrait géométrique phase variation`,
+   body:`Calques d'artistes optionnels. Sans sélection, la toile est la mosaïque par défaut (rectangles φ nets). Huit styles, chacun une lecture différente des mêmes notes : ◆ Picasso — plans cubistes (éclats analytiques anguleux, ou collage synthétique de papiers découpés). ◆ Kusama — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile. ◆ Pollock — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules. ◆ Kandinsky — une dispersion cosmique libre de triangles/cercles/arcs, ou une grille Bauhaus ordonnée. ◆ Miró — denses Constellations sombres, ou un champ clair et épuré de quelques formes franches. ◆ Mondrian — grilles De Stijl, grilles tardives épurées, ou pistes de couleur Boogie-Woogie. ◆ Rothko — champs de couleur empilés et fondus l'un dans l'autre. ◆ Matisse — panneaux de couleur imbriqués, ou un grand collage de papiers découpés. ◆ La plupart des styles renferment plus d'une composition ; avec 🎲 Aléatoire activé, Varier/suivant alterne entre elles. Appuyer à nouveau sur le style actif pour le désélectionner. Bascule instantanée.`},
   {id:'random', title:`🎲 Aléatoire &amp; Mélange`, keywords:`aléatoire mélange shuffle hasard déterminisme graine seed relancer variation même musique peinture différente frais unique dé jouer play suivant style cycle`,
    body:`Situé à la fin de la ligne des styles. Par défaut, la même musique produit la même peinture — la graine de chaque calque est un hash des notes. Appuyer 🎲 pour basculer (le bouton s'illumine en ambre). La bascule elle-même ne change pas la peinture actuelle ; le changement survient à la prochaine Lecture (depuis le début) ou via « suivant › ». ◆ Avec un artiste sélectionné, Aléatoire relance ce style en une nouvelle variation à chaque fois — et comme la plupart des styles renferment plusieurs compositions distinctes, une relance peut changer toute la structure, pas seulement les couleurs. ◆ SANS artiste sélectionné, 🎲 devient un Mélange : chaque Lecture / suivant peint un style d'artiste différent au hasard (mosaïque exclue). Le style tiré apparaît avec un contour clair dans la ligne — appuyez dessus pour conserver cet artiste et quitter le mélange. ◆ Changer de style ou de mode couleur ne relance jamais ; seule la Lecture / suivant le fait. Le réglage est conservé entre les sessions.`},
   {id:'demo', title:`Démo (Für Elise)`, keywords:`démo für elise beethoven test exemple remplacer confirmer`,
@@ -5049,8 +4775,8 @@ const GUIDE_I18N = {
    body:`Paintiano es un traductor bidireccional entre música y arte visual. Una pieza musical es una pintura bajo una gramática; una pintura es una pieza musical bajo la misma gramática invertida. La misma rueda cromática, el mismo círculo de alturas, el mismo acto de percepción. La aplicación existe para demostrarlo. ◆ Tu primer paso depende de en qué dirección quieras traducir. De música a pintura: elige una fuente que produzca notas — Componer en el teclado, MICRO (Voz para cantar/tararear, o Música para captar sonido ambiente), cargar un archivo MIDI / audio / partitura, o elegir un Estado y dejar que la IA componga por ti. De pintura a música: carga una Imagen, y escucha cómo se lee el lienzo bajo la gramática color↔altura. ◆ Dos elecciones modelan cada pintura: el modo de color (Armonía o Espectral — ver modos) y opcionalmente un estilo pictórico (ocho en total — ver estilos). El mapeo es deliberadamente determinista: la misma música produce siempre la misma pintura — lo que ves es una lectura de la música, no una decoración. El interruptor 🎲 Aleatorio permite romper esto — con un artista seleccionado, una variación nueva en cada Reproducción; sin artista, mezcla los ocho estilos. ◆ Unas pocas orientaciones que conviene saber de entrada. Los modos en vivo (Componer, MICRO) pintan en un marco fijo con proporción áurea — a medida que añades más acordes, cada fila se adelgaza, la pintura se densifica en vez de crecer en altura. El lienzo es un espacio compositivo, no una línea de tiempo. ◆ Las fuentes importadas (MIDI, audio, partitura, imagen, estado) usan un lienzo que crece con el contenido — son transcripciones de un artefacto existente, no composiciones del momento. ◆ Los estilos de artista no son filtros visuales. Cada uno es una respuesta distinta a la pregunta "¿a qué se parece esta música?" — Pollock deja visible el sustrato del mosaico y gotea por encima; Miró abandona la cuadrícula por formas de constelación dispersas. Cambia de estilo libremente; la gramática de color subyacente sigue siendo la misma. ◆ En caso de duda: elige un Estado, pulsa Tocar, observa cómo se construye una pintura. Luego prueba el mismo estado en Espectral en lugar de Armonía, luego un estilo. Ese único bucle enseña el resto de la app.`},
   {id:'modes', title:`Armonía vs Espectral`, keywords:`color modo tono paleta círculo de quintas cromático`,
    body:`Dos gramáticas de color para la misma música. Armonía coloca las clases de tono en el círculo de quintas alrededor de la rueda de color. Espectral los espacía en pasos de 30°. Cambia en cualquier momento.`},
-  {id:'style', title:`Estilos pictóricos (8)`, keywords:`estilo picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubismo lunares goteo salpicadura constelación collage papel recortado cuadrícula campo color abstracto geométrico fase variación`,
-   body:`Capas opcionales, cada una una lectura distinta de las mismas notas. Sin selección, el lienzo es el mosaico por defecto (rectángulos φ nítidos). Ocho estilos: ◆ Cubista (inspirado en Picasso) — planos analíticos angulosos, o collage sintético de papel recortado. ◆ Lunares (inspirado en Kusama) — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo. ◆ Goteo (inspirado en Pollock) — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas. ◆ Cósmico (inspirado en Kandinsky) — una dispersión libre de triángulos/anillos/arcos, o una cuadrícula Bauhaus ordenada. ◆ Constelación (inspirado en Miró) — densas constelaciones oscuras, o un campo claro y disperso de unas pocas formas rotundas. ◆ Cuadrícula (inspirado en Mondrian) — cuadrículas De Stijl, cuadrículas tardías dispersas, o pistas de color Boogie-Woogie. ◆ Campos (inspirado en Rothko) — campos de color apilados que se funden entre sí. ◆ Recorte (inspirado en Matisse) — paneles de color anidados, o un gran collage de papel recortado. ◆ La mayoría de los estilos contienen más de una composición; con 🎲 Aleatorio activo, Variar/siguiente alterna entre ellas. Toca el estilo activo de nuevo para deseleccionar. Cambia al instante.`},
+  {id:'style', title:`Estilos pictóricos (8 artistas)`, keywords:`estilo picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubismo lunares goteo salpicadura constelación collage papel recortado cuadrícula campo color abstracto geométrico fase variación`,
+   body:`Capas de artista opcionales. Sin selección, el lienzo es el mosaico por defecto (rectángulos φ nítidos). Ocho estilos, cada uno una lectura distinta de las mismas notas: ◆ Picasso — planos cubistas (esquirlas analíticas angulosas, o collage sintético de papel recortado). ◆ Kusama — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo. ◆ Pollock — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas. ◆ Kandinsky — una dispersión cósmica libre de triángulos/anillos/arcos, o una cuadrícula Bauhaus ordenada. ◆ Miró — densas Constelaciones oscuras, o un campo claro y disperso de unas pocas formas rotundas. ◆ Mondrian — cuadrículas De Stijl, cuadrículas tardías dispersas, o pistas de color Boogie-Woogie. ◆ Rothko — campos de color apilados que se funden entre sí. ◆ Matisse — paneles de color anidados, o un gran collage de papel recortado. ◆ La mayoría de los estilos contienen más de una composición; con 🎲 Aleatorio activo, Variar/siguiente alterna entre ellas. Toca el estilo activo de nuevo para deseleccionar. Cambia al instante.`},
   {id:'random', title:`🎲 Aleatorio &amp; Mezcla`, keywords:`aleatorio mezcla shuffle determinismo semilla seed relanzar variación misma música pintura diferente fresco único dado tocar play siguiente estilo ciclo`,
    body:`Situado al final de la fila de estilos. Por defecto, la misma música produce la misma pintura — la semilla de cada superposición es un hash de las notas. Toca 🎲 para alternarlo (el botón brilla en ámbar). La pulsación en sí no cambia la pintura actual; el cambio ocurre en el siguiente Tocar (desde el principio) o con «siguiente ›». ◆ Con un artista seleccionado, Aleatorio relanza ese estilo en una variación nueva cada vez — y como la mayoría de los estilos contienen varias composiciones distintas, un relance puede cambiar toda la estructura, no solo los colores. ◆ SIN artista seleccionado, 🎲 se vuelve Mezcla: cada Tocar / siguiente pinta un estilo de artista distinto al azar (mosaico excluido). El estilo elegido muestra un contorno claro en la fila — tócalo para conservar ese artista y salir de la mezcla. ◆ Cambiar de estilo o de modo de color nunca relanza; solo Tocar / siguiente. El ajuste se conserva entre sesiones.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven prueba ejemplo reemplazar confirmar`,
@@ -5103,8 +4829,8 @@ const GUIDE_I18N = {
    body:`Paintiano je obojsmerný prekladateľ medzi hudbou a vizuálnym umením. Hudobná skladba *je* obraz pod jednou gramatikou; obraz *je* hudobná skladba pod tou istou gramatikou invertovanou. Ten istý farebný kruh, ten istý kruh tónov, ten istý akt vnímania. Aplikácia existuje preto, aby to dokázala. ◆ Tvoj prvý ťah závisí od toho, ktorým smerom chceš prekladať. Z hudby na obraz: vyber zdroj, ktorý produkuje noty — Komponuj na klaviatúre, MIKRO (Hlas pre spev/hum, alebo Hudba pre zachytenie ambientného zvuku), nahraj MIDI / audio / partitúru, alebo vyber Náladu a nechaj AI komponovať za teba. Z obrazu na hudbu: nahraj Obraz a vypočuj si, ako sa plátno číta pod gramatikou farba↔výška. ◆ Dve voľby formujú každý obraz: farebný režim (Harmónia alebo Spektrum — pozri režimy) a voliteľne maliarsky štýl (osem z nich — pozri štýly). Mapovanie je zámerne deterministické: tá istá hudba vždy vytvorí ten istý obraz, takže to, čo vidíš, je čítanie hudby, nie dekorácia. Prepínač 🎲 Náhoda ti umožňuje sa tomu vyhnúť — s vybraným umelcom nová variácia pri každom Prehratí; bez umelca mieša všetkých osem štýlov. ◆ Pár orientácií, ktoré sa oplatí poznať vopred. Živé režimy (Komponovať, MIKRO) maľujú do fixného rámu v zlatom reze — keď pridávaš akordy, každý riadok sa stenčí, takže obraz sa zhusťuje, namiesto aby rástol do výšky. Plátno je kompozičný priestor, nie časová os. ◆ Importované zdroje (MIDI, audio, partitúra, obraz, nálada) používajú plátno, ktoré rastie s obsahom — sú to prepisy existujúceho artefaktu, nie kompozície v okamihu. ◆ Maliarske štýly nie sú vizuálne filtre. Každý je iná odpoveď na otázku „ako vyzerá táto hudba?" — Pollock necháva mozaikový podklad viditeľný a kvapká cezeň; Miró opúšťa mriežku v prospech rozosiatych tvarov súhvezdí. Slobodne meň štýly; farebná gramatika pod nimi zostáva tá istá. ◆ Keď neviete: vyber Náladu, ťukni Prehrať, sleduj, ako sa obraz buduje sám. Potom skús tú istú náladu v Spektre namiesto Harmónie, potom štýl. Tá jedna slučka ťa naučí zvyšok aplikácie.`},
   {id:'modes', title:`Harmónia vs Spektrum`, keywords:`farba režim odtieň paleta kvintový kruh chromatický`,
    body:`Dve farebné gramatiky pre tú istú hudbu. Harmónia rozmiestňuje triedy tónov okolo farebného kruhu v poradí Kvintového kruhu — príbuzné tóniny sa zhlukujú v podobných farbách. Spektrum ich rozmiestňuje v rovnomerných krokoch 30° — jedna farba na poltón. Prepínaj kedykoľvek; tie isté noty sa okamžite premaľujú.`},
-  {id:'style', title:`Maliarske štýly (8)`, keywords:`štýl picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubizmus bodky kvapky striekanie súhvezdia koláž vystrihovaný papier mriežka farebné pole umelec abstraktný geometrický fáza variácia`,
-   body:`Voliteľné prekrytia, každé iné čítanie tých istých nôt. Bez výberu je plátno predvolená mozaika (ostré φ-obdĺžniky). Osem štýlov: ◆ Kubizmus (inšpirované Picassom) — hranaté analytické plochy, alebo syntetická koláž z vystrihovaného papiera. ◆ Bodky (inšpirované Kusamou) — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno. ◆ Kvapky (inšpirované Pollockom) — mozaika zostáva viditeľná pod kvapkami a striekancami, ktoré ignorujú hranice buniek. ◆ Kozmické (inšpirované Kandinským) — voľný rozptyl trojuholníkov/prstencov/oblúkov, alebo usporiadaná Bauhaus mriežka. ◆ Súhvezdie (inšpirované Mirom) — husté tmavé konštelácie, alebo svetlé riedke pole zopár výrazných tvarov. ◆ Mriežka (inšpirované Mondrianom) — De Stijl mriežky, riedke neskoré mriežky, alebo farebné dráhy Boogie-Woogie. ◆ Polia (inšpirované Rothkom) — mäkké navrstvené farebné polia, ktoré sa do seba prelievajú. ◆ Výstrižok (inšpirované Matissom) — vnorené farebné panely, alebo veľká koláž z vystrihovaného papiera. ◆ Väčšina štýlov obsahuje viac než jednu kompozíciu; pri zapnutej 🎲 Náhode Variovať/ďalej medzi nimi preroluje. Ťukni na aktívny štýl znova pre zrušenie výberu. Prepína okamžite.`},
+  {id:'style', title:`Maliarske štýly (8 umelcov)`, keywords:`štýl picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubizmus bodky kvapky striekanie súhvezdia koláž vystrihovaný papier mriežka farebné pole umelec abstraktný geometrický fáza variácia`,
+   body:`Voliteľné umelecké prekrytia. Bez výberu je plátno predvolená mozaika (ostré φ-obdĺžniky). Osem štýlov, každý iné čítanie tých istých nôt: ◆ Picasso — kubistické plochy (hranaté analytické úlomky, alebo syntetická koláž z vystrihovaného papiera). ◆ Kusama — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno. ◆ Pollock — mozaika zostáva viditeľná pod kvapkami a striekancami, ktoré ignorujú hranice buniek. ◆ Kandinsky — voľný kozmický rozptyl trojuholníkov/prstencov/oblúkov, alebo usporiadaná Bauhaus mriežka. ◆ Miró — husté tmavé Konštelácie, alebo svetlé riedke pole zopár výrazných tvarov. ◆ Mondrian — De Stijl mriežky, riedke neskoré mriežky, alebo farebné dráhy Boogie-Woogie. ◆ Rothko — mäkké navrstvené farebné polia, ktoré sa do seba prelievajú. ◆ Matisse — vnorené farebné panely, alebo veľká koláž z vystrihovaného papiera. ◆ Väčšina štýlov obsahuje viac než jednu kompozíciu; pri zapnutej 🎲 Náhode Variovať/ďalej medzi nimi preroluje. Ťukni na aktívny štýl znova pre zrušenie výberu. Prepína okamžite.`},
   {id:'random', title:`🎲 Náhoda &amp; Miešanie`, keywords:`náhoda miešanie shuffle determinizmus seed prehodiť variácia rovnaká hudba iný obraz čerstvé kocka unikátne prehrať ďalej štýl cyklus`,
    body:`Nachádza sa na konci radu štýlov. Štandardne tá istá hudba produkuje ten istý obraz — seed za každým prekrytím je hash nôt. Ťukni 🎲 pre prepnutie (tlačidlo svieti jantárovo). Samotné prepnutie nezmení aktuálny obraz; zmena nastane pri ďalšom Prehrať (od začiatku) alebo cez „ďalej ›". ◆ S vybraným umelcom Náhoda preroluje tento štýl do novej variácie zakaždým — a keďže väčšina štýlov obsahuje viacero odlišných kompozícií, prerolovanie môže zmeniť celú štruktúru, nielen farby. ◆ BEZ vybraného umelca sa 🎲 stáva Miešaním: každé Prehrať / ďalej namaľuje náhodne iný umelecký štýl (mozaika vynechaná). Vytiahnutý štýl má v rade svetlý obrys — ťukni naň, aby si ponechal tohto umelca a opustil miešanie. ◆ Prepínanie štýlu alebo farebného režimu nikdy nepriehadzuje; len Prehrať / ďalej. Nastavenie sa pamätá medzi reláciami.`},
   {id:'demo', title:`Demo (Pre Elišku)`, keywords:`demo pre elišku für elise beethoven test príklad ukážka nahradiť potvrdiť`,
@@ -5634,13 +5360,6 @@ export default function Paintiano() {
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
   const [lang, setLang] = useState(()=>{try{return localStorage.getItem('paintiano_lang')||'EN';}catch(_){return 'EN';}});
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
-  // Descriptive style labels shown on the chips (the internal keys —
-  // picasso/kusama/… — stay unchanged everywhere in the logic). This keeps the
-  // feature branded by what it DOES, while STYLE_INSPIRED supplies a small
-  // "inspired by …" caption for context. All eight, including Kusama, are
-  // attributed by name in this build (explicit choice).
-  const STYLE_LABELS = {picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Cosmic',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out'};
-  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse'};
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -7021,25 +6740,7 @@ export default function Paintiano() {
     // still a Compose/MIC draft, marked by draftOwnerRef. Treat that as a
     // creation (full clear), NOT a loaded source — otherwise Clear would keep
     // the chords and the painting would reappear on replay.
-    // IMAGE source: Clear should wipe only the painted/audio trace, NOT the
-    // loaded image — so it can replay without re-loading. Stop playback, reset
-    // to the start (disp/idx 0), invalidate the built-up painting cache, but
-    // keep the image, its pixel data and its chords intact.
-    if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
-      stopAll();
-      idxRef.current=0; sessionStart.current=0;
-      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
-      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
-      // Wipe the painted overlay to transparent so the clean original image
-      // shows underneath (option 1) — no dark fill, no φ-mosaic, no grid.
-      try{
-        const cv=canvasRef.current;
-        if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); }
-      }catch(_){}
-      setDisp(0); setStamp(s=>s+1);
-      return;
-    }
-    // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
+    // For everything else (loaded MIDI/Score/Audio/Image/mood OR empty), do a
     // full clear() too: it drops the loaded source and chords so the source tile
     // no longer shows as active when returning to setup. (Previously this branch
     // only blanked disp while keeping chords + loadedSource, which left the
@@ -7051,7 +6752,7 @@ export default function Paintiano() {
     singStashRef.current=null;listenStashRef.current=null;setHasMicDraft(false);
     composeStashRef.current=null;setHasComposeDraft(false);
     draftOwnerRef.current=null;
-  },[stopAll,clear,composeMode,micPainting,micListening,loadedSource]);
+  },[stopAll,clear,composeMode,micPainting,micListening]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -8371,7 +8072,7 @@ Composition rules:
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('styleLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr) auto',gap:6,rowGap:8,alignItems:'center'}} title="painting style — tap again to deselect (mosaic default)">
-              {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label],i)=>(
+              {[['picasso','picasso'],['kusama','kusama'],['pollock','pollock'],['kandinsky','kandinsky'],['miro','miro'],['mondrian','mondrian'],['rothko','rothko'],['matisse','matisse']].map(([k,label],i)=>(
                 <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{gridColumn:(i%4)+1,width:'100%',padding:'8px 6px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:(shuffleStyle===k?PF.cream:PF.muted),background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
               ))}
               {/* Random 🎲: with an artist selected it re-rolls that artist's
@@ -8457,9 +8158,6 @@ Composition rules:
           <span>{t('colorLabel')} · {t('styleLabel')}</span>
           <span style={{fontSize:'.7rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
         </button>
-        {style && STYLE_INSPIRED[style] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:'.5rem',letterSpacing:'.12em',color:'rgba(230,222,196,.32)',fontStyle:'italic',textTransform:'none'}}>{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
-        )}
         {stripOpen && (
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
           {/* Morph / Vary — only meaningful for a mood-based painting */}
@@ -8517,7 +8215,7 @@ Composition rules:
           {/* Style */}
           <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,rowGap:6,flex:1}} title="painting style — tap again to deselect (mosaic default)">
-              {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
+              {[['picasso','picasso'],['kusama','kusama'],['pollock','pollock'],['kandinsky','kandinsky'],['miro','miro'],['mondrian','mondrian'],['rothko','rothko'],['matisse','matisse']].map(([k,label])=>(
                 <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{width:'100%',padding:'7px 6px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:(shuffleStyle===k?PF.cream:PF.muted),background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
               ))}
             </div>
@@ -9138,7 +8836,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.8</footer>
     </div>
   );
 }
