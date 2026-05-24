@@ -6035,7 +6035,18 @@ export default function Paintiano() {
   // feature branded by what it DOES, while STYLE_INSPIRED supplies a small
   // "inspired by …" caption for context. All eight, including Kusama, are
   // attributed by name in this build (explicit choice).
-  const STYLE_LABELS = {picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Cosmic',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out'};
+  // Style button labels, per language. Previously a single English object, so the
+  // style row read EN regardless of UI language. Now keyed by lang and selected
+  // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
+  // proper names — those are not translated.)
+  const STYLE_LABELS_I18N = {
+    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Cosmic',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out'},
+    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Kozmický',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Výrez'},
+    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Kosmisch',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Scherenschnitt'},
+    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Coulure',kandinsky:'Cosmique',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Découpage'},
+    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Cósmico',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Recorte'},
+  };
+  const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
   const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse'};
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
