@@ -3880,6 +3880,8 @@ function pixelsToImageEvents(px,nc,nr,table){
   const bRange=(bMax-bMin)||1;
   let lastMel=null;                                 // mild smoothing of the contour
   let repeatRun=0;                                  // consecutive same-pitch counter (anti-telegraph)
+  let darkRepeatLast=null;                          // dark-band lift: own anti-telegraph state
+  let darkRepeatRun=0;                              // (kept separate so octave-wide global jumps don't apply)
   // Intensity reference: how "loud/dense" each event's source is, relative to the
   // whole piece. Intense events (vivid, busy cells) will swell into FULL chords —
   // root+third+fifth plus a doubled bass octave — for a strong, powerful sound;
@@ -3897,7 +3899,7 @@ function pixelsToImageEvents(px,nc,nr,table){
     // deep notes stay low. Fall back to loudest only if the cell is all-bass.
     const sorted=[...ev.n].sort((a,b)=>(b.v||0)-(a.v||0));
     const nonBass=sorted.filter(n=>!n.bass);
-    const melSrc=(nonBass.length?nonBass:sorted)[0];
+    let melSrc=(nonBass.length?nonBass:sorted)[0];
     let melPc=((melSrc.m%12)+12)%12;
     // Target height from brightness: map this cell's brightness proxy into the
     // melody band, so the melodic contour mirrors the painting's light/dark.
@@ -3937,17 +3939,78 @@ function pixelsToImageEvents(px,nc,nr,table){
     }
     lastMel=melM;
     const intensity=Math.max(0,Math.min(1,(rawInt[i]-intLo)/intRange)); // 0 calm … 1 intense
-    // All-dark cell (black dot, no colour): the melody source IS a bass note.
-    // Don't lift it into the treble — keep it deep where the pixel put it, the
-    // way the base version does. This is what stops black dots playing "high".
-    const melIsBass = !!melSrc.bass;
+    // DARK-PASSAGE HANDLING. Two distinct situations where melSrc.bass is true:
+    //
+    //  (a) a SPARSE black dot inside an otherwise colourful cell — here we DO
+    //      want it to stay deep (the original behaviour: a black dot that plays
+    //      "high" sounds wrong). Detected by: the cell also has non-bass voices,
+    //      OR this is an isolated dark event surrounded by bright ones.
+    //
+    //  (b) a WHOLE dark band (tmavá pasáž — black cat, shadow, dark chair) where
+    //      EVERY voice is bass. The old code left the melody deep too, so the
+    //      entire band collapsed into a low rumble with no audible line. Instead
+    //      we keep ONE deep pedal tone (handled later via bassNotes) but LIFT a
+    //      real melody up into the mid register so the passage actually sings.
+    //
+    // We treat it as a dark band only when EVERY voice is a deep/dark bass voice
+    // — a genuinely dark passage (black cat, shadow, dark chair) with no colour
+    // highlight at all. When a cell DOES carry a brighter (non-bass) voice — a
+    // highlight or contour inside the shadow — that voice is left on the normal
+    // path, where its own lightness already lifts it into a clear register
+    // (this is how the reference build already handled speckled shadows well).
+    // The dark-band lift below exists purely to rescue the all-dark cells, which
+    // are the ones that used to collapse into a low rumble.
+    const allBass = ev.n.length>0 && ev.n.every(n=>n.bass);
+    const melIsBass = !!melSrc.bass && !allBass;
+    // For a dark-band cell, derive the melody pitch-class from the loudest
+    // (darkest, most present) bass voice so the line still reflects the shadow's
+    // residual hue, then voice it UP into a clear singing register. The brightness
+    // target sits mid-high so the melody floats over the harmony with real air.
+    if(allBass){
+      // re-pick melody pc: prefer the highest-velocity bass voice (darkest dots
+      // are loudest, but a near-l22 coloured-dark pixel carries a real hue)
+      melPc=((melSrc.m%12)+12)%12;
+      melPc=snapToScale(60+melPc)%12;                 // keep it diatonic
+      // Lift the dark-band melody into a CLEAR singing register — well above the
+      // deep pedal root that anchors the passage. The old target (0.18·span ≈ C4)
+      // sat almost on top of the mid-register chord, so melody, chord and bass
+      // all piled into one narrow muddy band → the "rumble". Aim high in the
+      // melody band and weight the brightness target strongly over the smoothing
+      // term so a uniform shadow holds a clear, steady high line instead of
+      // sagging back down toward the chord.
+      const darkTarget=MEL_MIN + 0.78*MEL_SPAN;       // ~C5 — clearly sings over the chord
+      let dm=melPc; while(dm<MEL_MIN) dm+=12; while(dm>MEL_MAX) dm-=12;
+      const dcands=[dm-12,dm,dm+12,dm+24].filter(m=>m>=MEL_MIN&&m<=MEL_MAX);
+      const aimD=lastMel!=null?(0.82*darkTarget+0.18*lastMel):darkTarget;
+      melM=(dcands.length?dcands:[dm]).reduce((a,b)=>Math.abs(b-aimD)<Math.abs(a-aimD)?b:a);
+      melM=Math.max(MEL_MIN,Math.min(MEL_MAX,melM));
+      // Anti-telegraph for uniform shadows: a flat dark field maps every cell to
+      // the SAME high pitch, which would re-strike one note (a beep). Instead of
+      // the global anti-repeat's octave-wide jumps (which here dropped the line
+      // BELOW the chord), nudge by a single scale STEP up/down around the target,
+      // so the shadow holds a gentle stepwise high line that never collapses into
+      // the harmony. Every 3rd repeat rests so the line breathes.
+      if(darkRepeatLast!=null && melM===darkRepeatLast){
+        darkRepeatRun++;
+        const stepUp=(from)=>{let m=from+1;for(let g=0;g<7&&m<=MEL_MAX;g++,m++){if(scalePCs.includes(((m%12)+12)%12))return m;}return null;};
+        const stepDn=(from)=>{let m=from-1;for(let g=0;g<7&&m>=MEL_MIN;g++,m--){if(scalePCs.includes(((m%12)+12)%12))return m;}return null;};
+        const dir=(darkRepeatRun%2===1);
+        const alt=(dir?stepUp(melM):stepDn(melM)) ?? (dir?stepDn(melM):stepUp(melM));
+        if(alt!=null) melM=alt;
+        if(darkRepeatRun>=2 && darkRepeatRun%3===0) ev._melRest=true;
+      } else {
+        darkRepeatRun=0;
+      }
+      darkRepeatLast=melM;
+      lastMel=melM;
+    }
     // Melody velocity: softer overall, and higher notes are softened MORE so the
     // top register doesn't sound shrill/telegraph-like. At C5 ~full, by E6 ~-25%.
     const heightFrac = Math.max(0, Math.min(1, (melM - MEL_MIN) / (MEL_SPAN||1)));
     const melVel = Math.round((melSrc.v||80) * (0.92 - 0.25*heightFrac));
     const melody = melIsBass
       ? {...melSrc}                                   // keep its low pitch + velocity
-      : {...melSrc, m:melM, v:Math.max(48,Math.min(104,melVel))};
+      : {...melSrc, m:melM, v:Math.max(48,Math.min(104,melVel)), bass:false};
     if(melIsBass){ lastMel=null; }                    // don't let it anchor the contour
     // Accompaniment = the rest (minus the chosen melody note). Protected bass
     // notes (black dots) are pulled OUT here so the chord voicing can't lift
@@ -3959,11 +4022,20 @@ function pixelsToImageEvents(px,nc,nr,table){
     // FULL triad (root+third+fifth) for a strong, full-bodied sound; on calmer
     // ones, just root+fifth so they stay open and light.
     const haveP=new Set(accomp.map(n=>((n.m%12)+12)%12));
-    const refLow=Math.min(melM-7, 64);
-    const seedPCs = intensity>0.5 ? [barPCs[0],barPCs[1],barPCs[2]] : [barPCs[0],barPCs[2]];
+    // Reference register for seeded chord tones. In a dark band, anchor the
+    // chord low-mid (~G3–C4) — a clear octave or more below the lifted high
+    // melody — so three distinct layers emerge with air between them: deep pedal
+    // (~C1–C2), mid chord (~G3–C4), singing melody (~C5). This vertical spread is
+    // exactly what replaces the old single-octave mush with an open, resonant
+    // sound. Elsewhere keep the original behaviour.
+    const refLow = allBass ? Math.max(48, Math.min(55, melM-13)) : Math.min(melM-7, 64);
+    // In a dark band we always seed the FULL triad (root+third+fifth) in the
+    // mid register so the lifted melody sits over real harmony, not a hollow
+    // fifth — this is what turns the old rumble into an actual chord + tune.
+    const seedPCs = (allBass || intensity>0.5) ? [barPCs[0],barPCs[1],barPCs[2]] : [barPCs[0],barPCs[2]];
     for(const pc of seedPCs){
       if(!haveP.has(pc)){
-        accomp.push({...melSrc, m:nearestPc(pc, refLow), v:Math.max(30,Math.round((melSrc.v||64)*0.5))});
+        accomp.push({...melSrc, m:nearestPc(pc, refLow), v:Math.max(30,Math.round((melSrc.v||64)*0.5)), bass:false});
         haveP.add(pc);
       }
     }
@@ -3986,12 +4058,15 @@ function pixelsToImageEvents(px,nc,nr,table){
       .slice(0,voiceCap);
     // Re-add the protected black-dot bass: deep (C1–C2) on the bar root, at a
     // velocity that sits UNDER the chord so it supports rather than dominates —
-    // sparse, deliberate low tones that fit the composition.
+    // sparse, deliberate low tones that fit the composition. In a dark band
+    // (allBass) we deliberately add ONLY this single pedal root: the many low
+    // source voices that used to pile up here (the "rumble") are dropped in
+    // favour of one clean pedal under the lifted melody + mid-register chord.
     if(bassNotes.length){
       const darkBassM = Math.max(24, 24 + ((barPCs[0]-0+12)%12)); // C1 octave (deep but clear)
       const bv = Math.round(Math.min(...bassNotes.map(n=>n.v||70)) * 0.7); // softer than source
       if(!accomp.some(n=>n.m===darkBassM) && melActual!==darkBassM){
-        accomp.push({ m:darkBassM, v:Math.max(28,Math.min(80,bv)), durMs:noteDur });
+        accomp.push({ m:darkBassM, v:Math.max(28,Math.min(80,bv)), durMs:noteDur, bass:true });
       }
     }
     ev.n = ev._melRest ? [...accomp] : [melody, ...accomp];
@@ -4137,7 +4212,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', inspiredBy:'inspired by {artist}', backToSetup:'setup', backToCanvas:'canvas', newSource:'new',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', newSource:'new',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all',
     selectMood:'✦ select a mood…', morph:'✦ morph', vary:'✦ vary',
@@ -4182,7 +4257,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', inspiredBy:'inspiriert von {artist}', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen',
     selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'✦ variieren',
@@ -4227,7 +4302,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', inspiredBy:'inspiré par {artist}', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer',
     selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'✦ varier',
@@ -4272,7 +4347,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', inspiredBy:'inspirado en {artist}', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo',
     selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'✦ variar',
@@ -4317,7 +4392,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', inspiredBy:'inšpirované {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť',
     selectMood:'✦ vyber náladu…', morph:'✦ morf', vary:'✦ variácia',
@@ -6084,6 +6159,9 @@ export default function Paintiano() {
   // button. Compose / mic-painted content has no picker button to highlight.
   const activeSource = loadedSource;
   const composedModeRef = useRef(false);
+  const [selectedChordIdx, setSelectedChordIdx] = useState(null); // chord.idx selected by tapping a block (compose / compose-pause) for targeted Undo
+  const selectedChordIdxRef = useRef(null);
+  useEffect(()=>{ selectedChordIdxRef.current=selectedChordIdx; },[selectedChordIdx]);
 
   // === Creative mode draft stashes ===
   // Each creative mode (compose/sing/listen) keeps its own work-in-progress draft.
@@ -6878,8 +6956,25 @@ export default function Paintiano() {
     // its live grid synchronously, and set both — closing the one-render gap that
     // otherwise flashed the new note as a tiny default-grid corner block before
     // the reactive [chords] grid effect could land setGrid.
-    const nextChords=[...chordsRef.current,{n:notes,idx,startMs,recorded:true,durQ}];
+    const selIdxKb=selectedChordIdxRef.current;
+    let nextChords, insertedCursor=null;
+    if(selIdxKb!=null){
+      const base=chordsRef.current;
+      const pos=base.findIndex(c=>c.idx===selIdxKb);
+      if(pos>=0){
+        const insChord={n:notes,idx,startMs,recorded:true,durQ};
+        nextChords=base.slice(0,pos+1).concat([insChord],base.slice(pos+1)).map((c,i)=>({...c,idx:i}));
+        insertedCursor=pos+1;
+        // patch chordIdx on held notes to the inserted chord's NEW index
+        for(const{m}of notes){const info=pressInfo.current[m];if(info&&info.releasedDur==null)info.chordIdx=pos+1;}
+      }else{
+        nextChords=[...base,{n:notes,idx,startMs,recorded:true,durQ}];
+      }
+    }else{
+      nextChords=[...chordsRef.current,{n:notes,idx,startMs,recorded:true,durQ}];
+    }
     chordsRef.current=nextChords;
+    if(insertedCursor!=null){ selectedChordIdxRef.current=insertedCursor; setSelectedChordIdx(insertedCursor); }
     try{
       const evs=nextChords.map(c=>({durQ:c.durQ!=null?c.durQ:1}));
       const newGrid=computeGrid(evs,{liveMode:true});
@@ -7035,12 +7130,30 @@ export default function Paintiano() {
   const undoLast = useCallback(()=>{
     setChords(prev=>{
       if(!prev.length)return prev;
-      const next=prev.slice(0,-1);
+      // If a chord is selected (tapped in compose/compose-pause), delete THAT
+      // one; otherwise fall back to removing the last chord.
+      let next;
+      if(selectedChordIdx!=null){
+        const pos=prev.findIndex(c=>c.idx===selectedChordIdx);
+        next = pos>=0 ? prev.slice(0,pos).concat(prev.slice(pos+1)) : prev.slice(0,-1);
+      }else{
+        next=prev.slice(0,-1);
+      }
+      // Re-index so chord.idx stays contiguous (0,1,2,…). computeGrid lays cells
+      // out by array position, so without this a deleted chord leaves a visual
+      // gap and idx-based hit-testing/selection drifts.
+      next=next.map((c,i)=>({...c,idx:i}));
       if(!next.length){idxRef.current=0;sessionStart.current=0;}
+      // Keep the paused resume-position in sync with the shortened piece, so a
+      // Resume after Undo doesn't replay (and visually restore) the just-deleted
+      // notes. Clamp to the new length.
+      if(resumeFromRef.current!=null){ resumeFromRef.current=Math.min(resumeFromRef.current, next.length); }
+      idxRef.current=Math.min(idxRef.current, next.length);
       return next;
     });
+    setSelectedChordIdx(null);selectedChordIdxRef.current=null;
     setDisp(p=>Math.max(0,p-1));
-  },[]);
+  },[selectedChordIdx]);
 
   useEffect(()=>{
     const map={a:60,w:61,s:62,e:63,d:64,f:65,t:66,g:67,y:68,h:69,u:70,j:71,k:72,o:73,l:74,p:75};
@@ -7206,6 +7319,7 @@ export default function Paintiano() {
         if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); }
       }catch(_){}
       setDisp(0); setStamp(s=>s+1); setPlayedOnce(false);
+      resumeFromRef.current=null; setHoldPaused(false);   // CLEAR fully resets position — no stale Resume that repaints the wiped trace
       return;
     }
     // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
@@ -7670,6 +7784,7 @@ Composition rules:
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
     if(viewModeRef.current==='image') setPlayedOnce(true);
+    setSelectedChordIdx(null);selectedChordIdxRef.current=null;
 
     // Audio mode: play via Web Audio API BufferSourceNode - supports precise offset natively
     if(viewMode==='audio'&&audioPCMRef.current){
@@ -8887,6 +9002,9 @@ Composition rules:
               }} style={{padding:'12px',background:'transparent',color:'rgba(201,168,76,.85)',border:'1px solid rgba(201,168,76,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
                 {t('chooseFile')}
               </button>
+              <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
+                {pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
+              </div>
               <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.6rem',marginTop:4}}>
                 {t('cancel')}
               </button>
@@ -9013,6 +9131,18 @@ Composition rules:
             return segs.some(s=>tx>=s.x&&tx<=s.x+s.w&&ty>=s.y&&ty<=s.y+s.h);
           });
           if(!hit)return;
+          // Selection + targeted delete only works in the default (mosaic) mode.
+          // If an artist style is active the cells are painted abstractly, so
+          // tell the user to turn it off (naming the specific artist).
+          if(composeMode || (holdPaused && composedModeRef.current)){
+            if(effectiveStyle){
+              const artist=STYLE_INSPIRED[effectiveStyle]||effectiveStyle;
+              setErr(t('selectNeedsMosaic').replace('{artist}',artist));
+              setErrInfo(true);
+              return;
+            }
+            setSelectedChordIdx(prev=>{const v=prev===hit.idx?null:hit.idx;selectedChordIdxRef.current=v;return v;});  // tap again to deselect
+          }
           unlockAudio();
           const midis=hit.n.map(({m,v,durMs})=>{playNote(m,v,durMs||300);return{m,dur:durMs||300};});
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
@@ -9030,6 +9160,16 @@ Composition rules:
         <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',width:'100%',height:'auto',maxWidth:CW,position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease'}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
+        {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(()=>{
+          const cell=grid.cells[selectedChordIdx];
+          const segs=cell.segments||[cell];
+          // Outline EACH segment separately. A long chord wraps across rows, so a
+          // single bounding box would span almost the whole canvas — instead we
+          // draw a thin highlight per segment that hugs the actual painted shape.
+          return segs.map((s,si)=>(
+            <div key={si} aria-hidden="true" style={{position:'absolute',left:`${s.x/CW*100}%`,top:`${s.y/CH*100}%`,width:`${s.w/CW*100}%`,height:`${s.h/CH*100}%`,boxSizing:'border-box',border:'2px solid rgba(255,220,90,.95)',boxShadow:'0 0 10px rgba(255,210,70,.6)',zIndex:4,pointerEvents:'none'}}/>
+          ));
+        })()}
         {micActive && (
           <div aria-hidden="true" style={{position:'absolute',top:10,left:10,zIndex:4,display:'inline-flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:20,pointerEvents:'none',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
             <span style={{width:7,height:7,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
@@ -9413,7 +9553,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7.2</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7.3</footer>
     </div>
   );
 }
