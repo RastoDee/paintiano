@@ -9027,7 +9027,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',maxWidth:'100%',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease'}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',width:'100%',height:'auto',maxWidth:CW,position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease'}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {micActive && (
@@ -9190,7 +9190,7 @@ Composition rules:
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {(()=>{ const m=recName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:recName; const ext=m?m[2]:''; return (
               <span style={{flex:1,display:'flex',alignItems:'center',gap:2,minWidth:0}}>
-                <input value={base} onChange={e=>setRecName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:'.6rem',color:'rgba(255,170,150,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(220,90,90,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
+                <input value={base} onFocus={()=>{inputFocus.current=true;}} onBlur={()=>{inputFocus.current=false;}} onChange={e=>setRecName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:'.6rem',color:'rgba(255,170,150,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(220,90,90,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
                 <span style={{fontSize:'.55rem',color:'rgba(255,140,120,.6)',flexShrink:0}}>{ext} · {(recBlob.size/1024).toFixed(0)}KB</span>
               </span>
             ); })()}
@@ -9208,7 +9208,7 @@ Composition rules:
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {(()=>{ const m=scoreFileName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:scoreFileName; const ext=m?m[2]:''; return (
               <span style={{flex:1,display:'flex',alignItems:'center',gap:2,minWidth:0}}>
-                <input value={base} onChange={e=>setScoreFileName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:'.6rem',color:'rgba(160,230,195,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(120,200,160,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
+                <input value={base} onFocus={()=>{inputFocus.current=true;}} onBlur={()=>{inputFocus.current=false;}} onChange={e=>setScoreFileName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:'.6rem',color:'rgba(160,230,195,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(120,200,160,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
                 <span style={{fontSize:'.55rem',color:'rgba(150,225,185,.6)',flexShrink:0}}>{ext} · {(scoreBlob.size/1024).toFixed(0)}KB</span>
               </span>
             ); })()}
