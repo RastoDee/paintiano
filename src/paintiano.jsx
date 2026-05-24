@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback, useMemo, memo, Fragment } fro
 // §1  CONSTANTS & MATH UTILITIES
 // ─────────────────────────────────────────────────────────────────────────────
 const PHI = 1.6180339887;
-const IMG_TARGET_MS = 120000; // image transcription is exactly 2:00 regardless of grid
+const IMG_TARGET_MS = 120000; // fallback duration only; real length now scales with image energy (~1:30–2:40)
 const CWIN = 55;
 const KB_WIN = 65;
 const DN = 25, DB = 16, DH = 26;
@@ -4318,9 +4318,21 @@ function pixelsToImageEvents(px,nc,nr,table){
   const BEAT=4;                                  // 4 cells per "beat" → downbeat feel
   const sal=evts.map(ev=>ev.n.reduce((a,n)=>a+(n.v||0),0)); // saliency = summed velocity
   const onsetSal=sal.filter((_,i)=>evts[i].n.length && evts[i]._playable!==false).slice().sort((a,b)=>a-b);
-  const lowSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length*0.28)]:0; // 28th pct
+  // Rest density scales GENTLY with the painting's energy — but never toward a
+  // dense "morse / telegraph" patter, which would break the floating ambient
+  // (Sigur Rós) feel. Even an energetic canvas keeps real space between notes;
+  // it just rests a little less than a calm one. The window is deliberately
+  // narrow (0.40 → 0.22): calm breathes more, busy breathes a touch less, but
+  // BOTH always breathe. Energy is expressed through fullness, brightness and
+  // sustain elsewhere — not through machine-gun onsets.
+  const restPct = 0.40 - 0.18*energy;            // calm→0.40, wild→0.22 (still spacious)
+  const lowSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length*Math.max(0.18,restPct))]:0;
   const medSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length/2)]:0;
+  // Allow up to two consecutive rests at any energy — long held silences are part
+  // of the ambient language and stop the line from ever turning into a steady tick.
+  const maxRestRun = 2;
   let sinceSound=0;                              // consecutive-rest guard
+  let lastSoundIdx=-99;                          // anti-telegraph: spacing of onsets
   for(let i=0;i<evts.length;i++){
     const ev=evts[i];
     if(!ev.n.length){ sinceSound++; continue; }
@@ -4328,21 +4340,31 @@ function pixelsToImageEvents(px,nc,nr,table){
     const isDownbeat=(i%BEAT)===0;
     const isBarStart=(i%BAR_EVENTS)===0;          // first beat of a bar = chord change
     const s=sal[i];
-    // Breath-rest: a dull, off-beat onset over a quiet stretch becomes a rest,
-    // but never two rests in a row and never on a downbeat — keeps the pulse.
-    if(!isDownbeat && s<=lowSal && sinceSound<1){
+    // Breath-rest: a quiet, off-beat onset over a calm stretch becomes a rest.
+    // Never on a downbeat (keeps the pulse); consecutive rests capped.
+    if(!isDownbeat && s<=lowSal && sinceSound<maxRestRun){
       ev._playable=false; ev._rest=true; sinceSound++; continue;
     }
-    sinceSound=0;
-    // Dynamics: bar-starts (where the harmony changes) get the strongest accent,
-    // other beats a lighter one, off-beats sit back. This makes the harmonic
-    // rhythm audible — the ear hears each chord change land on a strong beat.
+    // Anti-telegraph spacing: if the last several onsets were all immediately
+    // adjacent (no gaps), a quiet off-beat note is dropped to open space — this
+    // breaks up any run of identical-rhythm hits before it reads as a tick/morse.
+    if(!isDownbeat && (i-lastSoundIdx)===1 && s<=medSal && sinceSound<maxRestRun){
+      // only if the few preceding cells were also a solid run
+      let run=0; for(let b=i-1;b>=0&&b>i-5;b--){ if(evts[b].n.length&&evts[b]._playable!==false){run++;}else break; }
+      if(run>=4){ ev._playable=false; ev._rest=true; sinceSound++; continue; }
+    }
+    sinceSound=0; lastSoundIdx=i;
+    // Dynamics: gentle, wave-like swells rather than hard metric accents. A bar
+    // start lifts a little (you sense the harmony turn over) and weak off-beats
+    // ease back, but the contrast is kept SOFT so nothing punches out as a beat.
+    // Accent strength barely tracks energy (≤ +20%) — a vivid canvas feels a hair
+    // more shaped, never percussive. This keeps the pulse implied, not hammered.
+    const accentGain = 1 + 0.2*energy;            // very restrained
     let mul=1;
-    if(isBarStart) mul*=1.15;                     // bar downbeat — chord change (gentler)
-    else if(isDownbeat) mul*=1.06;                // other on-beats (gentler)
-    else if((i%BEAT)===2) mul*=1.04;              // secondary stress (the "and")
-    else mul*=0.9;                                // weak off-beats sit back
-    if(s>medSal) mul*=1.06; else mul*=0.96;       // salient cells a touch louder
+    if(isBarStart) mul*=1+0.08*accentGain;        // soft lift at the chord turn
+    else if(isDownbeat) mul*=1+0.03*accentGain;   // barely-there on-beat
+    else mul*=1-0.04*accentGain;                  // off-beats ease back gently
+    if(s>medSal) mul*=1.04; else mul*=0.97;       // salient cells a touch louder
     if(mul!==1){
       ev.n=ev.n.map(n=>({...n,v:Math.max(22,Math.min(120,Math.round((n.v||64)*mul)))}));
     }
@@ -4369,9 +4391,13 @@ function pixelsToImageEvents(px,nc,nr,table){
     const ev=evts[i];
     if(!ev.n.length||ev._playable===false) continue;
     const t=Math.max(0,Math.min(1,(texture[i]-texLo)/texRange)); // 0 smooth … 1 busy
-    // Smooth (t→0): 1.4× legato. Busy (t→1): 0.6× staccato. Linear between.
-    const artMul=1.4 - 0.8*t;
-    ev.n=ev.n.map(n=>({...n, durMs:Math.max(90, Math.round((n.durMs||250)*artMul))}));
+    // Articulation stays in the legato half throughout: smooth areas ring very
+    // long (1.5×), busy areas merely a little shorter (1.0×) — but NEVER short,
+    // detached staccato, which would clip notes into a dry tick/morse. Every note
+    // still overlaps its neighbour, so even detailed passages flow and shimmer
+    // rather than chatter — the connected, reverberant Sigur Rós surface.
+    const artMul=1.5 - 0.5*t;                     // 1.5× (smooth) … 1.0× (busy), always legato
+    ev.n=ev.n.map(n=>({...n, durMs:Math.max(140, Math.round((n.durMs||250)*artMul))}));
   }
   return evts;
 }
@@ -9045,10 +9071,10 @@ Composition rules:
           )}
         </div>
         <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:'.5rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
-          <span>{t('colorLabel')} · {t('styleLabel')}</span>
+          <span>{loadedSource==='image' ? t('colorLabel') : (t('colorLabel') + ' · ' + t('styleLabel'))}</span>
           <span style={{fontSize:'.7rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
         </button>
-        {style && STYLE_INSPIRED[style] && (
+        {loadedSource!=='image' && style && STYLE_INSPIRED[style] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:'.5rem',letterSpacing:'.12em',color:'rgba(230,222,196,.32)',fontStyle:'italic',textTransform:'none'}}>{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
         )}
         {stripOpen && (
@@ -9105,7 +9131,9 @@ Composition rules:
           {mode==='custom' && (
             <button onClick={()=>setShowPaletteEditor(true)} aria-label={t('editPalette')} title={t('editPalette')} className="pf-lift" style={{padding:'7px 12px',borderRadius:10,border:`1px solid ${PF.gold}`,background:'transparent',color:PF.gold,cursor:'pointer',fontFamily:'inherit',fontSize:'.6rem',letterSpacing:'.08em',alignSelf:'flex-start'}}>✏ {t('editPalette')}</button>
           )}
-          {/* Style */}
+          {/* Style — hidden in image mode: an artist re-paint makes no sense when
+              the source already IS a painting; only the colour reading matters there. */}
+          {loadedSource!=='image' && (
           <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,rowGap:6,flex:1}} title="painting style — tap again to deselect (mosaic default)">
               {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
@@ -9114,6 +9142,7 @@ Composition rules:
             </div>
             <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'.95rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
           </div>
+          )}
         </div>
         )}
       </div>
