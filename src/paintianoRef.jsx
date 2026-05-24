@@ -3789,6 +3789,45 @@ function pixelsToImageEvents(px,nc,nr,table){
     }
     mi=mj;
   }
+  // ─── Rhythmic phrasing pass (deterministic — driven by image content only) ──
+  // The raw scan emits a uniform 8th-note grid, which sounds mechanical. Without
+  // touching timing/index-stepping (the painting reveal depends on it), we shape
+  // DYNAMICS and ONSET DENSITY using each cell's saliency so a pulse and some
+  // breathing emerge:
+  //   • downbeats (every BEAT cells) are accented,
+  //   • weak off-beat onsets are softened,
+  //   • genuinely dull, non-downbeat onsets occasionally become short rests,
+  //     capped so the music never drops into silence.
+  // All choices come from pixel-derived saliency + position, so the result is
+  // fully deterministic (re-rendering the same image gives the same phrasing).
+  const BEAT=4;                                  // 4 cells per "beat" → downbeat feel
+  const sal=evts.map(ev=>ev.n.reduce((a,n)=>a+(n.v||0),0)); // saliency = summed velocity
+  const onsetSal=sal.filter((_,i)=>evts[i].n.length && evts[i]._playable!==false).slice().sort((a,b)=>a-b);
+  const lowSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length*0.28)]:0; // 28th pct
+  const medSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length/2)]:0;
+  let sinceSound=0;                              // consecutive-rest guard
+  for(let i=0;i<evts.length;i++){
+    const ev=evts[i];
+    if(!ev.n.length){ sinceSound++; continue; }
+    if(ev._playable===false){ continue; }        // merge-continuation: leave as held
+    const isDownbeat=(i%BEAT)===0;
+    const s=sal[i];
+    // Breath-rest: a dull, off-beat onset over a quiet stretch becomes a rest,
+    // but never two rests in a row and never on a downbeat — keeps the pulse.
+    if(!isDownbeat && s<=lowSal && sinceSound<1){
+      ev._playable=false; ev._rest=true; sinceSound++; continue;
+    }
+    sinceSound=0;
+    // Dynamics: accent downbeats, lift salient cells, soften weak off-beats.
+    let mul=1;
+    if(isDownbeat) mul*=1.18;                     // downbeat accent
+    else if((i%BEAT)===2) mul*=1.04;              // secondary stress (the "and")
+    else mul*=0.9;                                // weak off-beats sit back
+    if(s>medSal) mul*=1.06; else mul*=0.96;       // salient cells a touch louder
+    if(mul!==1){
+      ev.n=ev.n.map(n=>({...n,v:Math.max(22,Math.min(120,Math.round((n.v||64)*mul)))}));
+    }
+  }
   return evts;
 }
 

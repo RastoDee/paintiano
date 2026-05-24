@@ -3589,8 +3589,10 @@ function pixelsToImageEvents(px,nc,nr,table){
   // being buried in a single-note drone from 60-70% of the canvas.
   const hueHist=new Float32Array(36); // 10° bins, weighted by saturation
   let chSum=0,chN=0;
+  let lSum=0,lN=0;                       // overall image lightness (all pixels)
   for(const p of px){
     const[hh,ss,ll]=toHsl(p.r,p.g,p.b);
+    lSum+=ll; lN++;
     if(ll<6||ll>94||ss<10)continue;
     hueHist[Math.floor(hh/10)%36]+=ss;
     chSum+=ss*Math.min(ll,100-ll)/50; chN++;
@@ -3599,6 +3601,16 @@ function pixelsToImageEvents(px,nc,nr,table){
   for(let i=0;i<36;i++)if(hueHist[i]>bgMax){bgMax=hueHist[i];bgBin=i;}
   const bgHue=bgBin*10+5;
   const avgChroma=chN?chSum/chN:25;
+  // Overall brightness of the image (0..100). Used to gently normalize the
+  // pitch register: a very light painting (white ground) would otherwise play
+  // the WHOLE piece too high, a dark one too low. We shift octaves toward the
+  // middle by MOST of the deviation from mid-grey, but keep a small part so a
+  // light image still sounds a touch brighter than a dark one (jemný rozdiel).
+  const avgLight=lN?lSum/lN:50;          // mean lightness
+  // octaveShift in semitones: light image → shift down, dark → shift up. 70% of
+  // the deviation from 50% lightness is compensated; 30% of the brightness
+  // character is preserved. ~±0.7 octave max at the extremes.
+  const octaveShift = Math.round(-((avgLight-50)/50) * 0.7 * 8); // semitones
   // Saliency floor scales with the image's overall chroma so a vivid painting
   // doesn't get over-suppressed, but a monochrome one does.
   const salFloor=Math.max(28,avgChroma*0.85);
@@ -3620,12 +3632,29 @@ function pixelsToImageEvents(px,nc,nr,table){
       // muddy mid-grey, so the visual extremes are also the sonic extremes.
       const contrast = Math.abs(l - 50) * 2; // 0 (mid-grey) … 100 (black/white)
       const v = Math.round(45 + (contrast/100) * 50); // 45 … 95
-      return { m: midi, v, durMs: noteDur };
+      // Strong black dots become protected deep-bass notes: bass:true keeps them
+      // out of the melody and stops tightenChord from pulling them up, so they
+      // sound as occasional deep low tones under the chord (sparse, deliberate).
+      if (l < 12) return { m: midi, v, durMs: noteDur, bass:true };
+      return { m: Math.max(24,Math.min(96, midi+octaveShift)), v, durMs: noteDur };
     }
     // ── CHROMATIC PATH ──
     // Saturated pixels at near-black or near-white extremes contain little
     // visible colour information, so we drop them; the grayscale branch above
     // already covers achromatic value extremes.
+    // DARK COLORED PIXELS (the blended black dots): after downscaling, a black
+    // dot mixes with its bright surround into a dark *colored* pixel, so it
+    // never hits the grayscale branch. Catch it here: a genuinely dark pixel
+    // becomes a protected deep-bass note (kept in key via its hue's pitch
+    // class), so black dots are heard as low tones instead of being lifted up.
+    if (l < 22) {
+      let pcd=0,mind=Infinity;
+      table.forEach((th,ti)=>{const dd=Math.min(Math.abs(h-th),360-Math.abs(h-th));if(dd<mind){mind=dd;pcd=ti;}});
+      const oct = l < 10 ? 0 : 1;                    // very dark → C0 region, dark → C1
+      const midi=Math.max(21,(oct+1)*12+pcd);        // one octave deeper; keep on keyboard (A0=21)
+      const dv = Math.round(50 + (22-l)/22*40);      // darker → louder (50..90)
+      return { m:midi, v:dv, durMs:noteDur, bass:true };
+    }
     if (l < 6 || l > 94) return null;
     const dh=Math.min(Math.abs(h-bgHue),360-Math.abs(h-bgHue));
     const chroma=s*Math.min(l,100-l)/50; // 0..100
@@ -3646,7 +3675,7 @@ function pixelsToImageEvents(px,nc,nr,table){
     table.forEach((th,ti)=>{const d=Math.min(Math.abs(h-th),360-Math.abs(h-th));if(d<minD){minD=d;pc=ti;}});
     // Octave: lightness → register, compressed to 3..6
     const oct=Math.max(3,Math.min(6,3+Math.round((l-20)/72*3)));
-    const midi=(oct+1)*12+pc;
+    const midi=Math.max(24,Math.min(96,(oct+1)*12+pc+octaveShift)); // gentle whole-image normalization
     // Velocity: chroma drives dynamics. Background-hue cells are attenuated
     // so the non-background palette stays in foreground.
     let v = Math.round(38 + (chroma/100) * 68);
@@ -3701,12 +3730,29 @@ function pixelsToImageEvents(px,nc,nr,table){
   evts.forEach(ev=>ev.n.forEach(n=>pcCounts[n.m%12]++));
   const MAJOR_P=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
   const MINOR_P=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+  // Colour temperature → mood bias. Warm hues (reds/oranges/yellows, ~0–60° &
+  // ~330–360°) lean MAJOR/bright; cool hues (greens/cyans/blues/violets,
+  // ~120–270°) lean MINOR/darker. Computed from the saturation-weighted hue
+  // histogram built in the stats pass. We turn it into a gentle multiplier on
+  // the major-vs-minor correlation so the pitch evidence still leads and colour
+  // only tips genuinely ambiguous cases (keeps harmony sound, adds mood).
+  let warmW=0,coolW=0;
+  for(let b=0;b<36;b++){
+    const hue=b*10+5, w=hueHist[b];
+    if(hue<60||hue>=330) warmW+=w;            // red→yellow + magenta/pink
+    else if(hue>=120&&hue<270) coolW+=w;      // green→blue→violet
+  }
+  const tempTotal=warmW+coolW;
+  const warmth=tempTotal>0 ? (warmW-coolW)/tempTotal : 0; // -1 cool … +1 warm
+  const majBias=1+0.06*warmth;                // ≤±6% nudge — a tiebreaker, not an override
+  const minBias=1-0.06*warmth;
   let bestKey=0,bestModeIsMajor=true,bestCorr=-Infinity;
   for(let key=0;key<12;key++){
     for(const isMaj of[true,false]){
       const prof=isMaj?MAJOR_P:MINOR_P;
       let corr=0;
       for(let i=0;i<12;i++)corr+=pcCounts[(i+key)%12]*prof[i];
+      corr*=isMaj?majBias:minBias;             // colour-temperature mood tiebreaker
       if(corr>bestCorr){bestCorr=corr;bestKey=key;bestModeIsMajor=isMaj;}
     }
   }
@@ -3724,7 +3770,7 @@ function pixelsToImageEvents(px,nc,nr,table){
     if(notes.length<=1)return notes;
     const sorted=[...notes].sort((a,b)=>a.m-b.m);
     const anchor=sorted[Math.floor(sorted.length/2)].m;
-    return notes.map(n=>{let m=n.m;while(m>anchor+17)m-=12;while(m<anchor-17)m+=12;return{...n,m};});
+    return notes.map(n=>{if(n.bass)return n;let m=n.m;while(m>anchor+17)m-=12;while(m<anchor-17)m+=12;return{...n,m};});
   }
   function removeM2(notes){
     if(notes.length<=1)return notes;
@@ -3761,13 +3807,211 @@ function pixelsToImageEvents(px,nc,nr,table){
     if(!existing.has(fifthM))result.push({...root,m:fifthM,v:Math.round((root.v||64)*0.68)});
     return result;
   }
+  // ─── Harmonic progression (deterministic, per-bar) ─────────────────────────
+  // Static per-cell triads gave harmony no direction. Instead we lay a diatonic
+  // chord progression over the piece: the canvas is divided into BARS (a fixed
+  // run of events), and each bar is assigned a scale degree from a progression
+  // that fits the detected mode. Accompaniment in each event is then voiced
+  // toward THAT bar's chord, so the harmony actually moves (tension → release)
+  // across the painting instead of sitting in one place.
+  const BAR_EVENTS=16;                              // 16 cells ≈ one bar (4 beats × 4)
+  // Degree progressions (0-indexed scale degrees). Major: I–V–vi–IV (pop-classic,
+  // always lands well). Minor: i–VI–III–VII (natural-minor staple).
+  const PROG=bestModeIsMajor ? [0,4,5,3] : [0,5,2,6];
+  // Cadence: give the piece a sense of arrival. The LAST bar resolves to the
+  // tonic (I/i) and the bar before it sits on the dominant (V) — a V→I (or V→i)
+  // authentic cadence — so the music lands instead of just stopping mid-phrase.
+  const totalBars=Math.max(1, Math.ceil(evts.length / BAR_EVENTS));
+  function barChordPCs(barIdx){
+    let deg;
+    if(barIdx>=totalBars-1)      deg=0;             // final bar → tonic (resolve)
+    else if(barIdx===totalBars-2) deg=4;            // penultimate bar → dominant (V)
+    else                          deg=PROG[barIdx % PROG.length];
+    // Triad = scale degrees deg, deg+2, deg+4 (root/third/fifth within the scale)
+    return [scalePCs[deg%7], scalePCs[(deg+2)%7], scalePCs[(deg+4)%7]];
+  }
+  // Nearest MIDI of a given pitch-class to a reference note.
+  function nearestPc(pc, ref){
+    const base=Math.floor(ref/12)*12+pc;
+    const cands=[base-12,base,base+12];
+    return cands.reduce((a,b)=>Math.abs(b-ref)<Math.abs(a-ref)?b:a);
+  }
+  // Voice an event's accompaniment to the bar chord: keep up to 3 chord tones
+  // near the mid register, dropping non-chord tones to the nearest chord tone.
+  function voiceToBarChord(notes, barPCs){
+    if(notes.length===0) return notes;
+    const set=new Set(barPCs);
+    return notes.map(n=>{
+      const pc=((n.m%12)+12)%12;
+      if(set.has(pc)) return n;                      // already a chord tone
+      // snap to nearest chord-tone pitch class
+      let best=barPCs[0],bd=99;
+      for(const c of barPCs){const d=Math.min(Math.abs(pc-c),12-Math.abs(pc-c));if(d<bd){bd=d;best=c;}}
+      return {...n, m:nearestPc(best, n.m)};
+    });
+  }
   for(const ev of evts){
+    // Capture brightness BEFORE tighten/snap collapse the octave spread: the
+    // most-salient note's raw MIDI still reflects the source pixel's lightness.
+    if(ev.n.length){ ev._bright=[...ev.n].sort((a,b)=>(b.v||0)-(a.v||0))[0].m; }
     ev.n=ev.n.map(n=>({...n,m:snapToScale(n.m)}));
     ev.n=tightenChord(ev.n);
     ev.n=removeM2(ev.n);
     const seen=new Set();
     ev.n=ev.n.filter(n=>seen.has(n.m)?false:(seen.add(n.m),true));
-    ev.n=harmonizeToTriad(ev.n);
+  }
+  // ─── Melody extraction + progression voicing ───────────────────────────────
+  // For each event: the single most-salient (highest-velocity) note becomes the
+  // MELODY — lifted into a clear upper register, played at full strength, and
+  // kept diatonic. The remaining notes become quieter ACCOMPANIMENT voiced to
+  // the current bar's chord. This gives a foreground line the ear can follow,
+  // over moving harmony — the two biggest things plain scanning lacked.
+  const MEL_MIN=60;                                 // C4 — melody floor (lowered for a rounder, softer voice)
+  const MEL_MAX=76;                                 // E5 — melody ceiling
+  const MEL_SPAN=MEL_MAX-MEL_MIN;
+  // Brightness range across the image's melody-source notes — used to map each
+  // cell's brightness onto the melody register so the LINE TRACES THE IMAGE:
+  // bright regions push the tune up, dark regions pull it down. (A note's
+  // original octave was derived from pixel lightness upstream, so its raw MIDI
+  // is a faithful brightness proxy.)
+  let bMin=Infinity,bMax=-Infinity;
+  for(const ev of evts){ if(ev._bright==null) continue; if(ev._bright<bMin)bMin=ev._bright; if(ev._bright>bMax)bMax=ev._bright; }
+  if(!isFinite(bMin)){ bMin=0; bMax=1; }
+  const bRange=(bMax-bMin)||1;
+  let lastMel=null;                                 // mild smoothing of the contour
+  let repeatRun=0;                                  // consecutive same-pitch counter (anti-telegraph)
+  // Intensity reference: how "loud/dense" each event's source is, relative to the
+  // whole piece. Intense events (vivid, busy cells) will swell into FULL chords —
+  // root+third+fifth plus a doubled bass octave — for a strong, powerful sound;
+  // calm events stay sparse. Measured from summed source velocity.
+  const rawInt=evts.map(ev=>ev.n.reduce((a,n)=>a+(n.v||0),0));
+  const intSorted=rawInt.filter((_,i)=>evts[i].n.length).slice().sort((a,b)=>a-b);
+  const intLo=intSorted.length?intSorted[Math.floor(intSorted.length*0.3)]:0;
+  const intHi=intSorted.length?intSorted[Math.floor(intSorted.length*0.85)]:1;
+  const intRange=(intHi-intLo)||1;
+  for(let i=0;i<evts.length;i++){
+    const ev=evts[i];
+    if(!ev.n.length) continue;
+    const barPCs=barChordPCs(Math.floor(i/BAR_EVENTS));
+    // Pick melody = loudest note that ISN'T a protected bass note, so black-dot
+    // deep notes stay low. Fall back to loudest only if the cell is all-bass.
+    const sorted=[...ev.n].sort((a,b)=>(b.v||0)-(a.v||0));
+    const nonBass=sorted.filter(n=>!n.bass);
+    const melSrc=(nonBass.length?nonBass:sorted)[0];
+    let melPc=((melSrc.m%12)+12)%12;
+    // Target height from brightness: map this cell's brightness proxy into the
+    // melody band, so the melodic contour mirrors the painting's light/dark.
+    const bright=(((ev._bright!=null?ev._bright:melSrc.m))-bMin)/bRange; // 0 dark … 1 bright
+    const targetM=MEL_MIN + bright*MEL_SPAN;        // desired pitch height
+    // Place melPc at the octave whose pitch is nearest the brightness target,
+    // then blend lightly toward the previous note so the line is smooth but
+    // still clearly follows the image (70% contour, 30% smoothing).
+    let melM=melPc; while(melM<MEL_MIN) melM+=12; while(melM>MEL_MAX) melM-=12;
+    const aim = lastMel!=null ? (0.7*targetM + 0.3*lastMel) : targetM;
+    const cands=[melM-12,melM,melM+12].filter(m=>m>=MEL_MIN-12&&m<=MEL_MAX+12);
+    melM=cands.reduce((a,b)=>Math.abs(b-aim)<Math.abs(a-aim)?b:a);
+    melM=Math.max(MEL_MIN-12,Math.min(MEL_MAX+12,melM));
+    // Anti-repeat: a flat, uniform region maps every cell to the same pitch,
+    // which re-strikes one note rapidly (a "telegraph beep"). When the melody
+    // would repeat, walk to an adjacent SCALE tone instead, alternating up/down,
+    // so uniform areas become gentle stepwise motion rather than a stutter.
+    if(lastMel!=null && melM===lastMel){
+      repeatRun++;
+      // find scale-tone neighbours above and below within the melody band
+      const stepTone=(from,dir)=>{
+        let m=from+dir;
+        for(let g=0;g<12;g++,m+=dir){
+          const pc=((m%12)+12)%12;
+          if(scalePCs.includes(pc) && m>=MEL_MIN-12 && m<=MEL_MAX+12) return m;
+        }
+        return null;
+      };
+      const dir=(repeatRun%2===1)?1:-1;            // alternate direction each repeat
+      const alt=stepTone(melM,dir) ?? stepTone(melM,-dir);
+      if(alt!=null) melM=alt;
+      // Long fast repeats in the high register read as telegraph chatter. Every
+      // 3rd repeat, drop the melody onset entirely (a rest) so the line breathes.
+      if(repeatRun>=2 && (repeatRun%3===0)) ev._melRest=true;
+    } else {
+      repeatRun=0;
+    }
+    lastMel=melM;
+    const intensity=Math.max(0,Math.min(1,(rawInt[i]-intLo)/intRange)); // 0 calm … 1 intense
+    // All-dark cell (black dot, no colour): the melody source IS a bass note.
+    // Don't lift it into the treble — keep it deep where the pixel put it, the
+    // way the base version does. This is what stops black dots playing "high".
+    const melIsBass = !!melSrc.bass;
+    // Melody velocity: softer overall, and higher notes are softened MORE so the
+    // top register doesn't sound shrill/telegraph-like. At C5 ~full, by E6 ~-25%.
+    const heightFrac = Math.max(0, Math.min(1, (melM - MEL_MIN) / (MEL_SPAN||1)));
+    const melVel = Math.round((melSrc.v||80) * (0.92 - 0.25*heightFrac));
+    const melody = melIsBass
+      ? {...melSrc}                                   // keep its low pitch + velocity
+      : {...melSrc, m:melM, v:Math.max(48,Math.min(104,melVel))};
+    if(melIsBass){ lastMel=null; }                    // don't let it anchor the contour
+    // Accompaniment = the rest (minus the chosen melody note). Protected bass
+    // notes (black dots) are pulled OUT here so the chord voicing can't lift
+    // them up; they're re-added low at the end, fitting under the chord.
+    const rest=ev.n.filter(n=>n!==melSrc);
+    const bassNotes=rest.filter(n=>n.bass);
+    let accomp=voiceToBarChord(rest.filter(n=>!n.bass), barPCs);
+    // Seed the bar chord so harmony is always heard. On INTENSE events, seed the
+    // FULL triad (root+third+fifth) for a strong, full-bodied sound; on calmer
+    // ones, just root+fifth so they stay open and light.
+    const haveP=new Set(accomp.map(n=>((n.m%12)+12)%12));
+    const refLow=Math.min(melM-7, 64);
+    const seedPCs = intensity>0.5 ? [barPCs[0],barPCs[1],barPCs[2]] : [barPCs[0],barPCs[2]];
+    for(const pc of seedPCs){
+      if(!haveP.has(pc)){
+        accomp.push({...melSrc, m:nearestPc(pc, refLow), v:Math.max(30,Math.round((melSrc.v||64)*0.5))});
+        haveP.add(pc);
+      }
+    }
+    // Intense events get a DOUBLED BASS octave (root an octave down) for weight,
+    // and a wider voice cap so the chord fills out; calm events stay thin.
+    if(intensity>0.6){
+      const bassM=nearestPc(barPCs[0], 40);          // low root (~E2 region)
+      if(!accomp.some(n=>n.m===bassM)) accomp.push({...melSrc, m:bassM, v:Math.max(34,Math.round((melSrc.v||64)*0.55))});
+    }
+    const voiceCap = intensity>0.6 ? 5 : intensity>0.3 ? 3 : 2;
+    // Velocity swell: intense chords play louder overall (up to +22%).
+    const intGain = 1 + 0.12*intensity;              // gentler swell (was 0.22) — softer, rounder
+    // Keep accompaniment below the melody and dedup.
+    const seen=new Set();
+    const melActual=melody.m;
+    accomp=accomp
+      .map(n=>({...n, m:n.m>=melActual ? n.m-12 : n.m, v:Math.max(26,Math.min(100,Math.round((n.v||56)*0.78*intGain)))}))
+      .filter(n=>{const k=n.m; if(seen.has(k)||k<28)return false; seen.add(k); return true;})
+      .sort((a,b)=>b.m-a.m)                           // keep the fullest upper voices first
+      .slice(0,voiceCap);
+    // Re-add the protected black-dot bass: deep (C1–C2) on the bar root, at a
+    // velocity that sits UNDER the chord so it supports rather than dominates —
+    // sparse, deliberate low tones that fit the composition.
+    if(bassNotes.length){
+      const darkBassM = Math.max(21, 12 + ((barPCs[0]-0+12)%12)); // C0 octave (one deeper)
+      const bv = Math.round(Math.min(...bassNotes.map(n=>n.v||70)) * 0.7); // softer than source
+      if(!accomp.some(n=>n.m===darkBassM) && melActual!==darkBassM){
+        accomp.push({ m:darkBassM, v:Math.max(28,Math.min(80,bv)), durMs:noteDur });
+      }
+    }
+    ev.n = ev._melRest ? [...accomp] : [melody, ...accomp];
+    if(ev._melRest && ev.n.length===0) ev.n=[melody]; // never fully silent
+  }
+  // Final melodic resolution: land the last sounding note on the tonic so the
+  // V→I cadence completes melodically too (the ear hears "home"). We move the
+  // top voice of the last non-empty event to the nearest tonic pitch within the
+  // melody band, keeping its velocity.
+  for(let i=evts.length-1;i>=0;i--){
+    if(evts[i].n.length){
+      const tonicPc=scalePCs[0];
+      const mel=evts[i].n[0];
+      let tm=tonicPc; while(tm<MEL_MIN) tm+=12; while(tm>MEL_MAX) tm-=12;
+      // nearest tonic octave to where the melody currently is
+      const cands=[tm-12,tm,tm+12].filter(m=>m>=MEL_MIN-12&&m<=MEL_MAX+12);
+      tm=cands.reduce((a,b)=>Math.abs(b-mel.m)<Math.abs(a-mel.m)?b:a);
+      evts[i].n[0]={...mel, m:tm};
+      break;
+    }
   }
   // Merge identical consecutive chords for legato, capped at whole note
   const chordKey=ns=>ns.length?ns.map(n=>n.m).sort((a,b)=>a-b).join(','):'';
@@ -3788,6 +4032,75 @@ function pixelsToImageEvents(px,nc,nr,table){
       k+=groupLen;
     }
     mi=mj;
+  }
+  // ─── Rhythmic phrasing pass (deterministic — driven by image content only) ──
+  // The raw scan emits a uniform 8th-note grid, which sounds mechanical. Without
+  // touching timing/index-stepping (the painting reveal depends on it), we shape
+  // DYNAMICS and ONSET DENSITY using each cell's saliency so a pulse and some
+  // breathing emerge:
+  //   • downbeats (every BEAT cells) are accented,
+  //   • weak off-beat onsets are softened,
+  //   • genuinely dull, non-downbeat onsets occasionally become short rests,
+  //     capped so the music never drops into silence.
+  // All choices come from pixel-derived saliency + position, so the result is
+  // fully deterministic (re-rendering the same image gives the same phrasing).
+  const BEAT=4;                                  // 4 cells per "beat" → downbeat feel
+  const sal=evts.map(ev=>ev.n.reduce((a,n)=>a+(n.v||0),0)); // saliency = summed velocity
+  const onsetSal=sal.filter((_,i)=>evts[i].n.length && evts[i]._playable!==false).slice().sort((a,b)=>a-b);
+  const lowSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length*0.28)]:0; // 28th pct
+  const medSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length/2)]:0;
+  let sinceSound=0;                              // consecutive-rest guard
+  for(let i=0;i<evts.length;i++){
+    const ev=evts[i];
+    if(!ev.n.length){ sinceSound++; continue; }
+    if(ev._playable===false){ continue; }        // merge-continuation: leave as held
+    const isDownbeat=(i%BEAT)===0;
+    const isBarStart=(i%BAR_EVENTS)===0;          // first beat of a bar = chord change
+    const s=sal[i];
+    // Breath-rest: a dull, off-beat onset over a quiet stretch becomes a rest,
+    // but never two rests in a row and never on a downbeat — keeps the pulse.
+    if(!isDownbeat && s<=lowSal && sinceSound<1){
+      ev._playable=false; ev._rest=true; sinceSound++; continue;
+    }
+    sinceSound=0;
+    // Dynamics: bar-starts (where the harmony changes) get the strongest accent,
+    // other beats a lighter one, off-beats sit back. This makes the harmonic
+    // rhythm audible — the ear hears each chord change land on a strong beat.
+    let mul=1;
+    if(isBarStart) mul*=1.15;                     // bar downbeat — chord change (gentler)
+    else if(isDownbeat) mul*=1.06;                // other on-beats (gentler)
+    else if((i%BEAT)===2) mul*=1.04;              // secondary stress (the "and")
+    else mul*=0.9;                                // weak off-beats sit back
+    if(s>medSal) mul*=1.06; else mul*=0.96;       // salient cells a touch louder
+    if(mul!==1){
+      ev.n=ev.n.map(n=>({...n,v:Math.max(22,Math.min(120,Math.round((n.v||64)*mul)))}));
+    }
+  }
+  // ─── Articulation from texture (deterministic) ─────────────────────────────
+  // Smooth, uniform stretches of the image play LEGATO (longer, connected notes);
+  // busy, high-contrast stretches play STACCATO (short, detached). We measure
+  // local "busyness" as the average absolute change in saliency to neighbouring
+  // events, normalise it across the piece, and scale each note's durMs: calm
+  // areas breathe, detailed areas feel crisp and energetic.
+  const texture=evts.map((ev,i)=>{
+    if(!ev.n.length) return 0;
+    let d=0,c=0;
+    for(let k=Math.max(0,i-2);k<=Math.min(evts.length-1,i+2);k++){
+      if(k===i) continue; d+=Math.abs(sal[i]-sal[k]); c++;
+    }
+    return c?d/c:0;
+  });
+  const texSorted=texture.filter((_,i)=>evts[i].n.length).slice().sort((a,b)=>a-b);
+  const texLo=texSorted.length?texSorted[Math.floor(texSorted.length*0.2)]:0;
+  const texHi=texSorted.length?texSorted[Math.floor(texSorted.length*0.8)]:1;
+  const texRange=(texHi-texLo)||1;
+  for(let i=0;i<evts.length;i++){
+    const ev=evts[i];
+    if(!ev.n.length||ev._playable===false) continue;
+    const t=Math.max(0,Math.min(1,(texture[i]-texLo)/texRange)); // 0 smooth … 1 busy
+    // Smooth (t→0): 1.4× legato. Busy (t→1): 0.6× staccato. Linear between.
+    const artMul=1.4 - 0.8*t;
+    ev.n=ev.n.map(n=>({...n, durMs:Math.max(90, Math.round((n.durMs||250)*artMul))}));
   }
   return evts;
 }
@@ -6708,7 +7021,25 @@ export default function Paintiano() {
     // still a Compose/MIC draft, marked by draftOwnerRef. Treat that as a
     // creation (full clear), NOT a loaded source — otherwise Clear would keep
     // the chords and the painting would reappear on replay.
-    // For everything else (loaded MIDI/Score/Audio/Image/mood OR empty), do a
+    // IMAGE source: Clear should wipe only the painted/audio trace, NOT the
+    // loaded image — so it can replay without re-loading. Stop playback, reset
+    // to the start (disp/idx 0), invalidate the built-up painting cache, but
+    // keep the image, its pixel data and its chords intact.
+    if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
+      stopAll();
+      idxRef.current=0; sessionStart.current=0;
+      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
+      // Wipe the painted overlay to transparent so the clean original image
+      // shows underneath (option 1) — no dark fill, no φ-mosaic, no grid.
+      try{
+        const cv=canvasRef.current;
+        if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); }
+      }catch(_){}
+      setDisp(0); setStamp(s=>s+1);
+      return;
+    }
+    // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
     // full clear() too: it drops the loaded source and chords so the source tile
     // no longer shows as active when returning to setup. (Previously this branch
     // only blanked disp while keeping chords + loadedSource, which left the
@@ -6720,7 +7051,7 @@ export default function Paintiano() {
     singStashRef.current=null;listenStashRef.current=null;setHasMicDraft(false);
     composeStashRef.current=null;setHasComposeDraft(false);
     draftOwnerRef.current=null;
-  },[stopAll,clear,composeMode,micPainting,micListening]);
+  },[stopAll,clear,composeMode,micPainting,micListening,loadedSource]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -8807,7 +9138,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.6.8</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7</footer>
     </div>
   );
 }
