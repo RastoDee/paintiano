@@ -4152,7 +4152,7 @@ const I18N = {
     play:'▶ play', pause:'⏸ pause', resume:'▶ resume', mute:'mute audio', unmute:'unmute audio', randomOn:'random ON', randomOff:'random OFF',
     print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', switchConfirm:'clean canvas?', loop:'⟳ loop', undo:'↩',
     recArm:'⏺ rec', recStop:'⏹ rec…',
-    share:'share', save:'save', saving:'saving…', saved:'saved ✓',
+    share:'share', save:'save', saving:'saving…', saved:'saved ✓', scoreExport:'score',
     chordsPlay:'chords · tap to play',
     nameThisPiece:'name this piece…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · fast · share online',
@@ -4197,7 +4197,7 @@ const I18N = {
     play:'▶ spielen', pause:'⏸ pause', resume:'▶ weiter', mute:'ton aus', unmute:'ton an', randomOn:'zufall AN', randomOff:'zufall AUS',
     print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', switchConfirm:'leinwand leeren?', loop:'⟳ schleife', undo:'↩',
     recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
-    share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓',
+    share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓', scoreExport:'noten',
     chordsPlay:'akkorde · zum spielen tippen',
     nameThisPiece:'dieses stück benennen…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · schnell · online teilen',
@@ -4242,7 +4242,7 @@ const I18N = {
     play:'▶ jouer', pause:'⏸ pause', resume:'▶ reprendre', mute:'couper le son', unmute:'activer le son', randomOn:'aléatoire ON', randomOff:'aléatoire OFF',
     print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', switchConfirm:'vider la toile ?', loop:'⟳ boucle', undo:'↩',
     recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
-    share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓',
+    share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓', scoreExport:'partition',
     chordsPlay:'accords · appuyer pour jouer',
     nameThisPiece:'nommer cette pièce…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rapide · partager en ligne',
@@ -4287,7 +4287,7 @@ const I18N = {
     play:'▶ tocar', pause:'⏸ pausa', resume:'▶ continuar', mute:'silenciar', unmute:'activar sonido', randomOn:'aleatorio ON', randomOff:'aleatorio OFF',
     print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', switchConfirm:'¿limpiar lienzo?', loop:'⟳ bucle', undo:'↩',
     recArm:'⏺ grabar', recStop:'⏹ graba…',
-    share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓',
+    share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓', scoreExport:'partitura',
     chordsPlay:'acordes · pulsar para tocar',
     nameThisPiece:'nombrar esta pieza…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rápido · compartir en línea',
@@ -4332,7 +4332,7 @@ const I18N = {
     play:'▶ prehrať', pause:'⏸ pauza', resume:'▶ pokračovať', mute:'stlmiť zvuk', unmute:'zapnúť zvuk', randomOn:'náhoda ZAP', randomOff:'náhoda VYP',
     print:'🖨 tlačiť', clear:'vyčistiť', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', switchConfirm:'vyčistiť plátno?', loop:'⟳ slučka', undo:'↩',
     recArm:'⏺ nahrať', recStop:'⏹ nahr…',
-    share:'zdieľať', save:'uložiť', saving:'ukladám…', saved:'uložené ✓',
+    share:'zdieľať', save:'uložiť', saving:'ukladám…', saved:'uložené ✓', scoreExport:'noty',
     chordsPlay:'akordy · ťukni pre hranie',
     nameThisPiece:'pomenuj túto skladbu…',
     sizeWeb:'Web / Sociálne', sizeWebHint:'~4× · rýchle · zdieľať online',
@@ -4592,6 +4592,61 @@ function noteArr2events(notes,tempo){
   return groupToEvents(flat,msb);
 }
 function encodeMidi(events,tempo){const bpm=tempo||120,TPB=480,USPB=Math.round(60000000/bpm);function vl(v){const b=[v&0x7f];v>>=7;while(v>0){b.unshift((v&0x7f)|0x80);v>>=7;}return b;}function ms2t(ms){return Math.round(ms*TPB*bpm/60000);}const evts=[];events.forEach(ev=>ev.n.forEach(n=>{evts.push({t:ms2t(ev.startMs),on:true,m:n.m,v:n.v});evts.push({t:ms2t(ev.startMs+n.durMs),on:false,m:n.m});}));evts.sort((a,b)=>a.t-b.t||(a.on?1:-1));const track=[0,0xff,0x51,0x03,(USPB>>16)&0xff,(USPB>>8)&0xff,USPB&0xff];let prev=0;evts.forEach(ev=>{const d=ev.t-prev;prev=ev.t;track.push(...vl(d));track.push(ev.on?0x90:0x80,ev.m,ev.on?ev.v:0);});track.push(0,0xff,0x2f,0x00);const tl=track.length;return new Uint8Array([0x4d,0x54,0x68,0x64,0,0,0,6,0,0,0,1,(TPB>>8)&0xff,TPB&0xff,0x4d,0x54,0x72,0x6b,(tl>>24)&0xff,(tl>>16)&0xff,(tl>>8)&0xff,tl&0xff,...track]);}
+
+// ─── MusicXML export ───────────────────────────────────────────────────────
+// Build a printable score (MusicXML 3.1, partwise) from the same chord/event
+// data used for MIDI. Each event becomes one beat-quantized chord. Output opens
+// in MuseScore / Sibelius / Finale and can be printed or exported to PDF there.
+// Deliberately simple: single piano part, 4/4, durations quantized to the beat
+// grid; dense image pieces produce a long but valid score (user's choice).
+function encodeMusicXML(events,tempo,title){
+  const DIVISIONS=4;                 // divisions per quarter note (16th resolution)
+  const bpm=Math.max(40,Math.min(208,Math.round(tempo||96)));
+  const BEAT_MS=60000/bpm;
+  // Build a flat list of chords with quantized durations (in divisions).
+  const STEP=['C','C','D','D','E','F','F','G','G','A','A','B'];
+  const ALTER=[0,1,0,1,0,0,1,0,1,0,1,0];
+  function pitchXML(m){
+    const pc=((m%12)+12)%12, oct=Math.floor(m/12)-1;
+    const alt=ALTER[pc]?`<alter>1</alter>`:'';
+    return `<pitch><step>${STEP[pc]}</step>${alt}<octave>${oct}</octave></pitch>`;
+  }
+  // Quantize each event's duration to at least a 16th note, default from gap to
+  // the next event so the score's rhythm roughly tracks playback.
+  const rows=[];
+  for(let i=0;i<events.length;i++){
+    const ev=events[i]; if(!ev.n||!ev.n.length) continue;
+    const next=events[i+1];
+    const gapMs = next ? Math.max(60, next.startMs-ev.startMs) : (ev.n[0]?.durMs||BEAT_MS);
+    let divs=Math.max(1,Math.round((gapMs/BEAT_MS)*DIVISIONS));
+    divs=Math.min(divs, DIVISIONS*4);   // cap at a whole note
+    rows.push({notes:[...ev.n].sort((a,b)=>a.m-b.m), divs});
+  }
+  // Group rows into 4/4 measures (DIVISIONS*4 divisions each).
+  const MEASURE=DIVISIONS*4;
+  let body='', measureNo=1, fill=0, measureOpen=false;
+  const openMeasure=()=>{ body+=`<measure number="${measureNo}">`; if(measureNo===1){ body+=`<attributes><divisions>${DIVISIONS}</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>`; } measureOpen=true; };
+  const closeMeasure=()=>{ if(measureOpen){ body+=`</measure>`; measureNo++; fill=0; measureOpen=false; } };
+  openMeasure();
+  for(const row of rows){
+    let rem=row.divs;
+    while(rem>0){
+      if(fill>=MEASURE) closeMeasure(), openMeasure();
+      const take=Math.min(rem, MEASURE-fill);
+      row.notes.forEach((n,idx)=>{
+        const chordTag = idx>0 ? '<chord/>' : '';
+        body+=`<note>${chordTag}${pitchXML(n.m)}<duration>${take}</duration><type>${take>=DIVISIONS*2?'half':take>=DIVISIONS?'quarter':take>=DIVISIONS/2?'eighth':'16th'}</type></note>`;
+      });
+      fill+=take; rem-=take;
+    }
+  }
+  closeMeasure();
+  const safeTitle=(title||'Paintiano').replace(/[<>&]/g,'');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.1"><work><work-title>${safeTitle}</work-title></work><identification><encoding><software>Paintiano</software></encoding></identification><part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list><part id="P1">${body}</part></score-partwise>`;
+}
+
 
 
 
@@ -5715,6 +5770,7 @@ export default function Paintiano() {
   const [scoreName, setScoreName] = useState('');
   const [recordingName, setRecordingName] = useState('');
   const [audioShareMsg, setAudioShareMsg] = useState(null);
+  const [scoreMsg, setScoreMsg] = useState(null);   // MusicXML export status
   // Auto-dismiss share status after a few seconds
   useEffect(()=>{
     if(!audioShareMsg||audioShareMsg.tone==='wait')return;
@@ -8058,6 +8114,44 @@ Composition rules:
   //   2. showSaveFilePicker — Chrome/Edge desktop (native save dialog)
   //   3. Anchor <a download> click — Firefox / older browsers / fallback
   // Each method handles its own AbortError (user cancellation).
+  // Export the current piece as a MusicXML score (.musicxml) — opens in
+  // MuseScore/Sibelius/Finale for viewing, editing or printing to PDF. Works for
+  // any source (image, compose, MIDI…) since it reads the live `chords`.
+  const saveScore=useCallback(async()=>{
+    const src=chordsRef.current&&chordsRef.current.length?chordsRef.current:chords;
+    if(!src||!src.length){setScoreMsg({tone:'err',text:t('noNotesGeneric')});return;}
+    // Derive a tempo: image uses its fixed block timing (~125ms/chord ≈ tidy
+    // beat), others fall back to a pleasant default.
+    const tempoGuess = loadedSource==='image' ? 110 : 96;
+    const title=(compositionName||recordingName||'Paintiano').trim()||'Paintiano';
+    let xml;
+    try{ xml=encodeMusicXML(src,tempoGuess,title); }
+    catch(e){ setScoreMsg({tone:'err',text:'Score export failed'}); return; }
+    const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.musicxml';
+    const blob=new Blob([xml],{type:'application/vnd.recordare.musicxml+xml'});
+    const file=new File([blob],finalName,{type:blob.type});
+    setScoreMsg({tone:'wait',text:t('saving')});
+    if(navigator.share){
+      try{
+        const canTry=!navigator.canShare||navigator.canShare({files:[file]});
+        if(canTry){ await navigator.share({files:[file],title:'Paintiano score'}); setScoreMsg({tone:'ok',text:t('saved')}); return; }
+      }catch(e){ if(e?.name==='AbortError'){setScoreMsg({tone:'ok',text:'cancelled'});return;} }
+    }
+    if(window.showSaveFilePicker){
+      try{
+        const handle=await window.showSaveFilePicker({suggestedName:finalName,types:[{description:'MusicXML score',accept:{'application/xml':['.musicxml','.xml']}}]});
+        const w=await handle.createWritable(); await w.write(blob); await w.close();
+        setScoreMsg({tone:'ok',text:t('saved')}); return;
+      }catch(e){ if(e?.name==='AbortError'){setScoreMsg({tone:'ok',text:'cancelled'});return;} }
+    }
+    try{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=finalName; a.rel='noopener';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}},10000);
+      setScoreMsg({tone:'ok',text:'download started ✓'});
+    }catch(e){ setScoreMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')}); }
+  },[chords,loadedSource,compositionName,recordingName,t]);
   const shareRecording=async()=>{
     if(!recBlob)return;
     const ext=recName.split('.').pop()||'m4a';
@@ -8994,6 +9088,9 @@ Composition rules:
           <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
             {recording?t('recStop'):t('recArm')}
           </button>
+        )}
+        {viewMode==='image'&&chords.length>0&&!composeMode&&!micPainting&&!micListening&&(
+          <button className="pf-lift" onClick={saveScore} disabled={recording} title={recording?t('stopRecFirst'):t('scoreExport')} style={{padding:'8px 14px',background:'rgba(120,200,160,.12)',color:recording?'rgba(120,200,160,.25)':'rgba(150,225,185,.92)',border:'1px solid '+(recording?'rgba(120,200,160,.15)':'rgba(120,200,160,.45)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>♫ {t('scoreExport')}{scoreMsg?<span style={{marginLeft:6,fontSize:'.5rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)'}}>{scoreMsg.text}</span>:null}</button>
         )}
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
