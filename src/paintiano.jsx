@@ -3662,12 +3662,21 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode){
     // neutral swatch. table[] here is the palette's hues (built in loadImage).
     if (colorMode==='custom') {
       const CUSTOM_HUE_TOL=25;                       // "medium" strictness
+      const sats=table.__sats;
       if (s < 12) {
         // Achromatic pixel: only sounds if the palette has a neutral swatch.
         if (!(table.__hasNeutral)) return null;
       } else {
+        // Colour pixel: match only against COLOURED palette swatches — a grey
+        // swatch has a meaningless hue (toHsl returns 0), so without this an
+        // all-grey palette would accidentally pass red-ish pixels. With it, an
+        // all-grey palette plays only the image's greys, never its colours.
         let md=Infinity;
-        for (const th of table){ const d=Math.min(Math.abs(h-th),360-Math.abs(h-th)); if(d<md) md=d; }
+        for (let ti=0; ti<table.length; ti++){
+          if (sats && sats[ti] < 12) continue;        // skip neutral swatches
+          const th=table[ti], d=Math.min(Math.abs(h-th),360-Math.abs(h-th));
+          if(d<md) md=d;
+        }
         if (md > CUSTOM_HUE_TOL) return null;          // colour not in palette → silent
       }
     }
@@ -7961,12 +7970,14 @@ Composition rules:
           // Process pixels into events using the current mode's hue→pitch table.
           // B/W uses harmony's hue table — same music as harmony, but the canvas
           // renders monochrome because gc() returns greys in bw mode.
-          // In custom mode we also flag whether the palette contains any neutral
-          // (near-grey) swatch, so the Custom gate knows whether achromatic image
-          // pixels are allowed to sound at all.
+          // In custom mode we attach two extra hints for the Custom gate: the
+          // saturation of each swatch (so the gate can ignore the meaningless hue
+          // of grey swatches when matching colour pixels), and whether ANY swatch
+          // is neutral (so achromatic image pixels are allowed to sound).
           const hueTable = mode==='custom'
             ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
-                            { __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
+                            { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
+                              __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
             : (mode==='spectral'?SPEC_HUE:COF);
           const evts=pixelsToImageEvents(px,nc,nr,hueTable,mode);
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -8013,7 +8024,8 @@ Composition rules:
     const{nc,nr,px}=pixelRef.current;
     const hueTable = mode==='custom'
       ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
-                      { __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
+                      { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
+                        __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
       : (mode==='spectral'?SPEC_HUE:COF);
     const evts=pixelsToImageEvents(px,nc,nr,hueTable,mode);
     // Changing the colour mode re-transcribes the SAME painting through a new
@@ -8024,15 +8036,11 @@ Composition rules:
     // resume playback from that same index. Only when stopped do we reset to the
     // top (ready to play from the start in the new colour).
     if(playingRef.current){
-      const fromIdx=Math.min(dispRef.current||0, evts.length);
+      // Playback loop now reads chords live from chordsRef each step, so swapping
+      // in the re-transcribed notes is enough — the very next step plays the new
+      // colour's tones from the same position. No restart, no stutter.
       setChords(evts);chordsRef.current=evts;
       setStamp(s=>s+1);
-      resumeFromRef.current=fromIdx;
-      // Defer so the new chords settle into state before the loop restarts.
-      // Clear the start-debounce so this programmatic resume always goes through
-      // (the debounce only exists to swallow double touch+click on the Play button).
-      lastStartPlayRef.current=0;
-      setTimeout(()=>{ startPlayRef.current?.(); }, 0);
     }else if(holdPausedRef.current){
       // Paused mid-piece: swap in the new colour's notes but KEEP the position so
       // pressing Resume continues from where it was, now in the new tones. Don't
@@ -8043,7 +8051,8 @@ Composition rules:
       resumeFromRef.current=keep;
     }else{
       stopAll();
-      setChords(evts);setDisp(evts.length);
+      setChords(evts);chordsRef.current=evts;
+      setDisp(evts.length);
       idxRef.current=evts.length;setStamp(s=>s+1);
     }
   },[mode,viewMode,stopAll,activePalette]);
@@ -8155,7 +8164,11 @@ Composition rules:
       const effCols=Math.ceil(nc/colStep);
       const step=()=>{
         if(genRef.current!==gen)return;
-        if(i>=chords.length){setPlaying(false);setDisp(chords.length);return;}
+        // Read chords LIVE from the ref each step (not the captured local), so a
+        // colour change mid-playback that swaps in re-transcribed notes is heard
+        // immediately on the very next step — no restart needed, no stale copy.
+        const liveChords=chordsRef.current;
+        if(i>=liveChords.length){setPlaying(false);setDisp(liveChords.length);return;}
         // For chord i: compute band & column group, render colStep columns
         const band=Math.floor(i/effCols),cg=i%effCols,colStart=cg*colStep;
         if(ctx){
@@ -8170,14 +8183,14 @@ Composition rules:
           }
         }
         // Skip playback if this chord is a continuation of an identical run
-        if(chords[i]._playable!==false){
+        if(liveChords[i] && liveChords[i]._playable!==false){
           // Unmerged: 3× step interval → notes ring into next 2 chords for legato blend
           // Merged run: exact run length (held note up to whole)
-          const durMul=chords[i]._runLen||3;
+          const durMul=liveChords[i]._runLen||3;
           // Soften velocity for unmerged (overlapping notes can pile up, want gentle blend)
-          const velScale=chords[i]._runLen?1:0.75;
+          const velScale=liveChords[i]._runLen?1:0.75;
           try{
-            const notes=chords[i].n;
+            const notes=liveChords[i].n;
             const midis=notes.map(({m,v,durMs})=>{
               const scaledDur=Math.round(durMs*durMul/playbackSpeedRef.current);
               playNote(m,Math.round(v*velScale),scaledDur);
@@ -8196,7 +8209,7 @@ Composition rules:
             // the painting's colors as the image plays back.
             const wrap=kbScrollRef.current;
             if(wrap){
-              const xs=chords[i].n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
+              const xs=liveChords[i].n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
               if(xs.length){
                 const cx=xs.reduce((a,b)=>a+b,0)/xs.length;
                 const target=Math.max(0,cx - wrap.clientWidth/2 + 13);
@@ -9904,7 +9917,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7.6</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7.7</footer>
     </div>
   );
 }
