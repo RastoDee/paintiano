@@ -6518,6 +6518,16 @@ export default function Paintiano() {
     if(playing){
       wakeVisualizerRef.current?.();
       wakeHighlightRef.current?.();
+    }else{
+      // Playback ended (naturally or via pause). If a recording is in progress,
+      // finalize it now — the piece is over, so stop the recorder to flush the
+      // blob. Without this, a piece that finishes on its own leaves the recorder
+      // running and the eventual blob comes back empty ("recording too short").
+      const r=recorderRef.current;
+      if(r&&r.state!=='inactive'){
+        try{ r.requestData(); }catch(_){}
+        try{ r.stop(); }catch(_){}
+      }
     }
   },[playing]);
   useEffect(()=>{ dispRef.current=disp; },[disp]);
