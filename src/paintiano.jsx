@@ -8231,8 +8231,8 @@ Composition rules:
     let xml;
     try{ xml=encodeMusicXML(src,tempoGuess,title); }
     catch(e){ setScoreMsg({tone:'err',text:'Score export failed'}); return; }
-    const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.musicxml';
-    const blob=new Blob([xml],{type:'application/vnd.recordare.musicxml+xml'});
+    const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.xml';
+    const blob=new Blob([xml],{type:'application/xml'});
     // Open a share/save panel (same pattern as Print and the recording row) so
     // the user picks share-sheet → Save to Files, rather than a silent download.
     setScoreMsg(null);
@@ -8252,7 +8252,7 @@ Composition rules:
     }
     if(window.showSaveFilePicker){
       try{
-        const handle=await window.showSaveFilePicker({suggestedName:scoreFileName,types:[{description:'MusicXML score',accept:{'application/xml':['.musicxml','.xml']}}]});
+        const handle=await window.showSaveFilePicker({suggestedName:scoreFileName,types:[{description:'MusicXML score',accept:{'application/xml':['.xml','.musicxml']}}]});
         const w=await handle.createWritable(); await w.write(scoreBlob); await w.close();
         setScoreMsg({tone:'ok',text:t('saved')}); return;
       }catch(e){ if(e?.name==='AbortError'){setScoreMsg({tone:'ok',text:'cancelled'});return;} }
