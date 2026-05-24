@@ -3638,6 +3638,29 @@ function pixelsToImageEvents(px,nc,nr,table){
       if (l < 12) return { m: midi, v, durMs: noteDur, bass:true };
       return { m: Math.max(24,Math.min(96, midi+octaveShift)), v, durMs: noteDur };
     }
+    // ── BRIGHT NEAR-WHITE PATH ──
+    // Painted whites (Chagall's luminous figures against a cobalt field, a moon,
+    // snow, highlights) are rarely pure neutral — they carry a faint warm/cool
+    // tint, so s sits around 10–22 instead of under 10. The old code therefore
+    // sent them down the chromatic path, where their tiny chroma (l is high, so
+    // chroma = s·min(l,100-l)/50 is near zero) failed the saliency floor OR the
+    // l>94 cutoff dropped them entirely → a visually MARKANT white shape went
+    // silent or whisper-quiet. Treat a bright, lightly-tinted pixel as essentially
+    // white: a clear high note, voiced LOUD in proportion to its brightness, with
+    // pitch class still taken from its faint hue so it stays in key. This makes
+    // luminous whites read sonically as the bright accents they are.
+    if (l > 78 && s < 25) {
+      let pcw=0,mdw=Infinity;
+      table.forEach((th,ti)=>{const dd=Math.min(Math.abs(h-th),360-Math.abs(h-th));if(dd<mdw){mdw=dd;pcw=ti;}});
+      // High register: brighter → higher (C6 region), clearly above the mid chord.
+      const octw=Math.max(5,Math.min(7,5+Math.round((l-78)/22*2)));
+      const midiw=Math.max(24,Math.min(96,(octw+1)*12+pcw));
+      // Loud in proportion to brightness — a markant white speaks out. l 78→100
+      // maps to velocity ~72→104, so the brightest whites are among the strongest
+      // voices in the piece (matching their visual prominence).
+      const vw=Math.round(72 + (Math.min(100,l)-78)/22 * 32);
+      return { m:midiw, v:Math.max(60,Math.min(110,vw)), durMs:noteDur, white:true };
+    }
     // ── CHROMATIC PATH ──
     // Saturated pixels at near-black or near-white extremes contain little
     // visible colour information, so we drop them; the grayscale branch above
@@ -4108,12 +4131,22 @@ function pixelsToImageEvents(px,nc,nr,table){
     // Melody velocity: softer overall, and higher notes are softened MORE so the
     // raised top register soars and shimmers rather than turning shrill. The
     // stronger high-end roll-off (0.34) keeps the bright soaring notes airy and
-    // weightless — the floating top voice of ambient/post-rock.
+    // weightless — the floating top voice of ambient/post-rock. EXCEPTION: a white
+    // source (a markant luminous shape) keeps most of its strength and gets a
+    // higher floor, so a bright white reads as the prominent accent it is on the
+    // canvas rather than being rolled off into the haze.
+    // White is made MARKANT through CLARITY and SPACE, not loudness — a loud high
+    // note would be shrill (ucho-nelahodiaca). So a white melody keeps the same
+    // soft dynamic as any other note; what makes it stand out is the thinning of
+    // the chord beneath it and a longer ring (handled below). Velocity stays gentle.
     const heightFrac = Math.max(0, Math.min(1, (melM - MEL_MIN) / (MEL_SPAN||1)));
-    const melVel = Math.round((melSrc.v||80) * (0.90 - 0.34*heightFrac));
+    const isWhiteMel = !!melSrc.white;
+    const rollOff = 0.34;                             // same soft high-end roll-off for all
+    const melVel = Math.round((melSrc.v||80) * (0.90 - rollOff*heightFrac));
+    const melFloor = 48;
     const melody = melIsBass
       ? {...melSrc}                                   // keep its low pitch + velocity
-      : {...melSrc, m:melM, v:Math.max(48,Math.min(104,melVel)), bass:false};
+      : {...melSrc, m:melM, v:Math.max(melFloor,Math.min(96,melVel)), bass:false, white:isWhiteMel};
     if(melIsBass){ lastMel=null; }                    // don't let it anchor the contour
     // Accompaniment = the rest (minus the chosen melody note). Protected bass
     // notes (black dots) are pulled OUT here so the chord voicing can't lift
@@ -4185,6 +4218,23 @@ function pixelsToImageEvents(px,nc,nr,table){
       if(!accomp.some(n=>n.m===darkBassM) && melActual!==darkBassM){
         accomp.push({ m:darkBassM, v:Math.max(28,Math.min(80,bv)), durMs:noteDur, bass:true });
       }
+    }
+    // ── WHITE = CLARITY + SPACE ──────────────────────────────────────────────
+    // A markant white shape (Chagall's luminous figure on cobalt) should read as
+    // a clear, open, ringing tone that stands out by being UNCLUTTERED — not by
+    // being loud. So when the melody is white: thin the accompaniment hard (keep
+    // at most the single most-supportive low voice), drop any doubled/dense mid
+    // voices, and add ONE open perfect fifth below the melody for a bell-like,
+    // resonant halo. Pull accompaniment velocity down so the white note floats
+    // clearly above a quiet, open backing rather than inside a full chord.
+    if(isWhiteMel && !ev._melRest){
+      // keep only the lowest existing voice as a soft anchor, soften it
+      accomp.sort((a,b)=>a.m-b.m);
+      const anchor = accomp.length ? [{...accomp[0], v:Math.max(22,Math.round((accomp[0].v||50)*0.6))}] : [];
+      // open perfect fifth below the white melody → bell/halo, no dense thirds
+      const fifthM = melActual-7;
+      const halo = (fifthM>=40) ? [{ m:fifthM, v:Math.max(20,Math.round(melody.v*0.45)), durMs:noteDur, bass:false }] : [];
+      accomp = [...anchor, ...halo].filter(n=>n.m!==melActual);
     }
     ev.n = ev._melRest ? [...accomp] : [melody, ...accomp];
     if(ev._melRest && ev.n.length===0) ev.n=[melody]; // never fully silent
@@ -6274,7 +6324,13 @@ export default function Paintiano() {
   // composition is from MIDI / audio / score / image / mood. Mood-loaded
   // content is highlighted via the mood <select> dropdown value, not a picker
   // button. Compose / mic-painted content has no picker button to highlight.
-  const activeSource = loadedSource;
+  // IMAGE special case: Clear wipes the painted/audio trace (disp→0, playedOnce
+  // →false) but deliberately keeps loadedSource='image' so the picture can be
+  // replayed. In that cleared state the IMAGE tile should NOT read as the active
+  // source — there is nothing painted to return to — so going back to Setup
+  // shows a clean, unselected source row. It re-highlights as soon as the image
+  // plays again (disp>0 or playedOnce).
+  const activeSource = (loadedSource==='image' && disp===0 && !playedOnce) ? null : loadedSource;
   const composedModeRef = useRef(false);
   const [selectedChordIdx, setSelectedChordIdx] = useState(null); // chord.idx selected by tapping a block (compose / compose-pause) for targeted Undo
   const selectedChordIdxRef = useRef(null);
@@ -8935,7 +8991,7 @@ Composition rules:
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
           {loadedSource && (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}fullClear();setPickMode(loadedSource);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={t('newSource')+' '+t(loadedSource).replace(/[^\p{L}]/gu,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {t('newSource')} {t(loadedSource).replace(/[^\p{L}]/gu,'')}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(loadedSource);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={t('newSource')+' '+t(loadedSource).replace(/[^\p{L}]/gu,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {t('newSource')} {t(loadedSource).replace(/[^\p{L}]/gu,'')}</button>
           )}
           {/* New MOOD — opens an inline mood picker right over the canvas (no
               jump back to setup); picking one loads it immediately. */}
@@ -9677,7 +9733,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7.4</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7.5</footer>
     </div>
   );
 }
