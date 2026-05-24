@@ -3704,11 +3704,19 @@ function pixelsToImageEvents(px,nc,nr,table){
       // Collect notes from all COL_STEP columns in this group for a richer chord
       const notes=[];
       const seenM=new Set();
+      // Accumulate colour chroma (saturation × value spread) across this cell's
+      // pixels — a proxy for how emotionally "charged" / vivid this patch of the
+      // painting is. Used later to decide chord fullness (vivid → full triad with
+      // its mood-defining third; muted → open, airy voicing).
+      let cellChroma=0, cellChN=0;
       for(let sk=0;sk<COL_STEP;sk++){
         const col=cg*COL_STEP+sk; if(col>=nc) break;
         for(let j=0;j<CHORD_SIZE;j++){
           const row=band*CHORD_SIZE+j; if(row>=nr) break;
-          const n=pxToNote(row*nc+col);
+          const idx=row*nc+col;
+          const{r,g,b}=px[idx],[ ,ss,ll]=toHsl(r,g,b);
+          cellChroma += ss*Math.min(ll,100-ll)/50; cellChN++;
+          const n=pxToNote(idx);
           if(n&&!seenM.has(n.m)){seenM.add(n.m);notes.push(n);}
         }
       }
@@ -3720,7 +3728,7 @@ function pixelsToImageEvents(px,nc,nr,table){
           if(fallback&&!seenM.has(fallback.m)){seenM.add(fallback.m);notes.push(fallback);}
         }
       }
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,colStep:COL_STEP});
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0});
       evIdx++;
     }
   }
@@ -3818,6 +3826,15 @@ function pixelsToImageEvents(px,nc,nr,table){
   // Degree progressions (0-indexed scale degrees). Major: I–V–vi–IV (pop-classic,
   // always lands well). Minor: i–VI–III–VII (natural-minor staple).
   const PROG=bestModeIsMajor ? [0,4,5,3] : [0,5,2,6];
+  // Brightness-mapped chord palettes. A bar's chord is chosen from one of these
+  // by how light/dark that strip of the painting is, so the HARMONY MOVES WITH
+  // THE IMAGE instead of cycling one fixed loop. Light strips get bright, open
+  // chords (I/IV/V); shadowed strips get the darker, more introspective diatonic
+  // chords (vi/ii/iii). The base progression still seeds the choice (so motion
+  // stays directional and musical), then brightness shifts it toward bright or
+  // dark — a blend of "follows the painting" and "sounds like a real progression".
+  const BRIGHT_DEGREES = bestModeIsMajor ? [0,3,4] : [0,5,6];   // I, IV, V  /  i, VI, VII
+  const DARK_DEGREES   = bestModeIsMajor ? [5,1,2] : [2,3,1];   // vi, ii, iii / III, iv, ii°
   // Cadence: give the piece a sense of arrival. The LAST bar resolves to the
   // tonic (I/i) and the bar before it sits on the dominant (V) — a V→I (or V→i)
   // authentic cadence — so the music lands instead of just stopping mid-phrase.
@@ -3826,7 +3843,24 @@ function pixelsToImageEvents(px,nc,nr,table){
     let deg;
     if(barIdx>=totalBars-1)      deg=0;             // final bar → tonic (resolve)
     else if(barIdx===totalBars-2) deg=4;            // penultimate bar → dominant (V)
-    else                          deg=PROG[barIdx % PROG.length];
+    else {
+      // Base motion from the progression loop, then bend toward a bright or dark
+      // diatonic chord depending on this bar's brightness. The progression index
+      // keeps the harmonic rhythm directional; brightness picks WHICH colour of
+      // chord lands, so luminous and shadowed strips genuinely differ in mood.
+      const light=barLight[barIdx]!=null?barLight[barIdx]:0.5;  // 0 dark … 1 light
+      const baseDeg=PROG[barIdx % PROG.length];
+      if(light>0.62){
+        // luminous strip → bright chord; rotate through the bright set by position
+        deg=BRIGHT_DEGREES[barIdx % BRIGHT_DEGREES.length];
+      } else if(light<0.38){
+        // shadowed strip → darker chord
+        deg=DARK_DEGREES[barIdx % DARK_DEGREES.length];
+      } else {
+        // mid brightness → follow the natural progression (keeps it grounded)
+        deg=baseDeg;
+      }
+    }
     // Triad = scale degrees deg, deg+2, deg+4 (root/third/fifth within the scale)
     return [scalePCs[deg%7], scalePCs[(deg+2)%7], scalePCs[(deg+4)%7]];
   }
@@ -3860,6 +3894,39 @@ function pixelsToImageEvents(px,nc,nr,table){
     const seen=new Set();
     ev.n=ev.n.filter(n=>seen.has(n.m)?false:(seen.add(n.m),true));
   }
+  // ─── Per-bar brightness profile (harmony follows the painting) ──────────────
+  // The old progression cycled a fixed 4-chord loop (I–V–vi–IV) regardless of
+  // what the canvas was doing, so the harmony sounded the same start to finish.
+  // Instead, measure each bar's average brightness (from the _bright proxy) and
+  // its position in the overall light/dark range, so the chord chosen per bar can
+  // track whether THIS strip of the painting is luminous or shadowed.
+  const _barCount=Math.max(1, Math.ceil(evts.length / 16));
+  const barBright=new Array(_barCount).fill(0);
+  const barBN=new Array(_barCount).fill(0);
+  const barChroma=new Array(_barCount).fill(0);
+  const barCN=new Array(_barCount).fill(0);
+  for(let i=0;i<evts.length;i++){
+    const b=Math.floor(i/16);
+    if(evts[i]._bright!=null){ barBright[b]+=evts[i]._bright; barBN[b]++; }
+    if(evts[i]._chroma!=null){ barChroma[b]+=evts[i]._chroma; barCN[b]++; }
+  }
+  for(let b=0;b<_barCount;b++){
+    barBright[b]= barBN[b]? barBright[b]/barBN[b] : null;
+    barChroma[b]= barCN[b]? barChroma[b]/barCN[b] : 0;
+  }
+  // Normalize bar brightness to 0..1 across the bars that actually sounded, so
+  // "dark" and "light" are relative to THIS painting rather than absolute MIDI.
+  let _bbMin=Infinity,_bbMax=-Infinity;
+  for(const v of barBright){ if(v==null)continue; if(v<_bbMin)_bbMin=v; if(v>_bbMax)_bbMax=v; }
+  const _bbRange=(isFinite(_bbMin)&&_bbMax>_bbMin)?(_bbMax-_bbMin):1;
+  const barLight=barBright.map(v=> v==null?0.5 : Math.max(0,Math.min(1,(v-_bbMin)/_bbRange)));
+  // Normalize bar chroma the same way → 0 (muted/greyish strip) … 1 (most vivid
+  // strip in this painting). This is the "emotional charge" axis: vivid strips
+  // get full, mood-bearing chords; washed-out strips stay open and airy.
+  let _bcMax=-Infinity;
+  for(const v of barChroma){ if(v>_bcMax)_bcMax=v; }
+  const _bcRange=_bcMax>0?_bcMax:1;
+  const barVivid=barChroma.map(v=> Math.max(0,Math.min(1, v/_bcRange)));
   // ─── Melody extraction + progression voicing ───────────────────────────────
   // For each event: the single most-salient (highest-velocity) note becomes the
   // MELODY — lifted into a clear upper register, played at full strength, and
@@ -4018,10 +4085,23 @@ function pixelsToImageEvents(px,nc,nr,table){
     const rest=ev.n.filter(n=>n!==melSrc);
     const bassNotes=rest.filter(n=>n.bass);
     let accomp=voiceToBarChord(rest.filter(n=>!n.bass), barPCs);
-    // Seed the bar chord so harmony is always heard. On INTENSE events, seed the
-    // FULL triad (root+third+fifth) for a strong, full-bodied sound; on calmer
-    // ones, just root+fifth so they stay open and light.
+    // Seed the bar chord so harmony is always heard. Whether the mood-defining
+    // THIRD is included is what makes a patch sound bright/dark and full/airy —
+    // so we gate it on the painting's emotional charge HERE, not just loudness.
+    // A patch that is vivid (saturated colour), luminous, OR energetic earns the
+    // full triad (root+third+fifth) → a clear, emotionally-coloured chord. A
+    // muted, dim, washed-out patch keeps an open root+fifth → airy, neutral,
+    // suspended — the sonic equivalent of a faded or shadowed area. This ties
+    // chord colour directly to the aura of each strip of the image.
     const haveP=new Set(accomp.map(n=>((n.m%12)+12)%12));
+    const barIdxNow=Math.floor(i/BAR_EVENTS);
+    const vivid=barVivid[barIdxNow]!=null?barVivid[barIdxNow]:0.5;   // colour saturation of this strip
+    const light=barLight[barIdxNow]!=null?barLight[barIdxNow]:0.5;   // luminosity of this strip
+    // "Charged" = the strip carries real emotional colour: saturated, or bright,
+    // or busy. Any one of these brings the third in; only genuinely muted+dim+
+    // calm patches stay open. Dark bands always get the third (the lifted melody
+    // needs real harmony under it, not a hollow fifth).
+    const charged = allBass || vivid>0.42 || light>0.6 || intensity>0.5;
     // Reference register for seeded chord tones. In a dark band, anchor the
     // chord low-mid (~G3–C4) — a clear octave or more below the lifted high
     // melody — so three distinct layers emerge with air between them: deep pedal
@@ -4029,10 +4109,7 @@ function pixelsToImageEvents(px,nc,nr,table){
     // exactly what replaces the old single-octave mush with an open, resonant
     // sound. Elsewhere keep the original behaviour.
     const refLow = allBass ? Math.max(48, Math.min(55, melM-13)) : Math.min(melM-7, 64);
-    // In a dark band we always seed the FULL triad (root+third+fifth) in the
-    // mid register so the lifted melody sits over real harmony, not a hollow
-    // fifth — this is what turns the old rumble into an actual chord + tune.
-    const seedPCs = (allBass || intensity>0.5) ? [barPCs[0],barPCs[1],barPCs[2]] : [barPCs[0],barPCs[2]];
+    const seedPCs = charged ? [barPCs[0],barPCs[1],barPCs[2]] : [barPCs[0],barPCs[2]];
     for(const pc of seedPCs){
       if(!haveP.has(pc)){
         accomp.push({...melSrc, m:nearestPc(pc, refLow), v:Math.max(30,Math.round((melSrc.v||64)*0.5)), bass:false});
@@ -7783,6 +7860,9 @@ Composition rules:
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
+    // Score must not stay active during playback — close any open score-export
+    // (MusicXML share) panel so it can't be interacted with while playing.
+    setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
     if(viewModeRef.current==='image') setPlayedOnce(true);
     setSelectedChordIdx(null);selectedChordIdxRef.current=null;
 
@@ -8347,6 +8427,10 @@ Composition rules:
   // MuseScore/Sibelius/Finale for viewing, editing or printing to PDF. Works for
   // any source (image, compose, MIDI…) since it reads the live `chords`.
   const saveScore=useCallback(async()=>{
+    // Score export must not run during playback: the live chord index is moving
+    // and exporting mid-play could capture a partial/scrubbing state. The button
+    // is already disabled while playing; this guard covers any other entry path.
+    if(playingRef.current){ setScoreMsg({tone:'wait',text:t('exportNeedsPlay')}); return; }
     const src=chordsRef.current&&chordsRef.current.length?chordsRef.current:chords;
     if(!src||!src.length){setScoreMsg({tone:'err',text:t('noNotesGeneric')});return;}
     // Derive a tempo: image uses its fixed block timing (~125ms/chord ≈ tidy
@@ -9408,7 +9492,7 @@ Composition rules:
           </button>
         )}
         {viewMode==='image'&&chords.length>0&&!composeMode&&!micPainting&&!micListening&&(
-          <button className="pf-lift" onClick={saveScore} disabled={recording} title={recording?t('stopRecFirst'):t('scoreExport')} style={{padding:'8px 14px',background:'rgba(120,200,160,.12)',color:recording?'rgba(120,200,160,.25)':'rgba(150,225,185,.92)',border:'1px solid '+(recording?'rgba(120,200,160,.15)':'rgba(120,200,160,.45)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>♫ {t('scoreExport')}{scoreMsg?<span style={{marginLeft:6,fontSize:'.5rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)'}}>{scoreMsg.text}</span>:null}</button>
+          <button className="pf-lift" onClick={saveScore} disabled={recording||playing} title={recording?t('stopRecFirst'):playing?t('exportNeedsPlay'):t('scoreExport')} style={{padding:'8px 14px',background:'rgba(120,200,160,.12)',color:(recording||playing)?'rgba(120,200,160,.25)':'rgba(150,225,185,.92)',border:'1px solid '+((recording||playing)?'rgba(120,200,160,.15)':'rgba(120,200,160,.45)'),borderRadius:22,cursor:(recording||playing)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>♫ {t('scoreExport')}{scoreMsg?<span style={{marginLeft:6,fontSize:'.5rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)'}}>{scoreMsg.text}</span>:null}</button>
         )}
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
@@ -9553,7 +9637,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7.3</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7.4</footer>
     </div>
   );
 }
