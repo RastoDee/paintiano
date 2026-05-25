@@ -29,11 +29,16 @@ const PF_STYLE = `
         .pf-tool, .pf-morph, .pf-vary, .pf-lift { -webkit-tap-highlight-color:transparent; }
         .pf-tool:focus, .pf-tool:focus-visible { outline:none!important; }
         .pf-tool .pf-glyph { transition: transform .18s; display:inline-block; }
+        .pf-lift { transition: all .18s; }
+        .pf-chip { transition: all .18s; }
+        /* All hover affordances gated to real pointers. On touch screens :hover
+           "sticks" after a tap — which made SOURCE tiles (Score/Image) keep their
+           coloured glow as if active. (hover:hover) keeps lifts/glows for mouse
+           users only; touch taps no longer leave a tile stuck highlighted. */
+        @media (hover:hover) and (pointer:fine) {
         .pf-tool:hover { transform: translateY(-2px); }
         .pf-tool:hover .pf-glyph { transform: scale(1.2); }
-        .pf-lift { transition: all .18s; }
         .pf-lift:hover { transform: translateY(-1px); }
-        .pf-chip { transition: all .18s; }
         .pf-chip:hover { transform: translateY(-1px); }
         .pf-dice:hover { transform: rotate(20deg) translateY(-1px) !important; }
         .pf-midi:hover  { background:rgba(91,156,246,.12)!important; border-color:${PF.blue}!important; box-shadow:0 4px 16px rgba(91,156,246,.22); }
@@ -47,6 +52,7 @@ const PF_STYLE = `
         .pf-moodcta:hover { border-color:${PF.gold2}!important; transform: translateY(-1px); box-shadow:0 6px 24px rgba(240,192,64,.18); }
         .pf-tab:hover:not(.pf-tab-on) { background:${PF.card3}!important; color:${PF.cream}!important; }
         .pf-artist:hover:not(.pf-artist-on) { color:${PF.cream}!important; border-color:rgba(242,238,232,.25)!important; transform:translateY(-1px); }
+        }
         /* Mosaic while Shuffle is drawing an artist: stays muted/grey, no hover
            lift — it is NOT the active choice (the drawn style's outline is). */
         .pf-art-shuf, .pf-art-shuf:hover { color:${PF.muted}!important; border-color:rgba(242,238,232,.08)!important; transform:none!important; box-shadow:none!important; }
