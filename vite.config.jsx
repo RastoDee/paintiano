@@ -27,13 +27,26 @@ export default defineConfig({
       workbox: {
         // Embedded base64 samples push the JSX bundle above the default 2 MB precache limit
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+        // Precache only the static front-end build — never anything under /api.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        // Do NOT let the service worker intercept /api/* — those must reach the
-        // Vercel serverless function. Without this, the SW navigation fallback
-        // serves index.html (or 404) for /api/compose and the endpoint never runs.
+        globIgnores: ['**/api/**'],
+        // Keep navigation fallback away from /api so SPA fallback can't swallow it.
         navigateFallbackDenylist: [/^\/api\//],
-        // After first online fetch, CDN resources are cached and available offline
         runtimeCaching: [
+          {
+            // CRITICAL: force every /api/* request straight to the network.
+            // NetworkOnly means the service worker never caches or short-circuits
+            // these — POST /api/compose now reaches the Vercel function instead
+            // of getting a 404 from the SW. This is the fix for the 404.
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+            method: 'POST'
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+            method: 'GET'
+          },
           {
             urlPattern: /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/pdf\.js\/.*/,
             handler: 'CacheFirst',
