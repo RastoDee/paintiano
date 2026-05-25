@@ -7351,6 +7351,7 @@ export default function Paintiano() {
   const dispRef     = useRef(0);
   const handlePauseClickRef = useRef(null);
   const startPlayRef = useRef(null);
+  const aiComposeRef = useRef(null); // lets aiMoodFromText (declared earlier) call aiCompose for unknown moods
   const chordsRef   = useRef([]);
   const gridRef     = useRef(null);
   const gcRef       = useRef(null);
@@ -8370,7 +8371,17 @@ export default function Paintiano() {
   const aiMoodFromText=useCallback((raw)=>{
     const text=(raw||'').trim(); if(!text||working) return;
     const known=findSong(text.toLowerCase());
-    if(known){ aiMidi(text.toLowerCase()); return; }
+    if(known){ aiMidi(text.toLowerCase()); return; }   // one of the 15 crafted moods
+    // Unknown mood → compose it with Claude for the richest result. aiCompose is
+    // declared later, so we reach it through a ref. If the API is unavailable
+    // (no endpoint / offline / error), aiCompose itself falls back gracefully;
+    // but to be safe we also keep the offline generator as a hard fallback.
+    if(aiComposeRef.current){
+      setSongQ(text);
+      aiComposeRef.current(text);
+      return;
+    }
+    // Hard fallback: offline procedural generator (no network).
     const song=moodToSong(text);
     if(!song){ setErr(t('errs').songNotFound); return; }
     setSongQ(text);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');audioBlobRef.current=null;stopAll();
@@ -8435,9 +8446,27 @@ Composition rules:
       const bytes=encodeMidi(evts,parsed.tempo||120);
       setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
       setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
-    }catch(e){setErr(e.message||'Compose failed');setErrInfo(false);}
+    }catch(e){
+      // API unavailable (no endpoint / offline / error). Fall back to the offline
+      // procedural generator so the user still gets a piece for their mood.
+      const fb=moodToSong(title);
+      if(fb){
+        const fevts=noteArr2events(fb.notes,fb.tempo);
+        if(fevts.length){
+          setVarySource(fb);
+          applyEvents(fevts,fb.title);
+          const fbytes=encodeMidi(fevts,fb.tempo||100);
+          setMidiBlob(new Blob([fbytes],{type:'audio/midi'}));
+          setMidiName(fb.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
+          setErr('');setErrInfo(false);
+        } else { setErr(e.message||'Compose failed');setErrInfo(false); }
+      } else { setErr(e.message||'Compose failed');setErrInfo(false); }
+    }
     finally{setWorking(false);setWLabel('');setWPct(0);}
   },[songQ,busy,stopAll,applyEvents,wipeCanvasNow]);
+
+  // Bridge ref so aiMoodFromText (declared earlier) can invoke aiCompose.
+  useEffect(()=>{ aiComposeRef.current=aiCompose; },[aiCompose]);
 
 
 
