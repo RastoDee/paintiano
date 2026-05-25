@@ -1,12 +1,9 @@
 // Vercel serverless function: /api/compose
-// Proxies a Claude request server-side so the API key never reaches the browser
-// and CORS is not an issue. Place this file at: <project root>/api/compose.js
-//
-// Required: add an Environment Variable in Vercel named ANTHROPIC_API_KEY
-// (Project → Settings → Environment Variables), value = your Anthropic key.
+// Classic Node (req, res) handler — the standard signature Vercel's Node runtime
+// invokes for files in /api. Reads JSON via req.body, replies via res.status().
+// Requires Vercel env var: ANTHROPIC_API_KEY
 
 export default async function handler(req, res) {
-  // Only POST is allowed
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -19,8 +16,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    // The frontend sends { model, max_tokens, messages }
-    const { model, max_tokens, messages } = req.body || {};
+    // req.body may arrive parsed (object) or as a raw string depending on runtime.
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (_) { body = {}; }
+    }
+    if (!body || typeof body !== 'object') body = {};
+
+    const { model, max_tokens, messages } = body;
     if (!messages) {
       res.status(400).json({ error: 'Missing messages' });
       return;
@@ -41,10 +44,10 @@ export default async function handler(req, res) {
     });
 
     const text = await upstream.text();
-    // Pass through Anthropic's status + body verbatim so the client can read it
-    res.status(upstream.status).setHeader('Content-Type', 'application/json');
+    res.status(upstream.status);
+    res.setHeader('Content-Type', 'application/json');
     res.send(text);
   } catch (err) {
-    res.status(500).json({ error: String(err && err.message || err) });
+    res.status(500).json({ error: String((err && err.message) || err) });
   }
 }
