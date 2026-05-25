@@ -47,6 +47,9 @@ const PF_STYLE = `
         .pf-moodcta:hover { border-color:${PF.gold2}!important; transform: translateY(-1px); box-shadow:0 6px 24px rgba(240,192,64,.18); }
         .pf-tab:hover:not(.pf-tab-on) { background:${PF.card3}!important; color:${PF.cream}!important; }
         .pf-artist:hover:not(.pf-artist-on) { color:${PF.cream}!important; border-color:rgba(242,238,232,.25)!important; transform:translateY(-1px); }
+        /* Mosaic while Shuffle is drawing an artist: stays muted/grey, no hover
+           lift — it is NOT the active choice (the drawn style's outline is). */
+        .pf-art-shuf, .pf-art-shuf:hover { color:${PF.muted}!important; border-color:rgba(242,238,232,.08)!important; transform:none!important; box-shadow:none!important; }
         .pf-artist, .pf-dice { outline:none!important; -webkit-tap-highlight-color:transparent; }
         .pf-artist:focus, .pf-artist:focus-visible, .pf-dice:focus, .pf-dice:focus-visible { outline:none!important; box-shadow:none; }
         .pf-artist-on:focus, .pf-artist-on:focus-visible { box-shadow:0 3px 10px rgba(240,192,64,.3)!important; }
@@ -3307,9 +3310,18 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 }
 
-function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode){
+function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc){
   if(chordCount === 0) return;
   const ss = sessionSeed|0;
+  // Bauhaus palette tuned to the active colour scheme. Instead of one hard-coded
+  // set, we sample gc() across 8 pitches spread over the range, so Harmony yields
+  // a circle-of-fifths family, Spectral a chromatic rainbow, B/W a grey scale,
+  // and Custom the user's palette — "in the spirit of" the scheme, not per-note.
+  const palette = (()=>{
+    if(typeof gc !== 'function') return null;
+    const pitches=[60,64,67,71,74,77,55,48];   // spread across mid/low register
+    return pitches.map(m=>{ const c=gc(m,100); return Array.isArray(c)?`rgb(${c[0]},${c[1]},${c[2]})`:c; });
+  })();
   // ── PHASE CHOOSER: commit to ONE of Kandinsky's compositional modes ──
   // Stable from the session seed, re-rolls on Vary/Random (seed changes).
   //  A = Cosmic scatter (free composition: triangles, rings, diagonals, arcs,
@@ -3320,12 +3332,12 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode){
   const cr = _seedRnd(606, ss, 41, 97);
   cr(); cr(); // warm up — first xorshift output after reseed is poorly distributed
   const phase = cr() < 0.60 ? 'A' : 'B';
-  if(phase === 'B'){ kandinskyPhaseB(ctx, CW, CH, chordCount, ss, mode); return; }
-  kandinskyPhaseA(ctx, CW, CH, chordCount, ss, mode);
+  if(phase === 'B'){ kandinskyPhaseB(ctx, CW, CH, chordCount, ss, mode, palette); return; }
+  kandinskyPhaseA(ctx, CW, CH, chordCount, ss, mode, palette);
 }
 
 // ── Kandinsky phase A: the original free "cosmic scatter" composition. ──
-function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode){
+function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   const ss = sessionSeed|0;
   const isBW = mode==='bw';
 
@@ -3341,8 +3353,9 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode){
     return count;
   };
 
-  // Kandinsky palette -- always colored even in B/W mode (intentional)
-  const lineColors = [
+  // Kandinsky palette -- tuned to the active scheme when a palette is supplied
+  // (Harmony/Spectral/B-W/Custom); otherwise falls back to the classic fixed set.
+  const lineColors = palette || [
     'rgba(225, 60, 50, 0.92)',     // saturated red
     'rgba(240, 180, 30, 0.92)',    // golden yellow
     'rgba(40, 70, 200, 0.92)',     // saturated blue
@@ -3469,15 +3482,16 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode){
 // palette and seeded-rng discipline as phase A, but a structured composition
 // instead of a free scatter, so Vary/Random produces a genuinely different
 // Kandinsky rather than just reshuffled positions.
-function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode){
+function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   const ss = sessionSeed|0;
-  // Same palette as phase A (kept colored even in B/W, intentional for Kandinsky).
-  const lineColors = [
+  // Palette tuned to the active scheme when supplied (see drawKandinskyOverlay);
+  // otherwise the classic fixed Bauhaus set.
+  const lineColors = palette || [
     'rgba(225, 60, 50, 0.92)', 'rgba(240, 180, 30, 0.92)', 'rgba(40, 70, 200, 0.92)',
     'rgba(180, 60, 200, 0.90)', 'rgba(245, 238, 220, 0.90)', 'rgba(8, 4, 12, 0.92)',
     'rgba(50, 160, 80, 0.90)', 'rgba(240, 130, 40, 0.92)',
   ];
-  const fillColors = [
+  const fillColors = palette || [
     'rgba(225, 60, 50, 0.85)', 'rgba(240, 180, 30, 0.85)', 'rgba(40, 70, 200, 0.82)',
     'rgba(180, 60, 200, 0.80)', 'rgba(50, 160, 80, 0.80)', 'rgba(240, 130, 40, 0.85)',
   ];
@@ -3864,23 +3878,30 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode){
       if(corr>bestCorr){bestCorr=corr;bestKey=key;bestModeIsMajor=isMaj;}
     }
   }
-  // Scale choice depends on the COLOUR MODE so switching Harmony↔Spectral
-  // actually changes the mood. HARMONY/BW/CUSTOM keep the familiar major/minor
-  // diatonic — warm, resolved, song-like. SPECTRAL uses the WHOLE-TONE scale:
-  // six equal whole steps, no semitones, no leading tone, so it has no pull to a
-  // tonic at all — dreamy, weightless, shimmering (Debussy / spectral music). On
-  // the same painting this sounds unmistakably different from Harmony's grounded
-  // diatonic, not just a couple of swapped notes. Two transpositions exist; we
-  // pick the one anchored to the detected key so it still relates to the image.
+  // Scale choice depends on the COLOUR MODE. HARMONY/BW/CUSTOM keep the familiar
+  // major/minor diatonic — warm, resolved, song-like. SPECTRAL adapts to the
+  // painting's character so it's never harsh:
+  //   • a SOFT / PALE image (low saturation or high lightness) gets the MAJOR
+  //     PENTATONIC — five notes, no semitones and no tritones, so every
+  //     combination is gentle and consonant. No edge, no sourness on delicate
+  //     pastel washes where the whole-tone scale sounded unpleasant.
+  //   • a VIVID / DRAMATIC image keeps the WHOLE-TONE scale — dreamy, weightless,
+  //     unmistakably "spectral", which suits bold saturated paintings.
+  // Both still read clearly different from Harmony, but the soft case is now
+  // pretty instead of jarring.
   const MAJ_OFFSETS=[0,2,4,5,7,9,11];
   const MIN_OFFSETS=[0,2,3,5,7,8,10];
-  const WHOLE_OFFSETS=[0,2,4,6,8,10];            // whole-tone — dreamy, tonic-less, spectral
+  const WHOLE_OFFSETS=[0,2,4,6,8,10];            // whole-tone — dreamy, tonic-less (vivid images)
+  const PENTA_OFFSETS=[0,2,4,7,9];               // major pentatonic — always sweet (soft images)
   const isSpectral = colorMode==='spectral';
+  // "Soft/pale" = muted colour OR bright, delicate wash. Tuned so a saturated,
+  // mid-to-dark painting stays whole-tone while pastels switch to pentatonic.
+  const spectralSoft = isSpectral && (avgChroma < 32 || avgLight > 66);
   const baseOffsets = isSpectral
-    ? WHOLE_OFFSETS
+    ? (spectralSoft ? PENTA_OFFSETS : WHOLE_OFFSETS)
     : (bestModeIsMajor ? MAJ_OFFSETS : MIN_OFFSETS);
   const scalePCs=baseOffsets.map(o=>(o+bestKey)%12);
-  const SCALE_LEN=scalePCs.length;               // 7 for diatonic, 6 for whole-tone
+  const SCALE_LEN=scalePCs.length;               // 7 diatonic / 6 whole-tone / 5 pentatonic
   function snapToScale(midi){
     const oct=Math.floor(midi/12);
     let bestPC=scalePCs[0],bestD=99;
@@ -4506,9 +4527,9 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', newSource:'new',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', newSource:'new',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
-    editPalette:'edit palette', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all',
+    editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', morph:'✦ morph', vary:'✦ vary',
     moodNames:{funny:'funny',sad:'sad',aggressive:'aggressive',dreamy:'dreamy',love:'love',nostalgic:'nostalgic',calm:'calm',excited:'excited',crazy:'crazy',hopeful:'hopeful'},
     errs:{noNotesMidi:'No notes found in MIDI.',noNotesAudio:'No notes detected.',noNotesXml:'No playable notes in MusicXML.',noNotesGeneric:'No notes.',imgRead:'Could not read image.',imgDecode:'Could not decode image.',imgNoNotes:'Image produced no notes — try a more colorful image.',notXml:'Not a MusicXML score. Pick a .musicxml, .xml, or .mxl file (or a .mscz from MuseScore — those are .mxl underneath).',looksMidi:'That looks like a MIDI file. Use the ♬ midi button instead.',notInLibrary:'Not in library. Try ✦ AI to generate it.',nothingToPrint:'Nothing to print yet — load a song or image first.',songNotFound:'Song not found in library.',printEncode:'Print: could not encode image.',morphFail:'Could not morph.',varyFail:'Variation produced no notes.',samplesFallback:'Grand-piano samples could not load — falling back to a built-in synth. Audio still works, just less rich.'},
@@ -4519,7 +4540,7 @@ const I18N = {
     mic:'🎙 MIC', micActive:'🎙 LIVE',
     voicePreset:'🎤 voice', musicPreset:'🔊 music',
     play:'▶ play', pause:'⏸ pause', resume:'▶ resume', mute:'mute audio', unmute:'unmute audio', randomOn:'random ON', randomOff:'random OFF',
-    print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', switchConfirm:'clean canvas?', loop:'⟳ loop', undo:'↩',
+    print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', switchConfirm:'clean canvas?', loop:'⟳ loop', appChoseColour:'the app chose the colour reading', undo:'↩',
     recArm:'⏺ rec', recStop:'⏹ rec…',
     share:'share', save:'save', saving:'saving…', saved:'saved ✓', scoreExport:'score', scoreXmlHint:'opens in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exports the whole piece', exportScore:'score (xml)', exportScoreHint:'opens in MuseScore etc.', exportAudio:'audio', exportAudioHint:'plays & records the full piece', exportBoth:'both', exportBothHint:'score now, then records audio', exportNeedsPlay:'play first to export', rendering:'rendering audio…', renderFail:'audio render failed',
     chordsPlay:'chords · tap to play',
@@ -4551,9 +4572,9 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
-    editPalette:'palette bearbeiten', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen',
+    editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', morph:'✦ morph', vary:'✦ variieren',
     moodNames:{funny:'lustig',sad:'traurig',aggressive:'aggressiv',dreamy:'verträumt',love:'liebe',nostalgic:'nostalgisch',calm:'ruhig',excited:'aufgeregt',crazy:'verrückt',hopeful:'hoffnungsvoll'},
     errs:{noNotesMidi:'Keine Noten in der MIDI-Datei.',noNotesAudio:'Keine Noten erkannt.',noNotesXml:'Keine spielbaren Noten in MusicXML.',noNotesGeneric:'Keine Noten.',imgRead:'Bild konnte nicht gelesen werden.',imgDecode:'Bild konnte nicht dekodiert werden.',imgNoNotes:'Das Bild ergab keine Noten — versuche ein farbenfroheres Bild.',notXml:'Keine MusicXML-Partitur. Wähle eine .musicxml-, .xml- oder .mxl-Datei (oder eine .mscz von MuseScore — das sind .mxl darunter).',looksMidi:'Das sieht nach einer MIDI-Datei aus. Nutze stattdessen den ♬ MIDI-Knopf.',notInLibrary:'Nicht in der Bibliothek. Versuche ✦ KI zum Generieren.',nothingToPrint:'Noch nichts zum Drucken — lade zuerst einen Song oder ein Bild.',songNotFound:'Song nicht in der Bibliothek gefunden.',printEncode:'Druck: Bild konnte nicht kodiert werden.',morphFail:'Morphen fehlgeschlagen.',varyFail:'Variation ergab keine Noten.',samplesFallback:'Grand-Piano-Samples konnten nicht geladen werden — Wechsel zu einem eingebauten Synth. Audio funktioniert weiter, nur weniger reichhaltig.'},
@@ -4564,7 +4585,7 @@ const I18N = {
     mic:'🎙 MIKRO', micActive:'🎙 LIVE',
     voicePreset:'🎤 stimme', musicPreset:'🔊 musik',
     play:'▶ spielen', pause:'⏸ pause', resume:'▶ weiter', mute:'ton aus', unmute:'ton an', randomOn:'zufall AN', randomOff:'zufall AUS',
-    print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', switchConfirm:'leinwand leeren?', loop:'⟳ schleife', undo:'↩',
+    print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', switchConfirm:'leinwand leeren?', loop:'⟳ schleife', appChoseColour:'die App wählte die Farblesung', undo:'↩',
     recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
     share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓', scoreExport:'noten', scoreXmlHint:'öffnet in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportiert das ganze Stück', exportScore:'noten (xml)', exportScoreHint:'öffnet in MuseScore usw.', exportAudio:'audio', exportAudioHint:'spielt & nimmt das Stück auf', exportBoth:'beides', exportBothHint:'noten jetzt, dann audio', exportNeedsPlay:'zuerst abspielen', rendering:'audio wird erzeugt…', renderFail:'audio-erzeugung fehlgeschlagen',
     chordsPlay:'akkorde · zum spielen tippen',
@@ -4596,9 +4617,9 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
-    editPalette:'modifier la palette', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer',
+    editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', morph:'✦ morphe', vary:'✦ varier',
     moodNames:{funny:'drôle',sad:'triste',aggressive:'agressif',dreamy:'rêveur',love:'amour',nostalgic:'nostalgique',calm:'calme',excited:'excité',crazy:'fou',hopeful:"plein d'espoir"},
     errs:{noNotesMidi:'Aucune note dans le fichier MIDI.',noNotesAudio:'Aucune note détectée.',noNotesXml:'Aucune note jouable dans le MusicXML.',noNotesGeneric:'Aucune note.',imgRead:"Impossible de lire l'image.",imgDecode:"Impossible de décoder l'image.",imgNoNotes:"L'image n'a produit aucune note — essayez une image plus colorée.",notXml:'Pas une partition MusicXML. Choisissez un fichier .musicxml, .xml ou .mxl (ou un .mscz de MuseScore — ce sont des .mxl en dessous).',looksMidi:'Cela ressemble à un fichier MIDI. Utilisez plutôt le bouton ♬ MIDI.',notInLibrary:'Pas dans la bibliothèque. Essayez ✦ IA pour le générer.',nothingToPrint:"Rien à imprimer pour l'instant — chargez d'abord un morceau ou une image.",songNotFound:'Morceau introuvable dans la bibliothèque.',printEncode:"Impression : impossible d'encoder l'image.",morphFail:'Morphage impossible.',varyFail:'La variation n\'a produit aucune note.',samplesFallback:'Les échantillons de piano à queue n\'ont pas pu se charger — repli sur un synthé intégré. L\'audio fonctionne, juste moins riche.'},
@@ -4609,7 +4630,7 @@ const I18N = {
     mic:'🎙 MICRO', micActive:'🎙 LIVE',
     voicePreset:'🎤 voix', musicPreset:'🔊 musique',
     play:'▶ jouer', pause:'⏸ pause', resume:'▶ reprendre', mute:'couper le son', unmute:'activer le son', randomOn:'aléatoire ON', randomOff:'aléatoire OFF',
-    print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', switchConfirm:'vider la toile ?', loop:'⟳ boucle', undo:'↩',
+    print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', switchConfirm:'vider la toile ?', loop:'⟳ boucle', appChoseColour:"l'app a choisi la lecture couleur", undo:'↩',
     recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
     share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓', scoreExport:'partition', scoreXmlHint:'ouvre dans MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exporter', exportHint:'exporte tout le morceau', exportScore:'partition (xml)', exportScoreHint:'ouvre dans MuseScore etc.', exportAudio:'audio', exportAudioHint:'joue & enregistre le morceau', exportBoth:'les deux', exportBothHint:'partition puis audio', exportNeedsPlay:'jouez d\'abord', rendering:'rendu audio…', renderFail:'échec du rendu audio',
     chordsPlay:'accords · appuyer pour jouer',
@@ -4641,9 +4662,9 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
-    editPalette:'editar paleta', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo',
+    editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', morph:'✦ morfar', vary:'✦ variar',
     moodNames:{funny:'divertido',sad:'triste',aggressive:'agresivo',dreamy:'soñador',love:'amor',nostalgic:'nostálgico',calm:'tranquilo',excited:'emocionado',crazy:'loco',hopeful:'esperanzado'},
     errs:{noNotesMidi:'Sin notas en el archivo MIDI.',noNotesAudio:'No se detectaron notas.',noNotesXml:'Sin notas reproducibles en MusicXML.',noNotesGeneric:'Sin notas.',imgRead:'No se pudo leer la imagen.',imgDecode:'No se pudo decodificar la imagen.',imgNoNotes:'La imagen no produjo notas — prueba una imagen más colorida.',notXml:'No es una partitura MusicXML. Elige un archivo .musicxml, .xml o .mxl (o un .mscz de MuseScore — son .mxl por dentro).',looksMidi:'Eso parece un archivo MIDI. Usa el botón ♬ MIDI en su lugar.',notInLibrary:'No está en la biblioteca. Prueba ✦ IA para generarlo.',nothingToPrint:'Nada que imprimir aún — carga primero una canción o imagen.',songNotFound:'Canción no encontrada en la biblioteca.',printEncode:'Impresión: no se pudo codificar la imagen.',morphFail:'No se pudo transformar.',varyFail:'La variación no produjo notas.',samplesFallback:'No se pudieron cargar las muestras de piano de cola — se usa un sintetizador integrado. El audio sigue funcionando, solo menos rico.'},
@@ -4654,7 +4675,7 @@ const I18N = {
     mic:'🎙 MICRO', micActive:'🎙 EN VIVO',
     voicePreset:'🎤 voz', musicPreset:'🔊 música',
     play:'▶ tocar', pause:'⏸ pausa', resume:'▶ continuar', mute:'silenciar', unmute:'activar sonido', randomOn:'aleatorio ON', randomOff:'aleatorio OFF',
-    print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', switchConfirm:'¿limpiar lienzo?', loop:'⟳ bucle', undo:'↩',
+    print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', switchConfirm:'¿limpiar lienzo?', loop:'⟳ bucle', appChoseColour:'la app eligió la lectura de color', undo:'↩',
     recArm:'⏺ grabar', recStop:'⏹ graba…',
     share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓', scoreExport:'partitura', scoreXmlHint:'abre en MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exportar', exportHint:'exporta toda la pieza', exportScore:'partitura (xml)', exportScoreHint:'abre en MuseScore etc.', exportAudio:'audio', exportAudioHint:'reproduce y graba la pieza', exportBoth:'ambos', exportBothHint:'partitura y luego audio', exportNeedsPlay:'reproduce primero', rendering:'renderizando audio…', renderFail:'fallo al renderizar audio',
     chordsPlay:'acordes · pulsar para tocar',
@@ -4686,9 +4707,9 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
-    editPalette:'upraviť paletu', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť',
+    editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', morph:'✦ morf', vary:'✦ variácia',
     moodNames:{funny:'veselá',sad:'smutná',aggressive:'agresívna',dreamy:'snová',love:'láska',nostalgic:'nostalgická',calm:'pokojná',excited:'vzrušená',crazy:'šialená',hopeful:'nádejná'},
     errs:{noNotesMidi:'Žiadne noty v MIDI súbore.',noNotesAudio:'Nezistené žiadne noty.',noNotesXml:'Žiadne hrateľné noty v MusicXML.',noNotesGeneric:'Žiadne noty.',imgRead:'Obrázok sa nepodarilo načítať.',imgDecode:'Obrázok sa nepodarilo dekódovať.',imgNoNotes:'Obrázok nevytvoril žiadne noty — skús farebnejší obrázok.',notXml:'Nie je to partitúra MusicXML. Vyber súbor .musicxml, .xml alebo .mxl (alebo .mscz z MuseScore — tie sú vnútri .mxl).',looksMidi:'Vyzerá to ako MIDI súbor. Použi radšej tlačidlo ♬ MIDI.',notInLibrary:'Nie je v knižnici. Skús ✦ AI na vygenerovanie.',nothingToPrint:'Zatiaľ nie je čo tlačiť — najprv načítaj skladbu alebo obrázok.',songNotFound:'Skladba sa v knižnici nenašla.',printEncode:'Tlač: obrázok sa nepodarilo zakódovať.',morphFail:'Morfovanie zlyhalo.',varyFail:'Variácia nevytvorila žiadne noty.',samplesFallback:'Vzorky koncertného klavíra sa nepodarilo načítať — prepnutie na vstavaný syntetizátor. Zvuk funguje, len menej bohatý.'},
@@ -4699,7 +4720,7 @@ const I18N = {
     mic:'🎙 MIKRO', micActive:'🎙 LIVE',
     voicePreset:'🎤 hlas', musicPreset:'🔊 hudba',
     play:'▶ prehrať', pause:'⏸ pauza', resume:'▶ pokračovať', mute:'stlmiť zvuk', unmute:'zapnúť zvuk', randomOn:'náhoda ZAP', randomOff:'náhoda VYP',
-    print:'🖨 tlačiť', clear:'vyčistiť', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', switchConfirm:'vyčistiť plátno?', loop:'⟳ slučka', undo:'↩',
+    print:'🖨 tlačiť', clear:'vyčistiť', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', switchConfirm:'vyčistiť plátno?', loop:'⟳ slučka', appChoseColour:'farbu určila aplikácia', undo:'↩',
     recArm:'⏺ nahrať', recStop:'⏹ nahr…',
     share:'zdieľať', save:'uložiť', saving:'ukladám…', saved:'uložené ✓', scoreExport:'noty', scoreXmlHint:'otvorí v MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportuje celú skladbu', exportScore:'noty (xml)', exportScoreHint:'otvorí v MuseScore a pod.', exportAudio:'audio', exportAudioHint:'prehrá a nahrá celú skladbu', exportBoth:'oboje', exportBothHint:'noty hneď, potom audio', exportNeedsPlay:'najprv prehraj', rendering:'renderujem audio…', renderFail:'render audia zlyhal',
     chordsPlay:'akordy · ťukni pre hranie',
@@ -5171,12 +5192,12 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmony</strong> places the twelve pitch classes around the wheel in <em>Circle-of-Fifths</em> order. Notes a perfect fifth apart become hue neighbours; a piece in one key paints in a tight family of related colours.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> maps the same twelve in strict chromatic order at 30° steps — C is red, every semitone shifts one notch. A more literal "one colour per note", useful for picking out a melodic line.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Painting styles</h3>
-    <p style={{margin:'0 0 12px'}}>With nothing selected the canvas is the default <strong>mosaic</strong> — sharp φ-rectangles. Eight optional styles reinterpret the same notes:</p>
+    <p style={{margin:'0 0 12px'}}><strong>Mosaic</strong> is the default — sharp φ-rectangles, its own button at the start of the row. Eight optional styles reinterpret the same notes:</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubist</strong> (inspired by Picasso) — cubist planes; either angular analytic shards or a synthetic cut-paper collage.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Dots</strong> (inspired by Kusama) — polka dots on colour blocks, or an all-over dot-field that shimmers across a single tonal ground.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> (inspired by Pollock) — the mosaic stays visible under canvas-wide drip lines and splatter that ignore cell boundaries.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cosmic</strong> (inspired by Kandinsky) — a free cosmic scatter of triangles, rings and arcs, or an orderly Bauhaus grid.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> (inspired by Kandinsky) — geometric forms in the Bauhaus spirit: either a free composition of triangles, rings and arcs, or an orderly grid of coloured blocks.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Constellation</strong> (inspired by Miró) — dense dark Constellations, or a bright sparse field of a few bold shapes.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Grid</strong> (inspired by Mondrian) — De Stijl block grids, sparse late grids, or colour-track Boogie-Woogie.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Fields</strong> (inspired by Rothko) — soft stacked colour fields that bleed into one another.</li>
@@ -5188,14 +5209,9 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>The <strong style={{color:'rgba(255,210,140,.9)'}}>🎲 Random</strong> toggle by the style row opts out of that. <strong>With an artist selected</strong>, each fresh Play (or the <em>next ›</em> control) re-rolls that artist into a new variation — and most styles hold several distinct compositions, so re-rolling can change the whole structure, not just the colours.</p>
     <p style={{margin:'0 0 22px'}}><strong>With no artist selected</strong>, 🎲 becomes <strong>shuffle</strong>: every Play / next paints a different artist style at random. The drawn style shows a light outline in the row; tap it to keep it (and leave shuffle).</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Image transcription</h3>
-    <p style={{margin:'0 0 12px'}}>Drop in a painting and Paintiano reads it as a score. The image is downsampled to 192 × 120 pixels and walked left-to-right, top-to-bottom — 960 chord events across a fixed two-minute performance.</p>
-    <p style={{margin:'0 0 8px'}}>Each pixel becomes a note from its HSL colour:</p>
-    <ul style={{margin:'0 0 14px',paddingLeft:20}}>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Hue → pitch class</strong> — via the current mode's table.</li>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Lightness → octave</strong> — darker pixels lower, lighter higher.</li>
-      <li><strong style={{color:'rgba(210,160,255,.9)'}}>Chroma → velocity</strong> — vivid colours louder, muted softer.</li>
-    </ul>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>White, grey, and black</strong> are not silent — achromatic pixels play C, octave from lightness.</p>
+    <p style={{margin:'0 0 12px'}}>Drop in a painting and Paintiano reads it as a score. The image is downsampled to 192 × 120 pixels and walked left-to-right, top-to-bottom — 960 chord events. The performance length isn't fixed: it scales with the painting's energy (its colour, contrast and busyness), roughly 1½ to 2½ minutes, so calm images breathe and dense ones move.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>The app picks the reading for you.</strong> It measures how colourful the painting really is: a genuinely colourful work (a Chagall) is read in <strong>Color</strong> — hue → pitch class, lightness → octave, vividness → loudness. A near-monochrome one (a Guernica, an ink drawing, a sepia photo) is read in <strong>B/W</strong>, where a pixel's <em>lightness</em> alone drives pitch — dark low, light high, hue ignored. Color and B/W show which reading the app chose; you can't swap them, but you can tap the active chip to preview its colours.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> is the one reading you choose. It turns the palette into a filter: only colours close to one of your twelve swatches sound — everything else falls silent, so you can pull a single colour family out of the painting. Its default palette is the exact opposite of Harmony (complementary hues), so Custom always plays and contrasts immediately; recolour any swatch in the editor.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>The result is specific to the painting: not random, not literal, but a structured reading where the colour palette becomes a harmonic palette.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Compose &amp; MIC</h3>
     <p style={{margin:'0 0 12px'}}>Two ways to create from scratch. <strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> reveals an on-screen piano — tap or hold keys, longer holds make wider blocks. Hardware keyboard: A–K for white keys, W/E/T/Y/U for black. Backspace undoes the last chord, Enter toggles the keyboard, Space plays/pauses. Held chords are named live (C maj, A min…) in the readout.</p>
@@ -5210,16 +5226,16 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie</strong> ordnet die zwölf Tonklassen im <em>Quintenzirkel</em> um das Farbrad an. Töne im Quintabstand werden Farb-Nachbarn; ein Stück in einer Tonart malt in einer engen Familie verwandter Farben.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spektral</strong> bildet dieselben zwölf in streng chromatischer Reihenfolge in 30°-Schritten ab — C ist Rot, jeder Halbton verschiebt um eine Stufe. Wörtlicher „eine Farbe pro Note", gut zum Herausfiltern einer Melodielinie.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Malstile</h3>
-    <p style={{margin:'0 0 12px'}}>Ohne Auswahl ist die Leinwand das Standard-<strong>Mosaik</strong> — scharfe φ-Rechtecke. Acht optionale Stile deuten dieselben Noten neu:</p>
+    <p style={{margin:'0 0 12px'}}><strong>Mosaik</strong> ist der Standard — scharfe φ-Rechtecke, ein eigener Button am Anfang der Reihe. Acht optionale Stile deuten dieselben Noten neu:</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubismus</strong> (inspiriert von Picasso) — kubistische Flächen; entweder kantige analytische Splitter oder eine synthetische Scherenschnitt-Collage.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Punkte</strong> (inspiriert von Kusama) — Punkte auf Farbblöcken oder ein flächendeckendes, schimmerndes Punktfeld.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Tropfen</strong> (inspiriert von Pollock) — das Mosaik bleibt sichtbar unter leinwandweiten Tropflinien und Spritzern, die Zellgrenzen ignorieren.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kosmisch</strong> (inspiriert von Kandinsky) — eine freie kosmische Streuung aus Dreiecken, Ringen und Bögen, oder ein geordnetes Bauhaus-Raster.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> (inspiriert von Pollock) — das Mosaik bleibt sichtbar unter leinwandweiten Tropflinien und Spritzern, die Zellgrenzen ignorieren.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> (inspiriert von Kandinsky) — geometrische Formen im Bauhaus-Geist: entweder eine freie Komposition aus Dreiecken, Ringen und Bögen, oder ein geordnetes Raster farbiger Blöcke.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Konstellation</strong> (inspiriert von Miró) — dichte dunkle Konstellationen oder ein helles, sparsames Feld weniger kräftiger Formen.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Raster</strong> (inspiriert von Mondrian) — De-Stijl-Blockraster, sparsame Spätraster oder Boogie-Woogie-Farbspuren.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Farbfelder</strong> (inspiriert von Rothko) — weiche gestapelte Farbfelder, die ineinander verlaufen.</li>
-      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Scherenschnitt</strong> (inspiriert von Matisse) — verschachtelte Farbpaneele oder eine große freie Scherenschnitt-Collage.</li>
+      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> (inspiriert von Matisse) — verschachtelte Farbpaneele oder eine große freie Scherenschnitt-Collage.</li>
     </ul>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Aktiven Stil erneut antippen für die Rückkehr zum Mosaik. Stile sind keine Filter — jeder ist eine andere Antwort auf „Wie sieht diese Musik aus?"</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>Determinismus &amp; 🎲 Zufall</h3>
@@ -5227,14 +5243,9 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Der Schalter <strong style={{color:'rgba(255,210,140,.9)'}}>🎲 Zufall</strong> neben der Stilzeile hebt das auf. <strong>Mit ausgewähltem Künstler</strong> würfelt jedes frische Play (oder die Taste <em>weiter ›</em>) diesen Stil in eine neue Variation — und die meisten Stile besitzen mehrere eigenständige Kompositionen, sodass ein Neu-Würfeln die ganze Struktur ändern kann, nicht nur die Farben.</p>
     <p style={{margin:'0 0 22px'}}><strong>Ohne ausgewählten Künstler</strong> wird 🎲 zum <strong>Mischen</strong>: jedes Play / weiter malt einen zufällig anderen Künstlerstil. Der gezogene Stil zeigt eine helle Umrandung in der Zeile; antippen, um ihn zu behalten (und das Mischen zu verlassen).</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Bildtranskription</h3>
-    <p style={{margin:'0 0 12px'}}>Lade ein Gemälde, und Paintiano liest es als Partitur. Das Bild wird auf 192 × 120 Pixel verkleinert und von links nach rechts, oben nach unten abgetastet — 960 Akkordereignisse über eine feste, zweiminütige Wiedergabe.</p>
-    <p style={{margin:'0 0 8px'}}>Jeder Pixel wird aus seiner HSL-Farbe zur Note:</p>
-    <ul style={{margin:'0 0 14px',paddingLeft:20}}>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Farbton → Tonklasse</strong> — über die Tabelle des aktuellen Modus.</li>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Helligkeit → Oktave</strong> — dunklere Pixel tiefer, hellere höher.</li>
-      <li><strong style={{color:'rgba(210,160,255,.9)'}}>Chroma → Lautstärke</strong> — lebhafte Farben lauter, gedämpfte leiser.</li>
-    </ul>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Weiß, Grau und Schwarz</strong> sind nicht still — achromatische Pixel spielen C, Oktave aus der Helligkeit.</p>
+    <p style={{margin:'0 0 12px'}}>Lade ein Gemälde, und Paintiano liest es als Partitur. Das Bild wird auf 192 × 120 Pixel verkleinert und von links nach rechts, oben nach unten abgetastet — 960 Akkordereignisse. Die Dauer ist nicht fest: sie skaliert mit der Energie des Bildes (Farbe, Kontrast, Geschäftigkeit), etwa 1½ bis 2½ Minuten — ruhige Bilder atmen, dichte bewegen sich.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Die App wählt die Lesart für dich.</strong> Sie misst, wie farbig das Gemälde wirklich ist: ein echt farbiges Werk (ein Chagall) wird in <strong>Color</strong> gelesen — Farbton → Tonklasse, Helligkeit → Oktave, Lebhaftigkeit → Lautstärke. Ein fast monochromes (ein Guernica, eine Tuschezeichnung, ein Sepia-Foto) wird in <strong>B/W</strong> gelesen, wo allein die <em>Helligkeit</em> eines Pixels die Tonhöhe bestimmt — dunkel tief, hell hoch, Farbton ignoriert. Color und B/W zeigen, welche Lesart die App gewählt hat; tauschen kannst du sie nicht, aber ein Tippen auf das aktive Feld zeigt eine Farbvorschau.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> ist die Lesart, die du wählst. Sie macht die Palette zum Filter: nur Farben nahe einem deiner zwölf Felder klingen — alles andere verstummt, sodass du eine einzelne Farbfamilie aus dem Bild ziehen kannst. Die Standardpalette ist das exakte Gegenteil von Harmonie (Komplementärfarben), sodass Custom immer klingt und sofort kontrastiert; färbe jedes Feld im Editor um.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Das Ergebnis ist spezifisch für das Gemälde: nicht zufällig, nicht wörtlich, sondern eine strukturierte Lesart, in der die Farbpalette zur harmonischen Palette wird.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Komponieren &amp; MIKRO</h3>
     <p style={{margin:'0 0 12px'}}>Zwei Wege, von Grund auf neu zu erschaffen. <strong style={{color:'rgba(201,168,76,.95)'}}>Komponieren</strong> öffnet ein Bildschirmklavier — antippen oder halten, längeres Halten erzeugt breitere Blöcke. Hardware-Tastatur: A–K für weiße Tasten, W/E/T/Y/U für schwarze. Rücktaste macht den letzten Akkord rückgängig, Enter blendet die Tastatur ein/aus, Leertaste spielt/pausiert. Gehaltene Akkorde werden live benannt (C-Dur, a-Moll…).</p>
@@ -5249,16 +5260,16 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie</strong> place les douze classes de hauteur autour de la roue dans l'ordre du <em>cercle des quintes</em>. Les notes à une quinte deviennent voisines en teinte ; un morceau dans une tonalité peint dans une famille resserrée de couleurs proches.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> mappe les douze en ordre chromatique strict par pas de 30° — Do est rouge, chaque demi-ton décale d'un cran. Plus littéral, « une couleur par note », utile pour suivre une ligne mélodique.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Styles picturaux</h3>
-    <p style={{margin:'0 0 12px'}}>Sans sélection, la toile est la <strong>mosaïque</strong> par défaut — des rectangles φ nets. Huit styles optionnels réinterprètent les mêmes notes :</p>
+    <p style={{margin:'0 0 12px'}}>La <strong>mosaïque</strong> est le réglage par défaut — des rectangles φ nets, avec son propre bouton en tête de ligne. Huit styles optionnels réinterprètent les mêmes notes :</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubiste</strong> (inspiré par Picasso) — plans cubistes ; soit des éclats analytiques anguleux, soit un collage synthétique de papiers découpés.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Pois</strong> (inspiré par Kusama) — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Coulure</strong> (inspiré par Pollock) — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cosmique</strong> (inspiré par Kandinsky) — une dispersion cosmique libre de triangles, cercles et arcs, ou une grille Bauhaus ordonnée.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> (inspiré par Pollock) — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> (inspiré par Kandinsky) — des formes géométriques dans l'esprit Bauhaus : soit une composition libre de triangles, cercles et arcs, soit une grille ordonnée de blocs colorés.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Constellation</strong> (inspiré par Miró) — denses Constellations sombres, ou un champ clair et épuré de quelques formes franches.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Grille</strong> (inspiré par Mondrian) — grilles De Stijl, grilles tardives épurées, ou pistes de couleur Boogie-Woogie.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Champs</strong> (inspiré par Rothko) — champs de couleur empilés et fondus l'un dans l'autre.</li>
-      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Découpage</strong> (inspiré par Matisse) — panneaux de couleur imbriqués, ou un grand collage de papiers découpés.</li>
+      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> (inspiré par Matisse) — panneaux de couleur imbriqués, ou un grand collage de papiers découpés.</li>
     </ul>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Appuyer à nouveau sur le style actif pour revenir à la mosaïque. Les styles ne sont pas des filtres — chacun répond autrement à « à quoi ressemble cette musique ? »</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>Déterminisme &amp; 🎲 Aléatoire</h3>
@@ -5266,14 +5277,9 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Le bouton <strong style={{color:'rgba(255,210,140,.9)'}}>🎲 Aléatoire</strong> près de la ligne de styles permet d'y déroger. <strong>Avec un artiste sélectionné</strong>, chaque nouvelle Lecture (ou la commande <em>suivant ›</em>) relance ce style en une nouvelle variation — et la plupart des styles renferment plusieurs compositions distinctes, si bien qu'une relance peut changer toute la structure, pas seulement les couleurs.</p>
     <p style={{margin:'0 0 22px'}}><strong>Sans artiste sélectionné</strong>, 🎲 devient un <strong>mélange</strong> : chaque Lecture / suivant peint un style d'artiste différent au hasard. Le style tiré apparaît avec un contour clair dans la ligne ; appuyez dessus pour le conserver (et quitter le mélange).</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Transcription d'image</h3>
-    <p style={{margin:'0 0 12px'}}>Déposez une peinture et Paintiano la lit comme une partition. L'image est réduite à 192 × 120 pixels, parcourue de gauche à droite, de haut en bas — 960 événements d'accords sur une performance fixe de deux minutes.</p>
-    <p style={{margin:'0 0 8px'}}>Chaque pixel devient une note à partir de sa couleur HSL :</p>
-    <ul style={{margin:'0 0 14px',paddingLeft:20}}>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Teinte → classe de hauteur</strong> — via la table du mode actuel.</li>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Luminosité → octave</strong> — pixels sombres plus graves, clairs plus aigus.</li>
-      <li><strong style={{color:'rgba(210,160,255,.9)'}}>Chroma → vélocité</strong> — couleurs vives plus fortes, ternes plus douces.</li>
-    </ul>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Le blanc, le gris et le noir</strong> ne sont pas silencieux — les pixels achromatiques jouent Do, l'octave venant de la luminosité.</p>
+    <p style={{margin:'0 0 12px'}}>Déposez une peinture et Paintiano la lit comme une partition. L'image est réduite à 192 × 120 pixels, parcourue de gauche à droite, de haut en bas — 960 événements d'accords. La durée n'est pas fixe : elle varie avec l'énergie de l'image (couleur, contraste, densité), environ 1½ à 2½ minutes — les images calmes respirent, les denses bougent.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>L'app choisit la lecture pour vous.</strong> Elle mesure à quel point la peinture est vraiment colorée : une œuvre franchement colorée (un Chagall) se lit en <strong>Color</strong> — teinte → hauteur, luminosité → octave, vivacité → volume. Une œuvre quasi monochrome (un Guernica, un dessin à l'encre, une photo sépia) se lit en <strong>B/W</strong>, où seule la <em>luminosité</em> du pixel donne la hauteur — sombre grave, clair aigu, teinte ignorée. Color et B/W indiquent la lecture choisie ; vous ne pouvez pas les permuter, mais toucher la puce active affiche un aperçu de ses couleurs.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> est la lecture que vous choisissez. Elle transforme la palette en filtre : seules les couleurs proches d'une de vos douze cases sonnent — tout le reste se tait, ce qui permet d'extraire une seule famille de couleurs de la peinture. Sa palette par défaut est l'exact opposé d'Harmony (teintes complémentaires), donc Custom joue toujours et contraste aussitôt ; recolorez chaque case dans l'éditeur.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Le résultat est propre à la peinture : ni aléatoire, ni littéral, mais une lecture structurée où la palette de couleurs devient une palette harmonique.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Composer &amp; MICRO</h3>
     <p style={{margin:'0 0 12px'}}>Deux façons de créer de toutes pièces. <strong style={{color:'rgba(201,168,76,.95)'}}>Composer</strong> révèle un piano à l'écran — appuyer ou maintenir les touches, un maintien plus long produit des blocs plus larges. Clavier physique : A–K touches blanches, W/E/T/Y/U noires. Retour arrière annule le dernier accord, Entrée affiche/masque le clavier, Espace lit/met en pause. Les accords maintenus sont nommés en direct (Do maj, La min…).</p>
@@ -5288,16 +5294,16 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Armonía</strong> coloca las doce clases de altura alrededor de la rueda en orden del <em>círculo de quintas</em>. Las notas a una quinta se vuelven vecinas de tono; una pieza en una tonalidad pinta en una familia estrecha de colores afines.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Espectral</strong> mapea las mismas doce en orden cromático estricto a pasos de 30° — Do es rojo, cada semitono desplaza un paso. Más literal, «un color por nota», útil para seguir una línea melódica.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Estilos pictóricos</h3>
-    <p style={{margin:'0 0 12px'}}>Sin selección, el lienzo es el <strong>mosaico</strong> por defecto — rectángulos φ nítidos. Ocho estilos opcionales reinterpretan las mismas notas:</p>
+    <p style={{margin:'0 0 12px'}}>El <strong>mosaico</strong> es el modo por defecto — rectángulos φ nítidos, con su propio botón al inicio de la fila. Ocho estilos opcionales reinterpretan las mismas notas:</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubista</strong> (inspirado en Picasso) — planos cubistas; o esquirlas analíticas angulosas, o un collage sintético de papel recortado.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Lunares</strong> (inspirado en Kusama) — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Goteo</strong> (inspirado en Pollock) — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cósmico</strong> (inspirado en Kandinsky) — una dispersión cósmica libre de triángulos, anillos y arcos, o una cuadrícula Bauhaus ordenada.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> (inspirado en Pollock) — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> (inspirado en Kandinsky) — formas geométricas al estilo Bauhaus: o una composición libre de triángulos, anillos y arcos, o una cuadrícula ordenada de bloques de color.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Constelación</strong> (inspirado en Miró) — densas Constelaciones oscuras, o un campo claro y disperso de unas pocas formas rotundas.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cuadrícula</strong> (inspirado en Mondrian) — cuadrículas De Stijl, cuadrículas tardías dispersas, o pistas de color Boogie-Woogie.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Campos</strong> (inspirado en Rothko) — campos de color apilados que se funden entre sí.</li>
-      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Recorte</strong> (inspirado en Matisse) — paneles de color anidados, o un gran collage de papel recortado.</li>
+      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> (inspirado en Matisse) — paneles de color anidados, o un gran collage de papel recortado.</li>
     </ul>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Toca el estilo activo de nuevo para volver al mosaico. Los estilos no son filtros — cada uno responde distinto a «¿a qué se parece esta música?»</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>Determinismo &amp; 🎲 Aleatorio</h3>
@@ -5305,14 +5311,9 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>El botón <strong style={{color:'rgba(255,210,140,.9)'}}>🎲 Aleatorio</strong> junto a la fila de estilos permite salirse de eso. <strong>Con un artista seleccionado</strong>, cada Tocar nuevo (o el control <em>siguiente ›</em>) relanza ese estilo en una variación nueva — y la mayoría de los estilos contienen varias composiciones distintas, así que relanzar puede cambiar toda la estructura, no solo los colores.</p>
     <p style={{margin:'0 0 22px'}}><strong>Sin artista seleccionado</strong>, 🎲 se vuelve <strong>mezcla</strong>: cada Tocar / siguiente pinta un estilo de artista distinto al azar. El estilo elegido muestra un contorno claro en la fila; tócalo para conservarlo (y salir de la mezcla).</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Transcripción de imagen</h3>
-    <p style={{margin:'0 0 12px'}}>Carga una pintura y Paintiano la lee como partitura. La imagen se reduce a 192 × 120 píxeles y se recorre de izquierda a derecha, de arriba abajo — 960 eventos de acordes en una interpretación fija de dos minutos.</p>
-    <p style={{margin:'0 0 8px'}}>Cada píxel se vuelve nota a partir de su color HSL:</p>
-    <ul style={{margin:'0 0 14px',paddingLeft:20}}>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Tono → clase de altura</strong> — según la tabla del modo actual.</li>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Luminosidad → octava</strong> — píxeles oscuros más graves, claros más agudos.</li>
-      <li><strong style={{color:'rgba(210,160,255,.9)'}}>Croma → velocidad</strong> — colores vivos más fuertes, apagados más suaves.</li>
-    </ul>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Blanco, gris y negro</strong> no son silencio — los píxeles acromáticos tocan Do, con la octava según la luminosidad.</p>
+    <p style={{margin:'0 0 12px'}}>Carga una pintura y Paintiano la lee como partitura. La imagen se reduce a 192 × 120 píxeles y se recorre de izquierda a derecha, de arriba abajo — 960 eventos de acordes. La duración no es fija: escala con la energía de la imagen (color, contraste, densidad), aproximadamente 1½ a 2½ minutos — las imágenes calmas respiran, las densas se mueven.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>La app elige la lectura por ti.</strong> Mide cuán colorida es realmente la pintura: una obra genuinamente colorida (un Chagall) se lee en <strong>Color</strong> — tono → clase de altura, luminosidad → octava, viveza → volumen. Una casi monocroma (un Guernica, un dibujo a tinta, una foto sepia) se lee en <strong>B/W</strong>, donde solo la <em>luminosidad</em> del píxel marca la altura — oscuro grave, claro agudo, tono ignorado. Color y B/W muestran qué lectura eligió la app; no puedes intercambiarlas, pero al tocar la activa ves una vista previa de sus colores.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> es la lectura que eliges tú. Convierte la paleta en filtro: solo suenan los colores cercanos a una de tus doce casillas — todo lo demás enmudece, así extraes una sola familia de colores de la pintura. Su paleta por defecto es el opuesto exacto de Harmony (tonos complementarios), así que Custom siempre suena y contrasta enseguida; recolorea cualquier casilla en el editor.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>El resultado es específico de la pintura: ni aleatorio, ni literal, sino una lectura estructurada donde la paleta de colores se vuelve paleta armónica.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Componer &amp; MICRO</h3>
     <p style={{margin:'0 0 12px'}}>Dos formas de crear desde cero. <strong style={{color:'rgba(201,168,76,.95)'}}>Componer</strong> muestra un piano en pantalla — toca o mantén las teclas, mantener más tiempo produce bloques más anchos. Teclado físico: A–K teclas blancas, W/E/T/Y/U negras. Retroceso deshace el último acorde, Enter muestra/oculta el teclado, Espacio reproduce/pausa. Los acordes mantenidos se nombran en vivo (Do may, La min…).</p>
@@ -5327,16 +5328,16 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Harmónia</strong> rozmiestňuje dvanásť tónov okolo kruhu v poradí <em>Kvintového kruhu</em>. Tóny vzdialené o čistú kvintu sa stávajú farebnými susedmi; skladba v jednej tónine sa namaľuje v tesnej rodine príbuzných farieb.</p>
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spektrum</strong> mapuje tých istých dvanásť v striktnom chromatickom poradí v krokoch 30° — C je červené, každý poltón posunie o jeden krok. Doslovnejšie „jedna farba na tón", užitočné pre sledovanie melodickej línie.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Maliarske štýly</h3>
-    <p style={{margin:'0 0 12px'}}>Bez výberu je plátno predvolená <strong>mozaika</strong> — ostré φ-obdĺžniky. Osem voliteľných štýlov interpretuje tie isté noty inak:</p>
+    <p style={{margin:'0 0 12px'}}><strong>Mozaika</strong> je predvolený režim — ostré φ-obdĺžniky, vlastné tlačidlo na začiatku riadku. Osem voliteľných štýlov interpretuje tie isté noty inak:</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubizmus</strong> (inšpirované Picassom) — kubistické plochy; buď hranaté analytické úlomky, alebo syntetická koláž z vystrihovaného papiera.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Bodky</strong> (inšpirované Kusamou) — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kvapky</strong> (inšpirované Pollockom) — mozaika zostáva viditeľná pod kvapkajúcimi líniami a striekancami, ktoré ignorujú hranice buniek.</li>
-      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kozmické</strong> (inšpirované Kandinským) — voľný kozmický rozptyl trojuholníkov, prstencov a oblúkov, alebo usporiadaná Bauhaus mriežka.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> (inšpirované Pollockom) — mozaika zostáva viditeľná pod kvapkajúcimi líniami a striekancami, ktoré ignorujú hranice buniek.</li>
+      <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> (inšpirované Kandinským) — geometrické tvary v duchu Bauhausu: buď voľná kompozícia trojuholníkov, prstencov a oblúkov, alebo usporiadaná mriežka farebných blokov.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Súhvezdie</strong> (inšpirované Mirom) — husté tmavé Konštelácie, alebo svetlé riedke pole zopár výrazných tvarov.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Mriežka</strong> (inšpirované Mondrianom) — De Stijl blokové mriežky, riedke neskoré mriežky, alebo farebné dráhy Boogie-Woogie.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Polia</strong> (inšpirované Rothkom) — mäkké navrstvené farebné polia, ktoré sa do seba prelievajú.</li>
-      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Výstrižok</strong> (inšpirované Matissom) — vnorené farebné panely, alebo veľká voľná koláž z vystrihovaného papiera.</li>
+      <li><strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> (inšpirované Matissom) — vnorené farebné panely, alebo veľká voľná koláž z vystrihovaného papiera.</li>
     </ul>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Ťukni na aktívny štýl znova pre návrat k mozaike. Štýly nie sú filtre — každý je inou odpoveďou na „ako vyzerá táto hudba?"</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>Determinizmus &amp; 🎲 Náhoda</h3>
@@ -5344,14 +5345,9 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Prepínač <strong style={{color:'rgba(255,210,140,.9)'}}>🎲 Náhoda</strong> vedľa radu štýlov to umožní obísť. <strong>S vybraným umelcom</strong> každé čerstvé Prehrať (alebo ovládač <em>ďalej ›</em>) preroluje tento štýl do novej variácie — a väčšina štýlov obsahuje viacero odlišných kompozícií, takže prerolovanie môže zmeniť celú štruktúru, nielen farby.</p>
     <p style={{margin:'0 0 22px'}}><strong>Bez vybraného umelca</strong> sa 🎲 stáva <strong>miešaním</strong>: každé Prehrať / ďalej namaľuje náhodne iný umelecký štýl. Vytiahnutý štýl má v rade svetlý obrys; ťukni naň, aby si ho ponechal (a opustil miešanie).</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Transkripcia obrazu</h3>
-    <p style={{margin:'0 0 12px'}}>Vlož obraz a Paintiano ho prečíta ako partitúru. Obrázok sa zmenší na 192 × 120 pixelov a prechádza zľava doprava, zhora nadol — 960 akordických udalostí v pevnom dvojminútovom prevedení.</p>
-    <p style={{margin:'0 0 8px'}}>Každý pixel sa stáva notou z jeho HSL farby:</p>
-    <ul style={{margin:'0 0 14px',paddingLeft:20}}>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Odtieň → trieda tónu</strong> — podľa tabuľky aktuálneho režimu.</li>
-      <li style={{marginBottom:6}}><strong style={{color:'rgba(210,160,255,.9)'}}>Svetlosť → oktáva</strong> — tmavšie pixely nižšie, svetlejšie vyššie.</li>
-      <li><strong style={{color:'rgba(210,160,255,.9)'}}>Chroma → rýchlosť</strong> — sýte farby hlasnejšie, tlmené tichšie.</li>
-    </ul>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Biela, šedá a čierna</strong> nie sú tiché — achromatické pixely hrajú C s oktávou podľa svetlosti.</p>
+    <p style={{margin:'0 0 12px'}}>Vlož obraz a Paintiano ho prečíta ako partitúru. Obrázok sa zmenší na 192 × 120 pixelov a prechádza zľava doprava, zhora nadol — 960 akordických udalostí. Dĺžka nie je pevná: škáluje s energiou obrazu (jeho farebnosťou, kontrastom a rušnosťou), zhruba 1½ až 2½ minúty — pokojné obrazy dýchajú, husté sa hýbu.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Režim za teba vyberie aplikácia.</strong> Zmeria, aký farebný obraz naozaj je: skutočne farebné dielo (Chagall) sa číta v režime <strong>Color</strong> — odtieň → trieda tónu, svetlosť → oktáva, sýtosť → hlasitosť. Takmer monochromatické (Guernica, kresba tušom, sépiová fotka) sa číta v <strong>B/W</strong>, kde výšku tónu určuje len <em>svetlosť</em> pixelu — tmavé nízko, svetlé vysoko, odtieň sa ignoruje. Color a B/W ukazujú, ktoré čítanie aplikácia zvolila; prepnúť sa nedajú, ale ťuknutím na aktívny vidíš náhľad jeho farieb.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> je čítanie, ktoré si volíš ty. Z palety spraví filter: znejú len farby blízke niektorému z tvojich dvanástich políčok — všetko ostatné stíchne, takže z obrazu vytiahneš jednu farebnú rodinu. Jeho predvolená paleta je presný opak Harmónie (komplementárne odtiene), takže Custom vždy hrá a hneď kontrastuje; ktorékoľvek políčko prefarbíš v editore.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Výsledok je špecifický pre obraz: nie náhodný, nie doslovný, ale štruktúrované čítanie, kde sa farebná paleta stáva harmonickou paletou.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Komponovať &amp; MIKRO</h3>
     <p style={{margin:'0 0 12px'}}>Dva spôsoby tvorby od nuly. <strong style={{color:'rgba(201,168,76,.95)'}}>Komponovať</strong> zobrazí klavír na obrazovke — ťukni alebo podrž klávesy, dlhšie podržanie vytvára širšie bloky. Hardvérová klávesnica: A–K biele klávesy, W/E/T/Y/U čierne. Backspace odvolá posledný akord, Enter prepína klávesnicu, medzerník hrá/pozastaví. Podržané akordy sa pomenúvajú naživo (C dur, a mol…).</p>
@@ -5398,10 +5394,10 @@ const GUIDE_I18N = {
    body:`Paintiano paints music as a φ-proportioned grid of coloured blocks, and plays paintings back as music. Pick a source — Compose, MIC, MIDI, Audio, Score, Image, or a mood — and the canvas fills as you play. Hit Play to hear it, Print to save the painting, and in image mode Rec to capture the audio or ♫ Score to export the notes as MusicXML.`},
   {id:'start-here', title:`Where to begin`, keywords:`onboarding start here begin first time new user thesis how to use guide orient direction`,
    body:`Paintiano is a two-way translator between music and visual art. A piece of music *is* a painting under one grammar; a painting *is* a piece of music under the same grammar inverted. Same colour wheel, same pitch wheel, same act of perception. The app exists to prove this. ◆ Your first move depends on which direction you want to translate. To go from music to painting: pick a source that produces notes — Compose at the keyboard, MIC (Voice to sing/hum, or Music to capture ambient sound), upload a MIDI / audio / score file, or pick a Mood and let the AI compose for you. To go from painting to music: upload an Image, and hear how the canvas reads under the colour↔pitch grammar. ◆ Two choices shape every painting: colour mode (Harmony or Spectral — see modes) and optionally an artist style (eight of them — see styles). The mapping is deterministic on purpose: the same music always produces the same painting, so what you see is a reading of the music, not a decoration. The 🎲 Random toggle lets you opt out — with an artist selected it gives a new variation on every Play; with no artist it shuffles across all eight styles. ◆ A few orientations worth knowing up front. Live modes (Compose, MIC) paint into a fixed golden-ratio frame — as you add more chords, every row gets thinner, so the painting densifies rather than grows taller. The canvas is a compositional space, not a timeline. ◆ Imported sources (MIDI, audio, score, image, mood) use a canvas that grows with content — they are transcripts of an existing artefact, not in-the-moment compositions. ◆ Artist styles are not visual filters. Each one is a different answer to the question "what does this music look like?" — Pollock keeps the underlying mosaic visible and drips across it; Miró abandons the grid for scattered constellation shapes. Switch styles freely; the underlying colour grammar stays the same. ◆ When in doubt: pick a Mood, hit Play, watch a painting build itself. Then try the same mood in Spectral instead of Harmony, then try a style. That single loop teaches the rest of the app.`},
-  {id:'modes', title:`Harmony vs Spectral`, keywords:`colour color mode hue palette circle fifths chromatic`,
-   body:`Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. Switch any time; the same notes repaint instantly.`},
+  {id:'modes', title:`Harmony vs Spectral`, keywords:`colour color mode hue palette circle fifths chromatic custom bw black white`,
+   body:`Two colour grammars for the same music. Harmony places pitch classes around the colour wheel in Circle-of-Fifths order — related keys cluster in similar colours. Spectral spaces them at even 30° steps — one colour per semitone. B/W maps lightness to pitch, ignoring hue. Custom plays only the colours in your own palette. Switch any time; the same notes repaint instantly. Tap an active Harmony/Spectral/B-W tab to preview its colours. ◆ In image mode the app picks Color or B/W for you based on the painting's colourfulness — only Custom is yours to choose there.`},
   {id:'style', title:`Painting styles (8)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubist polka dots drip splatter constellation collage cut-out grid colour field fields artist abstract geometric phase variation inspired by`,
-   body:`Optional overlays, each a different reading of the same notes. With nothing selected the canvas is the mosaic default (sharp φ-rectangles). Eight styles: ◆ Cubist (inspired by Picasso) — angular analytic planes, or a synthetic cut-paper collage. ◆ Dots (inspired by Kusama) — dots on colour blocks, or an all-over shimmering dot-field. ◆ Drip (inspired by Pollock) — the mosaic stays visible under canvas-wide drips and splatter that ignore cell boundaries. ◆ Cosmic (inspired by Kandinsky) — a free scatter of triangles/rings/arcs, or an orderly Bauhaus grid. ◆ Constellation (inspired by Miró) — dense dark constellations, or a bright sparse field of a few bold shapes. ◆ Grid (inspired by Mondrian) — De Stijl block grids, sparse late grids, or Boogie-Woogie colour tracks. ◆ Fields (inspired by Rothko) — soft stacked colour fields bleeding into one another. ◆ Cut-out (inspired by Matisse) — nested colour panels, or a big paper cut-out collage. ◆ Most styles hold more than one composition; with 🎲 Random on, Vary/next re-rolls between them. Tap the active style again to deselect. Switches instantly.`},
+   body:`Optional overlays, each a different reading of the same notes. Mosaic is the default — its own button at the start of the row (sharp φ-rectangles). Eight styles: ◆ Cubist (inspired by Picasso) — angular analytic planes, or a synthetic cut-paper collage. ◆ Dots (inspired by Kusama) — dots on colour blocks, or an all-over shimmering dot-field. ◆ Drip (inspired by Pollock) — the mosaic stays visible under canvas-wide drips and splatter that ignore cell boundaries. ◆ Bauhaus (inspired by Kandinsky) — geometric Bauhaus forms: a free composition of triangles/rings/arcs, or an orderly grid of coloured blocks. ◆ Constellation (inspired by Miró) — dense dark constellations, or a bright sparse field of a few bold shapes. ◆ Grid (inspired by Mondrian) — De Stijl block grids, sparse late grids, or Boogie-Woogie colour tracks. ◆ Fields (inspired by Rothko) — soft stacked colour fields bleeding into one another. ◆ Cut-out (inspired by Matisse) — nested colour panels, or a big paper cut-out collage. ◆ Most styles hold more than one composition; with 🎲 Random on, Vary/next re-rolls between them. Tap the active style again to deselect. Switches instantly.`},
   {id:'random', title:`🎲 Random &amp; Shuffle`, keywords:`random shuffle determinism seed reroll variation same music different painting fresh dice unique play next style cycle`,
    body:`Sits at the end of the style row. By default the same music makes the same painting — the seed behind every overlay is a hash of the notes. Tap 🎲 to toggle it (button glows amber). The toggle itself doesn't change the current painting; the change happens on the next Play (from the start) or the "next ›" control. ◆ With an artist selected, Random re-rolls that artist into a fresh variation each time — and since most styles hold several distinct compositions, a re-roll can change the whole structure, not just colours. ◆ With NO artist selected, 🎲 becomes Shuffle: every Play / next paints a different artist style at random (mosaic excluded). The drawn style shows a light outline in the row — tap it to keep that artist and leave shuffle. ◆ Switching style or colour mode never re-rolls; only Play / next does. Setting is remembered across sessions.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test example sample replace confirm`,
@@ -5422,8 +5418,8 @@ const GUIDE_I18N = {
    body:`Upload mp3, wav, m4a, ogg, or aac. Audio is decoded and pitch-detected into MIDI-like events. Works best with clean monophonic or sparse polyphonic material. Built-in sample available.`},
   {id:'score', title:`𝄞 Score (MusicXML)`, keywords:`score musicxml mxl musescore finale dorico sheet music`,
    body:`Upload exact sheet music from MuseScore, Finale, or Dorico. Accepts .musicxml, .xml, and .mxl. Pitches, durations, dynamics, and chords come through exactly — the most accurate input.`},
-  {id:'image', title:`🖼 Image transcription`, keywords:`image painting picture transcribe paint photo colour`,
-   body:`Upload an image; Paintiano reads it as a score. Downsampled to 192×120 pixels, walked left-to-right top-to-bottom. Hue → pitch, lightness → octave, chroma → velocity. Dominant background hue is suppressed so figurative content dominates.`},
+  {id:'image', title:`🖼 Image transcription`, keywords:`image painting picture transcribe paint photo colour color bw custom palette guernica chagall`,
+   body:`Upload a painting; Paintiano reads it as a score. Downsampled to 192×120 pixels, walked left-to-right top-to-bottom — 960 chord events. Length isn't fixed: it scales with the image's energy (colour, contrast, busyness), roughly 1½–2½ minutes. ◆ The app chooses the reading from how colourful the painting is. A colourful work reads in Color (hue → pitch, lightness → octave, vividness → loudness); a near-monochrome one (Guernica, ink, sepia) reads in B/W, where lightness alone drives pitch — dark low, light high, hue ignored. Color and B/W are shown as info (the app decided which); tap the active one to preview its colours. ◆ Custom is the reading you control: it filters the painting through your palette so only colours near one of your twelve swatches sound, the rest fall silent. Its default is the opposite of Harmony, so it always plays; tap Custom again (✎) to edit the palette.`},
   {id:'morph', title:`✦ Morph`, keywords:`morph crossfade blend transition mood between`,
    body:`Available after picking a mood. Tap ✦ MORPH to crossfade the current mood into another. First half is mood A, second half is mood B, with a velocity blend in the 40–60% zone. The progress bar subtitle shows the blend e.g. "happy → sad".`},
   {id:'vary', title:`✦ Vary`, keywords:`vary variation reroll randomize random fresh sparkle`,
@@ -5433,7 +5429,7 @@ const GUIDE_I18N = {
   {id:'loop', title:`⟳ Loop`, keywords:`loop repeat cycle mood continuous`,
    body:`Available during mood playback. Tap ⟳ LOOP to keep the piece repeating continuously. Tap again to turn off. The button highlights gold when active.`},
   {id:'speed', title:`Playback speed`, keywords:`speed slow fast tempo rate buttons 1x half plus minus`,
-   body:`Tap − or + to nudge playback speed by 0.05× steps, anywhere from 0.25× to 2×. Hold either button to sweep continuously — the repeat accelerates after a second so you can cross the range fast and stop precisely. Tap the centre label to snap back to 1×. Changes take effect immediately during playback.`},
+   body:`Playback speed sits as a small chip showing the current rate (1× by default). Tap it to snap back to 1×. Press and hold to cycle through the rates — 0.25× to 1× in 0.25 steps, then 2×, 3×, 4× — wrapping around to the start; release to keep the rate you landed on. The chip highlights when the rate isn't 1×. Changes take effect immediately during playback.`},
   {id:'mute', title:`🔊 / 🔇 Mute`, keywords:`mute silence audio sound volume off on speaker quiet`,
    body:`The speaker icon next to the Play button toggles all audio output (master mute). Tap once to silence the piano, playback, and any active recording bus; tap again to unmute. The painting continues to render normally — only sound is suppressed. Setting is remembered across sessions, so the app reopens in the same mute state.`},
   {id:'print', title:`🖨 Print (save the painting)`, keywords:`print export png image save painting picture size web print a1 dpi resolution`,
@@ -5443,7 +5439,7 @@ const GUIDE_I18N = {
   {id:'score-export', title:`♫ Score export (MusicXML)`, keywords:`score export musicxml xml notes notation sheet music musescore sibelius finale save share rename filename print`,
    body:`Available in image mode only, next to Rec. Tap ♫ Score to turn the current painting's notes into a MusicXML score. A share row appears with an editable filename (default filled in, extension fixed). Tap Share to save the .musicxml via the system dialog, then open it in MuseScore, Sibelius, Finale or any notation app to view, edit, or print the sheet music.`},
   {id:'clear', title:`Clear`, keywords:`clear reset start over delete confirm arm two-tap`,
-   body:`In Compose or MIC mode: the clear button needs two taps to fire — the first arms it (label changes to "tap again to clear"), the second wipes the canvas. This prevents accidental loss of a live composition. In MIDI, audio, score, image, or mood mode: resets the canvas to blank but keeps the loaded piece so you can play it again. Single tap, no confirm.`},
+   body:`In Compose or MIC mode: the clear button needs two taps to fire — the first arms it (label changes to "tap again to clear"), the second wipes the canvas. This prevents accidental loss of a live composition. With an image: Clear wipes everything — the painted trace and the picture — but stays in the image view with its Color/Custom chips; the full Color+Style panel (with artists) only returns via "← Setup". In MIDI, audio, score, or mood mode: Clear is a full reset — it drops the loaded piece and returns you to an empty setup. Single tap, no confirm.`},
   {id:'micvol', title:`Canvas breathing (mic volume)`, keywords:`mic volume breathing pulse canvas room sound ambient`,
    body:`In MIC mode (either Voice or Music preset) the canvas automatically pulses with the room volume — louder sound expands the canvas slightly, silence lets it rest. Starts and stops with MIC automatically.`},
   {id:'troubleshoot', title:`Troubleshooting`, keywords:`troubleshoot problem error broken fix bug help slow`,
@@ -5454,10 +5450,10 @@ const GUIDE_I18N = {
    body:`Paintiano malt Musik als φ-proportioniertes Raster farbiger Blöcke und spielt Gemälde als Musik ab. Wähle eine Quelle — Komponieren, MIKRO, MIDI, Audio, Partitur, Bild oder eine Stimmung — und die Leinwand füllt sich beim Spielen. Play tippen zum Hören, Drucken zum Speichern.`},
   {id:'start-here', title:`Wo anfangen`, keywords:`einstieg start hier anfang erstes mal neuer benutzer these wie benutzen anleitung orientierung richtung`,
    body:`Paintiano ist ein wechselseitiger Übersetzer zwischen Musik und bildender Kunst. Ein Musikstück ist ein Gemälde unter einer Grammatik; ein Gemälde ist ein Musikstück unter derselben Grammatik invertiert. Dasselbe Farbrad, derselbe Tonkreis, derselbe Akt der Wahrnehmung. Die App existiert, um das zu beweisen. ◆ Dein erster Schritt hängt davon ab, in welche Richtung du übersetzen möchtest. Von Musik zu Gemälde: wähle eine Quelle, die Noten erzeugt — Komponieren an der Tastatur, MIKRO (Stimme zum Singen/Summen oder Musik für Umgebungsklang), eine MIDI- / Audio- / Partitur-Datei hochladen oder eine Stimmung wählen und die KI komponieren lassen. Von Gemälde zu Musik: lade ein Bild hoch und höre, wie die Leinwand unter der Farbe↔Tonhöhe-Grammatik gelesen wird. ◆ Zwei Entscheidungen prägen jedes Gemälde: der Farbmodus (Harmonie oder Spektral — siehe Modi) und optional ein Künstlerstil (acht davon — siehe Stile). Das Mapping ist absichtlich deterministisch: dieselbe Musik erzeugt immer dasselbe Gemälde — was du siehst, ist eine Lesung der Musik, keine Dekoration. Der 🎲 Zufallsschalter erlaubt es, davon abzuweichen — mit ausgewähltem Künstler gibt es bei jedem Play eine neue Variation; ohne Künstler mischt er über alle acht Stile. ◆ Ein paar Orientierungen vorab. Live-Modi (Komponieren, MIKRO) malen in einen festen Goldener-Schnitt-Rahmen — je mehr Akkorde du hinzufügst, desto dünner werden alle Zeilen, das Gemälde verdichtet sich, statt höher zu wachsen. Die Leinwand ist ein Kompositionsraum, keine Zeitachse. ◆ Importierte Quellen (MIDI, Audio, Partitur, Bild, Stimmung) verwenden eine Leinwand, die mit dem Inhalt wächst — sie sind Transkripte eines bestehenden Artefakts, keine Spontankompositionen. ◆ Künstlerstile sind keine visuellen Filter. Jeder ist eine andere Antwort auf die Frage "wie sieht diese Musik aus?" — Pollock lässt das Mosaik-Substrat sichtbar und tropft darüber; Miró verlässt das Raster zugunsten verstreuter Konstellationsformen. Stile frei wechseln; die Farbgrammatik darunter bleibt dieselbe. ◆ Im Zweifel: Stimmung wählen, Play drücken, zuschauen, wie sich ein Gemälde aufbaut. Dann dieselbe Stimmung in Spektral statt Harmonie versuchen, dann einen Stil. Diese eine Schleife lehrt den Rest der App.`},
-  {id:'modes', title:`Harmonie vs. Spektral`, keywords:`farbe modus farbton palette quintenzirkel chromatisch`,
-   body:`Zwei Farbgrammatiken für dieselbe Musik. Harmonie ordnet die Tonklassen im Quintenzirkel um das Farbrad an — verwandte Tonarten clustern in ähnlichen Farben. Spektral verteilt sie in gleichmäßigen 30°-Schritten — ein Halbton, eine Farbe. Jederzeit wechselbar.`},
+  {id:'modes', title:`Harmonie vs. Spektral`, keywords:`farbe modus farbton palette quintenzirkel chromatisch custom bw schwarz weiß`,
+   body:`Zwei Farbgrammatiken für dieselbe Musik. Harmonie ordnet die Tonklassen im Quintenzirkel um das Farbrad an — verwandte Tonarten clustern in ähnlichen Farben. Spektral verteilt sie in gleichmäßigen 30°-Schritten — ein Halbton, eine Farbe. B/W bildet Helligkeit auf Tonhöhe ab, Farbton ignoriert. Custom spielt nur die Farben deiner eigenen Palette. Jederzeit wechselbar; dieselben Noten malen sofort neu. Tippe auf einen aktiven Harmonie/Spektral/B-W-Tab für eine Farbvorschau. ◆ Im Bildmodus wählt die App Color oder B/W für dich anhand der Farbigkeit des Werks — nur Custom wählst du dort selbst.`},
   {id:'style', title:`Malstile (8)`, keywords:`stil picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubismus punkte tropfen spritzer konstellation collage scherenschnitt raster farbfeld abstrakt geometrisch phase variation`,
-   body:`Optionale Overlays, jedes eine andere Lesart derselben Noten. Ohne Auswahl ist die Leinwand das Standard-Mosaik (scharfe φ-Rechtecke). Acht Stile: ◆ Kubismus (inspiriert von Picasso) — kantige analytische Flächen oder eine synthetische Scherenschnitt-Collage. ◆ Punkte (inspiriert von Kusama) — Punkte auf Farbblöcken oder ein flächendeckendes schimmerndes Punktfeld. ◆ Tropfen (inspiriert von Pollock) — das Mosaik bleibt sichtbar unter leinwandweiten Tropfen und Spritzern, die Zellgrenzen ignorieren. ◆ Kosmisch (inspiriert von Kandinsky) — eine freie Streuung aus Dreiecken/Ringen/Bögen oder ein geordnetes Bauhaus-Raster. ◆ Konstellation (inspiriert von Miró) — dichte dunkle Konstellationen oder ein helles, sparsames Feld weniger kräftiger Formen. ◆ Raster (inspiriert von Mondrian) — De-Stijl-Blockraster, sparsame Spätraster oder Boogie-Woogie-Farbspuren. ◆ Farbfelder (inspiriert von Rothko) — weiche gestapelte Farbfelder, die ineinander verlaufen. ◆ Scherenschnitt (inspiriert von Matisse) — verschachtelte Farbpaneele oder eine große Scherenschnitt-Collage. ◆ Die meisten Stile besitzen mehr als eine Komposition; bei aktivem 🎲 Zufall würfeln Variieren/weiter zwischen ihnen. Aktiven Stil erneut antippen zum Abwählen. Wechselt sofort.`},
+   body:`Optionale Overlays, jedes eine andere Lesart derselben Noten. Mosaik ist der Standard — eigener Button am Zeilenanfang (scharfe φ-Rechtecke). Acht Stile: ◆ Kubismus (inspiriert von Picasso) — kantige analytische Flächen oder eine synthetische Scherenschnitt-Collage. ◆ Punkte (inspiriert von Kusama) — Punkte auf Farbblöcken oder ein flächendeckendes schimmerndes Punktfeld. ◆ Drip (inspiriert von Pollock) — das Mosaik bleibt sichtbar unter leinwandweiten Tropfen und Spritzern, die Zellgrenzen ignorieren. ◆ Bauhaus (inspiriert von Kandinsky) — geometrische Bauhaus-Formen: eine freie Komposition aus Dreiecken/Ringen/Bögen oder ein geordnetes Raster farbiger Blöcke. ◆ Konstellation (inspiriert von Miró) — dichte dunkle Konstellationen oder ein helles, sparsames Feld weniger kräftiger Formen. ◆ Raster (inspiriert von Mondrian) — De-Stijl-Blockraster, sparsame Spätraster oder Boogie-Woogie-Farbspuren. ◆ Farbfelder (inspiriert von Rothko) — weiche gestapelte Farbfelder, die ineinander verlaufen. ◆ Cut-out (inspiriert von Matisse) — verschachtelte Farbpaneele oder eine große Scherenschnitt-Collage. ◆ Die meisten Stile besitzen mehr als eine Komposition; bei aktivem 🎲 Zufall würfeln Variieren/weiter zwischen ihnen. Aktiven Stil erneut antippen zum Abwählen. Wechselt sofort.`},
   {id:'random', title:`🎲 Zufall &amp; Mischen`, keywords:`zufall mischen shuffle determinismus seed neu würfeln variation gleiche musik unterschiedliches gemälde frisch einzigartig play spielen weiter stil wechseln`,
    body:`Sitzt am Ende der Stilzeile. Standardmäßig erzeugt dieselbe Musik dasselbe Gemälde — der Seed jedes Overlays ist ein Hash der Noten. 🎲 antippen zum Umschalten (Button leuchtet bernsteinfarben). Das Umschalten selbst ändert das aktuelle Gemälde nicht; die Änderung erfolgt beim nächsten Play (vom Anfang) oder über „weiter ›". ◆ Mit ausgewähltem Künstler würfelt Zufall diesen Stil jedes Mal in eine neue Variation — und da die meisten Stile mehrere eigenständige Kompositionen besitzen, kann ein Neu-Würfeln die ganze Struktur ändern, nicht nur Farben. ◆ OHNE ausgewählten Künstler wird 🎲 zum Mischen: jedes Play / weiter malt einen zufällig anderen Künstlerstil (Mosaik ausgenommen). Der gezogene Stil zeigt eine helle Umrandung in der Zeile — antippen, um diesen Künstler zu behalten und das Mischen zu verlassen. ◆ Stil- oder Farbmoduswechsel würfeln nie neu; nur Play / weiter. Einstellung wird über Sitzungen hinweg gespeichert.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test beispiel ersetzen bestätigen`,
@@ -5478,8 +5474,8 @@ const GUIDE_I18N = {
    body:`mp3, wav, m4a, ogg oder aac hochladen. Audio wird dekodiert und tonhöhenerkannt. Funktioniert am besten mit sauberem einstimmigem oder sparsam polyfonem Material.`},
   {id:'score', title:`𝄞 Partitur (MusicXML)`, keywords:`partitur musicxml musescore finale dorico noten`,
    body:`Exakte Noten von MuseScore, Finale oder Dorico hochladen. Akzeptiert .musicxml, .xml und .mxl. Tonhöhen, Dauern, Dynamik und Akkorde werden exakt übertragen.`},
-  {id:'image', title:`🖼 Bildtranskription`, keywords:`bild gemälde foto transkribieren malen farbe`,
-   body:`Ein Bild hochladen; Paintiano liest es als Partitur. Auf 192×120 Pixel herunterskaliert. Farbton → Tonhöhe, Helligkeit → Oktave, Sättigung → Lautstärke. Dominante Hintergrundfarbe wird unterdrückt.`},
+  {id:'image', title:`🖼 Bildtranskription`, keywords:`bild gemälde foto transkribieren malen farbe color bw custom palette guernica chagall`,
+   body:`Ein Gemälde hochladen; Paintiano liest es als Partitur. Auf 192×120 Pixel herunterskaliert, von links nach rechts, oben nach unten — 960 Akkordereignisse. Die Dauer ist nicht fest: sie skaliert mit der Energie des Bildes (Farbe, Kontrast, Geschäftigkeit), etwa 1½–2½ Minuten. ◆ Die App wählt die Lesart anhand der Farbigkeit des Gemäldes. Ein farbiges Werk wird in Color gelesen (Farbton → Tonhöhe, Helligkeit → Oktave, Lebhaftigkeit → Lautstärke); ein fast monochromes (Guernica, Tusche, Sepia) in B/W, wo allein die Helligkeit die Tonhöhe bestimmt — dunkel tief, hell hoch, Farbton ignoriert. Color und B/W sind Info (die App hat entschieden); Tippen auf das aktive Feld zeigt eine Farbvorschau. ◆ Custom steuerst du: es filtert das Bild durch deine Palette, sodass nur Farben nahe einem deiner zwölf Felder klingen, der Rest verstummt. Die Standardpalette ist das Gegenteil von Harmonie, klingt also immer; erneut auf Custom tippen (✎), um die Palette zu bearbeiten.`},
   {id:'morph', title:`✦ Morphen`, keywords:`morphen überblenden übergang stimmung zwischen`,
    body:`Nach Stimmungsauswahl verfügbar. ✦ MORPHEN antippen, um die aktuelle Stimmung in eine andere überzublenden. Erste Hälfte Stimmung A, zweite Hälfte Stimmung B.`},
   {id:'vary', title:`✦ Variieren`, keywords:`variieren variation neu zufällig frisch funkeln`,
@@ -5489,7 +5485,7 @@ const GUIDE_I18N = {
   {id:'loop', title:`⟳ Schleife`, keywords:`schleife wiederholen zyklus stimmung kontinuierlich`,
    body:`Bei Stimmungswiedergabe verfügbar. ⟳ SCHLEIFE antippen für kontinuierliche Wiederholung. Erneut antippen zum Ausschalten. Schaltfläche leuchtet gold.`},
   {id:'speed', title:`Wiedergabegeschwindigkeit`, keywords:`geschwindigkeit langsam schnell tempo rate tasten plus minus`,
-   body:`− oder + antippen, um die Wiedergabegeschwindigkeit in 0,05×-Schritten zwischen 0,25× und 2× zu ändern. Taste halten für stufenloses Durchlaufen — die Wiederholung beschleunigt nach einer Sekunde, sodass du schnell quer durch den Bereich fahren und präzise stoppen kannst. Mittlere Beschriftung antippen für Sprung zurück auf 1×.`},
+   body:`Die Wiedergabegeschwindigkeit sitzt als kleiner Chip, der die aktuelle Rate zeigt (Standard 1×). Antippen springt zurück auf 1×. Gedrückt halten durchläuft die Raten — 0,25× bis 1× in 0,25-Schritten, dann 2×, 3×, 4× — und beginnt oben wieder von vorn; loslassen behält die erreichte Rate. Der Chip hebt sich hervor, wenn die Rate nicht 1× ist.`},
   {id:'mute', title:`🔊 / 🔇 Ton aus`, keywords:`ton aus stumm audio sound lautstärke aus an lautsprecher leise`,
    body:`Das Lautsprecher-Symbol neben der Play-Taste schaltet die gesamte Audioausgabe stumm (Master-Mute). Einmal antippen, um Klavier, Wiedergabe und alle aktiven Aufnahme-Busse stummzuschalten; erneut antippen zum Aufheben. Das Gemälde wird weiterhin normal gerendert — nur der Ton wird unterdrückt. Einstellung wird über Sitzungen hinweg gespeichert.`},
   {id:'print', title:`🖨 Drucken (Gemälde speichern)`, keywords:`drucken exportieren png bild speichern gemälde web a1 dpi auflösung größe`,
@@ -5499,7 +5495,7 @@ const GUIDE_I18N = {
   {id:'score-export', title:`♫ Noten-Export (MusicXML)`, keywords:`noten export musicxml xml notation partitur musescore sibelius finale speichern teilen umbenennen`,
    body:`Nur im Bildmodus verfügbar, neben der Aufnahme. ♫ Noten antippen, um die Noten des aktuellen Bildes als MusicXML-Partitur zu exportieren. Eine Teilen-Zeile mit editierbarem Dateinamen erscheint. Teilen antippen, die .musicxml über den Systemdialog speichern und in MuseScore, Sibelius, Finale o. ä. öffnen.`},
   {id:'clear', title:`Löschen`, keywords:`löschen zurücksetzen neu beginnen entfernen bestätigen scharfschalten zwei tipps`,
-   body:`Im Komponier- oder MIKRO-Modus: die Löschen-Schaltfläche benötigt zwei Tipps — der erste schärft scharf (Beschriftung wird "nochmal antippen"), der zweite löscht die Leinwand. Verhindert versehentlichen Verlust einer Live-Komposition. Im MIDI-, Audio-, Partitur-, Bild- oder Stimmungsmodus: Leinwand zurücksetzen, Stück bleibt erhalten. Einmaliges Tippen, keine Bestätigung.`},
+   body:`Im Komponier- oder MIKRO-Modus: die Löschen-Schaltfläche benötigt zwei Tipps — der erste schärft scharf (Beschriftung wird "nochmal antippen"), der zweite löscht die Leinwand. Verhindert versehentlichen Verlust einer Live-Komposition. Bei einem Bild: Löschen entfernt alles — die gemalte Spur und das Bild — bleibt aber in der Bildansicht mit ihren Color/Custom-Chips; das volle Color+Stil-Panel (mit Künstlern) kehrt nur über "← Setup" zurück. Im MIDI-, Audio-, Partitur- oder Stimmungsmodus: Löschen ist ein vollständiger Reset — das geladene Stück wird verworfen und du landest wieder im leeren Setup. Einmaliges Tippen, keine Bestätigung.`},
   {id:'micvol', title:`Leinwand-Puls (Mikrofonlautstärke)`, keywords:`mikrofon lautstärke puls leinwand raum klang umgebung`,
    body:`Im MIKRO-Modus (entweder Stimme oder Musik) pulsiert die Leinwand automatisch mit der Raumlautstärke. Startet und stoppt automatisch.`},
   {id:'troubleshoot', title:`Fehlerbehebung`, keywords:`fehlerbehebung problem fehler kaputt hilfe langsam`,
@@ -5510,10 +5506,10 @@ const GUIDE_I18N = {
    body:`Paintiano peint la musique sous forme de grille de blocs colorés aux proportions φ, et joue les peintures en tant que musique. Choisissez une source — Composer, MICRO, MIDI, Audio, Partition, Image ou une humeur — et la toile se remplit. Appuyez sur Jouer pour l'entendre, Imprimer pour sauvegarder.`},
   {id:'start-here', title:`Par où commencer`, keywords:`débuter commencer ici première fois nouvel utilisateur thèse comment utiliser guide orientation direction`,
    body:`Paintiano est un traducteur bidirectionnel entre musique et art visuel. Un morceau de musique est une peinture sous une grammaire ; une peinture est un morceau de musique sous la même grammaire inversée. Même roue chromatique, même cercle des hauteurs, même acte de perception. L'application existe pour le prouver. ◆ Votre premier geste dépend de la direction dans laquelle vous voulez traduire. De la musique à la peinture : choisissez une source qui produit des notes — Composer au clavier, MICRO (Voix pour chanter/fredonner, ou Musique pour capter un son ambiant), charger un fichier MIDI / audio / partition, ou choisir une Humeur et laisser l'IA composer pour vous. De la peinture à la musique : chargez une Image, et entendez comment la toile se lit sous la grammaire couleur↔hauteur. ◆ Deux choix façonnent chaque peinture : le mode couleur (Harmonie ou Spectral — voir modes) et optionnellement un style pictural (huit en tout — voir styles). L'association est délibérément déterministe : la même musique produit toujours la même peinture — ce que vous voyez est une lecture de la musique, pas une décoration. Le bouton 🎲 Aléatoire permet de rompre cela — avec un artiste sélectionné, une nouvelle variation à chaque Lecture ; sans artiste, il mélange les huit styles. ◆ Quelques repères à connaître d'emblée. Les modes en direct (Composer, MICRO) peignent dans un cadre fixe au nombre d'or — à mesure que vous ajoutez des accords, chaque rangée s'amincit, la peinture se densifie plutôt que de s'allonger. La toile est un espace compositionnel, pas une frise chronologique. ◆ Les sources importées (MIDI, audio, partition, image, humeur) utilisent une toile qui grandit avec le contenu — ce sont des transcriptions d'un artefact existant, pas des compositions de l'instant. ◆ Les styles d'artistes ne sont pas des filtres visuels. Chacun est une réponse différente à la question "à quoi cette musique ressemble-t-elle ?" — Pollock laisse le substrat mosaïque visible et coule par-dessus ; Miró abandonne la grille pour des formes de constellation dispersées. Changez librement de style ; la grammaire couleur sous-jacente reste la même. ◆ En cas de doute : choisissez une Humeur, appuyez sur Lecture, regardez une peinture se construire. Puis essayez la même humeur en Spectral plutôt qu'Harmonie, puis un style. Cette seule boucle enseigne le reste de l'app.`},
-  {id:'modes', title:`Harmonie vs Spectral`, keywords:`couleur mode teinte palette cercle des quintes chromatique`,
-   body:`Deux grammaires de couleurs pour la même musique. L'harmonie place les classes de hauteur autour de la roue chromatique dans l'ordre du cercle des quintes. Le spectral les répartit en pas de 30°. Changeable à tout moment.`},
+  {id:'modes', title:`Harmonie vs Spectral`, keywords:`couleur mode teinte palette cercle des quintes chromatique custom bw noir blanc`,
+   body:`Deux grammaires de couleurs pour la même musique. L'harmonie place les classes de hauteur autour de la roue chromatique dans l'ordre du cercle des quintes. Le spectral les répartit en pas de 30°. B/W associe la luminosité à la hauteur, en ignorant la teinte. Custom ne joue que les couleurs de votre propre palette. Changeable à tout moment ; les mêmes notes se repeignent aussitôt. Touchez un onglet Harmonie/Spectral/B-W actif pour un aperçu de ses couleurs. ◆ En mode image, l'app choisit Color ou B/W pour vous selon la richesse des couleurs — vous ne choisissez que Custom là.`},
   {id:'style', title:`Styles picturaux (8)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubisme pois goutte éclaboussure constellation collage papier découpé grille champ couleur abstrait géométrique phase variation`,
-   body:`Calques optionnels, chacun une lecture différente des mêmes notes. Sans sélection, la toile est la mosaïque par défaut (rectangles φ nets). Huit styles : ◆ Cubiste (inspiré par Picasso) — plans analytiques anguleux, ou collage synthétique de papiers découpés. ◆ Pois (inspiré par Kusama) — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile. ◆ Coulure (inspiré par Pollock) — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules. ◆ Cosmique (inspiré par Kandinsky) — une dispersion libre de triangles/cercles/arcs, ou une grille Bauhaus ordonnée. ◆ Constellation (inspiré par Miró) — denses constellations sombres, ou un champ clair et épuré de quelques formes franches. ◆ Grille (inspiré par Mondrian) — grilles De Stijl, grilles tardives épurées, ou pistes de couleur Boogie-Woogie. ◆ Champs (inspiré par Rothko) — champs de couleur empilés et fondus l'un dans l'autre. ◆ Découpage (inspiré par Matisse) — panneaux de couleur imbriqués, ou un grand collage de papiers découpés. ◆ La plupart des styles renferment plus d'une composition ; avec 🎲 Aléatoire activé, Varier/suivant alterne entre elles. Appuyer à nouveau sur le style actif pour le désélectionner. Bascule instantanée.`},
+   body:`Calques optionnels, chacun une lecture différente des mêmes notes. La mosaïque est le réglage par défaut — son propre bouton en tête de ligne (rectangles φ nets). Huit styles : ◆ Cubiste (inspiré par Picasso) — plans analytiques anguleux, ou collage synthétique de papiers découpés. ◆ Pois (inspiré par Kusama) — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile. ◆ Drip (inspiré par Pollock) — la mosaïque reste visible sous des coulures et éclaboussures qui ignorent les limites des cellules. ◆ Bauhaus (inspiré par Kandinsky) — des formes géométriques Bauhaus : une composition libre de triangles/cercles/arcs, ou une grille ordonnée de blocs colorés. ◆ Constellation (inspiré par Miró) — denses constellations sombres, ou un champ clair et épuré de quelques formes franches. ◆ Grille (inspiré par Mondrian) — grilles De Stijl, grilles tardives épurées, ou pistes de couleur Boogie-Woogie. ◆ Champs (inspiré par Rothko) — champs de couleur empilés et fondus l'un dans l'autre. ◆ Cut-out (inspiré par Matisse) — panneaux de couleur imbriqués, ou un grand collage de papiers découpés. ◆ La plupart des styles renferment plus d'une composition ; avec 🎲 Aléatoire activé, Varier/suivant alterne entre elles. Appuyer à nouveau sur le style actif pour le désélectionner. Bascule instantanée.`},
   {id:'random', title:`🎲 Aléatoire &amp; Mélange`, keywords:`aléatoire mélange shuffle hasard déterminisme graine seed relancer variation même musique peinture différente frais unique dé jouer play suivant style cycle`,
    body:`Situé à la fin de la ligne des styles. Par défaut, la même musique produit la même peinture — la graine de chaque calque est un hash des notes. Appuyer 🎲 pour basculer (le bouton s'illumine en ambre). La bascule elle-même ne change pas la peinture actuelle ; le changement survient à la prochaine Lecture (depuis le début) ou via « suivant › ». ◆ Avec un artiste sélectionné, Aléatoire relance ce style en une nouvelle variation à chaque fois — et comme la plupart des styles renferment plusieurs compositions distinctes, une relance peut changer toute la structure, pas seulement les couleurs. ◆ SANS artiste sélectionné, 🎲 devient un Mélange : chaque Lecture / suivant peint un style d'artiste différent au hasard (mosaïque exclue). Le style tiré apparaît avec un contour clair dans la ligne — appuyez dessus pour conserver cet artiste et quitter le mélange. ◆ Changer de style ou de mode couleur ne relance jamais ; seule la Lecture / suivant le fait. Le réglage est conservé entre les sessions.`},
   {id:'demo', title:`Démo (Für Elise)`, keywords:`démo für elise beethoven test exemple remplacer confirmer`,
@@ -5534,8 +5530,8 @@ const GUIDE_I18N = {
    body:`Importez mp3, wav, m4a, ogg ou aac. L'audio est décodé et les hauteurs détectées. Fonctionne mieux avec du matériel monophonique propre.`},
   {id:'score', title:`𝄞 Partition (MusicXML)`, keywords:`partition musicxml musescore finale dorico feuille de musique`,
    body:`Importez des partitions exactes depuis MuseScore, Finale ou Dorico. Accepte .musicxml, .xml et .mxl.`},
-  {id:'image', title:`🖼 Transcription d'image`, keywords:`image tableau photo transcrire peindre couleur`,
-   body:`Importez une image ; Paintiano la lit comme une partition. Réduite à 192×120 pixels. Teinte → hauteur, luminosité → octave, saturation → vélocité. La teinte de fond dominante est supprimée.`},
+  {id:'image', title:`🖼 Transcription d'image`, keywords:`image tableau photo transcrire peindre couleur color bw custom palette guernica chagall`,
+   body:`Importez une peinture ; Paintiano la lit comme une partition. Réduite à 192×120 pixels, parcourue de gauche à droite, de haut en bas — 960 événements d'accords. La durée n'est pas fixe : elle varie avec l'énergie de l'image (couleur, contraste, densité), environ 1½–2½ minutes. ◆ L'app choisit la lecture selon la richesse des couleurs. Une œuvre colorée se lit en Color (teinte → hauteur, luminosité → octave, vivacité → volume) ; une œuvre quasi monochrome (Guernica, encre, sépia) en B/W, où seule la luminosité donne la hauteur — sombre grave, clair aigu, teinte ignorée. Color et B/W sont informatifs (l'app a décidé) ; toucher la puce active affiche un aperçu des couleurs. ◆ Custom, c'est vous : il filtre l'image via votre palette, donc seules les couleurs proches d'une de vos douze cases sonnent, le reste se tait. La palette par défaut est l'opposé d'Harmony, donc elle joue toujours ; touchez Custom à nouveau (✎) pour éditer la palette.`},
   {id:'morph', title:`✦ Morphe`, keywords:`morphe fondu enchaîné transition humeur entre`,
    body:`Disponible après avoir choisi une humeur. Appuyez sur ✦ MORPHE pour fondre l'humeur actuelle dans une autre. Première moitié : humeur A, deuxième moitié : humeur B.`},
   {id:'vary', title:`✦ Varier`, keywords:`varier variation relancer aléatoire frais scintiller`,
@@ -5545,7 +5541,7 @@ const GUIDE_I18N = {
   {id:'loop', title:`⟳ Boucle`, keywords:`boucle répéter cycle humeur continu`,
    body:`Appuyez sur ⟳ BOUCLE pour répétition continue. Appuyez à nouveau pour désactiver. Le bouton s'illumine en or.`},
   {id:'speed', title:`Vitesse de lecture`, keywords:`vitesse lent rapide tempo boutons plus moins`,
-   body:`Appuyez sur − ou + pour ajuster la vitesse de lecture par pas de 0,05× entre 0,25× et 2×. Maintenez l'un des boutons pour balayer en continu — la répétition s'accélère après une seconde, vous permettant de traverser la plage rapidement et de vous arrêter précisément. Appuyez sur l'étiquette centrale pour revenir à 1×.`},
+   body:`La vitesse de lecture est une petite pastille affichant le débit actuel (1× par défaut). Touchez-la pour revenir à 1×. Maintenez pour faire défiler les vitesses — de 0,25× à 1× par pas de 0,25, puis 2×, 3×, 4× — en bouclant au début ; relâchez pour conserver la vitesse atteinte. La pastille se met en évidence quand la vitesse n'est pas 1×.`},
   {id:'mute', title:`🔊 / 🔇 Couper le son`, keywords:`couper son muet audio volume silence haut-parleur arrêter`,
    body:`L'icône de haut-parleur à côté du bouton Lecture coupe toute la sortie audio (mute principal). Appuyer une fois pour couper le piano, la lecture et tout bus d'enregistrement actif ; appuyer à nouveau pour réactiver. La peinture continue à se rendre normalement — seul le son est supprimé. Le réglage est conservé entre les sessions.`},
   {id:'print', title:`🖨 Imprimer (sauvegarder la peinture)`, keywords:`imprimer exporter png image sauvegarder peinture web a1 dpi résolution taille`,
@@ -5555,7 +5551,7 @@ const GUIDE_I18N = {
   {id:'score-export', title:`♫ Export partition (MusicXML)`, keywords:`partition export musicxml xml notation musescore sibelius finale enregistrer partager renommer`,
    body:`Mode image uniquement, à côté d'Enregistrer. Appuyez sur ♫ Partition pour exporter les notes du tableau actuel en partition MusicXML. Une ligne de partage avec nom modifiable apparaît. Appuyez sur Partager pour enregistrer le .musicxml via la boîte de dialogue système, puis ouvrez-le dans MuseScore, Sibelius, Finale, etc.`},
   {id:'clear', title:`Effacer`, keywords:`effacer réinitialiser recommencer supprimer confirmer armer deux touches`,
-   body:`En mode Composer ou MICRO : le bouton effacer nécessite deux appuis — le premier l'arme (le label devient "toucher à nouveau"), le second efface la toile. Évite la perte accidentelle d'une composition en direct. En mode MIDI, audio, partition, image ou humeur : remet la toile à zéro mais conserve le morceau. Un seul appui, sans confirmation.`},
+   body:`En mode Composer ou MICRO : le bouton effacer nécessite deux appuis — le premier l'arme (le label devient "toucher à nouveau"), le second efface la toile. Évite la perte accidentelle d'une composition en direct. Avec une image : Effacer efface tout — la trace peinte et l'image — mais reste dans la vue image avec ses puces Couleur/Custom ; le panneau complet Couleur+Style (avec artistes) ne revient que via "← Réglage". En mode MIDI, audio, partition ou ambiance : Effacer est une réinitialisation complète — le morceau chargé est abandonné et vous revenez à un réglage vide. Un seul appui, sans confirmation.`},
   {id:'micvol', title:`Respiration de la toile (volume micro)`, keywords:`micro volume respiration pulsation toile son ambiant`,
    body:`En mode MICRO (préréglage Voix ou Musique), la toile pulse automatiquement avec le volume de la pièce. Démarre et s'arrête automatiquement.`},
   {id:'troubleshoot', title:`Dépannage`, keywords:`dépannage problème erreur cassé aide lent`,
@@ -5566,10 +5562,10 @@ const GUIDE_I18N = {
    body:`Paintiano pinta música como una cuadrícula de bloques de color con proporciones φ, y reproduce pinturas como música. Elige una fuente — Componer, MICRO, MIDI, Audio, Partitura, Imagen o un estado — y el lienzo se llena mientras tocas. Pulsa Tocar para escuchar, Imprimir para guardar.`},
   {id:'start-here', title:`Por dónde empezar`, keywords:`empezar inicio aquí primera vez nuevo usuario tesis cómo usar guía orientación dirección`,
    body:`Paintiano es un traductor bidireccional entre música y arte visual. Una pieza musical es una pintura bajo una gramática; una pintura es una pieza musical bajo la misma gramática invertida. La misma rueda cromática, el mismo círculo de alturas, el mismo acto de percepción. La aplicación existe para demostrarlo. ◆ Tu primer paso depende de en qué dirección quieras traducir. De música a pintura: elige una fuente que produzca notas — Componer en el teclado, MICRO (Voz para cantar/tararear, o Música para captar sonido ambiente), cargar un archivo MIDI / audio / partitura, o elegir un Estado y dejar que la IA componga por ti. De pintura a música: carga una Imagen, y escucha cómo se lee el lienzo bajo la gramática color↔altura. ◆ Dos elecciones modelan cada pintura: el modo de color (Armonía o Espectral — ver modos) y opcionalmente un estilo pictórico (ocho en total — ver estilos). El mapeo es deliberadamente determinista: la misma música produce siempre la misma pintura — lo que ves es una lectura de la música, no una decoración. El interruptor 🎲 Aleatorio permite romper esto — con un artista seleccionado, una variación nueva en cada Reproducción; sin artista, mezcla los ocho estilos. ◆ Unas pocas orientaciones que conviene saber de entrada. Los modos en vivo (Componer, MICRO) pintan en un marco fijo con proporción áurea — a medida que añades más acordes, cada fila se adelgaza, la pintura se densifica en vez de crecer en altura. El lienzo es un espacio compositivo, no una línea de tiempo. ◆ Las fuentes importadas (MIDI, audio, partitura, imagen, estado) usan un lienzo que crece con el contenido — son transcripciones de un artefacto existente, no composiciones del momento. ◆ Los estilos de artista no son filtros visuales. Cada uno es una respuesta distinta a la pregunta "¿a qué se parece esta música?" — Pollock deja visible el sustrato del mosaico y gotea por encima; Miró abandona la cuadrícula por formas de constelación dispersas. Cambia de estilo libremente; la gramática de color subyacente sigue siendo la misma. ◆ En caso de duda: elige un Estado, pulsa Tocar, observa cómo se construye una pintura. Luego prueba el mismo estado en Espectral en lugar de Armonía, luego un estilo. Ese único bucle enseña el resto de la app.`},
-  {id:'modes', title:`Armonía vs Espectral`, keywords:`color modo tono paleta círculo de quintas cromático`,
-   body:`Dos gramáticas de color para la misma música. Armonía coloca las clases de tono en el círculo de quintas alrededor de la rueda de color. Espectral los espacía en pasos de 30°. Cambia en cualquier momento.`},
+  {id:'modes', title:`Armonía vs Espectral`, keywords:`color modo tono paleta círculo de quintas cromático custom bw negro blanco`,
+   body:`Dos gramáticas de color para la misma música. Armonía coloca las clases de tono en el círculo de quintas alrededor de la rueda de color. Espectral los espacía en pasos de 30°. B/W asigna luminosidad a altura, ignorando el tono. Custom solo toca los colores de tu propia paleta. Cambia en cualquier momento; las mismas notas se repintan al instante. Toca una pestaña Armonía/Espectral/B-W activa para ver una vista previa de sus colores. ◆ En modo imagen la app elige Color o B/W por ti según lo colorida que sea la obra — allí solo eliges Custom.`},
   {id:'style', title:`Estilos pictóricos (8)`, keywords:`estilo picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubismo lunares goteo salpicadura constelación collage papel recortado cuadrícula campo color abstracto geométrico fase variación`,
-   body:`Capas opcionales, cada una una lectura distinta de las mismas notas. Sin selección, el lienzo es el mosaico por defecto (rectángulos φ nítidos). Ocho estilos: ◆ Cubista (inspirado en Picasso) — planos analíticos angulosos, o collage sintético de papel recortado. ◆ Lunares (inspirado en Kusama) — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo. ◆ Goteo (inspirado en Pollock) — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas. ◆ Cósmico (inspirado en Kandinsky) — una dispersión libre de triángulos/anillos/arcos, o una cuadrícula Bauhaus ordenada. ◆ Constelación (inspirado en Miró) — densas constelaciones oscuras, o un campo claro y disperso de unas pocas formas rotundas. ◆ Cuadrícula (inspirado en Mondrian) — cuadrículas De Stijl, cuadrículas tardías dispersas, o pistas de color Boogie-Woogie. ◆ Campos (inspirado en Rothko) — campos de color apilados que se funden entre sí. ◆ Recorte (inspirado en Matisse) — paneles de color anidados, o un gran collage de papel recortado. ◆ La mayoría de los estilos contienen más de una composición; con 🎲 Aleatorio activo, Variar/siguiente alterna entre ellas. Toca el estilo activo de nuevo para deseleccionar. Cambia al instante.`},
+   body:`Capas opcionales, cada una una lectura distinta de las mismas notas. El mosaico es el modo por defecto — su propio botón al inicio de la fila (rectángulos φ nítidos). Ocho estilos: ◆ Cubista (inspirado en Picasso) — planos analíticos angulosos, o collage sintético de papel recortado. ◆ Lunares (inspirado en Kusama) — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo. ◆ Drip (inspirado en Pollock) — el mosaico sigue visible bajo goteos y salpicaduras que ignoran los límites de las celdas. ◆ Bauhaus (inspirado en Kandinsky) — formas geométricas Bauhaus: una composición libre de triángulos/anillos/arcos, o una cuadrícula ordenada de bloques de color. ◆ Constelación (inspirado en Miró) — densas constelaciones oscuras, o un campo claro y disperso de unas pocas formas rotundas. ◆ Cuadrícula (inspirado en Mondrian) — cuadrículas De Stijl, cuadrículas tardías dispersas, o pistas de color Boogie-Woogie. ◆ Campos (inspirado en Rothko) — campos de color apilados que se funden entre sí. ◆ Cut-out (inspirado en Matisse) — paneles de color anidados, o un gran collage de papel recortado. ◆ La mayoría de los estilos contienen más de una composición; con 🎲 Aleatorio activo, Variar/siguiente alterna entre ellas. Toca el estilo activo de nuevo para deseleccionar. Cambia al instante.`},
   {id:'random', title:`🎲 Aleatorio &amp; Mezcla`, keywords:`aleatorio mezcla shuffle determinismo semilla seed relanzar variación misma música pintura diferente fresco único dado tocar play siguiente estilo ciclo`,
    body:`Situado al final de la fila de estilos. Por defecto, la misma música produce la misma pintura — la semilla de cada superposición es un hash de las notas. Toca 🎲 para alternarlo (el botón brilla en ámbar). La pulsación en sí no cambia la pintura actual; el cambio ocurre en el siguiente Tocar (desde el principio) o con «siguiente ›». ◆ Con un artista seleccionado, Aleatorio relanza ese estilo en una variación nueva cada vez — y como la mayoría de los estilos contienen varias composiciones distintas, un relance puede cambiar toda la estructura, no solo los colores. ◆ SIN artista seleccionado, 🎲 se vuelve Mezcla: cada Tocar / siguiente pinta un estilo de artista distinto al azar (mosaico excluido). El estilo elegido muestra un contorno claro en la fila — tócalo para conservar ese artista y salir de la mezcla. ◆ Cambiar de estilo o de modo de color nunca relanza; solo Tocar / siguiente. El ajuste se conserva entre sesiones.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven prueba ejemplo reemplazar confirmar`,
@@ -5590,8 +5586,8 @@ const GUIDE_I18N = {
    body:`Importa mp3, wav, m4a, ogg o aac. El audio se decodifica y se detectan los tonos. Funciona mejor con material monofónico limpio.`},
   {id:'score', title:`𝄞 Partitura (MusicXML)`, keywords:`partitura musicxml musescore finale dorico música`,
    body:`Importa partituras exactas de MuseScore, Finale o Dorico. Acepta .musicxml, .xml y .mxl.`},
-  {id:'image', title:`🖼 Transcripción de imagen`, keywords:`imagen cuadro foto transcribir pintar color`,
-   body:`Importa una imagen; Paintiano la lee como partitura. Reducida a 192×120 píxeles. Tono → altura, luminosidad → octava, saturación → velocidad. El tono de fondo dominante es suprimido.`},
+  {id:'image', title:`🖼 Transcripción de imagen`, keywords:`imagen cuadro foto transcribir pintar color bw custom paleta guernica chagall`,
+   body:`Importa una pintura; Paintiano la lee como partitura. Reducida a 192×120 píxeles, recorrida de izquierda a derecha, de arriba abajo — 960 eventos de acordes. La duración no es fija: escala con la energía de la imagen (color, contraste, densidad), aproximadamente 1½–2½ minutos. ◆ La app elige la lectura según lo colorida que sea la obra. Una obra colorida se lee en Color (tono → altura, luminosidad → octava, viveza → volumen); una casi monocroma (Guernica, tinta, sepia) en B/W, donde solo la luminosidad marca la altura — oscuro grave, claro agudo, tono ignorado. Color y B/W son informativos (la app decidió); al tocar el activo ves una vista previa de los colores. ◆ Custom lo controlas tú: filtra la imagen a través de tu paleta, así solo suenan los colores cercanos a una de tus doce casillas, el resto enmudece. La paleta por defecto es el opuesto de Harmony, así que siempre suena; toca Custom de nuevo (✎) para editar la paleta.`},
   {id:'morph', title:`✦ Morfar`, keywords:`morfar fundido transición estado entre`,
    body:`Disponible después de elegir un estado. Pulsa ✦ MORFAR para mezclar el estado actual con otro. Primera mitad estado A, segunda mitad estado B.`},
   {id:'vary', title:`✦ Variar`, keywords:`variar variación relanzar aleatorio fresco brillo`,
@@ -5601,7 +5597,7 @@ const GUIDE_I18N = {
   {id:'loop', title:`⟳ Bucle`, keywords:`bucle repetir ciclo estado continuo`,
    body:`Pulsa ⟳ BUCLE para repetición continua. Pulsa de nuevo para desactivar. El botón se ilumina en dorado.`},
   {id:'speed', title:`Velocidad de reproducción`, keywords:`velocidad lento rápido tempo botones más menos`,
-   body:`Pulsa − o + para ajustar la velocidad en pasos de 0,05× entre 0,25× y 2×. Mantén pulsado cualquier botón para barrer continuamente — la repetición se acelera tras un segundo, permitiéndote recorrer el rango rápidamente y detenerte con precisión. Pulsa la etiqueta central para volver a 1×.`},
+   body:`La velocidad de reproducción es una pequeña ficha que muestra la velocidad actual (1× por defecto). Tócala para volver a 1×. Mantén pulsado para recorrer las velocidades — de 0,25× a 1× en pasos de 0,25, luego 2×, 3×, 4× — volviendo al inicio; suelta para mantener la velocidad alcanzada. La ficha se resalta cuando la velocidad no es 1×.`},
   {id:'mute', title:`🔊 / 🔇 Silenciar`, keywords:`silenciar mudo audio sonido volumen apagar encender altavoz quieto`,
    body:`El icono de altavoz junto al botón Reproducir silencia toda la salida de audio (silencio maestro). Toca una vez para silenciar piano, reproducción y cualquier bus de grabación activo; toca de nuevo para reactivar. La pintura se sigue renderizando con normalidad — solo se suprime el sonido. El ajuste se conserva entre sesiones.`},
   {id:'print', title:`🖨 Imprimir (guardar la pintura)`, keywords:`imprimir exportar png imagen guardar pintura web a1 dpi resolución tamaño`,
@@ -5611,7 +5607,7 @@ const GUIDE_I18N = {
   {id:'score-export', title:`♫ Exportar partitura (MusicXML)`, keywords:`partitura exportar musicxml xml notación musescore sibelius finale guardar compartir renombrar`,
    body:`Solo en modo imagen, junto a Grabar. Pulsa ♫ Partitura para exportar las notas del cuadro actual como partitura MusicXML. Aparece una fila para compartir con nombre editable. Pulsa Compartir para guardar el .musicxml mediante el diálogo del sistema y ábrelo en MuseScore, Sibelius, Finale, etc.`},
   {id:'clear', title:`Borrar`, keywords:`borrar reiniciar empezar de nuevo eliminar confirmar armar dos toques`,
-   body:`En modo Componer o MICRO: el botón borrar requiere dos toques — el primero lo arma (la etiqueta cambia a "tocar otra vez"), el segundo borra el lienzo. Evita la pérdida accidental de una composición en vivo. En modo MIDI, audio, partitura, imagen o estado: restablece el lienzo pero mantiene el fragmento cargado. Un solo toque, sin confirmación.`},
+   body:`En modo Componer o MICRO: el botón borrar requiere dos toques — el primero lo arma (la etiqueta cambia a "tocar otra vez"), el segundo borra el lienzo. Evita la pérdida accidental de una composición en vivo. Con una imagen: Borrar borra todo — el trazo pintado y la imagen — pero permanece en la vista de imagen con sus fichas Color/Custom; el panel completo Color+Estilo (con artistas) solo vuelve con "← Inicio". En modo MIDI, audio, partitura o estado: Borrar es un reinicio completo — descarta la pieza cargada y vuelves a un setup vacío. Un solo toque, sin confirmación.`},
   {id:'micvol', title:`Respiración del lienzo (volumen del micrófono)`, keywords:`micrófono volumen respiración pulso lienzo sonido ambiente`,
    body:`En modo MICRO (preajuste Voz o Música), el lienzo pulsa automáticamente con el volumen de la sala. Se inicia y detiene automáticamente.`},
   {id:'troubleshoot', title:`Solución de problemas`, keywords:`solución problemas error roto ayuda lento`,
@@ -5622,10 +5618,10 @@ const GUIDE_I18N = {
    body:`Paintiano maľuje hudbu ako mriežku farebných blokov v proporciách φ a prehráva obrazy ako hudbu. Vyber zdroj — Komponovať, MIKRO, MIDI, Audio, Partitúru, Obraz alebo náladu — a plátno sa pri hraní napĺňa. Ťukni Prehrať pre vypočutie, Tlačiť pre uloženie obrazu, a v režime obrazu Nahrať pre zachytenie zvuku alebo ♫ Noty pre export nôt do MusicXML.`},
   {id:'start-here', title:`Kde začať`, keywords:`onboarding začiatok začať prvýkrát nový používateľ téza ako používať príručka orientácia smer`,
    body:`Paintiano je obojsmerný prekladateľ medzi hudbou a vizuálnym umením. Hudobná skladba *je* obraz pod jednou gramatikou; obraz *je* hudobná skladba pod tou istou gramatikou invertovanou. Ten istý farebný kruh, ten istý kruh tónov, ten istý akt vnímania. Aplikácia existuje preto, aby to dokázala. ◆ Tvoj prvý ťah závisí od toho, ktorým smerom chceš prekladať. Z hudby na obraz: vyber zdroj, ktorý produkuje noty — Komponuj na klaviatúre, MIKRO (Hlas pre spev/hum, alebo Hudba pre zachytenie ambientného zvuku), nahraj MIDI / audio / partitúru, alebo vyber Náladu a nechaj AI komponovať za teba. Z obrazu na hudbu: nahraj Obraz a vypočuj si, ako sa plátno číta pod gramatikou farba↔výška. ◆ Dve voľby formujú každý obraz: farebný režim (Harmónia alebo Spektrum — pozri režimy) a voliteľne maliarsky štýl (osem z nich — pozri štýly). Mapovanie je zámerne deterministické: tá istá hudba vždy vytvorí ten istý obraz, takže to, čo vidíš, je čítanie hudby, nie dekorácia. Prepínač 🎲 Náhoda ti umožňuje sa tomu vyhnúť — s vybraným umelcom nová variácia pri každom Prehratí; bez umelca mieša všetkých osem štýlov. ◆ Pár orientácií, ktoré sa oplatí poznať vopred. Živé režimy (Komponovať, MIKRO) maľujú do fixného rámu v zlatom reze — keď pridávaš akordy, každý riadok sa stenčí, takže obraz sa zhusťuje, namiesto aby rástol do výšky. Plátno je kompozičný priestor, nie časová os. ◆ Importované zdroje (MIDI, audio, partitúra, obraz, nálada) používajú plátno, ktoré rastie s obsahom — sú to prepisy existujúceho artefaktu, nie kompozície v okamihu. ◆ Maliarske štýly nie sú vizuálne filtre. Každý je iná odpoveď na otázku „ako vyzerá táto hudba?" — Pollock necháva mozaikový podklad viditeľný a kvapká cezeň; Miró opúšťa mriežku v prospech rozosiatych tvarov súhvezdí. Slobodne meň štýly; farebná gramatika pod nimi zostáva tá istá. ◆ Keď neviete: vyber Náladu, ťukni Prehrať, sleduj, ako sa obraz buduje sám. Potom skús tú istú náladu v Spektre namiesto Harmónie, potom štýl. Tá jedna slučka ťa naučí zvyšok aplikácie.`},
-  {id:'modes', title:`Harmónia vs Spektrum`, keywords:`farba režim odtieň paleta kvintový kruh chromatický`,
-   body:`Dve farebné gramatiky pre tú istú hudbu. Harmónia rozmiestňuje triedy tónov okolo farebného kruhu v poradí Kvintového kruhu — príbuzné tóniny sa zhlukujú v podobných farbách. Spektrum ich rozmiestňuje v rovnomerných krokoch 30° — jedna farba na poltón. Prepínaj kedykoľvek; tie isté noty sa okamžite premaľujú.`},
+  {id:'modes', title:`Harmónia vs Spektrum`, keywords:`farba režim odtieň paleta kvintový kruh chromatický custom bw čierna biela`,
+   body:`Dve farebné gramatiky pre tú istú hudbu. Harmónia rozmiestňuje triedy tónov okolo farebného kruhu v poradí Kvintového kruhu — príbuzné tóniny sa zhlukujú v podobných farbách. Spektrum ich rozmiestňuje v rovnomerných krokoch 30° — jedna farba na poltón. B/W mapuje svetlosť na výšku, odtieň ignoruje. Custom hrá len farby z tvojej vlastnej palety. Prepínaj kedykoľvek; tie isté noty sa okamžite premaľujú. Ťuknutím na aktívny tab Harmónia/Spektrum/B-W zobrazíš náhľad jeho farieb. ◆ V režime obrazu aplikácia vyberie Color alebo B/W za teba podľa farebnosti diela — tam si volíš len Custom.`},
   {id:'style', title:`Maliarske štýly (8)`, keywords:`štýl picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubizmus bodky kvapky striekanie súhvezdia koláž vystrihovaný papier mriežka farebné pole umelec abstraktný geometrický fáza variácia`,
-   body:`Voliteľné prekrytia, každé iné čítanie tých istých nôt. Bez výberu je plátno predvolená mozaika (ostré φ-obdĺžniky). Osem štýlov: ◆ Kubizmus (inšpirované Picassom) — hranaté analytické plochy, alebo syntetická koláž z vystrihovaného papiera. ◆ Bodky (inšpirované Kusamou) — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno. ◆ Kvapky (inšpirované Pollockom) — mozaika zostáva viditeľná pod kvapkami a striekancami, ktoré ignorujú hranice buniek. ◆ Kozmické (inšpirované Kandinským) — voľný rozptyl trojuholníkov/prstencov/oblúkov, alebo usporiadaná Bauhaus mriežka. ◆ Súhvezdie (inšpirované Mirom) — husté tmavé konštelácie, alebo svetlé riedke pole zopár výrazných tvarov. ◆ Mriežka (inšpirované Mondrianom) — De Stijl mriežky, riedke neskoré mriežky, alebo farebné dráhy Boogie-Woogie. ◆ Polia (inšpirované Rothkom) — mäkké navrstvené farebné polia, ktoré sa do seba prelievajú. ◆ Výstrižok (inšpirované Matissom) — vnorené farebné panely, alebo veľká koláž z vystrihovaného papiera. ◆ Väčšina štýlov obsahuje viac než jednu kompozíciu; pri zapnutej 🎲 Náhode Variovať/ďalej medzi nimi preroluje. Ťukni na aktívny štýl znova pre zrušenie výberu. Prepína okamžite.`},
+   body:`Voliteľné prekrytia, každé iné čítanie tých istých nôt. Mozaika je predvolený režim — vlastné tlačidlo na začiatku riadku (ostré φ-obdĺžniky). Osem štýlov: ◆ Kubizmus (inšpirované Picassom) — hranaté analytické plochy, alebo syntetická koláž z vystrihovaného papiera. ◆ Bodky (inšpirované Kusamou) — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno. ◆ Drip (inšpirované Pollockom) — mozaika zostáva viditeľná pod kvapkami a striekancami, ktoré ignorujú hranice buniek. ◆ Bauhaus (inšpirované Kandinským) — geometrické Bauhaus tvary: voľná kompozícia trojuholníkov/prstencov/oblúkov, alebo usporiadaná mriežka farebných blokov. ◆ Súhvezdie (inšpirované Mirom) — husté tmavé konštelácie, alebo svetlé riedke pole zopár výrazných tvarov. ◆ Mriežka (inšpirované Mondrianom) — De Stijl mriežky, riedke neskoré mriežky, alebo farebné dráhy Boogie-Woogie. ◆ Polia (inšpirované Rothkom) — mäkké navrstvené farebné polia, ktoré sa do seba prelievajú. ◆ Cut-out (inšpirované Matissom) — vnorené farebné panely, alebo veľká koláž z vystrihovaného papiera. ◆ Väčšina štýlov obsahuje viac než jednu kompozíciu; pri zapnutej 🎲 Náhode Variovať/ďalej medzi nimi preroluje. Ťukni na aktívny štýl znova pre zrušenie výberu. Prepína okamžite.`},
   {id:'random', title:`🎲 Náhoda &amp; Miešanie`, keywords:`náhoda miešanie shuffle determinizmus seed prehodiť variácia rovnaká hudba iný obraz čerstvé kocka unikátne prehrať ďalej štýl cyklus`,
    body:`Nachádza sa na konci radu štýlov. Štandardne tá istá hudba produkuje ten istý obraz — seed za každým prekrytím je hash nôt. Ťukni 🎲 pre prepnutie (tlačidlo svieti jantárovo). Samotné prepnutie nezmení aktuálny obraz; zmena nastane pri ďalšom Prehrať (od začiatku) alebo cez „ďalej ›". ◆ S vybraným umelcom Náhoda preroluje tento štýl do novej variácie zakaždým — a keďže väčšina štýlov obsahuje viacero odlišných kompozícií, prerolovanie môže zmeniť celú štruktúru, nielen farby. ◆ BEZ vybraného umelca sa 🎲 stáva Miešaním: každé Prehrať / ďalej namaľuje náhodne iný umelecký štýl (mozaika vynechaná). Vytiahnutý štýl má v rade svetlý obrys — ťukni naň, aby si ponechal tohto umelca a opustil miešanie. ◆ Prepínanie štýlu alebo farebného režimu nikdy nepriehadzuje; len Prehrať / ďalej. Nastavenie sa pamätá medzi reláciami.`},
   {id:'demo', title:`Demo (Pre Elišku)`, keywords:`demo pre elišku für elise beethoven test príklad ukážka nahradiť potvrdiť`,
@@ -5646,8 +5642,8 @@ const GUIDE_I18N = {
    body:`Nahraj mp3, wav, m4a, ogg alebo aac. Audio je dekódované a výšky sú detegované do MIDI-podobných udalostí. Najlepšie funguje s čistým monofónnym alebo riedkym polyfónnym materiálom. Vstavaná ukážka je k dispozícii.`},
   {id:'score', title:`𝄞 Partitúra (MusicXML)`, keywords:`partitúra musicxml mxl musescore finale dorico noty`,
    body:`Nahraj presné noty z MuseScore, Finale alebo Dorico. Akceptuje .musicxml, .xml a .mxl. Výšky, dĺžky, dynamika a akordy prechádzajú presne — najpresnejší vstup.`},
-  {id:'image', title:`🖼 Transkripcia obrazu`, keywords:`obraz maľba foto prepísať maľovať fotografia farba`,
-   body:`Nahraj obrázok; Paintiano ho prečíta ako partitúru. Redukovaný na 192×120 pixelov, prechádzajúci zľava doprava, zhora nadol. Odtieň → výška, svetlosť → oktáva, chroma → rýchlosť. Dominantná farba pozadia je potlačená, aby dominoval figuratívny obsah.`},
+  {id:'image', title:`🖼 Transkripcia obrazu`, keywords:`obraz maľba foto prepísať maľovať fotografia farba color bw custom paleta guernica chagall`,
+   body:`Nahraj obraz; Paintiano ho prečíta ako partitúru. Redukovaný na 192×120 pixelov, prechádza zľava doprava, zhora nadol — 960 akordických udalostí. Dĺžka nie je pevná: škáluje s energiou obrazu (farebnosť, kontrast, rušnosť), zhruba 1½–2½ minúty. ◆ Aplikácia vyberie čítanie podľa toho, aký farebný obraz je. Farebné dielo sa číta v Color (odtieň → výška, svetlosť → oktáva, sýtosť → hlasitosť); takmer monochromatické (Guernica, tuš, sépia) v B/W, kde výšku určuje len svetlosť — tmavé nízko, svetlé vysoko, odtieň sa ignoruje. Color a B/W sú info (aplikácia rozhodla); ťuknutím na aktívny vidíš náhľad jeho farieb. ◆ Custom je čítanie, ktoré riadiš ty: filtruje obraz cez tvoju paletu, takže znejú len farby blízke niektorému z tvojich dvanástich políčok, zvyšok stíchne. Predvolená paleta je opak Harmónie, takže vždy hrá; ďalším ťuknutím na Custom (✎) upravíš paletu.`},
   {id:'morph', title:`✦ Morf`, keywords:`morf crossfade prelínanie prechod nálada medzi`,
    body:`Dostupné po výbere nálady. Ťukni ✦ MORF pre prelínanie aktuálnej nálady do inej. Prvá polovica je nálada A, druhá polovica nálada B, s prelínaním rýchlosti v zóne 40–60 %. Podtitul progress baru zobrazuje prelínanie, napr. „šťastný → smutný".`},
   {id:'vary', title:`✦ Variácia`, keywords:`variácia variovať prehodiť randomizovať náhodný čerstvý iskra`,
@@ -5657,7 +5653,7 @@ const GUIDE_I18N = {
   {id:'loop', title:`⟳ Slučka`, keywords:`slučka opakovať cyklus nálada nepretržite`,
    body:`Dostupné počas prehrávania nálady. Ťukni ⟳ SLUČKA pre nepretržité opakovanie skladby. Ťukni znova pre vypnutie. Tlačidlo svieti zlato, keď je aktívne.`},
   {id:'speed', title:`Rýchlosť prehrávania`, keywords:`rýchlosť pomaly rýchlo tempo tlačidlá plus mínus`,
-   body:`Ťukni − alebo + pre úpravu rýchlosti prehrávania v krokoch 0,05× v rozsahu 0,25× až 2×. Podrž tlačidlo pre plynulé prechádzanie — opakovanie sa po sekunde zrýchli, takže môžeš rýchlo prejsť celý rozsah a presne zastaviť. Ťukni na štítok v strede pre návrat na 1×.`},
+   body:`Rýchlosť prehrávania je malý čip zobrazujúci aktuálnu rýchlosť (predvolene 1×). Ťuknutím sa vráti na 1×. Podržaním prechádzaš rýchlosti — od 0,25× do 1× v krokoch 0,25, potom 2×, 3×, 4× — pričom sa na konci vráti na začiatok; po pustení ostane nastavená rýchlosť. Čip sa zvýrazní, keď rýchlosť nie je 1×.`},
   {id:'mute', title:`🔊 / 🔇 Stlmiť`, keywords:`stlmiť ticho audio zvuk hlasitosť vyp zap reproduktor tichý`,
    body:`Ikona reproduktora vedľa tlačidla Prehrať prepína celý audio výstup (master mute). Ťukni raz pre stlmenie piána, prehrávania a každej aktívnej nahrávacej zbernice; ťukni znova pre obnovenie zvuku. Obraz sa naďalej vykresľuje normálne — len zvuk je potlačený. Nastavenie sa pamätá medzi reláciami, takže sa aplikácia otvorí v rovnakom stave stlmenia.`},
   {id:'print', title:`🖨 Tlač (uložiť obraz)`, keywords:`tlačiť exportovať png obrázok uložiť obraz fotografia veľkosť web tlač a1 dpi rozlíšenie`,
@@ -5667,7 +5663,7 @@ const GUIDE_I18N = {
   {id:'score-export', title:`♫ Export nôt (MusicXML)`, keywords:`noty export musicxml xml notový zápis partitúra musescore sibelius finale uložiť zdieľať premenovať`,
    body:`Dostupné len v režime obrazu, vedľa Nahrávania. Ťukni ♫ Noty pre prevod nôt aktuálnej maľby do MusicXML zápisu. Objaví sa zdieľací riadok s upraviteľným názvom (default predvyplnený, prípona pevná). Ťukni Zdieľať pre uloženie .musicxml cez systémový dialóg, potom súbor otvor v MuseScore, Sibelius, Finale alebo inom notačnom programe na zobrazenie, úpravu či tlač notového zápisu.`},
   {id:'clear', title:`Vyčistiť`, keywords:`vyčistiť reset začať odznova zmazať potvrdiť aktivovať dvojité ťuknutie`,
-   body:`V režime Komponovať alebo MIKRO: tlačidlo vyčistenia potrebuje dve ťuknutia — prvé ho aktivuje (štítok sa zmení na „znova pre vyčistenie"), druhé zmaže plátno. Zabraňuje to náhodnej strate živej kompozície. V režime MIDI, audio, partitúra, obraz alebo nálada: resetuje plátno na prázdne, ale ponecháva nahranú skladbu, takže ju môžeš znova prehrať. Jedno ťuknutie, bez potvrdenia.`},
+   body:`V režime Komponovať alebo MIKRO: tlačidlo vyčistenia potrebuje dve ťuknutia — prvé ho aktivuje (štítok sa zmení na „znova pre vyčistenie"), druhé zmaže plátno. Zabraňuje to náhodnej strate živej kompozície. Pri obraze: Vyčistiť zmaže všetko — namaľovanú stopu aj obraz — ale ostaneš v zobrazení obrazu s jeho tlačidlami Farba/Vlastná; plný panel Farba+Štýl (s umelcami) sa vráti až cez „← Nastavenie". V režime MIDI, audio, partitúra alebo nálada: Vyčistiť je úplný reset — zahodí načítané dielo a vrátiš sa do prázdneho nastavenia. Jedno ťuknutie, bez potvrdenia.`},
   {id:'micvol', title:`Dýchanie plátna (hlasitosť mikrofónu)`, keywords:`mikro hlasitosť dýchanie pulz plátno miestnosť zvuk ambient`,
    body:`V režime MIKRO (Hlas alebo Hudba) plátno automaticky pulzuje s hlasitosťou miestnosti — hlasnejší zvuk plátno mierne rozšíri, ticho mu dovolí oddýchnuť. Začína a zastavuje sa automaticky s MIKRO.`},
   {id:'troubleshoot', title:`Riešenie problémov`, keywords:`riešenie problém chyba pokazené opraviť bug pomoc pomalé`,
@@ -6022,7 +6018,17 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
             </label>
           ))}
         </div>
-        <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18}}>
+        <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18,flexWrap:'wrap'}}>
+          <button onClick={()=>{
+            // Default: restore the opposite-of-Harmony palette (each pitch class
+            // gets Harmony's complementary hue). This is the same palette the app
+            // seeds Custom with, so it always plays and contrasts with Color.
+            setCustomPalette(Array.from({length:12},(_,pc)=>{
+              const oppHue=(COF[pc]+180)%360;
+              const [r,g,b]=fromHsl(oppHue,80,55);
+              return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
+            }));
+          }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
           <button onClick={()=>{
             // Clear all: reset every pitch class to neutral light grey.
             // The user starts from a blank slate and picks each color
@@ -6035,6 +6041,114 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
     </div>
   );
 });
+
+// Shown once per session (survives in-app remounts; a real page reload starts a
+// fresh session and replays it — the intended "UX standard" behaviour).
+let INTRO_SHOWN = false;
+
+// Splash intro: a Pollock-style burst of coloured paint that erupts from centre,
+// arcs out with gravity + fading trails, settles, then the title surfaces. Runs
+// on a real <canvas> (rAF) so it's smooth. Tap anywhere (or auto-timeout) to skip.
+function IntroSplash({ onDone, tagline, skipLabel }){
+  const cvRef = useRef(null);
+  const rafRef = useRef(0);
+  const doneRef = useRef(false);
+  const [titleIn, setTitleIn] = useState(false);
+  const finish = useCallback(()=>{ if(doneRef.current) return; doneRef.current=true; cancelAnimationFrame(rafRef.current); onDone(); },[onDone]);
+
+  useEffect(()=>{
+    const cv = cvRef.current; if(!cv) return;
+    const dpr = Math.min(2, window.devicePixelRatio||1);
+    let W=cv.clientWidth, H=cv.clientHeight;
+    cv.width=W*dpr; cv.height=H*dpr;
+    const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr);
+
+    // Circle-of-fifths hues → vivid paint colours.
+    const COF_L=[0,210,60,270,120,330,180,30,240,90,300,150];
+    const hsl=(h,s,l)=>{s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>Math.round((l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1))))*255);return`rgb(${f(0)},${f(8)},${f(4)})`;};
+
+    // Pollock drip: ribbons of paint are "thrown" across the canvas — each stroke
+    // is a moving head that lays down a tapering line, flinging the odd droplet.
+    // No radial fireworks; the motion reads as a hand whipping paint across.
+    const strokes=[];
+    const mkStroke=(t0)=>{
+      const edge=Math.random();
+      // start somewhere off/near an edge, travel across with a lazy arc
+      const x = edge<.5 ? -20+Math.random()*40 : W-20+Math.random()*40;
+      const y = H*(0.15+Math.random()*0.7);
+      const dir = x<W/2 ? 1 : -1;
+      const pc=(Math.random()*12)|0;
+      strokes.push({
+        t0, x, y,
+        vx: dir*(2.2+Math.random()*2.6), vy:(Math.random()-.5)*2.2,
+        curl:(Math.random()-.5)*0.06, swing:Math.random()*6.28,
+        w: 2.5+Math.random()*4, col:hsl(COF_L[pc],80,50+Math.random()*16),
+        life:0, max:42+Math.random()*40, px:x, py:y, drips:[],
+      });
+    };
+    // staggered, overlapping strokes — a calm build, not one big bang
+    let nextAt=4; for(let i=0;i<18;i++){ const at=nextAt; mkStroke(at); nextAt+=9+((Math.random()*12)|0); }
+
+    const START=performance.now();
+    const DUR=4600;
+    let frame=0;
+    const tick=(now)=>{
+      const el=now-START; frame++;
+      // soft fade for layered, painterly build-up (strokes persist, gently settle)
+      ctx.fillStyle='rgba(6,6,12,0.05)'; ctx.fillRect(0,0,W,H);
+      for(const s of strokes){
+        if(frame < s.t0) continue;
+        if(s.life<=s.max){
+          s.life++;
+          s.px=s.x; s.py=s.y;
+          // curving, decelerating throw with a little vertical swing
+          s.vx*=0.99; s.curl*=0.99;
+          s.vy += s.curl*6 + Math.sin(s.life*0.18+s.swing)*0.12;
+          s.x+=s.vx; s.y+=s.vy;
+          const taper=Math.sin(Math.min(1,s.life/s.max)*Math.PI); // thin→thick→thin
+          ctx.strokeStyle=s.col; ctx.lineCap='round';
+          ctx.lineWidth=Math.max(0.6, s.w*taper);
+          ctx.globalAlpha=0.9;
+          ctx.beginPath(); ctx.moveTo(s.px,s.py); ctx.lineTo(s.x,s.y); ctx.stroke();
+          // fling a droplet now and then
+          if(Math.random()<0.18){ s.drips.push({x:s.x,y:s.y,vx:s.vx*0.3+(Math.random()-.5),vy:s.vy*0.3+Math.random()*1.5,r:1+Math.random()*2.4,life:0,max:30+Math.random()*30,col:s.col}); }
+        }
+        // droplets fall + fade
+        for(const d of s.drips){
+          if(d.life>d.max) continue;
+          d.life++; d.vy+=0.12; d.x+=d.vx; d.y+=d.vy;
+          ctx.globalAlpha=Math.max(0,1-d.life/d.max)*0.85;
+          ctx.fillStyle=d.col; ctx.beginPath(); ctx.arc(d.x,d.y,d.r,0,6.2832); ctx.fill();
+        }
+      }
+      ctx.globalAlpha=1;
+      if(el>1200 && !titleIn) setTitleIn(true);
+      if(el<DUR && !doneRef.current){ rafRef.current=requestAnimationFrame(tick); }
+      else finish();
+    };
+    rafRef.current=requestAnimationFrame(tick);
+
+    const onResize=()=>{ W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.scale(dpr,dpr); };
+    window.addEventListener('resize',onResize);
+    return ()=>{ cancelAnimationFrame(rafRef.current); window.removeEventListener('resize',onResize); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  return (
+    <div onClick={finish} role="button" aria-label="skip intro"
+      style={{position:'fixed',inset:0,zIndex:9999,background:'#06060c',cursor:'pointer',overflow:'hidden'}}>
+      <canvas ref={cvRef} style={{position:'absolute',inset:0,width:'100%',height:'100%'}}/>
+      <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'3rem',fontWeight:600,letterSpacing:'.04em',
+          background:`linear-gradient(95deg,${PF.gold2},${PF.cream} 50%,${PF.gold})`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent',
+          opacity:titleIn?1:0,transform:titleIn?'translateY(0) scale(1)':'translateY(10px) scale(.96)',transition:'opacity .8s ease, transform .9s cubic-bezier(.2,.8,.2,1)',textShadow:'0 4px 30px rgba(0,0,0,.5)'}}>Paintiano</div>
+        <div style={{fontFamily:"'Outfit',sans-serif",fontSize:'.6rem',letterSpacing:'.34em',textTransform:'uppercase',color:PF.cream,marginTop:12,transformOrigin:'center top',
+          opacity:titleIn?0.8:0,transform:titleIn?'scale(1)':'scale(2.4)',transition:'opacity .7s ease .8s, transform 1.0s cubic-bezier(.18,.7,.16,1) .8s'}}>{tagline}</div>
+      </div>
+      <div style={{position:'absolute',bottom:30,left:0,right:0,textAlign:'center',fontFamily:"'Outfit',sans-serif",fontSize:'.5rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.28)',pointerEvents:'none'}}>{skipLabel}</div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §7  MAIN COMPONENT — Paintiano
@@ -6105,6 +6219,11 @@ export default function Paintiano() {
   const introRafRef   = useRef(null);
 
   const [mode,      setMode]      = useState('harmony');
+  const modeRef = useRef('harmony');
+  useEffect(()=>{ modeRef.current=mode; },[mode]);
+  // The colour reading the app chose for the current image (harmony or bw), so
+  // leaving Custom returns to it rather than always to harmony.
+  const appModeRef = useRef('harmony');
   // Custom palette = 12 hex colors, one per pitch class (index 0 = C, 11 = B).
   // null = uninitialized. Seeded on first switch to 'custom' mode from whichever
   // mode was active. Persisted across sessions in localStorage.
@@ -6122,7 +6241,16 @@ export default function Paintiano() {
     }catch(_){}
     return null;
   });
-  const defaultCustomPalette=useMemo(()=>Array.from({length:12},()=>'#888888'),[]);
+  // Default Custom palette = the exact OPPOSITE of Harmony: each pitch class gets
+  // the complementary hue (Harmony's COF hue + 180°). So the moment you open
+  // Custom it already plays AND sounds maximally different from Color/Harmony —
+  // no silent grey default, and the contrast is obvious on first listen. The user
+  // can still recolour any swatch in the editor.
+  const defaultCustomPalette=useMemo(()=>Array.from({length:12},(_,pc)=>{
+    const oppHue=(COF[pc]+180)%360;
+    const [r,g,b]=fromHsl(oppHue,80,55);
+    return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
+  }),[]);
   const activePalette=customPalette||defaultCustomPalette;
   useEffect(()=>{
     if(!customPalette)return;
@@ -6131,9 +6259,30 @@ export default function Paintiano() {
   },[customPalette]);
   // Modal open state for the palette editor
   const [showPaletteEditor, setShowPaletteEditor] = useState(false);
+  // Custom chip (image mode) is a multi-step cycle. After Custom is active, the
+  // 2nd tap "arms" it — the chip label switches to "edit palette" but the editor
+  // stays closed; the 3rd tap actually opens the editor. Closing the editor
+  // disarms it, returning the chip to the plain active "Custom" label.
+  const [customArmed, setCustomArmed] = useState(false);
+  // Toggles a read-only preview of the 12 Harmony colours under the Color chip
+  // (image mode). Tapping the active Color chip shows/hides it; it's purely
+  // informational (the swatches can't be edited — that's what Custom is for).
+  const [showColorPalette, setShowColorPalette] = useState(false);
+  // After returning to SETUP from an image, no colour tab should look selected
+  // (the app's image pick shouldn't carry over as a gold SETUP tab). Cleared the
+  // moment the user taps any colour tab in SETUP.
+  const [setupNoSel, setSetupNoSel] = useState(false);
+  // One-shot splash intro (palette→keyboard demo). Skippable by tap; auto-hides.
+  const [showIntro, setShowIntro] = useState(()=>!INTRO_SHOWN);
+  useEffect(()=>{
+    if(INTRO_SHOWN) return;
+    INTRO_SHOWN = true;                          // mark immediately so remounts don't replay
+    const t=setTimeout(()=>setShowIntro(false), 4800);   // safety net slightly above the canvas DUR
+    return ()=>clearTimeout(t);
+  },[]);
   // Stable close callback so PaletteEditorModal's React.memo can skip
   // reconciliation when the parent re-renders for unrelated reasons.
-  const closePaletteEditor = useCallback(()=>setShowPaletteEditor(false),[]);
+  const closePaletteEditor = useCallback(()=>{setShowPaletteEditor(false);setCustomArmed(false);},[]);
   const [chords,    setChords]    = useState([]);
   const [disp,      setDisp]      = useState(0);
   const [active,    setActive]    = useState(new Set());
@@ -6167,11 +6316,11 @@ export default function Paintiano() {
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
   const STYLE_LABELS_I18N = {
-    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Cosmic',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out'},
-    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Kozmický',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Výrez'},
-    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Kosmisch',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Scherenschnitt'},
-    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Coulure',kandinsky:'Cosmique',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Découpage'},
-    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Cósmico',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Recorte'},
+    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out'},
+    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Drip',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Cut-out'},
+    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Drip',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Cut-out'},
+    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Cut-out'},
+    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Cut-out'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
   const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse'};
@@ -6268,6 +6417,8 @@ export default function Paintiano() {
   const [clearArmed, setClearArmed] = useState(false);
   const clearArmRef = useRef(null);
   const speedHoldRef = useRef(null);
+  const speedMovedRef = useRef(false);   // did the current press advance the rate (hold) vs stay still (tap)?
+  const [speedSweeping, setSpeedSweeping] = useState(false);   // true while holding — shows a floating rate label above the finger
   // Same pattern for the demo link: if the canvas has content, ask once before
   // replacing it with Für Elise. Empty canvas → demo fires immediately.
   const [demoArmed, setDemoArmed] = useState(false);
@@ -6412,6 +6563,14 @@ export default function Paintiano() {
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [showMoodMenu, setShowMoodMenu] = useState(false);
   const [currentMood, setCurrentMood] = useState(null);
+  // setupNoSel only makes sense right after an image→Setup return. Any other
+  // source (midi/audio/score/mood/compose/mic) should restore a normal selected
+  // colour tab, so clear it whenever the source becomes something other than image.
+  useEffect(()=>{
+    // Clear the image-only "nothing selected" state once any other source/mood
+    // becomes active, so its colour tab shows as normally selected again.
+    if((loadedSource && loadedSource!=='image') || currentMood || composeMode || micActive){ setSetupNoSel(false); }
+  },[loadedSource, currentMood, composeMode, micActive]);  // eslint-disable-line react-hooks/exhaustive-deps
   // When a mood is picked the view flips to active and the setup panel (with
   // MORPH/VARY) is replaced by the collapsed strip. Auto-open the strip on
   // mood-select so those mood-refinement controls stay immediately reachable.
@@ -6470,7 +6629,12 @@ export default function Paintiano() {
   // source — there is nothing painted to return to — so going back to Setup
   // shows a clean, unselected source row. It re-highlights as soon as the image
   // plays again (disp>0 or playedOnce).
-  const activeSource = (loadedSource==='image' && disp===0 && !playedOnce) ? null : loadedSource;
+  // A source tile lights up as "active" only when it actually has content loaded.
+  // After app start or a Clear there are no chords, so nothing should glow — even
+  // if loadedSource still names a type (e.g. image keeps 'image' after Clear).
+  const activeSource = !chords.length ? null
+    : (loadedSource==='image' && (!pixelRef.current || (disp===0 && !playedOnce))) ? null
+    : loadedSource;
   const composedModeRef = useRef(false);
   const [selectedChordIdx, setSelectedChordIdx] = useState(null); // chord.idx selected by tapping a block (compose / compose-pause) for targeted Undo
   const selectedChordIdxRef = useRef(null);
@@ -6535,6 +6699,15 @@ export default function Paintiano() {
     return harmCol(m,v);
   },[mode,activePalette]);
 
+  // Colour for a pitch class (0..11) in a given mode — used by the read-only
+  // colour previews under the Color tabs. B/W spreads the 12 classes across its
+  // value ramp (a grey scale) using octave-spaced MIDI so the shades differ.
+  const colorPreview = useCallback((md,pc)=>{
+    if(md==='bw') return bwCol(36+pc*4, 100);     // 12 steps up the value ramp → grey scale
+    if(md==='spectral') return specCol(60+pc, 100);
+    return harmCol(60+pc, 100);
+  },[]);
+
   useEffect(()=>{
     const cv=canvasRef.current;if(!cv)return;
     const{N,BW,BH,CW,CH}=grid;
@@ -6552,7 +6725,35 @@ export default function Paintiano() {
     if(viewMode==='image'&&pixelRef.current){
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
-      // Stopped: leave whatever pixels the animation painted
+      // Stopped/paused: the canvas may have been blanked while we were away in
+      // Setup (the element unmounts/clears). Repaint the already-played mosaic
+      // 0..disp from pixel data so returning via "← Canvas"/Resume shows the
+      // progress that was on screen before, instead of a blank image overlay.
+      try{
+        const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
+        const px=pixelRef.current;
+        if(ctx && px && disp>0){
+          const{nc,nr}=px, pdata=px.px;
+          const{BW,BH,CW,CH}=grid;
+          const colStep=px.colStep||1;
+          const effCols=Math.ceil(nc/colStep);
+          const CHORD_SIZE=6;
+          ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
+          for(let i=0;i<disp && i<chords.length;i++){
+            const band=Math.floor(i/effCols),cg=i%effCols,colStart=cg*colStep;
+            for(let sk=0;sk<colStep;sk++){
+              const col=colStart+sk; if(col>=nc) break;
+              for(let j=0;j<CHORD_SIZE;j++){
+                const row=band*CHORD_SIZE+j; if(row>=nr) break;
+                const p=pdata[row*nc+col];
+                if(!p) continue;
+                ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+                ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
+              }
+            }
+          }
+        }
+      }catch(_){}
       return;
     }
     // Per-painting seed for renderers needing a stable whole-painting choice.
@@ -6727,7 +6928,7 @@ export default function Paintiano() {
         else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed);
         else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode);
+        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc);
         else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
@@ -6755,7 +6956,7 @@ export default function Paintiano() {
       // Kandinsky canvas-wide contour overlay — large outlined shapes in
       // varied colors layered over the per-cell Kandinsky composition.
       if(style==='kandinsky' && lim>0){
-        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode);
+        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc);
       }
       if(style==='rothko' && lim>0){
         drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
@@ -7501,7 +7702,7 @@ export default function Paintiano() {
     const onEsc=(e)=>{
       if(e.key!=='Escape')return;
       if(preview){e.preventDefault();if(preview){try{URL.revokeObjectURL(preview.url);}catch(_){}}setPreview(null);return;}
-      if(showPaletteEditor){e.preventDefault();setShowPaletteEditor(false);return;}
+      if(showPaletteEditor){e.preventDefault();closePaletteEditor();return;}
       if(showMorphMenu){e.preventDefault();setShowMorphMenu(false);return;}
       if(showMoodMenu){e.preventDefault();setShowMoodMenu(false);return;}
       if(showSizePicker){e.preventDefault();setShowSizePicker(false);return;}
@@ -7532,6 +7733,21 @@ export default function Paintiano() {
       window.removeEventListener('blur',release);
     };
   },[releaseAllHeld]);
+
+  // Immediately blank the canvas + painting state when a NEW source starts
+  // loading, so the previous painting's trace doesn't linger on screen during
+  // transcription (e.g. switching MIDI→Audio: the old MIDI strip used to stay
+  // visible until the audio finished decoding). Does NOT touch loadedSource/blobs
+  // — the loaders manage those — it just clears the visible painting + resume.
+  const wipeCanvasNow = useCallback(()=>{
+    setChords([]);chordsRef.current=[];idxRef.current=0;setPending([]);pendingRef.current=[];
+    setDisp(0);setHoldPaused(false);resumeFromRef.current=null;
+    pixelRef.current=null;setViewMode('paint');setOriginalImgUrl(null);setInfo(null);
+    substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+    lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
+    try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
+    setStamp(s=>s+1);
+  },[]);
 
   const clear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -7591,10 +7807,10 @@ export default function Paintiano() {
     else if(micListening) { composedModeRef.current=true; draftOwnerRef.current='listen'; }
   },[stopAll,micPainting,micListening,composeMode]);
 
-  // Clear from the painting view. For a LOADED source (mood / MIDI / audio /
-  // score / image) we keep the music (chords) so Play can repaint it — we just
-  // stop playback and blank the canvas back to the start (disp=0). For compose
-  // / mic the "painting" IS the chord draft, so fall through to full clear().
+  // Clear from the painting view. For a loaded source (mood / MIDI / audio /
+  // score / image) Clear is a FULL reset — it drops the loaded piece and returns
+  // to an empty setup. For compose / mic the "painting" IS the chord draft, so it
+  // also falls through to full clear().
   const clearCanvas = useCallback(()=>{
     // Voice/Music mic mode: the mic stream is still live and the capture loop
     // appends new chords continuously. If we only wipe the canvas, the next
@@ -7616,30 +7832,31 @@ export default function Paintiano() {
     // still a Compose/MIC draft, marked by draftOwnerRef. Treat that as a
     // creation (full clear), NOT a loaded source — otherwise Clear would keep
     // the chords and the painting would reappear on replay.
-    // IMAGE source: Clear should wipe only the painted/audio trace, NOT the
-    // loaded image — so it can replay without re-loading. Stop playback, reset
-    // to the start (disp/idx 0), invalidate the built-up painting cache, but
-    // keep the image, its pixel data and its chords intact.
+    // IMAGE source: Clear wipes everything — the painted trace AND the loaded
+    // picture — but STAYS in the image view: loadedSource remains 'image' so the
+    // image-style Color/Custom strip keeps showing, and we do NOT drop to the full
+    // setup. The complete Color+Style panel (with artists) only appears when the
+    // user explicitly taps "← Setup". This keeps the cleared view calm.
     if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
-      idxRef.current=0; sessionStart.current=0;
+      setChords([]);chordsRef.current=[];idxRef.current=0;setPending([]);pendingRef.current=[];
+      pressInfo.current={};sessionStart.current=0;gridSigRef.current='';
+      pixelRef.current=null;                 // drop the picture's pixel data
+      setOriginalImgUrl(null);               // drop the displayed original image
+      setInfo(null);
       substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
       lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
-      // Wipe the painted overlay to transparent so the clean original image
-      // shows underneath (option 1) — no dark fill, no φ-mosaic, no grid.
-      try{
-        const cv=canvasRef.current;
-        if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); }
-      }catch(_){}
+      setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
+      try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
       setDisp(0); setStamp(s=>s+1); setPlayedOnce(false);
-      resumeFromRef.current=null; setHoldPaused(false);   // CLEAR fully resets position — no stale Resume that repaints the wiped trace
+      resumeFromRef.current=null; setHoldPaused(false);
+      setShowColorPalette(false); setCustomArmed(false);
+      // loadedSource stays 'image' and forceSetup stays false → image view persists.
       return;
     }
     // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
-    // full clear() too: it drops the loaded source and chords so the source tile
-    // no longer shows as active when returning to setup. (Previously this branch
-    // only blanked disp while keeping chords + loadedSource, which left the
-    // source highlighted/active in setup after Clear.)
+    // full clear(): it drops the loaded source and chords so the source tile
+    // no longer shows as active when returning to setup.
     clear();
     // Discard any stopped-session draft + glow too (a Compose/MIC draft whose
     // live mode already ended). Without this the MIC/COMPOSE button kept its
@@ -7647,6 +7864,8 @@ export default function Paintiano() {
     singStashRef.current=null;listenStashRef.current=null;setHasMicDraft(false);
     composeStashRef.current=null;setHasComposeDraft(false);
     draftOwnerRef.current=null;
+    // Reset Colour + Style to defaults so returning to Setup is a clean slate.
+    setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
   },[stopAll,clear,composeMode,micPainting,micListening,loadedSource]);
 
   const fullClear = useCallback(()=>{
@@ -7719,7 +7938,7 @@ export default function Paintiano() {
 
   const loadMidi=e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
-    stopAll();
+    stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     const r=new FileReader();
     r.onload=evt=>{
@@ -7741,7 +7960,7 @@ export default function Paintiano() {
 
   const loadAudio=useCallback(async e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
-    setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();
+    setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const buf=await file.arrayBuffer();
@@ -7768,7 +7987,7 @@ export default function Paintiano() {
       setLoadedSource('audio');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Audio: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
-  },[stopAll,applyEvents,t]);
+  },[stopAll,applyEvents,t,wipeCanvasNow]);
 
   // MusicXML upload — exact, structured score data from MuseScore / Finale / Dorico.
   // Far more accurate than PDF OMR because every note's pitch, octave, accidental, and rhythm is encoded.
@@ -7776,7 +7995,7 @@ export default function Paintiano() {
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
-    setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();
+    setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const buf=await file.arrayBuffer();
@@ -7810,7 +8029,7 @@ export default function Paintiano() {
       setLoadedSource('score');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Score: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
-  },[stopAll,applyEvents,t]);
+  },[stopAll,applyEvents,t,wipeCanvasNow]);
 
   // Built-in sample loaders — embedded files, decoded through the real pipelines
   const loadSampleMidi=useCallback(()=>{
@@ -7819,14 +8038,14 @@ export default function Paintiano() {
       const{raw,div,temps,skipped}=parseMidi(arrayBuffer);
       const evts=toChords(raw,div,temps);
       if(!evts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
-      stopAll();applyEvents(evts,SAMPLE_MIDI_NAME);
+      stopAll();wipeCanvasNow();applyEvents(evts,SAMPLE_MIDI_NAME);
       setLoadedSource('midi');
       if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
-  },[stopAll,applyEvents]);
+  },[stopAll,applyEvents,wipeCanvasNow]);
 
   const loadSampleAudio=useCallback(async()=>{
-    setWorking(true);setWLabel('decoding sample audio');setWPct(0);setErr('');setErrInfo(false);stopAll();
+    setWorking(true);setWLabel('decoding sample audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_AUDIO_B64);
@@ -7847,11 +8066,11 @@ export default function Paintiano() {
       setLoadedSource('audio');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Sample audio: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
-  },[stopAll,applyEvents,t]);
+  },[stopAll,applyEvents,t,wipeCanvasNow]);
 
 
   const loadSampleScore=useCallback(async()=>{
-    setWorking(true);setWLabel('reading sample score');setWPct(20);setErr('');setErrInfo(false);stopAll();
+    setWorking(true);setWLabel('reading sample score');setWPct(20);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_SCORE_B64);
@@ -7865,7 +8084,7 @@ export default function Paintiano() {
       setLoadedSource('score');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Sample score: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
-  },[stopAll,applyEvents,t]);
+  },[stopAll,applyEvents,t,wipeCanvasNow]);
 
 
   const aiMidi=useCallback((title)=>{
@@ -7892,7 +8111,7 @@ export default function Paintiano() {
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
     if(!title||busy||composedModeRef.current)return;
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
-    setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();
+    setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
       const prompt=`Compose a short expressive solo piano piece inspired by: "${title.slice(0,80)}".
 Output ONLY a single valid JSON object — no markdown, no prose, no explanation.
@@ -7934,7 +8153,7 @@ Composition rules:
       setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
     }catch(e){setErr(e.message||'Compose failed');setErrInfo(false);}
     finally{setWorking(false);setWLabel('');setWPct(0);}
-  },[songQ,busy,stopAll,applyEvents]);
+  },[songQ,busy,stopAll,applyEvents,wipeCanvasNow]);
 
 
 
@@ -7944,7 +8163,7 @@ Composition rules:
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
     setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
-    stopAll();
+    stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current; // captured after stopAll's bump
     const r=new FileReader();
     r.onerror=()=>{if(loadTokenRef.current===myToken){setErr(t('errs').imgRead);setErrInfo(false);}};
@@ -7966,20 +8185,42 @@ Composition rules:
           const raw=ctx.getImageData(0,0,nc,nr).data;
           const px=[];
           for(let row=0;row<nr;row++)for(let col=0;col<nc;col++){const i=(row*nc+col)*4;px.push({r:raw[i],g:raw[i+1],b:raw[i+2]});}
-          pixelRef.current={nc,nr,px,lastMode:mode,colStep:4};
-          // Process pixels into events using the current mode's hue→pitch table.
+          // APP-CHOSEN COLOUR MODE: decide the reading from how much of the image
+          // is GENUINELY colourful, not from average saturation. Average is fooled
+          // by cream/off-white fields (a Mondrian reads ~33% avg sat because pale
+          // warm whites carry a deceptively high HSL saturation), so instead we
+          // count the fraction of pixels that are vividly coloured — saturation
+          // above ~25% at a non-pale lightness. A near-monochrome image (Guernica,
+          // Mondrian's cream+black, ink, sepia) has almost none ⇒ B/W; a colourful
+          // painting (Chagall, Monet) has plenty ⇒ Color.
+          let vivid=0, considered=0;
+          for(const p of px){
+            const[,ss,ll]=toHsl(p.r,p.g,p.b);
+            considered++;
+            if(ss>25 && ll<85 && ll>6) vivid++;        // truly saturated, not pale/near-black
+          }
+          const vividPct = considered ? (vivid/considered)*100 : 0;
+          const autoMode = vividPct < 5 ? 'bw' : 'harmony';   // <5% colour ⇒ monochrome reading
+          appModeRef.current = autoMode;             // remember the app's pick for Custom→back
+          setSetupNoSel(false);                      // a fresh image re-enables the app's colour pick
+          // Keep a manual Custom choice if the user already had it; otherwise apply
+          // the app's pick. (spectral/other non-image modes fall back to autoMode.)
+          const startMode = mode==='custom' ? 'custom' : autoMode;
+          if(startMode!==mode) setMode(startMode);
+          pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
+          // Process pixels into events using the chosen mode's hue→pitch table.
           // B/W uses harmony's hue table — same music as harmony, but the canvas
           // renders monochrome because gc() returns greys in bw mode.
           // In custom mode we attach two extra hints for the Custom gate: the
           // saturation of each swatch (so the gate can ignore the meaningless hue
           // of grey swatches when matching colour pixels), and whether ANY swatch
           // is neutral (so achromatic image pixels are allowed to sound).
-          const hueTable = mode==='custom'
+          const hueTable = startMode==='custom'
             ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
                             { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                               __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
-            : (mode==='spectral'?SPEC_HUE:COF);
-          const evts=pixelsToImageEvents(px,nc,nr,hueTable,mode);
+            : COF;                                     // harmony & bw both read via COF
+          const evts=pixelsToImageEvents(px,nc,nr,hueTable,startMode);
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
           if(!evts || !evts.length){setErr(t('errs').imgNoNotes);setErrInfo(false);setPickMode(null);return;}
           // Explicit canvas clear — when loading consecutive images, both
@@ -8009,7 +8250,7 @@ Composition rules:
       img.src=evt.target.result;
     };
     r.readAsDataURL(file);
-  },[mode,stopAll,stashDraft,t]);
+  },[mode,stopAll,stashDraft,t,wipeCanvasNow]);
 
   // When mode is toggled while an image is loaded, re-process pixels through the new
   // hue→pitch table (HARMONY: COF / SPECTRAL: SPEC_HUE / CUSTOM: user palette).
@@ -8915,7 +9156,7 @@ Composition rules:
         }
         // Kandinsky canvas-wide contour overlay.
         if(style==='kandinsky' && chords.length>0){
-          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode);
+          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode, gc);
         }
         if(style==='rothko' && chords.length>0){
           drawRothkoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
@@ -9012,6 +9253,7 @@ Composition rules:
   return (
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?'12px 16px 220px':'48px 16px',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE}}/>
+      {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={t('tagline')||'paintings, played'} skipLabel={t('tapToSkip')||'tap to skip'} />}
       <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <nav style={{display:'flex',gap:18,fontSize:'.6rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)'}}>{t('concept')}</span>
@@ -9081,31 +9323,58 @@ Composition rules:
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('colorLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-              {['harmony','spectral','bw','custom'].map(m=>(
-              <button key={m} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+              {['harmony','spectral','bw','custom'].map(m=>{
+              const isCustomTab = m==='custom';
+              const armed = isCustomTab && mode==='custom' && customArmed && !setupNoSel;
+              const sel = mode===m && !setupNoSel;     // after image→setup, nothing looks selected
+              return (
+              <button key={m} className={sel?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
                 setForceSetup(false);
+                const wasNoSel=setupNoSel; setSetupNoSel(false);
+                if(isCustomTab && mode==='custom' && !wasNoSel){
+                  // already in Custom: 1st extra tap arms (label→edit), next opens editor
+                  if(!customArmed) setCustomArmed(true); else setShowPaletteEditor(true);
+                  return;
+                }
+                if(m==='custom') setCustomArmed(false);
+                else if(mode===m && !wasNoSel){ setShowColorPalette(v=>!v); return; }   // tap active H/S/BW tab → toggle preview
+                else setShowColorPalette(false);
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-              }} style={{padding:'10px 0',textAlign:'center',fontSize:'.62rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'all .18s',border:'1px solid transparent',color:mode===m?PF.bg:PF.muted,background:mode===m?PF.gold:PF.card2,boxShadow:mode===m?'0 3px 12px rgba(240,192,64,.35)':'none'}}>{t(m)}</button>
-              ))}
+              }} style={{padding:'10px 0',textAlign:'center',fontSize:'.62rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s',border:'1px solid transparent',color:sel?PF.bg:PF.cream,background:sel?PF.gold:PF.card2,boxShadow:sel?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{armed?('✎ '+t('editShort')):t(m)}</button>
+              );})}
             </div>
-            {mode==='custom' && (
-              <button onClick={()=>setShowPaletteEditor(true)} aria-label={t('editPalette')} title={t('editPalette')} className="pf-lift" style={{marginTop:8,padding:'8px 14px',borderRadius:10,border:`1px solid ${PF.gold}`,background:'transparent',color:PF.gold,cursor:'pointer',fontFamily:'inherit',fontSize:'.62rem',letterSpacing:'.08em'}}>✏ {t('editPalette')}</button>
+            {showColorPalette && mode!=='custom' && !setupNoSel && (
+              <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:5,padding:'8px',borderRadius:10,background:'rgba(20,18,30,.4)',border:'1px solid rgba(242,238,232,.06)',marginTop:8}}>
+                {['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'].map((nm,pc)=>{
+                  const [r,g,b]=colorPreview(mode,pc);
+                  return (
+                    <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                      <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />
+                      <span style={{fontSize:'.42rem',letterSpacing:'.04em',color:PF.muted,opacity:.7}}>{nm}</span>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 
           {/* ARTIST STYLE */}
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('styleLabel')}</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr) auto',gap:6,rowGap:8,alignItems:'center'}} title="painting style — tap again to deselect (mosaic default)">
-              {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label],i)=>(
-                <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{gridColumn:(i%4)+1,width:'100%',padding:'8px 6px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:(shuffleStyle===k?PF.cream:PF.muted),background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
+              {/* Mosaic = the default (no artist overlay); selected when style is
+                  null. While Shuffle is drawing an artist (shuffleStyle set), Mosaic
+                  does NOT glow — only the drawn style's white outline shows. */}
+              {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; return (
+              <button onClick={()=>{ if(mosaicInert) return; if(style!==null) selectStyle(style); }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':'mosaic — the plain reading with no artist overlay'} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',color:mosaicOn?PF.bg:(mosaicInert?PF.muted:PF.cream),background:mosaicOn?PF.gold:PF.card2,border:'1px solid '+(mosaicOn?PF.gold:'rgba(242,238,232,.08)'),boxShadow:mosaicOn?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{t('mosaicStyle')}</button>
+              ); })()}
+              {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
+                <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:PF.cream,background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
               ))}
               {/* Random 🎲: with an artist selected it re-rolls that artist's
-                  variation; with NO artist it shuffles across all artist styles
-                  (each Play/Next paints a different one). Always enabled. Sits in
-                  the 5th column on row 2 — NOT part of the equal-width 4-chip grid. */}
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off · next Play produces a new variation':'shuffle ON · each Play/Next paints a different artist style · tap to turn off'):(style?'random OFF · tap to enable · next Play produces a unique variation':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{gridColumn:5,gridRow:2,flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+                  variation; with NO artist it shuffles across all artist styles. */}
+              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off · next Play produces a new variation':'shuffle ON · each Play/Next paints a different artist style · tap to turn off'):(style?'random OFF · tap to enable · next Play produces a unique variation':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{justifySelf:'center',flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
             </div>
           </div>
 
@@ -9115,10 +9384,10 @@ Composition rules:
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('sourceLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;setPickMode('midi');}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^\p{L}]/gu,'')}</span></button>
-              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;setPickMode('audio');}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^\p{L}]/gu,'')}</span></button>
-              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;setPickMode('score');}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^\p{L}]/gu,'')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'){setForceSetup(false);return;}setPickMode('midi');}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;if(activeSource==='audio'){setForceSetup(false);return;}setPickMode('audio');}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;if(activeSource==='score'){setForceSetup(false);return;}setPickMode('score');}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:8}}>
               <button className="pf-compose" onClick={()=>{
@@ -9167,7 +9436,30 @@ Composition rules:
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,position:'relative'}}>
-          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);stopAll();setWorking(false);setWLabel('');setWPct(0);if(composeMode){if(draftOwnerRef.current==='compose')stashDraft('compose');setComposeMode(false);}if(micPainting||micListening){if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen')stashDraft(draftOwnerRef.current);}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);
+            // Leaving to Setup while a painting is playing/paused should PRESERVE
+            // the position so "← Canvas" (Resume) picks up exactly where it left
+            // off — capture disp into resumeFromRef and pause, instead of the full
+            // stopAll() reset. If nothing is playing, fall back to stopAll (fresh).
+            // Going to Setup PRESERVES the position only when the user has
+            // consciously PAUSED (holdPaused) — then "← Canvas"/Resume continues
+            // where they stopped. If it was still actively PLAYING (or nothing was
+            // going on), treat leaving as abandoning → full stopAll() reset.
+            // Active playback (Score/MIDI/audio via startPlay sets playing; image
+            // mosaic uses anim). Use the live refs so a fast Pause→leave or
+            // Resume→leave reads the real state, not a one-render-stale snapshot.
+            // Also treat running playback timers as "still live" — the surest sign.
+            const isLive = playingRef.current || playing || anim || timers.current.length>0;
+            const keepResume = holdPausedRef.current && !isLive && chords.length>0;
+            if(keepResume){
+              resumeFromRef.current=dispRef.current; setHoldPaused(true);
+              genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];timersSet.current.clear();
+              try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+              try{if(audioElRef.current)audioElRef.current.pause();}catch(_){}
+              try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
+              setActive(new Set());setPlaying(false);setAnim(false);
+            } else { stopAll(); wipeCanvasNow(); }
+            setWorking(false);setWLabel('');setWPct(0);if(composeMode){if(draftOwnerRef.current==='compose')stashDraft('compose');setComposeMode(false);}if(micPainting||micListening){if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen')stashDraft(draftOwnerRef.current);}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
@@ -9230,27 +9522,117 @@ Composition rules:
           </div>
           )}
           {/* Color */}
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-            {['harmony','spectral','bw','custom'].map(m=>(
-            <button key={m} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
-              if(canvasRef.current){canvasRef.current.style.opacity='0';}
-              setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-            }} style={{padding:'8px 0',textAlign:'center',fontSize:'.6rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'all .18s',border:'1px solid transparent',color:mode===m?PF.bg:PF.muted,background:mode===m?PF.gold:PF.card2,boxShadow:mode===m?'0 3px 12px rgba(240,192,64,.35)':'none'}}>{t(m)}</button>
-            ))}
-          </div>
-          {mode==='custom' && (
-            <button onClick={()=>setShowPaletteEditor(true)} aria-label={t('editPalette')} title={t('editPalette')} className="pf-lift" style={{padding:'7px 12px',borderRadius:10,border:`1px solid ${PF.gold}`,background:'transparent',color:PF.gold,cursor:'pointer',fontFamily:'inherit',fontSize:'.6rem',letterSpacing:'.08em',alignSelf:'flex-start'}}>✏ {t('editPalette')}</button>
-          )}
+          {loadedSource==='image' ? (() => {
+            // IMAGE mode: the APP picks the reading from the painting's colourfulness
+            // — colourful ⇒ Color (Harmony), near-monochrome ⇒ B/W. Only the chosen
+            // one is shown (not both), next to Custom. Tapping the app chip activates
+            // it and toggles a READ-ONLY preview of the 12 Harmony colours below
+            // (looks like the Custom palette but can't be edited). Custom enters the
+            // editable palette; tapping the app chip again returns to that reading.
+            const appKey = appModeRef.current==='bw' ? 'bw' : 'color';
+            const appLabel = appKey==='bw' ? t('bw') : t('colorLabel');
+            const appActive = mode!=='custom';
+            const customActive = mode==='custom';
+            return (
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
+                <button onClick={()=>{
+                    if(mode==='custom'){
+                      // leave Custom → back to the app's reading (no preview)
+                      setCustomArmed(false); setShowColorPalette(false);
+                      if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                      setTimeout(()=>{setMode(appModeRef.current||'harmony');if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+                    } else {
+                      // already on the app reading (Color or B/W) → toggle the read-only preview
+                      setShowColorPalette(v=>!v);
+                    }
+                  }}
+                  title={t('appChoseColour')}
+                  style={{padding:'8px 0',textAlign:'center',fontSize:'.6rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',border:'1px solid transparent',color:appActive?PF.bg:PF.cream,background:appActive?PF.gold:PF.card2,boxShadow:appActive?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{appLabel}</button>
+                <button onClick={()=>{
+                    // Custom chip cycle:
+                    //  1st tap (not custom yet) → activate Custom (label "Custom")
+                    //  2nd tap (custom, not armed) → arm it; label becomes "edit palette",
+                    //                                 editor stays CLOSED
+                    //  3rd tap (custom, armed) → open the palette editor
+                    // Closing the editor disarms (handled where the modal closes).
+                    // Leaving Custom entirely is done via the Color/B-W chip.
+                    if(!customActive){
+                      if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                      setTimeout(()=>{setMode('custom');if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+                      setCustomArmed(false);
+                    } else if(!customArmed){
+                      setCustomArmed(true);
+                    } else {
+                      setShowPaletteEditor(true);
+                    }
+                  }}
+                  style={{padding:'8px 0',textAlign:'center',fontSize:'.6rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',border:'1px solid transparent',color:customActive?PF.bg:PF.cream,background:customActive?PF.gold:PF.card2,boxShadow:customActive?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{customActive&&customArmed?('✎ '+t('editShort')):t('custom')}</button>
+              </div>
+              {/* READ-ONLY preview of the 12 Harmony colours — shown when the Color
+                  reading is active and the user tapped to reveal it. Purely
+                  informational: the swatches can't be edited (Custom is for that). */}
+              {appActive && showColorPalette && (
+                <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:5,padding:'8px',borderRadius:10,background:'rgba(20,18,30,.4)',border:'1px solid rgba(242,238,232,.06)'}}>
+                  {['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'].map((nm,pc)=>{
+                    const [r,g,b]=colorPreview(appKey==='bw'?'bw':'harmony',pc);
+                    return (
+                      <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                        <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />
+                        <span style={{fontSize:'.42rem',letterSpacing:'.04em',color:PF.muted,opacity:.7}}>{nm}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            );
+          })() : (<>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+              {['harmony','spectral','bw','custom'].map(m=>{
+              const isCustomTab = m==='custom';
+              const armed = isCustomTab && mode==='custom' && customArmed;
+              return (
+              <button key={m} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+                if(isCustomTab && mode==='custom'){
+                  if(!customArmed) setCustomArmed(true); else setShowPaletteEditor(true);
+                  return;
+                }
+                if(m==='custom') setCustomArmed(false);
+                else if(mode===m){ setShowColorPalette(v=>!v); return; }   // tap active H/S/BW tab → toggle preview
+                else setShowColorPalette(false);
+                if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+              }} style={{padding:'8px 0',textAlign:'center',fontSize:'.6rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s',border:'1px solid transparent',color:mode===m?PF.bg:PF.cream,background:mode===m?PF.gold:PF.card2,boxShadow:mode===m?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{armed?('✎ '+t('editShort')):t(m)}</button>
+              );})}
+            </div>
+            {showColorPalette && mode!=='custom' && (
+              <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:5,padding:'8px',borderRadius:10,background:'rgba(20,18,30,.4)',border:'1px solid rgba(242,238,232,.06)',marginTop:8}}>
+                {['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'].map((nm,pc)=>{
+                  const [r,g,b]=colorPreview(mode,pc);
+                  return (
+                    <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                      <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />
+                      <span style={{fontSize:'.42rem',letterSpacing:'.04em',color:PF.muted,opacity:.7}}>{nm}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>)}
           {/* Style — hidden in image mode: an artist re-paint makes no sense when
               the source already IS a painting; only the colour reading matters there. */}
           {loadedSource!=='image' && (
-          <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,rowGap:6,flex:1}} title="painting style — tap again to deselect (mosaic default)">
-              {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
-                <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{width:'100%',padding:'7px 6px',borderRadius:20,fontSize:'.58rem',fontWeight:600,letterSpacing:'.05em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:(shuffleStyle===k?PF.cream:PF.muted),background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
-              ))}
-            </div>
-            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'.95rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
+            {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
+            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; return (
+            <button onClick={()=>{ if(mosaicInert) return; if(style!==null) selectStyle(style); }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':'mosaic — the plain reading with no artist overlay'} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',color:mosaicOn?PF.bg:(mosaicInert?PF.muted:PF.cream),background:mosaicOn?PF.gold:PF.card2,border:'1px solid '+(mosaicOn?PF.gold:'rgba(242,238,232,.08)'),boxShadow:mosaicOn?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{t('mosaicStyle')}</button>
+            ); })()}
+            {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
+              <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:PF.cream,background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
+            ))}
+            {/* Random 🎲 — sits as the last grid cell (row 2), like in Setup. */}
+            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{justifySelf:'center',flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
           </div>
           )}
         </div>
@@ -9758,7 +10140,7 @@ Composition rules:
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
-        {randomMode&&effectiveStyle&&chords.length>0&&!recording&&(
+        {randomMode&&effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(
           <button className="pf-lift" onClick={()=>{if(playing||holdPaused)advanceVariation();}} disabled={!(playing||holdPaused)} title={(playing||holdPaused)?'next painting — jump to a new variation':'play to browse variations'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:(playing||holdPaused)?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:(playing||holdPaused)?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+((playing||holdPaused)?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:(playing||holdPaused)?'pointer':'default',fontFamily:'inherit',fontSize:'.55rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
         )}
         {viewMode!=='image'&&(
@@ -9777,48 +10159,44 @@ Composition rules:
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
           const setSpd=setPlaybackSpeed;
-          const LO=0.25, HI=2, STEP=0.05;
+          // Discrete rate ladder: 0.25 steps below 1× (0.25–1), whole steps above (1–4).
+          const STEPS=[0.25,0.5,0.75,1,2,3,4];
           const label=spd===0.5?'½×':spd===1?'1×':`${(Math.round(spd*100)/100)}×`;
           // Lock speed during recording — changing rate mid-record desyncs the
           // recorded audio from the visual painting timing in the saved file.
           const lockSpeed = recording;
-          const clamp=(v)=>Math.max(LO,Math.min(HI,Math.round(v/STEP)*STEP));
-          const bump=(dir)=>setSpd(v=>clamp(v+dir*STEP));
-          // Long-press auto-repeat. Holds the same button to sweep through the
-          // range: 80ms repeat for the first second, then accelerates to 40ms.
-          const startHold=(dir)=>{
+          const nearestIdx=(v)=>{ let bi=0,bd=Infinity; STEPS.forEach((s,i)=>{const d=Math.abs(s-v);if(d<bd){bd=d;bi=i;}}); return bi; };
+          // Long-press sweeps up the ladder, wrapping back to the start at the top,
+          // so one continuous hold cycles through every rate. Release to keep it.
+          // speedMovedRef survives re-renders (a plain const would reset each render
+          // when setSpd triggers one, breaking the tap-vs-hold distinction).
+          const startHold=()=>{
             if(lockSpeed)return;
-            bump(dir);
-            const t0=Date.now();
-            const tick=()=>{
-              bump(dir);
-              const elapsed=Date.now()-t0;
-              const delay=elapsed>1000?40:80;
-              speedHoldRef.current=setTimeout(tick,delay);
-            };
-            speedHoldRef.current=setTimeout(tick,300);
+            speedMovedRef.current=false;
+            const advance=()=>{ if(!speedSweeping) setSpeedSweeping(true); speedMovedRef.current=true; setSpd(v=>{ const i=nearestIdx(v); return STEPS[(i+1)%STEPS.length]; }); };
+            // First advance only after the hold threshold, so a quick tap stays a tap.
+            speedHoldRef.current=setTimeout(function tick(){ advance(); speedHoldRef.current=setTimeout(tick,420); },420);
           };
-          const stopHold=()=>{
+          const endHold=()=>{
+            const wasHold=speedMovedRef.current;
             if(speedHoldRef.current){clearTimeout(speedHoldRef.current);speedHoldRef.current=null;}
+            setSpeedSweeping(false);
+            // No movement during the press = treat as a short tap → reset to 1×.
+            if(!wasHold && !lockSpeed){ setSpd(1); }
           };
-          const btnStyle=(enabled)=>({padding:'5px 9px',background:enabled?'rgba(28,24,40,.6)':'transparent',color:enabled?GOLD:'rgba(201,168,76,.2)',border:'1px solid '+(enabled?'rgba(201,168,76,.35)':'rgba(201,168,76,.12)'),borderRadius:14,cursor:enabled?'pointer':'default',fontSize:'.7rem',lineHeight:1,letterSpacing:0,fontFamily:'inherit',minWidth:24,userSelect:'none',touchAction:'manipulation'});
-          const canDown = !lockSpeed && spd>LO+1e-6;
-          const canUp   = !lockSpeed && spd<HI-1e-6;
+          const cancelHold=()=>{ if(speedHoldRef.current){clearTimeout(speedHoldRef.current);speedHoldRef.current=null;} setSpeedSweeping(false); };
           return(
-            <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 4px',border:'1px solid rgba(201,168,76,.2)',borderRadius:22,background:'rgba(28,24,40,.4)',opacity:lockSpeed?0.4:1}} title={lockSpeed?t('stopRecFirst'):'playback speed · tap +/− to nudge, hold to sweep'}>
+            <span style={{position:'relative',display:'inline-flex'}}>
+              {speedSweeping && (
+                <span style={{position:'absolute',bottom:'calc(100% + 8px)',left:'50%',transform:'translateX(-50%)',padding:'6px 14px',borderRadius:14,background:'rgba(20,18,30,.96)',border:'1px solid rgba(201,168,76,.5)',color:GOLD,fontSize:'1.1rem',fontWeight:700,letterSpacing:'.04em',fontFamily:'inherit',whiteSpace:'nowrap',pointerEvents:'none',boxShadow:'0 6px 20px rgba(0,0,0,.5)',zIndex:50}}>{label}</span>
+              )}
               <button
-                onPointerDown={e=>{e.preventDefault();startHold(-1);}}
-                onPointerUp={stopHold} onPointerLeave={stopHold} onPointerCancel={stopHold}
-                disabled={!canDown}
-                aria-label="slow down"
-                style={btnStyle(canDown)}>−</button>
-              <button onClick={()=>setSpd(1)} disabled={lockSpeed||spd===1} aria-label="reset speed to 1×" style={{padding:'4px 8px',background:'transparent',color:spd===1?'rgba(201,168,76,.35)':GOLD,border:'1px solid '+(spd===1?'rgba(201,168,76,.15)':'rgba(201,168,76,.35)'),borderRadius:14,cursor:(lockSpeed||spd===1)?'default':'pointer',fontSize:'.5rem',letterSpacing:'.04em',fontFamily:'inherit',minWidth:36,textAlign:'center'}}>{label}</button>
-              <button
-                onPointerDown={e=>{e.preventDefault();startHold(+1);}}
-                onPointerUp={stopHold} onPointerLeave={stopHold} onPointerCancel={stopHold}
-                disabled={!canUp}
-                aria-label="speed up"
-                style={btnStyle(canUp)}>+</button>
+                onPointerDown={e=>{e.preventDefault();e.currentTarget.setPointerCapture?.(e.pointerId);startHold();}}
+                onPointerUp={endHold} onPointerCancel={cancelHold}
+                disabled={lockSpeed}
+                title={lockSpeed?t('stopRecFirst'):'playback speed — tap to reset to 1×, hold to change'}
+                aria-label="playback speed — tap to reset, hold to change"
+                style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4,padding:'5px 11px',minWidth:42,border:'1px solid '+(spd===1?'rgba(201,168,76,.2)':'rgba(201,168,76,.45)'),borderRadius:22,background:spd===1?'rgba(28,24,40,.4)':'rgba(201,168,76,.12)',color:spd===1?'rgba(201,168,76,.6)':GOLD,cursor:lockSpeed?'default':'pointer',fontSize:'.5rem',letterSpacing:'.06em',fontFamily:'inherit',fontWeight:600,opacity:lockSpeed?0.4:1,userSelect:'none',WebkitUserSelect:'none',touchAction:'none'}}>{label}</button>
             </span>
           );
         })()}
@@ -9917,7 +10295,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.7.7</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v2.8.0</footer>
     </div>
   );
 }
