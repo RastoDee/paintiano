@@ -4606,7 +4606,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', generateLabel:'generate', todaySource:'today', imgMood:'mood from image',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'type any mood — e.g. furious', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -4651,7 +4651,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', generateLabel:'erzeugen', todaySource:'heute', imgMood:'stimmung aus bild',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'stimmung eingeben — z.B. wütend', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -4696,7 +4696,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', generateLabel:'générer', todaySource:'jour', imgMood:'ambiance image',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'tape une humeur — ex. furieux', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -4741,7 +4741,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', generateLabel:'generar', todaySource:'hoy', imgMood:'estado imagen',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'escribe un estado — p.ej. furioso', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -4786,7 +4786,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', generateLabel:'generuj', todaySource:'dnes', imgMood:'nálada z obrazu',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'napíš náladu — napr. zúrivá', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -6350,6 +6350,57 @@ function moodToSong(text){
   return { mood:label, title:label.charAt(0).toUpperCase()+label.slice(1), tempo:out.tempo, notes:out.notes };
 }
 
+// ── Emotion (valence/energy) → arrangement. Shared by mood text, date/weather, image.
+function _emotionArrange(v,e,rootPc,seed){
+  v=Math.max(-1,Math.min(1,v)); e=Math.max(0,Math.min(1,e));
+  const mode=(v>=0.5&&e>0.7)?'lydian':(v>=0?'major':'minor');
+  let ch;
+  if(mode==='lydian') ch='dreamy';
+  else if(v<=-0.2&&e<0.4) ch='eerie';
+  else if(e>=0.7&&v<0) ch='aggressive';
+  else if(e>=0.7&&v>=0.4) ch='bright';
+  else if(e>=0.7) ch='driving';
+  else if(e>=0.5&&v>=0.6) ch='grand';
+  else if(e>=0.5&&v>=0.25) ch='bright';
+  else if(e>=0.45&&v<0) ch='driving';
+  else if(e<0.4&&v<-0.05) ch='sad';
+  else ch=(v<0?'sad':'gentle');
+  const tempo=Math.round(60+e*80);
+  return _RA_arrange(rootPc,mode,ch,tempo,seed);
+}
+// WMO weather code → simple key
+function _weatherFromCode(c){
+  if(c==null||isNaN(c)) return null;
+  if(c===0) return 'sunny';
+  if(c<=3) return 'cloudy';
+  if(c>=45&&c<=48) return 'cloudy';
+  if((c>=51&&c<=67)||(c>=80&&c<=82)) return 'rainy';
+  if((c>=71&&c<=77)||(c>=85&&c<=86)) return 'snowy';
+  if(c>=95) return 'stormy';
+  return 'cloudy';
+}
+// Date + season + (optional) weather → a piece. Fully offline / free.
+function dayToSong(hour,season,weatherKey){
+  let v=0.2,e=0.5;
+  if(hour<6){v=-0.05;e=0.25;}
+  else if(hour<11){v=0.5;e=0.55;}
+  else if(hour<16){v=0.45;e=0.7;}
+  else if(hour<20){v=0.35;e=0.5;}
+  else {v=0.05;e=0.3;}
+  if(season==='spring'){v+=0.15;e+=0.05;}
+  else if(season==='summer'){v+=0.1;e+=0.2;}
+  else if(season==='autumn'){v-=0.2;}
+  else if(season==='winter'){v-=0.1;e-=0.15;}
+  if(weatherKey==='sunny'){v+=0.2;e+=0.1;}
+  else if(weatherKey==='cloudy'){v-=0.1;}
+  else if(weatherKey==='rainy'){v-=0.3;e-=0.05;}
+  else if(weatherKey==='stormy'){v-=0.4;e+=0.3;}
+  else if(weatherKey==='snowy'){e-=0.2;}
+  const rootPc=((hour*5)%12+12)%12;
+  const out=_emotionArrange(v,e,rootPc,'day'+hour+'_'+season+'_'+(weatherKey||'x'));
+  return {tempo:out.tempo,notes:out.notes};
+}
+
 // Crossfade-morph two mood pieces into one. First half is mood A,
 // second half is mood B (time-scaled to A's length), with a velocity
 // crossfade in the 40-60% zone where both pieces overlap and blend.
@@ -7252,17 +7303,140 @@ export default function Paintiano() {
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [morphSel, setMorphSel] = useState([]); // ordered target moods for chain-morph (max 3)
   const [morphPool, setMorphPool] = useState([]);
+  const [morphTargets, setMorphTargets] = useState([]); // perzistentný reťazec aktívneho morphu (na pre-výber pri znovuotvorení)
+  const [morphPoolLoading, setMorphPoolLoading] = useState(false);
+  const [morphPoolSource, setMorphPoolSource] = useState('offline'); // 'ai' | 'offline' — ako vznikol pool
+  const morphPoolCacheRef = useRef({}); // base mood → AI pool (cache, nech sa pri tej istej nálade nevolá AI znova)
+  const morphSelRef = useRef([]);
   const [showMoodMenu, setShowMoodMenu] = useState(false);
   const [moodEdit, setMoodEdit] = useState(''); // text v edit políčku mood popupu (vlastná nálada + filter zoznamu)
   const [currentMood, setCurrentMood] = useState(null);
   // Morph picker shows a RANDOM subset of 18 moods (not all ~100), laid out 3 cols
   // × 6 rows. The pool is frozen while the dialog is open so selected chips don't
   // vanish; a fresh 18 is drawn each time the dialog opens (and via the ↻ button).
-  const makeMorphPool = useCallback(()=>{
-    const cands = MOODS.filter(m=>m!==currentMood);
-    for(let i=cands.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cands[i],cands[j]]=[cands[j],cands[i]];}
-    return cands.slice(0,18);
+  // Pool is biased toward the primary mood's emotional neighbourhood: ~2/3 are
+  // the closest moods (same family + escalating intensity), ~1/3 random for
+  // contrast/variety in the morph. Uses the offline valence/energy model — no
+  // AI, no API budget. `base` = primary mood, `exclude` = already-selected
+  // targets (so re-opening an active morph only regenerates the remainder).
+  const makeMorphPool = useCallback((base, exclude=[])=>{
+    const baseMood = base!=null ? base : currentMood;
+    const ex = new Set([baseMood, ...exclude]);
+    const cands = MOODS.filter(m=>!ex.has(m));
+    const need = Math.max(0, 18 - exclude.length);
+    if(!need || !cands.length) return [];
+    const P0 = _moodParams(String(baseMood||'').toLowerCase());
+    const shuf = a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+    const scored = cands.map(m=>{const Pm=_moodParams(m.toLowerCase());return {m,d:Math.hypot(P0.v-Pm.v,P0.e-Pm.e)};}).sort((a,b)=>a.d-b.d);
+    const band = Math.min(scored.length, Math.max(need, Math.round(need*1.6)));
+    const near = scored.slice(0, band).map(s=>s.m);          // closest family + escalation
+    const relN = Math.min(near.length, Math.round(need*0.65));
+    const relevant = shuf(near).slice(0, relN);
+    const rest = cands.filter(m=>!relevant.includes(m));
+    const variety = shuf(rest).slice(0, need - relevant.length);
+    return shuf([...relevant, ...variety]);
   },[currentMood]);
+  useEffect(()=>{ morphSelRef.current=morphSel; },[morphSel]);
+  // AI-picked morph pool via the cheap Haiku model (through our /api/compose).
+  // Returns up to (18 - preselected) mood KEYS from the library, emotionally
+  // related/escalating to `base`. Returns null on any failure → caller uses the
+  // offline pool. The phrase may be in any language (Claude interprets meaning).
+  const fetchMorphPoolAI = useCallback(async (base, preselected)=>{
+    const need = Math.max(0, 18 - preselected.length);
+    if(!need) return [];
+    const list = MOODS.filter(m=>m!==base && !preselected.includes(m));
+    const prompt = `Current mood: "${String(base).slice(0,80)}". From the list below, pick exactly ${need} moods that make good morph / blend targets for it — MOSTLY emotionally related or escalating variations (same emotional family, rising or falling intensity), plus a few contrasting ones for variety. The phrase may be in ANY language; interpret its real emotion, do NOT read it word-by-word.
+List: ${list.join(', ')}
+Return ONLY a JSON array of exactly ${need} strings copied verbatim from the list. No prose, no markdown. Example: ["furious","tense","melancholic"]`;
+    try{
+      const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+      const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+      const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      let respText='',ok=false;
+      for(const ep of _eps){
+        try{
+          const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:prompt}]})});
+          const txt=await r.text(); if(r.ok&&txt){respText=txt;ok=true;break;}
+        }catch(_){}
+      }
+      if(!ok) return null;
+      const data=JSON.parse(respText);
+      const raw=(data.content||[]).map(b=>b.type==='text'?b.text:'').join('');
+      const match=raw.match(/\[[\s\S]*\]/); if(!match) return null;
+      const arr=JSON.parse(match[0]);
+      const valid=arr.filter(m=>typeof m==='string'&&MOODS.includes(m)&&m!==base&&!preselected.includes(m));
+      const uniq=[...new Set(valid)];
+      return uniq.length?uniq.slice(0,need):null;
+    }catch(_){ return null; }
+  },[]);
+
+  // ── Date/weather + image → emotion sources ─────────────────────────────
+  const [todayBusy,setTodayBusy]=useState(false);
+  const [imgAiBusy,setImgAiBusy]=useState(false);
+  // Play an offline-generated {tempo,notes} piece as a mood context.
+  const playGenerated=useCallback((song,title)=>{
+    if(!song||!song.notes||!song.notes.length) return;
+    setStructureSeedLock(null); setForceSetup(false); setLoadedSource(null);
+    setMoodContext(true); setCurrentMood(title); setSongQ(title); setVarySource(song);
+    stopAll();
+    const evts=noteArr2events(song.notes,song.tempo);
+    if(!evts.length) return;
+    applyEvents(evts,title); setComposeSource('offline');
+    try{ const bytes=encodeMidi(evts,song.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(String(title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+  },[stopAll,applyEvents]);
+  // "Today": time + season (+ best-effort weather) → mood of the day. Offline/free.
+  const generateToday=useCallback(async()=>{
+    if(todayBusy) return; setTodayBusy(true);
+    try{
+      const now=new Date(); const hour=now.getHours(); const mo=now.getMonth();
+      const season=(mo<=1||mo===11)?'winter':mo<=4?'spring':mo<=7?'summer':'autumn';
+      let weatherKey=null;
+      try{
+        const pos=await new Promise((res,rej)=>{ if(!navigator.geolocation){rej(new Error('no geo'));return;} navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000,maximumAge:600000}); });
+        const la=pos.coords.latitude, lo=pos.coords.longitude;
+        const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current_weather=true');
+        const d=await r.json(); weatherKey=_weatherFromCode(d&&d.current_weather&&d.current_weather.weathercode);
+      }catch(_){ /* no location → time + season only */ }
+      const song=dayToSong(hour,season,weatherKey);
+      const tw=({EN:['Night','Morning','Midday','Evening'],DE:['Nacht','Morgen','Mittag','Abend'],FR:['Nuit','Matin','Midi','Soir'],ES:['Noche','Mañana','Mediodía','Tarde'],SK:['Noc','Ráno','Poludnie','Večer']}[lang])||['Night','Morning','Midday','Evening'];
+      const word=hour<6?tw[0]:hour<11?tw[1]:hour<16?tw[2]:tw[3];
+      const wem=({sunny:'☀️',cloudy:'☁️',rainy:'🌧️',stormy:'⛈️',snowy:'❄️'}[weatherKey])||'🗓️';
+      playGenerated(song, wem+' '+word);
+    }finally{ setTodayBusy(false); }
+  },[todayBusy,lang,playGenerated]);
+  // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
+  const composeFromImage=useCallback(async()=>{
+    if(imgAiBusy||!originalImgUrl) return;
+    setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
+    try{
+      const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
+      setWPct(40);
+      const b64=dataUrl.split(',')[1];
+      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
+      const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+      const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+      const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+      const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+      let respText='',ok=false;
+      for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+      setWPct(75);
+      if(!ok) throw new Error('AI unavailable');
+      const data=JSON.parse(respText);
+      const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
+      const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
+      const parsed=JSON.parse(m[0]); if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
+      const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
+      const title=(parsed.title&&String(parsed.title).trim())||'✦';
+      stopAll();
+      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(null);
+      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(title);
+      try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+    }catch(e){
+      setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
+    }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
+  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t]);
+
   // setupNoSel only makes sense right after an image→Setup return. Any other
   // source (midi/audio/score/mood/compose/mic) should restore a normal selected
   // colour tab, so clear it whenever the source becomes something other than image.
@@ -7274,7 +7448,7 @@ export default function Paintiano() {
   // When a mood is picked the view flips to active and the setup panel (with
   // MORPH/VARY) is replaced by the collapsed strip. Auto-open the strip on
   // mood-select so those mood-refinement controls stay immediately reachable.
-  useEffect(()=>{ if(currentMood) setStripOpen(true); },[currentMood]);
+  useEffect(()=>{ if(currentMood) setStripOpen(true); setMorphTargets([]); },[currentMood]);
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
   // Mood-hint flash: when the user taps a disabled morph/vary, the mood
@@ -10171,6 +10345,11 @@ Composition rules:
               </>); })()}
           </div>
 
+          {/* GENERATE — mood of the day (offline / free) */}
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,.4)',marginBottom:10,textTransform:'uppercase'}}>{t('generateLabel')||'generate'}</div>
+            <button onClick={()=>{ if(!todayBusy&&!recording) generateToday(); }} disabled={todayBusy||recording} className="pf-lift" title={t('todaySource')||'today'} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(todayBusy||recording)?'default':'pointer',background:'rgba(140,200,255,.08)',border:'1px solid rgba(140,200,255,.3)',color:(todayBusy||recording)?'rgba(170,210,255,.4)':'rgba(180,215,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}><span style={{fontSize:'1.05rem'}}>{todayBusy?'⏳':'🗓️'}</span>{todayBusy?'…':(t('todaySource')||'today')}</button>
+          </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
 
           {/* SOURCE — input tiles, split into IMPORT (files) and CREATE (live) */}
@@ -10284,8 +10463,28 @@ Composition rules:
               if(sourcePickerLocked)return;
               if(!currentMood){flashMoodHint();return;}
               if(!chords.length)return;
-              setMorphPool(makeMorphPool());
+              const pre=morphTargets.filter(m=>MOODS.includes(m));
+              setMorphSel(pre);
               setShowMorphMenu(true);
+              const cached=morphPoolCacheRef.current[currentMood];
+              if(cached){
+                setMorphPool([...pre, ...cached.filter(m=>!pre.includes(m)).slice(0,18-pre.length)]);
+                setMorphPoolSource('ai'); setMorphPoolLoading(false);
+              } else {
+                // okamžitý offline pool, kým AI dobehne
+                setMorphPool([...pre, ...makeMorphPool(currentMood, pre)]);
+                setMorphPoolSource('offline'); setMorphPoolLoading(true);
+                const base=currentMood;
+                fetchMorphPoolAI(base, pre).then(ai=>{
+                  setMorphPoolLoading(false);
+                  if(ai&&ai.length){
+                    morphPoolCacheRef.current[base]=ai;
+                    const cur=morphSelRef.current||pre;
+                    setMorphPool([...cur, ...ai.filter(m=>!cur.includes(m)).slice(0,18-cur.length)]);
+                    setMorphPoolSource('ai');
+                  }
+                });
+              }
             }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:'.64rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:chords.length&&currentMood&&!sourcePickerLocked?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.3)',opacity:chords.length&&currentMood&&!sourcePickerLocked?1:.55,transition:'all .18s'}}>{t('morph')}</button>
             <button className="pf-vary" onClick={()=>{
               // VARY is allowed while PLAYING (no need to pause first), but not
@@ -10585,7 +10784,7 @@ Composition rules:
       )}
 
       {(() => { const seekTitle = info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : t('mic').replace(/[^\p{L} ]/gu,'')); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
-        <div style={{width:'100%',maxWidth:'100%',boxSizing:'border-box',marginBottom:8}}>
+        <div style={{width:'100%',maxWidth:`min(100%, ${CW}px)`,boxSizing:'border-box',marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{moodContext&&composeSource&&(<span style={{flexShrink:0,fontSize:'.46rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>)}</span>
             <span style={{opacity:.75}}>
@@ -10670,7 +10869,7 @@ Composition rules:
       ); })()}
 
       {isActiveView && (<>
-      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{maxHeight:'calc(100dvh - 210px)',width:'fit-content',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:'100%'})}}
+      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{maxHeight:'calc(100dvh - 210px)',width:'fit-content',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`})}}
         onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
           if(playing||!chords.length)return;
@@ -10711,7 +10910,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micActive)?{height:'calc(100dvh - 210px)',width:'auto',maxWidth:'100%',maxHeight:'calc(100dvh - 210px)'}:{width:'100%',height:'auto',maxWidth:'100%'})}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micActive)?{height:'calc(100dvh - 210px)',width:'auto',maxWidth:'100%',maxHeight:'calc(100dvh - 210px)'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(()=>{
@@ -10845,12 +11044,12 @@ Composition rules:
         <div onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="morph mood" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(220,150,255,.35)',borderRadius:8,padding:'22px 18px'}}>
             <div style={{textAlign:'center',marginBottom:4,letterSpacing:'.18em',color:'rgba(220,170,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>✦ {t('morphTitle').replace('{mood}',(t('moodNames')||{})[currentMood]||currentMood||'')}</div>
-            <div style={{textAlign:'center',marginBottom:12,fontSize:'.55rem',letterSpacing:'.04em',color:'rgba(207,197,168,.45)'}}>{t('morphHint')} · <span role="button" tabIndex={0} onClick={()=>{setMorphPool(makeMorphPool());setMorphSel([]);}} title="shuffle / iné" style={{cursor:'pointer',color:'rgba(220,180,255,.85)',userSelect:'none'}}>↻</span></div>
+            <div style={{textAlign:'center',marginBottom:12,fontSize:'.55rem',letterSpacing:'.04em',color:'rgba(207,197,168,.45)'}}>{t('morphHint')} · <span role="button" tabIndex={0} onClick={()=>{setMorphPool([...morphSel, ...makeMorphPool(currentMood, morphSel)]);setMorphPoolSource('offline');setMorphPoolLoading(false);}} title="shuffle / iné" style={{cursor:'pointer',color:'rgba(220,180,255,.85)',userSelect:'none'}}>↻</span> · <span style={{fontSize:'.5rem',letterSpacing:'.06em',textTransform:'uppercase',color:morphPoolLoading?'rgba(220,180,255,.7)':morphPoolSource==='ai'?'rgba(220,170,255,.95)':'rgba(207,197,168,.5)'}}>{morphPoolLoading?'✦ …':morphPoolSource==='ai'?'✦ AI':'offline'}</span></div>
             {/* Live chain preview: current → sel1 → sel2 → sel3 */}
             <div style={{textAlign:'center',marginBottom:12,fontSize:'.62rem',letterSpacing:'.04em',color:'rgba(220,180,255,.9)',textTransform:'capitalize',minHeight:'1.2em'}}>
               {[(t('moodNames')||{})[currentMood]||currentMood, ...morphSel.map(m=>(t('moodNames')||{})[m]||m)].join(' → ')}
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,maxHeight:'46vh',overflowY:'auto',paddingRight:2}}>
               {morphPool.map(m=>{
                 const selIdx = morphSel.indexOf(m);
                 const isSel = selIdx>=0;
@@ -10863,9 +11062,10 @@ Composition rules:
                     if(prev.length>=3) return prev;          // cap at 3
                     return [...prev, m];                     // add to end of chain
                   });
-                }} style={{position:'relative',padding:'10px 3px',background:isSel?'rgba(220,150,255,.25)':'rgba(220,150,255,.08)',color:isSel?'#fff':(full?'rgba(220,180,255,.3)':'rgba(220,180,255,.9)'),border:'1px solid '+(isSel?'rgba(220,150,255,.8)':'rgba(220,150,255,.3)'),borderRadius:4,cursor:full?'default':'pointer',fontFamily:'inherit',fontSize:'.58rem',letterSpacing:'.02em',textTransform:'capitalize',opacity:full?.5:1,lineHeight:1.15}}>
-                  {isSel && <span style={{position:'absolute',top:2,right:3,fontSize:'.5rem',fontWeight:700,color:'#e9c8ff'}}>{selIdx+1}</span>}
-                  <span style={{marginRight:2}}>{MOOD_EMOJI[m]||'✦'}</span>{(t('moodNames')||{})[m]||m}
+                }} style={{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',background:isSel?'rgba(220,150,255,.22)':'rgba(220,150,255,.06)',color:isSel?'#fff':(full?'rgba(220,180,255,.3)':PF.cream),border:'1px solid '+(isSel?'rgba(220,150,255,.8)':'rgba(220,150,255,.25)'),borderRadius:12,cursor:full?'default':'pointer',fontFamily:'inherit',opacity:full?.5:1,transition:'all .18s'}}>
+                  {isSel && <span style={{position:'absolute',top:3,right:4,fontSize:'.5rem',fontWeight:700,color:'#e9c8ff'}}>{selIdx+1}</span>}
+                  <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
+                  <span style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{(t('moodNames')||{})[m]||m}</span>
                 </button>
                 );
               })}
@@ -10886,7 +11086,7 @@ Composition rules:
                 const mn=t('moodNames')||{};
                 const morphTitleDisp=[(mn[currentMood]||currentMood), ...sel.map(m=>mn[m]||m)].join(' → ');
                 applyEvents(evts,morphTitleDisp);
-                setCurrentMood(currentMood+' → '+sel.join(' → '));
+                setMorphTargets(sel);
                 const bytes=encodeMidi(evts,morphed.tempo||100);
                 setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                 setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
@@ -10983,6 +11183,9 @@ Composition rules:
           <button className="pf-lift" onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'8px 14px',background:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(169,127,245,.14)':'rgba(28,24,40,.5)',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.92)':'rgba(180,140,255,.25)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.5)':'rgba(180,140,255,.18)'),borderRadius:22,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>
             {t('print')}
           </button>
+        )}
+        {viewMode==='image'&&originalImgUrl&&(
+          <button onClick={()=>{ if(!imgAiBusy) composeFromImage(); }} disabled={imgAiBusy} className="pf-lift" title={t('imgMood')||'mood from image'} style={{padding:'8px 14px',background:imgAiBusy?'rgba(220,150,255,.1)':'rgba(220,150,255,.14)',color:imgAiBusy?'rgba(220,170,255,.55)':'rgba(225,175,255,.95)',border:'1px solid rgba(220,150,255,.5)',borderRadius:22,cursor:imgAiBusy?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>{imgAiBusy?'✦ …':'✦ '+(t('imgMood')||'mood from image')}</button>
         )}
         {viewMode==='image'&&chords.length>0&&(
           <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>

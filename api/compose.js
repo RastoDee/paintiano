@@ -12,7 +12,10 @@
 //  • Rate limit  — max RATE_MAX volaní za RATE_WINDOW_MS na IP (best-effort, per warm instance).
 //  • max_tokens  — zastropované na MAX_TOKENS (lacnejší výstup, krátke skladby to bohato pokryjú).
 
-const API_MODEL = 'claude-sonnet-4-6';   // vždy aktuálny model (ignoruje sa to, čo pošle appka)
+const API_MODEL = 'claude-sonnet-4-6';
+// Povolené modely, ktoré smie appka vyžiadať (inak sa použije API_MODEL).
+// Haiku = lacný (napr. výber morph poolu), Sonnet = kvalitný (kompozícia).
+const ALLOWED_MODELS = new Set(['claude-sonnet-4-6','claude-sonnet-4-6-20260218','claude-haiku-4-5','claude-haiku-4-5-20251001']);   // vždy aktuálny model (ignoruje sa to, čo pošle appka)
 const MAX_TOKENS = 1500;                  // strop na výstup (appka pýta 2000 → orežeme)
 const RATE_MAX = 30;                      // max požiadaviek
 const RATE_WINDOW_MS = 60 * 1000;         // za 60 sekúnd na jednu IP
@@ -82,7 +85,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: API_MODEL,
+        model: (body.model && ALLOWED_MODELS.has(body.model)) ? body.model : API_MODEL,
         max_tokens: Math.min(body.max_tokens || MAX_TOKENS, MAX_TOKENS),  // 3) strop na výstup
         messages: body.messages
       })
