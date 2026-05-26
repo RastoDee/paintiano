@@ -5047,7 +5047,14 @@ async function transcribeAudio(audioBuf, onP) {
   return evts;
 }
 
-function name2midi(note){if(!note)return null;const trimmed=note.trim();if(_nameToMidi[trimmed]!==undefined){const v=_nameToMidi[trimmed];return v>=21&&v<=108?v:null;}const m=trimmed.match(/^([A-G])(#{1,2}|bb?|x)?(-?\d)$/i);if(!m)return null;const PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11},pc=PC[m[1].toUpperCase()];if(pc===undefined)return null;const a=m[2]||'',acc=a.startsWith('##')||a==='x'?2:a.startsWith('#')?1:a.startsWith('bb')?-2:a.startsWith('b')?-1:0,midi=(parseInt(m[3])+1)*12+pc+acc;return midi>=21&&midi<=108?midi:null;}
+function name2midi(note){if(note===null||note===undefined)return null;
+  // Accept a raw MIDI number (or numeric string) too — some AI outputs return
+  // pitches as numbers instead of names (e.g. 60 rather than "C4").
+  if(typeof note==='number'){ return note>=21&&note<=108?Math.round(note):null; }
+  if(typeof note!=='string'){ const _n=Number(note); if(!isNaN(_n)) return _n>=21&&_n<=108?Math.round(_n):null; return null; }
+  const trimmed=note.trim();
+  if(/^-?\d+$/.test(trimmed)){ const _n=parseInt(trimmed,10); return _n>=21&&_n<=108?_n:null; }
+  if(_nameToMidi[trimmed]!==undefined){const v=_nameToMidi[trimmed];return v>=21&&v<=108?v:null;}const m=trimmed.match(/^([A-G])(#{1,2}|bb?|x)?(-?\d)$/i);if(!m)return null;const PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11},pc=PC[m[1].toUpperCase()];if(pc===undefined)return null;const a=m[2]||'',acc=a.startsWith('##')||a==='x'?2:a.startsWith('#')?1:a.startsWith('bb')?-2:a.startsWith('b')?-1:0,midi=(parseInt(m[3])+1)*12+pc+acc;return midi>=21&&midi<=108?midi:null;}
 function noteArr2events(notes,tempo){
   let bpm=tempo||120;
   // Normalise: accept both object {note,dur,beat} and array [pitch,dur,beat,vel]
@@ -8953,7 +8960,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       let _fromCache=!!parsed;
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
-        const prompt='You are given a SKELETON of MIDI pitches derived from the colours of a painting, in time order: ['+_skeleton.join(', ')+']. The likely key centre is '+_NOTE[_root]+'. Treat these pitches as the harmonic/melodic seed and DEVELOP them into a complete, musically polished solo piano piece of about ONE MINUTE.\nOutput ONLY a single valid JSON object - no markdown, no prose. The JSON MUST be complete and closed with all brackets; do NOT exceed the limits below or it will be cut off.\nSet "title" to a short evocative phrase in '+_langName+' (Title Case, max 5 words).\nSchema: {"title":"...","tempo":'+_tempo+',"key":"'+_NOTE[_root]+' major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nHARD LIMIT: at most 90 notes total (fewer is fine). Clear ABA\' structure with a recurring motif drawn from the skeleton; bass octaves 2-3 (at least 16 notes) under a melody in octaves 4-6; vary durations (mix 0.25/0.5/1/2); dynamics via velocity 40-115; stay mostly diatonic to the key; pitches use sharps only (C#4 not Db4). Finish the JSON object completely.';
+        const prompt='You are given a SKELETON of MIDI pitch numbers derived from the colours of a painting, in time order: ['+_skeleton.join(', ')+']. The likely key centre is '+_NOTE[_root]+'. Treat these pitches as the harmonic/melodic seed and DEVELOP them into a complete, musically polished solo piano piece of about ONE MINUTE.\nOutput ONLY a single valid JSON object - no markdown, no prose. The JSON MUST be complete and closed with all brackets; do NOT exceed the limits below or it will be cut off.\nSet "title" to a short evocative phrase in '+_langName+' (Title Case, max 5 words).\nSchema: {"title":"...","tempo":'+_tempo+',"key":"'+_NOTE[_root]+' major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nIMPORTANT: each "pitch" MUST be a note-NAME string like "C4" or "F#5" (sharps only, NOT a number, NOT flats).\nHARD LIMIT: at most 90 notes total (fewer is fine). Clear ABA\' structure with a recurring motif drawn from the skeleton; bass octaves 2-3 (at least 16 notes) under a melody in octaves 4-6; vary durations (mix 0.25/0.5/1/2); dynamics via velocity 40-115; stay mostly diatonic to the key. Finish the JSON object completely.';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -8968,9 +8975,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // even if the JSON was truncated mid-array (the dangling partial tuple is
         // simply skipped), so a cut-off response still yields a playable piece.
         const _salvageNotes=(txt)=>{
-          const re=/\[\s*"([A-G]#?\d)"\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/g;
+          // Match complete tuples with either a "C4"-style name OR a bare MIDI number.
+          const re=/\[\s*(?:"([A-G]#?\d)"|(\d{1,3}))\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/g;
           const out=[]; let mm;
-          while((mm=re.exec(txt))!==null){ out.push([mm[1],parseFloat(mm[2]),parseFloat(mm[3]),parseFloat(mm[4])]); }
+          while((mm=re.exec(txt))!==null){ const pitch=mm[1]!==undefined?mm[1]:parseInt(mm[2],10); out.push([pitch,parseFloat(mm[3]),parseFloat(mm[4]),parseFloat(mm[5])]); }
           return out;
         };
         let parsedTry=null;
@@ -10542,7 +10550,7 @@ Composition rules:
 
           {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
           <div style={{marginBottom:14}}>
-            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable) setPickMode('imgmood'); }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgMood')||'mood from image')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:'rgba(220,150,255,.08)',border:'1px solid rgba(220,150,255,.35)',color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}{!aiUsable&&<span style={{fontSize:'.5rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}</button>
+            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgMood')||'mood from image')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'rgba(220,150,255,.08)',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}{!aiUsable&&<span style={{fontSize:'.5rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}</button>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
 
@@ -11570,7 +11578,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.2.1</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.2.2</footer>
     </div>
   );
 }
