@@ -4606,7 +4606,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', aiOffline:'offline', aiOfflineHint:'AI features need a connection', aiCompose:'AI compose', aiComposeHint:'compose a full piece from this image',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'type any mood — e.g. furious', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -4651,7 +4651,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung', aiCompose:'KI-Komposition', aiComposeHint:'ein ganzes Stück aus diesem Bild komponieren',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'stimmung eingeben — z.B. wütend', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -4696,7 +4696,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion', aiCompose:'composition IA', aiComposeHint:'composer un morceau complet à partir de cette image',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'tape une humeur — ex. furieux', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -4741,7 +4741,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión', aiCompose:'composición IA', aiComposeHint:'componer una pieza completa a partir de esta imagen',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'escribe un estado — p.ej. furioso', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -4786,7 +4786,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie', aiCompose:'AI skladba', aiComposeHint:'skomponovať celú skladbu z tohto obrazu',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'napíš náladu — napr. zúrivá', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -8540,9 +8540,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgAiBusy,setImgAiBusy]=useState(false);
   const [imgReturnUrl,setImgReturnUrl]=useState(null); // original image kept after an image→atmosphere jump, so the user can go back
   const [imgMoodThumb,setImgMoodThumb]=useState(null); // small source-image thumbnail for the "mood from image" mode
+  // True when the current mood piece came FROM AN IMAGE (mood-from-image or the
+  // AI-composition-from-image button), false for text moods. Morph is offered for
+  // text moods only; Vary is offered for both. Cleared by text-mood entry points.
+  const [moodFromImg,setMoodFromImg]=useState(false);
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
+  // Body 10: AI-availability tracking. `isOnline` follows the network; `aiDown`
+  // latches true when an AI call fails for any reason (budget/429/offline/no
+  // endpoint) and clears on the next successful AI call. AI features are
+  // considered usable only when online AND not latched-down.
+  const [isOnline,setIsOnline]=useState(typeof navigator==='undefined'?true:navigator.onLine!==false);
+  const [aiDown,setAiDown]=useState(false);
+  const aiUsable = isOnline && !aiDown;
+  useEffect(()=>{
+    if(typeof window==='undefined') return;
+    const on=()=>setIsOnline(true), off=()=>setIsOnline(false);
+    window.addEventListener('online',on); window.addEventListener('offline',off);
+    return ()=>{ window.removeEventListener('online',on); window.removeEventListener('offline',off); };
+  },[]);
 
   const clear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -8593,7 +8610,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // (Stashed Compose/MIC drafts live in their own refs and are untouched —
     // their "draft saved" glow is correct because they're recoverable.)
     setCurrentMood(null);setVarySource(null);setSongQ('');
-    setImgMoodThumb(null);
+    setImgMoodThumb(null);setMoodFromImg(false);
     setDisp(0);setErr('');setStamp(s=>s+1);
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
     // After clear in a creative mode, mark the canvas as draft-owned by that
@@ -8862,6 +8879,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
         setWPct(75);
         if(!ok) throw new Error('AI unavailable');
+        setAiDown(false); // a live AI call just succeeded
         const data=JSON.parse(respText);
         const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
         const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
@@ -8882,12 +8900,86 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const _imgVarySource={notes:_varyNotes,tempo:parsed.tempo||90,title};
       stopAll();
       setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(_imgVarySource);
-      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(''); setImgMoodThumb(_src);
+      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(''); setImgMoodThumb(_src); setMoodFromImg(true);
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
+      // Only latch AI-down for genuine availability failures (network/budget),
+      // not for parse hiccups on an otherwise-reachable endpoint.
+      if(e&&e.message==='AI unavailable') setAiDown(true);
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
   },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet]);
+
+  // Body 9: AI Composition from image. Unlike composeFromImage (which reads the
+  // image's *mood* and composes freely), this takes the COLOUR-DERIVED notes that
+  // the Image-mode pixel pipeline already produced (chordsRef) as a SKELETON, and
+  // asks the model to develop them into a ~1-minute, structurally-complete piece
+  // while preserving the tonality/motifs the colours implied. "Notes from colour
+  // as the base." Result is cached (compose: prefix) so a second run is free, and
+  // gated by aiUsable (Body 10) so it disables offline.
+  const aiComposeFromImage=useCallback(async()=>{
+    if(imgAiBusy||composedModeRef.current) return;
+    const _src=chordsRef.current;
+    if(!_src||!_src.length){ setErr(((t('errs')||{}).imgNoNotes)||'Load an image first.'); return; }
+    if(!aiUsable){ setAiDown(true); return; }
+    setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false);
+    try{
+      // ── Build the colour-derived skeleton from the existing image events ──
+      // Flatten all notes, keep the most salient (loudest) ones, dedupe to a
+      // compact pitch set, and read tempo from the event density. This is the
+      // "notes from colour" base the model will compose around.
+      const _flat=[];
+      for(const ev of _src){ if(ev&&ev.n) for(const nt of ev.n){ if(nt&&typeof nt.m==='number') _flat.push({m:nt.m,v:nt.v||70,startMs:ev.startMs||0}); } }
+      if(!_flat.length){ setErr(((t('errs')||{}).imgNoNotes)||'Image produced no notes.'); setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); return; }
+      // Salience: sort by velocity, take a representative sample across the piece.
+      const _byTime=[..._flat].sort((a,b)=>a.startMs-b.startMs);
+      const _step=Math.max(1,Math.floor(_byTime.length/40));
+      const _sample=[]; for(let i=0;i<_byTime.length;i+=_step) _sample.push(_byTime[i].m);
+      const _skeleton=_sample.slice(0,32); // up to 32 representative pitches, in time order
+      // Pitch-class histogram → hint a likely key centre for the model.
+      const _pc=new Array(12).fill(0); for(const m of _skeleton) _pc[((m%12)+12)%12]++;
+      let _root=0,_best=-1; for(let i=0;i<12;i++){ if(_pc[i]>_best){ _best=_pc[i]; _root=i; } }
+      const _NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+      // Tempo hint from density: busier images (more events) → a touch faster.
+      const _tempo=Math.max(60,Math.min(132,Math.round(72 + Math.min(60,_src.length/16))));
+      // Cache: key on the skeleton + key, prefix to keep it apart from imgmood.
+      const _hash='compose:'+_root+':'+_skeleton.join(',');
+      let parsed=_imgMoodCacheGet(_hash);
+      let _fromCache=!!parsed;
+      if(!parsed){
+        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
+        const prompt='You are given a SKELETON of MIDI pitches derived from the colours of a painting, in time order: ['+_skeleton.join(', ')+']. The likely key centre is '+_NOTE[_root]+'. Treat these pitches as the harmonic/melodic seed and DEVELOP them into a complete, musically polished solo piano piece of about ONE MINUTE.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short evocative phrase in '+_langName+' (Title Case, max 5 words).\nSchema: {"title":"...","tempo":'+_tempo+',"key":"'+_NOTE[_root]+' major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 120-180 notes giving roughly one minute at the given tempo; clear ABA\' structure with a recurring motif drawn from the skeleton; bass octaves 2-3 (at least 24 notes) under a melody in octaves 4-6; vary durations (mix 0.25/0.5/1/2); dynamics via velocity 40-115; stay mostly diatonic to the key, sparing chromatic colour; pitches use sharps only (C#4 not Db4).';
+        const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+        const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+        const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+        let respText='',ok=false;
+        for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+        setWPct(75);
+        if(!ok) throw new Error('AI unavailable');
+        setAiDown(false); // a live AI call just succeeded
+        const data=JSON.parse(respText);
+        const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
+        const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
+        parsed=JSON.parse(m[0]); if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
+      }
+      setWPct(85);
+      const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
+      const title=(parsed.title&&String(parsed.title).trim())||'✦';
+      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} }
+      // Vary works from the cached notes locally — no new AI call, no cost.
+      const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)
+        ? {note:n[0],dur:n[1],beat:n[2],vel:n[3]}
+        : {note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
+      const _varySrc={notes:_varyNotes,tempo:parsed.tempo||_tempo,title};
+      stopAll();
+      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(_varySrc);
+      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(''); setMoodFromImg(true);
+      try{ const bytes=encodeMidi(evts,parsed.tempo||_tempo); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+    }catch(e){
+      if(e&&e.message==='AI unavailable') setAiDown(true);
+      setErr(((t('errs')||{}).songNotFound)||'Could not compose from the image.');
+    }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
+  },[imgAiBusy,aiUsable,lang,stopAll,applyEvents,t,_imgMoodCacheGet,_imgMoodCacheSet]);
 
   // Standalone "mood from image" mode: pick a picture, AI reads its emotion and
   // composes a mood on the canvas; a small thumbnail of the source sits on top.
@@ -9108,7 +9200,8 @@ Composition rules:
         }catch(err){ lastErr=err; }
       }
       setWPct(75);
-      if(!resp)throw lastErr||new Error('compose endpoints unavailable');
+      if(!resp){ const _netErr=lastErr||new Error('compose endpoints unavailable'); _netErr._aiNet=true; throw _netErr; }
+      setAiDown(false); // a live AI call just succeeded
       let data;
       try{data=JSON.parse(respText);}catch(_){throw new Error(`Response not JSON: ${respText.slice(0,200)}`);}
       const raw=(data.content||[]).map(b=>b.type==='text'?b.text:'').join('');
@@ -9127,6 +9220,7 @@ Composition rules:
     }catch(e){
       // API unavailable (no endpoint / offline / error). Fall back to the offline
       // procedural generator so the user still gets a piece for their mood.
+      if(e&&e._aiNet) setAiDown(true); // only network/budget failures latch AI down
       const fb=moodToSong(title);
       if(fb){
         const fevts=noteArr2events(fb.notes,fb.tempo);
@@ -9332,6 +9426,7 @@ Composition rules:
       let respText='',ok=false;
       for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:200,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
       if(!ok) throw new Error('AI unavailable');
+      setAiDown(false); // a live AI call just succeeded
       const data=JSON.parse(respText);
       const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
       const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
@@ -9341,7 +9436,7 @@ Composition rules:
       if(isNaN(vv)||isNaN(ee)) throw new Error('bad');
       setAtmoMood({v:vv,e:ee,root:0,title:(parsed.title&&String(parsed.title).trim())||''});
       setAtmoOn(true);
-    }catch(e){ setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.'); }
+    }catch(e){ if(e&&e.message==='AI unavailable') setAiDown(true); setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.'); }
     finally{ setAtmoBusy(false); }
   },[atmoBusy,originalImgUrl,lang,t]);
 
@@ -10372,7 +10467,7 @@ Composition rules:
               Known moods play the crafted piece; anything else is synthesised. */}
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
-            {(()=>{ const goMood=(val)=>{ const txt=(val||'').trim(); if(!txt||sourcePickerLocked)return; setStructureSeedLock(null);setForceSetup(false);setCurrentMood(txt);setLoadedSource(null);setMoodContext(true); aiMoodFromText(txt); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false); };
+            {(()=>{ const goMood=(val)=>{ const txt=(val||'').trim(); if(!txt||sourcePickerLocked)return; setStructureSeedLock(null);setForceSetup(false);setCurrentMood(txt);setLoadedSource(null);setImgMoodThumb(null);setMoodFromImg(false);setVarySource(null);setMoodContext(true); aiMoodFromText(txt); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false); };
               // Autocomplete: as you type, list moods whose localized name (or key)
               // starts with the query. Diacritics are stripped on both sides so "z"
               // also matches "žiarivá". Deduped by label, current language.
@@ -10421,7 +10516,7 @@ Composition rules:
 
           {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
           <div style={{marginBottom:14}}>
-            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked) setPickMode('imgmood'); }} disabled={imgAiBusy} className="pf-lift" title={t('imgMood')||'mood from image'} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:imgAiBusy?'default':'pointer',background:'rgba(220,150,255,.08)',border:'1px solid rgba(220,150,255,.35)',color:imgAiBusy?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}</button>
+            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable) setPickMode('imgmood'); }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgMood')||'mood from image')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:'rgba(220,150,255,.08)',border:'1px solid rgba(220,150,255,.35)',color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}{!aiUsable&&<span style={{fontSize:'.5rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}</button>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
 
@@ -10505,7 +10600,7 @@ Composition rules:
               try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
               setActive(new Set());setPlaying(false);setAnim(false);
             } else { stopAll(); wipeCanvasNow(); }
-            setWorking(false);setWLabel('');setWPct(0);if(composeMode){if(draftOwnerRef.current==='compose')stashDraft('compose');setComposeMode(false);}if(micPainting||micListening){if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen')stashDraft(draftOwnerRef.current);}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+            setWorking(false);setWLabel('');setWPct(0);if(composeMode){if(draftOwnerRef.current==='compose')stashDraft('compose');setComposeMode(false);}if(micPainting||micListening){if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen')stashDraft(draftOwnerRef.current);}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
@@ -10518,7 +10613,7 @@ Composition rules:
               Clear, when currentMood is null but we're still on the mood canvas. */}
           {!loadedSource && !composeMode && !micActive && moodContext && (
             imgMoodThumb ? (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode('imgmood');}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{}).image||t('newSource'))+' '+(t('backToImage')||'image')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:(recording||sourcePickerLocked)?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:(recording||sourcePickerLocked)?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).image||t('newSource'))} {t('backToImage')||'image'}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked||!aiUsable)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode('imgmood');}} disabled={recording||sourcePickerLocked||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(((t('newBy')||{}).image||t('newSource'))+' '+(t('backToImage')||'image'))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:(recording||sourcePickerLocked||!aiUsable)?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:(recording||sourcePickerLocked||!aiUsable)?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}>+ {((t('newBy')||{}).image||t('newSource'))} {t('backToImage')||'image'}{!aiUsable&&<span style={{fontSize:'.5rem',opacity:.8}}>· {t('aiOffline')||'offline'}</span>}</button>
             ) : (
             <button onClick={()=>{if(recording)return;setMoodEdit('');setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={((t('newBy')||{}).mood||t('newSource'))+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).mood||t('newSource'))} {t('moodLabel')}</button>
             )
@@ -10537,10 +10632,11 @@ Composition rules:
         )}
         {stripOpen && (
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
-          {/* Morph / Vary — only meaningful for a mood-based painting */}
-          {currentMood && (
-          <div style={{display:'grid',gridTemplateColumns:(composeSource==='crafted')?'1fr 1fr':'1fr',gap:8}}>
-            {(composeSource==='crafted') && (
+          {/* Morph / Vary — only for mood-based pieces (mood + mood-from-image),
+              never for loaded MIDI/audio/score. Morph: text moods only. Vary: both. */}
+          {moodContext && (
+          <div style={{display:'grid',gridTemplateColumns:(!moodFromImg)?'1fr 1fr':'1fr',gap:8}}>
+            {(!moodFromImg) && (
             <button className="pf-morph" onClick={()=>{
               if(sourcePickerLocked)return;
               if(!currentMood){flashMoodHint();return;}
@@ -10870,10 +10966,21 @@ Composition rules:
         </div>
       )}
 
-      {(() => { const seekTitle = info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : t('mic').replace(/[^\p{L} ]/gu,'')); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
+      {(() => {
+        // Body 8: in image mode with AI atmosphere ON, the seek row shows the
+        // AI-detected title + atmosphere word (same form as Mood from Image),
+        // flagged with the ✦ AI badge — replacing the separate blue pill above.
+        const _atmoWordSeek=(v,e)=>{
+          if(e>=0.62) return v>=0.15?'dramatic':v<=-0.2?'tense':'intense';
+          if(e<=0.32) return v>=0.2?'serene':v<=-0.2?'melancholic':'calm';
+          return v>=0.3?'joyful':v<=-0.3?'sombre':'reflective';
+        };
+        const _imgAtmo = (viewMode==='image' && originalImgUrl && atmoOn && atmoMood);
+        const _atmoTitle = _imgAtmo ? (()=>{ const w=_atmoWordSeek(atmoMood.v,atmoMood.e); const ti=(atmoMood.title&&String(atmoMood.title).trim())||''; return ti?(ti+' · '+w):w; })() : null;
+        const seekTitle = _atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : t('mic').replace(/[^\p{L} ]/gu,''))); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
         <div style={{width:'100%',maxWidth:`min(100%, ${CW}px)`,boxSizing:'border-box',marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',marginBottom:4}}>
-            <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{moodContext&&composeSource&&(<span style={{flexShrink:0,fontSize:'.46rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>)}</span>
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{(moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:'.46rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:'.46rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>))}</span>
             <span style={{opacity:.75}}>
               {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
             </span>
@@ -10964,28 +11071,6 @@ Composition rules:
         return (
           <div style={{display:'flex',justifyContent:'center',marginBottom:big?14:10,transition:'margin .25s ease'}}>
             <img src={imgMoodThumb} alt="source" style={{width:big?'100%':74,height:big?'auto':74,maxWidth:big?`min(100%, 360px)`:74,objectFit:'cover',borderRadius:big?14:10,border:'1px solid rgba(220,150,255,.45)',boxShadow:big?'0 4px 24px rgba(0,0,0,.55)':'0 2px 10px rgba(0,0,0,.4)',opacity:big?1:.88,transition:'all .3s ease'}}/>
-          </div>
-        );
-      })()}
-      {viewMode==='image' && originalImgUrl && atmoOn && atmoMood && (()=>{
-        // Body 8: above-canvas readout of the AI-detected atmosphere. Shows the
-        // image title when the model named one, plus a word for the mood derived
-        // from valence/energy; with no title, only the atmosphere word is shown.
-        const _atmoWord=(v,e)=>{
-          if(e>=0.62) return v>=0.15?'dramatic':v<=-0.2?'tense':'intense';
-          if(e<=0.32) return v>=0.2?'serene':v<=-0.2?'melancholic':'calm';
-          return v>=0.3?'joyful':v<=-0.3?'sombre':'reflective';
-        };
-        const word=_atmoWord(atmoMood.v,atmoMood.e);
-        const title=(atmoMood.title&&String(atmoMood.title).trim())||'';
-        return (
-          <div style={{display:'flex',justifyContent:'center',marginBottom:8,padding:'0 8px'}}>
-            <div style={{display:'inline-flex',alignItems:'center',gap:8,maxWidth:'100%',padding:'5px 14px',borderRadius:20,background:'rgba(120,180,255,.10)',border:'1px solid rgba(120,180,255,.3)',color:'rgba(185,218,255,.95)',fontFamily:'inherit',fontSize:'.6rem',letterSpacing:'.06em',overflow:'hidden'}}>
-              <span style={{flexShrink:0,opacity:.8}}>✦</span>
-              {title && <span style={{fontStyle:'italic',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontSize:'.66rem',color:'rgba(205,228,255,.98)'}}>{title}</span>}
-              {title && <span style={{flexShrink:0,opacity:.4}}>·</span>}
-              <span style={{flexShrink:0,textTransform:'uppercase',letterSpacing:'.1em',opacity:.85}}>{word}</span>
-            </div>
           </div>
         );
       })()}
@@ -11128,7 +11213,7 @@ Composition rules:
         <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:'.7rem',textTransform:'uppercase'}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
-            {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
+            {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null); setMoodFromImg(false); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
               <div style={{display:'flex',gap:6,marginBottom:12}}>
                 <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder={t('moodPlaceholder')} autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{flex:1,minWidth:0,background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
                 <button onClick={()=>submit(moodEdit)} disabled={!moodEdit.trim()} aria-label={t('moodGo')} title={t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:moodEdit.trim()?'pointer':'default',background:moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)',color:moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
@@ -11143,6 +11228,8 @@ Composition rules:
                   setForceSetup(false);
                   setCurrentMood(m);
                   setVarySource(s);
+                  setImgMoodThumb(null);
+                  setMoodFromImg(false);
                   setLoadedSource(null);
                   setMoodContext(true);
                   setSongQ(m);
@@ -11305,7 +11392,10 @@ Composition rules:
           </button>
         )}
         {viewMode==='image'&&originalImgUrl&&(
-          <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { detectAtmosphere(); } }} disabled={atmoBusy} className="pf-lift" title={t('atmoLabel')||'atmosphere'} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:atmoBusy?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':atmoOn?'ON':'OFF')}</button>
+          <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
+        )}
+        {viewMode==='image'&&originalImgUrl&&(
+          <button onClick={()=>{ if(!imgAiBusy&&aiUsable) aiComposeFromImage(); }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('aiComposeHint')||'compose a full piece from this image')} style={{padding:'8px 14px',background:'rgba(200,130,255,.12)',color:imgAiBusy?'rgba(220,170,255,.6)':(!aiUsable)?'rgba(220,170,255,.4)':'rgba(228,178,255,.95)',border:'1px solid rgba(200,130,255,'+(!aiUsable?'.25':'.45')+')',borderRadius:22,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',opacity:!aiUsable?.5:1}}>{'✦ '+(imgAiBusy?'…':(!aiUsable)?((t('aiCompose')||'AI compose')+' · '+(t('aiOffline')||'offline')):(t('aiCompose')||'AI compose'))}</button>
         )}
         {viewMode==='image'&&chords.length>0&&(
           <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
@@ -11454,7 +11544,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.2</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.7</footer>
     </div>
   );
 }
