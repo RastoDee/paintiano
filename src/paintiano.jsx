@@ -8802,6 +8802,41 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
+  // ── Body 4: Mood-from-image cache ──────────────────────────────────────────
+  // The expensive step is the AI vision call. We cache its parsed result keyed by
+  // a fast content hash of the image data URL, persisted in localStorage so the
+  // SAME picture replays for free — across sessions, and regardless of filename.
+  // The built-in sample is a special always-present entry (see SAMPLE_IMGMOOD).
+  const _imgMoodHash=useCallback((dataUrl)=>{
+    // FNV-1a style 32-bit hash over the string; cheap and good enough for keying.
+    const s=String(dataUrl||''); let h=0x811c9dc5>>>0;
+    for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; }
+    // length-salted to further reduce accidental collisions
+    return (h^(s.length*2654435761))>>>0;
+  },[]);
+  const IMGMOOD_CACHE_KEY='paintiano_imgmood_cache_v1';
+  const _imgMoodCacheGet=useCallback((hash)=>{
+    // Baked sample first (offline, always free — see SAMPLE_IMGMOOD constant).
+    try{
+      if(typeof SAMPLE_IMGMOOD!=='undefined' && SAMPLE_IMGMOOD && SAMPLE_IMGMOOD.hash===hash) return SAMPLE_IMGMOOD.result;
+    }catch(_){}
+    try{
+      const raw=localStorage.getItem(IMGMOOD_CACHE_KEY); if(!raw) return null;
+      const map=JSON.parse(raw)||{}; return map[hash]||null;
+    }catch(_){ return null; }
+  },[]);
+  const _imgMoodCacheSet=useCallback((hash,result)=>{
+    try{
+      const raw=localStorage.getItem(IMGMOOD_CACHE_KEY);
+      const map=raw?(JSON.parse(raw)||{}):{};
+      map[hash]=result;
+      // Soft cap: keep the most recent ~40 entries to stay well under quota.
+      const keys=Object.keys(map);
+      if(keys.length>40){ for(const k of keys.slice(0,keys.length-40)) delete map[k]; }
+      localStorage.setItem(IMGMOOD_CACHE_KEY, JSON.stringify(map));
+    }catch(_){ /* quota or disabled storage — silently skip caching */ }
+  },[]);
+
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   const composeFromImage=useCallback(async(srcUrl)=>{
     const _src=srcUrl||originalImgUrl;
@@ -8811,30 +8846,40 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=_src; });
       setWPct(40);
       const b64=dataUrl.split(',')[1];
-      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
-      const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
-      const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
-      const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
-      const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
-      let respText='',ok=false;
-      for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
-      setWPct(75);
-      if(!ok) throw new Error('AI unavailable');
-      const data=JSON.parse(respText);
-      const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
-      const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
-      const parsed=JSON.parse(m[0]); if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
+      // Body 4: cache lookup on the downsampled image's content hash. A hit means
+      // we already paid for this picture (or it's the baked sample) → replay free.
+      const _hash=_imgMoodHash(dataUrl);
+      let parsed=_imgMoodCacheGet(_hash);
+      let _fromCache=!!parsed;
+      if(!parsed){
+        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
+        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+        const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+        const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+        const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+        const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+        let respText='',ok=false;
+        for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+        setWPct(75);
+        if(!ok) throw new Error('AI unavailable');
+        const data=JSON.parse(respText);
+        const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
+        const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
+        parsed=JSON.parse(m[0]); if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
+      }
+      setWPct(85);
       const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
       const title=(parsed.title&&String(parsed.title).trim())||'✦';
+      // Store fresh AI results so the next run of this image is free.
+      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} }
       stopAll();
       setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(null);
-      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(title); setImgMoodThumb(_src);
+      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(''); setImgMoodThumb(_src);
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
-  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t]);
+  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet]);
 
   // Standalone "mood from image" mode: pick a picture, AI reads its emotion and
   // composes a mood on the canvas; a small thumbnail of the source sits on top.
@@ -10769,7 +10814,7 @@ Composition rules:
                 else loadSampleImage();
                 setForceSetup(false);
                 setPickMode(null);
-              }} style={{padding:'12px',background:'transparent',color:pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
+              }} style={{padding:'12px',background:'transparent',color:pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':pickMode==='imgmood'?'rgba(228,178,255,.95)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':pickMode==='imgmood'?'rgba(220,150,255,.45)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
                 {t('builtInSample')}
               </button>
               <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
@@ -11097,7 +11142,7 @@ Composition rules:
                   aiMidi(m);
                   if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
                   setMoodHint(false);
-                }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',borderRadius:12,background: m===currentMood?PF.gold:PF.card2,color: m===currentMood?PF.bg:PF.cream,border:'1px solid '+(m===currentMood?PF.gold:'rgba(242,238,232,.08)'),cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
+                }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',borderRadius:12,background: (m===currentMood&&!imgMoodThumb)?PF.gold:PF.card2,color: (m===currentMood&&!imgMoodThumb)?PF.bg:PF.cream,border:'1px solid '+((m===currentMood&&!imgMoodThumb)?PF.gold:'rgba(242,238,232,.08)'),cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
                   <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
                   <span style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{(t('moodNames')||{})[m]||m}</span>
                 </button>
@@ -11401,7 +11446,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.0</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.1</footer>
     </div>
   );
 }
