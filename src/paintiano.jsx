@@ -8857,8 +8857,10 @@ export default function Paintiano() {
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang]||'English';
       const prompt=`Compose a short expressive solo piano piece inspired by this mood phrase: "${title.slice(0,80)}".
 The phrase may be written in ANY language and may be colloquial, slang or idiomatic. FIRST translate it and work out the genuine emotion it expresses (e.g. anger, irritation, joy, calm, sadness, longing) — do NOT read it word-by-word and do NOT assume it is English. THEN compose music that fits that real emotion.
+Set the "title" field to a short, natural translation of the phrase into ${_langName} that captures its meaning (Title Case, max 5 words).
 Output ONLY a single valid JSON object — no markdown, no prose, no explanation.
 Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
 Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
@@ -8913,7 +8915,7 @@ Composition rules:
       if(!parsed?.notes?.length)throw new Error(`No notes in: ${match[0].slice(0,200)}`);
       const evts=noteArr2events(parsed.notes,parsed.tempo);
       if(!evts.length)throw new Error('Could not parse composition');
-      const _dispT=(title||'').trim(); applyEvents(evts,(_dispT?_dispT.charAt(0).toUpperCase()+_dispT.slice(1):(parsed.title||title))); setComposeSource('ai');
+      const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed); applyEvents(evts,_dispT); setComposeSource('ai');
       const bytes=encodeMidi(evts,parsed.tempo||120);
       setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
       setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
