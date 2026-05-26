@@ -63,6 +63,11 @@ const PF_STYLE = `
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
 // "API in artifacts" feature; bump here when Anthropic publishes a newer one.
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+// Body 5: baked AI result for the built-in "mood from image" sample. Generated
+// once on the deployed app and frozen here 1:1 so the sample plays offline and
+// always free — _imgMoodCacheGet returns this whenever the hash matches. The
+// hash is the _imgMoodHash of the downsampled sample image.
+const SAMPLE_IMGMOOD = { hash: 4082737685, result: {"title":"Lovers Floating In Blue","tempo":76,"key":"C major","notes":[["C2",1,0,55],["G2",1,1,50],["C3",0.5,2,52],["E3",0.5,2.5,50],["G3",1,3,48],["C2",1,4,55],["G2",1,5,50],["C3",0.5,6,52],["E3",0.5,6.5,50],["G3",1,7,48],["F2",1,8,55],["C3",1,9,52],["F3",0.5,10,50],["A3",0.5,10.5,48],["C4",1,11,52],["G2",1,12,55],["D3",1,13,52],["G3",0.5,14,50],["B3",0.5,14.5,48],["D4",1,15,52],["E5",2,0,95],["D5",1,2,90],["C5",0.5,3,88],["B4",0.5,3.5,85],["G4",1,4,80],["E5",2,5,95],["D5",1,7,90],["C5",0.5,8,88],["B4",0.5,8.5,85],["A4",1,9,82],["G4",2,10,85],["A4",0.5,12,88],["B4",0.5,12.5,90],["C5",1,13,92],["E5",0.5,14,95],["G5",0.5,14.5,100],["A5",2,15,105],["G5",1,17,98],["E5",0.5,18,95],["D5",0.5,18.5,90],["C5",1,19,88],["A2",1,16,55],["E3",1,17,52],["A3",0.5,18,50],["C4",0.5,18.5,48],["E4",1,19,52],["F2",1,20,55],["C3",1,21,52],["F3",0.5,22,50],["A3",0.5,22.5,48],["E5",2,20,95],["D5",1,22,90],["C5",0.5,23,88],["B4",0.5,23.5,85],["G2",1,24,55],["D3",1,25,52],["G3",0.5,26,50],["B3",0.5,26.5,48],["C2",2,27,58],["G2",1,29,52],["G4",0.5,24,82],["A4",0.5,24.5,85],["B4",1,25,88],["D5",0.5,26,92],["F5",0.5,26.5,98],["G5",1,27,105],["E5",1,28,100],["C5",2,29,95],["G4",1,31,80],["C5",2,32,88],["C3",1,32,52],["G3",1,33,50],["C3",2,34,48]]} };
 const S_BASE = "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/salamander/";
 const S_URLS = {"A0":"A0.mp3","C1":"C1.mp3","D#1":"Ds1.mp3","F#1":"Fs1.mp3","A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3","A5":"A5.mp3","C6":"C6.mp3","D#6":"Ds6.mp3","F#6":"Fs6.mp3","A6":"A6.mp3","C7":"C7.mp3","D#7":"Ds7.mp3","F#7":"Fs7.mp3","A7":"A7.mp3","C8":"C8.mp3"};
 
@@ -11544,7 +11549,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.7</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.8</footer>
     </div>
   );
 }
