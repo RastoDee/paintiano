@@ -4786,7 +4786,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový', dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'napíš náladu — napr. zúrivá', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -7253,6 +7253,7 @@ export default function Paintiano() {
   const [morphSel, setMorphSel] = useState([]); // ordered target moods for chain-morph (max 3)
   const [morphPool, setMorphPool] = useState([]);
   const [showMoodMenu, setShowMoodMenu] = useState(false);
+  const [moodEdit, setMoodEdit] = useState(''); // text v edit políčku mood popupu (vlastná nálada + filter zoznamu)
   const [currentMood, setCurrentMood] = useState(null);
   // Morph picker shows a RANDOM subset of 18 moods (not all ~100), laid out 3 cols
   // × 6 rows. The pool is frozen while the dialog is open so selected chips don't
@@ -8814,7 +8815,7 @@ export default function Paintiano() {
     if(!song){setErr(t('errs').songNotFound);return;}
     const evts=noteArr2events(song.notes,song.tempo);
     if(!evts.length){setErr(t('errs').noNotesGeneric);return;}
-    const dispTitle=((t('moodNames')||{})[title])||song.title;
+    const dispTitle=((t('moodNames')||{})[song.mood])||((t('moodNames')||{})[title])||song.title;
     applyEvents(evts,dispTitle); setComposeSource('crafted');
     const bytes=encodeMidi(evts,song.tempo||120);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
@@ -8856,8 +8857,10 @@ export default function Paintiano() {
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang]||'English';
       const prompt=`Compose a short expressive solo piano piece inspired by: "${title.slice(0,80)}".
 Output ONLY a single valid JSON object — no markdown, no prose, no explanation.
+The "title" field must express this mood in ${_langName} — if the input is written in another language, translate it into ${_langName}. Keep the title short (max 4 words), title-cased.
 Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
 Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
 
@@ -8932,7 +8935,7 @@ Composition rules:
       } else { setErr(e.message||'Compose failed');setErrInfo(false); }
     }
     finally{setWorking(false);setWLabel('');setWPct(0);}
-  },[songQ,busy,stopAll,applyEvents,wipeCanvasNow]);
+  },[songQ,busy,stopAll,applyEvents,wipeCanvasNow,lang]);
 
   // Bridge ref so aiMoodFromText (declared earlier) can invoke aiCompose.
   useEffect(()=>{ aiComposeRef.current=aiCompose; },[aiCompose]);
@@ -10154,34 +10157,16 @@ Composition rules:
               <button onClick={()=>{ goMood(songQ); }} disabled={sourcePickerLocked||!songQ.trim()} aria-label={t('moodGo')||'go'} title={t('moodGo')||'go'} style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,border:'none',cursor:(sourcePickerLocked||!songQ.trim())?'default':'pointer',background:songQ.trim()?PF.gold:'rgba(201,168,76,.2)',color:songQ.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700,opacity:sourcePickerLocked?0.4:1,transition:'all .18s'}}>→</button>
               </div>
               {showSug && (
-                <div role="listbox" aria-label={t('moodLabel')} style={{marginBottom:10,maxHeight:208,overflowY:'auto',borderRadius:10,border:'1px solid rgba(201,168,76,.25)',background:'rgba(20,18,30,.97)',boxShadow:'0 8px 24px rgba(0,0,0,.5)',WebkitOverflowScrolling:'touch'}}>
+                <div role="listbox" aria-label={t('moodLabel')} style={{marginBottom:10,maxHeight:230,overflowY:'auto',borderRadius:10,border:'1px solid rgba(201,168,76,.25)',background:'rgba(20,18,30,.97)',boxShadow:'0 8px 24px rgba(0,0,0,.5)',WebkitOverflowScrolling:'touch',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,padding:8}}>
                   {sug.map(o=>(
-                    <button key={o.k} role="option" onMouseDown={e=>e.preventDefault()} onClick={()=>{ setSongQ(o.label); setMoodFocused(false); goMood(o.label); }} style={{display:'flex',alignItems:'center',gap:9,width:'100%',textAlign:'left',padding:'10px 13px',background:'transparent',border:'none',borderBottom:'1px solid rgba(242,238,232,.05)',color:PF.cream,cursor:'pointer',fontFamily:'inherit',fontSize:'.82rem'}}>
-                      <span style={{fontSize:'.95rem',width:'1.2em',textAlign:'center'}}>{MOOD_EMOJI[o.k]||'✦'}</span>
-                      <span style={{textTransform:'capitalize'}}>{o.label}</span>
+                    <button key={o.k} role="option" onMouseDown={e=>e.preventDefault()} onClick={()=>{ setSongQ(o.label); setMoodFocused(false); goMood(o.label); }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',borderRadius:12,background:PF.card2,border:'1px solid rgba(242,238,232,.08)',color:PF.cream,cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
+                      <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[o.k]||'✦'}</span>
+                      <span style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{o.label}</span>
                     </button>
                   ))}
                 </div>
               )}
               </>); })()}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6}}>
-              {['love','funny','sad','calm','epic'].map(m=>{
-                const mn=t('moodNames'); const label=(mn&&mn[m])||m;
-                const sel = currentMood===m && !loadedSource;
-                return (
-                  <button key={m} onClick={()=>{
-                    if(sourcePickerLocked)return;
-                    const s=findSong(m);
-                    setStructureSeedLock(null);setForceSetup(false);setCurrentMood(m);setVarySource(s);setLoadedSource(null);setMoodContext(true);setSongQ(m);
-                    aiMidi(m);
-                    if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false);
-                  }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):label} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,padding:'8px 3px',borderRadius:12,cursor:sourcePickerLocked?'default':'pointer',fontFamily:'inherit',transition:'all .18s',color:sel?PF.bg:PF.cream,background:sel?PF.gold:PF.card2,border:'1px solid '+(sel?PF.gold:'rgba(242,238,232,.08)'),boxShadow:sel?'0 3px 10px rgba(240,192,64,.3)':'none',opacity:sourcePickerLocked?.4:1}}>
-                    <span style={{fontSize:'1rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
-                    <span style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{label}</span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
@@ -10271,14 +10256,14 @@ Composition rules:
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; return (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(srcBtn);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={t('newSource')+' '+t(srcBtn).replace(/[^\p{L}]/gu,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {t('newSource')} {t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(srcBtn);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+t(srcBtn).replace(/[^\p{L}]/gu,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
           ); })()}
           {/* New MOOD — opens an inline mood picker right over the canvas (no
               jump back to setup); picking one loads it immediately. Shown for the
               mood context (not a file source, not a live mode) — including AFTER
               Clear, when currentMood is null but we're still on the mood canvas. */}
           {!loadedSource && !composeMode && !micActive && moodContext && (
-            <button onClick={()=>{if(recording)return;setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={t('newSource')+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {t('newSource')} {t('moodLabel')}</button>
+            <button onClick={()=>{if(recording)return;setMoodEdit('');setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={((t('newBy')||{}).mood||t('newSource'))+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).mood||t('newSource'))} {t('moodLabel')}</button>
           )}
         </div>
         <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:'.5rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
@@ -10822,8 +10807,14 @@ Composition rules:
         <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:'.7rem',textTransform:'uppercase'}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-              {MOODS.map(m=>(
+            {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
+              <div style={{display:'flex',gap:6,marginBottom:12}}>
+                <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder={t('moodPlaceholder')} autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{flex:1,minWidth:0,background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
+                <button onClick={()=>submit(moodEdit)} disabled={!moodEdit.trim()} aria-label={t('moodGo')} title={t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:moodEdit.trim()?'pointer':'default',background:moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)',color:moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
+              </div>
+            ); })()}
+            <div style={{maxHeight:'42vh',overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4}}>
+              {MOODS.filter(m=>{ const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=_n(moodEdit.trim()); if(!q)return false; return _n((t('moodNames')||{})[m]||m).includes(q); }).map(m=>(
                 <button key={m} onClick={()=>{
                   setShowMoodMenu(false);
                   const s=findSong(m);
@@ -10838,8 +10829,9 @@ Composition rules:
                   aiMidi(m);
                   if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
                   setMoodHint(false);
-                }} style={{padding:'12px 10px',background: m===currentMood?'rgba(201,168,76,.18)':'rgba(201,168,76,.07)',color:PF.gold2,border:'1px solid rgba(201,168,76,.3)',borderRadius:4,cursor:'pointer',fontFamily:'inherit',fontSize:'.72rem',letterSpacing:'.06em',textTransform:'capitalize'}}>
-                  <span style={{marginRight:5}}>{MOOD_EMOJI[m]||'✦'}</span>{(t('moodNames')||{})[m]||m}
+                }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',borderRadius:12,background: m===currentMood?PF.gold:PF.card2,color: m===currentMood?PF.bg:PF.cream,border:'1px solid '+(m===currentMood?PF.gold:'rgba(242,238,232,.08)'),cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
+                  <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
+                  <span style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{(t('moodNames')||{})[m]||m}</span>
                 </button>
               ))}
             </div>
