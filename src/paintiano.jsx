@@ -8397,6 +8397,7 @@ export default function Paintiano() {
     };
     const dn=e=>{
       if(inputFocus.current)return;
+      const _ae=document.activeElement; if(_ae&&(_ae.tagName==='INPUT'||_ae.tagName==='TEXTAREA'||_ae.isContentEditable))return;
       if(e.key==='Backspace'&&composeMode&&!busy&&!recording){e.preventDefault();undoLast();return;}
       if((e.key===' '||e.key==='Enter')&&isInteractive())return;
       if(e.key===' '){e.preventDefault();handlePauseClickRef.current?.();return;}
