@@ -7004,6 +7004,7 @@ export default function Paintiano() {
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
   const [moodFocused, setMoodFocused] = useState(false); // mood input focused → show autocomplete suggestions
+  const [composeSource, setComposeSource] = useState(null); // 'ai' | 'offline' | 'crafted' — how the current mood piece was made
   const [err,       setErr]       = useState('');
   const [errInfo,   setErrInfo]   = useState(false);
 
@@ -8814,7 +8815,7 @@ export default function Paintiano() {
     const evts=noteArr2events(song.notes,song.tempo);
     if(!evts.length){setErr(t('errs').noNotesGeneric);return;}
     const dispTitle=((t('moodNames')||{})[title])||song.title;
-    applyEvents(evts,dispTitle);
+    applyEvents(evts,dispTitle); setComposeSource('crafted');
     const bytes=encodeMidi(evts,song.tempo||120);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -8843,7 +8844,7 @@ export default function Paintiano() {
     setVarySource(song);
     const evts=noteArr2events(song.notes,song.tempo);
     if(!evts.length){ setErr(t('errs').noNotesGeneric); return; }
-    applyEvents(evts,song.title);
+    applyEvents(evts,song.title); setComposeSource('offline');
     const bytes=encodeMidi(evts,song.tempo||100);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -8910,7 +8911,7 @@ Composition rules:
       if(!parsed?.notes?.length)throw new Error(`No notes in: ${match[0].slice(0,200)}`);
       const evts=noteArr2events(parsed.notes,parsed.tempo);
       if(!evts.length)throw new Error('Could not parse composition');
-      applyEvents(evts,parsed.title||title);
+      applyEvents(evts,parsed.title||title); setComposeSource('ai');
       const bytes=encodeMidi(evts,parsed.tempo||120);
       setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
       setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -8922,7 +8923,7 @@ Composition rules:
         const fevts=noteArr2events(fb.notes,fb.tempo);
         if(fevts.length){
           setVarySource(fb);
-          applyEvents(fevts,fb.title);
+          applyEvents(fevts,fb.title); setComposeSource('offline');
           const fbytes=encodeMidi(fevts,fb.tempo||100);
           setMidiBlob(new Blob([fbytes],{type:'audio/midi'}));
           setMidiName(fb.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -10599,7 +10600,7 @@ Composition rules:
       {(() => { const seekTitle = info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : t('mic').replace(/[^\p{L} ]/gu,'')); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
         <div style={{width:'100%',maxWidth:'100%',boxSizing:'border-box',marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',marginBottom:4}}>
-            <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60%',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{moodContext&&composeSource&&(<span style={{flexShrink:0,fontSize:'.46rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>)}</span>
             <span style={{opacity:.75}}>
               {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
             </span>
