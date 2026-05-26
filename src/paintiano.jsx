@@ -4606,7 +4606,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', generateLabel:'generate', todaySource:'today', todayHint:'uses time + season; allow location for live weather (optional)', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'type any mood — e.g. furious', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -4651,7 +4651,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', generateLabel:'erzeugen', todaySource:'heute', todayHint:'nutzt zeit + jahreszeit; standort erlauben für aktuelles wetter (optional)', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'stimmung eingeben — z.B. wütend', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -4696,7 +4696,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', generateLabel:'générer', todaySource:'jour', todayHint:'utilise heure + saison; autorisez la localisation pour la météo (optionnel)', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'tape une humeur — ex. furieux', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -4741,7 +4741,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', generateLabel:'generar', todaySource:'hoy', todayHint:'usa hora + estación; permite la ubicación para el clima (opcional)', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'escribe un estado — p.ej. furioso', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -4786,7 +4786,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', generateLabel:'generuj', todaySource:'dnes', todayHint:'použije čas + ročné obdobie; pre aktuálne počasie povoľ polohu (nepovinné)', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'napíš náladu — napr. zúrivá', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -6350,68 +6350,6 @@ function moodToSong(text){
   return { mood:label, title:label.charAt(0).toUpperCase()+label.slice(1), tempo:out.tempo, notes:out.notes };
 }
 
-// ── Emotion (valence/energy) → arrangement. Shared by mood text, date/weather, image.
-function _emotionArrange(v,e,rootPc,seed){
-  v=Math.max(-1,Math.min(1,v)); e=Math.max(0,Math.min(1,e));
-  const mode=(v>=0.5&&e>0.7)?'lydian':(v>=0?'major':'minor');
-  let ch;
-  if(mode==='lydian') ch='dreamy';
-  else if(v<=-0.2&&e<0.4) ch='eerie';
-  else if(e>=0.7&&v<0) ch='aggressive';
-  else if(e>=0.7&&v>=0.4) ch='bright';
-  else if(e>=0.7) ch='driving';
-  else if(e>=0.5&&v>=0.6) ch='grand';
-  else if(e>=0.5&&v>=0.25) ch='bright';
-  else if(e>=0.45&&v<0) ch='driving';
-  else if(e<0.4&&v<-0.05) ch='sad';
-  else ch=(v<0?'sad':'gentle');
-  const tempo=Math.round(60+e*80);
-  return _RA_arrange(rootPc,mode,ch,tempo,seed);
-}
-// WMO weather code → simple key
-function _weatherFromCode(c){
-  if(c==null||isNaN(c)) return null;
-  if(c===0) return 'sunny';
-  if(c<=3) return 'cloudy';
-  if(c===45||c===48) return 'foggy';
-  if(c>=51&&c<=57) return 'drizzle';
-  if((c>=61&&c<=67)||(c>=80&&c<=82)) return 'rainy';
-  if((c>=71&&c<=77)||(c>=85&&c<=86)) return 'snowy';
-  if(c>=95) return 'stormy';
-  return 'cloudy';
-}
-// Date + season + (optional) weather → a piece. Fully offline / free.
-function dayToSong(hour,season,weather){
-  const wk=(weather&&weather.key)||null;
-  const temp=(weather&&typeof weather.temp==='number')?weather.temp:null;
-  const wind=(weather&&typeof weather.wind==='number')?weather.wind:null;
-  const isDay=(weather&&weather.isDay!=null)?weather.isDay:null;
-  let v=0.2,e=0.5;
-  if(hour<6){v=-0.05;e=0.25;}
-  else if(hour<11){v=0.5;e=0.55;}
-  else if(hour<16){v=0.45;e=0.7;}
-  else if(hour<20){v=0.35;e=0.5;}
-  else {v=0.05;e=0.3;}
-  if(season==='spring'){v+=0.15;e+=0.05;}
-  else if(season==='summer'){v+=0.1;e+=0.2;}
-  else if(season==='autumn'){v-=0.2;}
-  else if(season==='winter'){v-=0.1;e-=0.15;}
-  if(wk==='sunny'){v+=0.2;e+=0.1;}
-  else if(wk==='cloudy'){v-=0.1;}
-  else if(wk==='foggy'){v-=0.08;e-=0.18;}
-  else if(wk==='drizzle'){v-=0.18;e-=0.08;}
-  else if(wk==='rainy'){v-=0.3;e-=0.05;}
-  else if(wk==='stormy'){v-=0.4;e+=0.3;}
-  else if(wk==='snowy'){e-=0.2;}
-  if(temp!=null){ if(temp<0){v-=0.06;e-=0.1;} else if(temp<8){e-=0.05;} else if(temp>=30){v+=0.04;e+=0.12;} else if(temp>=22){v+=0.06;e+=0.04;} }
-  if(wind!=null){ if(wind>=40){e+=0.16;} else if(wind>=22){e+=0.08;} }
-  if(isDay===0){ e-=0.08; v-=0.02; }
-  const rootPc=((hour*5)%12+12)%12;
-  const seed='day'+hour+'_'+season+'_'+(wk||'x')+'_'+(temp==null?'':temp)+'_'+(wind==null?'':Math.round(wind))+'_'+(isDay==null?'':isDay);
-  const out=_emotionArrange(v,e,rootPc,seed);
-  return {tempo:out.tempo,notes:out.notes};
-}
-
 // Atmosphere transform: re-colour an image's literal colour→notes piece with a
 // detected mood (valence v / energy e). Snaps pitches to the mood scale (harmony),
 // scales velocity (dynamics) and time (tempo). Returns NEW events; pass the literal
@@ -6921,6 +6859,7 @@ export default function Paintiano() {
   const refMidi      = useRef(null);
   const refAudio     = useRef(null);
   const refImage     = useRef(null);
+  const refImgMood   = useRef(null);
   const refScore     = useRef(null);
   const kbScrollRef  = useRef(null);
   const recorderRef      = useRef(null);
@@ -8598,9 +8537,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[]);
 
   // ── Date/weather + image → emotion sources ─────────────────────────────
-  const [todayBusy,setTodayBusy]=useState(false);
   const [imgAiBusy,setImgAiBusy]=useState(false);
   const [imgReturnUrl,setImgReturnUrl]=useState(null); // original image kept after an image→atmosphere jump, so the user can go back
+  const [imgMoodThumb,setImgMoodThumb]=useState(null); // small source-image thumbnail for the "mood from image" mode
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
@@ -8782,7 +8721,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const applyEvents = useCallback((events,title)=>{
     if(!events.length)return;
-    setImgReturnUrl(null);
+    setImgReturnUrl(null); setImgMoodThumb(null);
     // Stash any active creative draft before replacing the canvas with imported
     // content. The draft lives on in its mode's stash slot until the user
     // explicitly CLEARs it from inside that mode.
@@ -8862,49 +8801,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
-  // Play an offline-generated {tempo,notes} piece as a mood context.
-  const playGenerated=useCallback((song,title)=>{
-    if(!song||!song.notes||!song.notes.length) return;
-    setStructureSeedLock(null); setForceSetup(false); setLoadedSource(null);
-    setMoodContext(true); setCurrentMood(title); setSongQ(title); setVarySource(song);
-    stopAll();
-    const evts=noteArr2events(song.notes,song.tempo);
-    if(!evts.length) return;
-    applyEvents(evts,title); setComposeSource('offline');
-    try{ const bytes=encodeMidi(evts,song.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(String(title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
-  },[stopAll,applyEvents]);
-  // "Today": time + season (+ best-effort weather) → mood of the day. Offline/free.
-  const generateToday=useCallback(async()=>{
-    if(todayBusy) return; setTodayBusy(true);
-    try{
-      const now=new Date(); const hour=now.getHours(); const mo=now.getMonth();
-      const season=(mo<=1||mo===11)?'winter':mo<=4?'spring':mo<=7?'summer':'autumn';
-      let weather=null;
-      try{
-        const pos=await new Promise((res,rej)=>{ if(!navigator.geolocation){rej(new Error('no geo'));return;} navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000,maximumAge:600000}); });
-        const la=pos.coords.latitude, lo=pos.coords.longitude;
-        const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current_weather=true');
-        const d=await r.json(); const cw=d&&d.current_weather;
-        if(cw){ weather={ key:_weatherFromCode(cw.weathercode), temp:(typeof cw.temperature==='number'?Math.round(cw.temperature):null), wind:(typeof cw.windspeed==='number'?cw.windspeed:null), isDay:(cw.is_day!=null?cw.is_day:null) }; }
-      }catch(_){ /* no location → time + season only */ }
-      const song=dayToSong(hour,season,weather);
-      const tw=({EN:['Night','Morning','Midday','Evening'],DE:['Nacht','Morgen','Mittag','Abend'],FR:['Nuit','Matin','Midi','Soir'],ES:['Noche','Mañana','Mediodía','Tarde'],SK:['Noc','Ráno','Poludnie','Večer']}[lang])||['Night','Morning','Midday','Evening'];
-      const word=hour<6?tw[0]:hour<11?tw[1]:hour<16?tw[2]:tw[3];
-      const ww=({EN:{sunny:'clear',cloudy:'cloudy',foggy:'fog',drizzle:'drizzle',rainy:'rain',snowy:'snow',stormy:'storm'},DE:{sunny:'klar',cloudy:'bewölkt',foggy:'nebel',drizzle:'niesel',rainy:'regen',snowy:'schnee',stormy:'sturm'},FR:{sunny:'clair',cloudy:'nuageux',foggy:'brouillard',drizzle:'bruine',rainy:'pluie',snowy:'neige',stormy:'orage'},ES:{sunny:'despejado',cloudy:'nublado',foggy:'niebla',drizzle:'llovizna',rainy:'lluvia',snowy:'nieve',stormy:'tormenta'},SK:{sunny:'jasno',cloudy:'oblačno',foggy:'hmla',drizzle:'mrholenie',rainy:'dážď',snowy:'sneh',stormy:'búrka'}}[lang])||{};
-      const wk=weather&&weather.key;
-      const emojiDay={sunny:'☀️',cloudy:'☁️',foggy:'🌫️',drizzle:'🌦️',rainy:'🌧️',snowy:'❄️',stormy:'⛈️'};
-      let title=('🗓️')+' '+word;
-      if(wk){ let wem=emojiDay[wk]||'🗓️'; if(wk==='sunny'&&weather.isDay===0) wem='🌙'; const parts=[word]; if(ww[wk]) parts.push(ww[wk]); if(weather.temp!=null) parts.push(weather.temp+'°'); title=wem+' '+parts.join(' · '); }
-      playGenerated(song, title);
-    }finally{ setTodayBusy(false); }
-  },[todayBusy,lang,playGenerated]);
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
-  const composeFromImage=useCallback(async()=>{
-    if(imgAiBusy||!originalImgUrl) return;
-    const _retUrl=originalImgUrl;
+  const composeFromImage=useCallback(async(srcUrl)=>{
+    const _src=srcUrl||originalImgUrl;
+    if(imgAiBusy||!_src) return;
     setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
     try{
-      const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
+      const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=_src; });
       setWPct(40);
       const b64=dataUrl.split(',')[1];
       const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
@@ -8925,12 +8828,23 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const title=(parsed.title&&String(parsed.title).trim())||'✦';
       stopAll();
       setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(null);
-      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(title); setImgReturnUrl(_retUrl);
+      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(title); setImgMoodThumb(_src);
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
   },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t]);
+
+  // Standalone "mood from image" mode: pick a picture, AI reads its emotion and
+  // composes a mood on the canvas; a small thumbnail of the source sits on top.
+  const loadImgMood=useCallback(e=>{
+    const file=e.target.files[0]; if(!file) return; e.target.value='';
+    if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; }
+    const r=new FileReader();
+    r.onerror=()=>{ setErr(((t('errs')||{}).imgRead)||'Could not read image'); setErrInfo(false); };
+    r.onload=evt=>{ composeFromImage(evt.target.result); };
+    r.readAsDataURL(file);
+  },[composeFromImage,stashDraft,t]);
 
   // MusicXML upload — exact, structured score data from MuseScore / Finale / Dorico.
   // Far more accurate than PDF OMR because every note's pitch, octave, accidental, and rhythm is encoded.
@@ -10442,11 +10356,9 @@ Composition rules:
               </>); })()}
           </div>
 
-          {/* GENERATE — mood of the day (offline / free) */}
+          {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
           <div style={{marginBottom:14}}>
-            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,.4)',marginBottom:10,textTransform:'uppercase'}}>{t('generateLabel')||'generate'}</div>
-            <button onClick={()=>{ if(!todayBusy&&!recording) generateToday(); }} disabled={todayBusy||recording} className="pf-lift" title={t('todaySource')||'today'} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(todayBusy||recording)?'default':'pointer',background:'rgba(140,200,255,.08)',border:'1px solid rgba(140,200,255,.3)',color:(todayBusy||recording)?'rgba(170,210,255,.4)':'rgba(180,215,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}><span style={{fontSize:'1.05rem'}}>{todayBusy?'⏳':'🗓️'}</span>{todayBusy?'…':(t('todaySource')||'today')}</button>
-            <div style={{fontSize:'.5rem',lineHeight:1.5,color:'rgba(242,238,232,.32)',marginTop:7,textAlign:'center',letterSpacing:'.03em'}}>{t('todayHint')||''}</div>
+            <button onClick={()=>{ if(!imgAiBusy&&refImgMood.current) refImgMood.current.click(); }} disabled={imgAiBusy} className="pf-lift" title={t('imgMood')||'mood from image'} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:imgAiBusy?'default':'pointer',background:'rgba(220,150,255,.08)',border:'1px solid rgba(220,150,255,.35)',color:imgAiBusy?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}</button>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
 
@@ -10795,6 +10707,7 @@ Composition rules:
       <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
       <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
       <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
+      <input ref={refImgMood} type="file" accept="image/*" onChange={loadImgMood} style={{display:'none'}}/>
 
       {pickMode && (
         <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
@@ -10974,6 +10887,11 @@ Composition rules:
       ); })()}
 
       {isActiveView && (<>
+      {imgMoodThumb && moodContext && viewMode!=='image' && (
+        <div style={{display:'flex',justifyContent:'center',marginBottom:10}}>
+          <img src={imgMoodThumb} alt="source" style={{width:74,height:74,objectFit:'cover',borderRadius:10,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 10px rgba(0,0,0,.4)',opacity:.88}}/>
+        </div>
+      )}
       <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{maxHeight:'calc(100dvh - 210px)',width:'fit-content',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`})}}
         onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
@@ -11288,9 +11206,6 @@ Composition rules:
           <button className="pf-lift" onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'8px 14px',background:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(169,127,245,.14)':'rgba(28,24,40,.5)',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.92)':'rgba(180,140,255,.25)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.5)':'rgba(180,140,255,.18)'),borderRadius:22,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>
             {t('print')}
           </button>
-        )}
-        {viewMode==='image'&&originalImgUrl&&(
-          <button onClick={()=>{ if(!imgAiBusy) composeFromImage(); }} disabled={imgAiBusy} className="pf-lift" title={t('imgMood')||'mood from image'} style={{padding:'8px 14px',background:imgAiBusy?'rgba(220,150,255,.1)':'rgba(220,150,255,.14)',color:imgAiBusy?'rgba(220,170,255,.55)':'rgba(225,175,255,.95)',border:'1px solid rgba(220,150,255,.5)',borderRadius:22,cursor:imgAiBusy?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>{imgAiBusy?'✦ …':'✦ '+(t('imgMood')||'mood from image')}</button>
         )}
         {viewMode==='image'&&originalImgUrl&&(
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { detectAtmosphere(); } }} disabled={atmoBusy} className="pf-lift" title={t('atmoLabel')||'atmosphere'} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:atmoBusy?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':atmoOn?'ON':'OFF')}</button>
