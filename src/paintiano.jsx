@@ -8872,8 +8872,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const title=(parsed.title&&String(parsed.title).trim())||'✦';
       // Store fresh AI results so the next run of this image is free.
       if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} }
+      // Body 3: make Vary work in mood-from-image. rerollSong expects notes as
+      // {note,dur,beat} objects; the AI returns [pitch,dur,beat,vel] arrays — so
+      // normalise here. Vary then re-tunes THIS image's piece locally (transpose
+      // + colour/structure reshuffle), no new AI call, no cost.
+      const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)
+        ? {note:n[0],dur:n[1],beat:n[2],vel:n[3]}
+        : {note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
+      const _imgVarySource={notes:_varyNotes,tempo:parsed.tempo||90,title};
       stopAll();
-      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(null);
+      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(_imgVarySource);
       applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(''); setImgMoodThumb(_src);
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
@@ -11446,7 +11454,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.1</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.2</footer>
     </div>
   );
 }
