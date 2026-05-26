@@ -8953,18 +8953,27 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       let _fromCache=!!parsed;
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
-        const prompt='You are given a SKELETON of MIDI pitches derived from the colours of a painting, in time order: ['+_skeleton.join(', ')+']. The likely key centre is '+_NOTE[_root]+'. Treat these pitches as the harmonic/melodic seed and DEVELOP them into a complete, musically polished solo piano piece of about ONE MINUTE.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short evocative phrase in '+_langName+' (Title Case, max 5 words).\nSchema: {"title":"...","tempo":'+_tempo+',"key":"'+_NOTE[_root]+' major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 120-180 notes giving roughly one minute at the given tempo; clear ABA\' structure with a recurring motif drawn from the skeleton; bass octaves 2-3 (at least 24 notes) under a melody in octaves 4-6; vary durations (mix 0.25/0.5/1/2); dynamics via velocity 40-115; stay mostly diatonic to the key, sparing chromatic colour; pitches use sharps only (C#4 not Db4).';
+        const prompt='You are given a SKELETON of MIDI pitches derived from the colours of a painting, in time order: ['+_skeleton.join(', ')+']. The likely key centre is '+_NOTE[_root]+'. Treat these pitches as the harmonic/melodic seed and DEVELOP them into a complete, musically polished solo piano piece of about ONE MINUTE.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short evocative phrase in '+_langName+' (Title Case, max 5 words).\nSchema: {"title":"...","tempo":'+_tempo+',"key":"'+_NOTE[_root]+' major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 70-100 notes; clear ABA\' structure with a recurring motif drawn from the skeleton; bass octaves 2-3 (at least 16 notes) under a melody in octaves 4-6; vary durations (mix 0.25/0.5/1/2); dynamics via velocity 40-115; stay mostly diatonic to the key, sparing chromatic colour; pitches use sharps only (C#4 not Db4).';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
         let respText='',ok=false;
-        for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+        for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:8000,messages:[{role:'user',content:prompt}]})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
         setWPct(75);
         if(!ok) throw new Error('AI unavailable');
         setAiDown(false); // a live AI call just succeeded
         const data=JSON.parse(respText);
         const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
-        const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
+        let m=rawTxt.match(/\{[\s\S]*\}/);
+        if(!m){
+          // Response may have been truncated before the closing brace — salvage
+          // the notes array and rebuild a minimal valid object so we still play.
+          const _na=rawTxt.match(/"notes"\s*:\s*\[[\s\S]*\]/);
+          const _ti=rawTxt.match(/"title"\s*:\s*"([^"]*)"/);
+          const _te=rawTxt.match(/"tempo"\s*:\s*(\d+)/);
+          if(_na){ m=['{'+(_ti?'"title":"'+_ti[1]+'",':'')+(_te?'"tempo":'+_te[1]+',':'')+_na[0]+'}']; }
+        }
+        if(!m) throw new Error('no json');
         parsed=JSON.parse(m[0]); if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
       }
       setWPct(85);
@@ -8981,8 +8990,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(''); setMoodFromImg(true);
       try{ const bytes=encodeMidi(evts,parsed.tempo||_tempo); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
-      if(e&&e.message==='AI unavailable') setAiDown(true);
-      setErr(((t('errs')||{}).songNotFound)||'Could not compose from the image.');
+      if(e&&e.message==='AI unavailable'){ setAiDown(true); setErr(((t('errs')||{}).aiOfflineHint)||'AI unavailable — check connection.'); }
+      else { setErr('AI compose failed: '+((e&&e.message)||'unknown')); }
+      setErrInfo(true);
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
   },[imgAiBusy,aiUsable,lang,stopAll,applyEvents,t,_imgMoodCacheGet,_imgMoodCacheSet]);
 
@@ -11549,7 +11559,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.8</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.1.9</footer>
     </div>
   );
 }
