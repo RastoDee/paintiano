@@ -8593,6 +8593,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // (Stashed Compose/MIC drafts live in their own refs and are untouched —
     // their "draft saved" glow is correct because they're recoverable.)
     setCurrentMood(null);setVarySource(null);setSongQ('');
+    setImgMoodThumb(null);
     setDisp(0);setErr('');setStamp(s=>s+1);
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
     // After clear in a creative mode, mark the canvas as draft-owned by that
@@ -8845,6 +8846,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     r.onload=evt=>{ composeFromImage(evt.target.result); };
     r.readAsDataURL(file);
   },[composeFromImage,stashDraft,t]);
+
+  // Built-in sample for the "mood from image" mode — mirrors loadSampleImage but
+  // routes the embedded picture through composeFromImage (AI mood) instead of the
+  // pixel→notes pipeline. The sample's AI result is intended to be baked offline
+  // (see composeFromImage sample-cache) so it stays free + works without a network.
+  const loadSampleImgMood=useCallback(()=>{
+    if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; }
+    composeFromImage(SAMPLE_IMAGE_B64);
+  },[composeFromImage,stashDraft]);
 
   // MusicXML upload — exact, structured score data from MuseScore / Finale / Dorico.
   // Far more accurate than PDF OMR because every note's pitch, octave, accidental, and rhythm is encoded.
@@ -10358,7 +10368,7 @@ Composition rules:
 
           {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
           <div style={{marginBottom:14}}>
-            <button onClick={()=>{ if(!imgAiBusy&&refImgMood.current) refImgMood.current.click(); }} disabled={imgAiBusy} className="pf-lift" title={t('imgMood')||'mood from image'} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:imgAiBusy?'default':'pointer',background:'rgba(220,150,255,.08)',border:'1px solid rgba(220,150,255,.35)',color:imgAiBusy?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}</button>
+            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked) setPickMode('imgmood'); }} disabled={imgAiBusy} className="pf-lift" title={t('imgMood')||'mood from image'} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:imgAiBusy?'default':'pointer',background:'rgba(220,150,255,.08)',border:'1px solid rgba(220,150,255,.35)',color:imgAiBusy?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}</button>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
 
@@ -10454,7 +10464,11 @@ Composition rules:
               mood context (not a file source, not a live mode) — including AFTER
               Clear, when currentMood is null but we're still on the mood canvas. */}
           {!loadedSource && !composeMode && !micActive && moodContext && (
+            imgMoodThumb ? (
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode('imgmood');}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{}).image||t('newSource'))+' '+(t('backToImage')||'image')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:(recording||sourcePickerLocked)?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:(recording||sourcePickerLocked)?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).image||t('newSource'))} {t('backToImage')||'image'}</button>
+            ) : (
             <button onClick={()=>{if(recording)return;setMoodEdit('');setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={((t('newBy')||{}).mood||t('newSource'))+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).mood||t('newSource'))} {t('moodLabel')}</button>
+            )
           )}
           {/* ← back to image — shown after an image→atmosphere jump, restores the photo */}
           {imgReturnUrl && !composeMode && !micActive && moodContext && (
@@ -10713,7 +10727,7 @@ Composition rules:
         <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:'.65rem'}}>
-              {pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):t('imageInput')}
+              {pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')}
             </div>
             {pickMode==='mic' ? (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -10751,6 +10765,7 @@ Composition rules:
                 if(pickMode==='midi') loadSampleMidi();
                 else if(pickMode==='audio') loadSampleAudio();
                 else if(pickMode==='score') loadSampleScore();
+                else if(pickMode==='imgmood') loadSampleImgMood();
                 else loadSampleImage();
                 setForceSetup(false);
                 setPickMode(null);
@@ -10764,6 +10779,7 @@ Composition rules:
                 if(pickMode==='midi') refMidi.current?.click();
                 else if(pickMode==='audio') refAudio.current?.click();
                 else if(pickMode==='score') refScore.current?.click();
+                else if(pickMode==='imgmood') refImgMood.current?.click();
                 else refImage.current?.click();
                 // NOTE: do NOT setPickMode(null) here — doing so in the same tick
                 // unmounts the hidden <input> before the browser's file dialog
@@ -10887,11 +10903,39 @@ Composition rules:
       ); })()}
 
       {isActiveView && (<>
-      {imgMoodThumb && moodContext && viewMode!=='image' && (
-        <div style={{display:'flex',justifyContent:'center',marginBottom:10}}>
-          <img src={imgMoodThumb} alt="source" style={{width:74,height:74,objectFit:'cover',borderRadius:10,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 10px rgba(0,0,0,.4)',opacity:.88}}/>
-        </div>
-      )}
+      {imgMoodThumb && moodContext && viewMode!=='image' && (()=>{
+        // Body 11: before the mood plays, show the chosen picture large (like the
+        // Image mode preview). Once playback begins / the mood pic has been drawn
+        // (disp>0), it shrinks to the small thumbnail that sits over the canvas.
+        const big = disp===0 && !playing && !anim;
+        return (
+          <div style={{display:'flex',justifyContent:'center',marginBottom:big?14:10,transition:'margin .25s ease'}}>
+            <img src={imgMoodThumb} alt="source" style={{width:big?'100%':74,height:big?'auto':74,maxWidth:big?`min(100%, 360px)`:74,objectFit:'cover',borderRadius:big?14:10,border:'1px solid rgba(220,150,255,.45)',boxShadow:big?'0 4px 24px rgba(0,0,0,.55)':'0 2px 10px rgba(0,0,0,.4)',opacity:big?1:.88,transition:'all .3s ease'}}/>
+          </div>
+        );
+      })()}
+      {viewMode==='image' && originalImgUrl && atmoOn && atmoMood && (()=>{
+        // Body 8: above-canvas readout of the AI-detected atmosphere. Shows the
+        // image title when the model named one, plus a word for the mood derived
+        // from valence/energy; with no title, only the atmosphere word is shown.
+        const _atmoWord=(v,e)=>{
+          if(e>=0.62) return v>=0.15?'dramatic':v<=-0.2?'tense':'intense';
+          if(e<=0.32) return v>=0.2?'serene':v<=-0.2?'melancholic':'calm';
+          return v>=0.3?'joyful':v<=-0.3?'sombre':'reflective';
+        };
+        const word=_atmoWord(atmoMood.v,atmoMood.e);
+        const title=(atmoMood.title&&String(atmoMood.title).trim())||'';
+        return (
+          <div style={{display:'flex',justifyContent:'center',marginBottom:8,padding:'0 8px'}}>
+            <div style={{display:'inline-flex',alignItems:'center',gap:8,maxWidth:'100%',padding:'5px 14px',borderRadius:20,background:'rgba(120,180,255,.10)',border:'1px solid rgba(120,180,255,.3)',color:'rgba(185,218,255,.95)',fontFamily:'inherit',fontSize:'.6rem',letterSpacing:'.06em',overflow:'hidden'}}>
+              <span style={{flexShrink:0,opacity:.8}}>✦</span>
+              {title && <span style={{fontStyle:'italic',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontSize:'.66rem',color:'rgba(205,228,255,.98)'}}>{title}</span>}
+              {title && <span style={{flexShrink:0,opacity:.4}}>·</span>}
+              <span style={{flexShrink:0,textTransform:'uppercase',letterSpacing:'.1em',opacity:.85}}>{word}</span>
+            </div>
+          </div>
+        );
+      })()}
       <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{maxHeight:'calc(100dvh - 210px)',width:'fit-content',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`})}}
         onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
