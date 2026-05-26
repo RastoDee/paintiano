@@ -8953,7 +8953,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       let _fromCache=!!parsed;
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
-        const prompt='You are given a SKELETON of MIDI pitches derived from the colours of a painting, in time order: ['+_skeleton.join(', ')+']. The likely key centre is '+_NOTE[_root]+'. Treat these pitches as the harmonic/melodic seed and DEVELOP them into a complete, musically polished solo piano piece of about ONE MINUTE.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short evocative phrase in '+_langName+' (Title Case, max 5 words).\nSchema: {"title":"...","tempo":'+_tempo+',"key":"'+_NOTE[_root]+' major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 70-100 notes; clear ABA\' structure with a recurring motif drawn from the skeleton; bass octaves 2-3 (at least 16 notes) under a melody in octaves 4-6; vary durations (mix 0.25/0.5/1/2); dynamics via velocity 40-115; stay mostly diatonic to the key, sparing chromatic colour; pitches use sharps only (C#4 not Db4).';
+        const prompt='You are given a SKELETON of MIDI pitches derived from the colours of a painting, in time order: ['+_skeleton.join(', ')+']. The likely key centre is '+_NOTE[_root]+'. Treat these pitches as the harmonic/melodic seed and DEVELOP them into a complete, musically polished solo piano piece of about ONE MINUTE.\nOutput ONLY a single valid JSON object - no markdown, no prose. The JSON MUST be complete and closed with all brackets; do NOT exceed the limits below or it will be cut off.\nSet "title" to a short evocative phrase in '+_langName+' (Title Case, max 5 words).\nSchema: {"title":"...","tempo":'+_tempo+',"key":"'+_NOTE[_root]+' major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nHARD LIMIT: at most 90 notes total (fewer is fine). Clear ABA\' structure with a recurring motif drawn from the skeleton; bass octaves 2-3 (at least 16 notes) under a melody in octaves 4-6; vary durations (mix 0.25/0.5/1/2); dynamics via velocity 40-115; stay mostly diatonic to the key; pitches use sharps only (C#4 not Db4). Finish the JSON object completely.';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -8964,17 +8964,28 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         setAiDown(false); // a live AI call just succeeded
         const data=JSON.parse(respText);
         const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
-        let m=rawTxt.match(/\{[\s\S]*\}/);
-        if(!m){
-          // Response may have been truncated before the closing brace — salvage
-          // the notes array and rebuild a minimal valid object so we still play.
-          const _na=rawTxt.match(/"notes"\s*:\s*\[[\s\S]*\]/);
+        // Helper: pull every COMPLETE note tuple ["X",n,n,n] from the text. Works
+        // even if the JSON was truncated mid-array (the dangling partial tuple is
+        // simply skipped), so a cut-off response still yields a playable piece.
+        const _salvageNotes=(txt)=>{
+          const re=/\[\s*"([A-G]#?\d)"\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/g;
+          const out=[]; let mm;
+          while((mm=re.exec(txt))!==null){ out.push([mm[1],parseFloat(mm[2]),parseFloat(mm[3]),parseFloat(mm[4])]); }
+          return out;
+        };
+        let parsedTry=null;
+        try{ const m=rawTxt.match(/\{[\s\S]*\}/); if(m) parsedTry=JSON.parse(m[0]); }catch(_){ parsedTry=null; }
+        if(parsedTry&&parsedTry.notes&&parsedTry.notes.length){
+          parsed=parsedTry;
+        } else {
+          // Truncated or malformed JSON — salvage whatever complete notes exist.
+          const _notes=_salvageNotes(rawTxt);
+          if(!_notes.length) throw new Error('no notes');
           const _ti=rawTxt.match(/"title"\s*:\s*"([^"]*)"/);
           const _te=rawTxt.match(/"tempo"\s*:\s*(\d+)/);
-          if(_na){ m=['{'+(_ti?'"title":"'+_ti[1]+'",':'')+(_te?'"tempo":'+_te[1]+',':'')+_na[0]+'}']; }
+          parsed={ title:_ti?_ti[1]:'✦', tempo:_te?parseInt(_te[1],10):_tempo, notes:_notes };
         }
-        if(!m) throw new Error('no json');
-        parsed=JSON.parse(m[0]); if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
+        if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
       }
       setWPct(85);
       const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
@@ -11559,7 +11570,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.2.0</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.2.1</footer>
     </div>
   );
 }
