@@ -8597,6 +8597,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setStamp(s=>s+1);
   },[]);
 
+  // ── Date/weather + image → emotion sources ─────────────────────────────
+  const [todayBusy,setTodayBusy]=useState(false);
+  const [imgAiBusy,setImgAiBusy]=useState(false);
+  const [imgReturnUrl,setImgReturnUrl]=useState(null); // original image kept after an image→atmosphere jump, so the user can go back
+  const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
+  const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
+  const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
+
   const clear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
     if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
@@ -8690,16 +8698,29 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // user explicitly taps "← Setup". This keeps the cleared view calm.
     if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
-      setChords([]);chordsRef.current=[];idxRef.current=0;setPending([]);pendingRef.current=[];
+      setPending([]);pendingRef.current=[];
       pressInfo.current={};sessionStart.current=0;gridSigRef.current='';
-      pixelRef.current=null;                 // drop the picture's pixel data
-      setOriginalImgUrl(null);               // drop the displayed original image
+      // Keep the picture's pixel data AND the displayed photo. Clear in image
+      // mode wipes the visible mosaic and rebuilds the (hidden-until-play) notes
+      // from the SAME photo, so Play stays active — the played trace just resets.
       setInfo(null);
       substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
       lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
-      setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
       try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
-      setDisp(0); setStamp(s=>s+1); setPlayedOnce(false);
+      { let _evts=[]; const _pr=pixelRef.current;
+        if(_pr){ const _nc=_pr.nc,_nr=_pr.nr,_px=_pr.px;
+          const _hue = mode==='custom'
+            ? Object.assign(activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[0];}),
+                {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
+                 __hasNeutral:activePalette.some(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1]<12;})})
+            : (mode==='spectral'?SPEC_HUE:COF);
+          const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current);
+          _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood):_lit;
+        }
+        setChords(_evts);chordsRef.current=_evts;
+        idxRef.current=_evts.length;setDisp(_evts.length);
+      }
+      setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
       // loadedSource stays 'image' and forceSetup stays false → image view persists.
@@ -8717,7 +8738,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     draftOwnerRef.current=null;
     // Reset Colour + Style to defaults so returning to Setup is a clean slate.
     setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
-  },[stopAll,clear,composeMode,micPainting,micListening,loadedSource]);
+  },[stopAll,clear,composeMode,micPainting,micListening,loadedSource,mode,activePalette,atmoOn,atmoMood]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -8841,13 +8862,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
-  // ── Date/weather + image → emotion sources ─────────────────────────────
-  const [todayBusy,setTodayBusy]=useState(false);
-  const [imgAiBusy,setImgAiBusy]=useState(false);
-  const [imgReturnUrl,setImgReturnUrl]=useState(null); // original image kept after an image→atmosphere jump, so the user can go back
-  const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
-  const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
-  const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
   // Play an offline-generated {tempo,notes} piece as a mood context.
   const playGenerated=useCallback((song,title)=>{
     if(!song||!song.notes||!song.notes.length) return;
@@ -10546,7 +10560,8 @@ Composition rules:
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
           {/* Morph / Vary — only meaningful for a mood-based painting */}
           {currentMood && (
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+          <div style={{display:'grid',gridTemplateColumns:(composeSource==='crafted')?'1fr 1fr':'1fr',gap:8}}>
+            {(composeSource==='crafted') && (
             <button className="pf-morph" onClick={()=>{
               if(sourcePickerLocked)return;
               if(!currentMood){flashMoodHint();return;}
@@ -10574,6 +10589,7 @@ Composition rules:
                 });
               }
             }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:'.64rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:chords.length&&currentMood&&!sourcePickerLocked?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.3)',opacity:chords.length&&currentMood&&!sourcePickerLocked?1:.55,transition:'all .18s'}}>{t('morph')}</button>
+            )}
             <button className="pf-vary" onClick={()=>{
               // VARY is allowed while PLAYING (no need to pause first), but not
               // during compose/mic/recording/processing, and not on an empty
