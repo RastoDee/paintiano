@@ -8860,7 +8860,7 @@ export default function Paintiano() {
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang]||'English';
       const prompt=`Compose a short expressive solo piano piece inspired by: "${title.slice(0,80)}".
 Output ONLY a single valid JSON object — no markdown, no prose, no explanation.
-The "title" field must express this mood in ${_langName} — if the input is written in another language, translate it into ${_langName}. Keep the title short (max 4 words), title-cased.
+The "title" field MUST be written in ${_langName} (the user's chosen language), even though these instructions are in English. If the inspiration phrase above is in a different language, translate its meaning into ${_langName}. Never leave the title in another language. Keep it short (max 4 words), Title Case.
 Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
 Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
 
@@ -10071,7 +10071,7 @@ Composition rules:
   return (
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE}}/>
-      {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={t('tagline')||'paintings, played'} skipLabel={t('tapToSkip')||'tap to skip'} />}
+      {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20}}>
         <nav style={{display:'flex',gap:18,fontSize:'.6rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)'}}>{t('concept')}</span>
