@@ -4606,7 +4606,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', generateLabel:'generate', todaySource:'today', imgMood:'mood from image',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', generateLabel:'generate', todaySource:'today', todayHint:'uses time + season; allow location for live weather (optional)', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'type any mood — e.g. furious', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -4651,7 +4651,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', generateLabel:'erzeugen', todaySource:'heute', imgMood:'stimmung aus bild',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', generateLabel:'erzeugen', todaySource:'heute', todayHint:'nutzt zeit + jahreszeit; standort erlauben für aktuelles wetter (optional)', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'stimmung eingeben — z.B. wütend', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -4696,7 +4696,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', generateLabel:'générer', todaySource:'jour', imgMood:'ambiance image',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', generateLabel:'générer', todaySource:'jour', todayHint:'utilise heure + saison; autorisez la localisation pour la météo (optionnel)', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'tape une humeur — ex. furieux', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -4741,7 +4741,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', generateLabel:'generar', todaySource:'hoy', imgMood:'estado imagen',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', generateLabel:'generar', todaySource:'hoy', todayHint:'usa hora + estación; permite la ubicación para el clima (opcional)', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'escribe un estado — p.ej. furioso', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -4786,7 +4786,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', generateLabel:'generuj', todaySource:'dnes', imgMood:'nálada z obrazu',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', generateLabel:'generuj', todaySource:'dnes', todayHint:'použije čas + ročné obdobie; pre aktuálne počasie povoľ polohu (nepovinné)', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'napíš náladu — napr. zúrivá', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -6373,14 +6373,19 @@ function _weatherFromCode(c){
   if(c==null||isNaN(c)) return null;
   if(c===0) return 'sunny';
   if(c<=3) return 'cloudy';
-  if(c>=45&&c<=48) return 'cloudy';
-  if((c>=51&&c<=67)||(c>=80&&c<=82)) return 'rainy';
+  if(c===45||c===48) return 'foggy';
+  if(c>=51&&c<=57) return 'drizzle';
+  if((c>=61&&c<=67)||(c>=80&&c<=82)) return 'rainy';
   if((c>=71&&c<=77)||(c>=85&&c<=86)) return 'snowy';
   if(c>=95) return 'stormy';
   return 'cloudy';
 }
 // Date + season + (optional) weather → a piece. Fully offline / free.
-function dayToSong(hour,season,weatherKey){
+function dayToSong(hour,season,weather){
+  const wk=(weather&&weather.key)||null;
+  const temp=(weather&&typeof weather.temp==='number')?weather.temp:null;
+  const wind=(weather&&typeof weather.wind==='number')?weather.wind:null;
+  const isDay=(weather&&weather.isDay!=null)?weather.isDay:null;
   let v=0.2,e=0.5;
   if(hour<6){v=-0.05;e=0.25;}
   else if(hour<11){v=0.5;e=0.55;}
@@ -6391,14 +6396,36 @@ function dayToSong(hour,season,weatherKey){
   else if(season==='summer'){v+=0.1;e+=0.2;}
   else if(season==='autumn'){v-=0.2;}
   else if(season==='winter'){v-=0.1;e-=0.15;}
-  if(weatherKey==='sunny'){v+=0.2;e+=0.1;}
-  else if(weatherKey==='cloudy'){v-=0.1;}
-  else if(weatherKey==='rainy'){v-=0.3;e-=0.05;}
-  else if(weatherKey==='stormy'){v-=0.4;e+=0.3;}
-  else if(weatherKey==='snowy'){e-=0.2;}
+  if(wk==='sunny'){v+=0.2;e+=0.1;}
+  else if(wk==='cloudy'){v-=0.1;}
+  else if(wk==='foggy'){v-=0.08;e-=0.18;}
+  else if(wk==='drizzle'){v-=0.18;e-=0.08;}
+  else if(wk==='rainy'){v-=0.3;e-=0.05;}
+  else if(wk==='stormy'){v-=0.4;e+=0.3;}
+  else if(wk==='snowy'){e-=0.2;}
+  if(temp!=null){ if(temp<0){v-=0.06;e-=0.1;} else if(temp<8){e-=0.05;} else if(temp>=30){v+=0.04;e+=0.12;} else if(temp>=22){v+=0.06;e+=0.04;} }
+  if(wind!=null){ if(wind>=40){e+=0.16;} else if(wind>=22){e+=0.08;} }
+  if(isDay===0){ e-=0.08; v-=0.02; }
   const rootPc=((hour*5)%12+12)%12;
-  const out=_emotionArrange(v,e,rootPc,'day'+hour+'_'+season+'_'+(weatherKey||'x'));
+  const seed='day'+hour+'_'+season+'_'+(wk||'x')+'_'+(temp==null?'':temp)+'_'+(wind==null?'':Math.round(wind))+'_'+(isDay==null?'':isDay);
+  const out=_emotionArrange(v,e,rootPc,seed);
   return {tempo:out.tempo,notes:out.notes};
+}
+
+// Atmosphere transform: re-colour an image's literal colour→notes piece with a
+// detected mood (valence v / energy e). Snaps pitches to the mood scale (harmony),
+// scales velocity (dynamics) and time (tempo). Returns NEW events; pass the literal
+// events each time so toggling off restores the original.
+function _atmoTransform(evts, mood){
+  if(!evts||!evts.length||!mood) return evts;
+  const v=Math.max(-1,Math.min(1,mood.v||0)), e=Math.max(0,Math.min(1,mood.e==null?0.5:mood.e));
+  const sm=(v>=0.5&&e>0.7)?'lydian':(v>=0?'major':'minor');
+  const SC=({major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],lydian:[0,2,4,6,7,9,11]})[sm];
+  const root=((mood.root||0)%12+12)%12;
+  const tempoK=1.35-e*0.8;     // calm → slower, intense → faster
+  const vScale=0.6+e*0.6;      // calm → softer, intense → louder
+  const snap=(m)=>{ const pc=((m-root)%12+12)%12; let best=SC[0],bd=99; for(const d of SC){ const dd=Math.min(((pc-d)%12+12)%12,((d-pc)%12+12)%12); if(dd<bd){bd=dd;best=d;} } let delta=((best-pc)%12+12)%12; if(delta>6) delta-=12; return m+delta; };
+  return evts.map(ev=>({ ...ev, startMs:Math.round((ev.startMs||0)*tempoK), n:(ev.n||[]).map(no=>({ ...no, m:snap(no.m), v:Math.max(20,Math.min(124,Math.round((no.v||80)*vScale))), durMs:Math.max(40,Math.round((no.durMs||300)*tempoK)) })) }));
 }
 
 // Crossfade-morph two mood pieces into one. First half is mood A,
@@ -8734,6 +8761,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const applyEvents = useCallback((events,title)=>{
     if(!events.length)return;
+    setImgReturnUrl(null);
     // Stash any active creative draft before replacing the canvas with imported
     // content. The draft lives on in its mode's stash slot until the user
     // explicitly CLEARs it from inside that mode.
@@ -8816,6 +8844,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // ── Date/weather + image → emotion sources ─────────────────────────────
   const [todayBusy,setTodayBusy]=useState(false);
   const [imgAiBusy,setImgAiBusy]=useState(false);
+  const [imgReturnUrl,setImgReturnUrl]=useState(null); // original image kept after an image→atmosphere jump, so the user can go back
+  const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
+  const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
+  const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
   // Play an offline-generated {tempo,notes} piece as a mood context.
   const playGenerated=useCallback((song,title)=>{
     if(!song||!song.notes||!song.notes.length) return;
@@ -8833,23 +8865,29 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{
       const now=new Date(); const hour=now.getHours(); const mo=now.getMonth();
       const season=(mo<=1||mo===11)?'winter':mo<=4?'spring':mo<=7?'summer':'autumn';
-      let weatherKey=null;
+      let weather=null;
       try{
         const pos=await new Promise((res,rej)=>{ if(!navigator.geolocation){rej(new Error('no geo'));return;} navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000,maximumAge:600000}); });
         const la=pos.coords.latitude, lo=pos.coords.longitude;
         const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current_weather=true');
-        const d=await r.json(); weatherKey=_weatherFromCode(d&&d.current_weather&&d.current_weather.weathercode);
+        const d=await r.json(); const cw=d&&d.current_weather;
+        if(cw){ weather={ key:_weatherFromCode(cw.weathercode), temp:(typeof cw.temperature==='number'?Math.round(cw.temperature):null), wind:(typeof cw.windspeed==='number'?cw.windspeed:null), isDay:(cw.is_day!=null?cw.is_day:null) }; }
       }catch(_){ /* no location → time + season only */ }
-      const song=dayToSong(hour,season,weatherKey);
+      const song=dayToSong(hour,season,weather);
       const tw=({EN:['Night','Morning','Midday','Evening'],DE:['Nacht','Morgen','Mittag','Abend'],FR:['Nuit','Matin','Midi','Soir'],ES:['Noche','Mañana','Mediodía','Tarde'],SK:['Noc','Ráno','Poludnie','Večer']}[lang])||['Night','Morning','Midday','Evening'];
       const word=hour<6?tw[0]:hour<11?tw[1]:hour<16?tw[2]:tw[3];
-      const wem=({sunny:'☀️',cloudy:'☁️',rainy:'🌧️',stormy:'⛈️',snowy:'❄️'}[weatherKey])||'🗓️';
-      playGenerated(song, wem+' '+word);
+      const ww=({EN:{sunny:'clear',cloudy:'cloudy',foggy:'fog',drizzle:'drizzle',rainy:'rain',snowy:'snow',stormy:'storm'},DE:{sunny:'klar',cloudy:'bewölkt',foggy:'nebel',drizzle:'niesel',rainy:'regen',snowy:'schnee',stormy:'sturm'},FR:{sunny:'clair',cloudy:'nuageux',foggy:'brouillard',drizzle:'bruine',rainy:'pluie',snowy:'neige',stormy:'orage'},ES:{sunny:'despejado',cloudy:'nublado',foggy:'niebla',drizzle:'llovizna',rainy:'lluvia',snowy:'nieve',stormy:'tormenta'},SK:{sunny:'jasno',cloudy:'oblačno',foggy:'hmla',drizzle:'mrholenie',rainy:'dážď',snowy:'sneh',stormy:'búrka'}}[lang])||{};
+      const wk=weather&&weather.key;
+      const emojiDay={sunny:'☀️',cloudy:'☁️',foggy:'🌫️',drizzle:'🌦️',rainy:'🌧️',snowy:'❄️',stormy:'⛈️'};
+      let title=('🗓️')+' '+word;
+      if(wk){ let wem=emojiDay[wk]||'🗓️'; if(wk==='sunny'&&weather.isDay===0) wem='🌙'; const parts=[word]; if(ww[wk]) parts.push(ww[wk]); if(weather.temp!=null) parts.push(weather.temp+'°'); title=wem+' '+parts.join(' · '); }
+      playGenerated(song, title);
     }finally{ setTodayBusy(false); }
   },[todayBusy,lang,playGenerated]);
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   const composeFromImage=useCallback(async()=>{
     if(imgAiBusy||!originalImgUrl) return;
+    const _retUrl=originalImgUrl;
     setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
@@ -8873,7 +8911,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const title=(parsed.title&&String(parsed.title).trim())||'✦';
       stopAll();
       setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(null);
-      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(title);
+      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(title); setImgReturnUrl(_retUrl);
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
@@ -9205,6 +9243,7 @@ Composition rules:
           setInfo({title:file.name.replace(/\.[^.]+$/,''),count:evts.length,dur:Math.round(realDurMs/1000)});
           idxRef.current=evts.length;setStamp(s=>s+1);
           setPlaybackSpeed(1);playbackSpeedRef.current=1;
+          setAtmoOn(false);setAtmoMood(null);
           setLoadedSource('image');
           setPickMode(null);
         }catch(e){if(loadTokenRef.current===myToken){setErr('Image: '+e.message);setErrInfo(false);}}
@@ -9220,7 +9259,7 @@ Composition rules:
     if(viewMode!=='image'||!pixelRef.current)return;
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
-    const sig = mode + '|' + imgDir + (mode==='custom' ? '|' + activePalette.join(',') : '');
+    const sig = mode + '|' + imgDir + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '');
     if(pixelRef.current.lastSig===sig)return;
     pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
@@ -9230,7 +9269,8 @@ Composition rules:
                       { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                         __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
       : (mode==='spectral'?SPEC_HUE:COF);
-    const evts=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current);
+    const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current);
+    const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood):_evtsLit;
     // Changing the colour mode re-transcribes the SAME painting through a new
     // hue→pitch table, so the notes change but the structure/length do not. If a
     // playback is in progress we must NOT stop it — like MIDI and live drawing,
@@ -9258,7 +9298,7 @@ Composition rules:
       setDisp(evts.length);
       idxRef.current=evts.length;setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir]);
+  },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood]);
 
   const loadSampleImage=useCallback(()=>{
     try{
@@ -9271,6 +9311,48 @@ Composition rules:
       loadImage(fakeEvent);
     }catch(e){setErr('Sample image: '+e.message);setErrInfo(false);}
   },[loadImage]);
+  // Re-enter image mode from a stashed data-URL (the "← image" button after an
+  // image→atmosphere jump). Rebuilds a File and re-runs loadImage.
+  const returnToImage=useCallback((url)=>{
+    const u=url||imgReturnUrl; if(!u) return;
+    try{
+      const mime=(u.match(/^data:([^;]+);/)||[])[1]||'image/jpeg';
+      const b64=u.split(',')[1]; const buffer=b64ToArrayBuffer(b64);
+      const blob=new Blob([buffer],{type:mime}); const ext=(mime.split('/')[1]||'jpg').replace('jpeg','jpg');
+      const file=new File([blob],'image.'+ext,{type:mime});
+      setImgReturnUrl(null);
+      loadImage({target:{files:[file],value:''}});
+    }catch(e){ setErr('Image: '+((e&&e.message)||'restore failed')); setErrInfo(false); }
+  },[imgReturnUrl,loadImage]);
+  // Read the image's mood via AI vision (separate, paid step). Stores {v,e} and
+  // turns the atmosphere effect ON; the on/off toggle then re-uses it for free.
+  const detectAtmosphere=useCallback(async()=>{
+    if(atmoBusy||!originalImgUrl) return;
+    setAtmoBusy(true); setErr('');
+    try{
+      const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
+      const b64=dataUrl.split(',')[1];
+      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
+      const prompt='Look at this image and judge the EMOTION / atmosphere of the scene. Output ONLY a single JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."} where valence is -1 (sad/dark) to 1 (happy/bright), energy is 0 (calm/still) to 1 (intense/dramatic), and title is a short mood phrase in '+_langName+' (max 4 words, Title Case).';
+      const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+      const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+      const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+      let respText='',ok=false;
+      for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:200,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+      if(!ok) throw new Error('AI unavailable');
+      const data=JSON.parse(respText);
+      const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
+      const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
+      const parsed=JSON.parse(m[0]);
+      const vv=Math.max(-1,Math.min(1,Number(parsed.valence)));
+      const ee=Math.max(0,Math.min(1,Number(parsed.energy)));
+      if(isNaN(vv)||isNaN(ee)) throw new Error('bad');
+      setAtmoMood({v:vv,e:ee,root:0,title:(parsed.title&&String(parsed.title).trim())||''});
+      setAtmoOn(true);
+    }catch(e){ setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.'); }
+    finally{ setAtmoBusy(false); }
+  },[atmoBusy,originalImgUrl,lang,t]);
 
   const paintSong=()=>{
     const q=songQ.trim().toLowerCase();if(!q||busy)return;
@@ -10350,6 +10432,7 @@ Composition rules:
           <div style={{marginBottom:14}}>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,.4)',marginBottom:10,textTransform:'uppercase'}}>{t('generateLabel')||'generate'}</div>
             <button onClick={()=>{ if(!todayBusy&&!recording) generateToday(); }} disabled={todayBusy||recording} className="pf-lift" title={t('todaySource')||'today'} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(todayBusy||recording)?'default':'pointer',background:'rgba(140,200,255,.08)',border:'1px solid rgba(140,200,255,.3)',color:(todayBusy||recording)?'rgba(170,210,255,.4)':'rgba(180,215,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}><span style={{fontSize:'1.05rem'}}>{todayBusy?'⏳':'🗓️'}</span>{todayBusy?'…':(t('todaySource')||'today')}</button>
+            <div style={{fontSize:'.5rem',lineHeight:1.5,color:'rgba(242,238,232,.32)',marginTop:7,textAlign:'center',letterSpacing:'.03em'}}>{t('todayHint')||''}</div>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
 
@@ -10446,6 +10529,10 @@ Composition rules:
               Clear, when currentMood is null but we're still on the mood canvas. */}
           {!loadedSource && !composeMode && !micActive && moodContext && (
             <button onClick={()=>{if(recording)return;setMoodEdit('');setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={((t('newBy')||{}).mood||t('newSource'))+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).mood||t('newSource'))} {t('moodLabel')}</button>
+          )}
+          {/* ← back to image — shown after an image→atmosphere jump, restores the photo */}
+          {imgReturnUrl && !composeMode && !micActive && moodContext && (
+            <button onClick={()=>{if(recording)return;returnToImage();}} disabled={recording} className="pf-lift" title={t('backToImage')||'back to image'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToImage')||'image'}</button>
           )}
         </div>
         <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:'.5rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
@@ -10587,9 +10674,10 @@ Composition rules:
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['lr','vert','spiralIn','spiralOut'].map(d=>{
                   const sel = imgDir===d;
+                  const locked = playing||holdPaused;
                   const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
                   return (
-                    <button key={d} onClick={()=>{ setImgDir(d); }} style={{padding:'7px 0',textAlign:'center',fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s',border:'1px solid transparent',color:sel?PF.bg:PF.cream,background:sel?PF.gold:PF.card2,boxShadow:sel?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{glyph} {t('dir_'+d)}</button>
+                    <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{padding:'7px 0',textAlign:'center',fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',border:'1px solid transparent',opacity:locked&&!sel?0.4:1,color:sel?PF.bg:PF.cream,background:sel?PF.gold:PF.card2,boxShadow:sel?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{glyph} {t('dir_'+d)}</button>
                   );
                 })}
               </div>
@@ -10870,7 +10958,7 @@ Composition rules:
       ); })()}
 
       {isActiveView && (<>
-      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{maxHeight:'calc(100dvh - 210px)',width:'fit-content',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`})}}
+      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{maxHeight:'calc(100dvh - 210px)',width:'fit-content',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`})}}
         onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
           if(playing||!chords.length)return;
@@ -10911,7 +10999,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micActive)?{height:'calc(100dvh - 210px)',width:'auto',maxWidth:'100%',maxHeight:'calc(100dvh - 210px)'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.55:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micActive)?{height:'calc(100dvh - 210px)',width:'auto',maxWidth:'100%',maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(()=>{
@@ -11187,6 +11275,9 @@ Composition rules:
         )}
         {viewMode==='image'&&originalImgUrl&&(
           <button onClick={()=>{ if(!imgAiBusy) composeFromImage(); }} disabled={imgAiBusy} className="pf-lift" title={t('imgMood')||'mood from image'} style={{padding:'8px 14px',background:imgAiBusy?'rgba(220,150,255,.1)':'rgba(220,150,255,.14)',color:imgAiBusy?'rgba(220,170,255,.55)':'rgba(225,175,255,.95)',border:'1px solid rgba(220,150,255,.5)',borderRadius:22,cursor:imgAiBusy?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>{imgAiBusy?'✦ …':'✦ '+(t('imgMood')||'mood from image')}</button>
+        )}
+        {viewMode==='image'&&originalImgUrl&&(
+          <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { detectAtmosphere(); } }} disabled={atmoBusy} className="pf-lift" title={t('atmoLabel')||'atmosphere'} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:atmoBusy?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':atmoOn?'ON':'OFF')}</button>
         )}
         {viewMode==='image'&&chords.length>0&&(
           <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
