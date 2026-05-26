@@ -7370,72 +7370,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(_){ return null; }
   },[]);
 
-  // ── Date/weather + image → emotion sources ─────────────────────────────
-  const [todayBusy,setTodayBusy]=useState(false);
-  const [imgAiBusy,setImgAiBusy]=useState(false);
-  // Play an offline-generated {tempo,notes} piece as a mood context.
-  const playGenerated=useCallback((song,title)=>{
-    if(!song||!song.notes||!song.notes.length) return;
-    setStructureSeedLock(null); setForceSetup(false); setLoadedSource(null);
-    setMoodContext(true); setCurrentMood(title); setSongQ(title); setVarySource(song);
-    stopAll();
-    const evts=noteArr2events(song.notes,song.tempo);
-    if(!evts.length) return;
-    applyEvents(evts,title); setComposeSource('offline');
-    try{ const bytes=encodeMidi(evts,song.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(String(title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
-  },[stopAll,applyEvents]);
-  // "Today": time + season (+ best-effort weather) → mood of the day. Offline/free.
-  const generateToday=useCallback(async()=>{
-    if(todayBusy) return; setTodayBusy(true);
-    try{
-      const now=new Date(); const hour=now.getHours(); const mo=now.getMonth();
-      const season=(mo<=1||mo===11)?'winter':mo<=4?'spring':mo<=7?'summer':'autumn';
-      let weatherKey=null;
-      try{
-        const pos=await new Promise((res,rej)=>{ if(!navigator.geolocation){rej(new Error('no geo'));return;} navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000,maximumAge:600000}); });
-        const la=pos.coords.latitude, lo=pos.coords.longitude;
-        const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current_weather=true');
-        const d=await r.json(); weatherKey=_weatherFromCode(d&&d.current_weather&&d.current_weather.weathercode);
-      }catch(_){ /* no location → time + season only */ }
-      const song=dayToSong(hour,season,weatherKey);
-      const tw=({EN:['Night','Morning','Midday','Evening'],DE:['Nacht','Morgen','Mittag','Abend'],FR:['Nuit','Matin','Midi','Soir'],ES:['Noche','Mañana','Mediodía','Tarde'],SK:['Noc','Ráno','Poludnie','Večer']}[lang])||['Night','Morning','Midday','Evening'];
-      const word=hour<6?tw[0]:hour<11?tw[1]:hour<16?tw[2]:tw[3];
-      const wem=({sunny:'☀️',cloudy:'☁️',rainy:'🌧️',stormy:'⛈️',snowy:'❄️'}[weatherKey])||'🗓️';
-      playGenerated(song, wem+' '+word);
-    }finally{ setTodayBusy(false); }
-  },[todayBusy,lang,playGenerated]);
-  // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
-  const composeFromImage=useCallback(async()=>{
-    if(imgAiBusy||!originalImgUrl) return;
-    setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
-    try{
-      const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
-      setWPct(40);
-      const b64=dataUrl.split(',')[1];
-      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
-      const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
-      const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
-      const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
-      const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
-      let respText='',ok=false;
-      for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
-      setWPct(75);
-      if(!ok) throw new Error('AI unavailable');
-      const data=JSON.parse(respText);
-      const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
-      const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
-      const parsed=JSON.parse(m[0]); if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
-      const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
-      const title=(parsed.title&&String(parsed.title).trim())||'✦';
-      stopAll();
-      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(null);
-      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(title);
-      try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
-    }catch(e){
-      setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
-    }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
-  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t]);
 
   // setupNoSel only makes sense right after an image→Setup return. Any other
   // source (midi/audio/score/mood/compose/mic) should restore a normal selected
@@ -8878,6 +8812,73 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(e){if(loadTokenRef.current===myToken){setErr('Audio: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
+
+  // ── Date/weather + image → emotion sources ─────────────────────────────
+  const [todayBusy,setTodayBusy]=useState(false);
+  const [imgAiBusy,setImgAiBusy]=useState(false);
+  // Play an offline-generated {tempo,notes} piece as a mood context.
+  const playGenerated=useCallback((song,title)=>{
+    if(!song||!song.notes||!song.notes.length) return;
+    setStructureSeedLock(null); setForceSetup(false); setLoadedSource(null);
+    setMoodContext(true); setCurrentMood(title); setSongQ(title); setVarySource(song);
+    stopAll();
+    const evts=noteArr2events(song.notes,song.tempo);
+    if(!evts.length) return;
+    applyEvents(evts,title); setComposeSource('offline');
+    try{ const bytes=encodeMidi(evts,song.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(String(title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+  },[stopAll,applyEvents]);
+  // "Today": time + season (+ best-effort weather) → mood of the day. Offline/free.
+  const generateToday=useCallback(async()=>{
+    if(todayBusy) return; setTodayBusy(true);
+    try{
+      const now=new Date(); const hour=now.getHours(); const mo=now.getMonth();
+      const season=(mo<=1||mo===11)?'winter':mo<=4?'spring':mo<=7?'summer':'autumn';
+      let weatherKey=null;
+      try{
+        const pos=await new Promise((res,rej)=>{ if(!navigator.geolocation){rej(new Error('no geo'));return;} navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000,maximumAge:600000}); });
+        const la=pos.coords.latitude, lo=pos.coords.longitude;
+        const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current_weather=true');
+        const d=await r.json(); weatherKey=_weatherFromCode(d&&d.current_weather&&d.current_weather.weathercode);
+      }catch(_){ /* no location → time + season only */ }
+      const song=dayToSong(hour,season,weatherKey);
+      const tw=({EN:['Night','Morning','Midday','Evening'],DE:['Nacht','Morgen','Mittag','Abend'],FR:['Nuit','Matin','Midi','Soir'],ES:['Noche','Mañana','Mediodía','Tarde'],SK:['Noc','Ráno','Poludnie','Večer']}[lang])||['Night','Morning','Midday','Evening'];
+      const word=hour<6?tw[0]:hour<11?tw[1]:hour<16?tw[2]:tw[3];
+      const wem=({sunny:'☀️',cloudy:'☁️',rainy:'🌧️',stormy:'⛈️',snowy:'❄️'}[weatherKey])||'🗓️';
+      playGenerated(song, wem+' '+word);
+    }finally{ setTodayBusy(false); }
+  },[todayBusy,lang,playGenerated]);
+  // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
+  const composeFromImage=useCallback(async()=>{
+    if(imgAiBusy||!originalImgUrl) return;
+    setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
+    try{
+      const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
+      setWPct(40);
+      const b64=dataUrl.split(',')[1];
+      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
+      const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+      const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+      const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+      const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+      let respText='',ok=false;
+      for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+      setWPct(75);
+      if(!ok) throw new Error('AI unavailable');
+      const data=JSON.parse(respText);
+      const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
+      const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
+      const parsed=JSON.parse(m[0]); if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
+      const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
+      const title=(parsed.title&&String(parsed.title).trim())||'✦';
+      stopAll();
+      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(null);
+      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(title);
+      try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+    }catch(e){
+      setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
+    }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
+  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t]);
 
   // MusicXML upload — exact, structured score data from MuseScore / Finale / Dorico.
   // Far more accurate than PDF OMR because every note's pitch, octave, accidental, and rhythm is encoded.
