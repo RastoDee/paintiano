@@ -8857,10 +8857,9 @@ export default function Paintiano() {
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
-      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang]||'English';
-      const prompt=`Compose a short expressive solo piano piece inspired by: "${title.slice(0,80)}".
+      const prompt=`Compose a short expressive solo piano piece inspired by this mood phrase: "${title.slice(0,80)}".
+The phrase may be written in ANY language and may be colloquial, slang or idiomatic. FIRST translate it and work out the genuine emotion it expresses (e.g. anger, irritation, joy, calm, sadness, longing) — do NOT read it word-by-word and do NOT assume it is English. THEN compose music that fits that real emotion.
 Output ONLY a single valid JSON object — no markdown, no prose, no explanation.
-The "title" field MUST be written in ${_langName} (the user's chosen language), even though these instructions are in English. If the inspiration phrase above is in a different language, translate its meaning into ${_langName}. Never leave the title in another language. Keep it short (max 4 words), Title Case.
 Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
 Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
 
@@ -8914,7 +8913,7 @@ Composition rules:
       if(!parsed?.notes?.length)throw new Error(`No notes in: ${match[0].slice(0,200)}`);
       const evts=noteArr2events(parsed.notes,parsed.tempo);
       if(!evts.length)throw new Error('Could not parse composition');
-      applyEvents(evts,parsed.title||title); setComposeSource('ai');
+      const _dispT=(title||'').trim(); applyEvents(evts,(_dispT?_dispT.charAt(0).toUpperCase()+_dispT.slice(1):(parsed.title||title))); setComposeSource('ai');
       const bytes=encodeMidi(evts,parsed.tempo||120);
       setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
       setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
