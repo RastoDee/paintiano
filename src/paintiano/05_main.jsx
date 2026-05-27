@@ -2470,6 +2470,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const composeFromImage=useCallback(async(srcUrl)=>{
     const _src=srcUrl||originalImgUrl;
     if(imgAiBusy||!_src) return;
+    // Show the chosen picture immediately so the screen isn't blank while the AI
+    // composes. moodContext+moodFromImg gate the preview render; set them now and
+    // re-affirm after applyEvents (which clears the thumb) on success below.
+    setImgMoodThumb(_src); setMoodContext(true); setMoodFromImg(true); setViewMode('paint');
     setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=_src; });
@@ -2518,6 +2522,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Only latch AI-down for genuine availability failures (network/budget),
       // not for parse hiccups on an otherwise-reachable endpoint.
       if(e&&e.message==='AI unavailable') setAiDown(true);
+      // The preview was shown up-front (so the compose screen isn't blank); on
+      // failure there's no piece, so clear it rather than leave a stranded image.
+      setImgMoodThumb(null); setMoodContext(false); setMoodFromImg(false);
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
   },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet]);
@@ -4294,7 +4301,11 @@ Composition rules:
               stopAll();
               const evts=noteArr2events(varied.notes,varied.tempo);
               if(!evts.length){setErr(t('errs').varyFail);return;}
+              // applyEvents clears imgMoodThumb; in mood-from-image mode we want the
+              // small source picture to stay over the canvas, so capture + restore it.
+              const _keepThumb = moodFromImg ? imgMoodThumb : null;
               applyEvents(evts,varied.title+' ·');
+              if(_keepThumb){ setImgMoodThumb(_keepThumb); setMoodContext(true); }
               const bytes=encodeMidi(evts,varied.tempo||100);
               setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
               setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
