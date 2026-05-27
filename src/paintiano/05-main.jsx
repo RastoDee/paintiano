@@ -722,8 +722,9 @@ export default function Paintiano() {
     return SHUFFLE_POOL[(h>>>0) % SHUFFLE_POOL.length];
   }, [style, randomMode, pollockSessionSeed]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
-  // Notes mode wins only in plain Mosaic (no artist, no shuffle) on a mood canvas.
-  const effectiveStyle = style || shuffleStyle || ((notesMode && moodContext) ? 'notes' : null);
+  // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
+  // it only needs note MIDI + the colour fn, which every source provides.
+  const effectiveStyle = style || shuffleStyle || (notesMode ? 'notes' : null);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
@@ -2072,6 +2073,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // text moods only; Vary is offered for both. Cleared by text-mood entry points.
   const [moodFromImg,setMoodFromImg]=useState(false);
   const moodFromImgRef=useRef(false); useEffect(()=>{ moodFromImgRef.current=moodFromImg; },[moodFromImg]);
+  // Notes mode is a per-painting choice — reset it to plain colour Mosaic
+  // whenever the source changes (new loaded file, new mood, image↔mood switch),
+  // so each fresh source starts in the normal reading rather than inheriting
+  // note-names from the previous one.
+  useEffect(()=>{ setNotesMode(false); },[loadedSource,currentMood,moodFromImg]);
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
@@ -4003,8 +4009,6 @@ Composition rules:
   // Mood and file source are mutually exclusive contexts: entering the mood
   // context drops the file-source latch so only one "+ New …" button shows.
   useEffect(()=>{ if(moodContext) setSourceContext(null); },[moodContext]);
-  // Notes mode is mood-only — drop it whenever we leave the mood context.
-  useEffect(()=>{ if(!moodContext) setNotesMode(false); },[moodContext]);
   // Any newly-started activity (processing a file, entering compose/mic, or
   // playback beginning) returns us to the canvas even if we were parked on the
   // setup panel via "← Setup".
@@ -4181,7 +4185,10 @@ Composition rules:
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
                 if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); return; }
-                setPickMode('mic');
+                // Start immediately in the last-used preset (default 'voice') —
+                // no upfront dialog. The preset can be flipped live on the canvas
+                // badge while recording, so the choice never blocks getting going.
+                if(micPreset==='music') startMicListening(); else startMicPainting();
               }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
             </div>
           </div>
@@ -4451,7 +4458,7 @@ Composition rules:
           {loadedSource!=='image' && (
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
-            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn && moodContext; const showNotes = canNotes && notesMode; return (
+            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
             <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',color:mosaicOn?PF.bg:(mosaicInert?PF.muted:PF.cream),background:mosaicOn?PF.gold:PF.card2,border:'1px solid '+(mosaicOn?PF.gold:'rgba(242,238,232,.08)'),boxShadow:mosaicOn?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
             ); })()}
             {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
@@ -4778,9 +4785,18 @@ Composition rules:
           ));
         })()}
         {micActive && (
-          <div aria-hidden="true" style={{position:'absolute',top:10,left:10,zIndex:4,display:'inline-flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:20,pointerEvents:'none',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
-            <span style={{width:7,height:7,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
-            🎙 {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')}
+          <div style={{position:'absolute',top:10,left:10,zIndex:4,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:4}}>
+            <button onClick={()=>{
+              // Flip the preset live: swap the running mic stream to the other
+              // mode. Voice = sing (monophonic, snap-to-C, piano echo); Music =
+              // listen (polyphonic chord detection, silent). Keeps you recording.
+              if(micPreset==='voice'){ setMicPreset('music'); if(micPainting) stopMicPainting(); startMicListening(); }
+              else { setMicPreset('voice'); if(micListening) stopMicListening(); startMicPainting(); }
+            }} title={micPreset==='voice'?t('micVoiceHint'):t('micMusicHint')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
+              <span style={{width:7,height:7,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
+              🎙 {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄
+            </button>
+            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.55)',background:'rgba(8,6,14,.55)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:200}}>{t('micTapToSwitch')}</div>
           </div>
         )}
         {chords.length===0&&(
@@ -5190,7 +5206,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.5</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.7</footer>
     </div>
   );
 }
