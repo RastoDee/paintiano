@@ -7497,6 +7497,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // "tap 🎙 to record" prompt so it's clear you're still in MIC and one tap
   // resumes recording (rather than dumping you into an ambiguous blank state).
   const [micArmed, setMicArmed] = useState(false);
+  const _armedChangeRef = useRef(0);
+  useEffect(()=>{ _armedChangeRef.current++; },[micArmed]);
   // Which creative mode (if any) authored the chords currently on canvas.
   // 'compose'|'sing'|'listen'|null. Used to know whose stash to update.
   const draftOwnerRef = useRef(null);
@@ -11433,6 +11435,17 @@ Composition rules:
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
           </div>
         )}
+        <div style={{position:'absolute',top:10,right:10,zIndex:5,fontSize:'.5rem',fontFamily:'monospace',color:'rgba(255,255,255,.9)',background:'rgba(0,0,0,.7)',padding:'4px 8px',borderRadius:6,lineHeight:1.4}}>
+          armed:{String(micArmed)} (#{_armedChangeRef.current})<br/>
+          active:{String(micActive)}<br/>
+          chords:{chords.length}<br/>
+          compose:{String(composeMode)}<br/>
+          src:{String(loadedSource)}<br/>
+          mood:{String(!!currentMood)}<br/>
+          mfi:{String(moodFromImg)}<br/>
+          force:{String(forceSetup)}<br/>
+          stay:{String(stayActive)}
+        </div>
         {chords.length===0 && micArmed && !micActive && (
           <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14}}>
             <button onClick={()=>{
