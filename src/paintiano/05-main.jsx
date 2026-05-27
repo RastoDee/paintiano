@@ -2335,18 +2335,36 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       pressInfo.current={}; sessionStart.current=0; gridSigRef.current='';
       composedModeRef.current=false;
       setDisp(0); setInfo(null);
+      // Reset grid to defaults — without this the old (varied) grid persists
+      // and the renderer's "no chords, but lim===0 + paint grid" path keeps
+      // drawing the wrong cell layout under any residual overlay.
+      setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
+      // Reset seed + structure lock — multiple Vary taps may have built up
+      // a non-zero rndSalt and a structureSeedLock; both must reset so the
+      // next painting starts from a clean seed state.
+      setRndSalt(0); setStructureSeedLock(null);
+      saltHistoryRef.current=[0]; saltIdxRef.current=0; setVariationPos(0);
+      // Substrate cache + last-paint signature: invalidate fully so the
+      // renderer can't take any fast-path shortcut against stale data.
       substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
       lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
-      try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
+      // Clear ALL three canvas layers explicitly: main paint, visualizer
+      // (ripples), and highlight (playing-cell pulse). Otherwise lingering
+      // pixels from any of the three look like residual paint from the
+      // previous variation — especially after rapid Vary taps where the
+      // upper layers were actively rendering when Clear hit.
+      try{
+        const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); }
+        const vc=visualizerRef.current; if(vc){ const vx=vc.getContext('2d'); vx&&vx.clearRect(0,0,vc.width,vc.height); }
+        const hc=highlightCanvasRef.current; if(hc){ const hx=hc.getContext('2d'); hx&&hx.clearRect(0,0,hc.width,hc.height); }
+      }catch(_){}
+      // Drop any in-flight ripples and pending highlight state.
+      ripplesRef.current=[];
       // Drop the piece itself so Play has nothing to replay (Play disables
       // when chords are empty).
       setVarySource(null);
       // Drop the source-image thumbnail.
       setImgMoodThumb(null);
-      // currentMood / composeSource: keep them so the user can still see what
-      // mood was last painted (the chip-readout above the canvas) — they'll be
-      // overwritten when a new image / mood is picked. Drop only the painted
-      // content.
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
@@ -4941,6 +4959,20 @@ Composition rules:
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
           </div>
         )}
+        <div style={{position:'absolute',bottom:10,right:10,zIndex:99,fontSize:'.55rem',fontFamily:'monospace',color:'rgba(255,255,255,1)',background:'rgba(220,0,0,.85)',padding:'6px 10px',borderRadius:6,lineHeight:1.5,pointerEvents:'none',border:'2px solid yellow'}}>
+          DBG<br/>
+          chords:{chords.length}<br/>
+          chordsRef:{chordsRef.current?.length ?? '?'}<br/>
+          disp:{disp}<br/>
+          varSrc:{varySource?'yes':'no'}<br/>
+          mfi:{String(moodFromImg)}<br/>
+          ctx:{String(moodContext)}<br/>
+          mood:{currentMood||'null'}<br/>
+          style:{String(style||'mosaic')}<br/>
+          eff:{String(effectiveStyle||'none')}<br/>
+          rndSalt:{rndSalt}<br/>
+          playing:{String(playing)}
+        </div>
         {chords.length===0 && micArmed && !micActive && (
           <div style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
             <button onClick={()=>{
