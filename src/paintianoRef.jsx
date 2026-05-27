@@ -10812,6 +10812,20 @@ Composition rules:
           {imgReturnUrl && !composeMode && !micActive && moodContext && (
             <button onClick={()=>{if(recording)return;returnToImage();}} disabled={recording} className="pf-lift" title={t('backToImage')||'back to image'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToImage')||'image'}</button>
           )}
+          {/* MIC STOP / REC — under-canvas pf-lift control. Replaces the on-canvas
+              STOP/REC buttons so the canvas stays clean; the on-canvas voice/music
+              toggle remains for live preset switching. STOP shows while recording;
+              REC shows in armed state (after stop or Clear). */}
+          {micActive && (
+            <button onClick={()=>{ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); }} className="pf-lift" title={t('micActive')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(255,40,40,.16)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
+              <span style={{width:8,height:8,borderRadius:2,background:'#ff5a5a',boxShadow:'0 0 6px #ff5a5a',display:'inline-block'}}/>⏹ {t('micActive').replace(/[^\p{L} ]/gu,'')}
+            </button>
+          )}
+          {micArmed && !micActive && (
+            <button onClick={()=>{ setMicArmed(false); if(micPreset==='music') startMicListening(); else startMicPainting(); }} className="pf-lift" title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(255,40,40,.14)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
+              <span style={{width:9,height:9,borderRadius:'50%',background:'#ff5a5a',boxShadow:'0 0 8px #ff5a5a',display:'inline-block'}}/>🎙 REC
+            </button>
+          )}
         </div>
         <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:'.5rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
           <span>{loadedSource==='image' ? (t('colorLabel') + ' · ' + t('dirLabel')) : (t('colorLabel') + ' · ' + t('styleLabel'))}</span>
@@ -11338,61 +11352,31 @@ Composition rules:
             <div key={si} aria-hidden="true" style={{position:'absolute',left:`${s.x/CW*100}%`,top:`${s.y/CH*100}%`,width:`${s.w/CW*100}%`,height:`${s.h/CH*100}%`,boxSizing:'border-box',border:'2px solid rgba(255,220,90,.95)',boxShadow:'0 0 10px rgba(255,210,70,.6)',zIndex:4,pointerEvents:'none'}}/>
           ));
         })()}
-        {micActive && (
+        {(micActive || micArmed) && (
           <div style={{position:'absolute',top:10,left:10,zIndex:4,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:4}}>
-            <div style={{display:'flex',alignItems:'center',gap:6}}>
-              <button onClick={()=>{
-                // STOP recording but stay in MIC (armed) — the start button below
-                // stays on the canvas so you can resume without scrolling up.
-                if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true);
-              }} title={t('micActive')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 12px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
-                <span style={{width:7,height:7,borderRadius:2,background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
-                ⏹ {t('micActive').replace(/[^\p{L} ]/gu,'')}
-              </button>
-              <button onClick={()=>{
-                // Flip the preset live: swap the running mic stream to the other mode.
-                // Toggle shows the OTHER preset (target of the tap), painted in that
-                // preset's colour — contrasts with the same-coloured STOP button.
+            <button onClick={()=>{
+              // Voice ⇄ music preset toggle. During recording (micActive): hot-swap
+              // the running stream to the other mode. In armed state (mic stopped):
+              // just flip the stored preset — REC button below the canvas will start
+              // in the chosen preset.
+              if(micActive){
                 if(micPreset==='voice'){ setMicPreset('music'); if(micPainting) stopMicPainting(); startMicListening(); }
                 else { setMicPreset('voice'); if(micListening) stopMicListening(); startMicPainting(); }
-              }} title={micPreset==='voice'?t('micMusicHint'):t('micVoiceHint')} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:'transparent',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),textShadow:'0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
-                {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄
-              </button>
-            </div>
-            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.55)',background:'rgba(8,6,14,.55)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
-          </div>
-        )}
-        {micArmed && !micActive && (
-          <div style={{position:'absolute',top:10,left:10,zIndex:4,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:4}}>
-            <div style={{display:'flex',alignItems:'center',gap:6}}>
-              <button onClick={()=>{
-                // START recording in the current preset — straight on the canvas.
-                setMicArmed(false);
-                if(micPreset==='music') startMicListening(); else startMicPainting();
-              }} title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 12px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#e8c768':'#8accff',background:micPreset==='voice'?'rgba(201,168,76,.18)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(220,180,90,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
-                <span style={{width:9,height:9,borderRadius:'50%',background:micPreset==='voice'?'#e8c768':'#5aacff',boxShadow:'0 0 8px '+(micPreset==='voice'?'#e8c768':'#5aacff'),flexShrink:0}}/>
-                🎙 REC
-              </button>
-              <button onClick={()=>{
-                // Flip preset BEFORE starting — voice ⇄ music. Does not start
-                // recording; tap REC to begin in the chosen preset. The toggle
-                // shows the OTHER preset (where a tap will take you), painted in
-                // that preset's colour — so it visually contrasts with the REC
-                // button (same-coloured-as-current preset) instead of blending.
+              } else {
                 setMicPreset(micPreset==='voice'?'music':'voice');
-              }} title={micPreset==='voice'?t('micMusicHint'):t('micVoiceHint')} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:'transparent',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),textShadow:'0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
-                {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄
-              </button>
-            </div>
-            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.55)',background:'rgba(8,6,14,.55)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
+              }
+            }} title={micPreset==='voice'?t('micMusicHint'):t('micVoiceHint')} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:'transparent',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),textShadow:'0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
+              {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄
+            </button>
+            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
           </div>
         )}
         {chords.length===0&&(
           <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
-            <div style={{opacity:composeMode?.22:micArmed?.3:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':micArmed?(micPreset==='voice'?'rgba(255,138,138,.95)':'rgba(140,200,255,.95)'):'inherit'}}>
+            <div style={{opacity:composeMode?.22:micArmed?.35:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':micArmed?(micPreset==='voice'?'rgba(255,138,138,.95)':'rgba(140,200,255,.95)'):'inherit'}}>
               {composeMode?'play the keys to paint':micArmed?t('micTapToRecord'):'play · paint · upload'}
             </div>
-            <div style={{opacity:composeMode?.08:micArmed?.12:.05,fontSize:'2.8rem'}}>{micArmed?'🎙':'♩'}</div>
+            <div style={{opacity:composeMode?.08:micArmed?.18:.05,fontSize:'2.8rem'}}>{micArmed?'↓':'♩'}</div>
           </div>
         )}
       </div>
@@ -11794,7 +11778,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.11</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.12</footer>
     </div>
   );
 }
