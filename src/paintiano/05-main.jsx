@@ -3331,35 +3331,20 @@ Composition rules:
     }
   },[playing,recording]);
 
-  // Scroll page to keep the active playback band visible during image playback.
-  // While playing, the page smoothly follows the active band so it stays in
-  // view whether the cursor moves down OR jumps back up (e.g. on loop/restart).
-  // When playback ends, after a short delay the scroll glides back to the
-  // canvas's default (top-of-canvas) position.
+  // Image playback scroll: image now behaves like every other mode — no
+  // cursor-following during playback (that scrolled the page around mid-play,
+  // opposite to the other sources). startPlay already frames the collapsed
+  // Color·Style strip at the top; here we only re-frame it when playback
+  // ends/pauses, so the resting position matches the other modes on mobile
+  // and desktop alike.
   const imgScrollResetRef=useRef(null);
   useEffect(()=>{
     if(viewMode!=='image')return;
     const playingNow=playing||anim;
     if(playingNow){
-      // cancel any pending end-of-play reset — we're (re)playing
+      // Playing — leave the scroll where startPlay put it (strip framed). Just
+      // cancel any pending end-of-play reset so it doesn't fire mid-play.
       if(imgScrollResetRef.current){clearTimeout(imgScrollResetRef.current);imgScrollResetRef.current=null;}
-      if(!pixelRef.current||!canvasRef.current)return;
-      const{nc,colStep=6}=pixelRef.current;
-      const{BH}=grid;
-      const CHORD_SIZE=6;
-      const effCols=Math.ceil(nc/colStep);
-      const band=Math.floor(disp/effCols);
-      const cursorY=band*CHORD_SIZE*BH;
-      const canvasTop=canvasRef.current.getBoundingClientRect().top+window.scrollY;
-      const absCursorY=canvasTop+cursorY;
-      // Keep the active band inside a comfortable middle zone of the viewport.
-      // Re-center if it drifts above the top margin or below the bottom margin —
-      // this makes the follow bidirectional (fixes the "stuck at the bottom" bug).
-      const topMargin=window.scrollY+window.innerHeight*0.30;
-      const bottomMargin=window.scrollY+window.innerHeight*0.70;
-      if(absCursorY<topMargin||absCursorY>bottomMargin){
-        window.scrollTo({top:Math.max(0,absCursorY-window.innerHeight*0.40),behavior:'smooth'});
-      }
     }else{
       // Playback finished/paused — glide back so the Color·Style strip is framed
       // at the top with the canvas below it, after a beat.
@@ -3370,7 +3355,7 @@ Composition rules:
       },600);
     }
     return()=>{if(imgScrollResetRef.current){clearTimeout(imgScrollResetRef.current);imgScrollResetRef.current=null;}};
-  },[disp,playing,anim,viewMode,grid]);
+  },[playing,anim,viewMode]);
 
   // Recording: capture Tone.js master out via MediaRecorder. Output is mp4/m4a
   // on iOS Safari, webm elsewhere. Inline <audio> playback of the result is
@@ -5205,7 +5190,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.4</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.5</footer>
     </div>
   );
 }
