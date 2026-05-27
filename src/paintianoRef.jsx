@@ -11448,7 +11448,7 @@ Composition rules:
           BIG_REC_COND:{String(chords.length===0 && micArmed && !micActive)}
         </div>
         {chords.length===0 && micArmed && !micActive && (
-          <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,background:'rgba(255,0,255,.15)',border:'2px dashed rgba(255,0,255,.7)'}}>
+          <div style={{position:'absolute',inset:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,background:'rgba(255,0,255,.15)',border:'2px dashed rgba(255,0,255,.7)'}}>
             <button onClick={()=>{
               setMicArmed(false);
               if(micPreset==='music') startMicListening(); else startMicPainting();

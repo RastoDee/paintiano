@@ -960,8 +960,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // "tap 🎙 to record" prompt so it's clear you're still in MIC and one tap
   // resumes recording (rather than dumping you into an ambiguous blank state).
   const [micArmed, setMicArmed] = useState(false);
-  const _armedChangeRef = useRef(0);
-  useEffect(()=>{ _armedChangeRef.current++; },[micArmed]);
   // Which creative mode (if any) authored the chords currently on canvas.
   // 'compose'|'sing'|'listen'|null. Used to know whose stash to update.
   const draftOwnerRef = useRef(null);
@@ -4898,24 +4896,12 @@ Composition rules:
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
           </div>
         )}
-        <div style={{position:'absolute',top:10,right:10,zIndex:5,fontSize:'.5rem',fontFamily:'monospace',color:'rgba(255,255,255,.9)',background:'rgba(0,0,0,.7)',padding:'4px 8px',borderRadius:6,lineHeight:1.4}}>
-          armed:{String(micArmed)} (#{_armedChangeRef.current})<br/>
-          active:{String(micActive)}<br/>
-          chords:{chords.length}<br/>
-          compose:{String(composeMode)}<br/>
-          src:{String(loadedSource)}<br/>
-          mood:{String(!!currentMood)}<br/>
-          mfi:{String(moodFromImg)}<br/>
-          force:{String(forceSetup)}<br/>
-          stay:{String(stayActive)}<br/>
-          BIG_REC_COND:{String(chords.length===0 && micArmed && !micActive)}
-        </div>
         {chords.length===0 && micArmed && !micActive && (
-          <div style={{position:'absolute',inset:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,background:'rgba(255,0,255,.15)',border:'2px dashed rgba(255,0,255,.7)'}}>
+          <div style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
             <button onClick={()=>{
               setMicArmed(false);
               if(micPreset==='music') startMicListening(); else startMicPainting();
-            }} title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:10,width:108,height:108,borderRadius:'50%',cursor:'pointer',fontFamily:"'Outfit',sans-serif",fontSize:'.78rem',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'2px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),boxShadow:'0 6px 24px '+(micPreset==='voice'?'rgba(255,80,80,.25)':'rgba(80,160,255,.25)')+', inset 0 0 0 1px rgba(255,255,255,.04)',transition:'transform .14s, box-shadow .14s'}} onMouseDown={e=>e.currentTarget.style.transform='scale(.96)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+            }} title={t('micTapToRecord')} style={{pointerEvents:'auto',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:10,width:108,height:108,borderRadius:'50%',cursor:'pointer',fontFamily:"'Outfit',sans-serif",fontSize:'.78rem',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'2px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),boxShadow:'0 6px 24px '+(micPreset==='voice'?'rgba(255,80,80,.25)':'rgba(80,160,255,.25)')+', inset 0 0 0 1px rgba(255,255,255,.04)',transition:'transform .14s, box-shadow .14s'}} onMouseDown={e=>e.currentTarget.style.transform='scale(.96)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
               <span style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,lineHeight:1}}>
                 <span style={{width:18,height:18,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 12px '+(micPreset==='voice'?'#ff5a5a':'#5aacff')}}/>
                 <span style={{fontSize:'.62rem',marginTop:2}}>REC</span>
@@ -5343,7 +5329,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.16</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.17</footer>
     </div>
   );
 }
