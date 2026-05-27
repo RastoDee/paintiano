@@ -7858,6 +7858,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Display:none zeroes clientWidth, so the calculation must happen post-paint.
   useEffect(()=>{
     if(!composeMode)return;
+    // Frame the collapsed Color·Style strip at the top with the canvas below,
+    // the moment compose mode turns on — runs for every entry point (Enter key,
+    // COMPOSE buttons), so PC (hardware-keyboard compose) gets the same framing
+    // as mobile, which previously only scrolled on the first tapped piano key.
+    setStripOpen(false);
+    requestAnimationFrame(()=>{try{(stripWrapRef.current||canvasWrapRef.current)?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}});
     const wrap = kbScrollRef.current;
     if (!wrap) return;
     const c4 = WKEYS.find(k => k.midi === 60);
@@ -8361,9 +8367,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // (holdPaused = Resume). The keyboard composes only when idle; pressing keys
     // mid-playback would corrupt the recorded sequence and timing.
     if(playing || holdPaused) return;
-    // Starting to play the keys = starting to compose: collapse the attributes
-    // strip so the full canvas is visible while painting. (No-op if already shut.)
-    if(composeMode){ setStripOpen(false); requestAnimationFrame(()=>{try{canvasWrapRef.current?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}}); }
+    // Strip-collapse + scroll framing is handled centrally by the composeMode
+    // effect (fires once on entry, for both tap and hardware-keyboard compose),
+    // so we don't re-scroll on every keypress here — that would fight the user.
     // Apply scale snap. Velocity comes from the event (touch position / pressure),
     // duration from how long the key is held (see releaseNote).
     midi = paintSnapMidi(midi, paintScale);
@@ -9611,14 +9617,15 @@ Composition rules:
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
     setStripOpen(false); // collapse the attributes strip on Play to free the canvas
-    // In mood-from-image, the source thumbnail + collapsed Color·Style strip sit
-    // ABOVE the canvas; scrolling the canvas to the very top would push them off
-    // screen. Instead scroll to the strip wrapper so strip + thumbnail + canvas
-    // all stay framed (matches the intended Play layout). Other modes: canvas top.
+    // Always scroll so the collapsed Color·Style strip sits at the top of the
+    // viewport, with the canvas framed right below it — on mobile and desktop
+    // alike. The strip wrapper is the scroll anchor in every mode (it's always
+    // in the DOM while a painting is active); canvasWrapRef is only a fallback
+    // for the brief frame before the strip ref attaches.
     requestAnimationFrame(()=>{try{
-      const _tgt = (moodFromImgRef.current && stripWrapRef.current) ? stripWrapRef.current : canvasWrapRef.current;
+      const _tgt = stripWrapRef.current || canvasWrapRef.current;
       _tgt?.scrollIntoView({block:'start',behavior:'smooth'});
-    }catch(_){}}); // bring the right region fully into view
+    }catch(_){}}); // bring the strip + canvas region fully into view
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -9870,11 +9877,12 @@ Composition rules:
         window.scrollTo({top:Math.max(0,absCursorY-window.innerHeight*0.40),behavior:'smooth'});
       }
     }else{
-      // Playback finished/paused — glide back to the canvas default after a beat.
+      // Playback finished/paused — glide back so the Color·Style strip is framed
+      // at the top with the canvas below it, after a beat.
       if(imgScrollResetRef.current)clearTimeout(imgScrollResetRef.current);
       imgScrollResetRef.current=setTimeout(()=>{
         imgScrollResetRef.current=null;
-        try{canvasWrapRef.current?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}
+        try{(stripWrapRef.current||canvasWrapRef.current)?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}
       },600);
     }
     return()=>{if(imgScrollResetRef.current){clearTimeout(imgScrollResetRef.current);imgScrollResetRef.current=null;}};
@@ -10135,6 +10143,11 @@ Composition rules:
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
       setMicPainting(true);
+      // Frame the collapsed Color·Style strip at the top with the canvas below,
+      // same as Play and compose — MIC (Voice/Music) is another "performing"
+      // entry point, so it gets the same scroll framing on mobile and desktop.
+      setStripOpen(false);
+      requestAnimationFrame(()=>{try{(stripWrapRef.current||canvasWrapRef.current)?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}});
       // Same as compose: freeze the artist seed so the overlay (esp. Kusama
       // dots) doesn't re-randomise as sung notes accumulate. Skip on Random.
       if(!continuation && !randomMode){ setStructureSeedLock((pollockSessionSeed>>>0)||1); }
@@ -11708,7 +11721,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.2</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.3</footer>
     </div>
   );
 }

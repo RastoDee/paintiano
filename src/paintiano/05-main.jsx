@@ -2264,6 +2264,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
       // loadedSource stays 'image' and forceSetup stays false → image view persists.
+      // Return the page to its default (top) position so the header + collapsed
+      // strip are back in their resting place — same as the generic clear() path.
+      requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
       return;
     }
     // MOOD-FROM-IMAGE source: Clear wipes the painted trace but STAYS in MFI —
@@ -2296,6 +2299,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setImgMoodThumb(null);
       // moodFromImg / moodContext / currentMood stay set and forceSetup stays
       // false → MFI view persists with the same mood, just without the thumbnail.
+      // Return the page to its default (top) position so the header + collapsed
+      // strip are back in their resting place — same as the generic clear() path.
+      requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
       return;
     }
     // Active COMPOSE: Clear means just clear — wipe the canvas and stay in
@@ -5199,7 +5205,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.3</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.4</footer>
     </div>
   );
 }
