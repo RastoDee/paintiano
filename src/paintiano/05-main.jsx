@@ -4959,6 +4959,15 @@ Composition rules:
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
           </div>
         )}
+        {/* Hidden state-tracker — DO NOT REMOVE.
+            Without this element, React's render reconciliation can skip
+            re-running the canvas paint effect after rapid state changes
+            (e.g. Vary mid-play → Clear in MFI mode with an artist style).
+            The canvas keeps stale imperative pixel state and shows residual
+            shapes. Reading the relevant state values in JSX forces React to
+            keep the canvas-wrapper subtree in its dependency graph, so the
+            paint effect runs every time these values change. Width/height
+            0 + overflow:hidden makes it invisible and zero-cost. */}
         <div data-mfi-state aria-hidden="true" style={{position:'absolute',width:0,height:0,overflow:'hidden',pointerEvents:'none'}}>{chords.length}|{chordsRef.current?.length ?? 0}|{disp}|{varySource?1:0}|{String(moodFromImg)}|{String(moodContext)}|{currentMood||''}|{String(style||'')}|{String(effectiveStyle||'')}|{rndSalt}|{String(playing)}</div>
         {chords.length===0 && micArmed && !micActive && (
           <div style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
@@ -5393,7 +5402,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.2</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.3</footer>
     </div>
   );
 }

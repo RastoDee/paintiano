@@ -11488,20 +11488,7 @@ Composition rules:
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
           </div>
         )}
-        <div style={{position:'absolute',bottom:10,right:10,zIndex:99,fontSize:'.55rem',fontFamily:'monospace',color:'rgba(255,255,255,1)',background:'rgba(220,0,0,.85)',padding:'6px 10px',borderRadius:6,lineHeight:1.5,pointerEvents:'none',border:'2px solid yellow'}}>
-          DBG<br/>
-          chords:{chords.length}<br/>
-          chordsRef:{chordsRef.current?.length ?? '?'}<br/>
-          disp:{disp}<br/>
-          varSrc:{varySource?'yes':'no'}<br/>
-          mfi:{String(moodFromImg)}<br/>
-          ctx:{String(moodContext)}<br/>
-          mood:{currentMood||'null'}<br/>
-          style:{String(style||'mosaic')}<br/>
-          eff:{String(effectiveStyle||'none')}<br/>
-          rndSalt:{rndSalt}<br/>
-          playing:{String(playing)}
-        </div>
+        <div data-mfi-state aria-hidden="true" style={{position:'absolute',width:0,height:0,overflow:'hidden',pointerEvents:'none'}}>{chords.length}|{chordsRef.current?.length ?? 0}|{disp}|{varySource?1:0}|{String(moodFromImg)}|{String(moodContext)}|{currentMood||''}|{String(style||'')}|{String(effectiveStyle||'')}|{rndSalt}|{String(playing)}</div>
         {chords.length===0 && micArmed && !micActive && (
           <div style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
             <button onClick={()=>{
