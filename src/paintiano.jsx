@@ -9800,20 +9800,43 @@ Composition rules:
   },[playing,recording]);
 
   // Scroll page to keep the active playback band visible during image playback.
+  // While playing, the page smoothly follows the active band so it stays in
+  // view whether the cursor moves down OR jumps back up (e.g. on loop/restart).
+  // When playback ends, after a short delay the scroll glides back to the
+  // canvas's default (top-of-canvas) position.
+  const imgScrollResetRef=useRef(null);
   useEffect(()=>{
-    if(viewMode!=='image'||(!playing&&!anim)||!pixelRef.current||!canvasRef.current)return;
-    const{nc,colStep=6}=pixelRef.current;
-    const{BH}=grid;
-    const CHORD_SIZE=6;
-    const effCols=Math.ceil(nc/colStep);
-    const band=Math.floor(disp/effCols);
-    const cursorY=band*CHORD_SIZE*BH;
-    const canvasTop=canvasRef.current.getBoundingClientRect().top+window.scrollY;
-    const absCursorY=canvasTop+cursorY;
-    const viewportBottom=window.scrollY+window.innerHeight;
-    if(absCursorY>viewportBottom-60){
-      window.scrollTo({top:absCursorY-window.innerHeight*0.5,behavior:'smooth'});
+    if(viewMode!=='image')return;
+    const playingNow=playing||anim;
+    if(playingNow){
+      // cancel any pending end-of-play reset — we're (re)playing
+      if(imgScrollResetRef.current){clearTimeout(imgScrollResetRef.current);imgScrollResetRef.current=null;}
+      if(!pixelRef.current||!canvasRef.current)return;
+      const{nc,colStep=6}=pixelRef.current;
+      const{BH}=grid;
+      const CHORD_SIZE=6;
+      const effCols=Math.ceil(nc/colStep);
+      const band=Math.floor(disp/effCols);
+      const cursorY=band*CHORD_SIZE*BH;
+      const canvasTop=canvasRef.current.getBoundingClientRect().top+window.scrollY;
+      const absCursorY=canvasTop+cursorY;
+      // Keep the active band inside a comfortable middle zone of the viewport.
+      // Re-center if it drifts above the top margin or below the bottom margin —
+      // this makes the follow bidirectional (fixes the "stuck at the bottom" bug).
+      const topMargin=window.scrollY+window.innerHeight*0.30;
+      const bottomMargin=window.scrollY+window.innerHeight*0.70;
+      if(absCursorY<topMargin||absCursorY>bottomMargin){
+        window.scrollTo({top:Math.max(0,absCursorY-window.innerHeight*0.40),behavior:'smooth'});
+      }
+    }else{
+      // Playback finished/paused — glide back to the canvas default after a beat.
+      if(imgScrollResetRef.current)clearTimeout(imgScrollResetRef.current);
+      imgScrollResetRef.current=setTimeout(()=>{
+        imgScrollResetRef.current=null;
+        try{canvasWrapRef.current?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}
+      },600);
     }
+    return()=>{if(imgScrollResetRef.current){clearTimeout(imgScrollResetRef.current);imgScrollResetRef.current=null;}};
   },[disp,playing,anim,viewMode,grid]);
 
   // Recording: capture Tone.js master out via MediaRecorder. Output is mp4/m4a
