@@ -10991,12 +10991,22 @@ Composition rules:
             {compositionName.trim()&&(<div style={{fontSize:'.6rem',color:'rgba(201,168,76,.6)',textAlign:'center',letterSpacing:'.08em'}}>{compositionName}</div>)}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'center'}}>
               <button onClick={()=>{
-                if(navigator.share){
-                  navigator.share({files:[preview.file],title:preview.filename}).catch(()=>{});
-                } else {
+                // Desktop (mouse + hover) always downloads straight to disk — on
+                // Windows/desktop navigator.share exists but opens a Share panel
+                // that usually can't save a file, so we bypass it there. Touch /
+                // mobile devices use the share sheet (→ Save to Photos/Files),
+                // falling back to <a download> if share is unavailable or fails.
+                const isDesktop = typeof window!=='undefined' && window.matchMedia
+                  && window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+                const doDownload=()=>{
                   const a=document.createElement('a');
                   a.href=preview.url;a.download=preview.filename;
                   a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);
+                };
+                if(!isDesktop && navigator.share){
+                  navigator.share({files:[preview.file],title:preview.filename}).catch(()=>doDownload());
+                } else {
+                  doDownload();
                 }
               }} style={{padding:'12px 20px',background:'rgba(140,180,255,.15)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.6)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:'.75rem',textTransform:'uppercase',fontWeight:'bold'}}>↓ {t('save')}</button>
               <button onClick={copyPreview} style={{padding:'12px 20px',background:'rgba(140,180,255,.06)',color:'rgba(160,200,255,.75)',border:'1px solid rgba(140,180,255,.3)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:'.75rem',textTransform:'uppercase'}}>⎘ copy</button>
@@ -11009,9 +11019,9 @@ Composition rules:
             <img src={preview.url} alt={preview.filename} style={{maxWidth:'100%',maxHeight:'50vh',border:'1px solid rgba(201,168,76,.25)',borderRadius:4,display:'block',WebkitTouchCallout:'default'}}/>
             <div style={{fontSize:'.5rem',color:'rgba(180,170,150,.4)',textAlign:'center',wordBreak:'break-all',padding:'0 8px',maxWidth:340}}>{preview.filename}</div>
             <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 14px',maxWidth:340,lineHeight:1.5}}>
-              {(typeof navigator!=='undefined'&&navigator.share)
-                ? <>{t('saveAlternatives')} <b>{t('saveLongPressHint')}</b> {t('saveLongPressTail')}</>
-                : <>{t('saveAlternative')} <b>{t('saveRightClickHint')}</b> {t('saveRightClickTail')}</>}
+              {(typeof window!=='undefined' && window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches)
+                ? <>{t('saveAlternative')} <b>{t('saveRightClickHint')}</b> {t('saveRightClickTail')}</>
+                : <>{t('saveAlternatives')} <b>{t('saveLongPressHint')}</b> {t('saveLongPressTail')}</>}
             </div>
             <button onClick={closePreview} style={{padding:'8px 22px',background:'transparent',color:'rgba(207,197,168,.6)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:'.55rem',textTransform:'uppercase',marginTop:4}}>close</button>
           </div>
@@ -11698,7 +11708,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.1</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.2</footer>
     </div>
   );
 }
