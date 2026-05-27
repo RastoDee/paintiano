@@ -8762,6 +8762,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // above, but the notes come from the AI mood (varySource) rather than pixels.
     // Detection: MFI sets moodFromImg=true + moodContext=true and clears
     // loadedSource, so it's distinguishable from both loaded sources and text moods.
+    try{ console.log('[MFI-clear-debug]', {moodFromImg, moodContext, composeMode, micPainting, micListening, draftOwner:draftOwnerRef.current, loadedSource}); }catch(_){}
     if(moodFromImg && moodContext && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
       setPending([]);pendingRef.current=[];
@@ -10695,7 +10696,7 @@ Composition rules:
               mood context (not a file source, not a live mode) — including AFTER
               Clear, when currentMood is null but we're still on the mood canvas. */}
           {!loadedSource && !composeMode && !micActive && moodContext && (
-            imgMoodThumb ? (
+            moodFromImg ? (
             <button onClick={()=>{if(recording||sourcePickerLocked||!aiUsable)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode('imgmood');}} disabled={recording||sourcePickerLocked||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(((t('newBy')||{}).image||t('newSource'))+' '+(t('backToImage')||'image'))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:(recording||sourcePickerLocked||!aiUsable)?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:(recording||sourcePickerLocked||!aiUsable)?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}>+ {((t('newBy')||{}).image||t('newSource'))} {t('backToImage')||'image'}{!aiUsable&&<span style={{fontSize:'.5rem',opacity:.8}}>· {t('aiOffline')||'offline'}</span>}</button>
             ) : (
             <button onClick={()=>{if(recording)return;setMoodEdit('');setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={((t('newBy')||{}).mood||t('newSource'))+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).mood||t('newSource'))} {t('moodLabel')}</button>
@@ -11624,7 +11625,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.2.3</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.0</footer>
     </div>
   );
 }
