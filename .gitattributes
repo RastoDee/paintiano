@@ -1,0 +1,2 @@
+*.jsx text eol=crlf 
++.js eol=crlf
