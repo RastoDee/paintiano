@@ -4611,7 +4611,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'type any mood — e.g. furious', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -4658,7 +4658,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'stimmung eingeben — z.B. wütend', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -4705,7 +4705,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'tape une humeur — ex. furieux', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -4752,7 +4752,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'escribe un estado — p.ej. furioso', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -4799,7 +4799,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'napíš náladu — napr. zúrivá', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -5845,8 +5845,8 @@ const GUIDE_I18N = {
    body:`Image mode only. Tap ⏺ REC to record audio output as the painting plays; stops when the piece ends. Share row appears with editable filename. Tap Share to save via system dialog (iPhone: Share → Save to Files).`},
   {id:'score-export', title:`♫ Score export (MusicXML)`, keywords:`score export musicxml xml notes notation sheet music musescore sibelius finale save share rename filename print`,
    body:`Image mode only, next to Rec. Tap ♫ Score to turn the painting's notes into MusicXML. Share row with editable filename appears. Tap Share to save the .musicxml; open in MuseScore, Sibelius, Finale or any notation app.`},
-  {id:'clear', title:`Clear`, keywords:`clear reset start over delete confirm arm two tap`,
-   body:`In Compose: clears the canvas, stays in compose. In MIC: drops only the current preset's draft (voice or music) — the other preset is kept. Stays in armed so big REC reappears. Image mode: wipes the painted trace and the picture, but stays in image view; full Color+Style panel only returns via "← Setup". MIDI / audio / score / mood: full reset — drops the loaded piece and returns to setup. Compose/MIC need two taps the first time (arm + confirm); imports clear with one.`},
+  {id:'clear', title:`Clear`, keywords:`clear reset start over delete confirm arm two tap back setup`,
+   body:`Compose: wipes the canvas, stays in compose. MIC: drops only the current preset's draft (voice or music) — the other preset's draft is kept. Stays armed so the big REC reappears. Image: wipes the painted trace AND the picture, but stays in image view; full Color+Style panel returns only via "← back". Mood from image: wipes everything (chords, the AI piece, the thumbnail) but stays on the canvas with "+ new image" / "+ new mood" affordances right there. MIDI / audio / score / text mood: full reset — drops the loaded piece and returns to setup. Compose/MIC need two taps the first time (arm + confirm); imports clear with one.`},
   {id:'micvol', title:`Canvas breathing (mic volume)`, keywords:`mic volume breath pulse canvas room sound ambient`,
    body:`In MIC mode (Voice or Music), the canvas pulses with room volume — louder pushes it slightly wider, silence lets it rest. Starts and stops automatically with MIC.`},
   {id:'troubleshoot', title:`Troubleshooting`, keywords:`troubleshoot problem error broken fix bug help slow`,
@@ -5901,8 +5901,8 @@ const GUIDE_I18N = {
    body:`Nur im Bildmodus. ⏺ AUFNAHME nimmt das Audio auf, stoppt am Ende. Teilen-Zeile mit editierbarem Dateinamen erscheint. Teilen antippen für Systemdialog.`},
   {id:'score-export', title:`♫ Noten-Export (MusicXML)`, keywords:`noten export musicxml xml notation musescore sibelius finale speichern teilen umbenennen`,
    body:`Nur im Bildmodus, neben Aufnahme. ♫ Noten konvertiert die Noten zu MusicXML. Teilen-Zeile mit editierbarem Namen. In MuseScore, Sibelius, Finale o. ä. öffnen.`},
-  {id:'clear', title:`Löschen`, keywords:`löschen zurücksetzen neu beginnen entfernen bestätigen scharfschalten zwei tipps`,
-   body:`In Komponieren: löscht die Leinwand, bleibt in Komponieren. In MIKRO: verwirft nur den Entwurf des aktuellen Modus (Stimme oder Musik) — der andere bleibt. Bleibt bereit, der große REC erscheint wieder. Bildmodus: löscht die Spur UND das Bild, bleibt aber in der Bildansicht; volles Panel kehrt nur via „← Setup" zurück. MIDI / Audio / Partitur / Stimmung: voller Reset. Komponieren/MIKRO brauchen zwei Tipps beim ersten Mal (scharfschalten + bestätigen); Importe löschen mit einem.`},
+  {id:'clear', title:`Löschen`, keywords:`löschen zurücksetzen neu beginnen entfernen bestätigen scharfschalten zwei tipps zurück setup`,
+   body:`Komponieren: löscht die Leinwand, bleibt in Komponieren. MIKRO: verwirft nur den Entwurf des aktuellen Modus (Stimme oder Musik) — der andere bleibt. Bleibt scharfgeschaltet, der große REC erscheint wieder. Bildmodus: löscht die Spur UND das Bild, bleibt aber in der Bildansicht; volles Panel kehrt nur via „← zurück" zurück. Stimmung aus Bild: löscht alles (Akkorde, das KI-Stück, das Vorschaubild), bleibt aber auf der Leinwand mit „+ neues Bild" / „+ neue Stimmung" direkt vor Ort. MIDI / Audio / Partitur / Text-Stimmung: voller Reset — verwirft das geladene Stück und kehrt zum Setup zurück. Komponieren/MIKRO brauchen zwei Tipps beim ersten Mal (scharfschalten + bestätigen); Importe löschen mit einem.`},
   {id:'micvol', title:`Leinwand atmet (Mikrofonlautstärke)`, keywords:`mikrofon lautstärke atmen puls leinwand raum klang umgebung`,
    body:`Im MIKRO-Modus (Stimme oder Musik) pulst die Leinwand mit der Raumlautstärke — lauter dehnt leicht, Stille lässt ruhen. Startet und stoppt automatisch.`},
   {id:'troubleshoot', title:`Fehlerbehebung`, keywords:`fehlerbehebung problem fehler kaputt hilfe langsam`,
@@ -5957,8 +5957,8 @@ const GUIDE_I18N = {
    body:`Mode image uniquement. ⏺ ENREG. enregistre l'audio pendant la lecture; s'arrête à la fin. Ligne de partage avec nom modifiable. Partager via dialogue système.`},
   {id:'score-export', title:`♫ Export partition (MusicXML)`, keywords:`partition export musicxml xml notation musescore sibelius finale enregistrer partager renommer`,
    body:`Mode image, à côté d'Enreg. ♫ Partition convertit les notes en MusicXML. Ligne de partage avec nom modifiable. Ouvre dans MuseScore, Sibelius, Finale, etc.`},
-  {id:'clear', title:`Effacer`, keywords:`effacer réinitialiser recommencer supprimer confirmer armer deux touches`,
-   body:`En Composer : efface la toile, reste en Composer. En MICRO : jette seulement le brouillon du mode courant (voix ou musique) — l'autre reste. Reste armé pour que le grand REC réapparaisse. Image : efface la trace ET l'image, mais reste en vue image; panneau complet seulement via « ← Réglage ». MIDI / audio / partition / humeur : reset complet. Composer/MICRO : deux appuis la première fois (armer + confirmer); imports effacent d'un appui.`},
+  {id:'clear', title:`Effacer`, keywords:`effacer réinitialiser recommencer supprimer confirmer armer deux touches retour réglage`,
+   body:`Composer : efface la toile, reste en Composer. MICRO : jette seulement le brouillon du mode courant (voix ou musique) — l'autre reste. Reste armé pour que le grand REC réapparaisse. Image : efface la trace ET l'image, mais reste en vue image; panneau complet seulement via « ← retour ». Ambiance d'image : efface tout (accords, pièce IA, miniature), mais reste sur la toile avec « + nouvelle image » / « + nouvelle ambiance » à portée. MIDI / audio / partition / humeur texte : reset complet — abandonne la pièce chargée et revient au réglage. Composer/MICRO : deux appuis la première fois (armer + confirmer); imports effacent d'un appui.`},
   {id:'micvol', title:`Respiration de la toile (volume micro)`, keywords:`micro volume respiration pulsation toile son ambiant`,
    body:`En MICRO (Voix ou Musique), la toile pulse avec le volume — plus fort la pousse, le silence la laisse respirer. Démarre et s'arrête avec MICRO.`},
   {id:'troubleshoot', title:`Dépannage`, keywords:`dépannage problème erreur cassé aide lent`,
@@ -6013,8 +6013,8 @@ const GUIDE_I18N = {
    body:`Solo modo imagen. ⏺ GRABAR captura el audio durante la reproducción; para al final. Fila de compartir con nombre editable. Compartir vía diálogo del sistema.`},
   {id:'score-export', title:`♫ Exportar partitura (MusicXML)`, keywords:`partitura exportar musicxml xml notación musescore sibelius finale guardar compartir renombrar`,
    body:`Solo modo imagen, junto a Grabar. ♫ Partitura convierte las notas a MusicXML. Fila de compartir con nombre editable. Abre en MuseScore, Sibelius, Finale, etc.`},
-  {id:'clear', title:`Borrar`, keywords:`borrar reiniciar empezar nuevo eliminar confirmar armar dos toques`,
-   body:`En Componer: borra el lienzo, sigue en Componer. En MICRO: descarta solo el borrador del modo actual (voz o música) — el otro queda. Sigue armado para que reaparezca el gran REC. Imagen: borra la traza Y la imagen, pero sigue en vista imagen; panel completo solo vía "← Ajuste". MIDI / audio / partitura / estado: reset completo. Componer/MICRO necesitan dos toques la primera vez (armar + confirmar); importes borran con uno.`},
+  {id:'clear', title:`Borrar`, keywords:`borrar reiniciar empezar nuevo eliminar confirmar armar dos toques atrás ajuste`,
+   body:`Componer: borra el lienzo, sigue en Componer. MICRO: descarta solo el borrador del modo actual (voz o música) — el otro queda. Sigue armado para que reaparezca el gran REC. Imagen: borra la traza Y la imagen, pero sigue en vista imagen; panel completo solo vía "← atrás". Estado desde imagen: borra todo (acordes, pieza IA, miniatura), pero sigue en el lienzo con "+ nueva imagen" / "+ nuevo estado" justo a mano. MIDI / audio / partitura / estado texto: reset completo — abandona la pieza cargada y vuelve al ajuste. Componer/MICRO: dos toques la primera vez (armar + confirmar); importes borran con uno.`},
   {id:'micvol', title:`Respiración del lienzo (volumen micro)`, keywords:`micrófono volumen respiración pulso lienzo habitación sonido ambiente`,
    body:`En MICRO (Voz o Música), el lienzo pulsa con el volumen — más fuerte lo empuja, silencio lo deja respirar. Inicia y detiene automáticamente.`},
   {id:'troubleshoot', title:`Solución de problemas`, keywords:`solución problema error roto arreglar bug ayuda lento`,
@@ -6069,8 +6069,8 @@ const GUIDE_I18N = {
    body:`Len v režime obrazu. ⏺ NAHRÁVAŤ nahráva audio výstup počas prehrávania; zastaví na konci. Zdieľací riadok s upraviteľným názvom. Zdieľať cez systémový dialóg.`},
   {id:'score-export', title:`♫ Export nôt (MusicXML)`, keywords:`noty export musicxml xml notácia musescore sibelius finale uložiť zdieľať premenovať`,
    body:`Len v režime obrazu, vedľa Nahrávať. ♫ Noty konvertuje noty na MusicXML. Zdieľací riadok s upraviteľným názvom. Otvor v MuseScore, Sibelius, Finale atď.`},
-  {id:'clear', title:`Vyčistiť`, keywords:`vyčistiť reset začať odznova zmazať potvrdiť aktivovať dvojité ťuknutie`,
-   body:`V Komponovaní: vyčistí plátno, ostane v Komponovaní. V MIKRO: zahodí len draft aktuálneho módu (hlas alebo hudba) — druhý ostáva. Ostane v armed, takže veľký REC sa znovu objaví. Obraz: zmaže stopu AJ obraz, ale ostane v zobrazení obrazu; plný panel sa vráti len cez „← Nastavenie". MIDI / audio / partitúra / nálada: úplný reset. Komponovať/MIKRO potrebujú dva ťuky prvýkrát (armovať + potvrdiť); importy mažú jedným.`},
+  {id:'clear', title:`Vyčistiť`, keywords:`vyčistiť reset začať odznova zmazať potvrdiť aktivovať dvojité ťuknutie späť nastavenie`,
+   body:`Komponovať: vyčistí plátno, ostane v Komponovaní. MIKRO: zahodí len draft aktuálneho módu (hlas alebo hudba) — druhý ostáva. Ostane v armed, takže veľký REC sa znovu objaví. Obraz: zmaže stopu AJ obraz, ale ostane v zobrazení obrazu; plný panel sa vráti len cez „← späť". Nálada z obrazu: zmaže všetko (akordy, AI skladbu, náhľad), ale ostane na plátne s „+ nový obraz" / „+ nová nálada" priamo poruke. MIDI / audio / partitúra / text nálada: úplný reset — zahodí načítané dielo a vráti do nastavenia. Komponovať/MIKRO: dva ťuky prvýkrát (armovať + potvrdiť); importy mažú jedným.`},
   {id:'micvol', title:`Dýchanie plátna (hlasitosť mikrofónu)`, keywords:`mikro hlasitosť dýchanie pulz plátno miestnosť zvuk ambient`,
    body:`V MIKRO (Hlas alebo Hudba) plátno pulzuje s hlasitosťou — hlasnejšie ho roztiahne, ticho ho nechá oddýchnuť. Začína a zastavuje sa automaticky.`},
   {id:'troubleshoot', title:`Riešenie problémov`, keywords:`riešenie problém chyba pokazené opraviť bug pomoc pomalé`,
@@ -9296,6 +9296,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!evts.length){setErr(t('errs').noNotesGeneric);return;}
     const dispTitle=((t('moodNames')||{})[song.mood])||((t('moodNames')||{})[title])||song.title;
     applyEvents(evts,dispTitle); setComposeSource('crafted');
+    // Set varySource so Vary works on crafted (library) moods too — without
+    // this, the Vary button stays disabled because !varySource. AI and offline
+    // mood paths already set this; the crafted-library branch was the gap.
+    setVarySource(song);
     const bytes=encodeMidi(evts,song.tempo||120);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -11931,7 +11935,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.3</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.4</footer>
     </div>
   );
 }

@@ -2767,6 +2767,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!evts.length){setErr(t('errs').noNotesGeneric);return;}
     const dispTitle=((t('moodNames')||{})[song.mood])||((t('moodNames')||{})[title])||song.title;
     applyEvents(evts,dispTitle); setComposeSource('crafted');
+    // Set varySource so Vary works on crafted (library) moods too — without
+    // this, the Vary button stays disabled because !varySource. AI and offline
+    // mood paths already set this; the crafted-library branch was the gap.
+    setVarySource(song);
     const bytes=encodeMidi(evts,song.tempo||120);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -5402,7 +5406,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.3</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.4</footer>
     </div>
   );
 }
