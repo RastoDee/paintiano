@@ -7108,7 +7108,10 @@ export default function Paintiano() {
   // 'music' = listen-style (polyphonic chord detection, silent painting).
   // Persisted across sessions in localStorage.
   const [micPreset, setMicPreset] = useState(()=>{
-    try{ const v=localStorage.getItem('paintiano_mic_preset'); return v==='music'?'music':'voice'; }catch(_){ return 'voice'; }
+    // Default is 'music' — most common MIC use is capturing ambient music from
+    // a speaker (longer recordings, polyphonic). Voice is the niche use. Users
+    // who prefer voice will flip the toggle once; localStorage remembers it.
+    try{ const v=localStorage.getItem('paintiano_mic_preset'); return v==='voice'?'voice':'music'; }catch(_){ return 'music'; }
   });
   useEffect(()=>{
     try{ localStorage.setItem('paintiano_mic_preset', micPreset); }catch(_){}
@@ -10078,11 +10081,22 @@ Composition rules:
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=120; // sample chord identity frequently (was 800 — that quantized durations)
       const MIN_HOLD_MS=180;     // ignore chords held shorter than this (transient flicker)
-      const RMS_THRESHOLD=0.003; // very low — iOS same-device mic+speaker signal is weak
+      // Adaptive noise gate: track quiet-background RMS and require signal to
+      // exceed it by a clear margin. Music is harder than Voice because the
+      // signal is often weak (speaker bleed), so we keep the floor minimum low
+      // but still gate aggressively above it.
+      let noiseFloor=0.002;       // initial guess; updated continuously below
+      const NOISE_GATE_MULT=2.5;  // signal must be 2.5× the noise floor
+      const RMS_FLOOR_MIN=0.003;  // absolute floor — was the old fixed threshold
       let prevChordSig=''; // chord-change detection
       let prevChordStart=performance.now(); // when current chord started
       let pendingNotes=null;     // the currently-sounding chord, awaiting its end to know duration
       let pendingSig='';
+      // Stability: only commit a chord after seeing the SAME pitch signature
+      // twice in a row. Filters transient chord-flickers between beats and
+      // false chord identities at note transitions.
+      let candidateSig='';
+      let candidateNotes=null;
       const emitChord=(notes,heldMs)=>{
         // Highlight active keys
         const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
@@ -10105,13 +10119,19 @@ Composition rules:
         analyser.getFloatTimeDomainData(buf);
         let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
         const now=performance.now();
-        if(rms<RMS_THRESHOLD){
+        // Update the noise floor with slow decay during quiet moments only —
+        // when the level is below 1.5× current floor, treat as background and
+        // let it drift toward `rms`. During loud moments the floor stays put.
+        if(rms < noiseFloor*1.5) noiseFloor = noiseFloor*0.95 + rms*0.05;
+        const gate = Math.max(RMS_FLOOR_MIN, noiseFloor*NOISE_GATE_MULT);
+        if(rms<gate){
           // Silence — if a chord was sounding, end it now with its real duration.
           if(pendingNotes){
             const heldMs=now-prevChordStart;
             if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
             pendingNotes=null;pendingSig='';prevChordSig='';
           }
+          candidateSig='';candidateNotes=null;
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
         // Detect chord identity every ~120ms (cheap, frequent — decoupled from
@@ -10124,18 +10144,32 @@ Composition rules:
           // pickPitches compute garbage frequencies → no pitches → first Music
           // session never painted. Fall back to a sane default if it's not ready.
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
-          const pitches=pickPitches(mag,liveSr,0.05);
-          if(pitches.length>0){
-            const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:0}));
+          const pitches=pickPitches(mag,liveSr,0.05); // back to 0.05 — catches weak/quiet music too; prominence filter below drops noise
+          // Peak prominence: keep only pitches whose magnitude is at least 30%
+          // of the strongest one. Avoids cluttering chords with weak harmonics
+          // that come and go between frames, while still catching softer notes
+          // in quiet music.
+          const topMag = pitches.length ? pitches[0].mag : 0;
+          const strong = pitches.filter(p=>p.mag >= topMag*0.3);
+          if(strong.length>0){
+            const notes=strong.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:0}));
             const sig=notes.map(n=>n.m).sort((a,b)=>a-b).join(',');
-            if(sig!==pendingSig){
-              // Chord changed. Flush the PREVIOUS chord with its true held time.
-              if(pendingNotes){
-                const heldMs=now-prevChordStart;
-                if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
+            // Stability: require the same signature twice consecutively before
+            // treating it as a real chord. First sighting → candidate; next
+            // matching sighting → commit. Different sighting → replace candidate.
+            if(candidateSig===sig){
+              if(sig!==pendingSig){
+                // Chord changed. Flush the PREVIOUS chord with its true held time.
+                if(pendingNotes){
+                  const heldMs=now-prevChordStart;
+                  if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
+                }
+                pendingNotes=notes;pendingSig=sig;prevChordStart=now;
               }
-              pendingNotes=notes;pendingSig=sig;prevChordStart=now;
             }
+            candidateSig=sig;candidateNotes=notes;
+          } else {
+            candidateSig='';candidateNotes=null;
           }
         }
         listenRafRef.current=requestAnimationFrame(tick);
@@ -10194,7 +10228,16 @@ Composition rules:
       let lastSample=performance.now();
       const SAMPLE_INTERVAL=100; // sample pitch frequently (was 600 commit gate — quantized durations)
       const MIN_HOLD_MS=160;     // ignore notes shorter than this
-      const RMS_THRESHOLD=0.06;  // minimum RMS energy — ignores ambient noise / silence
+      // Adaptive noise gate: track the quiet-background RMS and require the
+      // signal to be a clear multiple above it. Avoids both "too quiet" mic
+      // setups (where 0.06 fixed gate blocks real singing) and noisy rooms
+      // (where 0.06 lets ambient bleed in as random notes).
+      let noiseFloor=0.01;       // initial guess; updated continuously below
+      const NOISE_GATE_MULT=3.0; // signal must be 3× the noise floor to count
+      const RMS_FLOOR_MIN=0.015; // absolute minimum: ignores DC offset / silence
+      // Stability: only commit a pitch after seeing the SAME snapped midi twice
+      // in a row. Filters octave-jumps, transient glitches, and overtone confusion.
+      let candidateNote=null;    // {m,v} seen in the previous sample
       let pendingNote=null;      // {m,v} currently being sung, awaiting its end
       let noteStart=performance.now();
       const emitNote=(note,heldMs)=>{
@@ -10215,34 +10258,50 @@ Composition rules:
         analyser.getFloatTimeDomainData(buf);
         let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
         const now=performance.now();
-        if(rms<RMS_THRESHOLD){
+        // Update the noise floor with slow decay during quiet moments only —
+        // when the level is below 1.5× the current floor, treat as background
+        // and let it drift toward `rms`. During loud moments the floor stays put.
+        if(rms < noiseFloor*1.5) noiseFloor = noiseFloor*0.95 + rms*0.05;
+        const gate = Math.max(RMS_FLOOR_MIN, noiseFloor*NOISE_GATE_MULT);
+        if(rms<gate){
           // Silence ends the current note with its real duration.
           if(pendingNote){
             const heldMs=now-noteStart;
             if(heldMs>=MIN_HOLD_MS) emitNote(pendingNote,heldMs);
             pendingNote=null;
           }
+          candidateNote=null;
           micRafRef.current=requestAnimationFrame(tick);return;
         }
         if(now-lastSample>SAMPLE_INTERVAL){
           lastSample=now;
           const mag=fftMag(buf);
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
-          const pitches=pickPitches(mag,liveSr,0.20);
-          if(pitches.length>0){
+          const pitches=pickPitches(mag,liveSr,0.25); // raised from 0.20 — only confident peaks
+          // Peak prominence: require the top pitch to dominate the second by ≥1.5×.
+          // If the second peak is nearly as strong, the signal is noisy / chord-like
+          // and singling out one midi note from it produces oktave-jump artefacts.
+          if(pitches.length>0 && (pitches.length<2 || pitches[0].mag > pitches[1].mag*1.5)){
             const snapped=paintSnapMidi(pitches[0].midi,'cmaj');
             const v=Math.max(50,Math.min(120,Math.round(pitches[0].mag*110)));
-            if(!pendingNote || pendingNote.m!==snapped){
-              // Pitch changed — flush the previous sung note with its true length.
-              if(pendingNote){
-                const heldMs=now-noteStart;
-                if(heldMs>=MIN_HOLD_MS) emitNote(pendingNote,heldMs);
+            // Stability: confirm the pitch by requiring the SAME snapped midi
+            // twice consecutively before treating it as a real note. The first
+            // sighting becomes the candidate; the next sample either confirms
+            // it (commit / extend) or replaces it.
+            if(candidateNote && candidateNote.m===snapped){
+              if(!pendingNote || pendingNote.m!==snapped){
+                if(pendingNote){
+                  const heldMs=now-noteStart;
+                  if(heldMs>=MIN_HOLD_MS) emitNote(pendingNote,heldMs);
+                }
+                pendingNote={m:snapped,v};noteStart=now;
+              }else{
+                if(v>pendingNote.v) pendingNote.v=v;
               }
-              pendingNote={m:snapped,v};noteStart=now;
-            }else{
-              // Same pitch sustained — track the loudest velocity seen.
-              if(v>pendingNote.v) pendingNote.v=v;
             }
+            candidateNote={m:snapped,v};
+          } else {
+            candidateNote=null;
           }
         }
         micRafRef.current=requestAnimationFrame(tick);
@@ -10739,10 +10798,16 @@ Composition rules:
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
                 if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); return; }
-                // Start immediately in the last-used preset (default 'voice') —
-                // no upfront dialog. The preset can be flipped live on the canvas
-                // badge while recording, so the choice never blocks getting going.
-                if(micPreset==='music') startMicListening(); else startMicPainting();
+                // Open the MIC canvas in ARMED state — don't auto-start recording.
+                // The user taps the big 🎙 REC in the centre of the canvas (or the
+                // REC pill below it once any chords exist) to actually begin.
+                // Stash any other live draft + reset transient source state so
+                // the canvas is clean for MIC.
+                if(draftOwnerRef.current && draftOwnerRef.current!=='sing' && draftOwnerRef.current!=='listen'){
+                  stashDraft(draftOwnerRef.current); draftOwnerRef.current=null;
+                }
+                setForceSetup(false);
+                setMicArmed(true);
               }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
             </div>
           </div>
@@ -11357,12 +11422,26 @@ Composition rules:
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
           </div>
         )}
-        {chords.length===0&&(
+        {chords.length===0 && micArmed && !micActive && (
+          <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14}}>
+            <button onClick={()=>{
+              setMicArmed(false);
+              if(micPreset==='music') startMicListening(); else startMicPainting();
+            }} title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:10,width:108,height:108,borderRadius:'50%',cursor:'pointer',fontFamily:"'Outfit',sans-serif",fontSize:'.78rem',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'2px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),boxShadow:'0 6px 24px '+(micPreset==='voice'?'rgba(255,80,80,.25)':'rgba(80,160,255,.25)')+', inset 0 0 0 1px rgba(255,255,255,.04)',transition:'transform .14s, box-shadow .14s'}} onMouseDown={e=>e.currentTarget.style.transform='scale(.96)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+              <span style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,lineHeight:1}}>
+                <span style={{width:18,height:18,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 12px '+(micPreset==='voice'?'#ff5a5a':'#5aacff')}}/>
+                <span style={{fontSize:'.62rem',marginTop:2}}>REC</span>
+              </span>
+            </button>
+            <div style={{fontSize:'.55rem',letterSpacing:'.18em',textTransform:'uppercase',color:micPreset==='voice'?'rgba(255,138,138,.85)':'rgba(140,200,255,.85)',textShadow:'0 1px 3px rgba(0,0,0,.6)'}}>{t('micTapToRecord')}</div>
+          </div>
+        )}
+        {chords.length===0 && !(micArmed && !micActive) && (
           <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
-            <div style={{opacity:composeMode?.22:micArmed?.35:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':micArmed?(micPreset==='voice'?'rgba(255,138,138,.95)':'rgba(140,200,255,.95)'):'inherit'}}>
-              {composeMode?'play the keys to paint':micArmed?t('micTapToRecord'):'play · paint · upload'}
+            <div style={{opacity:composeMode?.22:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':'inherit'}}>
+              {composeMode?'play the keys to paint':'play · paint · upload'}
             </div>
-            <div style={{opacity:composeMode?.08:micArmed?.18:.05,fontSize:'2.8rem'}}>{micArmed?'↓':'♩'}</div>
+            <div style={{opacity:composeMode?.08:.05,fontSize:'2.8rem'}}>♩</div>
           </div>
         )}
       </div>
@@ -11610,7 +11689,7 @@ Composition rules:
             <span style={{width:8,height:8,borderRadius:2,background:'#ff5a5a',boxShadow:'0 0 6px #ff5a5a',display:'inline-block'}}/>⏹ {t('micActive').replace(/[^\p{L} ]/gu,'')}
           </button>
         )}
-        {micArmed && !micActive && (
+        {micArmed && !micActive && chords.length>0 && (
           <button onClick={()=>{ setMicArmed(false); if(micPreset==='music') startMicListening(); else startMicPainting(); }} className="pf-lift" title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,40,40,.14)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
             <span style={{width:9,height:9,borderRadius:'50%',background:'#ff5a5a',boxShadow:'0 0 8px #ff5a5a',display:'inline-block'}}/>🎙 REC
           </button>
@@ -11776,7 +11855,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.13</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.14</footer>
     </div>
   );
 }
