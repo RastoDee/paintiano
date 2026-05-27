@@ -1482,10 +1482,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!cur || !cur.length) return;
     const snapshot = {chords:cur.slice(), idxCounter:idxRef.current, sessionStart:sessionStart.current};
     if(owner==='compose'){composeStashRef.current = snapshot; setHasComposeDraft(true);}
-    else if(owner==='sing' || owner==='listen'){
-      // Sing and Listen share one draft (presets of unified MIC mode). Save
-      // to both slots so either preset can restore on next entry.
+    else if(owner==='sing'){
+      // Voice and Music are independent modes within MIC — each keeps its own
+      // stash. Toggling voice⇄music saves the current preset's draft and
+      // restores the other preset's draft (or starts blank). Clear in MIC
+      // discards only the active preset's stash, leaving the other intact.
       singStashRef.current = snapshot;
+      setHasMicDraft(true); // any preset having a draft lights the MIC glow
+    }
+    else if(owner==='listen'){
       listenStashRef.current = snapshot;
       setHasMicDraft(true);
     }
@@ -2183,12 +2188,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(_owner==='compose'){
       composeStashRef.current=null;
       setHasComposeDraft(false);
-    } else if(_owner==='sing' || _owner==='listen'){
-      // Sing and Listen are presets of the unified MIC mode and share a draft —
-      // wipe both stash slots together.
+    } else if(_owner==='sing'){
+      // Voice and Music are independent — clear discards only the active
+      // preset's stash, leaving the other preset's draft intact.
       singStashRef.current=null;
+      if(!listenStashRef.current) setHasMicDraft(false);
+    } else if(_owner==='listen'){
       listenStashRef.current=null;
-      setHasMicDraft(false);
+      if(!singStashRef.current) setHasMicDraft(false);
     }
     // For sing/listen: keep mic streams running — just wipe canvas
     if(!micPainting&&!micListening){
@@ -2241,13 +2248,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // detected sound instantly repaints — so Clear appears to do nothing. Stop
     // the mic too for a clean, predictable blank slate; re-tap MIC to resume.
     if(micPainting||micListening){
+      // Capture which preset was active BEFORE we stop the mic (stopMic* clears
+      // draftOwnerRef.current later via clear()'s _owner handling).
+      const wasPreset = micListening ? 'listen' : 'sing';
       if(micPainting) stopMicPaintingRef.current?.();
       if(micListening) stopMicListeningRef.current?.();
       clear();
-      // stopMic* stashes the draft (sets the glow); Clear means discard, so
-      // explicitly drop the mic draft + glow + owner after clear runs.
-      singStashRef.current=null;listenStashRef.current=null;setHasMicDraft(false);
-      composeStashRef.current=null;setHasComposeDraft(false);
+      // Voice/Music are independent: Clear discards ONLY the active preset's
+      // stash. The other preset's draft is preserved across the swap. Glow
+      // stays on if the other preset still has a draft.
+      if(wasPreset==='sing'){
+        singStashRef.current=null;
+        if(!listenStashRef.current) setHasMicDraft(false);
+      } else {
+        listenStashRef.current=null;
+        if(!singStashRef.current) setHasMicDraft(false);
+      }
       draftOwnerRef.current=null;
       // Stay in the MIC context with the mic stopped: arm it so the view stays
       // framed and the canvas shows "tap 🎙 to record" — one tap on MIC (LIVE)
@@ -2338,6 +2354,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Do NOT run the stopped-session cleanup below (it nulls the owner, drops
     // the draft, and resets colour/style) — that's for abandoned sessions only.
     if(composeMode){ clear(); return; }
+    // Armed MIC: mic stopped but user is still in MIC context. Clear discards
+    // only the active preset's stash (the other preset's draft is preserved)
+    // and stays in armed so the big REC button stays on the canvas.
+    if(micArmed){
+      clear();
+      if(micPreset==='voice'){
+        singStashRef.current=null;
+        if(!listenStashRef.current) setHasMicDraft(false);
+      } else {
+        listenStashRef.current=null;
+        if(!singStashRef.current) setHasMicDraft(false);
+      }
+      draftOwnerRef.current=null;
+      setMicArmed(true);
+      return;
+    }
     // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
     // full clear(): it drops the loaded source and chords so the source tile
     // no longer shows as active when returning to setup.
@@ -2350,7 +2382,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     draftOwnerRef.current=null;
     // Reset Colour + Style to defaults so returning to Setup is a clean slate.
     setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
-  },[stopAll,clear,composeMode,micPainting,micListening,loadedSource,mode,activePalette,atmoOn,atmoMood,moodFromImg,moodContext,varySource]);
+  },[stopAll,clear,composeMode,micPainting,micListening,micArmed,micPreset,loadedSource,mode,activePalette,atmoOn,atmoMood,moodFromImg,moodContext,varySource]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -3545,24 +3577,19 @@ Composition rules:
         composedModeRef.current=true;
       }
       let lastCommit=performance.now();
-      const COMMIT_INTERVAL=120; // sample chord identity frequently (was 800 — that quantized durations)
-      const MIN_HOLD_MS=180;     // ignore chords held shorter than this (transient flicker)
-      // Adaptive noise gate: track quiet-background RMS and require signal to
-      // exceed it by a clear margin. Music is harder than Voice because the
-      // signal is often weak (speaker bleed), so we keep the floor minimum low
-      // but still gate aggressively above it.
-      let noiseFloor=0.002;       // initial guess; updated continuously below
-      const NOISE_GATE_MULT=2.5;  // signal must be 2.5× the noise floor
-      const RMS_FLOOR_MIN=0.003;  // absolute floor — was the old fixed threshold
+      const COMMIT_INTERVAL=120; // sample chord identity frequently
+      const MIN_HOLD_MS=100;     // very short — catch quick changes; only filter very brief flickers
+      // Adaptive noise gate is the ONLY filter — distinguishes silence/room
+      // noise from any audio. Everything that gets past it gets painted, even
+      // distorted or rough detections. The point is "I hear something" → paint,
+      // not perfect transcription.
+      let noiseFloor=0.002;
+      const NOISE_GATE_MULT=1.8;  // signal must be 1.8× the noise floor
+      const RMS_FLOOR_MIN=0.003;  // absolute floor — true silence
       let prevChordSig=''; // chord-change detection
       let prevChordStart=performance.now(); // when current chord started
       let pendingNotes=null;     // the currently-sounding chord, awaiting its end to know duration
       let pendingSig='';
-      // Stability: only commit a chord after seeing the SAME pitch signature
-      // twice in a row. Filters transient chord-flickers between beats and
-      // false chord identities at note transitions.
-      let candidateSig='';
-      let candidateNotes=null;
       const emitChord=(notes,heldMs)=>{
         // Highlight active keys
         const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
@@ -3597,7 +3624,6 @@ Composition rules:
             if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
             pendingNotes=null;pendingSig='';prevChordSig='';
           }
-          candidateSig='';candidateNotes=null;
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
         // Detect chord identity every ~120ms (cheap, frequent — decoupled from
@@ -3610,32 +3636,20 @@ Composition rules:
           // pickPitches compute garbage frequencies → no pitches → first Music
           // session never painted. Fall back to a sane default if it's not ready.
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
-          const pitches=pickPitches(mag,liveSr,0.05); // back to 0.05 — catches weak/quiet music too; prominence filter below drops noise
-          // Peak prominence: keep only pitches whose magnitude is at least 30%
-          // of the strongest one. Avoids cluttering chords with weak harmonics
-          // that come and go between frames, while still catching softer notes
-          // in quiet music.
-          const topMag = pitches.length ? pitches[0].mag : 0;
-          const strong = pitches.filter(p=>p.mag >= topMag*0.3);
-          if(strong.length>0){
-            const notes=strong.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:0}));
+          const pitches=pickPitches(mag,liveSr,0.02); // very low — catch any peak; noise gate above filters silence
+          if(pitches.length>0){
+            const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:0}));
             const sig=notes.map(n=>n.m).sort((a,b)=>a-b).join(',');
-            // Stability: require the same signature twice consecutively before
-            // treating it as a real chord. First sighting → candidate; next
-            // matching sighting → commit. Different sighting → replace candidate.
-            if(candidateSig===sig){
-              if(sig!==pendingSig){
-                // Chord changed. Flush the PREVIOUS chord with its true held time.
-                if(pendingNotes){
-                  const heldMs=now-prevChordStart;
-                  if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
-                }
-                pendingNotes=notes;pendingSig=sig;prevChordStart=now;
+            if(sig!==pendingSig){
+              // Chord changed. Flush the PREVIOUS chord with its true held time
+              // and emit the NEW one immediately — no stability gate, no prominence
+              // filter. Every detected change paints.
+              if(pendingNotes){
+                const heldMs=now-prevChordStart;
+                if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
               }
+              pendingNotes=notes;pendingSig=sig;prevChordStart=now;
             }
-            candidateSig=sig;candidateNotes=notes;
-          } else {
-            candidateSig='';candidateNotes=null;
           }
         }
         listenRafRef.current=requestAnimationFrame(tick);
@@ -3692,19 +3706,15 @@ Composition rules:
       }
       unlockAudio();
       let lastSample=performance.now();
-      const SAMPLE_INTERVAL=100; // sample pitch frequently (was 600 commit gate — quantized durations)
-      const MIN_HOLD_MS=160;     // ignore notes shorter than this
-      // Adaptive noise gate: track the quiet-background RMS and require the
-      // signal to be a clear multiple above it. Avoids both "too quiet" mic
-      // setups (where 0.06 fixed gate blocks real singing) and noisy rooms
-      // (where 0.06 lets ambient bleed in as random notes).
-      let noiseFloor=0.01;       // initial guess; updated continuously below
-      const NOISE_GATE_MULT=3.0; // signal must be 3× the noise floor to count
-      const RMS_FLOOR_MIN=0.015; // absolute minimum: ignores DC offset / silence
-      // Stability: only commit a pitch after seeing the SAME snapped midi twice
-      // in a row. Filters octave-jumps, transient glitches, and overtone confusion.
-      let candidateNote=null;    // {m,v} seen in the previous sample
-      let pendingNote=null;      // {m,v} currently being sung, awaiting its end
+      const SAMPLE_INTERVAL=100; // sample pitch frequently
+      const MIN_HOLD_MS=100;     // catch quick changes; only filter very brief flickers
+      // Adaptive noise gate is the ONLY filter — distinguishes silence/room
+      // noise from any voice / sound. Everything past it gets painted, even
+      // imperfect detections. Goal is "I hear a note" → paint.
+      let noiseFloor=0.01;       // initial guess
+      const NOISE_GATE_MULT=2.0; // signal must be 2× the noise floor
+      const RMS_FLOOR_MIN=0.012; // absolute floor for true silence
+      let pendingNote=null;      // {m,v} currently being sung
       let noteStart=performance.now();
       const emitNote=(note,heldMs)=>{
         const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
@@ -3736,38 +3746,26 @@ Composition rules:
             if(heldMs>=MIN_HOLD_MS) emitNote(pendingNote,heldMs);
             pendingNote=null;
           }
-          candidateNote=null;
           micRafRef.current=requestAnimationFrame(tick);return;
         }
         if(now-lastSample>SAMPLE_INTERVAL){
           lastSample=now;
           const mag=fftMag(buf);
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
-          const pitches=pickPitches(mag,liveSr,0.25); // raised from 0.20 — only confident peaks
-          // Peak prominence: require the top pitch to dominate the second by ≥1.5×.
-          // If the second peak is nearly as strong, the signal is noisy / chord-like
-          // and singling out one midi note from it produces oktave-jump artefacts.
-          if(pitches.length>0 && (pitches.length<2 || pitches[0].mag > pitches[1].mag*1.5)){
+          const pitches=pickPitches(mag,liveSr,0.12); // very low — catch any peak; noise gate above filters silence
+          if(pitches.length>0){
             const snapped=paintSnapMidi(pitches[0].midi,'cmaj');
             const v=Math.max(50,Math.min(120,Math.round(pitches[0].mag*110)));
-            // Stability: confirm the pitch by requiring the SAME snapped midi
-            // twice consecutively before treating it as a real note. The first
-            // sighting becomes the candidate; the next sample either confirms
-            // it (commit / extend) or replaces it.
-            if(candidateNote && candidateNote.m===snapped){
-              if(!pendingNote || pendingNote.m!==snapped){
-                if(pendingNote){
-                  const heldMs=now-noteStart;
-                  if(heldMs>=MIN_HOLD_MS) emitNote(pendingNote,heldMs);
-                }
-                pendingNote={m:snapped,v};noteStart=now;
-              }else{
-                if(v>pendingNote.v) pendingNote.v=v;
+            // Emit on any pitch change — no stability gate, no prominence filter.
+            if(!pendingNote || pendingNote.m!==snapped){
+              if(pendingNote){
+                const heldMs=now-noteStart;
+                if(heldMs>=MIN_HOLD_MS) emitNote(pendingNote,heldMs);
               }
+              pendingNote={m:snapped,v};noteStart=now;
+            }else{
+              if(v>pendingNote.v) pendingNote.v=v;
             }
-            candidateNote={m:snapped,v};
-          } else {
-            candidateNote=null;
           }
         }
         micRafRef.current=requestAnimationFrame(tick);
@@ -4280,6 +4278,16 @@ Composition rules:
                 setLoadedSource(null);
                 setMoodFromImg(false); setImgMoodThumb(null);
                 setForceSetup(false);
+                // Restore the stash for the CURRENT preset (voice/music are
+                // independent) — if it exists, the canvas opens with that draft.
+                // Otherwise armed with a blank canvas.
+                const presetOwner = micPreset==='music' ? 'listen' : 'sing';
+                if(!restoreStash(presetOwner)){
+                  // No stash for this preset — clean armed canvas.
+                  setChords([]); chordsRef.current=[]; idxRef.current=0;
+                  composedModeRef.current=false; draftOwnerRef.current=null;
+                  gridSigRef.current='';
+                }
                 setMicArmed(true);
                 setStayActive(true);
               }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
@@ -4880,18 +4888,48 @@ Composition rules:
         {(micActive || micArmed) && (
           <div style={{position:'absolute',top:10,left:10,zIndex:4,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:4}}>
             <button onClick={()=>{
-              // Voice ⇄ music preset toggle. During recording (micActive): hot-swap
-              // the running stream to the other mode. In armed state (mic stopped):
-              // just flip the stored preset — REC button below the canvas will start
-              // in the chosen preset.
+              // Voice ⇄ Music are INDEPENDENT modes within MIC. Toggle saves the
+              // current preset's draft, switches the preset state, and restores
+              // the other preset's draft (or starts blank). They do NOT share a
+              // canvas — mixing voice and music in one painting doesn't make sense.
+              const curOwner = micPreset==='voice' ? 'sing' : 'listen';
+              const nextOwner = micPreset==='voice' ? 'listen' : 'sing';
+              const nextPreset = micPreset==='voice' ? 'music' : 'voice';
+              // Save current preset draft if there's any chord work to preserve.
+              if(composedModeRef.current && chordsRef.current.length>0){
+                stashDraft(curOwner);
+              }
+              // Clear the active draftOwner so the new start treats this as a
+              // fresh entry into the other preset (NOT a sibling-preset
+              // continuation that would carry chords across).
+              draftOwnerRef.current=null;
+              composedModeRef.current=false;
+              // Stop the currently running stream (if any) and clear the canvas
+              // for the new preset.
+              if(micPainting) stopMicPainting();
+              if(micListening) stopMicListening();
+              setChords([]); chordsRef.current=[]; idxRef.current=0;
+              sessionStart.current=0; gridSigRef.current='';
+              setDisp(0); setPending([]); pendingRef.current=[]; pressInfo.current={};
+              substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+              lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
+              setMicPreset(nextPreset);
+              // Restore the OTHER preset's stash (if any) onto the now-clean canvas.
+              const hadOtherDraft = restoreStash(nextOwner);
               if(micActive){
-                if(micPreset==='voice'){ setMicPreset('music'); if(micPainting) stopMicPainting(); startMicListening(); }
-                else { setMicPreset('voice'); if(micListening) stopMicListening(); startMicPainting(); }
+                // Was recording — start recording in the new preset. If a draft
+                // was restored, the new session continues from it (composedMode
+                // is set by restoreStash). Otherwise fresh start.
+                if(nextPreset==='music') startMicListening(); else startMicPainting();
               } else {
-                setMicPreset(micPreset==='voice'?'music':'voice');
+                // Was armed — stay armed in the new preset. Big REC will start it.
+                setMicArmed(true);
+                if(!hadOtherDraft){
+                  composedModeRef.current=false; draftOwnerRef.current=null;
+                }
               }
             }} title={micPreset==='voice'?t('micMusicHint'):t('micVoiceHint')} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:'transparent',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),textShadow:'0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
-              {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄
+              {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄{(micPreset==='voice'?listenStashRef.current:singStashRef.current)?' ●':''}
             </button>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
           </div>
@@ -5329,7 +5367,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.17</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.18</footer>
     </div>
   );
 }
