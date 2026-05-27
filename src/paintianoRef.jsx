@@ -8843,48 +8843,35 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
       return;
     }
-    // MOOD-FROM-IMAGE source: Clear wipes the painted trace but STAYS in MFI —
-    // it keeps the mood piece (rebuilt from varySource), the source thumbnail,
-    // currentMood and composeSource, so Play stays active and the screen does
-    // NOT drop into the generic text-mood setup. Mirrors the image-source branch
-    // above, but the notes come from the AI mood (varySource) rather than pixels.
+    // MOOD-FROM-IMAGE source: Clear is a FULL RESET — same as MIDI/audio/score/
+    // text-mood. Drops the chord trace, the AI varySource, the thumbnail, and
+    // the mood/composeSource latches, so the user lands in clean setup where
+    // they can pick a new image, a new mood, or any other source. Previously
+    // we tried to keep the piece (rebuilt from varySource) so Play would
+    // replay it — but that left Play "glowing" after Clear with nothing
+    // visible on the canvas, which felt wrong: in MFI Clear also drops the
+    // source thumbnail, so unlike image-source there's nothing left to "stay
+    // with". Full reset is the cleaner mental model.
     // Detection: MFI sets moodFromImg=true + moodContext=true and clears
     // loadedSource, so it's distinguishable from both loaded sources and text moods.
+    // We let this fall through to the default clear() path below (which drops
+    // chords, the loaded source, draft glows, and resets mode/style) — but
+    // first we explicitly drop the MFI-only state (varySource, imgMoodThumb,
+    // composeSource, moodContext, moodFromImg) since the default path doesn't
+    // know about those.
     if(moodFromImg && moodContext && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
-      stopAll();
-      setPending([]);pendingRef.current=[];
-      pressInfo.current={};sessionStart.current=0;gridSigRef.current='';
-      setInfo(null);
-      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
-      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
-      try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
-      // Rebuild the mood piece from varySource so Play replays the same piece.
-      // CRITICAL: disp stays at 0 — chords are loaded ready-to-play but the
-      // CANVAS stays blank after Clear. Otherwise the artist overlays
-      // (pollock drips, picasso shards, miró constellations…) render at full
-      // strength against the blank background, leaving "residual" shapes that
-      // look like leftover paint. Image-mode Clear has the same setup but its
-      // canvas has opacity:0 when not playing (the photo is visible underneath),
-      // so the issue is invisible there. In MFI the canvas is opaque, so we
-      // keep disp=0 — the painting only builds as Play actually progresses.
-      { let _evts=[];
-        if(varySource&&varySource.notes&&varySource.notes.length){
-          try{ _evts=noteArr2events(varySource.notes,varySource.tempo||90)||[]; }catch(_){ _evts=[]; }
-        }
-        setChords(_evts);chordsRef.current=_evts;
-        idxRef.current=0;setDisp(0);
-      }
-      setStamp(s=>s+1); setPlayedOnce(false);
-      resumeFromRef.current=null; setHoldPaused(false);
-      setShowColorPalette(false); setCustomArmed(false);
-      // Drop the small source-image thumbnail too — Clear should remove it.
+      setVarySource(null);
       setImgMoodThumb(null);
-      // moodFromImg / moodContext / currentMood stay set and forceSetup stays
-      // false → MFI view persists with the same mood, just without the thumbnail.
-      // Return the page to its default (top) position so the header + collapsed
-      // strip are back in their resting place — same as the generic clear() path.
-      requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
-      return;
+      setComposeSource(null);
+      setMoodContext(false);
+      setMoodFromImg(false);
+      setSourceContext(null);
+      // Drop stayActive so isActiveView falls back to false once chords/sources
+      // are gone — landing the user on the clean setup screen where they can
+      // pick a new image, mood, or any other source.
+      setStayActive(false);
+      // Fall through to the default full-clear path below — it stops audio,
+      // empties chords, clears the source latches, and resets colour/style.
     }
     // Active COMPOSE: Clear means just clear — wipe the canvas and stay in
     // compose (clear() already keeps composedModeRef + draftOwner='compose').

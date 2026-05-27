@@ -8843,35 +8843,47 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
       return;
     }
-    // MOOD-FROM-IMAGE source: Clear is a FULL RESET — same as MIDI/audio/score/
-    // text-mood. Drops the chord trace, the AI varySource, the thumbnail, and
-    // the mood/composeSource latches, so the user lands in clean setup where
-    // they can pick a new image, a new mood, or any other source. Previously
-    // we tried to keep the piece (rebuilt from varySource) so Play would
-    // replay it — but that left Play "glowing" after Clear with nothing
-    // visible on the canvas, which felt wrong: in MFI Clear also drops the
-    // source thumbnail, so unlike image-source there's nothing left to "stay
-    // with". Full reset is the cleaner mental model.
+    // MOOD-FROM-IMAGE source: Clear is a FULL RESET of the painted piece —
+    // drops the chords, the AI varySource (so Play has nothing to replay),
+    // the source thumbnail, and the canvas — but STAYS in MFI canvas view so
+    // the user can tap "+ new image" (or "← image" if there's a return URL) to
+    // pick a fresh image right where they are, without bouncing through setup.
+    // Previously Clear rebuilt the chords from varySource so Play stayed
+    // active, but that left full artist-style shapes (pollock drips, picasso
+    // shards…) on the canvas as "residual" paint. Now we wipe everything,
+    // Play disables because chords are empty, and the canvas reads as blank
+    // and ready for a new image / mood. moodFromImg + moodContext stay true
+    // so the MFI affordances persist; stayActive stays true so the active
+    // view doesn't collapse.
     // Detection: MFI sets moodFromImg=true + moodContext=true and clears
     // loadedSource, so it's distinguishable from both loaded sources and text moods.
-    // We let this fall through to the default clear() path below (which drops
-    // chords, the loaded source, draft glows, and resets mode/style) — but
-    // first we explicitly drop the MFI-only state (varySource, imgMoodThumb,
-    // composeSource, moodContext, moodFromImg) since the default path doesn't
-    // know about those.
     if(moodFromImg && moodContext && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
+      stopAll();
+      setChords([]); chordsRef.current=[]; idxRef.current=0;
+      setPending([]); pendingRef.current=[];
+      pressInfo.current={}; sessionStart.current=0; gridSigRef.current='';
+      composedModeRef.current=false;
+      setDisp(0); setInfo(null);
+      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
+      try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
+      // Drop the piece itself so Play has nothing to replay (Play disables
+      // when chords are empty).
       setVarySource(null);
+      // Drop the source-image thumbnail.
       setImgMoodThumb(null);
-      setComposeSource(null);
-      setMoodContext(false);
-      setMoodFromImg(false);
-      setSourceContext(null);
-      // Drop stayActive so isActiveView falls back to false once chords/sources
-      // are gone — landing the user on the clean setup screen where they can
-      // pick a new image, mood, or any other source.
-      setStayActive(false);
-      // Fall through to the default full-clear path below — it stops audio,
-      // empties chords, clears the source latches, and resets colour/style.
+      // currentMood / composeSource: keep them so the user can still see what
+      // mood was last painted (the chip-readout above the canvas) — they'll be
+      // overwritten when a new image / mood is picked. Drop only the painted
+      // content.
+      setStamp(s=>s+1); setPlayedOnce(false);
+      resumeFromRef.current=null; setHoldPaused(false);
+      setShowColorPalette(false); setCustomArmed(false);
+      // moodFromImg / moodContext / stayActive STAY — the canvas view persists
+      // with its "+ new image" / "+ new mood" affordances. The user picks
+      // their next move from right here.
+      requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
+      return;
     }
     // Active COMPOSE: Clear means just clear — wipe the canvas and stay in
     // compose (clear() already keeps composedModeRef + draftOwner='compose').
@@ -11891,7 +11903,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.1</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.2</footer>
     </div>
   );
 }
