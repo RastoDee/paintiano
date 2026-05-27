@@ -952,6 +952,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Sing and Listen are presets of the unified MIC mode and share one draft.
   // True iff either stash slot holds a non-empty snapshot.
   const [hasMicDraft, setHasMicDraft] = useState(false);
+  // True when we're in the MIC context with the mic stopped and the canvas
+  // cleared — i.e. after Clear in MIC. Keeps the MIC view framed and shows a
+  // "tap 🎙 to record" prompt so it's clear you're still in MIC and one tap
+  // resumes recording (rather than dumping you into an ambiguous blank state).
+  const [micArmed, setMicArmed] = useState(false);
   // Which creative mode (if any) authored the chords currently on canvas.
   // 'compose'|'sing'|'listen'|null. Used to know whose stash to update.
   const draftOwnerRef = useRef(null);
@@ -2084,6 +2089,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // so each fresh source starts in the normal reading rather than inheriting
   // note-names from the previous one.
   useEffect(()=>{ setNotesMode(false); },[loadedSource,currentMood,moodFromImg]);
+  // Leaving the MIC context for another source clears the armed state too.
+  useEffect(()=>{ if(loadedSource||currentMood||moodFromImg||composeMode) setMicArmed(false); },[loadedSource,currentMood,moodFromImg,composeMode]);
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
@@ -2236,6 +2243,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       singStashRef.current=null;listenStashRef.current=null;setHasMicDraft(false);
       composeStashRef.current=null;setHasComposeDraft(false);
       draftOwnerRef.current=null;
+      // Stay in the MIC context with the mic stopped: arm it so the view stays
+      // framed and the canvas shows "tap 🎙 to record" — one tap on MIC (LIVE)
+      // resumes recording. Avoids dumping the user into an ambiguous blank state.
+      setMicArmed(true);
       return;
     }
     // A creation session may be active even when no mic stream is live: pressing
@@ -3514,7 +3525,7 @@ Composition rules:
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
-      setMicListening(true);
+      setMicListening(true);setMicArmed(false);
       startMicVol();
       stopAll();
       // Continuation (sibling preset or re-entering): preserve canvas.
@@ -3623,7 +3634,7 @@ Composition rules:
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
-      setMicPainting(true);
+      setMicPainting(true);setMicArmed(false);
       // Frame the collapsed Color·Style strip at the top with the canvas below,
       // same as Play and compose — MIC (Voice/Music) is another "performing"
       // entry point, so it gets the same scroll framing on mobile and desktop.
@@ -3996,8 +4007,8 @@ Composition rules:
   // overrides isActiveView; the "→ Canvas" resume button and picking a new
   // mood/source clear it.
   const [forceSetup, setForceSetup] = useState(false);
-  const hasContent = chords.length>0 || composeMode || micActive;
-  const isActiveView = !forceSetup && (playing || chords.length>0 || composeMode || micActive || working || stayActive);
+  const hasContent = chords.length>0 || composeMode || micActive || micArmed;
+  const isActiveView = !forceSetup && (playing || chords.length>0 || composeMode || micActive || micArmed || working || stayActive);
   // Latch stayActive whenever we're genuinely active (content on canvas, a live
   // mode, or processing). Once latched, Clear can empty the canvas without
   // bouncing back to setup; only "← Setup" un-latches it.
@@ -4190,7 +4201,7 @@ Composition rules:
               <button className="pf-mic" onClick={()=>{
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
-                if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); return; }
+                if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); return; }
                 // Start immediately in the last-used preset (default 'voice') —
                 // no upfront dialog. The preset can be flipped live on the canvas
                 // badge while recording, so the choice never blocks getting going.
@@ -4242,7 +4253,7 @@ Composition rules:
               try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
               setActive(new Set());setPlaying(false);setAnim(false);
             } else { stopAll(); wipeCanvasNow(); }
-            setWorking(false);setWLabel('');setWPct(0);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+            setWorking(false);setWLabel('');setWPct(0);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setMicArmed(false);setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
@@ -4792,25 +4803,43 @@ Composition rules:
         })()}
         {micActive && (
           <div style={{position:'absolute',top:10,left:10,zIndex:4,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:4}}>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <button onClick={()=>{
+                // STOP recording but stay in MIC (armed) — the start button below
+                // stays on the canvas so you can resume without scrolling up.
+                if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true);
+              }} title={t('micActive')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 12px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
+                <span style={{width:7,height:7,borderRadius:2,background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
+                ⏹ {t('micActive').replace(/[^\p{L} ]/gu,'')}
+              </button>
+              <button onClick={()=>{
+                // Flip the preset live: swap the running mic stream to the other mode.
+                if(micPreset==='voice'){ setMicPreset('music'); if(micPainting) stopMicPainting(); startMicListening(); }
+                else { setMicPreset('voice'); if(micListening) stopMicListening(); startMicPainting(); }
+              }} title={micPreset==='voice'?t('micVoiceHint'):t('micMusicHint')} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:'rgba(8,6,14,.5)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.5)':'rgba(100,180,255,.5)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
+                {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄
+              </button>
+            </div>
+            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.55)',background:'rgba(8,6,14,.55)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
+          </div>
+        )}
+        {micArmed && !micActive && (
+          <div style={{position:'absolute',top:10,left:10,zIndex:4,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:4}}>
             <button onClick={()=>{
-              // Flip the preset live: swap the running mic stream to the other
-              // mode. Voice = sing (monophonic, snap-to-C, piano echo); Music =
-              // listen (polyphonic chord detection, silent). Keeps you recording.
-              if(micPreset==='voice'){ setMicPreset('music'); if(micPainting) stopMicPainting(); startMicListening(); }
-              else { setMicPreset('voice'); if(micListening) stopMicListening(); startMicPainting(); }
-            }} title={micPreset==='voice'?t('micVoiceHint'):t('micMusicHint')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
-              <span style={{width:7,height:7,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
-              🎙 {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄
+              // Resume recording in the current preset — START straight on the canvas.
+              setMicArmed(false);
+              if(micPreset==='music') startMicListening(); else startMicPainting();
+            }} title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 12px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.12)':'rgba(40,140,255,.12)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
+              🎙 {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ●
             </button>
-            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.55)',background:'rgba(8,6,14,.55)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:200}}>{t('micTapToSwitch')}</div>
           </div>
         )}
         {chords.length===0&&(
           <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
-            <div style={{opacity:composeMode?.22:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':'inherit'}}>
-              {composeMode?'play the keys to paint':'play · paint · upload'}
+            <div style={{opacity:composeMode?.22:micArmed?.3:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':micArmed?(micPreset==='voice'?'rgba(255,138,138,.95)':'rgba(140,200,255,.95)'):'inherit'}}>
+              {composeMode?'play the keys to paint':micArmed?t('micTapToRecord'):'play · paint · upload'}
             </div>
-            <div style={{opacity:composeMode?.08:.05,fontSize:'2.8rem'}}>♩</div>
+            <div style={{opacity:composeMode?.08:micArmed?.12:.05,fontSize:'2.8rem'}}>{micArmed?'🎙':'♩'}</div>
           </div>
         )}
       </div>
@@ -5212,7 +5241,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.8</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.9</footer>
     </div>
   );
 }
