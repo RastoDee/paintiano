@@ -4651,6 +4651,7 @@ const I18N = {
     midiInput:'♬ MIDI INPUT', audioInput:'♫ AUDIO INPUT', scoreInput:'𝄞 SCORE INPUT', imageInput:'🖼 IMAGE INPUT', micInput:'🎙 MIC INPUT',
     micVoiceHint:'sing, hum or whistle · snaps to C major · monophonic',
     micMusicHint:'play music from a nearby speaker · paints on chord changes',
+    micTapToSwitch:'tap to switch voice ⇄ music',
     builtInSample:'▶ built-in sample', chooseFile:'📁 choose file', cancel:'cancel',
     close:'close',
   },
@@ -4696,6 +4697,7 @@ const I18N = {
     midiInput:'♬ MIDI EINGABE', audioInput:'♫ AUDIO EINGABE', scoreInput:'𝄞 PARTITUR EINGABE', imageInput:'🖼 BILD EINGABE', micInput:'🎙 MIKRO EINGABE',
     micVoiceHint:'singen, summen oder pfeifen · auf C-Dur eingerastet · monophon',
     micMusicHint:'musik aus nahem lautsprecher · malt bei akkordwechsel',
+    micTapToSwitch:'tippen für Stimme ⇄ Musik',
     builtInSample:'▶ integriertes beispiel', chooseFile:'📁 datei wählen', cancel:'abbrechen',
     close:'schließen',
   },
@@ -4741,6 +4743,7 @@ const I18N = {
     midiInput:'♬ ENTRÉE MIDI', audioInput:'♫ ENTRÉE AUDIO', scoreInput:'𝄞 ENTRÉE PARTITION', imageInput:'🖼 ENTRÉE IMAGE', micInput:'🎙 ENTRÉE MICRO',
     micVoiceHint:'chanter, fredonner ou siffler · ancré en do majeur · monophonique',
     micMusicHint:'musique d\'un haut-parleur proche · peint aux changements d\'accord',
+    micTapToSwitch:'toucher pour voix ⇄ musique',
     builtInSample:'▶ exemple intégré', chooseFile:'📁 choisir fichier', cancel:'annuler',
     close:'fermer',
   },
@@ -4786,6 +4789,7 @@ const I18N = {
     midiInput:'♬ ENTRADA MIDI', audioInput:'♫ ENTRADA AUDIO', scoreInput:'𝄞 ENTRADA PARTITURA', imageInput:'🖼 ENTRADA IMAGEN', micInput:'🎙 ENTRADA MICRO',
     micVoiceHint:'canta, tararea o silba · ajustado a do mayor · monofónico',
     micMusicHint:'música de un altavoz cercano · pinta en cambios de acorde',
+    micTapToSwitch:'toca para voz ⇄ música',
     builtInSample:'▶ ejemplo integrado', chooseFile:'📁 elegir archivo', cancel:'cancelar',
     close:'cerrar',
   },
@@ -4831,6 +4835,7 @@ const I18N = {
     midiInput:'♬ MIDI VSTUP', audioInput:'♫ AUDIO VSTUP', scoreInput:'𝄞 VSTUP PARTITÚRY', imageInput:'🖼 OBRAZOVÝ VSTUP', micInput:'🎙 VSTUP MIKROFÓNU',
     micVoiceHint:'spievaj, hum alebo pískaj · prichytí na C dur · monofónne',
     micMusicHint:'pusti hudbu z blízkeho reproduktora · maľuje pri zmene akordu',
+    micTapToSwitch:'ťukni pre prepnutie hlas ⇄ hudba',
     builtInSample:'▶ vstavaná ukážka', chooseFile:'📁 vybrať súbor', cancel:'zrušiť',
     close:'zavrieť',
   },
@@ -5573,6 +5578,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> maps the same twelve in strict chromatic order at 30° steps — C is red, every semitone shifts one notch. A more literal "one colour per note", useful for picking out a melodic line.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Painting styles</h3>
     <p style={{margin:'0 0 12px'}}><strong>Mosaic</strong> is the default — sharp φ-rectangles, its own button at the start of the row. Eight optional styles reinterpret the same notes:</p>
+    <p style={{margin:'0 0 12px'}}>Tap the Mosaic button again to flip it into <strong>Notes</strong> — the same φ-grid, but each block is labelled with its note name (C4, E♭5…) instead of filled with colour. It's the literal reading of the grid, available on every source — mood, image, MIDI, audio, score or your own composition.</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubist</strong> (inspired by Picasso) — cubist planes; either angular analytic shards or a synthetic cut-paper collage.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Dots</strong> (inspired by Kusama) — polka dots on colour blocks, or an all-over dot-field that shimmers across a single tonal ground.</li>
@@ -5595,7 +5601,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>The result is specific to the painting: not random, not literal, but a structured reading where the colour palette becomes a harmonic palette.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Compose &amp; MIC</h3>
     <p style={{margin:'0 0 12px'}}>Two ways to create from scratch. <strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> reveals an on-screen piano — tap or hold keys, longer holds make wider blocks. Hardware keyboard: A–L for white keys, W/E/T/Y/U/O/P for black. Backspace undoes the last chord, Enter toggles the keyboard, Space plays/pauses. Held chords are named live (C maj, A min…) in the readout.</p>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MIC</strong> uses your microphone in one of two presets. <strong style={{color:'rgba(255,140,140,.95)'}}>Voice</strong> tracks pitch continuously, snaps to C major, plays your note through the sampler, and paints it — sing, hum, or whistle, one note at a time. <strong style={{color:'rgba(140,200,255,.95)'}}>Music</strong> listens to ambient music from a nearby speaker, detects pitches, and paints silently on each chord change. The MIC button glows red for Voice, blue for Music. On iOS, same-device speaker audio is suppressed by the OS — use an external speaker for Music.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MIC</strong> uses your microphone in one of two presets. <strong style={{color:'rgba(255,140,140,.95)'}}>Voice</strong> tracks pitch continuously, snaps to C major, plays your note through the sampler, and paints it — sing, hum, or whistle, one note at a time. <strong style={{color:'rgba(140,200,255,.95)'}}>Music</strong> listens to ambient music from a nearby speaker, detects pitches, and paints silently on each chord change. Tapping 🎙 MIC starts recording straight away in the last-used preset — no upfront choice. While it's live, a small <strong style={{color:'rgba(255,140,140,.95)'}}>voice</strong>/<strong style={{color:'rgba(140,200,255,.95)'}}>music</strong> badge sits on the canvas; tap it to flip presets and hear the difference in context. On iOS, same-device speaker audio is suppressed by the OS — use an external speaker for Music.</p>
     <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>In both live modes the canvas is a fixed golden-ratio frame: block widths stay proportional to hold time, and rows shrink as you add chords — the painting densifies into finer detail rather than growing taller. Imported sources (MIDI, audio, score, image, mood) keep the original grow-with-content canvas.</p>
   </>),
   DE: () => (<>
@@ -5612,6 +5618,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spektral</strong> bildet dieselben zwölf in streng chromatischer Reihenfolge in 30°-Schritten ab — C ist Rot, jeder Halbton verschiebt um eine Stufe. Wörtlicher „eine Farbe pro Note", gut zum Herausfiltern einer Melodielinie.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Malstile</h3>
     <p style={{margin:'0 0 12px'}}><strong>Mosaik</strong> ist der Standard — scharfe φ-Rechtecke, ein eigener Button am Anfang der Reihe. Acht optionale Stile deuten dieselben Noten neu:</p>
+    <p style={{margin:'0 0 12px'}}>Tippe den Mosaik-Button erneut an, um ihn auf <strong>Noten</strong> umzuschalten — dasselbe φ-Raster, aber jeder Block trägt seinen Notennamen (C4, Es5…) statt einer Farbfüllung. Es ist die wörtliche Lesart des Rasters, verfügbar bei jeder Quelle — Stimmung, Bild, MIDI, Audio, Partitur oder deiner eigenen Komposition.</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubismus</strong> (inspiriert von Picasso) — kubistische Flächen; entweder kantige analytische Splitter oder eine synthetische Scherenschnitt-Collage.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Punkte</strong> (inspiriert von Kusama) — Punkte auf Farbblöcken oder ein flächendeckendes, schimmerndes Punktfeld.</li>
@@ -5634,7 +5641,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Das Ergebnis ist spezifisch für das Gemälde: nicht zufällig, nicht wörtlich, sondern eine strukturierte Lesart, in der die Farbpalette zur harmonischen Palette wird.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Komponieren &amp; MIKRO</h3>
     <p style={{margin:'0 0 12px'}}>Zwei Wege, von Grund auf neu zu erschaffen. <strong style={{color:'rgba(201,168,76,.95)'}}>Komponieren</strong> öffnet ein Bildschirmklavier — antippen oder halten, längeres Halten erzeugt breitere Blöcke. Hardware-Tastatur: A–L für weiße Tasten, W/E/T/Y/U/O/P für schwarze. Rücktaste macht den letzten Akkord rückgängig, Enter blendet die Tastatur ein/aus, Leertaste spielt/pausiert. Gehaltene Akkorde werden live benannt (C-Dur, a-Moll…).</p>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MIKRO</strong> verwendet dein Mikrofon in einem von zwei Presets. <strong style={{color:'rgba(255,140,140,.95)'}}>Stimme</strong> verfolgt die Tonhöhe fortlaufend, rastet auf C-Dur ein, spielt deinen Ton durch den Sampler und malt ihn — singen, summen oder pfeifen, ein Ton nach dem anderen. <strong style={{color:'rgba(140,200,255,.95)'}}>Musik</strong> hört Umgebungsmusik von einem nahen Lautsprecher, erkennt die Tonhöhen und malt ohne eigenen Ton bei jedem Akkordwechsel. Die MIKRO-Schaltfläche leuchtet rot für Stimme, blau für Musik. Auf iOS wird der Ton vom selben Gerät vom OS unterdrückt — für Musik einen externen Lautsprecher verwenden.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MIKRO</strong> verwendet dein Mikrofon in einem von zwei Presets. <strong style={{color:'rgba(255,140,140,.95)'}}>Stimme</strong> verfolgt die Tonhöhe fortlaufend, rastet auf C-Dur ein, spielt deinen Ton durch den Sampler und malt ihn — singen, summen oder pfeifen, ein Ton nach dem anderen. <strong style={{color:'rgba(140,200,255,.95)'}}>Musik</strong> hört Umgebungsmusik von einem nahen Lautsprecher, erkennt die Tonhöhen und malt ohne eigenen Ton bei jedem Akkordwechsel. Ein Tippen auf 🎙 MIKRO startet die Aufnahme sofort im zuletzt genutzten Preset — keine Vorab-Wahl. Während es läuft, sitzt ein kleines <strong style={{color:'rgba(255,140,140,.95)'}}>Stimme</strong>/<strong style={{color:'rgba(140,200,255,.95)'}}>Musik</strong>-Abzeichen auf der Leinwand; tippe es an, um die Presets zu wechseln und den Unterschied im Kontext zu hören. Auf iOS wird der Ton vom selben Gerät vom OS unterdrückt — für Musik einen externen Lautsprecher verwenden.</p>
     <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>In beiden Live-Modi ist die Leinwand ein fester Rahmen im goldenen Schnitt: die Blockbreite bleibt proportional zur Haltedauer, und die Zeilen werden mit jedem Akkord schmaler — das Bild verdichtet sich in feinere Details, statt höher zu wachsen. Importierte Quellen (MIDI, Audio, Partitur, Bild, Stimmung) behalten die ursprüngliche mitwachsende Leinwand.</p>
   </>),
   FR: () => (<>
@@ -5651,6 +5658,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> mappe les douze en ordre chromatique strict par pas de 30° — Do est rouge, chaque demi-ton décale d'un cran. Plus littéral, « une couleur par note », utile pour suivre une ligne mélodique.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Styles picturaux</h3>
     <p style={{margin:'0 0 12px'}}>La <strong>mosaïque</strong> est le réglage par défaut — des rectangles φ nets, avec son propre bouton en tête de ligne. Huit styles optionnels réinterprètent les mêmes notes :</p>
+    <p style={{margin:'0 0 12px'}}>Appuyez à nouveau sur le bouton Mosaïque pour le basculer en <strong>Notes</strong> — la même grille φ, mais chaque bloc porte son nom de note (Do4, Mi♭5…) au lieu d'être rempli de couleur. C'est la lecture littérale de la grille, disponible sur toute source — humeur, image, MIDI, audio, partition ou votre propre composition.</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubiste</strong> (inspiré par Picasso) — plans cubistes ; soit des éclats analytiques anguleux, soit un collage synthétique de papiers découpés.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Pois</strong> (inspiré par Kusama) — pois sur blocs de couleur, ou un champ de points scintillant sur toute la toile.</li>
@@ -5673,7 +5681,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Le résultat est propre à la peinture : ni aléatoire, ni littéral, mais une lecture structurée où la palette de couleurs devient une palette harmonique.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Composer &amp; MICRO</h3>
     <p style={{margin:'0 0 12px'}}>Deux façons de créer de toutes pièces. <strong style={{color:'rgba(201,168,76,.95)'}}>Composer</strong> révèle un piano à l'écran — appuyer ou maintenir les touches, un maintien plus long produit des blocs plus larges. Clavier physique : A–L touches blanches, W/E/T/Y/U/O/P noires. Retour arrière annule le dernier accord, Entrée affiche/masque le clavier, Espace lit/met en pause. Les accords maintenus sont nommés en direct (Do maj, La min…).</p>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MICRO</strong> utilise votre microphone dans l'un des deux préréglages. <strong style={{color:'rgba(255,140,140,.95)'}}>Voix</strong> détecte la hauteur en continu, l'ancre en Do majeur, joue votre note via le sampler et la peint — chanter, fredonner ou siffler, une note à la fois. <strong style={{color:'rgba(140,200,255,.95)'}}>Musique</strong> écoute la musique ambiante d'un haut-parleur proche, détecte les hauteurs et peint sans son à chaque changement d'accord. Le bouton MICRO s'illumine en rouge pour Voix, en bleu pour Musique. Sur iOS, l'audio du même appareil est supprimé par le système — utilisez un haut-parleur externe pour Musique.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MICRO</strong> utilise votre microphone dans l'un des deux préréglages. <strong style={{color:'rgba(255,140,140,.95)'}}>Voix</strong> détecte la hauteur en continu, l'ancre en Do majeur, joue votre note via le sampler et la peint — chanter, fredonner ou siffler, une note à la fois. <strong style={{color:'rgba(140,200,255,.95)'}}>Musique</strong> écoute la musique ambiante d'un haut-parleur proche, détecte les hauteurs et peint sans son à chaque changement d'accord. Une pression sur 🎙 MICRO lance l'enregistrement aussitôt dans le dernier préréglage utilisé — aucun choix préalable. Pendant l'enregistrement, un petit badge <strong style={{color:'rgba(255,140,140,.95)'}}>voix</strong>/<strong style={{color:'rgba(140,200,255,.95)'}}>musique</strong> apparaît sur la toile ; touchez-le pour changer de préréglage et entendre la différence en contexte. Sur iOS, l'audio du même appareil est supprimé par le système — utilisez un haut-parleur externe pour Musique.</p>
     <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>Dans les deux modes en direct, la toile est un cadre fixe au nombre d'or : la largeur des blocs reste proportionnelle au temps de maintien, et les rangées rétrécissent à mesure que des accords s'ajoutent — la peinture se densifie en détails plus fins plutôt que de s'allonger. Les sources importées (MIDI, audio, partition, image, ambiance) conservent la toile qui grandit avec le contenu.</p>
   </>),
   ES: () => (<>
@@ -5690,6 +5698,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Espectral</strong> mapea las mismas doce en orden cromático estricto a pasos de 30° — Do es rojo, cada semitono desplaza un paso. Más literal, «un color por nota», útil para seguir una línea melódica.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Estilos pictóricos</h3>
     <p style={{margin:'0 0 12px'}}>El <strong>mosaico</strong> es el modo por defecto — rectángulos φ nítidos, con su propio botón al inicio de la fila. Ocho estilos opcionales reinterpretan las mismas notas:</p>
+    <p style={{margin:'0 0 12px'}}>Toca de nuevo el botón Mosaico para convertirlo en <strong>Notas</strong> — la misma cuadrícula φ, pero cada bloque lleva su nombre de nota (Do4, Mi♭5…) en lugar de rellenarse de color. Es la lectura literal de la cuadrícula, disponible en cualquier fuente — estado, imagen, MIDI, audio, partitura o tu propia composición.</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubista</strong> (inspirado en Picasso) — planos cubistas; o esquirlas analíticas angulosas, o un collage sintético de papel recortado.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Lunares</strong> (inspirado en Kusama) — lunares sobre bloques de color, o un campo de puntos que reluce por todo el lienzo.</li>
@@ -5712,7 +5721,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>El resultado es específico de la pintura: ni aleatorio, ni literal, sino una lectura estructurada donde la paleta de colores se vuelve paleta armónica.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Componer &amp; MICRO</h3>
     <p style={{margin:'0 0 12px'}}>Dos formas de crear desde cero. <strong style={{color:'rgba(201,168,76,.95)'}}>Componer</strong> muestra un piano en pantalla — toca o mantén las teclas, mantener más tiempo produce bloques más anchos. Teclado físico: A–L teclas blancas, W/E/T/Y/U/O/P negras. Retroceso deshace el último acorde, Enter muestra/oculta el teclado, Espacio reproduce/pausa. Los acordes mantenidos se nombran en vivo (Do may, La min…).</p>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MICRO</strong> usa tu micrófono en uno de dos preajustes. <strong style={{color:'rgba(255,140,140,.95)'}}>Voz</strong> rastrea el tono continuamente, lo ajusta a Do mayor, lo toca por el sampler y lo pinta — canta, tararea o silba, una nota a la vez. <strong style={{color:'rgba(140,200,255,.95)'}}>Música</strong> escucha música ambiente de un altavoz cercano, detecta las alturas y pinta en silencio en cada cambio de acorde. El botón MICRO brilla en rojo para Voz, en azul para Música. En iOS, el audio del mismo dispositivo lo suprime el sistema — usa un altavoz externo para Música.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MICRO</strong> usa tu micrófono en uno de dos preajustes. <strong style={{color:'rgba(255,140,140,.95)'}}>Voz</strong> rastrea el tono continuamente, lo ajusta a Do mayor, lo toca por el sampler y lo pinta — canta, tararea o silba, una nota a la vez. <strong style={{color:'rgba(140,200,255,.95)'}}>Música</strong> escucha música ambiente de un altavoz cercano, detecta las alturas y pinta en silencio en cada cambio de acorde. Tocar 🎙 MICRO inicia la grabación de inmediato en el último preajuste usado — sin elección previa. Mientras está activo, una pequeña insignia <strong style={{color:'rgba(255,140,140,.95)'}}>voz</strong>/<strong style={{color:'rgba(140,200,255,.95)'}}>música</strong> aparece en el lienzo; tócala para cambiar de preajuste y oír la diferencia en contexto. En iOS, el audio del mismo dispositivo lo suprime el sistema — usa un altavoz externo para Música.</p>
     <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>En ambos modos en vivo el lienzo es un marco fijo en proporción áurea: el ancho de los bloques permanece proporcional al tiempo de pulsación, y las filas se afinan con cada acorde — la pintura se densifica en detalles más finos en vez de alargarse. Las fuentes importadas (MIDI, audio, partitura, imagen, estado de ánimo) mantienen el lienzo que crece con el contenido.</p>
   </>),
   SK: () => (<>
@@ -5729,6 +5738,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Spektrum</strong> mapuje tých istých dvanásť v striktnom chromatickom poradí v krokoch 30° — C je červené, každý poltón posunie o jeden krok. Doslovnejšie „jedna farba na tón", užitočné pre sledovanie melodickej línie.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Maliarske štýly</h3>
     <p style={{margin:'0 0 12px'}}><strong>Mozaika</strong> je predvolený režim — ostré φ-obdĺžniky, vlastné tlačidlo na začiatku riadku. Osem voliteľných štýlov interpretuje tie isté noty inak:</p>
+    <p style={{margin:'0 0 12px'}}>Ťukni na tlačidlo Mozaika znova a prepneš ho na <strong>Noty</strong> — tá istá φ-mriežka, ale každý blok nesie názov svojho tónu (C4, Es5…) namiesto výplne farbou. Je to doslovné čítanie mriežky, dostupné pri každom zdroji — nálada, obraz, MIDI, audio, partitúra či tvoja vlastná skladba.</p>
     <ul style={{margin:'0 0 12px',paddingLeft:20}}>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubizmus</strong> (inšpirované Picassom) — kubistické plochy; buď hranaté analytické úlomky, alebo syntetická koláž z vystrihovaného papiera.</li>
       <li style={{marginBottom:5}}><strong style={{color:'rgba(210,170,255,.9)'}}>Bodky</strong> (inšpirované Kusamou) — bodky na farebných blokoch, alebo trblietavé bodkové pole cez celé plátno.</li>
@@ -5751,7 +5761,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Výsledok je špecifický pre obraz: nie náhodný, nie doslovný, ale štruktúrované čítanie, kde sa farebná paleta stáva harmonickou paletou.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Komponovať &amp; MIKRO</h3>
     <p style={{margin:'0 0 12px'}}>Dva spôsoby tvorby od nuly. <strong style={{color:'rgba(201,168,76,.95)'}}>Komponovať</strong> zobrazí klavír na obrazovke — ťukni alebo podrž klávesy, dlhšie podržanie vytvára širšie bloky. Hardvérová klávesnica: A–L biele klávesy, W/E/T/Y/U/O/P čierne. Backspace odvolá posledný akord, Enter prepína klávesnicu, medzerník hrá/pozastaví. Podržané akordy sa pomenúvajú naživo (C dur, a mol…).</p>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MIKRO</strong> používa tvoj mikrofón v jednom z dvoch režimov. <strong style={{color:'rgba(255,140,140,.95)'}}>Hlas</strong> sleduje výšku tónu priebežne, prichytí ju na C dur, prehrá cez sampler a namaľuje ju — spievaj, mrnkaj alebo pískaj, jeden tón naraz. <strong style={{color:'rgba(140,200,255,.95)'}}>Hudba</strong> počúva ambientnú hudbu z blízkeho reproduktora, detekuje výšky a maľuje ticho pri každej zmene akordu. Tlačidlo MIKRO svieti červeno pre Hlas, modro pre Hudbu. Na iOS je zvuk z toho istého zariadenia potlačený OS — pre Hudbu použi externý reproduktor.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>MIKRO</strong> používa tvoj mikrofón v jednom z dvoch režimov. <strong style={{color:'rgba(255,140,140,.95)'}}>Hlas</strong> sleduje výšku tónu priebežne, prichytí ju na C dur, prehrá cez sampler a namaľuje ju — spievaj, mrnkaj alebo pískaj, jeden tón naraz. <strong style={{color:'rgba(140,200,255,.95)'}}>Hudba</strong> počúva ambientnú hudbu z blízkeho reproduktora, detekuje výšky a maľuje ticho pri každej zmene akordu. Ťuknutie na 🎙 MIKRO spustí nahrávanie hneď v naposledy použitom režime — bez voľby vopred. Počas nahrávania je na plátne malý odznak <strong style={{color:'rgba(255,140,140,.95)'}}>hlas</strong>/<strong style={{color:'rgba(140,200,255,.95)'}}>hudba</strong>; ťuknutím naň režim prepneš a počuješ rozdiel v kontexte. Na iOS je zvuk z toho istého zariadenia potlačený OS — pre Hudbu použi externý reproduktor.</p>
     <p style={{margin:'0 0 4px',fontStyle:'italic',opacity:.75}}>V oboch živých režimoch je plátno pevný rám v zlatom reze: šírky blokov zostávajú úmerné dĺžke stlačenia a riadky sa s každým akordom zužujú — obraz sa zhusťuje do jemnejších detailov, namiesto aby rástol do výšky. Importované zdroje (MIDI, audio, partitúra, obraz, nálada) si zachovávajú plátno, ktoré rastie s obsahom.</p>
   </>),
 };
@@ -5807,7 +5817,7 @@ const GUIDE_I18N = {
   {id:'mobile-keys', title:`Mobile keyboard — swipe to scroll`, keywords:`mobile phone iphone ipad touch swipe scroll keyboard piano keys 88 horizontal pan`,
    body:`The on-screen piano shows all 88 keys, which extends far beyond the phone screen width. Swipe horizontally across the keyboard area to pan across the full range — tapping a key still plays the note, sliding scrolls. C4 (middle C) sits roughly in the centre. On PC the keyboard fits the page; only mobile needs panning.`},
   {id:'mic', title:`🎙 MIC — Voice / Music`, keywords:`mic microphone sing listen voice music hum whistle ambient speaker spotify room sound painting live preset`,
-   body:`Tap 🎙 MIC to open the input dialog. Two presets, each suited to a different kind of sound. ◆ 🎤 Voice — sing, hum, or whistle. The app detects your pitch continuously, snaps it to C major, plays each note through the piano sampler, and paints it as a block. Monophonic: one note at a time. The active MIC button glows red. ◆ 🔊 Music — for ambient music rather than voice. Play music from an external speaker or another device nearby. Paintiano detects the pitches and paints silently only when the chord changes. On iOS, same-device speaker audio is suppressed by the OS — use a separate source. The active MIC button glows blue. ◆ Tap the active MIC button (🎙 LIVE) to stop. Preset is remembered across sessions.`},
+   body:`Tap 🎙 MIC to start recording straight away in the last-used preset — no dialog, no upfront choice. While it's live, a small voice/music badge sits in the corner of the canvas; tap it to flip presets and hear the difference in context. Two presets, each suited to a different kind of sound. ◆ 🎤 Voice — sing, hum, or whistle. The app detects your pitch continuously, snaps it to C major, plays each note through the piano sampler, and paints it as a block. Monophonic: one note at a time. The badge glows red. ◆ 🔊 Music — for ambient music rather than voice. Play music from an external speaker or another device nearby. Paintiano detects the pitches and paints silently only when the chord changes. On iOS, same-device speaker audio is suppressed by the OS — use a separate source. The badge glows blue. ◆ Tap the active MIC button (🎙 LIVE) to stop. Preset is remembered across sessions.`},
   {id:'scale-snap', title:`Scale snap (advanced)`, keywords:`scale snap key major minor chromatic free advanced`,
    body:`In Compose mode, the ⚙ icon reveals a scale-snap selector. Snap input to C maj, A min, G maj, E min, D maj, F maj, or D min — notes outside the chosen scale are pulled to the nearest in-scale neighbour. Set to "free" (default) for full chromatic.`},
   {id:'moods', title:`Mood selector`, keywords:`mood ai compose generate emotion feeling type any language`,
@@ -5863,7 +5873,7 @@ const GUIDE_I18N = {
   {id:'mobile-keys', title:`Mobile Tastatur — wischen zum Scrollen`, keywords:`mobil handy iphone ipad berühren wischen scrollen tastatur klavier tasten 88 horizontal`,
    body:`Das Bildschirmklavier zeigt alle 88 Tasten, die weit über die Handybreite hinausgehen. Horizontal über den Tastaturbereich wischen, um durch den gesamten Bereich zu pannen — eine Taste antippen spielt den Ton, Wischen scrollt. C4 (mittleres C) liegt etwa in der Mitte. Am PC passt die Tastatur auf die Seite; nur mobil ist Pannen nötig.`},
   {id:'mic', title:`🎙 MIKRO — Stimme / Musik`, keywords:`mikro mikrofon singen lauschen stimme musik summen pfeifen umgebung lautsprecher spotify raum klang malen live preset`,
-   body:`🎙 MIKRO antippen, um den Eingabedialog zu öffnen. Zwei Presets, jedes für eine andere Klangart geeignet. ◆ 🎤 Stimme — singen, summen oder pfeifen. Die App erkennt deine Tonhöhe fortlaufend, rastet sie auf C-Dur ein, spielt jeden Ton über den Klavier-Sampler und malt ihn als Block. Monophon: ein Ton nach dem anderen. Die aktive MIKRO-Schaltfläche leuchtet rot. ◆ 🔊 Musik — für Umgebungsmusik statt Stimme. Musik von einem externen Lautsprecher oder einem nahen Gerät abspielen. Paintiano erkennt die Akkorde und malt ohne eigenen Ton nur bei Akkordwechsel. Auf iOS wird der Ton vom selben Gerät vom System unterdrückt — verwende eine separate Quelle. Die aktive MIKRO-Schaltfläche leuchtet blau. ◆ Aktive MIKRO-Schaltfläche (🎙 LIVE) antippen zum Stoppen. Preset wird über Sitzungen hinweg gespeichert.`},
+   body:`🎙 MIKRO antippen, um die Aufnahme sofort im zuletzt genutzten Preset zu starten — kein Dialog, keine Vorab-Wahl. Während es läuft, sitzt ein kleines Stimme/Musik-Abzeichen in der Ecke der Leinwand; antippen, um die Presets zu wechseln und den Unterschied im Kontext zu hören. Zwei Presets, jedes für eine andere Klangart geeignet. ◆ 🎤 Stimme — singen, summen oder pfeifen. Die App erkennt deine Tonhöhe fortlaufend, rastet sie auf C-Dur ein, spielt jeden Ton über den Klavier-Sampler und malt ihn als Block. Monophon: ein Ton nach dem anderen. Das Abzeichen leuchtet rot. ◆ 🔊 Musik — für Umgebungsmusik statt Stimme. Musik von einem externen Lautsprecher oder einem nahen Gerät abspielen. Paintiano erkennt die Akkorde und malt ohne eigenen Ton nur bei Akkordwechsel. Auf iOS wird der Ton vom selben Gerät vom System unterdrückt — verwende eine separate Quelle. Das Abzeichen leuchtet blau. ◆ Aktive MIKRO-Schaltfläche (🎙 LIVE) antippen zum Stoppen. Preset wird über Sitzungen hinweg gespeichert.`},
   {id:'scale-snap', title:`Tonleiter-Einrasten (erweitert)`, keywords:`tonleiter einrasten dur moll chromatisch frei erweitert`,
    body:`Im Komponier-Modus zeigt das ⚙-Symbol einen Tonleiter-Selektor. Eingabe auf C-Dur, a-Moll, G-Dur, e-Moll, D-Dur, F-Dur oder d-Moll einrasten lassen. "Frei" für vollständig chromatisch.`},
   {id:'moods', title:`Stimmungsauswahl`, keywords:`stimmung ki komponieren generieren gefühl emotion eingeben sprache`,
@@ -5919,7 +5929,7 @@ const GUIDE_I18N = {
   {id:'mobile-keys', title:`Clavier mobile — glisser pour défiler`, keywords:`mobile téléphone iphone ipad toucher glisser défiler clavier piano touches 88 horizontal pan`,
    body:`Le piano à l'écran affiche les 88 touches, qui s'étendent bien au-delà de la largeur du téléphone. Glissez horizontalement sur la zone du clavier pour parcourir toute l'étendue — toucher une touche joue la note, glisser fait défiler. Le Do central (C4) se trouve à peu près au centre. Sur PC le clavier tient sur la page ; seul le mobile nécessite le défilement.`},
   {id:'mic', title:`🎙 MICRO — Voix / Musique`, keywords:`micro microphone chanter écouter voix musique fredonner siffler ambiance haut-parleur spotify pièce son peinture live préréglage`,
-   body:`Appuyez sur 🎙 MICRO pour ouvrir la boîte de dialogue d'entrée. Deux préréglages, chacun adapté à un type de son. ◆ 🎤 Voix — chantez, fredonnez ou sifflez. L'app détecte votre hauteur en continu, l'ancre en Do majeur, joue chaque note via le sampler piano et la peint en bloc. Monophonique : une note à la fois. Le bouton MICRO actif s'illumine en rouge. ◆ 🔊 Musique — pour la musique ambiante plutôt que la voix. Jouez de la musique depuis un haut-parleur externe ou un autre appareil proche. Paintiano détecte les accords et peint silencieusement uniquement aux changements. Sur iOS, l'audio du même appareil est supprimé par le système — utilisez une source séparée. Le bouton MICRO actif s'illumine en bleu. ◆ Appuyez sur le bouton MICRO actif (🎙 LIVE) pour arrêter. Le préréglage est conservé entre les sessions.`},
+   body:`Appuyez sur 🎙 MICRO pour lancer l'enregistrement aussitôt dans le dernier préréglage utilisé — aucune boîte de dialogue, aucun choix préalable. Pendant l'enregistrement, un petit badge voix/musique apparaît dans le coin de la toile ; touchez-le pour changer de préréglage et entendre la différence en contexte. Deux préréglages, chacun adapté à un type de son. ◆ 🎤 Voix — chantez, fredonnez ou sifflez. L'app détecte votre hauteur en continu, l'ancre en Do majeur, joue chaque note via le sampler piano et la peint en bloc. Monophonique : une note à la fois. Le badge s'illumine en rouge. ◆ 🔊 Musique — pour la musique ambiante plutôt que la voix. Jouez de la musique depuis un haut-parleur externe ou un autre appareil proche. Paintiano détecte les accords et peint silencieusement uniquement aux changements. Sur iOS, l'audio du même appareil est supprimé par le système — utilisez une source séparée. Le badge s'illumine en bleu. ◆ Appuyez sur le bouton MICRO actif (🎙 LIVE) pour arrêter. Le préréglage est conservé entre les sessions.`},
   {id:'scale-snap', title:`Accrochage à la gamme (avancé)`, keywords:`gamme accrochage majeur mineur chromatique libre avancé`,
    body:`En mode Composer, l'icône ⚙ révèle un sélecteur de gamme. Accrocher à Do maj, La min, Sol maj, Mi min, Ré maj, Fa maj ou Ré min. "Libre" pour chromatique complet.`},
   {id:'moods', title:`Sélecteur d'humeur`, keywords:`humeur ia composer générer émotion ressenti saisir langue`,
@@ -5975,7 +5985,7 @@ const GUIDE_I18N = {
   {id:'mobile-keys', title:`Teclado móvil — desliza para desplazar`, keywords:`móvil teléfono iphone ipad táctil deslizar desplazar teclado piano teclas 88 horizontal panorámica`,
    body:`El piano en pantalla muestra las 88 teclas, que se extienden más allá del ancho del teléfono. Desliza horizontalmente sobre el área del teclado para recorrer todo el rango — tocar una tecla toca la nota, deslizar desplaza. El Do central (C4) está aproximadamente en el centro. En PC el teclado cabe en la página; solo el móvil necesita desplazamiento.`},
   {id:'mic', title:`🎙 MICRO — Voz / Música`, keywords:`micro micrófono cantar escuchar voz música tararear silbar ambiente altavoz spotify sala sonido pintura en vivo preajuste`,
-   body:`Pulsa 🎙 MICRO para abrir el diálogo de entrada. Dos preajustes, cada uno para un tipo de sonido. ◆ 🎤 Voz — canta, tararea o silba. La app detecta tu tono continuamente, lo ajusta a Do mayor, lo toca a través del sampler de piano y pinta cada nota como un bloque. Monofónico: una nota a la vez. El botón MICRO activo brilla en rojo. ◆ 🔊 Música — para música ambiente en lugar de voz. Reproduce música desde un altavoz externo u otro dispositivo cercano. Paintiano detecta los acordes y pinta en silencio solo cuando cambia el acorde. En iOS, el audio del mismo dispositivo es suprimido por el sistema — usa una fuente separada. El botón MICRO activo brilla en azul. ◆ Pulsa el botón MICRO activo (🎙 LIVE) para detener. El preajuste se conserva entre sesiones.`},
+   body:`Pulsa 🎙 MICRO para iniciar la grabación de inmediato en el último preajuste usado — sin diálogo, sin elección previa. Mientras está activo, una pequeña insignia voz/música aparece en la esquina del lienzo; tócala para cambiar de preajuste y oír la diferencia en contexto. Dos preajustes, cada uno para un tipo de sonido. ◆ 🎤 Voz — canta, tararea o silba. La app detecta tu tono continuamente, lo ajusta a Do mayor, lo toca a través del sampler de piano y pinta cada nota como un bloque. Monofónico: una nota a la vez. La insignia brilla en rojo. ◆ 🔊 Música — para música ambiente en lugar de voz. Reproduce música desde un altavoz externo u otro dispositivo cercano. Paintiano detecta los acordes y pinta en silencio solo cuando cambia el acorde. En iOS, el audio del mismo dispositivo es suprimido por el sistema — usa una fuente separada. La insignia brilla en azul. ◆ Pulsa el botón MICRO activo (🎙 LIVE) para detener. El preajuste se conserva entre sesiones.`},
   {id:'scale-snap', title:`Ajuste de escala (avanzado)`, keywords:`escala ajuste mayor menor cromático libre avanzado`,
    body:`En modo Componer, el icono ⚙ muestra un selector de escala. Ajustar a Do maj, La min, Sol maj, Mi min, Re maj, Fa maj o Re min. "Libre" para cromático completo.`},
   {id:'moods', title:`Selector de estado`, keywords:`estado ia componer generar emoción sentimiento escribir idioma`,
@@ -6031,7 +6041,7 @@ const GUIDE_I18N = {
   {id:'mobile-keys', title:`Mobilná klaviatúra — potiahnutím rolovať`, keywords:`mobil telefón iphone ipad dotyk potiahnuť rolovať klaviatúra klavír klávesy 88 horizontálne posúvanie`,
    body:`Klavír na obrazovke zobrazuje všetkých 88 klávesov, čo presahuje šírku telefónu. Potiahni horizontálne cez oblasť klaviatúry pre posun cez celý rozsah — ťuknutím na kláves stále hráš notu, posúvaním roluješ. C4 (stredné C) sedí približne v strede. Na PC sa klaviatúra zmestí na stránku; len mobil potrebuje posúvanie.`},
   {id:'mic', title:`🎙 MIKRO — Hlas / Hudba`, keywords:`mikro mikrofón spievať počúvať hlas hudba hum pískať ambient reproduktor spotify miestnosť zvuk maľovanie živo preset`,
-   body:`Ťukni 🎙 MIKRO pre otvorenie vstupného dialógu. Dva režimy, každý sa hodí na iný typ zvuku. ◆ 🎤 Hlas — spievaj, hum alebo pískaj. Aplikácia detekuje výšku tvojho tónu priebežne, prichytí ju na C dur, prehrá každú notu cez piano sampler a namaľuje ju ako blok. Monofónne: jedna nota naraz. Aktívne MIKRO tlačidlo svieti červeno. ◆ 🔊 Hudba — pre ambientnú hudbu namiesto hlasu. Pusti hudbu z externého reproduktora alebo iného blízkeho zariadenia. Paintiano detekuje výšky a maľuje ticho len keď sa zmení akord. Na iOS je zvuk z toho istého zariadenia potlačený OS — použi externý zdroj. Aktívne MIKRO tlačidlo svieti modro. ◆ Ťukni aktívne MIKRO tlačidlo (🎙 LIVE) pre zastavenie. Režim sa pamätá medzi reláciami.`},
+   body:`Ťukni 🎙 MIKRO a nahrávanie sa spustí hneď v naposledy použitom režime — žiadny dialóg, žiadna voľba vopred. Počas nahrávania je v rohu plátna malý odznak hlas/hudba; ťuknutím naň prepneš režim a počuješ rozdiel v kontexte. Dva režimy, každý sa hodí na iný typ zvuku. ◆ 🎤 Hlas — spievaj, hum alebo pískaj. Aplikácia detekuje výšku tvojho tónu priebežne, prichytí ju na C dur, prehrá každú notu cez piano sampler a namaľuje ju ako blok. Monofónne: jedna nota naraz. Odznak svieti červeno. ◆ 🔊 Hudba — pre ambientnú hudbu namiesto hlasu. Pusti hudbu z externého reproduktora alebo iného blízkeho zariadenia. Paintiano detekuje výšky a maľuje ticho len keď sa zmení akord. Na iOS je zvuk z toho istého zariadenia potlačený OS — použi externý zdroj. Odznak svieti modro. ◆ Ťukni aktívne MIKRO tlačidlo (🎙 LIVE) pre zastavenie. Režim sa pamätá medzi reláciami.`},
   {id:'scale-snap', title:`Prichytenie stupnice (pokročilé)`, keywords:`stupnica prichytenie tónina dur mol chromatický voľný pokročilé`,
    body:`V režime Komponovať ikona ⚙ odhalí výber prichytenia stupnice. Prichyť vstup na C dur, A mol, G dur, E mol, D dur, F dur alebo D mol — noty mimo zvolenej stupnice sú pritiahnuté k najbližšiemu susedovi v stupnici. Nastav na „voľné" (predvolené) pre úplne chromatické.`},
   {id:'moods', title:`Výber nálady`, keywords:`nálada ai komponovať generovať emócia pocit napísať jazyk`,
@@ -7244,8 +7254,9 @@ export default function Paintiano() {
     return SHUFFLE_POOL[(h>>>0) % SHUFFLE_POOL.length];
   }, [style, randomMode, pollockSessionSeed]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
-  // Notes mode wins only in plain Mosaic (no artist, no shuffle) on a mood canvas.
-  const effectiveStyle = style || shuffleStyle || ((notesMode && moodContext) ? 'notes' : null);
+  // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
+  // it only needs note MIDI + the colour fn, which every source provides.
+  const effectiveStyle = style || shuffleStyle || (notesMode ? 'notes' : null);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
@@ -8594,6 +8605,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // text moods only; Vary is offered for both. Cleared by text-mood entry points.
   const [moodFromImg,setMoodFromImg]=useState(false);
   const moodFromImgRef=useRef(false); useEffect(()=>{ moodFromImgRef.current=moodFromImg; },[moodFromImg]);
+  // Notes mode is a per-painting choice — reset it to plain colour Mosaic
+  // whenever the source changes (new loaded file, new mood, image↔mood switch),
+  // so each fresh source starts in the normal reading rather than inheriting
+  // note-names from the previous one.
+  useEffect(()=>{ setNotesMode(false); },[loadedSource,currentMood,moodFromImg]);
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
@@ -10525,8 +10541,6 @@ Composition rules:
   // Mood and file source are mutually exclusive contexts: entering the mood
   // context drops the file-source latch so only one "+ New …" button shows.
   useEffect(()=>{ if(moodContext) setSourceContext(null); },[moodContext]);
-  // Notes mode is mood-only — drop it whenever we leave the mood context.
-  useEffect(()=>{ if(!moodContext) setNotesMode(false); },[moodContext]);
   // Any newly-started activity (processing a file, entering compose/mic, or
   // playback beginning) returns us to the canvas even if we were parked on the
   // setup panel via "← Setup".
@@ -10703,7 +10717,10 @@ Composition rules:
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
                 if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); return; }
-                setPickMode('mic');
+                // Start immediately in the last-used preset (default 'voice') —
+                // no upfront dialog. The preset can be flipped live on the canvas
+                // badge while recording, so the choice never blocks getting going.
+                if(micPreset==='music') startMicListening(); else startMicPainting();
               }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
             </div>
           </div>
@@ -10973,7 +10990,7 @@ Composition rules:
           {loadedSource!=='image' && (
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
-            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn && moodContext; const showNotes = canNotes && notesMode; return (
+            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
             <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',color:mosaicOn?PF.bg:(mosaicInert?PF.muted:PF.cream),background:mosaicOn?PF.gold:PF.card2,border:'1px solid '+(mosaicOn?PF.gold:'rgba(242,238,232,.08)'),boxShadow:mosaicOn?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
             ); })()}
             {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
@@ -11300,9 +11317,18 @@ Composition rules:
           ));
         })()}
         {micActive && (
-          <div aria-hidden="true" style={{position:'absolute',top:10,left:10,zIndex:4,display:'inline-flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:20,pointerEvents:'none',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
-            <span style={{width:7,height:7,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
-            🎙 {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')}
+          <div style={{position:'absolute',top:10,left:10,zIndex:4,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:4}}>
+            <button onClick={()=>{
+              // Flip the preset live: swap the running mic stream to the other
+              // mode. Voice = sing (monophonic, snap-to-C, piano echo); Music =
+              // listen (polyphonic chord detection, silent). Keeps you recording.
+              if(micPreset==='voice'){ setMicPreset('music'); if(micPainting) stopMicPainting(); startMicListening(); }
+              else { setMicPreset('voice'); if(micListening) stopMicListening(); startMicPainting(); }
+            }} title={micPreset==='voice'?t('micVoiceHint'):t('micMusicHint')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'),backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
+              <span style={{width:7,height:7,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 6px '+(micPreset==='voice'?'#ff5a5a':'#5aacff'),flexShrink:0}}/>
+              🎙 {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄
+            </button>
+            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.55)',background:'rgba(8,6,14,.55)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:200}}>{t('micTapToSwitch')}</div>
           </div>
         )}
         {chords.length===0&&(
@@ -11712,7 +11738,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.5</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.7</footer>
     </div>
   );
 }

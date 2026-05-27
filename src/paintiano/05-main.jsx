@@ -1302,10 +1302,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(sigStr===gridSigRef.current)return;
     gridSigRef.current=sigStr;
     const evs=chords.map(c=>({durQ:c.durQ!=null?c.durQ:snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-    // liveMode: compose / sing / listen produce a fixed-frame painting that
-    // shrinks rows as content grows. Imported content (MIDI/audio/score/mood/
-    // demo) skips this — they get the original grow-with-content canvas.
-    const newGrid=computeGrid(evs,{liveMode:true});
+    // Fixed-frame live canvas applies to in-the-moment creation only — Compose
+    // and Voice (sing): short pieces that should sit in one golden-ratio frame
+    // with rows thinning as you add chords. MUSIC (listen) is really a transcript
+    // of existing ambient music (like MIDI/audio), so it uses the grow-with-
+    // content canvas — otherwise a long capture (e.g. 3 min) overflows the fixed
+    // frame: rows hit the 4px floor and later chords wrap over earlier cells,
+    // making it look like the painting stopped halfway. draftOwnerRef holds the
+    // authoring mode and survives after the mic stops, so the grid stays correct.
+    const isMusicListen = draftOwnerRef.current==='listen';
+    const newGrid=computeGrid(evs,{liveMode:!isMusicListen});
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
@@ -5206,7 +5212,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.7</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.8</footer>
     </div>
   );
 }
