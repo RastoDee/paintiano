@@ -10,7 +10,7 @@ const CWIN = 55;
 const KB_WIN = 65;
 const DN = 25, DB = 16, DH = 26;
 const GOLD = '#c9a84c';
-// ── v2.6.0 Playful design tokens ────────────────────────────────────────────
+// ── Playful design tokens (added v2.6.0) ────────────────────────────────────
 // Layered dark surfaces + bright cream text + saturated accents. Used across
 // the redesigned control panel. Buttons lift + glow on interaction.
 const PF = {
@@ -4611,7 +4611,7 @@ const LANGS = ['EN','DE','FR','ES','SK'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', aiOffline:'offline', aiOfflineHint:'AI features need a connection', aiCompose:'AI compose', aiComposeHint:'compose a full piece from this image',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'setup', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'type any mood — e.g. furious', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -4656,7 +4656,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung', aiCompose:'KI-Komposition', aiComposeHint:'ein ganzes Stück aus diesem Bild komponieren',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'setup', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'stimmung eingeben — z.B. wütend', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -4701,7 +4701,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion', aiCompose:'composition IA', aiComposeHint:'composer un morceau complet à partir de cette image',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'réglage', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'tape une humeur — ex. furieux', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -4746,7 +4746,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión', aiCompose:'composición IA', aiComposeHint:'componer una pieza completa a partir de esta imagen',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'inicio', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'escribe un estado — p.ej. furioso', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -4791,7 +4791,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie', aiCompose:'AI skladba', aiComposeHint:'skomponovať celú skladbu z tohto obrazu',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'nastavenie', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'napíš náladu — napr. zúrivá', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -5794,7 +5794,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Score (MusicXML)`, keywords:`score musicxml mxl musescore finale dorico sheet music`,
    body:`Upload exact sheet music from MuseScore, Finale, or Dorico. Accepts .musicxml, .xml, and .mxl. Pitches, durations, dynamics, and chords come through exactly — the most accurate input.`},
   {id:'image', title:`🖼 Image transcription`, keywords:`image painting picture transcribe paint photo colour color bw custom palette guernica chagall`,
-   body:`Upload a painting; Paintiano reads it as a score. Downsampled to 192×120 pixels, walked left-to-right top-to-bottom — 960 chord events. Length isn't fixed: it scales with the image's energy (colour, contrast, busyness), roughly 1½–2½ minutes. ◆ The app chooses the reading from how colourful the painting is. A colourful work reads in Color (hue → pitch, lightness → octave, vividness → loudness); a near-monochrome one (Guernica, ink, sepia) reads in B/W, where lightness alone drives pitch — dark low, light high, hue ignored. Color and B/W are shown as info (the app decided which); tap the active one to preview its colours. ◆ Custom is the reading you control: it filters the painting through your palette so only colours near one of your twelve swatches sound, the rest fall silent. Its default is the opposite of Harmony, so it always plays; tap Custom again (✎) to edit the palette. ◆ ✦ AI COMPOSE (needs a connection) takes the colour-derived notes as a seed and asks the AI to develop them into a fuller ~1-minute piece — a polished composition rooted in the painting's colours rather than a direct scan. The result is cached, so replaying the same image is free, and VARY then reworks it offline.`},
+   body:`Upload a painting; Paintiano reads it as a score. Downsampled to 192×120 pixels, walked left-to-right top-to-bottom — 960 chord events. Length isn't fixed: it scales with the image's energy (colour, contrast, busyness), roughly 1½–2½ minutes. ◆ The app chooses the reading from how colourful the painting is. A colourful work reads in Color (hue → pitch, lightness → octave, vividness → loudness); a near-monochrome one (Guernica, ink, sepia) reads in B/W, where lightness alone drives pitch — dark low, light high, hue ignored. Color and B/W are shown as info (the app decided which); tap the active one to preview its colours. ◆ Custom is the reading you control: it filters the painting through your palette so only colours near one of your twelve swatches sound, the rest fall silent. Its default is the opposite of Harmony, so it always plays; tap Custom again (✎) to edit the palette.`},
   {id:'morph', title:`✦ Morph`, keywords:`morph crossfade blend transition mood between`,
    body:`Available after picking a mood. Tap ✦ MORPH to crossfade the current mood into another. First half is mood A, second half is mood B, with a velocity blend in the 40–60% zone. The progress bar subtitle shows the blend, e.g. "A → B".`},
   {id:'vary', title:`✦ Vary`, keywords:`vary variation reroll randomize random fresh sparkle`,
@@ -5850,7 +5850,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Partitur (MusicXML)`, keywords:`partitur musicxml musescore finale dorico noten`,
    body:`Exakte Noten von MuseScore, Finale oder Dorico hochladen. Akzeptiert .musicxml, .xml und .mxl. Tonhöhen, Dauern, Dynamik und Akkorde werden exakt übertragen.`},
   {id:'image', title:`🖼 Bildtranskription`, keywords:`bild gemälde foto transkribieren malen farbe color bw custom palette guernica chagall`,
-   body:`Ein Gemälde hochladen; Paintiano liest es als Partitur. Auf 192×120 Pixel herunterskaliert, von links nach rechts, oben nach unten — 960 Akkordereignisse. Die Dauer ist nicht fest: sie skaliert mit der Energie des Bildes (Farbe, Kontrast, Geschäftigkeit), etwa 1½–2½ Minuten. ◆ Die App wählt die Lesart anhand der Farbigkeit des Gemäldes. Ein farbiges Werk wird in Color gelesen (Farbton → Tonhöhe, Helligkeit → Oktave, Lebhaftigkeit → Lautstärke); ein fast monochromes (Guernica, Tusche, Sepia) in B/W, wo allein die Helligkeit die Tonhöhe bestimmt — dunkel tief, hell hoch, Farbton ignoriert. Color und B/W sind Info (die App hat entschieden); Tippen auf das aktive Feld zeigt eine Farbvorschau. ◆ Custom steuerst du: es filtert das Bild durch deine Palette, sodass nur Farben nahe einem deiner zwölf Felder klingen, der Rest verstummt. Die Standardpalette ist das Gegenteil von Harmonie, klingt also immer; erneut auf Custom tippen (✎), um die Palette zu bearbeiten. ◆ ✦ KI-KOMPOSITION (benötigt eine Verbindung) nimmt die aus den Farben abgeleiteten Noten als Saat und lässt die KI daraus ein volleres ~1-minütiges Stück entwickeln — eine ausgefeilte Komposition, die in den Farben des Gemäldes wurzelt, statt eines direkten Scans. Das Ergebnis wird zwischengespeichert, ein erneutes Abspielen desselben Bildes ist also kostenlos, und VARIIEREN überarbeitet es dann offline.`},
+   body:`Ein Gemälde hochladen; Paintiano liest es als Partitur. Auf 192×120 Pixel herunterskaliert, von links nach rechts, oben nach unten — 960 Akkordereignisse. Die Dauer ist nicht fest: sie skaliert mit der Energie des Bildes (Farbe, Kontrast, Geschäftigkeit), etwa 1½–2½ Minuten. ◆ Die App wählt die Lesart anhand der Farbigkeit des Gemäldes. Ein farbiges Werk wird in Color gelesen (Farbton → Tonhöhe, Helligkeit → Oktave, Lebhaftigkeit → Lautstärke); ein fast monochromes (Guernica, Tusche, Sepia) in B/W, wo allein die Helligkeit die Tonhöhe bestimmt — dunkel tief, hell hoch, Farbton ignoriert. Color und B/W sind Info (die App hat entschieden); Tippen auf das aktive Feld zeigt eine Farbvorschau. ◆ Custom steuerst du: es filtert das Bild durch deine Palette, sodass nur Farben nahe einem deiner zwölf Felder klingen, der Rest verstummt. Die Standardpalette ist das Gegenteil von Harmonie, klingt also immer; erneut auf Custom tippen (✎), um die Palette zu bearbeiten.`},
   {id:'morph', title:`✦ Morphen`, keywords:`morphen überblenden übergang stimmung zwischen`,
    body:`Nach Stimmungsauswahl verfügbar. ✦ MORPHEN antippen, um die aktuelle Stimmung in eine andere überzublenden. Erste Hälfte Stimmung A, zweite Hälfte Stimmung B.`},
   {id:'vary', title:`✦ Variieren`, keywords:`variieren variation neu zufällig frisch funkeln`,
@@ -5906,7 +5906,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Partition (MusicXML)`, keywords:`partition musicxml musescore finale dorico feuille de musique`,
    body:`Importez des partitions exactes depuis MuseScore, Finale ou Dorico. Accepte .musicxml, .xml et .mxl.`},
   {id:'image', title:`🖼 Transcription d'image`, keywords:`image tableau photo transcrire peindre couleur color bw custom palette guernica chagall`,
-   body:`Importez une peinture ; Paintiano la lit comme une partition. Réduite à 192×120 pixels, parcourue de gauche à droite, de haut en bas — 960 événements d'accords. La durée n'est pas fixe : elle varie avec l'énergie de l'image (couleur, contraste, densité), environ 1½–2½ minutes. ◆ L'app choisit la lecture selon la richesse des couleurs. Une œuvre colorée se lit en Color (teinte → hauteur, luminosité → octave, vivacité → volume) ; une œuvre quasi monochrome (Guernica, encre, sépia) en B/W, où seule la luminosité donne la hauteur — sombre grave, clair aigu, teinte ignorée. Color et B/W sont informatifs (l'app a décidé) ; toucher la puce active affiche un aperçu des couleurs. ◆ Custom, c'est vous : il filtre l'image via votre palette, donc seules les couleurs proches d'une de vos douze cases sonnent, le reste se tait. La palette par défaut est l'opposé d'Harmony, donc elle joue toujours ; touchez Custom à nouveau (✎) pour éditer la palette. ◆ ✦ COMPOSITION IA (nécessite une connexion) prend les notes issues des couleurs comme graine et demande à l'IA d'en développer une pièce plus complète d'environ 1 minute — une composition soignée enracinée dans les couleurs du tableau plutôt qu'un scan direct. Le résultat est mis en cache, donc rejouer la même image est gratuit, et VARIER le retravaille ensuite hors ligne.`},
+   body:`Importez une peinture ; Paintiano la lit comme une partition. Réduite à 192×120 pixels, parcourue de gauche à droite, de haut en bas — 960 événements d'accords. La durée n'est pas fixe : elle varie avec l'énergie de l'image (couleur, contraste, densité), environ 1½–2½ minutes. ◆ L'app choisit la lecture selon la richesse des couleurs. Une œuvre colorée se lit en Color (teinte → hauteur, luminosité → octave, vivacité → volume) ; une œuvre quasi monochrome (Guernica, encre, sépia) en B/W, où seule la luminosité donne la hauteur — sombre grave, clair aigu, teinte ignorée. Color et B/W sont informatifs (l'app a décidé) ; toucher la puce active affiche un aperçu des couleurs. ◆ Custom, c'est vous : il filtre l'image via votre palette, donc seules les couleurs proches d'une de vos douze cases sonnent, le reste se tait. La palette par défaut est l'opposé d'Harmony, donc elle joue toujours ; touchez Custom à nouveau (✎) pour éditer la palette.`},
   {id:'morph', title:`✦ Morphe`, keywords:`morphe fondu enchaîné transition humeur entre`,
    body:`Disponible après avoir choisi une humeur. Appuyez sur ✦ MORPHE pour fondre l'humeur actuelle dans une autre. Première moitié : humeur A, deuxième moitié : humeur B.`},
   {id:'vary', title:`✦ Varier`, keywords:`varier variation relancer aléatoire frais scintiller`,
@@ -5962,7 +5962,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Partitura (MusicXML)`, keywords:`partitura musicxml musescore finale dorico música`,
    body:`Importa partituras exactas de MuseScore, Finale o Dorico. Acepta .musicxml, .xml y .mxl.`},
   {id:'image', title:`🖼 Transcripción de imagen`, keywords:`imagen cuadro foto transcribir pintar color bw custom paleta guernica chagall`,
-   body:`Importa una pintura; Paintiano la lee como partitura. Reducida a 192×120 píxeles, recorrida de izquierda a derecha, de arriba abajo — 960 eventos de acordes. La duración no es fija: escala con la energía de la imagen (color, contraste, densidad), aproximadamente 1½–2½ minutos. ◆ La app elige la lectura según lo colorida que sea la obra. Una obra colorida se lee en Color (tono → altura, luminosidad → octava, viveza → volumen); una casi monocroma (Guernica, tinta, sepia) en B/W, donde solo la luminosidad marca la altura — oscuro grave, claro agudo, tono ignorado. Color y B/W son informativos (la app decidió); al tocar el activo ves una vista previa de los colores. ◆ Custom lo controlas tú: filtra la imagen a través de tu paleta, así solo suenan los colores cercanos a una de tus doce casillas, el resto enmudece. La paleta por defecto es el opuesto de Harmony, así que siempre suena; toca Custom de nuevo (✎) para editar la paleta. ◆ ✦ COMPOSICIÓN IA (necesita conexión) toma las notas derivadas de los colores como semilla y pide a la IA que las desarrolle en una pieza más completa de ~1 minuto — una composición pulida enraizada en los colores del cuadro en lugar de un escaneo directo. El resultado se guarda en caché, así que reproducir la misma imagen es gratis, y VARIAR la reelabora luego sin conexión.`},
+   body:`Importa una pintura; Paintiano la lee como partitura. Reducida a 192×120 píxeles, recorrida de izquierda a derecha, de arriba abajo — 960 eventos de acordes. La duración no es fija: escala con la energía de la imagen (color, contraste, densidad), aproximadamente 1½–2½ minutos. ◆ La app elige la lectura según lo colorida que sea la obra. Una obra colorida se lee en Color (tono → altura, luminosidad → octava, viveza → volumen); una casi monocroma (Guernica, tinta, sepia) en B/W, donde solo la luminosidad marca la altura — oscuro grave, claro agudo, tono ignorado. Color y B/W son informativos (la app decidió); al tocar el activo ves una vista previa de los colores. ◆ Custom lo controlas tú: filtra la imagen a través de tu paleta, así solo suenan los colores cercanos a una de tus doce casillas, el resto enmudece. La paleta por defecto es el opuesto de Harmony, así que siempre suena; toca Custom de nuevo (✎) para editar la paleta.`},
   {id:'morph', title:`✦ Morfar`, keywords:`morfar fundido transición estado entre`,
    body:`Disponible después de elegir un estado. Pulsa ✦ MORFAR para mezclar el estado actual con otro. Primera mitad estado A, segunda mitad estado B.`},
   {id:'vary', title:`✦ Variar`, keywords:`variar variación relanzar aleatorio fresco brillo`,
@@ -6018,7 +6018,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Partitúra (MusicXML)`, keywords:`partitúra musicxml mxl musescore finale dorico noty`,
    body:`Nahraj presné noty z MuseScore, Finale alebo Dorico. Akceptuje .musicxml, .xml a .mxl. Výšky, dĺžky, dynamika a akordy prechádzajú presne — najpresnejší vstup.`},
   {id:'image', title:`🖼 Transkripcia obrazu`, keywords:`obraz maľba foto prepísať maľovať fotografia farba color bw custom paleta guernica chagall`,
-   body:`Nahraj obraz; Paintiano ho prečíta ako partitúru. Redukovaný na 192×120 pixelov, prechádza zľava doprava, zhora nadol — 960 akordických udalostí. Dĺžka nie je pevná: škáluje s energiou obrazu (farebnosť, kontrast, rušnosť), zhruba 1½–2½ minúty. ◆ Aplikácia vyberie čítanie podľa toho, aký farebný obraz je. Farebné dielo sa číta v Color (odtieň → výška, svetlosť → oktáva, sýtosť → hlasitosť); takmer monochromatické (Guernica, tuš, sépia) v B/W, kde výšku určuje len svetlosť — tmavé nízko, svetlé vysoko, odtieň sa ignoruje. Color a B/W sú info (aplikácia rozhodla); ťuknutím na aktívny vidíš náhľad jeho farieb. ◆ Custom je čítanie, ktoré riadiš ty: filtruje obraz cez tvoju paletu, takže znejú len farby blízke niektorému z tvojich dvanástich políčok, zvyšok stíchne. Predvolená paleta je opak Harmónie, takže vždy hrá; ďalším ťuknutím na Custom (✎) upravíš paletu. ◆ ✦ AI SKLADBA (vyžaduje pripojenie) berie noty odvodené z farieb ako základ a požiada AI, aby ich rozvinula do plnšej ~1-minútovej skladby — vycibrená kompozícia zakorenená vo farbách obrazu, nie priamy sken. Výsledok sa kešuje, takže opätovné prehratie toho istého obrazu je zadarmo, a VARIÁCIA ho potom prepracuje offline.`},
+   body:`Nahraj obraz; Paintiano ho prečíta ako partitúru. Redukovaný na 192×120 pixelov, prechádza zľava doprava, zhora nadol — 960 akordických udalostí. Dĺžka nie je pevná: škáluje s energiou obrazu (farebnosť, kontrast, rušnosť), zhruba 1½–2½ minúty. ◆ Aplikácia vyberie čítanie podľa toho, aký farebný obraz je. Farebné dielo sa číta v Color (odtieň → výška, svetlosť → oktáva, sýtosť → hlasitosť); takmer monochromatické (Guernica, tuš, sépia) v B/W, kde výšku určuje len svetlosť — tmavé nízko, svetlé vysoko, odtieň sa ignoruje. Color a B/W sú info (aplikácia rozhodla); ťuknutím na aktívny vidíš náhľad jeho farieb. ◆ Custom je čítanie, ktoré riadiš ty: filtruje obraz cez tvoju paletu, takže znejú len farby blízke niektorému z tvojich dvanástich políčok, zvyšok stíchne. Predvolená paleta je opak Harmónie, takže vždy hrá; ďalším ťuknutím na Custom (✎) upravíš paletu.`},
   {id:'morph', title:`✦ Morf`, keywords:`morf crossfade prelínanie prechod nálada medzi`,
    body:`Dostupné po výbere nálady. Ťukni ✦ MORF pre prelínanie aktuálnej nálady do inej. Prvá polovica je nálada A, druhá polovica nálada B, s prelínaním rýchlosti v zóne 40–60 %. Podtitul progress baru zobrazuje prelínanie, napr. „A → B".`},
   {id:'vary', title:`✦ Variácia`, keywords:`variácia variovať prehodiť randomizovať náhodný čerstvý iskra`,
@@ -7271,7 +7271,7 @@ export default function Paintiano() {
   // type for older readers). 1 = Normal, 1.25 = Large. Applied via CSS zoom on
   // the content wrapper so text AND spacing scale proportionally with one prop.
   const [readScale, setReadScale] = useState(1);
-  // v2.6.0: in active view, Color/Style live in a strip that's collapsed by
+  // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
   const [stripOpen, setStripOpen] = useState(false);
   const [guideQuery, setGuideQuery] = useState('');
@@ -8921,100 +8921,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
   },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet]);
-
-  // Body 9: AI Composition from image. Unlike composeFromImage (which reads the
-  // image's *mood* and composes freely), this takes the COLOUR-DERIVED notes that
-  // the Image-mode pixel pipeline already produced (chordsRef) as a SKELETON, and
-  // asks the model to develop them into a ~1-minute, structurally-complete piece
-  // while preserving the tonality/motifs the colours implied. "Notes from colour
-  // as the base." Result is cached (compose: prefix) so a second run is free, and
-  // gated by aiUsable (Body 10) so it disables offline.
-  const aiComposeFromImage=useCallback(async()=>{
-    if(imgAiBusy||composedModeRef.current) return;
-    const _src=chordsRef.current;
-    if(!_src||!_src.length){ setErr(((t('errs')||{}).imgNoNotes)||'Load an image first.'); return; }
-    if(!aiUsable){ setAiDown(true); return; }
-    setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false);
-    try{
-      // ── Build the colour-derived skeleton from the existing image events ──
-      // Flatten all notes, keep the most salient (loudest) ones, dedupe to a
-      // compact pitch set, and read tempo from the event density. This is the
-      // "notes from colour" base the model will compose around.
-      const _flat=[];
-      for(const ev of _src){ if(ev&&ev.n) for(const nt of ev.n){ if(nt&&typeof nt.m==='number') _flat.push({m:nt.m,v:nt.v||70,startMs:ev.startMs||0}); } }
-      if(!_flat.length){ setErr(((t('errs')||{}).imgNoNotes)||'Image produced no notes.'); setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); return; }
-      // Salience: sort by velocity, take a representative sample across the piece.
-      const _byTime=[..._flat].sort((a,b)=>a.startMs-b.startMs);
-      const _step=Math.max(1,Math.floor(_byTime.length/40));
-      const _sample=[]; for(let i=0;i<_byTime.length;i+=_step) _sample.push(_byTime[i].m);
-      const _skeleton=_sample.slice(0,32); // up to 32 representative pitches, in time order
-      // Pitch-class histogram → hint a likely key centre for the model.
-      const _pc=new Array(12).fill(0); for(const m of _skeleton) _pc[((m%12)+12)%12]++;
-      let _root=0,_best=-1; for(let i=0;i<12;i++){ if(_pc[i]>_best){ _best=_pc[i]; _root=i; } }
-      const _NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-      // Tempo hint from density: busier images (more events) → a touch faster.
-      const _tempo=Math.max(60,Math.min(132,Math.round(72 + Math.min(60,_src.length/16))));
-      // Cache: key on the skeleton + key, prefix to keep it apart from imgmood.
-      const _hash='compose:'+_root+':'+_skeleton.join(',');
-      let parsed=_imgMoodCacheGet(_hash);
-      let _fromCache=!!parsed;
-      if(!parsed){
-        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
-        const prompt='You are given a SKELETON of MIDI pitch numbers derived from the colours of a painting, in time order: ['+_skeleton.join(', ')+']. The likely key centre is '+_NOTE[_root]+'. Treat these pitches as the harmonic/melodic seed and DEVELOP them into a complete, musically polished solo piano piece of about ONE MINUTE.\nOutput ONLY a single valid JSON object - no markdown, no prose. The JSON MUST be complete and closed with all brackets; do NOT exceed the limits below or it will be cut off.\nSet "title" to a short evocative phrase in '+_langName+' (Title Case, max 5 words).\nSchema: {"title":"...","tempo":'+_tempo+',"key":"'+_NOTE[_root]+' major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nIMPORTANT: each "pitch" MUST be a note-NAME string like "C4" or "F#5" (sharps only, NOT a number, NOT flats).\nHARD LIMIT: at most 90 notes total (fewer is fine). Clear ABA\' structure with a recurring motif drawn from the skeleton; bass octaves 2-3 (at least 16 notes) under a melody in octaves 4-6; vary durations (mix 0.25/0.5/1/2); dynamics via velocity 40-115; stay mostly diatonic to the key. Finish the JSON object completely.';
-        const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
-        const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
-        const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-        let respText='',ok=false;
-        for(const ep of _eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:8000,messages:[{role:'user',content:prompt}]})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
-        setWPct(75);
-        if(!ok) throw new Error('AI unavailable');
-        setAiDown(false); // a live AI call just succeeded
-        const data=JSON.parse(respText);
-        const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
-        // Helper: pull every COMPLETE note tuple ["X",n,n,n] from the text. Works
-        // even if the JSON was truncated mid-array (the dangling partial tuple is
-        // simply skipped), so a cut-off response still yields a playable piece.
-        const _salvageNotes=(txt)=>{
-          // Match complete tuples with either a "C4"-style name OR a bare MIDI number.
-          const re=/\[\s*(?:"([A-G]#?\d)"|(\d{1,3}))\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/g;
-          const out=[]; let mm;
-          while((mm=re.exec(txt))!==null){ const pitch=mm[1]!==undefined?mm[1]:parseInt(mm[2],10); out.push([pitch,parseFloat(mm[3]),parseFloat(mm[4]),parseFloat(mm[5])]); }
-          return out;
-        };
-        let parsedTry=null;
-        try{ const m=rawTxt.match(/\{[\s\S]*\}/); if(m) parsedTry=JSON.parse(m[0]); }catch(_){ parsedTry=null; }
-        if(parsedTry&&parsedTry.notes&&parsedTry.notes.length){
-          parsed=parsedTry;
-        } else {
-          // Truncated or malformed JSON — salvage whatever complete notes exist.
-          const _notes=_salvageNotes(rawTxt);
-          if(!_notes.length) throw new Error('no notes');
-          const _ti=rawTxt.match(/"title"\s*:\s*"([^"]*)"/);
-          const _te=rawTxt.match(/"tempo"\s*:\s*(\d+)/);
-          parsed={ title:_ti?_ti[1]:'✦', tempo:_te?parseInt(_te[1],10):_tempo, notes:_notes };
-        }
-        if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
-      }
-      setWPct(85);
-      const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
-      const title=(parsed.title&&String(parsed.title).trim())||'✦';
-      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} }
-      // Vary works from the cached notes locally — no new AI call, no cost.
-      const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)
-        ? {note:n[0],dur:n[1],beat:n[2],vel:n[3]}
-        : {note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
-      const _varySrc={notes:_varyNotes,tempo:parsed.tempo||_tempo,title};
-      stopAll();
-      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(_varySrc);
-      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(''); setMoodFromImg(true);
-      try{ const bytes=encodeMidi(evts,parsed.tempo||_tempo); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
-    }catch(e){
-      if(e&&e.message==='AI unavailable'){ setAiDown(true); setErr(((t('errs')||{}).aiOfflineHint)||'AI unavailable — check connection.'); }
-      else { setErr('AI compose failed: '+((e&&e.message)||'unknown')); }
-      setErrInfo(true);
-    }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
-  },[imgAiBusy,aiUsable,lang,stopAll,applyEvents,t,_imgMoodCacheGet,_imgMoodCacheSet]);
-
   // Standalone "mood from image" mode: pick a picture, AI reads its emotion and
   // composes a mood on the canvas; a small thumbnail of the source sits on top.
   const loadImgMood=useCallback(e=>{
@@ -10388,7 +10294,7 @@ Composition rules:
     setPreview(null);
   };
 
-  // ── v2.6.0 view state ───────────────────────────────────────────────
+  // ── View state (introduced v2.6.0) ───────────────────────────────────────
   // Setup view: idle, nothing on canvas, no live mode — show the full bright
   // control panel (Source / Mood / Color / Style). This is where exploration
   // and onboarding happen.
@@ -10477,9 +10383,9 @@ Composition rules:
       </header>
 
       {/* ─────────────────────────────────────────────────────────────
-          v2.6.0 control panel. Grouped into four labelled sections:
+          Control panel (introduced v2.6.0). Grouped into four labelled sections:
           Source → Color → Style → Mood. Layout/skin only — every button
-          handler is identical to v2.5.0. Sections separated by spacing +
+          handler is identical to the prior version. Sections separated by spacing +
           hairline dividers; labels are tiny and faded (recede for return
           users, orient first-timers). lbl() / divider markup inline.
           ───────────────────────────────────────────────────────────── */}
@@ -11149,7 +11055,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.55:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micActive)?{height:'calc(100dvh - 210px)',width:'auto',maxWidth:'100%',maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micActive)?{height:'calc(100dvh - 210px)',width:'auto',maxWidth:'100%',maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(()=>{
@@ -11428,9 +11334,6 @@ Composition rules:
         {viewMode==='image'&&originalImgUrl&&(
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
-        {viewMode==='image'&&originalImgUrl&&(
-          <button onClick={()=>{ if(!imgAiBusy&&aiUsable) aiComposeFromImage(); }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('aiComposeHint')||'compose a full piece from this image')} style={{padding:'8px 14px',background:'rgba(200,130,255,.12)',color:imgAiBusy?'rgba(220,170,255,.6)':(!aiUsable)?'rgba(220,170,255,.4)':'rgba(228,178,255,.95)',border:'1px solid rgba(200,130,255,'+(!aiUsable?'.25':'.45')+')',borderRadius:22,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',opacity:!aiUsable?.5:1}}>{'✦ '+(imgAiBusy?'…':(!aiUsable)?((t('aiCompose')||'AI compose')+' · '+(t('aiOffline')||'offline')):(t('aiCompose')||'AI compose'))}</button>
-        )}
         {viewMode==='image'&&chords.length>0&&(
           <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
             {recording?t('recStop'):t('recArm')}
@@ -11578,7 +11481,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.2.2</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.2.3</footer>
     </div>
   );
 }
