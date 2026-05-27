@@ -7895,6 +7895,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const handlePauseClickRef = useRef(null);
   const startPlayRef = useRef(null);
   const aiComposeRef = useRef(null); // lets aiMoodFromText (declared earlier) call aiCompose for unknown moods
+  // Cache of the last successful AI composition, keyed by normalised mood text +
+  // language. Lets re-entering the SAME mood (e.g. Setup → Canvas, or retyping the
+  // same phrase) replay the already-composed piece instead of paying for a fresh
+  // AI call. Only AI results are cached here (crafted/offline moods are cheap).
+  const aiComposeCacheRef = useRef({ key:'', parsed:null });
   const chordsRef   = useRef([]);
   const gridRef     = useRef(null);
   const gcRef       = useRef(null);
@@ -8565,12 +8570,67 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // considered usable only when online AND not latched-down.
   const [isOnline,setIsOnline]=useState(typeof navigator==='undefined'?true:navigator.onLine!==false);
   const [aiDown,setAiDown]=useState(false);
-  const aiUsable = isOnline && !aiDown;
+  // True from mount until the startup probe resolves. While probing we treat AI
+  // as not-yet-usable so features don't flash enabled-then-disabled (or accept a
+  // click that then fails). Starts true only when plausibly online.
+  const [aiProbing,setAiProbing]=useState(typeof navigator==='undefined'?false:navigator.onLine!==false);
+  const aiUsable = isOnline && !aiDown && !aiProbing;
   useEffect(()=>{
     if(typeof window==='undefined') return;
     const on=()=>setIsOnline(true), off=()=>setIsOnline(false);
     window.addEventListener('online',on); window.addEventListener('offline',off);
     return ()=>{ window.removeEventListener('online',on); window.removeEventListener('offline',off); };
+  },[]);
+  // Startup AI probe: check endpoint reachability ONCE at mount so AI features
+  // (mood-from-image, text-mood compose, atmosphere) render disabled from the
+  // first setup screen when AI is unavailable — instead of only latching after
+  // the user clicks and the call fails. A minimal request is sent to the same
+  // endpoints aiCompose uses; if none answer OK (and we're online), aiDown latches.
+  // A later successful AI call clears aiDown as before. Skipped while offline
+  // (navigator.onLine already gates aiUsable) and aborted after a short timeout
+  // so a hanging endpoint never blocks the UI.
+  useEffect(()=>{
+    if(typeof window==='undefined') return;
+    if(navigator&&navigator.onLine===false) return; // offline already gates aiUsable
+    let cancelled=false;
+    const ac=(typeof AbortController!=='undefined')?new AbortController():null;
+    const _to=setTimeout(()=>{ try{ac&&ac.abort();}catch(_){} },6000);
+    (async()=>{
+      const _host=(window.location&&window.location.hostname)||'';
+      const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+      const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      // Tiny probe payload — a few tokens is enough to confirm the endpoint
+      // returns a real AI completion (not just any HTTP response).
+      const _body=JSON.stringify({model:CLAUDE_MODEL,max_tokens:8,messages:[{role:'user',content:'ping'}]});
+      let ok=false;
+      for(const ep of _eps){
+        if(cancelled) return;
+        try{
+          const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:_body,signal:ac?ac.signal:undefined});
+          // Match aiCompose's own success test: only an HTTP 2xx (r.ok) with a
+          // body that parses into a real `content` block means AI is live. A 4xx
+          // (e.g. /api/compose deployed without an API key) or an error JSON does
+          // NOT count — that's exactly the case the user hit where AI is down but
+          // the endpoint still answered.
+          if(r && r.ok){
+            const txt=await r.text();
+            if(txt){
+              try{
+                const data=JSON.parse(txt);
+                const hasContent=Array.isArray(data&&data.content) && data.content.some(b=>b&&(b.type==='text'||typeof b.text==='string'));
+                if(hasContent){ ok=true; break; }
+              }catch(_){ /* not JSON / error body → not a live AI endpoint */ }
+            }
+          }
+        }catch(_){ /* network/CORS/abort → try next endpoint */ }
+      }
+      if(cancelled) return;
+      clearTimeout(_to);
+      // Only latch DOWN on probe; never force-enable here (a real call clears it).
+      if(!ok) setAiDown(true);
+      setAiProbing(false); // probe resolved → unlock the gate either way
+    })();
+    return ()=>{ cancelled=true; clearTimeout(_to); try{ac&&ac.abort();}catch(_){}; setAiProbing(false); };
   },[]);
 
   const clear = useCallback(()=>{
@@ -8721,10 +8781,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
-      // moodFromImg / moodContext / imgMoodThumb / currentMood all stay set and
-      // forceSetup stays false → MFI view persists with the same source image.
+      // Drop the small source-image thumbnail too — Clear should remove it.
+      setImgMoodThumb(null);
+      // moodFromImg / moodContext / currentMood stay set and forceSetup stays
+      // false → MFI view persists with the same mood, just without the thumbnail.
       return;
     }
+    // Active COMPOSE: Clear means just clear — wipe the canvas and stay in
+    // compose (clear() already keeps composedModeRef + draftOwner='compose').
+    // Do NOT run the stopped-session cleanup below (it nulls the owner, drops
+    // the draft, and resets colour/style) — that's for abandoned sessions only.
+    if(composeMode){ clear(); return; }
     // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
     // full clear(): it drops the loaded source and chords so the source tile
     // no longer shows as active when returning to setup.
@@ -9128,6 +9195,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
     if(!title||busy||composedModeRef.current)return;
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
+    // Cache hit: same mood phrase + language already composed by AI → replay the
+    // stored piece, no new AI call, no "composing…" spinner. This is what makes
+    // re-entering an unchanged mood (Setup → Canvas, or retyping it) instant +
+    // free, and keeps the exact same notes instead of generating a new variant.
+    const _ckey=title.toLowerCase()+'|'+lang;
+    { const _c=aiComposeCacheRef.current;
+      if(_c && _c.key===_ckey && _c.parsed && _c.parsed.notes && _c.parsed.notes.length){
+        const parsed=_c.parsed;
+        const evts=noteArr2events(parsed.notes,parsed.tempo);
+        if(evts.length){
+          stopAll();
+          const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:{note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
+          setVarySource({notes:_varyNotes,tempo:parsed.tempo||90,title:(parsed.title&&String(parsed.title).trim())||title});
+          const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed);
+          applyEvents(evts,_dispT); setComposeSource('ai'); setErr(''); setErrInfo(false);
+          try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+          return;
+        }
+      }
+    }
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang]||'English';
@@ -9187,8 +9274,14 @@ Composition rules:
       let parsed;
       try{parsed=JSON.parse(match[0]);}catch(e){throw new Error(`JSON parse failed: ${match[0].slice(0,200)}`);}
       if(!parsed?.notes?.length)throw new Error(`No notes in: ${match[0].slice(0,200)}`);
+      // Cache this AI result so re-entering the same mood replays it for free.
+      aiComposeCacheRef.current = { key:_ckey, parsed };
       const evts=noteArr2events(parsed.notes,parsed.tempo);
       if(!evts.length)throw new Error('Could not parse composition');
+      // Set varySource (normalised note objects) so Vary can re-tune THIS piece
+      // locally — matches the mood-from-image path; the AI branch was missing it.
+      { const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:{note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
+        setVarySource({notes:_varyNotes,tempo:parsed.tempo||90,title:(parsed.title&&String(parsed.title).trim())||title}); }
       const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed); applyEvents(evts,_dispT); setComposeSource('ai');
       const bytes=encodeMidi(evts,parsed.tempo||120);
       setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
@@ -10521,7 +10614,14 @@ Composition rules:
                   // extend the painting.
                   if(!randomMode){ setStructureSeedLock((pollockSessionSeed>>>0)||1); }
                   const owner = draftOwnerRef.current;
-                  if(owner==='compose'){ setComposeMode(true); return; }
+                  if(owner==='compose'){
+                    // Re-entering compose. If the canvas was wiped on the way to
+                    // Setup (chords empty) but a stash exists, restore it so the
+                    // un-played composition reappears. If the canvas still holds
+                    // the draft (resume path), leave it as-is.
+                    if((!chordsRef.current||!chordsRef.current.length)) restoreStash('compose');
+                    setComposeMode(true); return;
+                  }
                   if(owner) stashDraft(owner);
                   if(!restoreStash('compose')){
                     resetCanvasForDraft('compose');
@@ -10568,6 +10668,13 @@ Composition rules:
             // Also treat running playback timers as "still live" — the surest sign.
             const isLive = playingRef.current || playing || anim || timers.current.length>0;
             const keepResume = holdPausedRef.current && !isLive && chords.length>0;
+            // Stash any live creative draft (compose / mic) BEFORE we touch the
+            // canvas. wipeCanvasNow() below empties chordsRef, and stashDraft only
+            // saves a non-empty canvas — so stashing AFTER the wipe silently lost
+            // an un-played composition. Stash first; setComposeMode/stopMic below
+            // then just flip the mode off, draft safely preserved for ← Canvas.
+            if(composeMode && draftOwnerRef.current==='compose') stashDraft('compose');
+            if((micPainting||micListening) && (draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen')) stashDraft(draftOwnerRef.current);
             if(keepResume){
               resumeFromRef.current=dispRef.current; setHoldPaused(true);
               genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];timersSet.current.clear();
@@ -10576,7 +10683,7 @@ Composition rules:
               try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
               setActive(new Set());setPlaying(false);setAnim(false);
             } else { stopAll(); wipeCanvasNow(); }
-            setWorking(false);setWLabel('');setWPct(0);if(composeMode){if(draftOwnerRef.current==='compose')stashDraft('compose');setComposeMode(false);}if(micPainting||micListening){if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen')stashDraft(draftOwnerRef.current);}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+            setWorking(false);setWLabel('');setWPct(0);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
