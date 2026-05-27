@@ -37,11 +37,11 @@ const REF  = path.join(ROOT, 'src', 'paintianoRef.jsx');
 
 // Fragment order — must stay in this sequence to reproduce the single file.
 const ORDER = [
-  '01_core_head.jsx', // imports + §1 constants/math + §2 parsers
-  '02_draw.jsx',      // §3 canvas draw functions
-  '03_i18n.jsx',      // §4 i18n / concept / guide
-  '04_songs.jsx',     // §5 song data / library / moods
-  '05_main.jsx',      // §6 sub-components + §7 main component
+  '01-core-head.jsx', // imports + §1 constants/math + §2 parsers
+  '02-draw.jsx',      // §3 canvas draw functions
+  '03-i18n.jsx',      // §4 i18n / concept / guide
+  '04-songs.jsx',     // §5 song data / library / moods
+  '05-main.jsx',      // §6 sub-components + §7 main component
 ];
 
 // Read each fragment, normalising any CRLF back to LF so the stitch is clean.

@@ -358,6 +358,7 @@ function IntroSplash({ onDone, tagline, skipLabel }){
 export default function Paintiano() {
   const canvasRef    = useRef(null);
   const canvasWrapRef = useRef(null); // wrapper around the canvas — scrolled into view when the strip closes
+  const stripWrapRef = useRef(null); // wrapper around the Color·Style strip — scroll target on Play in mood-from-image so the strip + source thumbnail stay framed
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const audioStartTimeRef = useRef(0); // AudioContext time when playback started
@@ -2064,6 +2065,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // AI-composition-from-image button), false for text moods. Morph is offered for
   // text moods only; Vary is offered for both. Cleared by text-mood entry points.
   const [moodFromImg,setMoodFromImg]=useState(false);
+  const moodFromImgRef=useRef(false); useEffect(()=>{ moodFromImgRef.current=moodFromImg; },[moodFromImg]);
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
@@ -3087,7 +3089,14 @@ Composition rules:
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
     setStripOpen(false); // collapse the attributes strip on Play to free the canvas
-    requestAnimationFrame(()=>{try{canvasWrapRef.current?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}}); // bring the canvas fully into view
+    // In mood-from-image, the source thumbnail + collapsed Color·Style strip sit
+    // ABOVE the canvas; scrolling the canvas to the very top would push them off
+    // screen. Instead scroll to the strip wrapper so strip + thumbnail + canvas
+    // all stay framed (matches the intended Play layout). Other modes: canvas top.
+    requestAnimationFrame(()=>{try{
+      const _tgt = (moodFromImgRef.current && stripWrapRef.current) ? stripWrapRef.current : canvasWrapRef.current;
+      _tgt?.scrollIntoView({block:'start',behavior:'smooth'});
+    }catch(_){}}); // bring the right region fully into view
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -4181,7 +4190,7 @@ Composition rules:
           is on the canvas, without the full setup panel. Collapsed by default
           so the canvas keeps the room; tap the header to expand. ── */}
       {isActiveView && (
-      <div style={{width:'100%',maxWidth:480,marginBottom:(composeMode||micActive)?4:12}}>
+      <div ref={stripWrapRef} style={{width:'100%',maxWidth:480,marginBottom:(composeMode||micActive)?4:12}}>
         {/* Back to setup — abandons the current mood/source and returns to the
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
@@ -4310,9 +4319,15 @@ Composition rules:
               setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
               setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
               setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
+              // Keep the Color·Style strip OPEN after Vary so the user can keep
+              // varying without re-expanding it each time. It stays open until the
+              // user closes it themselves.
+              setStripOpen(true);
               // Only restart playback if it was already playing. When stopped,
               // VARY just loads the new variation (canvas blank, ready to Play).
-              if(wasPlaying){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
+              // startPlay collapses the strip — re-open it just after so Vary's
+              // "stay open" wins even when Vary restarts playback.
+              if(wasPlaying){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
             }} disabled={composeMode||micPainting||micListening||recording||working||!chords.length} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:'.64rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?1:.55,transition:'all .18s'}}>{t('vary')}</button>
           </div>
           )}
