@@ -8695,6 +8695,36 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // loadedSource stays 'image' and forceSetup stays false → image view persists.
       return;
     }
+    // MOOD-FROM-IMAGE source: Clear wipes the painted trace but STAYS in MFI —
+    // it keeps the mood piece (rebuilt from varySource), the source thumbnail,
+    // currentMood and composeSource, so Play stays active and the screen does
+    // NOT drop into the generic text-mood setup. Mirrors the image-source branch
+    // above, but the notes come from the AI mood (varySource) rather than pixels.
+    // Detection: MFI sets moodFromImg=true + moodContext=true and clears
+    // loadedSource, so it's distinguishable from both loaded sources and text moods.
+    if(moodFromImg && moodContext && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
+      stopAll();
+      setPending([]);pendingRef.current=[];
+      pressInfo.current={};sessionStart.current=0;gridSigRef.current='';
+      setInfo(null);
+      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
+      try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
+      // Rebuild the mood piece from varySource so Play replays the same piece.
+      { let _evts=[];
+        if(varySource&&varySource.notes&&varySource.notes.length){
+          try{ _evts=noteArr2events(varySource.notes,varySource.tempo||90)||[]; }catch(_){ _evts=[]; }
+        }
+        setChords(_evts);chordsRef.current=_evts;
+        idxRef.current=_evts.length;setDisp(_evts.length);
+      }
+      setStamp(s=>s+1); setPlayedOnce(false);
+      resumeFromRef.current=null; setHoldPaused(false);
+      setShowColorPalette(false); setCustomArmed(false);
+      // moodFromImg / moodContext / imgMoodThumb / currentMood all stay set and
+      // forceSetup stays false → MFI view persists with the same source image.
+      return;
+    }
     // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
     // full clear(): it drops the loaded source and chords so the source tile
     // no longer shows as active when returning to setup.
@@ -8707,7 +8737,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     draftOwnerRef.current=null;
     // Reset Colour + Style to defaults so returning to Setup is a clean slate.
     setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
-  },[stopAll,clear,composeMode,micPainting,micListening,loadedSource,mode,activePalette,atmoOn,atmoMood]);
+  },[stopAll,clear,composeMode,micPainting,micListening,loadedSource,mode,activePalette,atmoOn,atmoMood,moodFromImg,moodContext,varySource]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -8925,6 +8955,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // composes a mood on the canvas; a small thumbnail of the source sits on top.
   const loadImgMood=useCallback(e=>{
     const file=e.target.files[0]; if(!file) return; e.target.value='';
+    // Close the picker the moment a file is chosen. Other loaders (loadMidi/
+    // loadAudio/loadScore/loadImage) already do this; loadImgMood didn't, so the
+    // picker modal stayed up over the image while the AI composed — confusing.
+    // The hidden <input> has already fired its change event here, so closing the
+    // modal no longer risks cancelling the file dialog.
+    setPickMode(null);
     if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; }
     const r=new FileReader();
     r.onerror=()=>{ setErr(((t('errs')||{}).imgRead)||'Could not read image'); setErrInfo(false); };
@@ -10918,7 +10954,7 @@ Composition rules:
         const _imgAtmo = (viewMode==='image' && originalImgUrl && atmoOn && atmoMood);
         const _atmoTitle = _imgAtmo ? (()=>{ const w=_atmoWordSeek(atmoMood.v,atmoMood.e); const ti=(atmoMood.title&&String(atmoMood.title).trim())||''; return ti?(ti+' · '+w):w; })() : null;
         const seekTitle = _atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : t('mic').replace(/[^\p{L} ]/gu,''))); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
-        <div style={{width:'100%',maxWidth:`min(100%, ${CW}px)`,boxSizing:'border-box',marginBottom:8}}>
+        <div style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{(moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:'.46rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:'.46rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>))}</span>
             <span style={{opacity:.75}}>
