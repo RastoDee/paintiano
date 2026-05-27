@@ -8554,7 +8554,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(e.key==='Backspace'&&composeMode&&!busy&&!recording){e.preventDefault();undoLast();return;}
       if((e.key===' '||e.key==='Enter')&&isInteractive())return;
       if(e.key===' '){e.preventDefault();handlePauseClickRef.current?.();return;}
-      if(e.key==='Enter'){e.preventDefault();if(!composeMode){unlockAudio();setComposeMode(true);}else{setComposeMode(false);}return;}
+      if(e.key==='Enter'){e.preventDefault();if(!composeMode){unlockAudio();setComposeMode(true);setMicArmed(false);}else{setComposeMode(false);}return;}
       const m=map[e.key];if(m&&!held.has(e.key)){held.add(e.key);pressNote(m);}
     };
     const up=e=>held.delete(e.key);
@@ -8629,8 +8629,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // so each fresh source starts in the normal reading rather than inheriting
   // note-names from the previous one.
   useEffect(()=>{ setNotesMode(false); },[loadedSource,currentMood,moodFromImg]);
-  // Leaving the MIC context for another source clears the armed state too.
-  useEffect(()=>{ if(loadedSource||currentMood||moodFromImg||composeMode) setMicArmed(false); },[loadedSource,currentMood,moodFromImg,composeMode]);
+  // micArmed is reset explicitly at every site that leaves the MIC context
+  // (start mic, ← Setup, Clear branches, source-picker handlers). A blanket
+  // reset effect made micArmed flicker on/off whenever an unrelated source
+  // state ticked, even when nothing about the MIC context changed. Without
+  // the effect, micArmed remains stable across re-renders.
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
@@ -8956,7 +8959,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stashDraft]);
 
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     const r=new FileReader();
@@ -8978,7 +8981,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   };
 
   const loadAudio=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
@@ -9136,7 +9139,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
@@ -9403,7 +9406,7 @@ Composition rules:
     if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
-    setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
     stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current; // captured after stopAll's bump
     const r=new FileReader();
@@ -10699,7 +10702,7 @@ Composition rules:
               Known moods play the crafted piece; anything else is synthesised. */}
           <div>
             <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
-            {(()=>{ const goMood=(val)=>{ const txt=(val||'').trim(); if(!txt||sourcePickerLocked)return; setStructureSeedLock(null);setForceSetup(false);setCurrentMood(txt);setLoadedSource(null);setImgMoodThumb(null);setMoodFromImg(false);setVarySource(null);setMoodContext(true); aiMoodFromText(txt); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false); };
+            {(()=>{ const goMood=(val)=>{ const txt=(val||'').trim(); if(!txt||sourcePickerLocked)return; setMicArmed(false);setStructureSeedLock(null);setForceSetup(false);setCurrentMood(txt);setLoadedSource(null);setImgMoodThumb(null);setMoodFromImg(false);setVarySource(null);setMoodContext(true); aiMoodFromText(txt); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false); };
               // Autocomplete: as you type, list moods whose localized name (or key)
               // starts with the query. Diacritics are stripped on both sides so "z"
               // also matches "žiarivá". Deduped by label, current language.
@@ -10792,6 +10795,7 @@ Composition rules:
                     audioBlobRef.current=null;setCurrentMood(null);setVarySource(null);setSongQ('');setLoadedSource(null);
                   }
                   setComposeMode(true);
+                  setMicArmed(false);
                 } else setComposeMode(false);
               }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}♪ {composeMode?t('composing').replace(/[^\p{L} ]/gu,''):t('compose').replace(/[^\p{L} ]/gu,'')}</button>
               <button className="pf-mic" onClick={()=>{
@@ -10814,6 +10818,7 @@ Composition rules:
                 setMoodFromImg(false); setImgMoodThumb(null);
                 setForceSetup(false);
                 setMicArmed(true);
+                setStayActive(true);
               }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
             </div>
           </div>
@@ -11861,7 +11866,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.15</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.16</footer>
     </div>
   );
 }
