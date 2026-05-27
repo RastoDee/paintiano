@@ -8859,12 +8859,20 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
       try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
       // Rebuild the mood piece from varySource so Play replays the same piece.
+      // CRITICAL: disp stays at 0 — chords are loaded ready-to-play but the
+      // CANVAS stays blank after Clear. Otherwise the artist overlays
+      // (pollock drips, picasso shards, miró constellations…) render at full
+      // strength against the blank background, leaving "residual" shapes that
+      // look like leftover paint. Image-mode Clear has the same setup but its
+      // canvas has opacity:0 when not playing (the photo is visible underneath),
+      // so the issue is invisible there. In MFI the canvas is opaque, so we
+      // keep disp=0 — the painting only builds as Play actually progresses.
       { let _evts=[];
         if(varySource&&varySource.notes&&varySource.notes.length){
           try{ _evts=noteArr2events(varySource.notes,varySource.tempo||90)||[]; }catch(_){ _evts=[]; }
         }
         setChords(_evts);chordsRef.current=_evts;
-        idxRef.current=_evts.length;setDisp(_evts.length);
+        idxRef.current=0;setDisp(0);
       }
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
@@ -11896,7 +11904,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.0</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.1</footer>
     </div>
   );
 }
