@@ -4264,11 +4264,17 @@ Composition rules:
                 // Open the MIC canvas in ARMED state — don't auto-start recording.
                 // The user taps the big 🎙 REC in the centre of the canvas (or the
                 // REC pill below it once any chords exist) to actually begin.
-                // Stash any other live draft + reset transient source state so
-                // the canvas is clean for MIC.
+                // Clear all OTHER source contexts so the micArmed-reset effect
+                // (which clears micArmed if any other source is active) doesn't
+                // immediately undo our setMicArmed(true) below.
                 if(draftOwnerRef.current && draftOwnerRef.current!=='sing' && draftOwnerRef.current!=='listen'){
                   stashDraft(draftOwnerRef.current); draftOwnerRef.current=null;
                 }
+                setComposeMode(false);
+                setCurrentMood(null); setVarySource(null); setSongQ('');
+                setMidiBlob(null); setMidiName(''); setAudioBlob(null); setAudioName(''); audioBlobRef.current=null;
+                setLoadedSource(null);
+                setMoodFromImg(false); setImgMoodThumb(null);
                 setForceSetup(false);
                 setMicArmed(true);
               }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
@@ -5318,7 +5324,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.14</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.3.15</footer>
     </div>
   );
 }
