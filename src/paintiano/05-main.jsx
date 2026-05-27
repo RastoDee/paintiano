@@ -4907,7 +4907,8 @@ Composition rules:
           mood:{String(!!currentMood)}<br/>
           mfi:{String(moodFromImg)}<br/>
           force:{String(forceSetup)}<br/>
-          stay:{String(stayActive)}
+          stay:{String(stayActive)}<br/>
+          BIG_REC_COND:{String(chords.length===0 && micArmed && !micActive)}
         </div>
         {chords.length===0 && micArmed && !micActive && (
           <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,background:'rgba(255,0,255,.15)',border:'2px dashed rgba(255,0,255,.7)'}}>
