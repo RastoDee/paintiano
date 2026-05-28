@@ -663,6 +663,19 @@ export default function Paintiano() {
   // Clicking the active artist a second time deselects, returning to mosaic.
   // Only affects music-mode rendering; image-mode ignores this.
   const [style, setStyle] = useState(null);
+  // styleRef mirrors `style` so async callbacks (demo reel host bridge,
+  // imperative renderer paths) can read the current style without going
+  // through a stale closure.
+  const styleRef = useRef(null);
+  useEffect(()=>{ styleRef.current = style; },[style]);
+  // AI Artist — "in the spirit of" real-artist overlay. When style==='ai',
+  // the renderer uses drawAiArtistOverlay with this artist's recipe.
+  // Generated lazily on first ✦ AI tap; rerolled by Vary or repeated tap.
+  // Persisted nowhere — fresh per session (cache lives in module memory).
+  const [aiArtist, setAiArtist] = useState(null);   // {name, period, palette[12], geometry, edges, density, layering, accent}
+  const [aiArtistLoading, setAiArtistLoading] = useState(false);
+  const aiArtistUsedNamesRef = useRef([]);  // session history — last few names AI picked, to avoid repeats
+  const aiArtistSeedRef = useRef(1);        // seed counter, increments on each Vary/AI re-tap
   // Notes mode: a Mosaic sub-mode (mood only) that writes note NAMES instead of
   // colour blocks. Toggled by tapping the active Mosaic chip; auto-reset when any
   // artist style is chosen, or when the source is not a mood.
@@ -748,6 +761,62 @@ export default function Paintiano() {
       if(canvasRef.current)canvasRef.current.style.opacity='1';
     },200);
   },[]);
+
+  // ✦ AI artist — picks a real artist + period via AI (with offline fallback),
+  // builds a 12-colour palette + drawing recipe, and switches the overlay to
+  // drawAiArtistOverlay. Each tap summons a NEW artist; if style is already 'ai',
+  // a fresh tap rerolls to the next one. The session keeps a short history of
+  // used names so AI doesn't repeat the same artist back-to-back.
+  const selectAiArtist = useCallback(async ()=>{
+    if(aiArtistLoading) return;
+    setAiArtistLoading(true);
+    // Build a context string from whatever the user has loaded:
+    //   – text mood / mood-from-image label    →  the mood phrase
+    //   – AI-composed piece title              →  the title
+    //   – MIDI/audio/score                     →  the file name (rough proxy)
+    //   – Compose / MIC                        →  generic "improvisation"
+    let context = '';
+    if(currentMood) context = currentMood;
+    else if(songQ) context = songQ;
+    else if(midiName) context = midiName.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ');
+    else if(audioName) context = audioName.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ');
+    else if(composeMode) context = 'a live improvisation at the piano';
+    else if(micPainting) context = 'a voice — humming, singing or whistling';
+    else if(micListening) context = 'ambient music captured live from a speaker';
+    else if(viewMode==='image') context = 'a painting read as music';
+    else context = 'an instrumental piece';
+    // Seed: increment so repeat taps reroll (cache bypass).
+    aiArtistSeedRef.current = (aiArtistSeedRef.current + 1) >>> 0;
+    const langName = ({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'})[lang] || 'English';
+    try{
+      const artist = await generateAiArtist({
+        context,
+        seed: aiArtistSeedRef.current,
+        usedNames: aiArtistUsedNamesRef.current.slice(-20),
+        langName,
+        model: CLAUDE_MODEL,
+      });
+      // Remember this name so the next tap doesn't immediately repeat.
+      aiArtistUsedNamesRef.current.push(artist.name);
+      if(aiArtistUsedNamesRef.current.length > 40) aiArtistUsedNamesRef.current.shift();
+      setAiArtist(artist);
+      // Activate the AI style. Mosaic/notes mode exits.
+      if(canvasRef.current){canvasRef.current.style.opacity='0';}
+      setTimeout(()=>{
+        setStyle('ai');
+        setNotesMode(false);
+        setStructureSeedLock(null);
+        if(canvasRef.current)canvasRef.current.style.opacity='1';
+      },200);
+    }catch(_e){
+      // generateAiArtist already has internal offline fallback that returns
+      // a valid artist on AI failure — getting here means even that failed.
+      // Surface a soft error and keep the existing style.
+      setErr('AI Artist unavailable.');
+    }finally{
+      setAiArtistLoading(false);
+    }
+  },[aiArtistLoading,currentMood,songQ,midiName,audioName,composeMode,micPainting,micListening,viewMode,lang]);
   // Append a fresh random salt and make it current (used by Play-from-start and
   // Loop replays when Random is on). Truncates any "future" entries if the user
   // had stepped Back, so the timeline stays linear.
@@ -766,6 +835,14 @@ export default function Paintiano() {
   // play action (Stop still works because it's the same button in playing state)
   // so the demo can't be re-triggered without an explicit clear.
   const [demoMode, setDemoMode] = useState(false);
+  // Demo reel — auto-playing showcase that walks through moods, modes, styles,
+  // Vary, image-as-music, Custom palette, and Print preview. Set demoReelRunning
+  // true to lock the UI gently and float a hint chip; the user can take over by
+  // tapping the canvas or the Skip pill. The reel runner lives in 046-demo-reel.jsx.
+  const [demoReelRunning, setDemoReelRunning] = useState(false);
+  const [demoReelHint, setDemoReelHint] = useState(null);          // i18n key for current hint
+  const [demoReelProgress, setDemoReelProgress] = useState(0);     // 0..1
+  const demoReelAliveRef = useRef(false);                          // cancellation flag
   // Inline "concept" modal: explains Harmony/Spectral and image transcription.
   const [showAbout, setShowAbout] = useState(false);
   // Stable callback for AboutModal — without useCallback the modal's React.memo
@@ -1210,7 +1287,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama';
+        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='ai';
         _setArtistSeed(pollockSessionSeed);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
@@ -1239,6 +1316,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        else if(style==='ai' && aiArtist) drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, aiArtist);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -1274,6 +1352,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='mondrian' && lim>0){
         drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
       }
+      if(style==='ai' && aiArtist && lim>0){
+        drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, aiArtist);
+      }
       if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
@@ -1283,7 +1364,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,aiArtist]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -3376,6 +3457,103 @@ Composition rules:
     startPlay();
   },[busy,stopAll,startPlay,fullClear,stashDraft]);
 
+  // ── Demo Reel ────────────────────────────────────────────────────────────
+  // Auto-play tour: ~60s, 10 scenes. The scene runner lives in 046-demo-reel.jsx
+  // and calls back into this app via the `host` object. Cancellation: setting
+  // demoReelAliveRef.current = false on next isStillRunning() poll exits cleanly.
+  const stopDemoReel = useCallback(()=>{
+    demoReelAliveRef.current = false;
+    setDemoReelRunning(false);
+    setDemoReelHint(null);
+    setDemoReelProgress(0);
+  },[]);
+
+  const runDemoReelStart = useCallback(()=>{
+    if(busy) return;
+    if(demoReelRunning) return;
+    // Clean slate first — drop any active mode/draft so the reel starts fresh.
+    try{ unlockAudio(); }catch(_){}
+    if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
+    draftOwnerRef.current = null;
+    fullClear();
+    stopAll();
+    setForceSetup(false);
+    setComposeMode(false);
+    setMicArmed(false);
+    setLoadedSource(null);
+    setStayActive(true); // lift to canvas view
+    demoReelAliveRef.current = true;
+    setDemoReelRunning(true);
+    setDemoReelProgress(0);
+    // Build the host bridge — high-level actions the reel uses.
+    const host = {
+      isStillRunning: ()=> demoReelAliveRef.current === true,
+      setHint: (key)=> setDemoReelHint(key),
+      setSceneProgress: (p)=> setDemoReelProgress(p),
+      setMood: (txt)=>{
+        // Use the same path as typing a mood — goes through crafted library or AI.
+        setStructureSeedLock(null);
+        setCurrentMood(txt);
+        setLoadedSource(null);
+        setImgMoodThumb(null);
+        setMoodFromImg(false);
+        setVarySource(null);
+        setMoodContext(true);
+        setSongQ(txt);
+        aiMoodFromText(txt);
+      },
+      setMode: (m)=>{
+        if(m === 'harmony' || m === 'spectral' || m === 'custom' || m === 'bw'){
+          setMode(m);
+        }
+      },
+      setStyle: (s)=>{
+        // null = mosaic. Reuse selectStyle for the cross-fade; if same value, no-op.
+        const cur = styleRef.current ?? null;
+        if(s === cur) return;
+        if(s === null){
+          if(cur !== null) selectStyle(cur); // toggles off
+        } else {
+          // If a different artist is active, selectStyle toggles it off first; just call twice safely.
+          if(cur !== null && cur !== s){ selectStyle(cur); setTimeout(()=>selectStyle(s), 120); }
+          else { selectStyle(s); }
+        }
+      },
+      triggerVary: ()=>{
+        // Mirror what the Vary button does, minus the UI feedback flash.
+        if(!varySource || !chordsRef.current.length) return;
+        try{
+          const varied = rerollSong(varySource, !randomMode);
+          if(!varied) return;
+          setVarySource(varied);
+          stopAll();
+          const evts = noteArr2events(varied.notes, varied.tempo);
+          if(!evts.length) return;
+          applyEvents(evts, varied.title + ' ·');
+          setTimeout(()=>{ startPlay(); }, 200);
+        }catch(_){}
+      },
+      loadImageFromDataUrl: (dataUrl)=>{
+        // Feed the URL into the existing image loader pipeline.
+        try{ loadImage(dataUrl); }catch(_){}
+      },
+      flashPrintPreview: ()=>{
+        // Open the print picker briefly; the reel auto-advances past it.
+        try{ setShowSizePicker(true); }catch(_){}
+        setTimeout(()=>{ try{ setShowSizePicker(false); }catch(_){} }, 3500);
+      },
+    };
+    // Need a stable ref for the current style so style transitions read correctly.
+    runDemoReel(host).then(()=>{
+      // Reel finished naturally — clear the running flag but keep whatever
+      // painting/state landed on the canvas so the user can keep playing.
+      setDemoReelRunning(false);
+      setDemoReelHint(null);
+      setDemoReelProgress(0);
+      demoReelAliveRef.current = false;
+    });
+  },[busy,demoReelRunning,fullClear,stopAll,stashDraft,aiMoodFromText,selectStyle,varySource,randomMode,applyEvents,startPlay,loadImage]);
+
   const handlePauseClick=useCallback(()=>{
     // If a live mic mode is active (Voice=micPainting or Music=micListening),
     // the Play button stops it and plays back the canvas just captured — mic-stop
@@ -4035,6 +4213,9 @@ Composition rules:
         if(style==='mondrian' && chords.length>0){
           drawMondrianOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
         }
+        if(style==='ai' && aiArtist && chords.length>0){
+          drawAiArtistOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, aiArtist);
+        }
       }
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
       if(!blob){setErr(t('errs').printEncode);setErrInfo(false);return;}
@@ -4140,7 +4321,7 @@ Composition rules:
 
   return (
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes demoHintIn{from{opacity:0;transform:translateX(-50%) translateY(-6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20}}>
         <nav style={{display:'flex',gap:18,fontSize:'.6rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
@@ -4150,9 +4331,9 @@ Composition rules:
             if(demoArmed){
               if(demoArmRef.current){clearTimeout(demoArmRef.current);demoArmRef.current=null;}
               setDemoArmed(false);
-              demoPlay();
+              runDemoReelStart();
             }else if(!chords.length){
-              demoPlay();
+              runDemoReelStart();
             }else{
               setDemoArmed(true);
               demoArmRef.current=setTimeout(()=>{setDemoArmed(false);demoArmRef.current=null;},3000);
@@ -4460,6 +4641,11 @@ Composition rules:
               setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
               setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
               setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
+              // If the AI Artist style is active, reroll the artist identity
+              // too — Vary means "fresh interpretation by a new artist".
+              // Fire-and-forget; the existing artist keeps painting until the
+              // new one resolves, then the renderer swaps in via aiArtist dep.
+              if(style==='ai'){ selectAiArtist(); }
               // Keep the Color·Style strip OPEN after Vary so the user can keep
               // varying without re-expanding it each time. It stays open until the
               // user closes it themselves.
@@ -4594,8 +4780,11 @@ Composition rules:
             {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse]].map(([k,label])=>(
               <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:PF.cream,background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
             ))}
-            {/* Random 🎲 — sits as the last grid cell (row 2), like in Setup. */}
-            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{justifySelf:'center',flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+            {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
+            <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
+              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+              <button onClick={()=>{ if(aiArtistLoading) return; selectAiArtist(); }} className="pf-artist pf-ai" title={aiArtistLoading?'summoning artist…':(style==='ai'?'AI artist active · tap for new':(currentMood?'paint in the spirit of a real artist':'paint in the spirit of a real artist (any source)'))} aria-label={style==='ai'?'AI artist active':'AI artist'} disabled={aiArtistLoading} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'.85rem',cursor:aiArtistLoading?'wait':'pointer',transition:'all .18s',color:style==='ai'?PF.bg:'rgba(220,180,255,.95)',background:style==='ai'?'linear-gradient(135deg,#ffb850,#d2a0ff)':'rgba(40,30,60,.5)',border:'1px solid '+(style==='ai'?'rgba(255,184,80,.85)':'rgba(210,160,255,.45)'),boxShadow:style==='ai'?'0 3px 10px rgba(210,160,255,.35)':'none',opacity:aiArtistLoading?.6:1}}>✦</button>
+            </div>
           </div>
           )}
         </div>
@@ -4972,7 +5161,43 @@ Composition rules:
             keep the canvas-wrapper subtree in its dependency graph, so the
             paint effect runs every time these values change. Width/height
             0 + overflow:hidden makes it invisible and zero-cost. */}
-        <div data-mfi-state aria-hidden="true" style={{position:'absolute',width:0,height:0,overflow:'hidden',pointerEvents:'none'}}>{chords.length}|{chordsRef.current?.length ?? 0}|{disp}|{varySource?1:0}|{String(moodFromImg)}|{String(moodContext)}|{currentMood||''}|{String(style||'')}|{String(effectiveStyle||'')}|{rndSalt}|{String(playing)}</div>
+        <div data-mfi-state aria-hidden="true" style={{position:'absolute',width:0,height:0,overflow:'hidden',pointerEvents:'none'}}>{chords.length}|{chordsRef.current?.length ?? 0}|{disp}|{varySource?1:0}|{String(moodFromImg)}|{String(moodContext)}|{currentMood||''}|{String(style||'')}|{String(effectiveStyle||'')}|{rndSalt}|{String(playing)}|{aiArtist?.name||''}</div>
+        {/* AI Artist signature — bottom-right corner when style='ai'. */}
+        {style==='ai' && aiArtist && (
+          <div style={{position:'absolute',bottom:10,right:14,zIndex:4,fontFamily:'Georgia, serif',fontStyle:'italic',fontSize:'.72rem',color:'rgba(220,180,255,.75)',textShadow:'0 1px 4px rgba(0,0,0,.85)',letterSpacing:'.02em',pointerEvents:'none'}}>
+            in the spirit of {aiArtist.name}
+          </div>
+        )}
+        {/* AI Artist loading overlay — covers the canvas while AI summons. */}
+        {aiArtistLoading && (
+          <div style={{position:'absolute',inset:0,zIndex:5,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'rgba(14,10,22,.55)',backdropFilter:'blur(2px)',WebkitBackdropFilter:'blur(2px)',pointerEvents:'none'}}>
+            <div style={{width:32,height:32,border:'2px solid rgba(220,180,255,.25)',borderTopColor:'rgba(220,180,255,.95)',borderRadius:'50%',animation:'spin .8s linear infinite'}}/>
+            <div style={{fontSize:'.55rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(220,180,255,.9)'}}>summoning artist…</div>
+          </div>
+        )}
+        {/* Demo reel overlays — hint chip, skip pill, top progress, and a
+            transparent layer that catches the first tap and hands control back
+            to the user (so the reel stops the moment they engage). */}
+        {demoReelRunning && (<>
+          {/* Top progress bar — thin, gold, fills left-to-right over the 60s. */}
+          <div style={{position:'absolute',top:0,left:0,right:0,height:2,zIndex:6,background:'rgba(201,168,76,.12)',pointerEvents:'none'}}>
+            <div style={{height:'100%',width:(demoReelProgress*100).toFixed(1)+'%',background:'linear-gradient(90deg,#c9a84c,#f0c860)',transition:'width .25s ease',boxShadow:'0 0 8px rgba(240,200,96,.55)'}}/>
+          </div>
+          {/* Hint chip — floats top-centre, fades in/out per scene. */}
+          {demoReelHint && (
+            <div style={{position:'absolute',top:14,left:'50%',transform:'translateX(-50%)',zIndex:7,padding:'8px 18px',borderRadius:22,background:'rgba(14,10,22,.78)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'rgba(245,232,200,.95)',fontSize:'.66rem',letterSpacing:'.14em',textTransform:'uppercase',fontWeight:500,whiteSpace:'nowrap',boxShadow:'0 4px 14px rgba(0,0,0,.4)',pointerEvents:'none',animation:'demoHintIn .4s ease-out'}}>
+              {t(demoReelHint)}
+            </div>
+          )}
+          {/* Skip pill — top-right corner. */}
+          <button onClick={stopDemoReel} style={{position:'absolute',top:12,right:12,zIndex:8,padding:'6px 14px',borderRadius:18,background:'rgba(14,10,22,.7)',border:'1px solid rgba(201,168,76,.4)',color:'rgba(245,232,200,.95)',fontSize:'.55rem',letterSpacing:'.16em',textTransform:'uppercase',cursor:'pointer',fontFamily:'inherit',fontWeight:500}}>
+            {t('demoSkip')}
+          </button>
+          {/* Click intercept — covers the canvas (below transport row). The
+              moment the user taps anywhere in the canvas area, the reel exits
+              and they own the next moment. No modal feel, no pause splash. */}
+          <div onClick={stopDemoReel} style={{position:'absolute',inset:0,zIndex:5,cursor:'pointer'}} title={t('demoTapToTakeOver')}/>
+        </>)}
         {chords.length===0 && micArmed && !micActive && (
           <div style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
             <button onClick={()=>{
@@ -5406,7 +5631,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.4</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.0-alpha</footer>
     </div>
   );
 }
