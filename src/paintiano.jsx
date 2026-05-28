@@ -7979,7 +7979,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='ai' && aiArtist) drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, aiArtist);
+        else if(style==='ai' && aiArtist) { try{ console.log('[AI Artist] drawing overlay, name=', aiArtist.name, 'lim=', lim); }catch(_){} drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, aiArtist); }
+        else if(style==='ai' && !aiArtist) { try{ console.warn('[AI Artist] style=ai but aiArtist is null'); }catch(_){} }
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -10123,9 +10124,11 @@ Composition rules:
       });
       aiArtistUsedNamesRef.current.push(artist.name);
       if(aiArtistUsedNamesRef.current.length > 40) aiArtistUsedNamesRef.current.shift();
+      try{ console.log('[AI Artist] picked', artist.name, 'palette=', artist.palette?.length, 'recipe=', {geometry:artist.geometry, edges:artist.edges, density:artist.density, accent:artist.accent}); }catch(_){}
       setAiArtist(artist);
       if(canvasRef.current){ canvasRef.current.style.opacity='0'; }
       setTimeout(()=>{
+        try{ console.log('[AI Artist] setting style=ai'); }catch(_){}
         setStyle('ai');
         setNotesMode(false);
         setStructureSeedLock(null);
