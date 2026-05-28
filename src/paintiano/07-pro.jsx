@@ -34,7 +34,7 @@ const PRO_CFG = {
   // Free-tier heavy-AI allowance before the paywall
   trialMax: 5,
   // Display price (informational; real price + VAT come from Lemon Squeezy)
-  displayPrice: '€14.99',
+  displayPrice: '€9.99',
 };
 
 // ─── license storage helpers ────────────────────────────────────────────────
@@ -263,6 +263,9 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <button style={btnGold} onClick={openCheckout}>
               {tr('proPaywallCta', 'Get Paintiano Pro — €14.99 lifetime')}
             </button>
+            <p style={{ color: GOLD, fontSize: '.58rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
+              {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
+            </p>
             <button style={btnGhost} onClick={() => setView('key')}>
               {tr('proHaveKey', 'I already have a key')}
             </button>
