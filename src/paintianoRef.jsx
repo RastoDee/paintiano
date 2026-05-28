@@ -8125,21 +8125,27 @@ export default function Paintiano() {
   const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein'};
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
-  // button → flip to its partner; tap again → back. Pairing is by visual/medium
-  // kinship: cubist↔cut-out (sliced planes), drip↔bloom (gestural liquid colour),
-  // dots↔constellation (scattered marks), grid↔bauhaus (geometric abstraction),
-  // fields↔gold (large meditative planes), bulge↔wave (op-art illusion),
-  // arcs↔spiral (concentric/arc forms), pop↔comic (pop / comic-book).
-  const STYLE_PAIRS = [
+  // button → flip to its partner; tap again → back to Mosaic. Pairing is by
+  // visual/medium kinship: cubist↔cut-out, drip↔bloom, dots↔constellation,
+  // grid↔bauhaus, gold↔fields, bulge↔wave, spiral↔arcs, pop↔comic.
+  const BASE_STYLE_PAIRS = [
     ['picasso','matisse'],
     ['pollock','bloom'],
     ['kusama','miro'],
     ['mondrian','kandinsky'],
-    ['rothko','gold'],
+    ['gold','rothko'],
     ['bulge','wave'],
-    ['arcs','spiral'],
+    ['spiral','arcs'],
     ['pop','comic'],
   ];
+  // Which of each pair sits in the "A" (default-face) slot is randomised once
+  // per app open, then frozen for the session (until reload). This rotates the
+  // partner styles onto the visible face over time so the "B" styles aren't
+  // forgotten. The order is held in state so it survives re-renders but re-rolls
+  // on every fresh open.
+  const [STYLE_PAIRS] = useState(() =>
+    BASE_STYLE_PAIRS.map(([a,b]) => (Math.random() < 0.5 ? [a,b] : [b,a]))
+  );
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -12293,9 +12299,9 @@ Composition rules:
               };
               const nextHint = style===a ? `tap for ${STYLE_LABELS[b]}` : (style===b ? 'tap for Mosaic' : '');
               return (
-                <button key={a+'_'+b} className={(isOn||shufHit)?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
+                <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:isOn?PF.bg:(shufHit?PF.bg:PF.cream),background:isOn?PF.gold:(shufHit?'rgba(255,200,120,.9)':PF.card2),border:'1px solid '+(isOn?PF.gold:(shufHit?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)')),boxShadow:(isOn||shufHit)?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{label}</button>
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:isOn?PF.bg:PF.cream,background:isOn?PF.gold:PF.card2,border:'1px solid '+(isOn?PF.gold:(shufHit?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:isOn?'0 3px 10px rgba(240,192,64,.3)':(shufHit?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
               );
             })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
@@ -13112,7 +13118,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.16</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.19</footer>
     </div>
   );
 }

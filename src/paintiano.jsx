@@ -8125,21 +8125,27 @@ export default function Paintiano() {
   const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein'};
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
-  // button → flip to its partner; tap again → back. Pairing is by visual/medium
-  // kinship: cubist↔cut-out (sliced planes), drip↔bloom (gestural liquid colour),
-  // dots↔constellation (scattered marks), grid↔bauhaus (geometric abstraction),
-  // fields↔gold (large meditative planes), bulge↔wave (op-art illusion),
-  // arcs↔spiral (concentric/arc forms), pop↔comic (pop / comic-book).
-  const STYLE_PAIRS = [
+  // button → flip to its partner; tap again → back to Mosaic. Pairing is by
+  // visual/medium kinship: cubist↔cut-out, drip↔bloom, dots↔constellation,
+  // grid↔bauhaus, gold↔fields, bulge↔wave, spiral↔arcs, pop↔comic.
+  const BASE_STYLE_PAIRS = [
     ['picasso','matisse'],
     ['pollock','bloom'],
     ['kusama','miro'],
     ['mondrian','kandinsky'],
-    ['rothko','gold'],
+    ['gold','rothko'],
     ['bulge','wave'],
-    ['arcs','spiral'],
+    ['spiral','arcs'],
     ['pop','comic'],
   ];
+  // Which of each pair sits in the "A" (default-face) slot is randomised once
+  // per app open, then frozen for the session (until reload). This rotates the
+  // partner styles onto the visible face over time so the "B" styles aren't
+  // forgotten. The order is held in state so it survives re-renders but re-rolls
+  // on every fresh open.
+  const [STYLE_PAIRS] = useState(() =>
+    BASE_STYLE_PAIRS.map(([a,b]) => (Math.random() < 0.5 ? [a,b] : [b,a]))
+  );
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -13112,7 +13118,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.17</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.19</footer>
     </div>
   );
 }
