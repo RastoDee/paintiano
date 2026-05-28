@@ -226,7 +226,9 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     background: '#0a0a12', border: '1px solid rgba(201,168,76,.25)',
     borderRadius: 8, padding: 26, color: '#f5f5f5',
     boxShadow: '0 20px 60px rgba(0,0,0,.6)',
+    maxHeight: '90vh', overflowY: 'auto',
   };
+  const cardWide = Object.assign({}, card, { maxWidth: 460 });
   const btnGold = {
     width: '100%', background: GOLD, color: '#0a0a12', border: 'none',
     padding: '11px 12px', borderRadius: 5, fontSize: '.7rem', fontWeight: 600,
@@ -242,7 +244,18 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
 
   return (
     <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
-      <div style={card}>
+      {view !== 'success' && (
+        <button onClick={onClose} aria-label="Close" style={{
+          position: 'fixed', top: 16, right: 16, zIndex: 100001,
+          width: 38, height: 38, borderRadius: '50%',
+          background: 'rgba(10,10,18,.85)', backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(201,168,76,.35)',
+          color: '#ddd', fontSize: 22, cursor: 'pointer', lineHeight: 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 14px rgba(0,0,0,.5)',
+        }}>×</button>
+      )}
+      <div style={view === 'about' ? cardWide : card}>
         {view === 'intro' && (
           <>
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
@@ -252,16 +265,32 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 background: 'rgba(201,168,76,.12)', color: GOLD, fontSize: 22,
               }}>✦</div>
             </div>
-            <p style={{ fontSize: '.95rem', fontWeight: 600, textAlign: 'center', margin: '0 0 8px' }}>
+            <p style={{ fontSize: '.95rem', fontWeight: 600, textAlign: 'center', margin: '0 0 6px' }}>
               {reason === 'ai_trial'
                 ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
                 : tr('proPaywallTitle', 'This is part of Paintiano Pro')}
             </p>
-            <p style={{ fontSize: '.72rem', color: '#9a9a9a', textAlign: 'center', margin: '0 0 18px', lineHeight: 1.6 }}>
-              {tr('proPaywallBody', 'Unlock unlimited AI compositions, remove the watermark from exports, and support an independent art project.')}
+            <p style={{ fontSize: '.66rem', color: GOLD, textAlign: 'center', margin: '0 0 16px', letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
+              {tr('proPaywallSubtitle', 'Unlock everything. Pay once. Keep forever.')}
             </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 18px' }}>
+              {[
+                ['proValue1', 'Unlimited AI compositions', 'proValue1Sub', 'Generate as many paintings as you wish'],
+                ['proValue2', 'Export without watermark', 'proValue2Sub', 'Clean images, ready to share or print'],
+                ['proValue3', 'Lifetime access', 'proValue3Sub', 'One payment, yours forever'],
+                ['proValue4', 'Support a solo art project', 'proValue4Sub', 'Keep Paintiano independent'],
+              ].map(([k1, fb1, k2, fb2], i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, margin: '0 0 9px', fontSize: '.7rem', lineHeight: 1.4 }}>
+                  <span style={{ color: GOLD, fontSize: '.75rem', flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span>
+                    <span style={{ color: '#f5f5f5', fontWeight: 500 }}>{tr(k1, fb1)}</span>
+                    <span style={{ color: '#8a8a8a', display: 'block', fontSize: '.62rem', marginTop: 1 }}>{tr(k2, fb2)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
             <button style={btnGold} onClick={openCheckout}>
-              {tr('proPaywallCta', 'Get Paintiano Pro — €14.99 lifetime')}
+              {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
             </button>
             <p style={{ color: GOLD, fontSize: '.58rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
               {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
@@ -269,6 +298,13 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <button style={btnGhost} onClick={() => setView('key')}>
               {tr('proHaveKey', 'I already have a key')}
             </button>
+            <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
+              <span onClick={() => setView('about')} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('about'); } }}
+                style={{ color: GOLD, fontSize: '.6rem', letterSpacing: '.04em', cursor: 'pointer', opacity: .8, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                {tr('proLearnMore', 'Learn more about Pro')} →
+              </span>
+            </p>
             <p style={{ color: '#555', fontSize: '.55rem', textAlign: 'center', margin: '12px 0 0', letterSpacing: '.04em' }}>
               {tr('proPaywallFooter', 'One-time payment · No subscription · VAT included')}
             </p>
@@ -302,6 +338,116 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
           </>
         )}
 
+        {view === 'about' && (
+          <>
+            <p style={{ margin: '0 0 4px' }}>
+              <span onClick={() => setView('intro')} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('intro'); } }}
+                style={{ color: '#888', fontSize: '.62rem', letterSpacing: '.04em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 0' }}>
+                ← {tr('proBack', 'Back')}
+              </span>
+            </p>
+            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+              <div style={{
+                display: 'inline-flex', width: 46, height: 46, borderRadius: '50%',
+                alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(201,168,76,.12)', color: GOLD, fontSize: 22, marginBottom: 10,
+              }}>✦</div>
+              <p style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px', fontFamily: "'Cormorant Garamond',serif" }}>
+                {tr('proAboutTitle', 'Paintiano Pro')}
+              </p>
+              <p style={{ fontSize: '.72rem', color: GOLD, margin: 0, letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
+                {tr('proAboutLead', 'Everything in Free, without limits.')}
+              </p>
+            </div>
+
+            <p style={{ fontSize: '.66rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
+              {tr('proAboutWhatYouGet', 'What you get with Pro')}
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
+              {[
+                ['proValue1', 'Unlimited AI compositions', 'proValue1Sub', 'Generate as many paintings as you wish'],
+                ['proValue2', 'Export without watermark', 'proValue2Sub', 'Clean images, ready to share or print'],
+                ['proValue3', 'Lifetime access', 'proValue3Sub', 'One payment, yours forever'],
+                ['proValue4', 'Support a solo art project', 'proValue4Sub', 'Keep Paintiano independent'],
+              ].map(([k1, fb1, k2, fb2], i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 11px', fontSize: '.72rem', lineHeight: 1.45 }}>
+                  <span style={{ color: GOLD, fontSize: '.8rem', flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span>
+                    <span style={{ color: '#f5f5f5', fontWeight: 500 }}>{tr(k1, fb1)}</span>
+                    <span style={{ color: '#8a8a8a', display: 'block', fontSize: '.64rem', marginTop: 1 }}>{tr(k2, fb2)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <p style={{ fontSize: '.66rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
+              {tr('proAboutCompareTitle', 'Free vs Pro')}
+            </p>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.66rem', marginBottom: 22 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: '#9a9a9a', fontWeight: 500 }}>{tr('proAboutCompareFeature', 'Feature')}</th>
+                  <th style={{ textAlign: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: '#9a9a9a', fontWeight: 500, width: '22%' }}>{tr('proAboutCompareFree', 'Free')}</th>
+                  <th style={{ textAlign: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: GOLD, fontWeight: 600, width: '22%' }}>{tr('proAboutComparePro', 'Pro')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['proAboutCmp1', 'All manual modes (keyboard, mic, audio)', '✓', '✓'],
+                  ['proAboutCmp2', 'All visual styles & moods', '✓', '✓'],
+                  ['proAboutCmp3', 'AI compositions',
+                    tr('proAboutCmp3Free', '5 trial'),
+                    tr('proAboutCmp3Pro', 'Unlimited')],
+                  ['proAboutCmp4', 'Watermark on exports',
+                    tr('proAboutCmp4Free', 'Yes'),
+                    tr('proAboutCmp4Pro', 'None')],
+                  ['proAboutCmp5', 'Lifetime access', '—', '✓'],
+                ].map(([k, fb, freeVal, proVal], i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', color: '#d8d8d8' }}>{tr(k, fb)}</td>
+                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'center', color: '#9a9a9a' }}>{freeVal}</td>
+                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'center', color: GOLD, fontWeight: 500 }}>{proVal}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <p style={{ fontSize: '.66rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
+              {tr('proAboutHonestTitle', 'Honest about what Pro isn’t')}
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
+              {[
+                ['proAboutHonest1', 'Pro keeps the same Paintiano you already use — it just removes the limits. No hidden new features behind a wall.'],
+                ['proAboutHonest2', 'Pro doesn’t sync between devices automatically. Your license key works on up to 5 devices.'],
+                ['proAboutHonest3', 'Pro doesn’t include cloud storage. You save your paintings to your own files.'],
+              ].map(([k, fb], i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 9px', fontSize: '.66rem', lineHeight: 1.5, color: '#a8a8a8' }}>
+                  <span style={{ color: '#666', flexShrink: 0, marginTop: 1 }}>·</span>
+                  <span>{tr(k, fb)}</span>
+                </li>
+              ))}
+            </ul>
+
+            <button style={btnGold} onClick={openCheckout}>
+              {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
+            </button>
+            <p style={{ color: GOLD, fontSize: '.58rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
+              {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
+            </p>
+            <button style={btnGhost} onClick={() => setView('key')}>
+              {tr('proHaveKey', 'I already have a key')}
+            </button>
+            <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
+              <span onClick={() => setView('intro')} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('intro'); } }}
+                style={{ color: '#888', fontSize: '.6rem', letterSpacing: '.04em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                ← {tr('proBack', 'Back')}
+              </span>
+            </p>
+          </>
+        )}
+
         {view === 'success' && (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
             <div style={{
@@ -318,12 +464,6 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
           </div>
         )}
 
-        {view !== 'success' && (
-          <button onClick={onClose} aria-label="Close" style={{
-            position: 'absolute', top: 12, right: 14, background: 'transparent',
-            border: 'none', color: '#666', fontSize: 20, cursor: 'pointer', lineHeight: 1,
-          }}>×</button>
-        )}
       </div>
     </div>
   );

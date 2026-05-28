@@ -25,6 +25,11 @@ const ALLOWED = [
   'https://paintiano.vercel.app',
   'https://paintiano.app',
   'https://www.paintiano.app',
+<<<<<<< HEAD
+=======
+  'https://paintiano-git-dev',
+  'https://paintiano-',
+>>>>>>> dev
   'http://localhost',
   'http://127.0.0.1'
 ];
