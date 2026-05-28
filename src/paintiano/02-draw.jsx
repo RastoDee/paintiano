@@ -2524,6 +2524,288 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 }
 
+// ── Bloom (Sam Francis) ──────────────────────────────────────────────────────
+// Saturated colour blots that bleed and bloom on a field of white, with thin
+// drips running down from the masses (Sam Francis's abstract-expressionist
+// color-field watercolours). Density auto-scales with track length: short
+// pieces breathe with lots of white, long pieces crowd the canvas. Each blot
+// is a soft radial bloom coloured from a chord via gc(); drips fall from the
+// heavier blots. Reveals progressively as lim advances.
+function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const rnd = _seedRnd(83, ss, 0, 0);
+
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [120,100,200];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+
+  // White ground (Sam Francis canvases are mostly raw white).
+  ctx.fillStyle = '#f7f5ef';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Blot count auto-scales: short = airy, long = crowded.
+  const BLOTS = cn<=4 ? 4 : cn<=12 ? 8 : cn<=30 ? 16 : cn<=70 ? 28 : cn<=140 ? 44 : 64;
+  const visBlots = Math.max(1, Math.ceil((lim / cn) * BLOTS));
+
+  // Coverage fraction grows with length — controls how much white is left.
+  const coverage = cn<=12 ? 0.42 : cn<=40 ? 0.55 : cn<=100 ? 0.68 : 0.8;
+
+  // Pre-roll blot positions (stable per painting). Cluster slightly toward top,
+  // as Sam Francis often weights the upper field with drips falling below.
+  const blots = [];
+  for(let i=0; i<BLOTS; i++){
+    const topBias = rnd();
+    blots.push({
+      x: rnd() * CW,
+      y: (topBias*topBias) * CH * 0.85 + CH*0.02, // weighted upward
+      r: Math.min(CW,CH) * (0.05 + rnd()*0.14) * (0.6 + coverage*0.8),
+      ci: i,
+      drip: rnd(),
+    });
+  }
+
+  ctx.save();
+  for(let i=0; i<visBlots && i<blots.length; i++){
+    const bl = blots[i];
+    const col = chordCol(bl.ci, 1.0);
+    const colCss = `rgb(${col[0]|0},${col[1]|0},${col[2]|0})`;
+    // Soft radial bloom — translucent so overlaps mix like wet pigment.
+    const g = ctx.createRadialGradient(bl.x, bl.y, 0, bl.x, bl.y, bl.r);
+    g.addColorStop(0, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0.85)`);
+    g.addColorStop(0.55, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0.55)`);
+    g.addColorStop(1, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0)`);
+    ctx.fillStyle = g;
+    // Irregular bloom: blob made of a few overlapping circles.
+    const lobes = 3 + Math.floor(rnd()*4);
+    for(let l=0; l<lobes; l++){
+      const ang = rnd()*Math.PI*2;
+      const dist = rnd() * bl.r * 0.5;
+      const lr = bl.r * (0.5 + rnd()*0.6);
+      const lx = bl.x + Math.cos(ang)*dist;
+      const ly = bl.y + Math.sin(ang)*dist;
+      const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+      lg.addColorStop(0, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0.7)`);
+      lg.addColorStop(1, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0)`);
+      ctx.fillStyle = lg;
+      ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI*2); ctx.fill();
+    }
+    // Drips — thin trails running down from heavier blots.
+    if(bl.drip > 0.45){
+      const nDrips = 1 + Math.floor(rnd()*3);
+      for(let d=0; d<nDrips; d++){
+        const dx = bl.x + (rnd()-0.5) * bl.r * 1.2;
+        const dyStart = bl.y + bl.r*0.4;
+        const dLen = (0.1 + rnd()*0.45) * CH;
+        ctx.strokeStyle = `rgba(${col[0]|0},${col[1]|0},${col[2]|0},${(0.25+rnd()*0.35).toFixed(2)})`;
+        ctx.lineWidth = 1 + rnd()*2.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(dx, dyStart);
+        // slight wobble
+        const midx = dx + (rnd()-0.5)*6;
+        ctx.quadraticCurveTo(midx, dyStart+dLen*0.5, dx+(rnd()-0.5)*4, dyStart+dLen);
+        ctx.stroke();
+        // small pooled drop at the end
+        ctx.fillStyle = colCss;
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath(); ctx.arc(dx+(rnd()-0.5)*4, dyStart+dLen, 1.5+rnd()*2.5, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+    // Occasional fine spatter around a blot (Sam Francis speckle).
+    if(rnd() > 0.5){
+      ctx.fillStyle = colCss;
+      const spat = 6 + Math.floor(rnd()*14);
+      for(let s=0; s<spat; s++){
+        const sa = rnd()*Math.PI*2, sd = bl.r*(0.6+rnd()*1.1);
+        const sx = bl.x + Math.cos(sa)*sd, sy = bl.y + Math.sin(sa)*sd;
+        ctx.globalAlpha = 0.3 + rnd()*0.4;
+        ctx.beginPath(); ctx.arc(sx, sy, 0.6+rnd()*1.8, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.restore();
+}
+
+// ── Spiral (Hilma af Klint) ──────────────────────────────────────────────────
+// Spiritual / symbolist abstraction: floating flowers, concentric circles and
+// snail-spirals on a warm field, OR a radiant mandala with segmented rings and
+// rays (Hilma af Klint's "The Ten Largest" and "Altarpieces"). Seed picks the
+// composition per painting. Each form is coloured from a chord via gc(); forms
+// reveal progressively as lim advances. Soft pastel, organic, mystical.
+function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, 0, 0);
+
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [200,150,120];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css = (c,a)=> a===undefined ? `rgb(${c[0]|0},${c[1]|0},${c[2]|0})` : `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+
+  // Warm ground sampled from the piece (Hilma's ochre/peach fields).
+  const warm = chordCol(0, 0.55);
+  ctx.fillStyle = `rgb(${Math.min(255,warm[0]+90)|0},${Math.min(255,warm[1]+55)|0},${Math.min(255,warm[2]+30)|0})`;
+  ctx.fillRect(0, 0, CW, CH);
+
+  const revealFrac = Math.max(0, Math.min(1, lim / cn));
+  const mandala = rnd() < 0.5;
+
+  // Draw a snail-spiral.
+  function snail(cx, cy, rMax, turns, col, lw){
+    ctx.strokeStyle = css(col, 0.9);
+    ctx.lineWidth = lw;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    const steps = Math.max(20, turns*30);
+    for(let s=0; s<=steps; s++){
+      const t = s/steps;
+      const ang = t * turns * Math.PI*2;
+      const r = t * rMax;
+      const x = cx + Math.cos(ang)*r;
+      const y = cy + Math.sin(ang)*r;
+      if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+  // Draw a petal-flower (ring of ellipses around a centre).
+  function flower(cx, cy, r, petals, col, colC){
+    for(let p=0; p<petals; p++){
+      const ang = (p/petals)*Math.PI*2;
+      const px = cx + Math.cos(ang)*r*0.55;
+      const py = cy + Math.sin(ang)*r*0.55;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(ang);
+      ctx.fillStyle = css(col, 0.85);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r*0.5, r*0.26, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = css(colC, 0.95);
+    ctx.beginPath(); ctx.arc(cx, cy, r*0.28, 0, Math.PI*2); ctx.fill();
+  }
+  // Concentric circles.
+  function rings(cx, cy, rMax, n, baseIdx){
+    for(let k=n; k>=1; k--){
+      const col = chordCol(baseIdx+k, (k&1)?1.0:0.78);
+      ctx.fillStyle = css(col, 0.9);
+      ctx.beginPath(); ctx.arc(cx, cy, rMax*(k/n), 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  if(mandala){
+    // ── Mandala: big segmented disc + ray crown + descending column ──────────
+    const cx = CW*0.5, cy = CH*0.32;
+    const R = Math.min(CW, CH) * 0.30;
+    // Ray crown
+    const rays = 36;
+    const visRays = Math.ceil(revealFrac * rays);
+    for(let i=0; i<visRays; i++){
+      const ang = (i/rays)*Math.PI*2 - Math.PI/2;
+      const col = chordCol(i, 1.0);
+      ctx.fillStyle = css(col, 0.85);
+      const r0 = R*1.02, r1 = R*1.35;
+      const w = (Math.PI*2/rays)*0.4;
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(ang-w)*r0, cy+Math.sin(ang-w)*r0);
+      ctx.lineTo(cx+Math.cos(ang)*r1, cy+Math.sin(ang)*r1);
+      ctx.lineTo(cx+Math.cos(ang+w)*r0, cy+Math.sin(ang+w)*r0);
+      ctx.closePath(); ctx.fill();
+    }
+    // Golden disc
+    const disc = chordCol(0, 1.1);
+    ctx.fillStyle = css([Math.min(255,disc[0]+40), Math.min(255,disc[1]+20), disc[2]], 1);
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
+    // Descending column of small rings (chakra ladder)
+    const cols = cn<=8?6:cn<=24?10:cn<=60?16:22;
+    const visCols = Math.ceil(revealFrac*cols);
+    const colTop = cy + R*1.0;
+    const colBot = CH*0.98;
+    for(let i=0; i<visCols; i++){
+      const t = i/(cols-1);
+      const y = colTop + t*(colBot-colTop);
+      const halfW = (CW*0.06) + t*(CW*0.34);
+      const col = chordCol(i+1, (i&1)?1.0:0.8);
+      ctx.fillStyle = css(col, 0.7);
+      ctx.fillRect(cx-halfW, y, halfW*2, (colBot-colTop)/cols*0.9);
+      // small mandala dot in centre
+      const dot = chordCol(i+3, 1.15);
+      ctx.fillStyle = css(dot, 0.95);
+      ctx.beginPath(); ctx.arc(cx, y+(colBot-colTop)/cols*0.45, Math.min(10, halfW*0.18), 0, Math.PI*2); ctx.fill();
+    }
+  } else {
+    // ── Floating forms: flowers, circles, spirals scattered on warm field ────
+    const FORMS = cn<=6?5:cn<=18?9:cn<=45?15:cn<=100?24:36;
+    const visForms = Math.ceil(revealFrac * FORMS);
+    // stable positions
+    const forms = [];
+    for(let i=0;i<FORMS;i++){
+      forms.push({
+        x: CW*(0.1+rnd()*0.8),
+        y: CH*(0.08+rnd()*0.84),
+        r: Math.min(CW,CH)*(0.06+rnd()*0.13),
+        kind: rnd(), // <0.34 flower, <0.67 rings, else spiral
+        ci: i,
+        petals: 5+Math.floor(rnd()*5),
+        turns: 2+rnd()*3,
+      });
+    }
+    // thin connecting curves first (behind)
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    for(let i=1;i<visForms;i++){
+      const a=forms[i-1], b=forms[i];
+      ctx.beginPath();
+      ctx.moveTo(a.x,a.y);
+      ctx.quadraticCurveTo((a.x+b.x)/2 + (rnd()-0.5)*60, (a.y+b.y)/2, b.x, b.y);
+      ctx.stroke();
+    }
+    for(let i=0;i<visForms;i++){
+      const f = forms[i];
+      const col = chordCol(f.ci, 1.0);
+      const colC = chordCol(f.ci+2, 1.15);
+      if(f.kind < 0.34){
+        flower(f.x, f.y, f.r, f.petals, col, colC);
+      } else if(f.kind < 0.67){
+        rings(f.x, f.y, f.r, 3+Math.floor(rnd()*3), f.ci);
+      } else {
+        // filled pale disc behind spiral for contrast
+        ctx.fillStyle = css(col, 0.4);
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill();
+        snail(f.x, f.y, f.r*0.95, f.turns, colC, 1.5+rnd()*2);
+      }
+    }
+  }
+}
+
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
