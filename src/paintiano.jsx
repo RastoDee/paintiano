@@ -2196,12 +2196,18 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // Pass count grows steeply with song length. Short songs are sparse (so the
   // music structure shows), long songs build true Pollock density. Curve:
   //   10 chords → 8 passes, 30 → 25, 60 → 55, 100 → 95, 150 → 135, 250+ → 200 (cap)
-  const passCount = Math.min(200,
+  const passCount0 = Math.min(200,
     N < 30 ? Math.ceil(N * 0.85)
     : N < 80 ? 25 + Math.floor((N-30) * 0.85)
     : N < 200 ? 68 + Math.floor((N-80) * 0.90)
     : 176 + Math.floor((N-200) * 0.48)
   );
+  // ── Variant chooser (stable per painting, re-rolls on Vary) ──
+  //  A = dense all-over web (the classic Pollock).
+  //  B = sparse, bolder strokes with more open canvas + thicker beads.
+  const pollVariant = (ss >>> 6) % 2;
+  const passCount = pollVariant === 1 ? Math.max(4, Math.round(passCount0 * 0.55)) : passCount0;
+  const _pollWidthMul = pollVariant === 1 ? 1.8 : 1.0;
 
   // Map pass index → chord index. The first pass corresponds to the first
   // chord, last pass corresponds to the latest chord, evenly distributed.
@@ -2323,7 +2329,7 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
       lineAlpha = 0.88;
     }
     ctx.strokeStyle = colBase + lineAlpha.toFixed(2) + ')';
-    ctx.lineWidth = lineWidth;
+    ctx.lineWidth = lineWidth * _pollWidthMul;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -3129,14 +3135,31 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // Coverage fraction grows with length — controls how much white is left.
   const coverage = cn<=12 ? 0.42 : cn<=40 ? 0.55 : cn<=100 ? 0.68 : 0.8;
 
-  // Pre-roll blot positions (stable per painting). Cluster slightly toward top,
-  // as Sam Francis often weights the upper field with drips falling below.
+  // ── Variant chooser (stable per painting, re-rolls on Vary) ──
+  //  A = top-weighted field with drips falling down (classic Sam Francis).
+  //  B = "edge" composition: blots ring the borders, open white centre.
+  const bloomVariant = (ss >>> 7) % 2;
+
+  // Pre-roll blot positions (stable per painting).
   const blots = [];
   for(let i=0; i<BLOTS; i++){
-    const topBias = rnd();
+    let bx, by;
+    if(bloomVariant === 1){
+      const edge = Math.floor(rnd()*4);
+      const t = rnd();
+      const m = 0.16;
+      if(edge===0){ bx = t*CW; by = rnd()*CH*m; }
+      else if(edge===1){ bx = t*CW; by = CH*(1-m) + rnd()*CH*m; }
+      else if(edge===2){ bx = rnd()*CW*m; by = t*CH; }
+      else { bx = CW*(1-m) + rnd()*CW*m; by = t*CH; }
+    } else {
+      const topBias = rnd();
+      bx = rnd() * CW;
+      by = (topBias*topBias) * CH * 0.85 + CH*0.02;
+    }
     blots.push({
-      x: rnd() * CW,
-      y: (topBias*topBias) * CH * 0.85 + CH*0.02, // weighted upward
+      x: bx,
+      y: by,
       r: Math.min(CW,CH) * (0.05 + rnd()*0.14) * (0.6 + coverage*0.8),
       ci: i,
       drip: rnd(),
@@ -3418,13 +3441,66 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 
   // ── Ornament grid ─────────────────────────────────────────────────────────
+  // ── Ornament composition: two variants chosen by seed ─────────────────────
+  const goldVariant = (ss >>> 3) % 2;
+  const revealFrac = Math.max(0, Math.min(1, lim/cn));
+
+  if(goldVariant === 1){
+    // Variant B — vertical decorative bands (Klimt frieze): tall columns, each
+    // filled with a stack of ornaments (eyes, spirals, triangles, chevrons).
+    const COLS = cn<=8 ? 3 : cn<=24 ? 5 : cn<=60 ? 7 : 9;
+    const colW = CW / COLS;
+    const visCols = Math.ceil(revealFrac * COLS);
+    for(let c=0; c<visCols; c++){
+      const x0 = c*colW;
+      const baseI = c*5;
+      // band background tint
+      const bandCol = chordCol(baseI, 0.92);
+      ctx.fillStyle = css(bandCol, 0.55);
+      ctx.fillRect(x0+colW*0.08, 0, colW*0.84, CH);
+      ctx.strokeStyle = 'rgba(60,40,8,0.5)'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x0+colW*0.08, 0, colW*0.84, CH);
+      // stack of motifs down the column
+      const motifs = cn<=12 ? 5 : cn<=40 ? 8 : 12;
+      const mH = CH / motifs;
+      for(let m=0; m<motifs; m++){
+        const cx = x0 + colW/2;
+        const cy = m*mH + mH/2;
+        const col1 = chordCol(baseI+m, 1.0);
+        const col2 = chordCol(baseI+m+2, 1.1);
+        const r = Math.min(colW*0.7, mH*0.7)/2;
+        const motifKind = (c + m) % 3;
+        if(motifKind === 0){
+          // eye
+          for(let k=3;k>=1;k--){ ctx.fillStyle = css(k===2?col2:col1, 0.9); ctx.beginPath(); ctx.arc(cx, cy, r*(k/3), 0, Math.PI*2); ctx.fill(); }
+          ctx.fillStyle='rgba(40,28,6,0.85)'; ctx.beginPath(); ctx.arc(cx,cy,r*0.16,0,Math.PI*2); ctx.fill();
+        } else if(motifKind === 1){
+          // chevron stack
+          ctx.strokeStyle = css(col1, 0.95); ctx.lineWidth = Math.max(2, r*0.2);
+          for(let z=-1;z<=1;z++){
+            ctx.beginPath();
+            ctx.moveTo(cx-r, cy+z*r*0.4 - r*0.2);
+            ctx.lineTo(cx, cy+z*r*0.4 + r*0.2);
+            ctx.lineTo(cx+r, cy+z*r*0.4 - r*0.2);
+            ctx.stroke();
+          }
+        } else {
+          // triangle
+          ctx.fillStyle = css(col2, 0.9);
+          ctx.beginPath(); ctx.moveTo(cx, cy-r); ctx.lineTo(cx+r, cy+r); ctx.lineTo(cx-r, cy+r); ctx.closePath(); ctx.fill();
+        }
+      }
+    }
+    return;
+  }
+
+  // ── Variant A — ornament grid (default) ───────────────────────────────────
   // Tile the canvas with cells; each cell gets a colour-jewel ornament. Ornament
   // count (grid resolution) scales with track length.
   const COLS = cn<=8 ? 4 : cn<=24 ? 6 : cn<=60 ? 8 : 10;
   const ROWS = Math.max(4, Math.round(COLS * (CH/CW)));
   const cw = CW/COLS, ch = CH/ROWS;
   const total = COLS*ROWS;
-  const revealFrac = Math.max(0, Math.min(1, lim/cn));
   const visCells = Math.ceil(revealFrac * total);
 
   let drawn=0;
@@ -3594,6 +3670,37 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     }
   }
 
+  // ── Composition: two variants by seed ─────────────────────────────────────
+  const popVariant = (ss >>> 4) % 2;
+
+  if(popVariant === 1){
+    // Variant B — mural: big scattered glyphs of varying size overlapping on a
+    // single vivid ground, each with energy ticks. Haring wall style.
+    const N = cn<=6?5:cn<=18?9:cn<=45?16:cn<=100?26:38;
+    const visN = Math.ceil(revealFrac * N);
+    const items = [];
+    for(let i=0;i<N;i++){
+      items.push({
+        x: CW*(0.08+rnd()*0.84),
+        y: CH*(0.08+rnd()*0.84),
+        s: Math.min(CW,CH)*(0.08+rnd()*0.16),
+        ci: i,
+        kind: Math.floor(rnd()*4),
+      });
+    }
+    for(let i=0;i<visN && i<items.length;i++){
+      const it = items[i];
+      const gcol = chordCol(it.ci, 1.0);
+      if(it.kind===0) glyphFigure(it.x, it.y, it.s, gcol);
+      else if(it.kind===1) glyphHeart(it.x, it.y, it.s, gcol);
+      else if(it.kind===2) glyphStar(it.x, it.y, it.s, gcol);
+      else glyphBurst(it.x, it.y, it.s, gcol);
+      energy(it.x, it.y, it.s);
+    }
+    return;
+  }
+
+  // ── Variant A — glyph grid (default) ──────────────────────────────────────
   let drawn=0;
   for(let row=0; row<ROWS; row++){
     for(let col=0; col<COLS; col++){
@@ -3657,6 +3764,42 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   ctx.fillStyle = css([Math.min(255,liteC[0]+60),Math.min(255,liteC[1]+60),Math.min(255,liteC[2]+60)]);
   ctx.fillRect(0, 0, CW, CH);
 
+  // ── Composition: two variants by seed ─────────────────────────────────────
+  const waveVariant = (ss >>> 5) % 2;
+
+  if(waveVariant === 1){
+    // Variant B — concentric ripple rings (Riley "Blaze"): nested wavy circles
+    // radiating from a centre, alternating two tones, with rotational wobble.
+    const cx = CW*0.5, cy = CH*0.5;
+    const maxR = Math.hypot(CW, CH)*0.55;
+    const RINGS = cn<=8?14:cn<=24?22:cn<=60?34:cn<=120?48:64;
+    const visRings = Math.max(1, Math.ceil((lim/cn)*RINGS));
+    const ringStep = maxR / RINGS;
+    // Draw outer→inner so inner rings sit on top.
+    for(let r=visRings; r>=1; r--){
+      const rad = r*ringStep;
+      const ch2 = chords[Math.min(cn-1, Math.floor((r/RINGS)*cn))];
+      const notes = ch2 && (ch2.n||ch2.notes);
+      const topNote = notes&&notes.length?(notes[0].m!==undefined?notes[0].m:notes[0]):60;
+      const wobN = 5 + (topNote%7);      // petals of wobble
+      const wobAmp = ringStep * (0.4 + ((r%5)/5)*0.9);
+      const col = (r&1) ? chordCol(r, 0.55) : chordCol(r+3, 1.2);
+      ctx.fillStyle = css(col);
+      ctx.beginPath();
+      const segs = 80;
+      for(let s=0;s<=segs;s++){
+        const a = (s/segs)*Math.PI*2;
+        const rr = rad + Math.sin(a*wobN + r*0.5)*wobAmp;
+        const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
+        if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    return;
+  }
+
+  // ── Variant A — horizontal bands of vertical wavy stripes (default) ───────
   // Horizontal bands of vertical wavy stripes; each band reveals as lim grows.
   const BANDS = cn<=8?6:cn<=24?10:cn<=60?16:cn<=120?22:28;
   const visBands = Math.max(1, Math.ceil((lim/cn)*BANDS));
@@ -3696,6 +3839,125 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
       }
       ctx.closePath();
       ctx.fill();
+    }
+  }
+}
+
+// ── Comic (Roy Lichtenstein) ─────────────────────────────────────────────────
+// Pop / comic-book language: flat primary-colour panels overlaid with Ben-Day
+// halftone dots, heavy black outlines, and the occasional starburst. Each panel
+// (or tile) takes its colour from a chord via gc(); the halftone density and
+// dot colour read the music. Two variants by seed: a panel grid, or a single
+// big burst-centred panel. Reveals progressively as lim advances.
+function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const rnd = _seedRnd(107, ss, 0, 0);
+
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [240,210,40];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+  const BLACK = '#0a0a0a';
+
+  // Ben-Day halftone fill over a rectangular region, in a given dot colour.
+  function halftone(x0, y0, w, h, dotCol, spacing, rad){
+    ctx.fillStyle = css(dotCol);
+    for(let y=y0+spacing/2; y<y0+h; y+=spacing){
+      const off = (Math.round((y-y0)/spacing)%2) ? spacing/2 : 0;
+      for(let x=x0+spacing/2+off; x<x0+w; x+=spacing){
+        ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  }
+  // Starburst (comic "POW" shape) outline.
+  function burst(cx, cy, r, fillCol){
+    const pts = 12;
+    ctx.fillStyle = css(fillCol);
+    ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(2, r*0.04); ctx.lineJoin='round';
+    ctx.beginPath();
+    for(let i=0;i<pts*2;i++){
+      const a = (i/(pts*2))*Math.PI*2 - Math.PI/2;
+      const rr = (i&1) ? r*0.6 : r;
+      const x = cx+Math.cos(a)*rr, y = cy+Math.sin(a)*rr;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+
+  const revealFrac = Math.max(0, Math.min(1, lim/cn));
+  const comicVariant = (ss >>> 2) % 2;
+
+  if(comicVariant === 1){
+    // Variant B — single big panel: flat ground + halftone + central burst.
+    const ground = chordCol(0, 1.0);
+    ctx.fillStyle = css([Math.min(255,ground[0]*0.5+120),Math.min(255,ground[1]*0.5+120),Math.min(255,ground[2]*0.5+120)]);
+    ctx.fillRect(0,0,CW,CH);
+    // halftone wash
+    const dotCol = chordCol(2, 0.8);
+    const sp = Math.max(8, Math.min(CW,CH)/40);
+    ctx.globalAlpha = 0.5;
+    halftone(0, 0, CW, CH, dotCol, sp, sp*0.28);
+    ctx.globalAlpha = 1;
+    // central burst sized by reveal
+    const r = Math.min(CW,CH)*0.18*(0.6+revealFrac*0.7);
+    burst(CW*0.5, CH*0.42, r, chordCol(4, 1.1));
+    // a few satellite bursts revealed over time
+    const sats = Math.ceil(revealFrac * 6);
+    for(let i=0;i<sats;i++){
+      const a = rnd()*Math.PI*2, d = Math.min(CW,CH)*(0.3+rnd()*0.25);
+      burst(CW*0.5+Math.cos(a)*d, CH*0.42+Math.sin(a)*d, r*(0.3+rnd()*0.3), chordCol(i+5, 1.0));
+    }
+    // thick frame
+    ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(4, Math.min(CW,CH)*0.02);
+    ctx.strokeRect(ctx.lineWidth/2, ctx.lineWidth/2, CW-ctx.lineWidth, CH-ctx.lineWidth);
+    return;
+  }
+
+  // Variant A — panel grid: each tile flat colour + halftone + black border.
+  const COLS = cn<=6?2:cn<=18?3:cn<=45?4:cn<=100?5:6;
+  const ROWS = Math.max(2, Math.round(COLS*(CH/CW)));
+  const cw = CW/COLS, ch = CH/ROWS;
+  const total = COLS*ROWS;
+  const visCells = Math.ceil(revealFrac*total);
+  let drawn=0;
+  for(let row=0; row<ROWS; row++){
+    for(let col=0; col<COLS; col++){
+      if(drawn++ >= visCells) break;
+      const i = row*COLS+col;
+      const x0=col*cw, y0=row*ch;
+      const base = chordCol(i, 1.0);
+      // light flat fill
+      ctx.fillStyle = css([Math.min(255,base[0]*0.55+110),Math.min(255,base[1]*0.55+110),Math.min(255,base[2]*0.55+110)]);
+      ctx.fillRect(x0, y0, cw, ch);
+      // halftone in saturated dot colour
+      const dot = chordCol(i, 0.85);
+      const sp = Math.max(6, Math.min(cw,ch)/8);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x0,y0,cw,ch); ctx.clip();
+      ctx.globalAlpha = 0.6;
+      halftone(x0, y0, cw, ch, dot, sp, sp*0.3);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+      // motif: alternate flat shape vs burst
+      if((i+ (ss%3)) % 3 === 0){
+        burst(x0+cw/2, y0+ch/2, Math.min(cw,ch)*0.3, chordCol(i+3,1.1));
+      }
+      // heavy black panel border
+      ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(3, Math.min(cw,ch)*0.04);
+      ctx.strokeRect(x0, y0, cw, ch);
     }
   }
 }
@@ -6443,8 +6705,8 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Type a feeling — <em>furious</em>, <em>saudade</em>, <em>3am drive</em>, in any language — and <strong style={{color:'rgba(201,168,76,.95)'}}>✦ AI</strong> writes a piano piece for it. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Morph</strong> bends one mood into another. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Vary</strong> rerolls a fresh take.</p>
     <p style={{margin:'0 0 22px'}}>Or bring your own: play the piano, sing into the mic, drop in a MIDI, an MP3, a sheet music file. Everything paints.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Painting styles</h3>
-    <p style={{margin:'0 0 12px'}}><strong>Mosaic</strong> is the plain reading — clean φ-rectangles. Tap it again for <strong>Notes</strong> mode (same grid, each block shows its note name — instant learning tool). Then fifteen artists rewrite the same notes their way:</p>
-    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubist</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Dots</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Constellation</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Grid</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Fields</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong></p>
+    <p style={{margin:'0 0 12px'}}><strong>Mosaic</strong> is the plain reading — clean φ-rectangles. Tap it again for <strong>Notes</strong> mode (same grid, each block shows its note name — instant learning tool). Then sixteen artists rewrite the same notes their way:</p>
+    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubist</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Dots</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Constellation</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Grid</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Fields</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Comic</strong></p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Picasso meets your playlist. Tap. Compare. Switch.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>🎲 Random</h3>
     <p style={{margin:'0 0 22px'}}>Same song, infinite variations. Toggle 🎲: with an artist picked, every Play rerolls a fresh version. With no artist, 🎲 shuffles the style itself — every Play, a new visual answer to the same music.</p>
@@ -6470,8 +6732,8 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Tippe ein Gefühl — <em>wütend</em>, <em>saudade</em>, <em>3-Uhr-Nachts-Fahrt</em>, in jeder Sprache — und <strong style={{color:'rgba(201,168,76,.95)'}}>✦ KI</strong> schreibt ein Klavierstück dazu. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Morph</strong> biegt eine Stimmung in eine andere. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Variieren</strong> würfelt eine frische Fassung.</p>
     <p style={{margin:'0 0 22px'}}>Oder bring eigene: spiel das Klavier, sing ins Mikro, lade ein MIDI, eine MP3, ein Partitur-File. Alles wird gemalt.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Malstile</h3>
-    <p style={{margin:'0 0 12px'}}><strong>Mosaik</strong> ist die schlichte Lesart — saubere φ-Rechtecke. Tippe nochmal für den <strong>Noten</strong>-Modus (gleiches Raster, jeder Block zeigt seinen Notennamen — Sofort-Lerntool). Dann schreiben fünfzehn Künstler dieselben Noten neu:</p>
-    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubismus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Punkte</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Konstellation</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Raster</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Farbfelder</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong></p>
+    <p style={{margin:'0 0 12px'}}><strong>Mosaik</strong> ist die schlichte Lesart — saubere φ-Rechtecke. Tippe nochmal für den <strong>Noten</strong>-Modus (gleiches Raster, jeder Block zeigt seinen Notennamen — Sofort-Lerntool). Dann schreiben sechzehn Künstler dieselben Noten neu:</p>
+    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubismus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Punkte</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Konstellation</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Raster</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Farbfelder</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Comic</strong></p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Picasso trifft deine Playlist. Antippen. Vergleichen. Wechseln.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>🎲 Zufall</h3>
     <p style={{margin:'0 0 22px'}}>Gleiches Stück, unendliche Varianten. 🎲 antippen: mit gewähltem Künstler würfelt jedes Play eine neue Variante. Ohne Künstler mischt 🎲 den Stil selbst — jedes Play, eine neue visuelle Antwort auf dieselbe Musik.</p>
@@ -6497,8 +6759,8 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Tape un ressenti — <em>furieux</em>, <em>saudade</em>, <em>3h du mat'</em>, dans n'importe quelle langue — et <strong style={{color:'rgba(201,168,76,.95)'}}>✦ IA</strong> écrit un morceau de piano dessus. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Morph</strong> plie une humeur dans une autre. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Varier</strong> relance une fraîche version.</p>
     <p style={{margin:'0 0 22px'}}>Ou amène la tienne : joue du piano, chante au micro, charge un MIDI, un MP3, une partition. Tout se peint.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Styles picturaux</h3>
-    <p style={{margin:'0 0 12px'}}><strong>Mosaïque</strong> est la lecture brute — rectangles φ nets. Tape encore pour <strong>Notes</strong> (même grille, chaque bloc affiche son nom — outil d'apprentissage instantané). Puis quinze artistes réécrivent les mêmes notes à leur façon :</p>
-    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubiste</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pois</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Constellation</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Grille</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Champs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong></p>
+    <p style={{margin:'0 0 12px'}}><strong>Mosaïque</strong> est la lecture brute — rectangles φ nets. Tape encore pour <strong>Notes</strong> (même grille, chaque bloc affiche son nom — outil d'apprentissage instantané). Puis seize artistes réécrivent les mêmes notes à leur façon :</p>
+    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubiste</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pois</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Constellation</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Grille</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Champs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Comic</strong></p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Picasso rencontre ta playlist. Tape. Compare. Change.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>🎲 Aléatoire</h3>
     <p style={{margin:'0 0 22px'}}>Même morceau, variations infinies. Tape 🎲 : avec un artiste choisi, chaque Lecture relance une nouvelle variante. Sans artiste, 🎲 mélange le style lui-même — chaque Lecture, une nouvelle réponse visuelle à la même musique.</p>
@@ -6524,8 +6786,8 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Escribe un sentir — <em>furioso</em>, <em>saudade</em>, <em>las 3am</em>, en cualquier idioma — y <strong style={{color:'rgba(201,168,76,.95)'}}>✦ IA</strong> compone una pieza de piano. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Morph</strong> dobla un estado en otro. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Variar</strong> relanza una versión fresca.</p>
     <p style={{margin:'0 0 22px'}}>O trae lo tuyo: toca el piano, canta al micrófono, carga un MIDI, un MP3, una partitura. Todo se pinta.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Estilos pictóricos</h3>
-    <p style={{margin:'0 0 12px'}}><strong>Mosaico</strong> es la lectura plana — rectángulos φ nítidos. Toca otra vez para modo <strong>Notas</strong> (misma cuadrícula, cada bloque muestra su nombre — herramienta de aprendizaje instantánea). Luego quince artistas reescriben las mismas notas a su manera:</p>
-    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubista</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Lunares</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Constelación</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cuadrícula</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Campos</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong></p>
+    <p style={{margin:'0 0 12px'}}><strong>Mosaico</strong> es la lectura plana — rectángulos φ nítidos. Toca otra vez para modo <strong>Notas</strong> (misma cuadrícula, cada bloque muestra su nombre — herramienta de aprendizaje instantánea). Luego dieciséis artistas reescriben las mismas notas a su manera:</p>
+    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Cubista</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Lunares</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Constelación</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cuadrícula</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Campos</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Comic</strong></p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Picasso se encuentra con tu playlist. Toca. Compara. Cambia.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>🎲 Aleatorio</h3>
     <p style={{margin:'0 0 22px'}}>Mismo tema, infinitas variantes. Toca 🎲: con un artista elegido, cada Reproducir relanza una variante. Sin artista, 🎲 mezcla el propio estilo — cada Reproducir, una respuesta visual distinta a la misma música.</p>
@@ -6551,8 +6813,8 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}>Napíš pocit — <em>zúrivý</em>, <em>saudade</em>, <em>3:00 cesta autom</em>, v hocijakom jazyku — a <strong style={{color:'rgba(201,168,76,.95)'}}>✦ AI</strong> naň napíše klavírnu skladbu. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Morph</strong> ohne jednu náladu do druhej. <strong style={{color:'rgba(201,168,76,.95)'}}>✦ Variovať</strong> hodí čerstvú verziu.</p>
     <p style={{margin:'0 0 22px'}}>Alebo prines vlastné: hraj na klavíri, spievaj do mikrofónu, vlož MIDI, MP3, notovú partitúru. Všetko sa maľuje.</p>
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Štýly maľby</h3>
-    <p style={{margin:'0 0 12px'}}><strong>Mozaika</strong> je obyčajné čítanie — čisté φ-obdĺžniky. Klikni znova pre <strong>Noty</strong> mód (tá istá mriežka, ale každý blok ukáže názov noty — okamžitý učebný nástroj). Potom pätnásť umelcov prepíše tie isté noty po svojom:</p>
-    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubizmus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bodky</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Konštelácia</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Mriežka</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Polia</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong></p>
+    <p style={{margin:'0 0 12px'}}><strong>Mozaika</strong> je obyčajné čítanie — čisté φ-obdĺžniky. Klikni znova pre <strong>Noty</strong> mód (tá istá mriežka, ale každý blok ukáže názov noty — okamžitý učebný nástroj). Potom šestnásť umelcov prepíše tie isté noty po svojom:</p>
+    <p style={{margin:'0 0 12px',opacity:.85}}><strong style={{color:'rgba(210,170,255,.9)'}}>Kubizmus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bodky</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Drip</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bauhaus</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Konštelácia</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Mriežka</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Polia</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Cut-out</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bulge</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Arcs</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Bloom</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Spiral</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Gold</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Pop</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Wave</strong> · <strong style={{color:'rgba(210,170,255,.9)'}}>Comic</strong></p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Picasso stretáva tvoj playlist. Klikni. Porovnaj. Prepni.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>🎲 Náhoda</h3>
     <p style={{margin:'0 0 22px'}}>Tá istá skladba, nekonečné variácie. Klikni 🎲: s vybraným umelcom každé Prehrať hodí novú variantu. Bez umelca 🎲 mieša samotný štýl — každé Prehrať, iná vizuálna odpoveď na tú istú hudbu.</p>
@@ -6606,8 +6868,8 @@ const GUIDE_I18N = {
    body:`Two paths. ◆ Music → painting: type a mood (any language, any vibe), or play the piano, or sing into the mic, or drop in a MIDI / MP3 / score. ◆ Painting → music: drop in an image. ◆ Pick a colour mode (Harmony or Spectral), maybe an artist style (8 of them). Same music always makes the same painting. 🎲 Random breaks that — fresh take each Play. ◆ Stuck? Type a feeling, hit Play, watch it build. The loop teaches the rest. ◆ Then Print the painting and Record the music — those are the parts you keep.`},
   {id:'modes', title:`Harmony vs Spectral`, keywords:`colour color mode hue palette circle fifths chromatic custom bw black white`,
    body:`Two colour grammars for the same music. Harmony — Circle-of-Fifths order, related keys cluster. Spectral — even 30° steps, one colour per semitone. B/W — lightness to pitch, hue ignored. Custom — only colours in your palette sound. Switch anytime; same notes, instant repaint. Tap an active tab to preview its colours. In image mode, the app picks Color or B/W for you; only Custom is yours to choose.`},
-  {id:'style', title:`Painting styles (15)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubist polka dots drip splatter constellation collage cut-out grid colour field fields artist abstract geometric phase variation inspired by`,
-   body:`Optional overlays — each a different reading of the same notes. Mosaic is the plain default (φ-rectangles). Then fifteen artists: ◆ Cubist (Picasso) ◆ Dots (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constellation (Miró) ◆ Grid (Mondrian) ◆ Fields (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — bold black-outlined glyphs with energy ticks) ◆ Wave (Bridget Riley — op-art wavy stripes that optically vibrate). Most styles hold several compositions; with 🎲 on, Vary/next rerolls between them. Tap active style to deselect. Each one is a fresh visual answer to the same piece.`},
+  {id:'style', title:`Painting styles (16)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubist polka dots drip splatter constellation collage cut-out grid colour field fields artist abstract geometric phase variation inspired by`,
+   body:`Optional overlays — each a different reading of the same notes. Mosaic is the plain default (φ-rectangles). Then sixteen artists: ◆ Cubist (Picasso) ◆ Dots (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constellation (Miró) ◆ Grid (Mondrian) ◆ Fields (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — bold black-outlined glyphs with energy ticks) ◆ Wave (Bridget Riley) ◆ Comic (Roy Lichtenstein — Ben-Day halftone dots, bold outlines, comic panels). Styles are paired on each button — tap to paint, tap again to flip to the partner. Most styles hold several compositions; with 🎲 on, Vary/next rerolls between them. Tap active style to deselect. Each one is a fresh visual answer to the same piece.`},
   {id:'random', title:`🎲 Random &amp; Shuffle`, keywords:`random shuffle determinism seed reroll variation same music different painting fresh dice unique play next style cycle`,
    body:`Same music = same painting, every time. 🎲 breaks that. ◆ With an artist picked: rerolls that artist into a new variation each Play. Structure can change too. ◆ With no artist: 🎲 becomes shuffle — every Play paints a random style (mosaic excluded). The drawn style shows a light outline; tap to keep it. ◆ Switching style or colour never rerolls — only Play / next does. Remembered across sessions.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test example sample replace confirm`,
@@ -6662,8 +6924,8 @@ const GUIDE_I18N = {
    body:`Zwei Wege. ◆ Musik → Bild: tippe eine Stimmung (jede Sprache, jedes Gefühl), oder spiel Klavier, oder sing ins Mikro, oder lad ein MIDI / MP3 / Partitur. ◆ Bild → Musik: lad ein Bild. ◆ Farbmodus wählen (Harmonie oder Spektral), vielleicht einen Künstlerstil (8 davon). Gleiche Musik macht immer das gleiche Bild. 🎲 Zufall bricht das — frische Fassung bei jedem Play. ◆ Unsicher? Tippe ein Gefühl, drück Play, schau zu. Die Schleife lehrt den Rest. ◆ Dann Bild drucken und Musik aufnehmen — das sind die Teile, die du behältst.`},
   {id:'modes', title:`Harmonie vs Spektral`, keywords:`farbe modus farbton palette quintenzirkel chromatisch custom bw schwarz weiß`,
    body:`Zwei Farbgrammatiken für die gleiche Musik. Harmonie — Quintenzirkel-Ordnung, verwandte Tonarten clustern. Spektral — gleichmäßige 30°-Schritte, eine Farbe pro Halbton. B/W — Helligkeit zu Tonhöhe, Farbton ignoriert. Custom — nur Farben deiner Palette klingen. Jederzeit wechselbar; gleiche Noten, sofort neu gemalt. Aktiven Tab antippen für Farbvorschau. Im Bildmodus wählt die App Color oder B/W; nur Custom wählst du.`},
-  {id:'style', title:`Malstile (15)`, keywords:`stil picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubismus punkte tropfen konstellation collage cut-out raster farbfeld künstler abstrakt geometrisch phase variation inspiriert`,
-   body:`Optionale Overlays — jedes eine andere Lesart derselben Noten. Mosaik ist Standard (φ-Rechtecke). Dann fünfzehn Künstler: ◆ Kubismus (Picasso) ◆ Punkte (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Konstellation (Miró) ◆ Raster (Mondrian) ◆ Farbfelder (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — fette schwarz umrandete Glyphen mit Energie-Strichen) ◆ Wave (Bridget Riley — Op-Art-Wellenstreifen, die optisch vibrieren). Die meisten Stile halten mehrere Kompositionen; mit 🎲 würfelt Variieren/weiter zwischen ihnen. Aktiven Stil antippen für Abwahl. Jeder ist eine frische visuelle Antwort auf dasselbe Stück.`},
+  {id:'style', title:`Malstile (16)`, keywords:`stil picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubismus punkte tropfen konstellation collage cut-out raster farbfeld künstler abstrakt geometrisch phase variation inspiriert`,
+   body:`Optionale Overlays — jedes eine andere Lesart derselben Noten. Mosaik ist Standard (φ-Rechtecke). Dann sechzehn Künstler: ◆ Kubismus (Picasso) ◆ Punkte (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Konstellation (Miró) ◆ Raster (Mondrian) ◆ Farbfelder (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — fette schwarz umrandete Glyphen mit Energie-Strichen) ◆ Wave (Bridget Riley) ◆ Comic (Roy Lichtenstein — Ben-Day-Halbtonpunkte, fette Umrisse, Comic-Panels). Stile sind paarweise pro Taste — tippen zum Malen, nochmal tippen zum Umschalten. Die meisten Stile halten mehrere Kompositionen; mit 🎲 würfelt Variieren/weiter zwischen ihnen. Aktiven Stil antippen für Abwahl. Jeder ist eine frische visuelle Antwort auf dasselbe Stück.`},
   {id:'random', title:`🎲 Zufall &amp; Mischen`, keywords:`zufall mischen shuffle determinismus seed neu würfeln variation gleiche musik anderes bild frisch einzigartig würfel play next stil zyklus`,
    body:`Gleiche Musik = gleiches Bild, immer. 🎲 bricht das. ◆ Mit gewähltem Künstler: würfelt diesen Stil bei jedem Play in eine neue Variante. Struktur kann sich auch ändern. ◆ Ohne Künstler: 🎲 wird Mischen — jedes Play malt einen zufälligen Stil (Mosaik ausgenommen). Gezogener Stil mit hellem Rand; antippen zum Behalten. ◆ Stil- oder Farbwechsel würfelt nie; nur Play / weiter. Über Sitzungen erinnert.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test beispiel ersetzen bestätigen`,
@@ -6718,8 +6980,8 @@ const GUIDE_I18N = {
    body:`Deux chemins. ◆ Musique → peinture : tape une humeur (n'importe quelle langue), ou joue du piano, ou chante au micro, ou charge un MIDI / MP3 / partition. ◆ Peinture → musique : charge une image. ◆ Choisis un mode couleur (Harmonie ou Spectral), peut-être un style d'artiste (8 disponibles). Même musique = même peinture, toujours. 🎲 Aléatoire rompt ça — version fraîche à chaque Lecture. ◆ Bloqué ? Tape une émotion, Lecture, regarde construire. La boucle apprend le reste. ◆ Ensuite Imprime la peinture et Enregistre la musique — c'est la part que tu gardes.`},
   {id:'modes', title:`Harmonie vs Spectral`, keywords:`couleur mode teinte palette cercle quintes chromatique custom bw noir blanc`,
    body:`Deux grammaires de couleur pour la même musique. Harmonie — ordre du cercle des quintes, tonalités voisines cluster. Spectral — pas de 30°, une couleur par demi-ton. B/W — luminosité à hauteur, teinte ignorée. Custom — seules les couleurs de ta palette sonnent. Échangeable à tout moment ; mêmes notes, repeint instantané. Toucher l'onglet actif pour aperçu. En image l'app choisit Color ou B/W ; seul Custom est à toi.`},
-  {id:'style', title:`Styles picturaux (15)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubisme pois drip constellation collage cut-out grille champ artiste abstrait géométrique phase variation inspiré`,
-   body:`Calques optionnels — chacun une lecture différente des mêmes notes. Mosaïque est le défaut (rectangles φ). Puis quinze artistes : ◆ Cubiste (Picasso) ◆ Pois (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constellation (Miró) ◆ Grille (Mondrian) ◆ Champs (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — glyphes cernés de noir avec traits d'énergie) ◆ Wave (Bridget Riley — rayures ondulées op-art qui vibrent optiquement). La plupart contiennent plusieurs compositions ; avec 🎲, Varier/suivant alterne entre elles. Toucher le style actif pour désélectionner. Chacun est une nouvelle réponse visuelle au même morceau.`},
+  {id:'style', title:`Styles picturaux (16)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubisme pois drip constellation collage cut-out grille champ artiste abstrait géométrique phase variation inspiré`,
+   body:`Calques optionnels — chacun une lecture différente des mêmes notes. Mosaïque est le défaut (rectangles φ). Puis seize artistes : ◆ Cubiste (Picasso) ◆ Pois (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constellation (Miró) ◆ Grille (Mondrian) ◆ Champs (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — glyphes cernés de noir avec traits d'énergie) ◆ Wave (Bridget Riley) ◆ Comic (Roy Lichtenstein — trames Ben-Day, contours épais, cases de BD). Les styles sont appairés sur chaque bouton — tape pour peindre, retape pour basculer. La plupart contiennent plusieurs compositions ; avec 🎲, Varier/suivant alterne entre elles. Toucher le style actif pour désélectionner. Chacun est une nouvelle réponse visuelle au même morceau.`},
   {id:'random', title:`🎲 Aléatoire &amp; Mélange`, keywords:`aléatoire mélange shuffle hasard déterminisme graine seed relancer variation même musique différente frais unique dé play suivant style cycle`,
    body:`Même musique = même peinture, toujours. 🎲 rompt ça. ◆ Avec un artiste : relance ce style en nouvelle variante à chaque Lecture. La structure peut aussi changer. ◆ Sans artiste : 🎲 devient mélange — chaque Lecture peint un style aléatoire (mosaïque exclue). Style tiré avec contour clair ; appui pour le garder. ◆ Changer de style/couleur ne relance jamais ; seule Lecture/suivant le fait. Mémorisé.`},
   {id:'demo', title:`Démo (Für Elise)`, keywords:`démo für elise beethoven test exemple remplacer confirmer`,
@@ -6774,8 +7036,8 @@ const GUIDE_I18N = {
    body:`Dos caminos. ◆ Música → pintura: escribe un estado (cualquier idioma), o toca el piano, o canta al micro, o carga un MIDI / MP3 / partitura. ◆ Pintura → música: carga una imagen. ◆ Elige modo de color (Armonía o Espectral), quizá un estilo (8 hay). Misma música = misma pintura, siempre. 🎲 Aleatorio rompe eso — versión fresca cada Reproducir. ◆ ¿Atorado? Escribe un sentir, Reproducir, observa cómo se construye. El bucle enseña el resto. ◆ Luego Imprime la pintura y Graba la música — esa es la parte que te queda.`},
   {id:'modes', title:`Armonía vs Espectral`, keywords:`color modo tono paleta círculo quintas cromático custom bw negro blanco`,
    body:`Dos gramáticas de color para la misma música. Armonía — orden del círculo de quintas, tonalidades emparentadas se agrupan. Espectral — pasos de 30°, un color por semitono. B/W — luminosidad a altura, tono ignorado. Custom — solo suenan los colores de tu paleta. Cambia cuando quieras; mismas notas, repintado instantáneo. Toca la pestaña activa para vista previa. En modo imagen la app elige Color o B/W; solo Custom es tuyo.`},
-  {id:'style', title:`Estilos pictóricos (15)`, keywords:`estilo picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubismo lunares drip constelación collage cut-out cuadrícula campo artista abstracto geométrico fase variación inspirado`,
-   body:`Capas opcionales — cada una una lectura distinta de las mismas notas. Mosaico es el predeterminado (rectángulos φ). Luego quince artistas: ◆ Cubista (Picasso) ◆ Lunares (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constelación (Miró) ◆ Cuadrícula (Mondrian) ◆ Campos (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — glifos con contorno negro y trazos de energía) ◆ Wave (Bridget Riley — rayas onduladas op-art que vibran ópticamente). La mayoría tienen varias composiciones; con 🎲 activo, Variar/siguiente alterna entre ellas. Toca el estilo activo para deseleccionar. Cada uno es una respuesta visual fresca a la misma pieza.`},
+  {id:'style', title:`Estilos pictóricos (16)`, keywords:`estilo picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubismo lunares drip constelación collage cut-out cuadrícula campo artista abstracto geométrico fase variación inspirado`,
+   body:`Capas opcionales — cada una una lectura distinta de las mismas notas. Mosaico es el predeterminado (rectángulos φ). Luego dieciséis artistas: ◆ Cubista (Picasso) ◆ Lunares (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constelación (Miró) ◆ Cuadrícula (Mondrian) ◆ Campos (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — glifos con contorno negro y trazos de energía) ◆ Wave (Bridget Riley) ◆ Comic (Roy Lichtenstein — puntos Ben-Day, contornos gruesos, viñetas). Los estilos van emparejados en cada botón — toca para pintar, toca otra vez para alternar. La mayoría tienen varias composiciones; con 🎲 activo, Variar/siguiente alterna entre ellas. Toca el estilo activo para deseleccionar. Cada uno es una respuesta visual fresca a la misma pieza.`},
   {id:'random', title:`🎲 Aleatorio &amp; Mezcla`, keywords:`aleatorio mezcla shuffle determinismo semilla seed relanzar variación misma música pintura diferente fresco único dado tocar play siguiente estilo ciclo`,
    body:`Misma música = misma pintura, siempre. 🎲 rompe eso. ◆ Con artista: relanza ese estilo en variación nueva cada Reproducir. La estructura también puede cambiar. ◆ Sin artista: 🎲 se vuelve mezcla — cada Reproducir pinta un estilo aleatorio (mosaico excluido). Estilo tirado con contorno claro; tócalo para quedártelo. ◆ Cambiar estilo/color nunca relanza; solo Reproducir/siguiente. Recordado.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test ejemplo reemplazar confirmar`,
@@ -6830,8 +7092,8 @@ const GUIDE_I18N = {
    body:`Dva smery. ◆ Hudba → maľba: napíš náladu (hocijaký jazyk), alebo hraj na klavíri, alebo spievaj do mikrofónu, alebo nahraj MIDI / MP3 / partitúru. ◆ Maľba → hudba: nahraj obraz. ◆ Vyber farebný mód (Harmónia alebo Spektrum), možno štýl umelca (8 ich je). Rovnaká hudba = rovnaká maľba, vždy. 🎲 Náhoda to ruší — čerstvá verzia každé Prehrať. ◆ Zaseknutý? Napíš pocit, Prehrať, sleduj ako sa to buduje. Tá slučka naučí zvyšok. ◆ Potom maľbu vytlač a hudbu nahraj — tá časť ti ostane.`},
   {id:'modes', title:`Harmónia vs Spektrum`, keywords:`farba mód odtieň paleta kvintový kruh chromatický custom bw čiernobiela`,
    body:`Dve farebné gramatiky pre tú istú hudbu. Harmónia — poradie kvintového kruhu, príbuzné tóniny sa zhlukujú. Spektrum — rovnomerné 30° kroky, jedna farba na poltón. B/W — jas na výšku, odtieň ignorovaný. Custom — znejú len farby tvojej palety. Prepni kedykoľvek; tie isté noty, okamžitá premaľba. Klikni aktívnu záložku pre náhľad. V obrazovom móde app vyberie Color alebo B/W; len Custom si volíš ty.`},
-  {id:'style', title:`Štýly maľby (15)`, keywords:`štýl picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubizmus bodky drip konštelácia koláž cut-out mriežka pole umelec abstraktný geometrický fáza variácia inšpirovaný`,
-   body:`Voliteľné vrstvy — každá iné čítanie tých istých nôt. Mozaika je default (φ-obdĺžniky). Potom pätnásť umelcov: ◆ Kubizmus (Picasso) ◆ Bodky (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Konštelácia (Miró) ◆ Mriežka (Mondrian) ◆ Polia (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — výrazné glyfy s čiernym obrysom a energetickými čiarkami) ◆ Wave (Bridget Riley — op-art zvlnené pruhy, ktoré opticky vibrujú). Väčšina drží viacero kompozícií; so 🎲 Variovať/ďalej strieda medzi nimi. Klikni aktívny štýl pre zrušenie. Každý je nová vizuálna odpoveď na tú istú skladbu.`},
+  {id:'style', title:`Štýly maľby (16)`, keywords:`štýl picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubizmus bodky drip konštelácia koláž cut-out mriežka pole umelec abstraktný geometrický fáza variácia inšpirovaný`,
+   body:`Voliteľné vrstvy — každá iné čítanie tých istých nôt. Mozaika je default (φ-obdĺžniky). Potom šestnásť umelcov: ◆ Kubizmus (Picasso) ◆ Bodky (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Konštelácia (Miró) ◆ Mriežka (Mondrian) ◆ Polia (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Gustav Klimt) ◆ Pop (Keith Haring — výrazné glyfy s čiernym obrysom a energetickými čiarkami) ◆ Wave (Bridget Riley) ◆ Comic (Roy Lichtenstein — Ben-Day rastrové bodky, hrubé obrysy, komiksové panely). Štýly sú spárované na každom tlačidle — klikni na maľovanie, klikni znova na prepnutie na partnera. Väčšina drží viacero kompozícií; so 🎲 Variovať/ďalej strieda medzi nimi. Klikni aktívny štýl pre zrušenie. Každý je nová vizuálna odpoveď na tú istú skladbu.`},
   {id:'random', title:`🎲 Náhoda &amp; Shuffle`, keywords:`náhoda shuffle determinizmus seed hodiť variácia rovnaká hudba iná maľba čerstvé jedinečné kocka prehrať ďalej štýl cyklus`,
    body:`Rovnaká hudba = rovnaká maľba, vždy. 🎲 to ruší. ◆ S umelcom: hodí ten štýl do novej variácie každé Prehrať. Štruktúra sa môže meniť tiež. ◆ Bez umelca: 🎲 sa stane shuffle — každé Prehrať namaľuje náhodný štýl (mozaika vynechaná). Vytiahnutý štýl s jemným obrysom; klikni preňho. ◆ Zmena štýlu/farby nikdy nehodí; len Prehrať/ďalej. Zapamätané.`},
   {id:'demo', title:`Demo (Für Elise)`, keywords:`demo für elise beethoven test príklad ukážka nahradiť potvrdiť`,
@@ -7853,14 +8115,31 @@ export default function Paintiano() {
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
   const STYLE_LABELS_I18N = {
-    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave'},
-    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Drip',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave'},
-    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Drip',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave'},
-    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave'},
-    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave'},
+    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic'},
+    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Drip',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic'},
+    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Drip',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic'},
+    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic'},
+    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
-  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley'};
+  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein'};
+  // Style pairs — each picker button cycles through two related styles, the way
+  // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
+  // button → flip to its partner; tap again → back. Pairing is by visual/medium
+  // kinship: cubist↔cut-out (sliced planes), drip↔bloom (gestural liquid colour),
+  // dots↔constellation (scattered marks), grid↔bauhaus (geometric abstraction),
+  // fields↔gold (large meditative planes), bulge↔wave (op-art illusion),
+  // arcs↔spiral (concentric/arc forms), pop↔comic (pop / comic-book).
+  const STYLE_PAIRS = [
+    ['picasso','matisse'],
+    ['pollock','bloom'],
+    ['kusama','miro'],
+    ['mondrian','kandinsky'],
+    ['rothko','gold'],
+    ['bulge','wave'],
+    ['arcs','spiral'],
+    ['pop','comic'],
+  ];
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -8047,7 +8326,7 @@ export default function Paintiano() {
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave'];
+  const SHUFFLE_POOL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
     // Mix the seed a little more so the style pick isn't correlated with the
@@ -8081,6 +8360,19 @@ export default function Paintiano() {
     },200);
   },[]);
 
+  // Set the style to a specific value (no toggle). Used by paired style buttons
+  // that cycle A→B→A within a pair instead of toggling a single key on/off.
+  const setStyleTo = useCallback((k)=>{
+    if(canvasRef.current){canvasRef.current.style.opacity='0';}
+    setTimeout(()=>{
+      setStyle(()=>{
+        if(k===null){ setStructureSeedLock(null); }
+        else { setNotesMode(false); }
+        return k;
+      });
+      if(canvasRef.current)canvasRef.current.style.opacity='1';
+    },200);
+  },[]);
   // Append a fresh random salt and make it current (used by Play-from-start and
   // Loop replays when Random is on). Truncates any "future" entries if the user
   // had stepped Back, so the timeline stays linear.
@@ -8453,7 +8745,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -8477,7 +8769,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
@@ -8485,7 +8777,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave';
+      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -8543,7 +8835,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave';
+        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic';
         _setArtistSeed(pollockSessionSeed);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
@@ -8579,6 +8871,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='gold') drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -8635,7 +8928,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='wave' && lim>0){
         drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'){
+      if(style==='comic' && lim>0){
+        drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+      }
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -8987,7 +9283,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave';
+        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic';
         if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
@@ -11418,6 +11714,9 @@ Composition rules:
         if(style==='wave' && chords.length>0){
           drawWaveOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
         }
+        if(style==='comic' && chords.length>0){
+          drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+        }
       }
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
       if(!blob){setErr(t('errs').printEncode);setErrInfo(false);return;}
@@ -11974,9 +12273,29 @@ Composition rules:
             {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
             <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',color:mosaicOn?PF.bg:(mosaicInert?PF.muted:PF.cream),background:mosaicOn?PF.gold:PF.card2,border:'1px solid '+(mosaicOn?PF.gold:'rgba(242,238,232,.08)'),boxShadow:mosaicOn?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
             ); })()}
-            {[['picasso',STYLE_LABELS.picasso],['kusama',STYLE_LABELS.kusama],['pollock',STYLE_LABELS.pollock],['kandinsky',STYLE_LABELS.kandinsky],['miro',STYLE_LABELS.miro],['mondrian',STYLE_LABELS.mondrian],['rothko',STYLE_LABELS.rothko],['matisse',STYLE_LABELS.matisse],['bulge',STYLE_LABELS.bulge],['arcs',STYLE_LABELS.arcs],['bloom',STYLE_LABELS.bloom],['spiral',STYLE_LABELS.spiral],['gold',STYLE_LABELS.gold],['pop',STYLE_LABELS.pop],['wave',STYLE_LABELS.wave]].map(([k,label])=>(
-              <button key={k} className={style===k?'pf-artist pf-artist-on':'pf-artist'} onClick={()=>selectStyle(k)} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:style===k?PF.bg:PF.cream,background:style===k?PF.gold:PF.card2,border:'1px solid '+(style===k?PF.gold:(shuffleStyle===k?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:style===k?'0 3px 10px rgba(240,192,64,.3)':(shuffleStyle===k?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
-            ))}
+            {STYLE_PAIRS.map(([a,b])=>{
+              // Which of the pair is active? Determines label + next target.
+              const activeKey = style===a ? a : (style===b ? b : null);
+              const isOn = activeKey!==null;
+              // Shuffle (Random + no manual pick): highlight whichever button
+              // holds the style the shuffle landed on, and show THAT style's
+              // label so the cycling reads on the buttons themselves.
+              const shufKey = (shuffleStyle===a || shuffleStyle===b) ? shuffleStyle : null;
+              const shufHit = shufKey!==null;
+              const label = STYLE_LABELS[activeKey || shufKey || a];
+              // Cycle: nothing→A, A→B, B→A.
+              const onClick = ()=>{
+                if(style===a) setStyleTo(b);
+                else if(style===b) setStyleTo(a);
+                else setStyleTo(a);
+              };
+              const partner = STYLE_LABELS[ activeKey===a ? b : a ];
+              return (
+                <button key={a+'_'+b} className={(isOn||shufHit)?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
+                  title={isOn ? `${STYLE_INSPIRED[activeKey]} — tap for ${partner}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip`)}
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:isOn?PF.bg:(shufHit?PF.bg:PF.cream),background:isOn?PF.gold:(shufHit?'rgba(255,200,120,.9)':PF.card2),border:'1px solid '+(isOn?PF.gold:(shufHit?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)')),boxShadow:(isOn||shufHit)?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{label}</button>
+              );
+            })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
             <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
               <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
@@ -12791,7 +13110,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.12</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.15</footer>
     </div>
   );
 }

@@ -1630,12 +1630,18 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // Pass count grows steeply with song length. Short songs are sparse (so the
   // music structure shows), long songs build true Pollock density. Curve:
   //   10 chords → 8 passes, 30 → 25, 60 → 55, 100 → 95, 150 → 135, 250+ → 200 (cap)
-  const passCount = Math.min(200,
+  const passCount0 = Math.min(200,
     N < 30 ? Math.ceil(N * 0.85)
     : N < 80 ? 25 + Math.floor((N-30) * 0.85)
     : N < 200 ? 68 + Math.floor((N-80) * 0.90)
     : 176 + Math.floor((N-200) * 0.48)
   );
+  // ── Variant chooser (stable per painting, re-rolls on Vary) ──
+  //  A = dense all-over web (the classic Pollock).
+  //  B = sparse, bolder strokes with more open canvas + thicker beads.
+  const pollVariant = (ss >>> 6) % 2;
+  const passCount = pollVariant === 1 ? Math.max(4, Math.round(passCount0 * 0.55)) : passCount0;
+  const _pollWidthMul = pollVariant === 1 ? 1.8 : 1.0;
 
   // Map pass index → chord index. The first pass corresponds to the first
   // chord, last pass corresponds to the latest chord, evenly distributed.
@@ -1757,7 +1763,7 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
       lineAlpha = 0.88;
     }
     ctx.strokeStyle = colBase + lineAlpha.toFixed(2) + ')';
-    ctx.lineWidth = lineWidth;
+    ctx.lineWidth = lineWidth * _pollWidthMul;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -2563,14 +2569,31 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // Coverage fraction grows with length — controls how much white is left.
   const coverage = cn<=12 ? 0.42 : cn<=40 ? 0.55 : cn<=100 ? 0.68 : 0.8;
 
-  // Pre-roll blot positions (stable per painting). Cluster slightly toward top,
-  // as Sam Francis often weights the upper field with drips falling below.
+  // ── Variant chooser (stable per painting, re-rolls on Vary) ──
+  //  A = top-weighted field with drips falling down (classic Sam Francis).
+  //  B = "edge" composition: blots ring the borders, open white centre.
+  const bloomVariant = (ss >>> 7) % 2;
+
+  // Pre-roll blot positions (stable per painting).
   const blots = [];
   for(let i=0; i<BLOTS; i++){
-    const topBias = rnd();
+    let bx, by;
+    if(bloomVariant === 1){
+      const edge = Math.floor(rnd()*4);
+      const t = rnd();
+      const m = 0.16;
+      if(edge===0){ bx = t*CW; by = rnd()*CH*m; }
+      else if(edge===1){ bx = t*CW; by = CH*(1-m) + rnd()*CH*m; }
+      else if(edge===2){ bx = rnd()*CW*m; by = t*CH; }
+      else { bx = CW*(1-m) + rnd()*CW*m; by = t*CH; }
+    } else {
+      const topBias = rnd();
+      bx = rnd() * CW;
+      by = (topBias*topBias) * CH * 0.85 + CH*0.02;
+    }
     blots.push({
-      x: rnd() * CW,
-      y: (topBias*topBias) * CH * 0.85 + CH*0.02, // weighted upward
+      x: bx,
+      y: by,
       r: Math.min(CW,CH) * (0.05 + rnd()*0.14) * (0.6 + coverage*0.8),
       ci: i,
       drip: rnd(),
@@ -2852,13 +2875,66 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 
   // ── Ornament grid ─────────────────────────────────────────────────────────
+  // ── Ornament composition: two variants chosen by seed ─────────────────────
+  const goldVariant = (ss >>> 3) % 2;
+  const revealFrac = Math.max(0, Math.min(1, lim/cn));
+
+  if(goldVariant === 1){
+    // Variant B — vertical decorative bands (Klimt frieze): tall columns, each
+    // filled with a stack of ornaments (eyes, spirals, triangles, chevrons).
+    const COLS = cn<=8 ? 3 : cn<=24 ? 5 : cn<=60 ? 7 : 9;
+    const colW = CW / COLS;
+    const visCols = Math.ceil(revealFrac * COLS);
+    for(let c=0; c<visCols; c++){
+      const x0 = c*colW;
+      const baseI = c*5;
+      // band background tint
+      const bandCol = chordCol(baseI, 0.92);
+      ctx.fillStyle = css(bandCol, 0.55);
+      ctx.fillRect(x0+colW*0.08, 0, colW*0.84, CH);
+      ctx.strokeStyle = 'rgba(60,40,8,0.5)'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x0+colW*0.08, 0, colW*0.84, CH);
+      // stack of motifs down the column
+      const motifs = cn<=12 ? 5 : cn<=40 ? 8 : 12;
+      const mH = CH / motifs;
+      for(let m=0; m<motifs; m++){
+        const cx = x0 + colW/2;
+        const cy = m*mH + mH/2;
+        const col1 = chordCol(baseI+m, 1.0);
+        const col2 = chordCol(baseI+m+2, 1.1);
+        const r = Math.min(colW*0.7, mH*0.7)/2;
+        const motifKind = (c + m) % 3;
+        if(motifKind === 0){
+          // eye
+          for(let k=3;k>=1;k--){ ctx.fillStyle = css(k===2?col2:col1, 0.9); ctx.beginPath(); ctx.arc(cx, cy, r*(k/3), 0, Math.PI*2); ctx.fill(); }
+          ctx.fillStyle='rgba(40,28,6,0.85)'; ctx.beginPath(); ctx.arc(cx,cy,r*0.16,0,Math.PI*2); ctx.fill();
+        } else if(motifKind === 1){
+          // chevron stack
+          ctx.strokeStyle = css(col1, 0.95); ctx.lineWidth = Math.max(2, r*0.2);
+          for(let z=-1;z<=1;z++){
+            ctx.beginPath();
+            ctx.moveTo(cx-r, cy+z*r*0.4 - r*0.2);
+            ctx.lineTo(cx, cy+z*r*0.4 + r*0.2);
+            ctx.lineTo(cx+r, cy+z*r*0.4 - r*0.2);
+            ctx.stroke();
+          }
+        } else {
+          // triangle
+          ctx.fillStyle = css(col2, 0.9);
+          ctx.beginPath(); ctx.moveTo(cx, cy-r); ctx.lineTo(cx+r, cy+r); ctx.lineTo(cx-r, cy+r); ctx.closePath(); ctx.fill();
+        }
+      }
+    }
+    return;
+  }
+
+  // ── Variant A — ornament grid (default) ───────────────────────────────────
   // Tile the canvas with cells; each cell gets a colour-jewel ornament. Ornament
   // count (grid resolution) scales with track length.
   const COLS = cn<=8 ? 4 : cn<=24 ? 6 : cn<=60 ? 8 : 10;
   const ROWS = Math.max(4, Math.round(COLS * (CH/CW)));
   const cw = CW/COLS, ch = CH/ROWS;
   const total = COLS*ROWS;
-  const revealFrac = Math.max(0, Math.min(1, lim/cn));
   const visCells = Math.ceil(revealFrac * total);
 
   let drawn=0;
@@ -3028,6 +3104,37 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     }
   }
 
+  // ── Composition: two variants by seed ─────────────────────────────────────
+  const popVariant = (ss >>> 4) % 2;
+
+  if(popVariant === 1){
+    // Variant B — mural: big scattered glyphs of varying size overlapping on a
+    // single vivid ground, each with energy ticks. Haring wall style.
+    const N = cn<=6?5:cn<=18?9:cn<=45?16:cn<=100?26:38;
+    const visN = Math.ceil(revealFrac * N);
+    const items = [];
+    for(let i=0;i<N;i++){
+      items.push({
+        x: CW*(0.08+rnd()*0.84),
+        y: CH*(0.08+rnd()*0.84),
+        s: Math.min(CW,CH)*(0.08+rnd()*0.16),
+        ci: i,
+        kind: Math.floor(rnd()*4),
+      });
+    }
+    for(let i=0;i<visN && i<items.length;i++){
+      const it = items[i];
+      const gcol = chordCol(it.ci, 1.0);
+      if(it.kind===0) glyphFigure(it.x, it.y, it.s, gcol);
+      else if(it.kind===1) glyphHeart(it.x, it.y, it.s, gcol);
+      else if(it.kind===2) glyphStar(it.x, it.y, it.s, gcol);
+      else glyphBurst(it.x, it.y, it.s, gcol);
+      energy(it.x, it.y, it.s);
+    }
+    return;
+  }
+
+  // ── Variant A — glyph grid (default) ──────────────────────────────────────
   let drawn=0;
   for(let row=0; row<ROWS; row++){
     for(let col=0; col<COLS; col++){
@@ -3091,6 +3198,42 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   ctx.fillStyle = css([Math.min(255,liteC[0]+60),Math.min(255,liteC[1]+60),Math.min(255,liteC[2]+60)]);
   ctx.fillRect(0, 0, CW, CH);
 
+  // ── Composition: two variants by seed ─────────────────────────────────────
+  const waveVariant = (ss >>> 5) % 2;
+
+  if(waveVariant === 1){
+    // Variant B — concentric ripple rings (Riley "Blaze"): nested wavy circles
+    // radiating from a centre, alternating two tones, with rotational wobble.
+    const cx = CW*0.5, cy = CH*0.5;
+    const maxR = Math.hypot(CW, CH)*0.55;
+    const RINGS = cn<=8?14:cn<=24?22:cn<=60?34:cn<=120?48:64;
+    const visRings = Math.max(1, Math.ceil((lim/cn)*RINGS));
+    const ringStep = maxR / RINGS;
+    // Draw outer→inner so inner rings sit on top.
+    for(let r=visRings; r>=1; r--){
+      const rad = r*ringStep;
+      const ch2 = chords[Math.min(cn-1, Math.floor((r/RINGS)*cn))];
+      const notes = ch2 && (ch2.n||ch2.notes);
+      const topNote = notes&&notes.length?(notes[0].m!==undefined?notes[0].m:notes[0]):60;
+      const wobN = 5 + (topNote%7);      // petals of wobble
+      const wobAmp = ringStep * (0.4 + ((r%5)/5)*0.9);
+      const col = (r&1) ? chordCol(r, 0.55) : chordCol(r+3, 1.2);
+      ctx.fillStyle = css(col);
+      ctx.beginPath();
+      const segs = 80;
+      for(let s=0;s<=segs;s++){
+        const a = (s/segs)*Math.PI*2;
+        const rr = rad + Math.sin(a*wobN + r*0.5)*wobAmp;
+        const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
+        if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    return;
+  }
+
+  // ── Variant A — horizontal bands of vertical wavy stripes (default) ───────
   // Horizontal bands of vertical wavy stripes; each band reveals as lim grows.
   const BANDS = cn<=8?6:cn<=24?10:cn<=60?16:cn<=120?22:28;
   const visBands = Math.max(1, Math.ceil((lim/cn)*BANDS));
@@ -3130,6 +3273,125 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
       }
       ctx.closePath();
       ctx.fill();
+    }
+  }
+}
+
+// ── Comic (Roy Lichtenstein) ─────────────────────────────────────────────────
+// Pop / comic-book language: flat primary-colour panels overlaid with Ben-Day
+// halftone dots, heavy black outlines, and the occasional starburst. Each panel
+// (or tile) takes its colour from a chord via gc(); the halftone density and
+// dot colour read the music. Two variants by seed: a panel grid, or a single
+// big burst-centred panel. Reveals progressively as lim advances.
+function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const rnd = _seedRnd(107, ss, 0, 0);
+
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [240,210,40];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+  const BLACK = '#0a0a0a';
+
+  // Ben-Day halftone fill over a rectangular region, in a given dot colour.
+  function halftone(x0, y0, w, h, dotCol, spacing, rad){
+    ctx.fillStyle = css(dotCol);
+    for(let y=y0+spacing/2; y<y0+h; y+=spacing){
+      const off = (Math.round((y-y0)/spacing)%2) ? spacing/2 : 0;
+      for(let x=x0+spacing/2+off; x<x0+w; x+=spacing){
+        ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  }
+  // Starburst (comic "POW" shape) outline.
+  function burst(cx, cy, r, fillCol){
+    const pts = 12;
+    ctx.fillStyle = css(fillCol);
+    ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(2, r*0.04); ctx.lineJoin='round';
+    ctx.beginPath();
+    for(let i=0;i<pts*2;i++){
+      const a = (i/(pts*2))*Math.PI*2 - Math.PI/2;
+      const rr = (i&1) ? r*0.6 : r;
+      const x = cx+Math.cos(a)*rr, y = cy+Math.sin(a)*rr;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+
+  const revealFrac = Math.max(0, Math.min(1, lim/cn));
+  const comicVariant = (ss >>> 2) % 2;
+
+  if(comicVariant === 1){
+    // Variant B — single big panel: flat ground + halftone + central burst.
+    const ground = chordCol(0, 1.0);
+    ctx.fillStyle = css([Math.min(255,ground[0]*0.5+120),Math.min(255,ground[1]*0.5+120),Math.min(255,ground[2]*0.5+120)]);
+    ctx.fillRect(0,0,CW,CH);
+    // halftone wash
+    const dotCol = chordCol(2, 0.8);
+    const sp = Math.max(8, Math.min(CW,CH)/40);
+    ctx.globalAlpha = 0.5;
+    halftone(0, 0, CW, CH, dotCol, sp, sp*0.28);
+    ctx.globalAlpha = 1;
+    // central burst sized by reveal
+    const r = Math.min(CW,CH)*0.18*(0.6+revealFrac*0.7);
+    burst(CW*0.5, CH*0.42, r, chordCol(4, 1.1));
+    // a few satellite bursts revealed over time
+    const sats = Math.ceil(revealFrac * 6);
+    for(let i=0;i<sats;i++){
+      const a = rnd()*Math.PI*2, d = Math.min(CW,CH)*(0.3+rnd()*0.25);
+      burst(CW*0.5+Math.cos(a)*d, CH*0.42+Math.sin(a)*d, r*(0.3+rnd()*0.3), chordCol(i+5, 1.0));
+    }
+    // thick frame
+    ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(4, Math.min(CW,CH)*0.02);
+    ctx.strokeRect(ctx.lineWidth/2, ctx.lineWidth/2, CW-ctx.lineWidth, CH-ctx.lineWidth);
+    return;
+  }
+
+  // Variant A — panel grid: each tile flat colour + halftone + black border.
+  const COLS = cn<=6?2:cn<=18?3:cn<=45?4:cn<=100?5:6;
+  const ROWS = Math.max(2, Math.round(COLS*(CH/CW)));
+  const cw = CW/COLS, ch = CH/ROWS;
+  const total = COLS*ROWS;
+  const visCells = Math.ceil(revealFrac*total);
+  let drawn=0;
+  for(let row=0; row<ROWS; row++){
+    for(let col=0; col<COLS; col++){
+      if(drawn++ >= visCells) break;
+      const i = row*COLS+col;
+      const x0=col*cw, y0=row*ch;
+      const base = chordCol(i, 1.0);
+      // light flat fill
+      ctx.fillStyle = css([Math.min(255,base[0]*0.55+110),Math.min(255,base[1]*0.55+110),Math.min(255,base[2]*0.55+110)]);
+      ctx.fillRect(x0, y0, cw, ch);
+      // halftone in saturated dot colour
+      const dot = chordCol(i, 0.85);
+      const sp = Math.max(6, Math.min(cw,ch)/8);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x0,y0,cw,ch); ctx.clip();
+      ctx.globalAlpha = 0.6;
+      halftone(x0, y0, cw, ch, dot, sp, sp*0.3);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+      // motif: alternate flat shape vs burst
+      if((i+ (ss%3)) % 3 === 0){
+        burst(x0+cw/2, y0+ch/2, Math.min(cw,ch)*0.3, chordCol(i+3,1.1));
+      }
+      // heavy black panel border
+      ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(3, Math.min(cw,ch)*0.04);
+      ctx.strokeRect(x0, y0, cw, ch);
     }
   }
 }
