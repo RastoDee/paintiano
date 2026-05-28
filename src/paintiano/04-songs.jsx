@@ -239,7 +239,6 @@ function audioBufferToWav(abuf){
 async function renderAudioOffline(events,opts){
   if(!events||!events.length) return null;
   const speed=(opts&&opts.speed)||1;
-  const instrument=(opts&&opts.instrument)||'piano';
   // Total duration: last note end + tail, scaled by playback speed.
   let endMs=0;
   events.forEach(ev=>ev.n.forEach(n=>{ const e=(ev.startMs||0)+(n.durMs||500); if(e>endMs)endMs=e; }));
@@ -247,34 +246,6 @@ async function renderAudioOffline(events,opts){
   const durSec=Math.max(1, endMs/1000/speed + tailS);
   try{
     const buffer=await Tone.Offline(async (ctx)=>{
-      if(instrument==='rhodes'){
-        // Rhodes electric piano — FM synth chain, fully synthetic so it always
-        // renders (no sample download needed in the offline context).
-        let rhodes=null;
-        try{
-          const reverb=new Tone.Reverb({decay:1.8, wet:0.18}).toDestination();
-          const chorus=new Tone.Chorus({frequency:1.2, delayTime:3.5, depth:0.5, wet:0.25}).connect(reverb);
-          try{ chorus.start(); }catch(_){}
-          rhodes=new Tone.PolySynth(Tone.FMSynth, {
-            harmonicity:3.0, modulationIndex:8,
-            oscillator:{type:'sine'},
-            envelope:{attack:0.002, decay:1.2, sustain:0.25, release:1.4},
-            modulation:{type:'sine'},
-            modulationEnvelope:{attack:0.004, decay:0.25, sustain:0.0, release:0.4},
-          }).connect(chorus);
-          try{ rhodes.volume.value=-6; }catch(_){}
-        }catch(_){}
-        events.forEach(ev=>{
-          const tSec=(ev.startMs||0)/1000/speed;
-          ev.n.forEach(n=>{
-            const gain=Math.max(0.01,Math.min(1,(n.v||88)/127));
-            const dur=Math.max(0.05,(n.durMs||500)/1000/speed);
-            const tail=Math.min(Math.max(dur*0.4,1.5),3.0);
-            if(rhodes){ try{ rhodes.triggerAttackRelease(Tone.Frequency(n.m,'midi').toNote(), dur+tail, tSec, gain); }catch(_){} }
-          });
-        });
-        return;
-      }
       // Create the sampler INSIDE the offline context and wait for its own
       // onload — Tone.loaded() tracks the global context, not this offline one,
       // which is why samples appeared "unloaded" (silent) on iOS.
