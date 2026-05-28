@@ -13,9 +13,6 @@
 
    Usage:   node build-paintiano.js
    Needs:   npm i -D @babel/parser   (one time)
-
-   NOTE: written as an ES module (import syntax) because package.json has
-         "type": "module". That is why this is import, not require.
    ─────────────────────────────────────────────────────────────────────────── */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,18 +33,15 @@ const OUT  = path.join(ROOT, 'src', 'paintiano.jsx');
 const REF  = path.join(ROOT, 'src', 'paintianoRef.jsx');
 
 // Fragment order — must stay in this sequence to reproduce the single file.
-// Adding a new module: insert it here at the right spot (alphabetic-ish, by
-// dependency order). Files NOT listed are ignored even if present in SRC.
+// Files NOT listed are ignored even if present in SRC.
 const ORDER = [
-  '01-core-head.jsx',    // imports + §1 constants/math + §2 parsers
-  '02-draw.jsx',         // §3 canvas draw functions
-  '03-i18n.jsx',         // §4 i18n / concept / guide
-  '04-songs.jsx',        // §5 song data / library / moods
-  '045-ai-artist.jsx',   // §5b AI Artist pool + generate + drawing (alpha)
-  '05-main.jsx',         // §6 sub-components + §7 main component
+  '01-core-head.jsx', // imports + §1 constants/math + §2 parsers
+  '02-draw.jsx',      // §3 canvas draw functions
+  '03-i18n.jsx',      // §4 i18n / concept / guide
+  '04-songs.jsx',     // §5 song data / library / moods
+  '05-main.jsx',      // §6 sub-components + §7 main component
 ];
 
-// Read each fragment, normalising any CRLF back to LF so the stitch is clean.
 const readLF = f => fs.readFileSync(path.join(SRC, f), 'utf8').replace(/\r\n/g, '\n');
 
 for (const f of ORDER) {
@@ -59,7 +53,6 @@ for (const f of ORDER) {
 
 const mergedLF = ORDER.map(readLF).join('');
 
-// ── Validation: real JSX parse ──────────────────────────────────────────────
 function parse(code, label) {
   try {
     parser.parse(code, { sourceType: 'module', plugins: ['jsx'] });
@@ -71,11 +64,9 @@ function parse(code, label) {
 }
 parse(mergedLF, 'src/paintiano.jsx');
 
-// ── Rotate Ref: current paintiano.jsx becomes "one version behind" ──────────
 let prevCRLF = null;
 if (fs.existsSync(OUT)) prevCRLF = fs.readFileSync(OUT, 'utf8');
 
-// ── Write output with CRLF to match the Windows repo ────────────────────────
 const mergedCRLF = mergedLF.replace(/\n/g, '\r\n');
 fs.writeFileSync(OUT, mergedCRLF);
 if (prevCRLF !== null) fs.writeFileSync(REF, prevCRLF);
