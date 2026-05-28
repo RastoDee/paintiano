@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/buy",
+      "destination": "https://paintiano.lemonsqueezy.com/checkout/buy/8d42493f-bca9-44b2-a057-8d730a8b2616",
+      "permanent": false
+    }
+  ]
+}

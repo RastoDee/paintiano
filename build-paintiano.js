@@ -40,7 +40,8 @@ const ORDER = [
   '03-i18n.jsx',      // §4 i18n / concept / guide
   '04-songs.jsx',     // §5 song data / library / moods
   '06-demo-reel.jsx', // §6b demo-reel data + phase timeline (used by main)
-  '05-main.jsx',      // §6 sub-components + §7 main component
+  '07-pro.jsx',       // §7 Pro: license/paywall/trial/watermark (used by main → must precede 05)
+  '05-main.jsx',      // §6 sub-components + §8 main component
 ];
 
 const readLF = f => fs.readFileSync(path.join(SRC, f), 'utf8').replace(/\r\n/g, '\n');

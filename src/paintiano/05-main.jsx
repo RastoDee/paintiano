@@ -511,6 +511,11 @@ export default function Paintiano() {
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
   const [lang, setLang] = useState(()=>{try{return localStorage.getItem('paintiano_lang')||'EN';}catch(_){return 'EN';}});
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
+
+  // ─── Paintiano Pro state (from 07-pro.jsx) ───
+  const { proStatus, isPro, maskedEmail, activateLicense, deactivateLicense, openCheckout } = useProStatus();
+  const { trialUsed, trialLeft, trialExhausted, consumeTrial } = useAiTrial();
+  const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
   // Descriptive style labels shown on the chips (the internal keys —
   // picasso/kusama/… — stay unchanged everywhere in the logic). This keeps the
   // feature branded by what it DOES, while STYLE_INSPIRED supplies a small
@@ -2648,6 +2653,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const composeFromImage=useCallback(async(srcUrl)=>{
     const _src=srcUrl||originalImgUrl;
     if(imgAiBusy||!_src) return;
+    // Pro gate (mood-from-image shares the same free trial pool as aiCompose).
+    // A cached image replays free (handled below); only a fresh AI call counts.
+    if(!isPro && trialExhausted){ setPaywallReason('ai_trial'); return; }
     // Show the chosen picture immediately so the screen isn't blank while the AI
     // composes. moodContext+moodFromImg gate the preview render; set them now and
     // re-affirm after applyEvents (which clears the thumb) on success below.
@@ -2683,7 +2691,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
       const title=(parsed.title&&String(parsed.title).trim())||'✦';
       // Store fresh AI results so the next run of this image is free.
-      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} }
+      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} if(!isPro) consumeTrial(); }
       // Body 3: make Vary work in mood-from-image. rerollSong expects notes as
       // {note,dur,beat} objects; the AI returns [pitch,dur,beat,vel] arrays — so
       // normalise here. Vary then re-tunes THIS image's piece locally (transpose
@@ -2907,6 +2915,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         }
       }
     }
+    // Pro gate: free tier gets a limited number of heavy AI compositions.
+    // Cache hits above already returned free; this point = a real (paid) AI call.
+    if(!isPro && trialExhausted){ setPaywallReason('ai_trial'); return; }
+    if(!isPro) consumeTrial();
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang]||'English';
@@ -4262,6 +4274,7 @@ Composition rules:
           drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
         }
       }
+      applyWatermark(hi, isPro);   // free tier → "paintiano.app" stamp; Pro → no-op
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
       if(!blob){setErr(t('errs').printEncode);setErrInfo(false);return;}
       const title=compositionName.trim()||info?.title||'painting';
@@ -4385,11 +4398,14 @@ Composition rules:
             }
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.55)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.85)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
           <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(140,200,255,.7)',color:'rgba(140,200,255,.95)'}}>{t('guide')}</span>
+          {!isPro && <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.9)',color:'rgba(201,168,76,.95)',fontWeight:600}}>{t('proBadge')}</span>}
+          {isPro && <span title={maskedEmail||''} style={{paddingBottom:2,color:'rgba(201,168,76,.7)'}}>✦ {t('proManageActive')}</span>}
         </nav>
         <button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} aria-label={`switch language (currently ${lang})`} title={`switch language (currently ${lang})`} style={{padding:'5px 13px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.14em'}}>{lang}</button>
       </div>
       <header style={{textAlign:'center',marginBottom:isActiveView?8:18}}>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
+        {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} /></div>}
         {!isActiveView && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
 
@@ -5680,6 +5696,17 @@ Composition rules:
       </div>
       )}
       <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.3</footer>
+      {paywallReason && (
+        <ProPaywall
+          t={t}
+          reason={paywallReason}
+          trialLeft={trialLeft}
+          onClose={()=>setPaywallReason(null)}
+          onActivated={()=>setPaywallReason(null)}
+          openCheckout={openCheckout}
+          activateLicense={activateLicense}
+        />
+      )}
     </div>
   );
 }

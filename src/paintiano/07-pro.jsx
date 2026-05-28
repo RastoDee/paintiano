@@ -1,0 +1,327 @@
+// ═════════════════════════════════════════════════════════════════════════════
+// §7  PAINTIANO PRO  —  monetization (license keys, paywall, AI trial, watermark)
+// ─────────────────────────────────────────────────────────────────────────────
+// Concatenated module (no imports/exports — same style as 01-core-head.jsx).
+// React hooks (useState/useEffect/useCallback) are already imported at the top
+// of the bundle by 01-core-head.jsx, so they're in scope here.
+//
+// What this module provides to 05-main.jsx:
+//   • useProStatus()        → { proStatus, isPro, licenseKey, maskedEmail,
+//                               activateLicense, deactivateLicense, openCheckout }
+//   • useAiTrial()          → { trialUsed, trialLeft, trialExhausted,
+//                               consumeTrial, resetTrial } (free-tier AI counter)
+//   • applyWatermark(canvas, isPro)  → stamps "paintiano.app" on free exports
+//   • <ProPaywall .../>      → the modal (gold-themed, matches app aesthetic)
+//   • <ProBadge t={t}/>      → small gold "PRO" pill for the header
+//   • PRO_CFG               → endpoints, checkout URL, price, trial size
+//
+// Networking goes ONLY through our own /api/validate (same origin). The Supabase
+// service-role key never touches the browser. AI cost coverage: free users get
+// PRO_CFG.trialMax (5) heavy AI compositions (aiCompose + composeFromImage),
+// counted in localStorage; helper calls (morph pool, ping) are never counted.
+// ═════════════════════════════════════════════════════════════════════════════
+
+const PRO_CFG = {
+  // Lemon Squeezy hosted checkout for "Paintiano Pro" (store slug: paintiano)
+  checkoutUrl: 'https://paintiano.lemonsqueezy.com/checkout/buy/8d42493f-bca9-44b2-a057-8d730a8b2616',
+  // Our own Vercel Edge validation endpoint (same origin as the app)
+  validateEndpoint: '/api/validate',
+  // localStorage keys
+  licenseStoreKey: 'paintiano_license_v1',
+  trialStoreKey: 'paintiano_ai_trial_v1',
+  // Trust a cached "valid" verdict this long before re-validating online
+  revalidateAfterMs: 30 * 24 * 60 * 60 * 1000, // 30 days
+  // Free-tier heavy-AI allowance before the paywall
+  trialMax: 5,
+  // Display price (informational; real price + VAT come from Lemon Squeezy)
+  displayPrice: '€14.99',
+};
+
+// ─── license storage helpers ────────────────────────────────────────────────
+function _proReadCache() {
+  try {
+    const raw = localStorage.getItem(PRO_CFG.licenseStoreKey);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    return (p && typeof p.key === 'string') ? p : null;
+  } catch (_) { return null; }
+}
+function _proWriteCache(key, extra) {
+  try {
+    localStorage.setItem(PRO_CFG.licenseStoreKey,
+      JSON.stringify(Object.assign({ key, validatedAt: Date.now() }, extra || {})));
+  } catch (_) {}
+}
+function _proClearCache() {
+  try { localStorage.removeItem(PRO_CFG.licenseStoreKey); } catch (_) {}
+}
+
+// ─── server validation (through our own endpoint) ────────────────────────────
+async function _proValidate(key) {
+  try {
+    const r = await fetch(PRO_CFG.validateEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    });
+    if (!r.ok) return { valid: false, reason: 'http_' + r.status };
+    return await r.json();
+  } catch (_) {
+    return { valid: false, reason: 'network', offline: true };
+  }
+}
+
+// ─── Pro status hook ──────────────────────────────────────────────────────────
+function useProStatus() {
+  const [proStatus, setProStatus] = useState('loading'); // 'loading'|'free'|'pro'
+  const [licenseKey, setLicenseKey] = useState(null);
+  const [maskedEmail, setMaskedEmail] = useState(null);
+
+  useEffect(() => {
+    const cached = _proReadCache();
+    if (!cached) { setProStatus('free'); return; }
+    const stale = Date.now() - (cached.validatedAt || 0) > PRO_CFG.revalidateAfterMs;
+    if (!stale) {
+      setProStatus('pro'); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+      return;
+    }
+    _proValidate(cached.key).then((res) => {
+      if (res.valid) {
+        _proWriteCache(cached.key, { email: res.email });
+        setProStatus('pro'); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
+      } else if (res.offline) {
+        // Network down during re-check → trust the cache (stay Pro) until online.
+        setProStatus('pro'); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+      } else {
+        // Authoritative revoke (refunded/disabled/not_found)
+        _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
+      }
+    });
+  }, []);
+
+  const activateLicense = useCallback(async (raw) => {
+    const key = (raw || '').trim();
+    if (!key) return { ok: false, reason: 'empty' };
+    const res = await _proValidate(key);
+    if (res.valid) {
+      _proWriteCache(key, { email: res.email });
+      setProStatus('pro'); setLicenseKey(key); setMaskedEmail(res.email || null);
+      return { ok: true };
+    }
+    return { ok: false, reason: res.reason || 'unknown' };
+  }, []);
+
+  const deactivateLicense = useCallback(() => {
+    _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
+  }, []);
+
+  const openCheckout = useCallback(() => {
+    try {
+      if (typeof window !== 'undefined' && window.LemonSqueezy && window.LemonSqueezy.Url && window.LemonSqueezy.Url.Open) {
+        window.LemonSqueezy.Url.Open(PRO_CFG.checkoutUrl);
+      } else {
+        window.open(PRO_CFG.checkoutUrl, '_blank', 'noopener');
+      }
+    } catch (_) {
+      window.open(PRO_CFG.checkoutUrl, '_blank', 'noopener');
+    }
+  }, []);
+
+  return { proStatus, isPro: proStatus === 'pro', licenseKey, maskedEmail,
+           activateLicense, deactivateLicense, openCheckout };
+}
+
+// ─── AI trial counter hook (free tier: PRO_CFG.trialMax heavy AI calls) ────────
+function useAiTrial() {
+  const [trialUsed, setTrialUsed] = useState(() => {
+    try { return Math.max(0, parseInt(localStorage.getItem(PRO_CFG.trialStoreKey) || '0', 10)) || 0; }
+    catch (_) { return 0; }
+  });
+
+  const consumeTrial = useCallback(() => {
+    setTrialUsed((n) => {
+      const next = n + 1;
+      try { localStorage.setItem(PRO_CFG.trialStoreKey, String(next)); } catch (_) {}
+      return next;
+    });
+  }, []);
+
+  const resetTrial = useCallback(() => {
+    try { localStorage.removeItem(PRO_CFG.trialStoreKey); } catch (_) {}
+    setTrialUsed(0);
+  }, []);
+
+  return {
+    trialUsed,
+    trialLeft: Math.max(0, PRO_CFG.trialMax - trialUsed),
+    trialExhausted: trialUsed >= PRO_CFG.trialMax,
+    consumeTrial,
+    resetTrial,
+  };
+}
+
+// ─── watermark for free exports (no-op for Pro) ───────────────────────────────
+function applyWatermark(canvas, isPro) {
+  if (isPro || !canvas) return canvas;
+  try {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+    const w = canvas.width, h = canvas.height;
+    const fontPx = Math.max(12, Math.round(h * 0.018));
+    const pad = Math.round(h * 0.025);
+    ctx.save();
+    ctx.globalAlpha = 0.42;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '500 ' + fontPx + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign = 'right';
+    ctx.shadowColor = 'rgba(0,0,0,0.45)';
+    ctx.shadowBlur = 2;
+    ctx.fillText('paintiano.app', w - pad, h - pad);
+    ctx.restore();
+  } catch (_) {}
+  return canvas;
+}
+
+// ─── ProBadge — small gold PRO pill for the header ─────────────────────────────
+function ProBadge({ t }) {
+  const label = (t && t('proBadge')) || 'PRO';
+  return (
+    <span style={{
+      display: 'inline-block', marginLeft: 8, padding: '2px 7px',
+      fontSize: '.5rem', fontWeight: 600, letterSpacing: '.14em',
+      color: GOLD, background: 'rgba(201,168,76,.15)',
+      border: '1px solid rgba(201,168,76,.45)', borderRadius: 999,
+      textTransform: 'uppercase', verticalAlign: 'middle',
+    }}>{label}</span>
+  );
+}
+
+// ─── ProPaywall — the modal ────────────────────────────────────────────────────
+// Props: { t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft }
+function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft }) {
+  const [view, setView] = useState('intro'); // 'intro'|'key'|'success'
+  const [keyInput, setKeyInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+
+  const tr = (k, fb) => (t && t(k)) || fb;
+
+  const submit = async () => {
+    setBusy(true); setErrMsg('');
+    const r = await activateLicense(keyInput);
+    setBusy(false);
+    if (r.ok) { setView('success'); if (onActivated) onActivated(); setTimeout(() => onClose && onClose(), 1500); }
+    else { setErrMsg(tr('proInvalidKey', 'This key is not valid. Check your email for the correct key.')); }
+  };
+
+  const overlay = {
+    position: 'fixed', inset: 0, zIndex: 100000,
+    background: 'rgba(4,4,10,.78)', backdropFilter: 'blur(8px)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    fontFamily: 'inherit',
+  };
+  const card = {
+    position: 'relative', width: '100%', maxWidth: 360,
+    background: '#0a0a12', border: '1px solid rgba(201,168,76,.25)',
+    borderRadius: 8, padding: 26, color: '#f5f5f5',
+    boxShadow: '0 20px 60px rgba(0,0,0,.6)',
+  };
+  const btnGold = {
+    width: '100%', background: GOLD, color: '#0a0a12', border: 'none',
+    padding: '11px 12px', borderRadius: 5, fontSize: '.7rem', fontWeight: 600,
+    letterSpacing: '.08em', textTransform: 'uppercase', cursor: 'pointer',
+    fontFamily: 'inherit', marginBottom: 8,
+  };
+  const btnGhost = {
+    width: '100%', background: 'transparent', color: '#999',
+    border: '1px solid rgba(255,255,255,.18)', padding: '9px 12px',
+    borderRadius: 5, fontSize: '.62rem', letterSpacing: '.06em',
+    cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase',
+  };
+
+  return (
+    <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
+      <div style={card}>
+        {view === 'intro' && (
+          <>
+            <div style={{ textAlign: 'center', marginBottom: 14 }}>
+              <div style={{
+                display: 'inline-flex', width: 46, height: 46, borderRadius: '50%',
+                alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(201,168,76,.12)', color: GOLD, fontSize: 22,
+              }}>✦</div>
+            </div>
+            <p style={{ fontSize: '.95rem', fontWeight: 600, textAlign: 'center', margin: '0 0 8px' }}>
+              {reason === 'ai_trial'
+                ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
+                : tr('proPaywallTitle', 'This is part of Paintiano Pro')}
+            </p>
+            <p style={{ fontSize: '.72rem', color: '#9a9a9a', textAlign: 'center', margin: '0 0 18px', lineHeight: 1.6 }}>
+              {tr('proPaywallBody', 'Unlock unlimited AI compositions, remove the watermark from exports, and support an independent art project.')}
+            </p>
+            <button style={btnGold} onClick={openCheckout}>
+              {tr('proPaywallCta', 'Get Paintiano Pro — €14.99 lifetime')}
+            </button>
+            <button style={btnGhost} onClick={() => setView('key')}>
+              {tr('proHaveKey', 'I already have a key')}
+            </button>
+            <p style={{ color: '#555', fontSize: '.55rem', textAlign: 'center', margin: '12px 0 0', letterSpacing: '.04em' }}>
+              {tr('proPaywallFooter', 'One-time payment · No subscription · VAT included')}
+            </p>
+          </>
+        )}
+
+        {view === 'key' && (
+          <>
+            <p style={{ fontSize: '.85rem', fontWeight: 600, margin: '0 0 14px' }}>
+              {tr('proEnterKey', 'Enter your license key')}
+            </p>
+            <input
+              type="text" value={keyInput} autoFocus
+              onChange={(e) => setKeyInput(e.target.value.toUpperCase())}
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              style={{
+                width: '100%', boxSizing: 'border-box', background: '#04040a',
+                border: '1px solid rgba(255,255,255,.18)', borderRadius: 5,
+                padding: '10px 12px', fontSize: '.78rem', color: '#f5f5f5',
+                fontFamily: 'monospace', letterSpacing: '.06em', marginBottom: 10,
+              }}
+            />
+            {errMsg && <p style={{ color: '#e57373', fontSize: '.62rem', margin: '0 0 10px' }}>{errMsg}</p>}
+            <button style={Object.assign({}, btnGold, { opacity: (busy || !keyInput) ? .5 : 1, cursor: busy ? 'wait' : 'pointer' })}
+                    disabled={busy || !keyInput} onClick={submit}>
+              {busy ? '…' : tr('proActivate', 'Activate')}
+            </button>
+            <button style={btnGhost} onClick={() => { setView('intro'); setErrMsg(''); }}>
+              {tr('proBack', 'Back')}
+            </button>
+          </>
+        )}
+
+        {view === 'success' && (
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <div style={{
+              display: 'inline-flex', width: 46, height: 46, borderRadius: '50%',
+              alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(201,168,76,.15)', color: GOLD, fontSize: 22, marginBottom: 12,
+            }}>✓</div>
+            <p style={{ fontSize: '.9rem', fontWeight: 600, margin: '0 0 6px' }}>
+              {tr('proWelcomeTitle', 'Welcome to Pro')}
+            </p>
+            <p style={{ fontSize: '.7rem', color: '#9a9a9a', margin: 0, lineHeight: 1.5 }}>
+              {tr('proWelcomeBody', 'All features unlocked on this device.')}
+            </p>
+          </div>
+        )}
+
+        {view !== 'success' && (
+          <button onClick={onClose} aria-label="Close" style={{
+            position: 'absolute', top: 12, right: 14, background: 'transparent',
+            border: 'none', color: '#666', fontSize: 20, cursor: 'pointer', lineHeight: 1,
+          }}>×</button>
+        )}
+      </div>
+    </div>
+  );
+}
