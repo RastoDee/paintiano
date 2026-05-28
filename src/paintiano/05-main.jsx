@@ -3411,7 +3411,9 @@ Composition rules:
         if(canvasRef.current) canvasRef.current.style.opacity='1';
       },180);
     }catch(_e){
-      setErr('AI Artist unavailable.');
+      // Detailed log so we can see the real reason in console.
+      try{ console.error('[AI Artist]', _e && (_e.message || _e), _e); }catch(__){}
+      setErr('AI Artist: ' + ((_e && _e.message) || 'unknown error'));
     }finally{
       setAiArtistLoading(false);
     }
