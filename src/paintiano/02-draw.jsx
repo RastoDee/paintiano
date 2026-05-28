@@ -2806,6 +2806,131 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 }
 
+// ── Gold (Gustav Klimt) ──────────────────────────────────────────────────────
+// Klimt's "golden phase": a shimmering gold-leaf ground tiled with ornamental
+// blocks — mosaic squares, spirals, concentric eyes, and triangle fields — each
+// filled with colour from a chord via gc(). The gold dominates; colour blocks
+// are inlaid like jewels. Ornaments reveal progressively as lim advances.
+function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const rnd = _seedRnd(97, ss, 0, 0);
+
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [180,140,60];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css = (c,a)=> a===undefined ? `rgb(${c[0]|0},${c[1]|0},${c[2]|0})` : `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+
+  // ── Gold-leaf ground: warm metallic gradient + subtle leaf flecks ─────────
+  const gg = ctx.createLinearGradient(0, 0, CW, CH);
+  gg.addColorStop(0, '#b8902f');
+  gg.addColorStop(0.35, '#d4ab3e');
+  gg.addColorStop(0.6, '#e8c862');
+  gg.addColorStop(0.85, '#c79a33');
+  gg.addColorStop(1, '#9c7822');
+  ctx.fillStyle = gg;
+  ctx.fillRect(0, 0, CW, CH);
+  // Leaf flecks — irregular lighter/darker patches for hammered-gold texture.
+  const flecks = 140;
+  for(let i=0;i<flecks;i++){
+    const x = rnd()*CW, y = rnd()*CH, r = 4+rnd()*22;
+    const light = rnd()>0.5;
+    ctx.fillStyle = light ? 'rgba(255,240,180,0.10)' : 'rgba(120,86,20,0.10)';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ── Ornament grid ─────────────────────────────────────────────────────────
+  // Tile the canvas with cells; each cell gets a colour-jewel ornament. Ornament
+  // count (grid resolution) scales with track length.
+  const COLS = cn<=8 ? 4 : cn<=24 ? 6 : cn<=60 ? 8 : 10;
+  const ROWS = Math.max(4, Math.round(COLS * (CH/CW)));
+  const cw = CW/COLS, ch = CH/ROWS;
+  const total = COLS*ROWS;
+  const revealFrac = Math.max(0, Math.min(1, lim/cn));
+  const visCells = Math.ceil(revealFrac * total);
+
+  let drawn=0;
+  for(let row=0; row<ROWS; row++){
+    for(let col=0; col<COLS; col++){
+      if(drawn++ >= visCells) break;
+      const i = row*COLS+col;
+      const cx = col*cw + cw/2;
+      const cy = row*ch + ch/2;
+      const col1 = chordCol(i, 1.0);
+      const col2 = chordCol(i+3, 1.1);
+      const kind = (i*7 + (ss%5)) % 4;
+      const pad = Math.min(cw,ch)*0.14;
+      const w = cw - pad*2, h = ch - pad*2;
+      const x0 = col*cw + pad, y0 = row*ch + pad;
+
+      // Thin dark outline gives the inlaid-jewel separation.
+      ctx.strokeStyle = 'rgba(60,40,8,0.5)';
+      ctx.lineWidth = 1;
+
+      if(kind === 0){
+        // Mosaic square block, sometimes split into quarters.
+        ctx.fillStyle = css(col1, 0.92);
+        ctx.fillRect(x0, y0, w, h);
+        if((i&1)){
+          ctx.fillStyle = css(col2, 0.92);
+          ctx.fillRect(x0, y0, w/2, h/2);
+          ctx.fillRect(x0+w/2, y0+h/2, w/2, h/2);
+        }
+        ctx.strokeRect(x0, y0, w, h);
+      } else if(kind === 1){
+        // Concentric "eye" — nested circles.
+        const rMax = Math.min(w,h)/2;
+        for(let k=3;k>=1;k--){
+          ctx.fillStyle = css(k===2?col2:col1, 0.9);
+          ctx.beginPath(); ctx.arc(cx, cy, rMax*(k/3), 0, Math.PI*2); ctx.fill();
+        }
+        ctx.fillStyle = 'rgba(40,28,6,0.85)';
+        ctx.beginPath(); ctx.arc(cx, cy, rMax*0.16, 0, Math.PI*2); ctx.fill();
+      } else if(kind === 2){
+        // Spiral on a colour tile.
+        ctx.fillStyle = css(col1, 0.85);
+        ctx.fillRect(x0, y0, w, h);
+        ctx.strokeStyle = css(col2, 0.95);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const rMax = Math.min(w,h)*0.42, turns=2.5, steps=60;
+        for(let s=0;s<=steps;s++){
+          const t=s/steps, a=t*turns*Math.PI*2, r=t*rMax;
+          const px=cx+Math.cos(a)*r, py=cy+Math.sin(a)*r;
+          if(s===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(60,40,8,0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x0, y0, w, h);
+      } else {
+        // Triangle field — two colour triangles forming the tile.
+        ctx.fillStyle = css(col1, 0.9);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0); ctx.lineTo(x0+w, y0); ctx.lineTo(x0, y0+h);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = css(col2, 0.9);
+        ctx.beginPath();
+        ctx.moveTo(x0+w, y0); ctx.lineTo(x0+w, y0+h); ctx.lineTo(x0, y0+h);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeRect(x0, y0, w, h);
+      }
+    }
+  }
+}
+
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
