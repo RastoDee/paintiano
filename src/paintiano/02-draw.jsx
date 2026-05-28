@@ -2931,6 +2931,209 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 }
 
+// ── Pop (Keith Haring) ───────────────────────────────────────────────────────
+// Bold flat colour blocks behind thick black-outlined glyphs, with radiating
+// "energy" ticks around them (Keith Haring's street-pop language). Each cell
+// is a colour from a chord via gc(); a simple glyph (figure, heart, star,
+// spiral, burst) sits on top with a heavy black contour and motion dashes.
+function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const rnd = _seedRnd(101, ss, 0, 0);
+
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [240,80,80];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    // Punch up saturation toward flat pop colour.
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+
+  const COLS = cn<=6?3:cn<=18?4:cn<=45?5:cn<=100?6:7;
+  const ROWS = Math.max(3, Math.round(COLS*(CH/CW)));
+  const cw = CW/COLS, ch = CH/ROWS;
+  const total = COLS*ROWS;
+  const revealFrac = Math.max(0, Math.min(1, lim/cn));
+  const visCells = Math.ceil(revealFrac*total);
+
+  // Bright flat background — pick a vivid base from the piece.
+  const bg = chordCol(0, 1.0);
+  ctx.fillStyle = css([Math.min(255,bg[0]*0.6+90), Math.min(255,bg[1]*0.6+90), Math.min(255,bg[2]*0.6+90)]);
+  ctx.fillRect(0, 0, CW, CH);
+
+  const BLACK = '#0c0c0c';
+
+  function glyphFigure(cx, cy, s, col){
+    // dancing figure — head + body + limbs
+    ctx.fillStyle = css(col);
+    ctx.strokeStyle = BLACK;
+    ctx.lineWidth = Math.max(3, s*0.13);
+    ctx.lineJoin = 'round'; ctx.lineCap='round';
+    // head
+    ctx.beginPath(); ctx.arc(cx, cy-s*0.55, s*0.2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    // body
+    ctx.beginPath(); ctx.moveTo(cx, cy-s*0.32); ctx.lineTo(cx, cy+s*0.1); ctx.stroke();
+    // arms
+    ctx.beginPath(); ctx.moveTo(cx, cy-s*0.2); ctx.lineTo(cx-s*0.35, cy-s*0.4); ctx.moveTo(cx, cy-s*0.2); ctx.lineTo(cx+s*0.35, cy-s*0.05); ctx.stroke();
+    // legs
+    ctx.beginPath(); ctx.moveTo(cx, cy+s*0.1); ctx.lineTo(cx-s*0.3, cy+s*0.5); ctx.moveTo(cx, cy+s*0.1); ctx.lineTo(cx+s*0.3, cy+s*0.45); ctx.stroke();
+  }
+  function glyphHeart(cx, cy, s, col){
+    ctx.fillStyle = css(col); ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(3,s*0.12); ctx.lineJoin='round';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy+s*0.4);
+    ctx.bezierCurveTo(cx-s*0.6, cy-s*0.1, cx-s*0.25, cy-s*0.5, cx, cy-s*0.18);
+    ctx.bezierCurveTo(cx+s*0.25, cy-s*0.5, cx+s*0.6, cy-s*0.1, cx, cy+s*0.4);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  function glyphStar(cx, cy, s, col){
+    ctx.fillStyle = css(col); ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(3,s*0.12); ctx.lineJoin='round';
+    ctx.beginPath();
+    for(let p=0;p<10;p++){
+      const ang = -Math.PI/2 + p*Math.PI/5;
+      const r = (p&1) ? s*0.22 : s*0.5;
+      const x=cx+Math.cos(ang)*r, y=cy+Math.sin(ang)*r;
+      if(p===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  function glyphBurst(cx, cy, s, col){
+    ctx.fillStyle = css(col); ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(2.5,s*0.1);
+    ctx.beginPath(); ctx.arc(cx, cy, s*0.32, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  }
+
+  // Radiating energy ticks around a glyph.
+  function energy(cx, cy, s){
+    ctx.strokeStyle = BLACK;
+    ctx.lineWidth = Math.max(2, s*0.06);
+    ctx.lineCap='round';
+    const n = 8;
+    for(let i=0;i<n;i++){
+      const a = (i/n)*Math.PI*2 + 0.2;
+      const r0 = s*0.62, r1 = s*0.82;
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(a)*r0, cy+Math.sin(a)*r0);
+      ctx.lineTo(cx+Math.cos(a)*r1, cy+Math.sin(a)*r1);
+      ctx.stroke();
+    }
+  }
+
+  let drawn=0;
+  for(let row=0; row<ROWS; row++){
+    for(let col=0; col<COLS; col++){
+      if(drawn++ >= visCells) break;
+      const i = row*COLS+col;
+      const cx = col*cw+cw/2, cy = row*ch+ch/2;
+      const s = Math.min(cw,ch)*0.62;
+      // flat colour tile
+      const tile = chordCol(i, 1.0);
+      ctx.fillStyle = css(tile);
+      ctx.fillRect(col*cw, row*ch, cw, ch);
+      // black grid seam
+      ctx.strokeStyle = BLACK; ctx.lineWidth = 2;
+      ctx.strokeRect(col*cw, row*ch, cw, ch);
+      // glyph in contrasting colour
+      const gcol = chordCol(i+4, 1.0);
+      const kind = (i*5 + (ss%5)) % 5;
+      if(kind===0) glyphFigure(cx, cy, s, gcol);
+      else if(kind===1) glyphHeart(cx, cy, s, gcol);
+      else if(kind===2) glyphStar(cx, cy, s, gcol);
+      else if(kind===3) glyphBurst(cx, cy, s, gcol);
+      else glyphFigure(cx, cy, s, gcol);
+      energy(cx, cy, s);
+    }
+  }
+}
+
+// ── Wave (Bridget Riley) ─────────────────────────────────────────────────────
+// Op-art kinetic stripes: rows of wavy bands whose amplitude and phase shift
+// across the canvas, producing optical vibration / moiré (Bridget Riley). Two
+// alternating colours pulled from chords via gc(); the wave parameters are
+// modulated by the music so louder/higher passages ripple harder. Reveals
+// progressively top-to-bottom as lim advances.
+function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const rnd = _seedRnd(103, ss, 0, 0);
+
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [30,30,30];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+
+  // Two-tone Riley palette: a dark and a light pulled from the piece.
+  const darkC = chordCol(0, 0.5);
+  const liteC = chordCol(Math.floor(cn/2), 1.25);
+
+  // Light ground.
+  ctx.fillStyle = css([Math.min(255,liteC[0]+60),Math.min(255,liteC[1]+60),Math.min(255,liteC[2]+60)]);
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Horizontal bands of vertical wavy stripes; each band reveals as lim grows.
+  const BANDS = cn<=8?6:cn<=24?10:cn<=60?16:cn<=120?22:28;
+  const visBands = Math.max(1, Math.ceil((lim/cn)*BANDS));
+  const bandH = CH / BANDS;
+  const stripeW = CW / (cn<=20?14:cn<=60?22:32);
+
+  for(let b=0; b<visBands; b++){
+    const y0 = b*bandH, y1 = y0+bandH;
+    // Wave params modulated by the chord at this band.
+    const chord = chords[Math.min(cn-1, Math.floor((b/BANDS)*cn))];
+    const notes = chord && (chord.n || chord.notes);
+    const topNote = notes && notes.length ? (notes[0].m!==undefined?notes[0].m:notes[0]) : 60;
+    const vel = notes && notes.length && notes[0].v!==undefined ? notes[0].v : 80;
+    const amp = bandH * (0.25 + (vel/127)*0.7);
+    const freq = 0.6 + ((topNote%12)/12)*2.2;
+    const phase = b*0.7 + rnd()*0.5;
+    const bandDark = chordCol(b, 0.55);
+    const bandLite = chordCol(b+3, 1.2);
+    // Draw vertical wavy stripes across the band.
+    let toggle = (b&1);
+    for(let sx=-stripeW; sx<CW+stripeW; sx+=stripeW){
+      toggle = !toggle;
+      ctx.fillStyle = toggle ? css(bandDark) : css(bandLite);
+      ctx.beginPath();
+      const segs = 18;
+      // top edge L→R
+      for(let s=0;s<=segs;s++){
+        const t=s/segs, x = sx + t*stripeW;
+        const yy = y0 + Math.sin((x/CW)*Math.PI*2*freq + phase)*amp*0.5 + amp*0.5;
+        if(s===0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+      }
+      // bottom edge R→L (next stripe offset)
+      for(let s=segs;s>=0;s--){
+        const t=s/segs, x = sx + t*stripeW + stripeW;
+        const yy = y1 + Math.sin((x/CW)*Math.PI*2*freq + phase)*amp*0.5 + amp*0.5;
+        ctx.lineTo(x, yy);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+}
+
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
