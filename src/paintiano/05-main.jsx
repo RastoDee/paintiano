@@ -365,6 +365,11 @@ export default function Paintiano() {
   const audioOffsetRef = useRef(0);    // offset into the audio buffer
   const samplerRef   = useRef(null);
   const samplerOk    = useRef(false);
+  // Optional Rhodes-style electric piano via Tone.FMSynth (zero extra download —
+  // FM synthesis is exactly how real Rhodes/DX-style e-pianos make their bell
+  // tone). Toggled by clicking the instrument label under the title.
+  const rhodesRef    = useRef(null);
+  const instrumentRef= useRef('piano'); // 'piano' | 'rhodes'
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -558,6 +563,7 @@ export default function Paintiano() {
   const [viewMode,  setViewMode]  = useState('paint');
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
+  const [instrument,setInstrument]= useState('piano'); // 'piano' | 'rhodes'
   const [songQ,     setSongQ]     = useState('');
   const [moodFocused, setMoodFocused] = useState(false); // mood input focused → show autocomplete suggestions
   const [composeSource, setComposeSource] = useState(null); // 'ai' | 'offline' | 'crafted' — how the current mood piece was made
@@ -1033,6 +1039,37 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     return()=>{dead=true;try{if(typeof cancelIdleCallback!=='undefined'&&typeof idleId==='number')cancelIdleCallback(idleId);}catch(_){}try{clearTimeout(idleId);}catch(_){}try{s&&s.dispose();}catch(_){}samplerRef.current=null;samplerOk.current=false;};
   },[]);
 
+  // Build the Rhodes-style electric piano (Tone.FMSynth → soft chorus → reverb).
+  // FM synthesis with a bell-like modulator and a fast-ish decay approximates the
+  // classic e-piano timbre. Zero download — created lazily alongside the sampler.
+  useEffect(()=>{
+    let dead=false;
+    let synth=null, chorus=null, reverb=null;
+    const build=()=>{
+      if(dead) return;
+      try{
+        reverb=new Tone.Reverb({decay:1.8, wet:0.18}).toDestination();
+        chorus=new Tone.Chorus({frequency:1.2, delayTime:3.5, depth:0.5, wet:0.25}).connect(reverb);
+        try{ chorus.start(); }catch(_){}
+        synth=new Tone.PolySynth(Tone.FMSynth, {
+          harmonicity: 3.0,
+          modulationIndex: 8,
+          oscillator:{type:'sine'},
+          envelope:{attack:0.002, decay:1.2, sustain:0.25, release:1.4},
+          modulation:{type:'sine'},
+          modulationEnvelope:{attack:0.004, decay:0.25, sustain:0.0, release:0.4},
+        }).connect(chorus);
+        try{ synth.volume.value=-6; }catch(_){}
+        rhodesRef.current=synth;
+      }catch(_){}
+    };
+    const id=(typeof requestIdleCallback!=='undefined')?requestIdleCallback(build,{timeout:1400}):setTimeout(build,400);
+    return()=>{dead=true;try{if(typeof cancelIdleCallback!=='undefined'&&typeof id==='number')cancelIdleCallback(id);}catch(_){}try{clearTimeout(id);}catch(_){}try{synth&&synth.dispose();}catch(_){}try{chorus&&chorus.dispose();}catch(_){}try{reverb&&reverb.dispose();}catch(_){}rhodesRef.current=null;};
+  },[]);
+  // Mirror instrument selection into a ref so the stable playNote can read it.
+  useEffect(()=>{ instrumentRef.current=instrument; },[instrument]);
+
+
   const gc = useCallback((m,v)=>{
     if(mode==='bw') return bwCol(m,v);
     if(mode==='custom') return customCol(m,v,activePalette);
@@ -1463,6 +1500,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // iOS — the symptom users see as "sound randomly disappears." Cheap to
       // call and a no-op when already running.
       try{const _ac=Tone.getContext().rawContext;if(_ac&&_ac.state==='suspended')_ac.resume().catch(()=>{});}catch(_){}
+      // Rhodes electric piano (zero-download FM synth) takes priority when picked.
+      if(instrumentRef.current==='rhodes' && rhodesRef.current){
+        try{ rhodesRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(), dur+tailS, Tone.now(), gain); return; }catch(_){}
+      }
       if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
       if(ac.state==='suspended')ac.resume();
@@ -3938,7 +3979,7 @@ Composition rules:
     const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
     setScoreMsg({tone:'wait',text:t('rendering')});
     let blob;
-    try{ blob=await renderAudioOffline(src,{speed:1}); }
+    try{ blob=await renderAudioOffline(src,{speed:1, instrument:instrumentRef.current}); }
     catch(e){ blob=null; }
     if(!blob){ setScoreMsg({tone:'err',text:t('renderFail')}); return; }
     const file=new File([blob],finalName,{type:blob.type});
@@ -4258,7 +4299,20 @@ Composition rules:
       </div>
       <header style={{textAlign:'center',marginBottom:isActiveView?8:18}}>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
-        {!isActiveView && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
+        {!isActiveView && (()=>{
+          // The instrument label doubles as a toggle: tap to switch between the
+          // grand piano (sampler) and the Rhodes electric piano (FM synth, 0 MB).
+          const baseLabel = instrument==='rhodes' ? ' Rhodes' : pianoLabel[piano];
+          const col = instrument==='rhodes' ? 'rgba(90,190,110,.7)' : pianoColor[piano];
+          const canToggle = piano!=='loading';
+          return (
+            <div onClick={canToggle ? ()=>{ try{unlockAudio();}catch(_){}; setInstrument(p=>p==='rhodes'?'piano':'rhodes'); } : undefined}
+              title={canToggle ? (instrument==='rhodes' ? 'Rhodes electric piano — tap for grand piano' : 'Grand piano — tap for Rhodes') : undefined}
+              style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:col,cursor:canToggle?'pointer':'default',userSelect:'none',display:'inline-block',transition:'color .2s'}}>
+              {baseLabel}{canToggle && <span style={{opacity:.5,fontStyle:'normal',fontSize:'.7rem'}}> ⇄</span>}
+            </div>
+          );
+        })()}
       </header>
 
       {/* ─────────────────────────────────────────────────────────────
@@ -5524,7 +5578,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.19</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.20</footer>
     </div>
   );
 }
