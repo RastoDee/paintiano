@@ -6527,262 +6527,6 @@ function rerollSong(song, structureStable) {
 // which memo gates.
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ─── AI Artist (skeleton MVP) ───────────────────────────────────────────────
-// "In the spirit of" — picks a real artist and renders the current piece as
-// they might have painted it. Skeleton version: 5 artists, simplified drawing.
-// Used to verify the TDZ-safe integration before scaling to the full 100+ pool.
-//
-// Two AI calls (with offline fallback):
-//   1. Artist pick — given mood/song context, AI picks one from the pool.
-//   2. Palette + recipe — AI returns 12 colours + drawing recipe.
-//
-// Module-scope functions and constants. Called by 05-main.jsx via refs (see
-// the TDZ-safe pattern there) so React's render order can't trip the
-// initialization timing.
-
-const AI_ARTIST_POOL = [
-  { name:'Vincent van Gogh', period:'1889 Saint-Rémy',
-    geometry:'gestural', edges:'soft', density:.85, accent:'strokes',
-    palette:['#0c1424','#1c2840','#2a3a60','#3a5078','#4a6890','#688098','#88a8b0','#d0c060','#e8a830','#f0d050','#a8c098','#1c4028'] },
-  { name:'Frida Kahlo', period:'1940s self-portraits',
-    geometry:'organic', edges:'hard', density:.7, accent:'shapes',
-    palette:['#0a0808','#181410','#2c2018','#3a2418','#a02820','#c83830','#e0683c','#88a060','#386040','#48a868','#c84860','#e0c878'] },
-  { name:'Katsushika Hokusai', period:'1830s ukiyo-e',
-    geometry:'flowing', edges:'hard', density:.65, accent:'shapes',
-    palette:['#0a0a18','#1a2848','#2a4880','#3868a8','#4a80c0','#7098c0','#a0b8d0','#88684c','#a0886c','#c8b890','#e0d8c0','#f4ecd8'] },
-  { name:'Mark Rothko', period:'1950s multiforms',
-    geometry:'geometric', edges:'feathered', density:.5, accent:'fields',
-    palette:['#0a0606','#1a1010','#2a1818','#3a2018','#702820','#a82a18','#c84020','#e06030','#684020','#88684c','#c8a878','#e8d4a8'] },
-  { name:'Hilma af Klint', period:'1907 esoteric abstraction',
-    geometry:'geometric', edges:'soft', density:.65, accent:'shapes',
-    palette:['#0a0a14','#1a1828','#2a2c48','#404068','#586088','#7878a0','#a0a878','#c8c068','#c87060','#e09080','#a8c0c0','#f0e0c8'] },
-];
-
-// ─── Cache ──────────────────────────────────────────────────────────────────
-const _aiArtistCache = (typeof Map !== 'undefined') ? new Map() : null;
-const AI_ARTIST_LRU = 16;
-
-function _aiArtistCacheKey(context, seed){
-  return String(context||'').toLowerCase().slice(0,80) + '|' + (seed>>>0);
-}
-function _aiArtistCacheGet(key){
-  if(!_aiArtistCache || !_aiArtistCache.has(key)) return null;
-  const v = _aiArtistCache.get(key);
-  _aiArtistCache.delete(key); _aiArtistCache.set(key, v);
-  return v;
-}
-function _aiArtistCacheSet(key, value){
-  if(!_aiArtistCache) return;
-  if(_aiArtistCache.has(key)) _aiArtistCache.delete(key);
-  _aiArtistCache.set(key, value);
-  while(_aiArtistCache.size > AI_ARTIST_LRU){
-    const firstKey = _aiArtistCache.keys().next().value;
-    _aiArtistCache.delete(firstKey);
-  }
-}
-
-// Hash → 32-bit, for deterministic offline pick.
-function _aiArtistHash(s){
-  let h = 0x811c9dc5;
-  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
-  return h >>> 0;
-}
-
-// Offline pick: deterministic from context + seed, avoids names already used.
-function _aiArtistOfflinePick(context, seed, usedNames){
-  const used = new Set(Array.isArray(usedNames) ? usedNames : []);
-  const h = _aiArtistHash(String(context||'') + '|' + (seed>>>0));
-  for(let i=0; i<AI_ARTIST_POOL.length; i++){
-    const a = AI_ARTIST_POOL[(h + i) % AI_ARTIST_POOL.length];
-    if(!used.has(a.name)) return a;
-  }
-  return AI_ARTIST_POOL[h % AI_ARTIST_POOL.length];
-}
-
-// Public entry — async, resolves to {name, period, palette[12], geometry, edges, density, accent}.
-// Skeleton version: offline-only (no AI calls yet — confirm UI/TDZ first, then add API).
-async function generateAiArtist(opts){
-  const o = opts || {};
-  const context = String(o.context || '');
-  const seed = (o.seed >>> 0) || 0;
-  const usedNames = Array.isArray(o.usedNames) ? o.usedNames : [];
-  const cacheKey = _aiArtistCacheKey(context, seed);
-  const cached = _aiArtistCacheGet(cacheKey);
-  if(cached) return cached;
-  // For the skeleton, pick offline. (Full version: 2 AI calls + this as fallback.)
-  const picked = _aiArtistOfflinePick(context, seed, usedNames);
-  const out = {
-    name: picked.name,
-    period: picked.period,
-    palette: picked.palette.slice(0, 12),
-    geometry: picked.geometry,
-    edges: picked.edges,
-    density: picked.density,
-    accent: picked.accent,
-  };
-  _aiArtistCacheSet(cacheKey, out);
-  return out;
-}
-
-// ─── Drawing ─────────────────────────────────────────────────────────────────
-
-// Mulberry32 PRNG.
-function _aiRng(seed){
-  let t = (seed >>> 0) || 1;
-  return function(){
-    t |= 0; t = (t + 0x6D2B79F5) | 0;
-    let r = Math.imul(t ^ (t >>> 15), 1 | t);
-    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
-    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// Map chord → palette colour by pitch class.
-function _aiColorForChord(palette, chord){
-  if(!chord || !chord.n || !chord.n.length) return palette[0];
-  const m = chord.n[0].m | 0;
-  const pc = ((m % 12) + 12) % 12;
-  return palette[pc % 12];
-}
-
-// Hex → rgba string.
-function _aiHexA(hex, alpha){
-  const h = (hex && hex[0] === '#') ? hex.slice(1) : (hex || '000000');
-  const r = parseInt(h.slice(0,2), 16) | 0;
-  const g = parseInt(h.slice(2,4), 16) | 0;
-  const b = parseInt(h.slice(4,6), 16) | 0;
-  return 'rgba(' + r + ',' + g + ',' + b + ',' + (Math.max(0, Math.min(1, alpha))).toFixed(3) + ')';
-}
-
-// Skeleton overlay drawing — dramatic, palette-driven, visibly distinct from mosaic.
-function drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, recipe){
-  if(!recipe || !chords || lim <= 0) return;
-  const rng = _aiRng(sessionSeed || 1);
-  const palette = recipe.palette || AI_ARTIST_POOL[0].palette;
-  const density = Math.max(0.3, Math.min(1, recipe.density || 0.6));
-  // ── 1. Background: multi-stop gradient across the full palette ────────────
-  // Distinctly NOT a black canvas — the painting is the palette.
-  const bg = ctx.createLinearGradient(0, 0, CW * 0.3, CH);
-  const stops = Math.min(8, palette.length);
-  for(let i = 0; i < stops; i++){
-    bg.addColorStop(i / (stops - 1), _aiHexA(palette[i], 1));
-  }
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, CW, CH);
-  // ── 2. Atmospheric wash — large soft blobs of palette colour ──────────────
-  // Creates depth and breaks the gradient into more painterly territory.
-  for(let i = 0; i < 8; i++){
-    const col = palette[Math.floor(rng() * palette.length)];
-    const x = rng() * CW;
-    const y = rng() * CH;
-    const r = Math.min(CW, CH) * (0.15 + rng() * 0.25);
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, _aiHexA(col, 0.55));
-    g.addColorStop(0.6, _aiHexA(col, 0.18));
-    g.addColorStop(1, _aiHexA(col, 0));
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
-  }
-  // ── 3. Cell layer — chord colours mapped through palette, NOT through gc ──
-  // Each played chord places a shape onto the canvas using the artist's palette.
-  // Shape type depends on geometry; size scales with velocity; alpha is high.
-  const cells = (gc && Array.isArray(gc.cells)) ? gc.cells : [];
-  const limCells = Math.min(lim, cells.length);
-  for(let i = 0; i < limCells; i++){
-    const cell = cells[i]; if(!cell) continue;
-    const chord = chords[i]; if(!chord) continue;
-    const col = _aiColorForChord(palette, chord);
-    const vel = (chord.n && chord.n[0] && chord.n[0].v) || 80;
-    const a = 0.6 + (vel / 127) * 0.35;
-    ctx.fillStyle = _aiHexA(col, a);
-    const cx = cell.x + cell.w / 2;
-    const cy = cell.y + cell.h / 2;
-    const r = Math.min(cell.w, cell.h) * (0.55 + (vel/127) * 0.25);
-    if(recipe.geometry === 'geometric'){
-      // Triangles + rectangles in alternation — Hilma af Klint, Kandinsky-ish.
-      if((i + (sessionSeed|0)) % 2 === 0){
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - r);
-        ctx.lineTo(cx + r * 0.866, cy + r * 0.5);
-        ctx.lineTo(cx - r * 0.866, cy + r * 0.5);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-      }
-    } else if(recipe.geometry === 'flowing' || recipe.geometry === 'organic'){
-      // Soft ellipses — organic shapes.
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, r, r * (0.7 + rng() * 0.4), rng() * Math.PI, 0, Math.PI*2);
-      ctx.fill();
-    } else if(recipe.geometry === 'gestural'){
-      // Brushstrokes — short directional sweeps. Van Gogh-ish.
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate((rng() - 0.5) * Math.PI);
-      ctx.fillRect(-r, -r * 0.35, r * 2, r * 0.7);
-      ctx.restore();
-    } else {
-      // Default: filled circle.
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
-  // ── 4. Accent layer ───────────────────────────────────────────────────────
-  const accentBudget = Math.floor(density * limCells * 0.8);
-  for(let k = 0; k < accentBudget; k++){
-    const ci = Math.floor(rng() * limCells);
-    const cell = cells[ci]; if(!cell) continue;
-    const chord = chords[ci];
-    const col = _aiColorForChord(palette, chord);
-    const cx = cell.x + cell.w * (0.2 + rng() * 0.6);
-    const cy = cell.y + cell.h * (0.2 + rng() * 0.6);
-    if(recipe.accent === 'strokes'){
-      // Bold gestural strokes — Van Gogh.
-      ctx.strokeStyle = _aiHexA(col, 0.85);
-      ctx.lineWidth = 1.5 + rng() * 4;
-      ctx.lineCap = 'round';
-      const ang = rng() * Math.PI * 2;
-      const len = Math.min(cell.w, cell.h) * (0.6 + rng() * 0.8);
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len);
-      ctx.stroke();
-    } else if(recipe.accent === 'fields'){
-      // Big soft fields — Rothko.
-      const r = Math.min(CW, CH) * (0.10 + rng() * 0.20);
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      g.addColorStop(0, _aiHexA(col, 0.55));
-      g.addColorStop(1, _aiHexA(col, 0));
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-    } else if(recipe.accent === 'dots'){
-      // Bright crisp dots.
-      const r = Math.min(cell.w, cell.h) * (0.18 + rng() * 0.25);
-      ctx.fillStyle = _aiHexA(col, 0.95);
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-    } else {
-      // shapes (Hilma af Klint, Hokusai). Outlined geometric forms.
-      const r = Math.min(cell.w, cell.h) * (0.4 + rng() * 0.5);
-      ctx.strokeStyle = _aiHexA(col, 0.85);
-      ctx.lineWidth = 1.5 + rng() * 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI*2);
-      ctx.stroke();
-      // Inner cross for esoteric feel.
-      if(rng() > 0.6){
-        ctx.beginPath();
-        ctx.moveTo(cx - r * 0.7, cy);
-        ctx.lineTo(cx + r * 0.7, cy);
-        ctx.moveTo(cx, cy - r * 0.7);
-        ctx.lineTo(cx, cy + r * 0.7);
-        ctx.stroke();
-      }
-    }
-  }
-}
-
 // §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
 // ─────────────────────────────────────────────────────────────────────────────
 const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered, isPending, hoverColor, busy, playing, loadedMode, pressNote, releaseNote, setHoveredKey, pressInfo}){
@@ -7448,24 +7192,6 @@ export default function Paintiano() {
   // Clicking the active artist a second time deselects, returning to mosaic.
   // Only affects music-mode rendering; image-mode ignores this.
   const [style, setStyle] = useState(null);
-  // AI Artist — "in the spirit of" overlay. State + refs only here at the
-  // top; the actual handler (selectAiArtistImpl) lives much lower in the
-  // component, AFTER its dependencies are declared, and is plugged into
-  // selectAiArtistRef via useEffect. This avoids the TDZ trap that bit the
-  // previous attempt: when a useCallback up here closes over names declared
-  // below, Vite's minifier can hoist the closure binding ahead of those
-  // declarations and trigger "Cannot access X before initialization" at
-  // runtime. Going through a ref makes the call site late-bound.
-  const [aiArtist, setAiArtist] = useState(null);
-  const [aiArtistLoading, setAiArtistLoading] = useState(false);
-  const aiArtistUsedNamesRef = useRef([]);
-  const aiArtistSeedRef = useRef(1);
-  const selectAiArtistRef = useRef(null);
-  // Stable wrapper for JSX — never changes identity, always forwards to the
-  // current impl. Safe to put in render props.
-  const selectAiArtist = useCallback(()=>{
-    try{ selectAiArtistRef.current && selectAiArtistRef.current(); }catch(_){}
-  },[]);
   // Notes mode: a Mosaic sub-mode (mood only) that writes note NAMES instead of
   // colour blocks. Toggled by tapping the active Mosaic chip; auto-reset when any
   // artist style is chosen, or when the source is not a mood.
@@ -7924,7 +7650,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='ai'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -7948,7 +7674,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='ai'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
@@ -7956,7 +7682,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='ai';
+      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -8014,7 +7740,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='ai';
+        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama';
         _setArtistSeed(pollockSessionSeed);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
@@ -8043,7 +7769,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='ai' && aiArtist) drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, aiArtist);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -8079,10 +7804,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='mondrian' && lim>0){
         drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
       }
-      if(style==='ai' && aiArtist && lim>0){
-        drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, aiArtist);
-      }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='ai'){
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -8091,7 +7813,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,aiArtist]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -10159,52 +9881,6 @@ Composition rules:
     }
   },[busy,playNote,stopAll,advanceVariation]);
 
-  // ── AI Artist impl ────────────────────────────────────────────────────────
-  // Late-bound: declared AFTER all its dependencies (loadImage, aiMoodFromText,
-  // canvas refs, mode setters), then plugged into selectAiArtistRef via the
-  // effect below. The top-of-component selectAiArtist wrapper calls .current
-  // when invoked, so the binding is resolved at click-time, never at module
-  // init. This is the TDZ-safe pattern.
-  const selectAiArtistImpl = useCallback(async ()=>{
-    if(aiArtistLoading) return;
-    setAiArtistLoading(true);
-    let context = '';
-    if(currentMood) context = currentMood;
-    else if(songQ) context = songQ;
-    else if(midiName) context = midiName.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ');
-    else if(audioName) context = audioName.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ');
-    else if(composeMode) context = 'a live improvisation at the piano';
-    else if(micPainting) context = 'a voice — humming, singing or whistling';
-    else if(micListening) context = 'ambient music captured live from a speaker';
-    else if(viewMode==='image') context = 'a painting read as music';
-    else context = 'an instrumental piece';
-    aiArtistSeedRef.current = (aiArtistSeedRef.current + 1) >>> 0;
-    try{
-      const artist = await generateAiArtist({
-        context,
-        seed: aiArtistSeedRef.current,
-        usedNames: aiArtistUsedNamesRef.current.slice(-20),
-      });
-      aiArtistUsedNamesRef.current.push(artist.name);
-      if(aiArtistUsedNamesRef.current.length > 40) aiArtistUsedNamesRef.current.shift();
-      setAiArtist(artist);
-      if(canvasRef.current){ canvasRef.current.style.opacity='0'; }
-      setTimeout(()=>{
-        setStyle('ai');
-        setNotesMode(false);
-        setStructureSeedLock(null);
-        if(canvasRef.current) canvasRef.current.style.opacity='1';
-      },180);
-    }catch(_e){
-      // Detailed log so we can see the real reason in console.
-      try{ console.error('[AI Artist]', _e && (_e.message || _e), _e); }catch(__){}
-      setErr('AI Artist: ' + ((_e && _e.message) || 'unknown error'));
-    }finally{
-      setAiArtistLoading(false);
-    }
-  },[aiArtistLoading,currentMood,songQ,midiName,audioName,composeMode,micPainting,micListening,viewMode]);
-  // Wire the impl into the ref the top-of-component wrapper reads.
-  useEffect(()=>{ selectAiArtistRef.current = selectAiArtistImpl; },[selectAiArtistImpl]);
 
   const demoPlay=useCallback(()=>{
     if(busy)return;unlockAudio();
@@ -10890,9 +10566,6 @@ Composition rules:
         if(style==='mondrian' && chords.length>0){
           drawMondrianOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
         }
-        if(style==='ai' && aiArtist && chords.length>0){
-          drawAiArtistOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, aiArtist);
-        }
       }
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
       if(!blob){setErr(t('errs').printEncode);setErrInfo(false);return;}
@@ -11455,7 +11128,6 @@ Composition rules:
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
             <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
               <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
-              <button onClick={()=>{ if(aiArtistLoading) return; selectAiArtist(); }} className="pf-artist pf-ai" title={aiArtistLoading?'summoning artist…':(style==='ai'?'AI artist active · tap for new':'paint in the spirit of a real artist')} aria-label={style==='ai'?'AI artist active':'AI artist'} disabled={aiArtistLoading} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'.85rem',cursor:aiArtistLoading?'wait':'pointer',transition:'all .18s',color:style==='ai'?PF.bg:'rgba(220,180,255,.95)',background:style==='ai'?'linear-gradient(135deg,#ffb850,#d2a0ff)':'rgba(40,30,60,.5)',border:'1px solid '+(style==='ai'?'rgba(255,184,80,.85)':'rgba(210,160,255,.45)'),boxShadow:style==='ai'?'0 3px 10px rgba(210,160,255,.35)':'none',opacity:aiArtistLoading?.6:1}}>✦</button>
             </div>
           </div>
           )}
@@ -11833,20 +11505,7 @@ Composition rules:
             keep the canvas-wrapper subtree in its dependency graph, so the
             paint effect runs every time these values change. Width/height
             0 + overflow:hidden makes it invisible and zero-cost. */}
-        <div data-mfi-state aria-hidden="true" style={{position:'absolute',width:0,height:0,overflow:'hidden',pointerEvents:'none'}}>{chords.length}|{chordsRef.current?.length ?? 0}|{disp}|{varySource?1:0}|{String(moodFromImg)}|{String(moodContext)}|{currentMood||''}|{String(style||'')}|{String(effectiveStyle||'')}|{rndSalt}|{String(playing)}|{aiArtist?.name||''}</div>
-        {/* AI Artist signature — bottom-right when style='ai'. */}
-        {style==='ai' && aiArtist && (
-          <div style={{position:'absolute',bottom:10,right:14,zIndex:4,fontFamily:'Georgia, serif',fontStyle:'italic',fontSize:'.72rem',color:'rgba(220,180,255,.75)',textShadow:'0 1px 4px rgba(0,0,0,.85)',letterSpacing:'.02em',pointerEvents:'none'}}>
-            in the spirit of {aiArtist.name}
-          </div>
-        )}
-        {/* AI Artist loading overlay. */}
-        {aiArtistLoading && (
-          <div style={{position:'absolute',inset:0,zIndex:5,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'rgba(14,10,22,.55)',backdropFilter:'blur(2px)',WebkitBackdropFilter:'blur(2px)',pointerEvents:'none'}}>
-            <div style={{width:32,height:32,border:'2px solid rgba(220,180,255,.25)',borderTopColor:'rgba(220,180,255,.95)',borderRadius:'50%',animation:'spin .8s linear infinite'}}/>
-            <div style={{fontSize:'.55rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(220,180,255,.9)'}}>summoning artist…</div>
-          </div>
-        )}
+        <div data-mfi-state aria-hidden="true" style={{position:'absolute',width:0,height:0,overflow:'hidden',pointerEvents:'none'}}>{chords.length}|{chordsRef.current?.length ?? 0}|{disp}|{varySource?1:0}|{String(moodFromImg)}|{String(moodContext)}|{currentMood||''}|{String(style||'')}|{String(effectiveStyle||'')}|{rndSalt}|{String(playing)}</div>
         {chords.length===0 && micArmed && !micActive && (
           <div style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
             <button onClick={()=>{
@@ -12280,7 +11939,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.0-alpha</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.5</footer>
     </div>
   );
 }
