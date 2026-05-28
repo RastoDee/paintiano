@@ -13426,9 +13426,9 @@ Composition rules:
 
       {working && (
         <div style={{width:'100%',maxWidth:480,marginBottom:10}}>
-          <div style={{fontSize:'.55rem',letterSpacing:'.12em',opacity:.6,marginBottom:4,textAlign:'center',color:'rgba(210,150,255,.8)'}}>⟳ {wLabel}… {wPct}%</div>
-          <div style={{height:2,background:'rgba(255,255,255,0.07)',borderRadius:1}}>
-            <div style={{height:'100%',width:wPct+'%',background:'rgba(200,120,255,.7)',borderRadius:1,transition:'width .3s'}}/>
+          <div style={{fontSize:'.7rem',letterSpacing:'.06em',marginBottom:6,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
+          <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
+            <div style={{height:'100%',width:wPct+'%',background:'rgba(210,140,255,.85)',borderRadius:2,transition:'width .3s'}}/>
           </div>
         </div>
       )}
