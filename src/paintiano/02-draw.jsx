@@ -2271,6 +2271,259 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 }
 
+// ── Bulge (Vasarely op-art) ──────────────────────────────────────────────────
+// A regular grid of diamonds or 3D-cubes that warps around invisible spheres,
+// creating a lens / bulge illusion (Victor Vasarely's "Vega" series). The
+// number of spheres scales with track length; cell shape (diamond vs cube) is
+// chosen once per painting from the seed. Each grid cell is coloured from the
+// chord at the corresponding position via gc(); brightness of facets builds the
+// 3D read. Spheres pull cells outward and enlarge them near their centre, then
+// release back to the flat grid at their rim.
+function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const rnd = _seedRnd(53, ss, 0, 0);
+
+  // ── Grid resolution: denser for longer pieces, capped for performance ──
+  const COLS = cn<=8 ? 10 : cn<=24 ? 14 : cn<=60 ? 18 : cn<=140 ? 24 : 30;
+  const ROWS = Math.max(6, Math.round(COLS * (CH / CW)));
+  const cw = CW / COLS, ch = CH / ROWS;
+
+  // ── Sphere count auto-scales with song length (1–4) ──
+  const SPHERES = cn<=10 ? 1 : cn<=40 ? 2 : cn<=120 ? 3 : 4;
+
+  // ── Cell shape: diamonds or 3D cubes, chosen once per painting ──
+  const useCubes = rnd() < 0.5;
+
+  // ── Place sphere centres (stable per painting) ──
+  const spheres = [];
+  if(SPHERES === 1){
+    spheres.push({ cx: CW*0.5, cy: CH*0.5, r: Math.min(CW,CH)*0.42 });
+  } else {
+    for(let s=0; s<SPHERES; s++){
+      spheres.push({
+        cx: CW * (0.22 + rnd()*0.56),
+        cy: CH * (0.22 + rnd()*0.56),
+        r:  Math.min(CW,CH) * (0.24 + rnd()*0.16),
+      });
+    }
+  }
+
+  // ── Background: deepest palette tone from the whole piece ──
+  const bgC = _rectChordColor(chords, 0, 1, gc);
+  ctx.fillStyle = `rgb(${(bgC[0]*0.18)|0},${(bgC[1]*0.18)|0},${(bgC[2]*0.18)|0})`;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Lens warp: for a point, find the strongest sphere influence and push the
+  // point radially outward + scale it up (classic fish-eye bulge).
+  function warp(px, py){
+    let bestScale = 1, ox = px, oy = py;
+    for(const sp of spheres){
+      const dx = px - sp.cx, dy = py - sp.cy;
+      const dist = Math.hypot(dx, dy);
+      if(dist < sp.r && dist > 0.0001){
+        const t = dist / sp.r;            // 0 centre … 1 rim
+        // Smooth bulge profile — magnify centre, ease to 1 at rim.
+        const mag = 1 + (1 - t*t) * 0.9;  // up to ~1.9× at centre
+        if(mag > bestScale){
+          bestScale = mag;
+          ox = sp.cx + dx * mag;
+          oy = sp.cy + dy * mag;
+        }
+      }
+    }
+    return [ox, oy, bestScale];
+  }
+
+  // Map a grid cell (col,row) → chord index → colour.
+  function cellColor(col, row, shade){
+    const gi = (row * COLS + col) % cn;
+    const idx = Math.min(cn-1, gi);
+    const chord = chords[idx];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [120,100,140];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    R/=c; G/=c; B/=c;
+    // Shade for 3D facet read.
+    return [Math.min(255,R*shade), Math.min(255,G*shade), Math.min(255,B*shade)];
+  }
+
+  // Progressive reveal — only draw cells whose chord index is within lim.
+  const revealFrac = Math.max(0, Math.min(1, lim / cn));
+  const revealCells = Math.ceil(revealFrac * COLS * ROWS);
+
+  let drawn = 0;
+  for(let row=0; row<ROWS; row++){
+    for(let col=0; col<COLS; col++){
+      if(drawn++ > revealCells && lim < cn) continue;
+      // Cell centre in flat grid.
+      const fx = col*cw + cw/2;
+      const fy = row*ch + ch/2;
+      const [wx, wy, scale] = warp(fx, fy);
+      const hw = (cw/2) * scale * 0.98;
+      const hh = (ch/2) * scale * 0.98;
+
+      if(useCubes){
+        // 3D cube — three rhombus faces (top, left, right) with shading.
+        const colTop = cellColor(col, row, 1.15);
+        const colL   = cellColor(col, row, 0.78);
+        const colR   = cellColor(col, row, 0.5);
+        // Top face
+        ctx.fillStyle = `rgb(${colTop[0]|0},${colTop[1]|0},${colTop[2]|0})`;
+        ctx.beginPath();
+        ctx.moveTo(wx, wy-hh);
+        ctx.lineTo(wx+hw, wy-hh*0.5);
+        ctx.lineTo(wx, wy);
+        ctx.lineTo(wx-hw, wy-hh*0.5);
+        ctx.closePath(); ctx.fill();
+        // Left face
+        ctx.fillStyle = `rgb(${colL[0]|0},${colL[1]|0},${colL[2]|0})`;
+        ctx.beginPath();
+        ctx.moveTo(wx-hw, wy-hh*0.5);
+        ctx.lineTo(wx, wy);
+        ctx.lineTo(wx, wy+hh);
+        ctx.lineTo(wx-hw, wy+hh*0.5);
+        ctx.closePath(); ctx.fill();
+        // Right face
+        ctx.fillStyle = `rgb(${colR[0]|0},${colR[1]|0},${colR[2]|0})`;
+        ctx.beginPath();
+        ctx.moveTo(wx+hw, wy-hh*0.5);
+        ctx.lineTo(wx, wy);
+        ctx.lineTo(wx, wy+hh);
+        ctx.lineTo(wx+hw, wy+hh*0.5);
+        ctx.closePath(); ctx.fill();
+      } else {
+        // Diamond (rhombus) — single facet, alternating shade like a checker.
+        const checker = ((row + col) & 1) ? 1.1 : 0.62;
+        const c = cellColor(col, row, checker);
+        ctx.fillStyle = `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+        ctx.beginPath();
+        ctx.moveTo(wx, wy-hh);
+        ctx.lineTo(wx+hw, wy);
+        ctx.lineTo(wx, wy+hh);
+        ctx.lineTo(wx-hw, wy);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+}
+
+// ── Arcs (Frank Stella) ──────────────────────────────────────────────────────
+// Two Stella languages, chosen once per painting from the seed:
+//   • Concentric Squares — nested rings of saturated colour with thin light
+//     gaps between them, growing from a centre square outward (Stella's
+//     "Concentric Squares" series).
+//   • Protractor — interlocking rainbow bands sweeping in arcs and semicircles
+//     (Stella's "Protractor" series).
+// Each colour band/ring is pulled from a chord via gc(), so the painting is a
+// direct reading of the music; rings/bands reveal progressively as lim advances.
+function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const rnd = _seedRnd(67, ss, 0, 0);
+
+  // Colour for chord i, optional brightness multiplier.
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [120,100,140];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+
+  // Decide mode: concentric squares vs protractor arcs.
+  const concentric = rnd() < 0.5;
+
+  // Background — cream/light like Stella's grounds, tinted slightly by the piece.
+  const bgC = chordCol(0, 0.4);
+  ctx.fillStyle = `rgb(${Math.min(255,bgC[0]+150)|0},${Math.min(255,bgC[1]+150)|0},${Math.min(255,bgC[2]+140)|0})`;
+  ctx.fillRect(0, 0, CW, CH);
+
+  const revealFrac = Math.max(0, Math.min(1, lim / cn));
+
+  if(concentric){
+    // ── Concentric Squares ──────────────────────────────────────────────────
+    const RINGS = cn<=6 ? Math.max(2,cn) : cn<=16 ? 6 : cn<=40 ? 9 : cn<=90 ? 12 : 16;
+    const visRings = Math.max(1, Math.ceil(revealFrac * RINGS));
+    const cx = CW/2, cy = CH/2;
+    const maxR = Math.min(CW, CH) * 0.46;
+    const gap = maxR / RINGS;
+    const lineGap = Math.max(1, gap * 0.10); // thin light separator
+    // Draw outermost first so inner rings sit on top.
+    for(let r=0; r<visRings; r++){
+      const ringIdx = r;
+      const sz = maxR - ringIdx * gap;
+      if(sz <= 0) continue;
+      const col = chordCol(ringIdx, ((ringIdx & 1) ? 1.0 : 0.82));
+      ctx.fillStyle = css(col);
+      ctx.fillRect(cx - sz, cy - sz, sz*2, sz*2);
+      // Light separator (inset)
+      const inner = sz - lineGap;
+      if(inner > 0){
+        ctx.fillStyle = 'rgba(245,242,230,0.92)';
+        ctx.fillRect(cx - sz + (sz-inner), cy - sz + (sz-inner), inner*2, inner*2);
+        // restore: draw inner colour back, slightly smaller — handled next loop iteration
+      }
+    }
+    // Re-draw colour squares on top of separators for crisp nesting.
+    for(let r=0; r<visRings; r++){
+      const sz = maxR - r * gap - lineGap;
+      if(sz <= 0) continue;
+      const col = chordCol(r, ((r & 1) ? 1.0 : 0.82));
+      ctx.fillStyle = css(col);
+      ctx.fillRect(cx - sz, cy - sz, sz*2, sz*2);
+    }
+  } else {
+    // ── Protractor arcs ─────────────────────────────────────────────────────
+    // A few fans of concentric arcs (rainbow bands) anchored at corners/edges.
+    const FANS = cn<=12 ? 2 : cn<=40 ? 3 : 4;
+    const BANDS = cn<=12 ? 5 : cn<=40 ? 7 : 9;
+    const visBands = Math.max(1, Math.ceil(revealFrac * BANDS));
+    // Anchor points for fan centres.
+    const anchors = [];
+    for(let f=0; f<FANS; f++){
+      anchors.push({
+        x: CW * (0.15 + rnd()*0.7),
+        y: CH * (0.15 + rnd()*0.7),
+        a0: rnd() * Math.PI * 2,
+        sweep: (0.5 + rnd()*1.5) * Math.PI,
+        rMax: Math.min(CW,CH) * (0.35 + rnd()*0.25),
+      });
+    }
+    let colIdx = 0;
+    for(const an of anchors){
+      const bandW = an.rMax / BANDS;
+      for(let b=0; b<visBands; b++){
+        const rOuter = an.rMax - b * bandW;
+        const rInner = rOuter - bandW * 0.86;
+        if(rInner <= 0) continue;
+        const col = chordCol(colIdx++, ((b & 1) ? 1.0 : 0.85));
+        ctx.fillStyle = css(col);
+        ctx.beginPath();
+        ctx.arc(an.x, an.y, rOuter, an.a0, an.a0 + an.sweep, false);
+        ctx.arc(an.x, an.y, rInner, an.a0 + an.sweep, an.a0, true);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  }
+}
+
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
