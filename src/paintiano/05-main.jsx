@@ -3432,16 +3432,30 @@ Composition rules:
 
   // Load the demo song (Für Elise) and start painting it live. Shared by the
   // reel's opening beat. Does NOT schedule the rest of the tour.
-  const demoLoadAndPlay=useCallback(()=>{
+  const demoLoadAndPlay=useCallback((songSpec)=>{
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
     fullClear();
     stopAll();clearTimeout(kbTimer.current);
     if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
-    let t=0;
-    const wi=DEMO.map((item,i)=>{const startMs=t;t+=item.d+25;return{n:item.n,startMs,idx:i,durQ:snapDurQ(item.d/500)};});
+    // songSpec: undefined → built-in DEMO (Für Elise). Otherwise a mood song
+    // ({notes,tempo,title}) whose events we lay out the same way, so the AI beat
+    // uses the exact same state+ref setup that makes the canvas paint reliably.
+    let wi, inf;
+    if(songSpec && songSpec.notes){
+      const evts=noteArr2events(songSpec.notes, songSpec.tempo);
+      wi=evts.map((c,i)=>({...c,idx:i}));
+      wi.forEach(ev=>{ if(ev.n&&ev.n.length>1) ev.n=[...ev.n].sort((a,b)=>b.m-a.m); });
+      const lastMs=wi[wi.length-1]?.startMs||0;
+      inf={title:songSpec.title||'', count:wi.length, dur:Math.round(lastMs/1000)};
+      setVarySource(songSpec); setCurrentMood(songSpec._mood||null);
+    }else{
+      let t=0;
+      wi=DEMO.map((item,i)=>{const startMs=t;t+=item.d+25;return{n:item.n,startMs,idx:i,durQ:snapDurQ(item.d/500)};});
+      inf={title:'Für Elise · Beethoven',count:wi.length,dur:Math.round(t/1000)};
+      setCurrentMood(null); setVarySource(null);
+    }
     const g=computeGrid(wi);
-    const inf={title:'Für Elise · Beethoven',count:wi.length,dur:Math.round(t/1000)};
     pendingRef.current=[];setPending([]);pressInfo.current={};sessionStart.current=0;gridSigRef.current='';
     setChords(wi);chordsRef.current=wi;
     setGrid(g);gridRef.current=g;
@@ -3449,7 +3463,7 @@ Composition rules:
     setDisp(0);idxRef.current=wi.length;
     setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;setStamp(s=>s+1);
     setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
-    setComposeMode(false);setPickMode(null);setCurrentMood(null);setVarySource(null);setSongQ('');
+    setComposeMode(false);setPickMode(null);setSongQ('');
     setDemoMode(true);
     resumeFromRef.current=0;
     startPlay();
@@ -3528,32 +3542,11 @@ Composition rules:
           case 'ai-play': {
             setDemoTyping('');
             setDemoText(T(ph.textKey));
-            // Offline mood song — instant, no network.
+            // Offline mood song — instant, no network. Use the SAME loader as the
+            // Für Elise beat (state + refs set together → canvas paints reliably).
             try{
               const song=moodToSong(DEMO_REEL_MOOD);
-              if(song){
-                const evts=noteArr2events(song.notes,song.tempo);
-                if(evts.length){
-                  setVarySource(song);
-                  applyEvents(evts, song.title);
-                  // applyEvents updates state but the refs startPlay reads sync
-                  // via effects only after commit — set them eagerly so playback
-                  // and the canvas grid line up (otherwise: black canvas, audio
-                  // playing). Mirror what demoLoadAndPlay does.
-                  const wi=evts.map((c,i)=>({...c,idx:i}));
-                  wi.forEach(ev=>{ if(ev.n&&ev.n.length>1) ev.n=[...ev.n].sort((a,b)=>b.m-a.m); });
-                  const g=computeGrid(wi);
-                  chordsRef.current=wi; gridRef.current=g; idxRef.current=wi.length;
-                  setCurrentMood(DEMO_REEL_MOOD);
-                  setDemoMode(true);
-                  setDisp(0);
-                  resumeFromRef.current=0;
-                  // Larger delay so React has committed the new grid/chords before
-                  // the paint loop starts walking them.
-                  const sid=setTimeout(()=>{ if(bag.active) startPlayRef.current?.(); }, 260);
-                  bag.timers.push(sid);
-                }
-              }
+              if(song){ song._mood=DEMO_REEL_MOOD; demoLoadAndPlay(song); }
             }catch(_){}
             break;
           }
@@ -3583,7 +3576,7 @@ Composition rules:
         }
       });
     });
-  },[busy,lang,demoLoadAndPlay,demoReelStop,advanceVariation,applyEvents]);
+  },[busy,lang,demoLoadAndPlay,demoReelStop,advanceVariation]);
 
   const handlePauseClick=useCallback(()=>{
     // If a live mic mode is active (Voice=micPainting or Music=micListening),
@@ -5163,25 +5156,25 @@ Composition rules:
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && (
           <div onClick={demoReelStop} role="button" aria-label="skip demo"
-            style={{position:'absolute',inset:0,zIndex:6,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end',pointerEvents:'auto'}}>
+            style={{position:'absolute',inset:0,zIndex:6,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'auto'}}>
             {/* Print/frame take-out flourish — a golden mat around the canvas */}
             {demoPrintBeat && (
               <div style={{position:'absolute',inset:0,border:'min(5vw,28px) solid #f6f3ec',boxShadow:'inset 0 0 0 2px rgba(180,140,40,.6), 0 24px 60px rgba(0,0,0,.5)',pointerEvents:'none',transition:'all .5s ease'}}/>
             )}
-            {/* Typed "AI" phrase, mid-screen */}
+            {/* Typed "AI" phrase — centred, same slot as the title card */}
             {demoTyping && (
-              <div style={{position:'absolute',top:'42%',left:0,right:0,textAlign:'center',pointerEvents:'none'}}>
-                <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.1rem,5vw,1.9rem)',color:'#fff',textShadow:'0 2px 14px rgba(0,0,0,.7)',background:'rgba(20,16,28,.55)',padding:'6px 16px',borderRadius:8}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
+              <div style={{padding:'10px 20px',background:'rgba(20,16,28,.6)',backdropFilter:'blur(6px)',borderRadius:10,pointerEvents:'none',maxWidth:'88%',textAlign:'center'}}>
+                <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.1rem,4vw,1.9rem)',color:'#fff',textShadow:'0 2px 14px rgba(0,0,0,.7)'}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
               </div>
             )}
-            {/* Trailer title card, lower third */}
-            {demoText && (
-              <div style={{position:'relative',marginBottom:'8%',padding:'10px 22px',background:'rgba(16,12,24,.6)',backdropFilter:'blur(6px)',borderRadius:30,border:'1px solid rgba(240,192,64,.35)',pointerEvents:'none',animation:'pfDemoFade .5s ease'}}>
-                <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.2rem,5.5vw,2.1rem)',letterSpacing:'.02em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>{demoText}</span>
+            {/* Trailer title card — centred */}
+            {demoText && !demoTyping && (
+              <div style={{padding:'12px 26px',background:'rgba(16,12,24,.62)',backdropFilter:'blur(6px)',borderRadius:30,border:'1px solid rgba(240,192,64,.35)',pointerEvents:'none',animation:'pfDemoFade .5s ease',maxWidth:'90%',textAlign:'center'}}>
+                <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.2rem,4.5vw,2.1rem)',letterSpacing:'.02em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>{demoText}</span>
               </div>
             )}
             {/* Skip hint, top-right */}
-            <div style={{position:'absolute',top:10,right:12,fontSize:'.58rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(247,243,236,.6)',background:'rgba(16,12,24,.5)',padding:'4px 10px',borderRadius:14,pointerEvents:'none'}}>{t('demoSkip')}</div>
+            <div style={{position:'absolute',top:10,right:12,fontSize:'.58rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(247,243,236,.7)',background:'rgba(16,12,24,.55)',padding:'4px 10px',borderRadius:14,pointerEvents:'none'}}>{t('demoSkip')}</div>
           </div>
         )}
         {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(()=>{
@@ -5686,7 +5679,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.1</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.3</footer>
     </div>
   );
 }
