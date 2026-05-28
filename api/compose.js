@@ -23,8 +23,10 @@ const RATE_WINDOW_MS = 60 * 1000;         // za 60 sekúnd na jednu IP
 // Povolené zdroje (tvoje domény + lokálny vývoj). Cudzí web bude odmietnutý.
 const ALLOWED = [
   'https://paintiano.vercel.app',
-  'https://paintiano.com',
-  'https://www.paintiano.com',
+  'https://paintiano.app',
+  'https://www.paintiano.app',
+  'https://paintiano-git-dev',
+  'https://paintiano-',
   'http://localhost',
   'http://127.0.0.1'
 ];
