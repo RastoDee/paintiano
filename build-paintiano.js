@@ -39,6 +39,7 @@ const ORDER = [
   '02-draw.jsx',      // §3 canvas draw functions
   '03-i18n.jsx',      // §4 i18n / concept / guide
   '04-songs.jsx',     // §5 song data / library / moods
+  '06-demo-reel.jsx', // §6b demo-reel data + phase timeline (used by main)
   '05-main.jsx',      // §6 sub-components + §7 main component
 ];
 

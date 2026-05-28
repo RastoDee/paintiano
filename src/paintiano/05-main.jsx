@@ -803,6 +803,13 @@ export default function Paintiano() {
   // play action (Stop still works because it's the same button in playing state)
   // so the demo can't be re-triggered without an explicit clear.
   const [demoMode, setDemoMode] = useState(false);
+  // Demo-reel (promo tour) state: overlay copy currently shown + a ref bag of
+  // timers so a skip can tear the whole sequence down cleanly.
+  const [demoText, setDemoText] = useState('');     // overlay card text ('' = hidden)
+  const [demoTyping, setDemoTyping] = useState('');  // AI-beat "typed" phrase
+  const [demoPrintBeat, setDemoPrintBeat] = useState(false); // frame/print flourish
+  const [demoReelOn, setDemoReelOn] = useState(false);       // reel active → render overlay
+  const demoReelRef = useRef({timers:[], parade:null, vary:null, type:null, active:false});
   // Inline "concept" modal: explains Harmony/Spectral and image transcription.
   const [showAbout, setShowAbout] = useState(false);
   // Stable callback for AboutModal — without useCallback the modal's React.memo
@@ -1004,7 +1011,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   // Cleanup the compose-commit debounce on unmount so it can't fire commit()
   // against a torn-down state tree.
-  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);if(switchArmRef.current)clearTimeout(switchArmRef.current);substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};},[]);
+  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);if(switchArmRef.current)clearTimeout(switchArmRef.current);try{const b=demoReelRef.current;if(b){b.active=false;b.timers.forEach(id=>clearTimeout(id));if(b.parade)clearInterval(b.parade);if(b.vary)clearInterval(b.vary);if(b.type)clearInterval(b.type);}}catch(_){}substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};},[]);
 
   useEffect(()=>{
     let dead=false;
@@ -3423,9 +3430,9 @@ Composition rules:
   },[busy,playNote,stopAll,advanceVariation]);
 
 
-  const demoPlay=useCallback(()=>{
-    if(busy)return;unlockAudio();
-    // Stash any active creative draft before the demo takes over the canvas.
+  // Load the demo song (Für Elise) and start painting it live. Shared by the
+  // reel's opening beat. Does NOT schedule the rest of the tour.
+  const demoLoadAndPlay=useCallback(()=>{
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
     fullClear();
@@ -3446,7 +3453,125 @@ Composition rules:
     setDemoMode(true);
     resumeFromRef.current=0;
     startPlay();
-  },[busy,stopAll,startPlay,fullClear,stashDraft]);
+  },[stopAll,startPlay,fullClear,stashDraft]);
+
+  // Tear the reel down completely: clear every timer/interval, hide overlays,
+  // stop audio, drop demo flags. Safe to call multiple times (idempotent).
+  const demoReelStop=useCallback(()=>{
+    const bag=demoReelRef.current;
+    if(!bag) return;
+    bag.active=false;
+    setDemoReelOn(false);
+    try{ bag.timers.forEach(id=>clearTimeout(id)); }catch(_){}
+    bag.timers=[];
+    if(bag.parade){ try{clearInterval(bag.parade);}catch(_){} bag.parade=null; }
+    if(bag.vary){ try{clearInterval(bag.vary);}catch(_){} bag.vary=null; }
+    if(bag.type){ try{clearInterval(bag.type);}catch(_){} bag.type=null; }
+    setDemoText(''); setDemoTyping(''); setDemoPrintBeat(false);
+    try{ stopAll(); }catch(_){}
+    setDemoMode(false);
+    setStyle(null);
+  },[stopAll]);
+
+  // The promo tour. Walks DEMO_REEL_PHASES, scheduling each beat with a timer.
+  // Reuses the real engine so it doubles as a working demo. Tap anywhere to skip
+  // (wired to demoReelStop via the overlay + a global pointer handler).
+  const demoPlay=useCallback(()=>{
+    if(busy && !demoReelRef.current.active) { /* allow re-entry only when idle */ }
+    unlockAudio();
+    // Reset any previous run.
+    demoReelStop();
+    const bag=demoReelRef.current;
+    bag.active=true;
+    setDemoReelOn(true);
+    const T=(key)=>demoReelText(lang, key);
+    const sched=(ms,fn)=>{ const id=setTimeout(()=>{ if(bag.active) fn(); }, ms); bag.timers.push(id); };
+
+    DEMO_REEL_PHASES.forEach(ph=>{
+      sched(ph.at, ()=>{
+        switch(ph.kind){
+          case 'play-song':
+            demoLoadAndPlay();
+            break;
+          case 'show-text':
+            setDemoTyping(''); setDemoPrintBeat(false);
+            setDemoText(T(ph.textKey));
+            break;
+          case 'set-style':
+            if(ph.style) setStyle(ph.style);
+            break;
+          case 'style-parade': {
+            setDemoText(T(ph.textKey||'artists'));
+            let i=0;
+            // immediate first swap
+            setStyle(DEMO_REEL_STYLE_PARADE[0]);
+            bag.parade=setInterval(()=>{
+              if(!bag.active){ clearInterval(bag.parade); bag.parade=null; return; }
+              i=(i+1)%DEMO_REEL_STYLE_PARADE.length;
+              setStyle(DEMO_REEL_STYLE_PARADE[i]);
+            }, DEMO_REEL_PARADE_STEP);
+            break;
+          }
+          case 'ai-type': {
+            if(bag.parade){ clearInterval(bag.parade); bag.parade=null; }
+            setStyle(null);
+            setDemoText('');
+            const phrase=T(ph.textKey);
+            let k=0; setDemoTyping('');
+            bag.type=setInterval(()=>{
+              if(!bag.active){ clearInterval(bag.type); bag.type=null; return; }
+              k++; setDemoTyping(phrase.slice(0,k));
+              if(k>=phrase.length){ clearInterval(bag.type); bag.type=null; }
+            }, 90);
+            break;
+          }
+          case 'ai-play': {
+            setDemoTyping('');
+            setDemoText(T(ph.textKey));
+            // Offline mood song — instant, no network.
+            try{
+              const song=moodToSong(DEMO_REEL_MOOD);
+              if(song){
+                const evts=noteArr2events(song.notes,song.tempo);
+                if(evts.length){
+                  setVarySource(song);
+                  applyEvents(evts, song.title);
+                  setCurrentMood(DEMO_REEL_MOOD);
+                  setDemoMode(true);
+                  resumeFromRef.current=0;
+                  setTimeout(()=>{ if(bag.active) startPlayRef.current?.(); }, 60);
+                }
+              }
+            }catch(_){}
+            break;
+          }
+          case 'vary': {
+            setDemoText(T(ph.textKey||'variations'));
+            let n=0;
+            bag.vary=setInterval(()=>{
+              if(!bag.active){ clearInterval(bag.vary); bag.vary=null; return; }
+              try{ advanceVariation(); }catch(_){}
+              n++;
+              if(n>=DEMO_REEL_VARY_COUNT){ clearInterval(bag.vary); bag.vary=null; }
+            }, DEMO_REEL_VARY_STEP);
+            break;
+          }
+          case 'print-beat':
+            setDemoText(T(ph.textKey));
+            setDemoPrintBeat(true);
+            break;
+          case 'outro':
+            setDemoPrintBeat(false);
+            setDemoText(T(ph.textKey));
+            break;
+          case 'end':
+            demoReelStop();
+            break;
+          default: break;
+        }
+      });
+    });
+  },[busy,lang,demoLoadAndPlay,demoReelStop,advanceVariation,applyEvents]);
 
   const handlePauseClick=useCallback(()=>{
     // If a live mic mode is active (Voice=micPainting or Music=micListening),
@@ -4236,7 +4361,7 @@ Composition rules:
 
   return (
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20}}>
         <nav style={{display:'flex',gap:18,fontSize:'.6rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
@@ -5024,6 +5149,29 @@ Composition rules:
         <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
+        {demoReelOn && (
+          <div onClick={demoReelStop} role="button" aria-label="skip demo"
+            style={{position:'absolute',inset:0,zIndex:6,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end',pointerEvents:'auto'}}>
+            {/* Print/frame take-out flourish — a golden mat around the canvas */}
+            {demoPrintBeat && (
+              <div style={{position:'absolute',inset:0,border:'min(5vw,28px) solid #f6f3ec',boxShadow:'inset 0 0 0 2px rgba(180,140,40,.6), 0 24px 60px rgba(0,0,0,.5)',pointerEvents:'none',transition:'all .5s ease'}}/>
+            )}
+            {/* Typed "AI" phrase, mid-screen */}
+            {demoTyping && (
+              <div style={{position:'absolute',top:'42%',left:0,right:0,textAlign:'center',pointerEvents:'none'}}>
+                <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.1rem,5vw,1.9rem)',color:'#fff',textShadow:'0 2px 14px rgba(0,0,0,.7)',background:'rgba(20,16,28,.55)',padding:'6px 16px',borderRadius:8}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
+              </div>
+            )}
+            {/* Trailer title card, lower third */}
+            {demoText && (
+              <div style={{position:'relative',marginBottom:'8%',padding:'10px 22px',background:'rgba(16,12,24,.6)',backdropFilter:'blur(6px)',borderRadius:30,border:'1px solid rgba(240,192,64,.35)',pointerEvents:'none',animation:'pfDemoFade .5s ease'}}>
+                <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.2rem,5.5vw,2.1rem)',letterSpacing:'.02em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>{demoText}</span>
+              </div>
+            )}
+            {/* Skip hint, top-right */}
+            <div style={{position:'absolute',top:10,right:12,fontSize:'.58rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(247,243,236,.6)',background:'rgba(16,12,24,.5)',padding:'4px 10px',borderRadius:14,pointerEvents:'none'}}>{t('demoSkip')}</div>
+          </div>
+        )}
         {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(()=>{
           const cell=grid.cells[selectedChordIdx];
           const segs=cell.segments||[cell];
@@ -5526,7 +5674,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.4.19</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.0</footer>
     </div>
   );
 }
