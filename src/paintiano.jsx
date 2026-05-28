@@ -6654,21 +6654,38 @@ function _aiHexA(hex, alpha){
   return 'rgba(' + r + ',' + g + ',' + b + ',' + (Math.max(0, Math.min(1, alpha))).toFixed(3) + ')';
 }
 
-// Skeleton overlay drawing — fills cells with palette colours, adds one accent layer.
+// Skeleton overlay drawing — dramatic, palette-driven, visibly distinct from mosaic.
 function drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, recipe){
   if(!recipe || !chords || lim <= 0) return;
   const rng = _aiRng(sessionSeed || 1);
   const palette = recipe.palette || AI_ARTIST_POOL[0].palette;
-  const density = Math.max(0.2, Math.min(1, recipe.density || 0.6));
-  // Background — palette darkest → mid gradient.
-  const dark = palette[0] || '#04040a';
-  const mid  = palette[Math.floor(palette.length / 2)] || dark;
-  const grad = ctx.createLinearGradient(0, 0, 0, CH);
-  grad.addColorStop(0, _aiHexA(dark, 1));
-  grad.addColorStop(1, _aiHexA(mid, 0.65));
-  ctx.fillStyle = grad;
+  const density = Math.max(0.3, Math.min(1, recipe.density || 0.6));
+  // ── 1. Background: multi-stop gradient across the full palette ────────────
+  // Distinctly NOT a black canvas — the painting is the palette.
+  const bg = ctx.createLinearGradient(0, 0, CW * 0.3, CH);
+  const stops = Math.min(8, palette.length);
+  for(let i = 0; i < stops; i++){
+    bg.addColorStop(i / (stops - 1), _aiHexA(palette[i], 1));
+  }
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, CW, CH);
-  // Cell layer.
+  // ── 2. Atmospheric wash — large soft blobs of palette colour ──────────────
+  // Creates depth and breaks the gradient into more painterly territory.
+  for(let i = 0; i < 8; i++){
+    const col = palette[Math.floor(rng() * palette.length)];
+    const x = rng() * CW;
+    const y = rng() * CH;
+    const r = Math.min(CW, CH) * (0.15 + rng() * 0.25);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, _aiHexA(col, 0.55));
+    g.addColorStop(0.6, _aiHexA(col, 0.18));
+    g.addColorStop(1, _aiHexA(col, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  }
+  // ── 3. Cell layer — chord colours mapped through palette, NOT through gc ──
+  // Each played chord places a shape onto the canvas using the artist's palette.
+  // Shape type depends on geometry; size scales with velocity; alpha is high.
   const cells = (gc && Array.isArray(gc.cells)) ? gc.cells : [];
   const limCells = Math.min(lim, cells.length);
   for(let i = 0; i < limCells; i++){
@@ -6676,49 +6693,96 @@ function drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, re
     const chord = chords[i]; if(!chord) continue;
     const col = _aiColorForChord(palette, chord);
     const vel = (chord.n && chord.n[0] && chord.n[0].v) || 80;
-    const a = 0.4 + (vel / 127) * 0.55;
+    const a = 0.6 + (vel / 127) * 0.35;
     ctx.fillStyle = _aiHexA(col, a);
-    if(recipe.geometry === 'flowing' || recipe.geometry === 'organic'){
+    const cx = cell.x + cell.w / 2;
+    const cy = cell.y + cell.h / 2;
+    const r = Math.min(cell.w, cell.h) * (0.55 + (vel/127) * 0.25);
+    if(recipe.geometry === 'geometric'){
+      // Triangles + rectangles in alternation — Hilma af Klint, Kandinsky-ish.
+      if((i + (sessionSeed|0)) % 2 === 0){
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r);
+        ctx.lineTo(cx + r * 0.866, cy + r * 0.5);
+        ctx.lineTo(cx - r * 0.866, cy + r * 0.5);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+      }
+    } else if(recipe.geometry === 'flowing' || recipe.geometry === 'organic'){
+      // Soft ellipses — organic shapes.
       ctx.beginPath();
-      ctx.ellipse(cell.x + cell.w/2, cell.y + cell.h/2, cell.w * 0.5, cell.h * 0.5, 0, 0, Math.PI*2);
+      ctx.ellipse(cx, cy, r, r * (0.7 + rng() * 0.4), rng() * Math.PI, 0, Math.PI*2);
       ctx.fill();
+    } else if(recipe.geometry === 'gestural'){
+      // Brushstrokes — short directional sweeps. Van Gogh-ish.
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((rng() - 0.5) * Math.PI);
+      ctx.fillRect(-r, -r * 0.35, r * 2, r * 0.7);
+      ctx.restore();
     } else {
-      ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
+      // Default: filled circle.
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI*2);
+      ctx.fill();
     }
   }
-  // Accent layer — sparse strokes/dots/shapes over the cells.
-  const accentBudget = Math.floor(density * limCells * 0.5);
+  // ── 4. Accent layer ───────────────────────────────────────────────────────
+  const accentBudget = Math.floor(density * limCells * 0.8);
   for(let k = 0; k < accentBudget; k++){
     const ci = Math.floor(rng() * limCells);
     const cell = cells[ci]; if(!cell) continue;
     const chord = chords[ci];
     const col = _aiColorForChord(palette, chord);
-    const cx = cell.x + cell.w * (0.3 + rng() * 0.4);
-    const cy = cell.y + cell.h * (0.3 + rng() * 0.4);
+    const cx = cell.x + cell.w * (0.2 + rng() * 0.6);
+    const cy = cell.y + cell.h * (0.2 + rng() * 0.6);
     if(recipe.accent === 'strokes'){
-      ctx.strokeStyle = _aiHexA(col, 0.7);
-      ctx.lineWidth = Math.max(1, rng() * 3);
+      // Bold gestural strokes — Van Gogh.
+      ctx.strokeStyle = _aiHexA(col, 0.85);
+      ctx.lineWidth = 1.5 + rng() * 4;
+      ctx.lineCap = 'round';
       const ang = rng() * Math.PI * 2;
-      const len = Math.min(cell.w, cell.h) * (0.4 + rng() * 0.6);
+      const len = Math.min(cell.w, cell.h) * (0.6 + rng() * 0.8);
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.lineTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len);
       ctx.stroke();
     } else if(recipe.accent === 'fields'){
-      const r = Math.min(CW, CH) * (0.06 + rng() * 0.10);
+      // Big soft fields — Rothko.
+      const r = Math.min(CW, CH) * (0.10 + rng() * 0.20);
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      g.addColorStop(0, _aiHexA(col, 0.35));
+      g.addColorStop(0, _aiHexA(col, 0.55));
       g.addColorStop(1, _aiHexA(col, 0));
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-    } else {
-      // shapes / default
-      const r = Math.min(cell.w, cell.h) * (0.2 + rng() * 0.3);
-      ctx.fillStyle = _aiHexA(col, 0.7);
+    } else if(recipe.accent === 'dots'){
+      // Bright crisp dots.
+      const r = Math.min(cell.w, cell.h) * (0.18 + rng() * 0.25);
+      ctx.fillStyle = _aiHexA(col, 0.95);
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+    } else {
+      // shapes (Hilma af Klint, Hokusai). Outlined geometric forms.
+      const r = Math.min(cell.w, cell.h) * (0.4 + rng() * 0.5);
+      ctx.strokeStyle = _aiHexA(col, 0.85);
+      ctx.lineWidth = 1.5 + rng() * 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI*2);
+      ctx.stroke();
+      // Inner cross for esoteric feel.
+      if(rng() > 0.6){
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.7, cy);
+        ctx.lineTo(cx + r * 0.7, cy);
+        ctx.moveTo(cx, cy - r * 0.7);
+        ctx.lineTo(cx, cy + r * 0.7);
+        ctx.stroke();
+      }
     }
   }
 }
+
 // §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
 // ─────────────────────────────────────────────────────────────────────────────
 const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered, isPending, hoverColor, busy, playing, loadedMode, pressNote, releaseNote, setHoveredKey, pressInfo}){
@@ -7979,8 +8043,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
         else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='ai' && aiArtist) { try{ console.log('[AI Artist] drawing overlay, name=', aiArtist.name, 'lim=', lim); }catch(_){} drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, aiArtist); }
-        else if(style==='ai' && !aiArtist) { try{ console.warn('[AI Artist] style=ai but aiArtist is null'); }catch(_){} }
+        else if(style==='ai' && aiArtist) drawAiArtistOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, aiArtist);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -10124,11 +10187,9 @@ Composition rules:
       });
       aiArtistUsedNamesRef.current.push(artist.name);
       if(aiArtistUsedNamesRef.current.length > 40) aiArtistUsedNamesRef.current.shift();
-      try{ console.log('[AI Artist] picked', artist.name, 'palette=', artist.palette?.length, 'recipe=', {geometry:artist.geometry, edges:artist.edges, density:artist.density, accent:artist.accent}); }catch(_){}
       setAiArtist(artist);
       if(canvasRef.current){ canvasRef.current.style.opacity='0'; }
       setTimeout(()=>{
-        try{ console.log('[AI Artist] setting style=ai'); }catch(_){}
         setStyle('ai');
         setNotesMode(false);
         setStructureSeedLock(null);
