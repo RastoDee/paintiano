@@ -5787,6 +5787,37 @@ const I18N = {
     proPaywallCta:'Get Paintiano Pro — €9.99 lifetime',
     proPaywallFooter:'One-time payment · No subscription · VAT included',
     proEarlyBird:'Early-bird price · first 50 supporters · then €14.99',
+    proPaywallSubtitle:'Unlock everything. Pay once. Keep forever.',
+    proValue1:'Unlimited AI compositions',
+    proValue1Sub:'Generate as many paintings as you wish',
+    proValue2:'Export without watermark',
+    proValue2Sub:'Clean images, ready to share or print',
+    proValue3:'Lifetime access',
+    proValue3Sub:'One payment, yours forever',
+    proValue4:'Support a solo art project',
+    proValue4Sub:'Keep Paintiano independent',
+    proLearnMore:'Learn more about Pro',
+    proAboutTitle:'Paintiano Pro',
+    proAboutLead:'Everything in Free, without limits.',
+    proAboutWhatYouGet:'What you get with Pro',
+    proAboutCompareTitle:'Free vs Pro',
+    proAboutCompareFeature:'Feature',
+    proAboutCompareFree:'Free',
+    proAboutComparePro:'Pro',
+    proAboutCmp1:'All manual modes (keyboard, mic, audio)',
+    proAboutCmp2:'All visual styles & moods',
+    proAboutCmp3:'AI compositions',
+    proAboutCmp3Free:'5 trial',
+    proAboutCmp3Pro:'Unlimited',
+    proAboutCmp4:'Watermark on exports',
+    proAboutCmp4Free:'Yes',
+    proAboutCmp4Pro:'None',
+    proAboutCmp5:'Lifetime access',
+    proAboutHonestTitle:'Honest about what Pro isn’t',
+    proAboutHonest1:'Pro keeps the same Paintiano you already use — it just removes the limits. No hidden new features behind a wall.',
+    proAboutHonest2:'Pro doesn’t sync between devices automatically. Your license key works on up to 5 devices.',
+    proAboutHonest3:'Pro doesn’t include cloud storage. You save your paintings to your own files.',
+    proAboutFinalCta:'Get Paintiano Pro — €9.99 lifetime',
     proHaveKey:'I already have a key',
     proEnterKey:'Enter your license key',
     proActivate:'Activate',
@@ -5849,6 +5880,37 @@ const I18N = {
     proPaywallCta:'Paintiano Pro holen — 9,99 € einmalig',
     proPaywallFooter:'Einmalige Zahlung · Kein Abo · inkl. MwSt.',
     proEarlyBird:'Early-Bird-Preis · erste 50 Unterstützer · danach 14,99 €',
+    proPaywallSubtitle:'Alles freischalten. Einmal zahlen. Für immer behalten.',
+    proValue1:'Unbegrenzte KI-Kompositionen',
+    proValue1Sub:'Erstelle so viele Bilder, wie du möchtest',
+    proValue2:'Export ohne Wasserzeichen',
+    proValue2Sub:'Saubere Bilder, bereit zum Teilen oder Drucken',
+    proValue3:'Lebenslanger Zugang',
+    proValue3Sub:'Eine Zahlung, für immer dein',
+    proValue4:'Unterstütze ein unabhängiges Kunstprojekt',
+    proValue4Sub:'Halte Paintiano unabhängig',
+    proLearnMore:'Mehr über Pro erfahren',
+    proAboutTitle:'Paintiano Pro',
+    proAboutLead:'Alles aus Free — ohne Grenzen.',
+    proAboutWhatYouGet:'Das bekommst du mit Pro',
+    proAboutCompareTitle:'Free vs. Pro',
+    proAboutCompareFeature:'Funktion',
+    proAboutCompareFree:'Free',
+    proAboutComparePro:'Pro',
+    proAboutCmp1:'Alle manuellen Modi (Tastatur, Mikro, Audio)',
+    proAboutCmp2:'Alle visuellen Stile & Stimmungen',
+    proAboutCmp3:'KI-Kompositionen',
+    proAboutCmp3Free:'5 Test',
+    proAboutCmp3Pro:'Unbegrenzt',
+    proAboutCmp4:'Wasserzeichen beim Export',
+    proAboutCmp4Free:'Ja',
+    proAboutCmp4Pro:'Keins',
+    proAboutCmp5:'Lebenslanger Zugang',
+    proAboutHonestTitle:'Ehrlich: Das ist Pro NICHT',
+    proAboutHonest1:'Pro behält das gleiche Paintiano, das du kennst — es entfernt nur die Grenzen. Keine versteckten neuen Funktionen hinter einer Wand.',
+    proAboutHonest2:'Pro synchronisiert nicht automatisch zwischen Geräten. Dein Lizenzschlüssel funktioniert auf bis zu 5 Geräten.',
+    proAboutHonest3:'Pro beinhaltet keinen Cloud-Speicher. Du speicherst deine Bilder in deine eigenen Dateien.',
+    proAboutFinalCta:'Paintiano Pro holen — 9,99 € einmalig',
     proHaveKey:'Ich habe bereits einen Schlüssel',
     proEnterKey:'Lizenzschlüssel eingeben',
     proActivate:'Aktivieren',
@@ -5911,6 +5973,37 @@ const I18N = {
     proPaywallCta:'Obtenir Paintiano Pro — 9,99 € à vie',
     proPaywallFooter:'Paiement unique · Sans abonnement · TVA incluse',
     proEarlyBird:'Tarif early-bird · 50 premiers soutiens · puis 14,99 €',
+    proPaywallSubtitle:'Tout débloquer. Payer une fois. Garder pour toujours.',
+    proValue1:'Compositions IA illimitées',
+    proValue1Sub:'Génère autant de peintures que tu veux',
+    proValue2:'Export sans filigrane',
+    proValue2Sub:'Images nettes, prêtes à partager ou imprimer',
+    proValue3:'Accès à vie',
+    proValue3Sub:'Un paiement, à toi pour toujours',
+    proValue4:'Soutiens un projet d’art indépendant',
+    proValue4Sub:'Garde Paintiano indépendant',
+    proLearnMore:'En savoir plus sur Pro',
+    proAboutTitle:'Paintiano Pro',
+    proAboutLead:'Tout ce qu’il y a dans Free, sans limites.',
+    proAboutWhatYouGet:'Ce que tu obtiens avec Pro',
+    proAboutCompareTitle:'Free vs Pro',
+    proAboutCompareFeature:'Fonction',
+    proAboutCompareFree:'Free',
+    proAboutComparePro:'Pro',
+    proAboutCmp1:'Tous les modes manuels (clavier, micro, audio)',
+    proAboutCmp2:'Tous les styles & ambiances',
+    proAboutCmp3:'Compositions IA',
+    proAboutCmp3Free:'5 essais',
+    proAboutCmp3Pro:'Illimité',
+    proAboutCmp4:'Filigrane sur les exports',
+    proAboutCmp4Free:'Oui',
+    proAboutCmp4Pro:'Aucun',
+    proAboutCmp5:'Accès à vie',
+    proAboutHonestTitle:'Honnêteté : ce que Pro n’est pas',
+    proAboutHonest1:'Pro garde le même Paintiano que tu utilises déjà — il enlève simplement les limites. Aucune fonction cachée derrière un mur.',
+    proAboutHonest2:'Pro ne synchronise pas automatiquement entre appareils. Ta clé fonctionne sur 5 appareils max.',
+    proAboutHonest3:'Pro n’inclut pas le stockage cloud. Tu sauvegardes tes peintures dans tes propres fichiers.',
+    proAboutFinalCta:'Obtenir Paintiano Pro — 9,99 € à vie',
     proHaveKey:'J’ai déjà une clé',
     proEnterKey:'Saisir votre clé de licence',
     proActivate:'Activer',
@@ -5973,6 +6066,37 @@ const I18N = {
     proPaywallCta:'Obtener Paintiano Pro — 9,99 € de por vida',
     proPaywallFooter:'Pago único · Sin suscripción · IVA incluido',
     proEarlyBird:'Precio early-bird · primeros 50 · luego 14,99 €',
+    proPaywallSubtitle:'Desbloquea todo. Paga una vez. Guarda para siempre.',
+    proValue1:'Composiciones de IA ilimitadas',
+    proValue1Sub:'Genera tantas pinturas como quieras',
+    proValue2:'Exporta sin marca de agua',
+    proValue2Sub:'Imágenes limpias, listas para compartir o imprimir',
+    proValue3:'Acceso de por vida',
+    proValue3Sub:'Un pago, tuyo para siempre',
+    proValue4:'Apoya un proyecto artístico independiente',
+    proValue4Sub:'Mantén Paintiano independiente',
+    proLearnMore:'Más información sobre Pro',
+    proAboutTitle:'Paintiano Pro',
+    proAboutLead:'Todo lo de Free, sin límites.',
+    proAboutWhatYouGet:'Lo que obtienes con Pro',
+    proAboutCompareTitle:'Free vs Pro',
+    proAboutCompareFeature:'Función',
+    proAboutCompareFree:'Free',
+    proAboutComparePro:'Pro',
+    proAboutCmp1:'Todos los modos manuales (teclado, micro, audio)',
+    proAboutCmp2:'Todos los estilos y ambientes',
+    proAboutCmp3:'Composiciones de IA',
+    proAboutCmp3Free:'5 de prueba',
+    proAboutCmp3Pro:'Ilimitadas',
+    proAboutCmp4:'Marca de agua en exportaciones',
+    proAboutCmp4Free:'Sí',
+    proAboutCmp4Pro:'Ninguna',
+    proAboutCmp5:'Acceso de por vida',
+    proAboutHonestTitle:'Sinceros: lo que Pro NO es',
+    proAboutHonest1:'Pro mantiene el mismo Paintiano que ya usas — solo quita los límites. Sin funciones nuevas escondidas tras un muro.',
+    proAboutHonest2:'Pro no sincroniza automáticamente entre dispositivos. Tu clave funciona en hasta 5 dispositivos.',
+    proAboutHonest3:'Pro no incluye almacenamiento en la nube. Guardas tus pinturas en tus propios archivos.',
+    proAboutFinalCta:'Obtener Paintiano Pro — 9,99 € de por vida',
     proHaveKey:'Ya tengo una clave',
     proEnterKey:'Introduce tu clave de licencia',
     proActivate:'Activar',
@@ -6035,6 +6159,37 @@ const I18N = {
     proPaywallCta:'Získať Paintiano Pro — 9,99 € navždy',
     proPaywallFooter:'Jednorazová platba · Bez predplatného · DPH v cene',
     proEarlyBird:'Early-bird cena · prvých 50 podporovateľov · potom 14,99 €',
+    proPaywallSubtitle:'Odomkni všetko. Zaplať raz. Maj navždy.',
+    proValue1:'Neobmedzené AI kompozície',
+    proValue1Sub:'Vytváraj toľko malieb, koľko chceš',
+    proValue2:'Export bez vodoznaku',
+    proValue2Sub:'Čisté obrazy, pripravené na zdieľanie alebo tlač',
+    proValue3:'Doživotný prístup',
+    proValue3Sub:'Jedna platba, navždy tvoje',
+    proValue4:'Podpor nezávislý umelecký projekt',
+    proValue4Sub:'Udrž Paintiano nezávislé',
+    proLearnMore:'Viac o Pro',
+    proAboutTitle:'Paintiano Pro',
+    proAboutLead:'Všetko z Free, bez obmedzení.',
+    proAboutWhatYouGet:'Čo dostaneš s Pro',
+    proAboutCompareTitle:'Free vs Pro',
+    proAboutCompareFeature:'Funkcia',
+    proAboutCompareFree:'Free',
+    proAboutComparePro:'Pro',
+    proAboutCmp1:'Všetky manuálne režimy (klávesnica, mikrofón, zvuk)',
+    proAboutCmp2:'Všetky vizuálne štýly a nálady',
+    proAboutCmp3:'AI kompozície',
+    proAboutCmp3Free:'5 skúšobne',
+    proAboutCmp3Pro:'Neobmedzene',
+    proAboutCmp4:'Vodoznak na exportoch',
+    proAboutCmp4Free:'Áno',
+    proAboutCmp4Pro:'Žiadny',
+    proAboutCmp5:'Doživotný prístup',
+    proAboutHonestTitle:'Čestne: čo Pro NIE je',
+    proAboutHonest1:'Pro nechá Paintiano také, aké ho už používaš — len odoberie obmedzenia. Žiadne skryté nové funkcie za stenou.',
+    proAboutHonest2:'Pro nesynchronizuje medzi zariadeniami automaticky. Tvoj kľúč funguje na max 5 zariadeniach.',
+    proAboutHonest3:'Pro nezahŕňa cloudové úložisko. Maľby si ukladáš do vlastných súborov.',
+    proAboutFinalCta:'Získať Paintiano Pro — 9,99 € navždy',
     proHaveKey:'Už mám kľúč',
     proEnterKey:'Zadaj licenčný kľúč',
     proActivate:'Aktivovať',
@@ -8016,7 +8171,9 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     background: '#0a0a12', border: '1px solid rgba(201,168,76,.25)',
     borderRadius: 8, padding: 26, color: '#f5f5f5',
     boxShadow: '0 20px 60px rgba(0,0,0,.6)',
+    maxHeight: '90vh', overflowY: 'auto',
   };
+  const cardWide = Object.assign({}, card, { maxWidth: 460 });
   const btnGold = {
     width: '100%', background: GOLD, color: '#0a0a12', border: 'none',
     padding: '11px 12px', borderRadius: 5, fontSize: '.7rem', fontWeight: 600,
@@ -8032,7 +8189,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
 
   return (
     <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
-      <div style={card}>
+      <div style={view === 'about' ? cardWide : card}>
         {view === 'intro' && (
           <>
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
@@ -8042,16 +8199,32 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 background: 'rgba(201,168,76,.12)', color: GOLD, fontSize: 22,
               }}>✦</div>
             </div>
-            <p style={{ fontSize: '.95rem', fontWeight: 600, textAlign: 'center', margin: '0 0 8px' }}>
+            <p style={{ fontSize: '.95rem', fontWeight: 600, textAlign: 'center', margin: '0 0 6px' }}>
               {reason === 'ai_trial'
                 ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
                 : tr('proPaywallTitle', 'This is part of Paintiano Pro')}
             </p>
-            <p style={{ fontSize: '.72rem', color: '#9a9a9a', textAlign: 'center', margin: '0 0 18px', lineHeight: 1.6 }}>
-              {tr('proPaywallBody', 'Unlock unlimited AI compositions, remove the watermark from exports, and support an independent art project.')}
+            <p style={{ fontSize: '.66rem', color: GOLD, textAlign: 'center', margin: '0 0 16px', letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
+              {tr('proPaywallSubtitle', 'Unlock everything. Pay once. Keep forever.')}
             </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 18px' }}>
+              {[
+                ['proValue1', 'Unlimited AI compositions', 'proValue1Sub', 'Generate as many paintings as you wish'],
+                ['proValue2', 'Export without watermark', 'proValue2Sub', 'Clean images, ready to share or print'],
+                ['proValue3', 'Lifetime access', 'proValue3Sub', 'One payment, yours forever'],
+                ['proValue4', 'Support a solo art project', 'proValue4Sub', 'Keep Paintiano independent'],
+              ].map(([k1, fb1, k2, fb2], i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, margin: '0 0 9px', fontSize: '.7rem', lineHeight: 1.4 }}>
+                  <span style={{ color: GOLD, fontSize: '.75rem', flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span>
+                    <span style={{ color: '#f5f5f5', fontWeight: 500 }}>{tr(k1, fb1)}</span>
+                    <span style={{ color: '#8a8a8a', display: 'block', fontSize: '.62rem', marginTop: 1 }}>{tr(k2, fb2)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
             <button style={btnGold} onClick={openCheckout}>
-              {tr('proPaywallCta', 'Get Paintiano Pro — €14.99 lifetime')}
+              {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
             </button>
             <p style={{ color: GOLD, fontSize: '.58rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
               {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
@@ -8059,6 +8232,13 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <button style={btnGhost} onClick={() => setView('key')}>
               {tr('proHaveKey', 'I already have a key')}
             </button>
+            <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
+              <span onClick={() => setView('about')} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('about'); } }}
+                style={{ color: GOLD, fontSize: '.6rem', letterSpacing: '.04em', cursor: 'pointer', opacity: .8, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                {tr('proLearnMore', 'Learn more about Pro')} →
+              </span>
+            </p>
             <p style={{ color: '#555', fontSize: '.55rem', textAlign: 'center', margin: '12px 0 0', letterSpacing: '.04em' }}>
               {tr('proPaywallFooter', 'One-time payment · No subscription · VAT included')}
             </p>
@@ -8089,6 +8269,109 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <button style={btnGhost} onClick={() => { setView('intro'); setErrMsg(''); }}>
               {tr('proBack', 'Back')}
             </button>
+          </>
+        )}
+
+        {view === 'about' && (
+          <>
+            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+              <div style={{
+                display: 'inline-flex', width: 46, height: 46, borderRadius: '50%',
+                alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(201,168,76,.12)', color: GOLD, fontSize: 22, marginBottom: 10,
+              }}>✦</div>
+              <p style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px', fontFamily: "'Cormorant Garamond',serif" }}>
+                {tr('proAboutTitle', 'Paintiano Pro')}
+              </p>
+              <p style={{ fontSize: '.72rem', color: GOLD, margin: 0, letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
+                {tr('proAboutLead', 'Everything in Free, without limits.')}
+              </p>
+            </div>
+
+            <p style={{ fontSize: '.66rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
+              {tr('proAboutWhatYouGet', 'What you get with Pro')}
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
+              {[
+                ['proValue1', 'Unlimited AI compositions', 'proValue1Sub', 'Generate as many paintings as you wish'],
+                ['proValue2', 'Export without watermark', 'proValue2Sub', 'Clean images, ready to share or print'],
+                ['proValue3', 'Lifetime access', 'proValue3Sub', 'One payment, yours forever'],
+                ['proValue4', 'Support a solo art project', 'proValue4Sub', 'Keep Paintiano independent'],
+              ].map(([k1, fb1, k2, fb2], i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 11px', fontSize: '.72rem', lineHeight: 1.45 }}>
+                  <span style={{ color: GOLD, fontSize: '.8rem', flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span>
+                    <span style={{ color: '#f5f5f5', fontWeight: 500 }}>{tr(k1, fb1)}</span>
+                    <span style={{ color: '#8a8a8a', display: 'block', fontSize: '.64rem', marginTop: 1 }}>{tr(k2, fb2)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <p style={{ fontSize: '.66rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
+              {tr('proAboutCompareTitle', 'Free vs Pro')}
+            </p>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.66rem', marginBottom: 22 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: '#9a9a9a', fontWeight: 500 }}>{tr('proAboutCompareFeature', 'Feature')}</th>
+                  <th style={{ textAlign: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: '#9a9a9a', fontWeight: 500, width: '22%' }}>{tr('proAboutCompareFree', 'Free')}</th>
+                  <th style={{ textAlign: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: GOLD, fontWeight: 600, width: '22%' }}>{tr('proAboutComparePro', 'Pro')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['proAboutCmp1', 'All manual modes (keyboard, mic, audio)', '✓', '✓'],
+                  ['proAboutCmp2', 'All visual styles & moods', '✓', '✓'],
+                  ['proAboutCmp3', 'AI compositions',
+                    tr('proAboutCmp3Free', '5 trial'),
+                    tr('proAboutCmp3Pro', 'Unlimited')],
+                  ['proAboutCmp4', 'Watermark on exports',
+                    tr('proAboutCmp4Free', 'Yes'),
+                    tr('proAboutCmp4Pro', 'None')],
+                  ['proAboutCmp5', 'Lifetime access', '—', '✓'],
+                ].map(([k, fb, freeVal, proVal], i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', color: '#d8d8d8' }}>{tr(k, fb)}</td>
+                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'center', color: '#9a9a9a' }}>{freeVal}</td>
+                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'center', color: GOLD, fontWeight: 500 }}>{proVal}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <p style={{ fontSize: '.66rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
+              {tr('proAboutHonestTitle', 'Honest about what Pro isn’t')}
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
+              {[
+                ['proAboutHonest1', 'Pro keeps the same Paintiano you already use — it just removes the limits. No hidden new features behind a wall.'],
+                ['proAboutHonest2', 'Pro doesn’t sync between devices automatically. Your license key works on up to 5 devices.'],
+                ['proAboutHonest3', 'Pro doesn’t include cloud storage. You save your paintings to your own files.'],
+              ].map(([k, fb], i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 9px', fontSize: '.66rem', lineHeight: 1.5, color: '#a8a8a8' }}>
+                  <span style={{ color: '#666', flexShrink: 0, marginTop: 1 }}>·</span>
+                  <span>{tr(k, fb)}</span>
+                </li>
+              ))}
+            </ul>
+
+            <button style={btnGold} onClick={openCheckout}>
+              {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
+            </button>
+            <p style={{ color: GOLD, fontSize: '.58rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
+              {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
+            </p>
+            <button style={btnGhost} onClick={() => setView('key')}>
+              {tr('proHaveKey', 'I already have a key')}
+            </button>
+            <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
+              <span onClick={() => setView('intro')} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('intro'); } }}
+                style={{ color: '#888', fontSize: '.6rem', letterSpacing: '.04em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                ← {tr('proBack', 'Back')}
+              </span>
+            </p>
           </>
         )}
 
