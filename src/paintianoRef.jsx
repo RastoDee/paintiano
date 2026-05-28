@@ -8189,6 +8189,17 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
 
   return (
     <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
+      {view !== 'success' && (
+        <button onClick={onClose} aria-label="Close" style={{
+          position: 'fixed', top: 16, right: 16, zIndex: 100001,
+          width: 38, height: 38, borderRadius: '50%',
+          background: 'rgba(10,10,18,.85)', backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(201,168,76,.35)',
+          color: '#ddd', fontSize: 22, cursor: 'pointer', lineHeight: 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 14px rgba(0,0,0,.5)',
+        }}>×</button>
+      )}
       <div style={view === 'about' ? cardWide : card}>
         {view === 'intro' && (
           <>
@@ -8274,6 +8285,13 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
 
         {view === 'about' && (
           <>
+            <p style={{ margin: '0 0 4px' }}>
+              <span onClick={() => setView('intro')} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('intro'); } }}
+                style={{ color: '#888', fontSize: '.62rem', letterSpacing: '.04em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 0' }}>
+                ← {tr('proBack', 'Back')}
+              </span>
+            </p>
             <div style={{ textAlign: 'center', marginBottom: 18 }}>
               <div style={{
                 display: 'inline-flex', width: 46, height: 46, borderRadius: '50%',
@@ -8391,12 +8409,6 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
           </div>
         )}
 
-        {view !== 'success' && (
-          <button onClick={onClose} aria-label="Close" style={{
-            position: 'absolute', top: 12, right: 14, background: 'transparent',
-            border: 'none', color: '#666', fontSize: 20, cursor: 'pointer', lineHeight: 1,
-          }}>×</button>
-        )}
       </div>
     </div>
   );
