@@ -8,7 +8,7 @@
      shows only the lines you actually changed (no LF→CRLF whole-file churn).
    • Validation: the merged output must fully parse as JSX via @babel/parser.
 
-   Source of truth = the 5 modules in src/paintiano/.
+   Source of truth = the modules in src/paintiano/.
    Do NOT edit src/paintiano.jsx by hand — it is generated and will be overwritten.
 
    Usage:   node build-paintiano.js
@@ -36,12 +36,15 @@ const OUT  = path.join(ROOT, 'src', 'paintiano.jsx');
 const REF  = path.join(ROOT, 'src', 'paintianoRef.jsx');
 
 // Fragment order — must stay in this sequence to reproduce the single file.
+// Adding a new module: insert it here at the right spot (alphabetic-ish, by
+// dependency order). Files NOT listed are ignored even if present in SRC.
 const ORDER = [
-  '01-core-head.jsx', // imports + §1 constants/math + §2 parsers
-  '02-draw.jsx',      // §3 canvas draw functions
-  '03-i18n.jsx',      // §4 i18n / concept / guide
-  '04-songs.jsx',     // §5 song data / library / moods
-  '05-main.jsx',      // §6 sub-components + §7 main component
+  '01-core-head.jsx',    // imports + §1 constants/math + §2 parsers
+  '02-draw.jsx',         // §3 canvas draw functions
+  '03-i18n.jsx',         // §4 i18n / concept / guide
+  '04-songs.jsx',        // §5 song data / library / moods
+  '045-ai-artist.jsx',   // §5b AI Artist pool + generate + drawing (alpha)
+  '05-main.jsx',         // §6 sub-components + §7 main component
 ];
 
 // Read each fragment, normalising any CRLF back to LF so the stitch is clean.
