@@ -4612,17 +4612,6 @@ const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
     sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
-    demoSkip:'skip ›', demoTapToTakeOver:'tap to take over',
-    demoHintMood:'type a feeling',
-    demoHintSpectral:'same notes, new colours',
-    demoHintArtist:'an artist\u2019s eye',
-    demoHintVary:'infinite variations',
-    demoHintFields:'soft fields, same music',
-    demoHintAnyMood:'any feeling, any language',
-    demoHintImage:'hear a painting',
-    demoHintCustom:'your colours, your rules',
-    demoHintPrint:'take it home',
-    demoHintOutro:'\u2728 try it yourself',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'type any mood — e.g. furious', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -4670,17 +4659,6 @@ const I18N = {
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
     sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
-    demoSkip:'überspringen ›', demoTapToTakeOver:'tippen zum Übernehmen',
-    demoHintMood:'tipp ein Gefühl',
-    demoHintSpectral:'gleiche Noten, neue Farben',
-    demoHintArtist:'ein Künstlerauge',
-    demoHintVary:'unendliche Varianten',
-    demoHintFields:'weiche Felder, gleiche Musik',
-    demoHintAnyMood:'jedes Gefühl, jede Sprache',
-    demoHintImage:'hör ein Bild',
-    demoHintCustom:'deine Farben, deine Regeln',
-    demoHintPrint:'nimm es mit nach Hause',
-    demoHintOutro:'\u2728 probier es selbst',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'stimmung eingeben — z.B. wütend', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -4728,17 +4706,6 @@ const I18N = {
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
     sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
-    demoSkip:'passer ›', demoTapToTakeOver:'toucher pour reprendre',
-    demoHintMood:'tape un ressenti',
-    demoHintSpectral:'mêmes notes, nouvelles couleurs',
-    demoHintArtist:'l\u2019œil d\u2019un artiste',
-    demoHintVary:'variations infinies',
-    demoHintFields:'champs doux, même musique',
-    demoHintAnyMood:'tout ressenti, toute langue',
-    demoHintImage:'écoute une peinture',
-    demoHintCustom:'tes couleurs, tes règles',
-    demoHintPrint:'ramène-le chez toi',
-    demoHintOutro:'\u2728 essaie toi-même',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'tape une humeur — ex. furieux', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -4786,17 +4753,6 @@ const I18N = {
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
     sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
-    demoSkip:'saltar ›', demoTapToTakeOver:'toca para tomar el control',
-    demoHintMood:'escribe un sentir',
-    demoHintSpectral:'mismas notas, nuevos colores',
-    demoHintArtist:'el ojo de un artista',
-    demoHintVary:'infinitas variantes',
-    demoHintFields:'campos suaves, misma música',
-    demoHintAnyMood:'cualquier sentir, cualquier idioma',
-    demoHintImage:'escucha una pintura',
-    demoHintCustom:'tus colores, tus reglas',
-    demoHintPrint:'llévatelo a casa',
-    demoHintOutro:'\u2728 pruébalo tú',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'escribe un estado — p.ej. furioso', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -4844,17 +4800,6 @@ const I18N = {
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
     sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
-    demoSkip:'preskočiť ›', demoTapToTakeOver:'ťukni pre prevzatie',
-    demoHintMood:'napíš pocit',
-    demoHintSpectral:'tie isté noty, nové farby',
-    demoHintArtist:'oko umelca',
-    demoHintVary:'nekonečné variácie',
-    demoHintFields:'mäkké polia, tá istá hudba',
-    demoHintAnyMood:'každý pocit, každý jazyk',
-    demoHintImage:'vypočuj si obraz',
-    demoHintCustom:'tvoje farby, tvoje pravidlá',
-    demoHintPrint:'zober si to domov',
-    demoHintOutro:'\u2728 skús to sám',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'napíš náladu — napr. zúrivá', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -7247,11 +7192,6 @@ export default function Paintiano() {
   // Clicking the active artist a second time deselects, returning to mosaic.
   // Only affects music-mode rendering; image-mode ignores this.
   const [style, setStyle] = useState(null);
-  // styleRef mirrors `style` so async callbacks (demo reel host bridge,
-  // imperative renderer paths) can read the current style without going
-  // through a stale closure.
-  const styleRef = useRef(null);
-  useEffect(()=>{ styleRef.current = style; },[style]);
   // AI Artist — "in the spirit of" real-artist overlay. When style==='ai',
   // the renderer uses drawAiArtistOverlay with this artist's recipe.
   // Generated lazily on first ✦ AI tap; rerolled by Vary or repeated tap.
@@ -7419,14 +7359,6 @@ export default function Paintiano() {
   // play action (Stop still works because it's the same button in playing state)
   // so the demo can't be re-triggered without an explicit clear.
   const [demoMode, setDemoMode] = useState(false);
-  // Demo reel — auto-playing showcase that walks through moods, modes, styles,
-  // Vary, image-as-music, Custom palette, and Print preview. Set demoReelRunning
-  // true to lock the UI gently and float a hint chip; the user can take over by
-  // tapping the canvas or the Skip pill. The reel runner lives in 046-demo-reel.jsx.
-  const [demoReelRunning, setDemoReelRunning] = useState(false);
-  const [demoReelHint, setDemoReelHint] = useState(null);          // i18n key for current hint
-  const [demoReelProgress, setDemoReelProgress] = useState(0);     // 0..1
-  const demoReelAliveRef = useRef(false);                          // cancellation flag
   // Inline "concept" modal: explains Harmony/Spectral and image transcription.
   const [showAbout, setShowAbout] = useState(false);
   // Stable callback for AboutModal — without useCallback the modal's React.memo
@@ -10041,103 +9973,6 @@ Composition rules:
     startPlay();
   },[busy,stopAll,startPlay,fullClear,stashDraft]);
 
-  // ── Demo Reel ────────────────────────────────────────────────────────────
-  // Auto-play tour: ~60s, 10 scenes. The scene runner lives in 046-demo-reel.jsx
-  // and calls back into this app via the `host` object. Cancellation: setting
-  // demoReelAliveRef.current = false on next isStillRunning() poll exits cleanly.
-  const stopDemoReel = useCallback(()=>{
-    demoReelAliveRef.current = false;
-    setDemoReelRunning(false);
-    setDemoReelHint(null);
-    setDemoReelProgress(0);
-  },[]);
-
-  const runDemoReelStart = useCallback(()=>{
-    if(busy) return;
-    if(demoReelRunning) return;
-    // Clean slate first — drop any active mode/draft so the reel starts fresh.
-    try{ unlockAudio(); }catch(_){}
-    if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
-    draftOwnerRef.current = null;
-    fullClear();
-    stopAll();
-    setForceSetup(false);
-    setComposeMode(false);
-    setMicArmed(false);
-    setLoadedSource(null);
-    setStayActive(true); // lift to canvas view
-    demoReelAliveRef.current = true;
-    setDemoReelRunning(true);
-    setDemoReelProgress(0);
-    // Build the host bridge — high-level actions the reel uses.
-    const host = {
-      isStillRunning: ()=> demoReelAliveRef.current === true,
-      setHint: (key)=> setDemoReelHint(key),
-      setSceneProgress: (p)=> setDemoReelProgress(p),
-      setMood: (txt)=>{
-        // Use the same path as typing a mood — goes through crafted library or AI.
-        setStructureSeedLock(null);
-        setCurrentMood(txt);
-        setLoadedSource(null);
-        setImgMoodThumb(null);
-        setMoodFromImg(false);
-        setVarySource(null);
-        setMoodContext(true);
-        setSongQ(txt);
-        aiMoodFromText(txt);
-      },
-      setMode: (m)=>{
-        if(m === 'harmony' || m === 'spectral' || m === 'custom' || m === 'bw'){
-          setMode(m);
-        }
-      },
-      setStyle: (s)=>{
-        // null = mosaic. Reuse selectStyle for the cross-fade; if same value, no-op.
-        const cur = styleRef.current ?? null;
-        if(s === cur) return;
-        if(s === null){
-          if(cur !== null) selectStyle(cur); // toggles off
-        } else {
-          // If a different artist is active, selectStyle toggles it off first; just call twice safely.
-          if(cur !== null && cur !== s){ selectStyle(cur); setTimeout(()=>selectStyle(s), 120); }
-          else { selectStyle(s); }
-        }
-      },
-      triggerVary: ()=>{
-        // Mirror what the Vary button does, minus the UI feedback flash.
-        if(!varySource || !chordsRef.current.length) return;
-        try{
-          const varied = rerollSong(varySource, !randomMode);
-          if(!varied) return;
-          setVarySource(varied);
-          stopAll();
-          const evts = noteArr2events(varied.notes, varied.tempo);
-          if(!evts.length) return;
-          applyEvents(evts, varied.title + ' ·');
-          setTimeout(()=>{ startPlay(); }, 200);
-        }catch(_){}
-      },
-      loadImageFromDataUrl: (dataUrl)=>{
-        // Feed the URL into the existing image loader pipeline.
-        try{ loadImage(dataUrl); }catch(_){}
-      },
-      flashPrintPreview: ()=>{
-        // Open the print picker briefly; the reel auto-advances past it.
-        try{ setShowSizePicker(true); }catch(_){}
-        setTimeout(()=>{ try{ setShowSizePicker(false); }catch(_){} }, 3500);
-      },
-    };
-    // Need a stable ref for the current style so style transitions read correctly.
-    runDemoReel(host).then(()=>{
-      // Reel finished naturally — clear the running flag but keep whatever
-      // painting/state landed on the canvas so the user can keep playing.
-      setDemoReelRunning(false);
-      setDemoReelHint(null);
-      setDemoReelProgress(0);
-      demoReelAliveRef.current = false;
-    });
-  },[busy,demoReelRunning,fullClear,stopAll,stashDraft,aiMoodFromText,selectStyle,varySource,randomMode,applyEvents,startPlay,loadImage]);
-
   const handlePauseClick=useCallback(()=>{
     // If a live mic mode is active (Voice=micPainting or Music=micListening),
     // the Play button stops it and plays back the canvas just captured — mic-stop
@@ -10905,7 +10740,7 @@ Composition rules:
 
   return (
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes demoHintIn{from{opacity:0;transform:translateX(-50%) translateY(-6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20}}>
         <nav style={{display:'flex',gap:18,fontSize:'.6rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
@@ -10915,9 +10750,9 @@ Composition rules:
             if(demoArmed){
               if(demoArmRef.current){clearTimeout(demoArmRef.current);demoArmRef.current=null;}
               setDemoArmed(false);
-              runDemoReelStart();
+              demoPlay();
             }else if(!chords.length){
-              runDemoReelStart();
+              demoPlay();
             }else{
               setDemoArmed(true);
               demoArmRef.current=setTimeout(()=>{setDemoArmed(false);demoArmRef.current=null;},3000);
@@ -11759,29 +11594,6 @@ Composition rules:
             <div style={{fontSize:'.55rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(220,180,255,.9)'}}>summoning artist…</div>
           </div>
         )}
-        {/* Demo reel overlays — hint chip, skip pill, top progress, and a
-            transparent layer that catches the first tap and hands control back
-            to the user (so the reel stops the moment they engage). */}
-        {demoReelRunning && (<>
-          {/* Top progress bar — thin, gold, fills left-to-right over the 60s. */}
-          <div style={{position:'absolute',top:0,left:0,right:0,height:2,zIndex:6,background:'rgba(201,168,76,.12)',pointerEvents:'none'}}>
-            <div style={{height:'100%',width:(demoReelProgress*100).toFixed(1)+'%',background:'linear-gradient(90deg,#c9a84c,#f0c860)',transition:'width .25s ease',boxShadow:'0 0 8px rgba(240,200,96,.55)'}}/>
-          </div>
-          {/* Hint chip — floats top-centre, fades in/out per scene. */}
-          {demoReelHint && (
-            <div style={{position:'absolute',top:14,left:'50%',transform:'translateX(-50%)',zIndex:7,padding:'8px 18px',borderRadius:22,background:'rgba(14,10,22,.78)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'rgba(245,232,200,.95)',fontSize:'.66rem',letterSpacing:'.14em',textTransform:'uppercase',fontWeight:500,whiteSpace:'nowrap',boxShadow:'0 4px 14px rgba(0,0,0,.4)',pointerEvents:'none',animation:'demoHintIn .4s ease-out'}}>
-              {t(demoReelHint)}
-            </div>
-          )}
-          {/* Skip pill — top-right corner. */}
-          <button onClick={stopDemoReel} style={{position:'absolute',top:12,right:12,zIndex:8,padding:'6px 14px',borderRadius:18,background:'rgba(14,10,22,.7)',border:'1px solid rgba(201,168,76,.4)',color:'rgba(245,232,200,.95)',fontSize:'.55rem',letterSpacing:'.16em',textTransform:'uppercase',cursor:'pointer',fontFamily:'inherit',fontWeight:500}}>
-            {t('demoSkip')}
-          </button>
-          {/* Click intercept — covers the canvas (below transport row). The
-              moment the user taps anywhere in the canvas area, the reel exits
-              and they own the next moment. No modal feel, no pause splash. */}
-          <div onClick={stopDemoReel} style={{position:'absolute',inset:0,zIndex:5,cursor:'pointer'}} title={t('demoTapToTakeOver')}/>
-        </>)}
         {chords.length===0 && micArmed && !micActive && (
           <div style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
             <button onClick={()=>{
