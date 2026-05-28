@@ -102,20 +102,20 @@ function demoReelText(lang, key){
 // Total ~46s. Tunable here without touching the orchestrator.
 const DEMO_REEL_PHASES = [
   { at: 0,     kind: 'play-song' },
-  { at: 300,   kind: 'show-text', textKey: 'becomes' },
-  { at: 8000,  kind: 'show-text', textKey: 'artists' },
-  { at: 8200,  kind: 'style-parade' },        // cycles styles ~every 1.1s
-  { at: 22000, kind: 'ai-type',   textKey: 'aiType' },
-  { at: 24500, kind: 'ai-play',   textKey: 'aiResult' },
-  { at: 32000, kind: 'show-text', textKey: 'variations' },
-  { at: 32200, kind: 'vary' },
-  { at: 39000, kind: 'print-beat',textKey: 'print' },
-  { at: 44000, kind: 'outro',     textKey: 'outro' },
-  { at: 47000, kind: 'end' },
+  { at: 400,   kind: 'show-text', textKey: 'becomes' },
+  { at: 12000, kind: 'show-text', textKey: 'artists' },
+  { at: 12300, kind: 'style-parade' },        // cycles styles ~every 1.8s
+  { at: 35000, kind: 'ai-type',   textKey: 'aiType' },
+  { at: 39000, kind: 'ai-play',   textKey: 'aiResult' },
+  { at: 52000, kind: 'show-text', textKey: 'variations' },
+  { at: 52300, kind: 'vary' },
+  { at: 64000, kind: 'print-beat',textKey: 'print' },
+  { at: 71000, kind: 'outro',     textKey: 'outro' },
+  { at: 75000, kind: 'end' },
 ];
 
 // Sub-interval (ms) for the style parade beat.
-const DEMO_REEL_PARADE_STEP = 1050;
+const DEMO_REEL_PARADE_STEP = 1800;
 // How many Vary triggers during the variations beat, and their spacing.
 const DEMO_REEL_VARY_COUNT = 5;
-const DEMO_REEL_VARY_STEP = 1300;
+const DEMO_REEL_VARY_STEP = 2100;

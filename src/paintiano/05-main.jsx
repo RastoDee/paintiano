@@ -3536,10 +3536,22 @@ Composition rules:
                 if(evts.length){
                   setVarySource(song);
                   applyEvents(evts, song.title);
+                  // applyEvents updates state but the refs startPlay reads sync
+                  // via effects only after commit — set them eagerly so playback
+                  // and the canvas grid line up (otherwise: black canvas, audio
+                  // playing). Mirror what demoLoadAndPlay does.
+                  const wi=evts.map((c,i)=>({...c,idx:i}));
+                  wi.forEach(ev=>{ if(ev.n&&ev.n.length>1) ev.n=[...ev.n].sort((a,b)=>b.m-a.m); });
+                  const g=computeGrid(wi);
+                  chordsRef.current=wi; gridRef.current=g; idxRef.current=wi.length;
                   setCurrentMood(DEMO_REEL_MOOD);
                   setDemoMode(true);
+                  setDisp(0);
                   resumeFromRef.current=0;
-                  setTimeout(()=>{ if(bag.active) startPlayRef.current?.(); }, 60);
+                  // Larger delay so React has committed the new grid/chords before
+                  // the paint loop starts walking them.
+                  const sid=setTimeout(()=>{ if(bag.active) startPlayRef.current?.(); }, 260);
+                  bag.timers.push(sid);
                 }
               }
             }catch(_){}
@@ -5674,7 +5686,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.0</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.1</footer>
     </div>
   );
 }
