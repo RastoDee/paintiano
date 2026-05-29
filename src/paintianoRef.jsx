@@ -11503,6 +11503,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setStructureSeedLock(null); setVarySource({notes:_varyNotes,tempo:entry.tempo||90,title});
       applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title);
       setSongQ(''); setImgMoodThumb(entry.thumb||null); setMoodFromImg(true);
+      // Recall = full painting visible immediately in current style (no Play needed
+      // to reveal it). applyEvents sets disp=0; override so all blocks render now.
+      setDisp(evts.length); idxRef.current=evts.length;
       try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(_){}
   },[stopAll,applyEvents]);
@@ -11560,6 +11563,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setImgMoodThumb(null); setMoodFromImg(false);
       applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title);
       setSongQ(title);
+      // Recall = full painting visible immediately in current style.
+      setDisp(evts.length); idxRef.current=evts.length;
       try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(_){}
   },[stopAll,applyEvents]);
