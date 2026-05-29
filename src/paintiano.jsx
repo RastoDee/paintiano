@@ -11082,9 +11082,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // preset's stash, leaving the other preset's draft intact.
       singStashRef.current=null;
       if(!listenStashRef.current) setHasMicDraft(false);
+      // Clear breaks "currently editing recall" identity for mic too.
+      micActiveRecallIdRef.current=null;
+      micActiveRecallPresetRef.current=null;
     } else if(_owner==='listen'){
       listenStashRef.current=null;
       if(!singStashRef.current) setHasMicDraft(false);
+      micActiveRecallIdRef.current=null;
+      micActiveRecallPresetRef.current=null;
     }
     // For sing/listen: keep mic streams running — just wipe canvas
     if(!micPainting&&!micListening){
@@ -11772,6 +11777,103 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(_){}
   },[stopAll,_composeRecentLabel]);
   const [showComposeRecent,setShowComposeRecent]=useState(false);
+
+  // ── Mic "recent 3" lists ────────────────────────────────────────────────────
+  // Two separate stores — voice (singing detection) and music (listening to
+  // external audio). The recently-played button shows whichever matches the
+  // current micPreset, so the user sees the right history for what they're doing.
+  // Same schema as Compose recent (chords + grid + style + timestamp).
+  const MIC_VOICE_RECENT_KEY='paintiano_mic_voice_recent_v1';
+  const MIC_MUSIC_RECENT_KEY='paintiano_mic_music_recent_v1';
+  const [micVoiceRecent,setMicVoiceRecent]=useState(()=>{
+    try{ const raw=localStorage.getItem(MIC_VOICE_RECENT_KEY); return raw?(JSON.parse(raw)||[]):[]; }
+    catch(_){ return []; }
+  });
+  const [micMusicRecent,setMicMusicRecent]=useState(()=>{
+    try{ const raw=localStorage.getItem(MIC_MUSIC_RECENT_KEY); return raw?(JSON.parse(raw)||[]):[]; }
+    catch(_){ return []; }
+  });
+  // Active recall id (single — only one mic preset active at a time).
+  const micActiveRecallIdRef=useRef(null);
+  // Remembers which preset the active recall came from so Back updates the
+  // right store even if user toggled the preset after recall.
+  const micActiveRecallPresetRef=useRef(null);
+  const _micRecentAdd=useCallback((preset,chordsArr,gridSnap)=>{
+    if(!chordsArr || !chordsArr.length) return;
+    try{
+      const compact = chordsArr.map(c=>({
+        n: (c.n||[]).map(nn=>({m:nn.m, v:nn.v, durMs:nn.durMs})),
+        startMs: c.startMs||0,
+        durQ: c.durQ
+      }));
+      const entry={
+        id: Date.now(),
+        ts: Date.now(),
+        chords: compact,
+        grid: gridSnap || null,
+        style: styleRef.current || null
+      };
+      const setter = preset==='voice' ? setMicVoiceRecent : setMicMusicRecent;
+      const key    = preset==='voice' ? MIC_VOICE_RECENT_KEY : MIC_MUSIC_RECENT_KEY;
+      setter(prev=>{
+        const next=[entry,...prev].slice(0,3);
+        try{ localStorage.setItem(key, JSON.stringify(next)); }catch(_){}
+        return next;
+      });
+    }catch(_){}
+  },[]);
+  const _micRecentUpdate=useCallback((preset,id,chordsArr,gridSnap)=>{
+    if(!id || !chordsArr || !chordsArr.length) return;
+    try{
+      const compact = chordsArr.map(c=>({
+        n: (c.n||[]).map(nn=>({m:nn.m, v:nn.v, durMs:nn.durMs})),
+        startMs: c.startMs||0,
+        durQ: c.durQ
+      }));
+      const setter = preset==='voice' ? setMicVoiceRecent : setMicMusicRecent;
+      const key    = preset==='voice' ? MIC_VOICE_RECENT_KEY : MIC_MUSIC_RECENT_KEY;
+      setter(prev=>{
+        const idx = prev.findIndex(p=>p.id===id);
+        if(idx<0) return prev;
+        const next = prev.slice();
+        next[idx] = { ...prev[idx], ts: Date.now(), chords: compact,
+                      grid: gridSnap || prev[idx].grid || null,
+                      style: styleRef.current || prev[idx].style || null };
+        const updated = next.splice(idx,1)[0];
+        next.unshift(updated);
+        try{ localStorage.setItem(key, JSON.stringify(next)); }catch(_){}
+        return next;
+      });
+    }catch(_){}
+  },[]);
+  const _micRecall=useCallback((preset,entry)=>{
+    if(!entry || !entry.chords || !entry.chords.length) return;
+    try{
+      stopAll();
+      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null);
+      setImgMoodThumb(null); setMoodFromImg(false); setForceSetup(false);
+      setStructureSeedLock(null); setMoodContext(false); setCurrentMood(null);
+      setVarySource(null); setComposeSource(null);
+      const evts = entry.chords.map((c,i)=>{
+        const n = (c.n||[]).slice().sort((a,b)=>b.m-a.m);
+        return { n, startMs:c.startMs||0, durQ:c.durQ, idx:i };
+      });
+      const lastMs = evts[evts.length-1]?.startMs || 0;
+      if(entry.grid) setGrid(entry.grid);
+      setChords(evts);
+      setInfo({ title: _composeRecentLabel(entry.ts), count: evts.length, dur: Math.round(lastMs/1000) });
+      setDisp(evts.length); idxRef.current = evts.length;
+      setPlaybackSpeed(1); playbackSpeedRef.current = 1;
+      composedModeRef.current = false;
+      if(entry.style){ setStyle(entry.style); }
+      // Stay in the same mic preset — keep mic UI visible (like Compose recall
+      // keeps the keyboard). draftOwner stays so Clear preserves mode.
+      draftOwnerRef.current = preset==='voice' ? 'sing' : 'listen';
+      micActiveRecallIdRef.current = entry.id;
+      micActiveRecallPresetRef.current = preset;
+    }catch(_){}
+  },[stopAll,_composeRecentLabel]);
+  const [showMicRecent,setShowMicRecent]=useState(false);
 
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   // isSample=true means it's the built-in sample (loadSampleImgMood), which we
@@ -13872,6 +13974,23 @@ Composition rules:
               }catch(_){}
             }
             composeActiveRecallIdRef.current=null;
+            // Same save logic for Mic — voice and music share the helpers but
+            // use separate stores. The preset at save time decides which store
+            // gets the new entry. For updates we use the preset captured at
+            // recall time so toggling preset after recall doesn't misroute.
+            if((micPainting||micListening) && chordsRef.current && chordsRef.current.length>=3){
+              try{
+                const updatePreset = micActiveRecallPresetRef.current;
+                const addPreset    = micListening ? 'music' : 'voice';
+                if(micActiveRecallIdRef.current && updatePreset){
+                  _micRecentUpdate(updatePreset, micActiveRecallIdRef.current, chordsRef.current, gridRef.current);
+                } else {
+                  _micRecentAdd(addPreset, chordsRef.current, gridRef.current);
+                }
+              }catch(_){}
+            }
+            micActiveRecallIdRef.current=null;
+            micActiveRecallPresetRef.current=null;
             if(keepResume){
               resumeFromRef.current=dispRef.current; setHoldPaused(true);
               genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];timersSet.current.clear();
@@ -13909,6 +14028,12 @@ Composition rules:
               Only visible in compose mode and only if any saved entries exist. */}
           {composeMode && composeRecent.length>0 && (
             <button onClick={()=>{if(recording)return;setShowComposeRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recent'}</button>
+          )}
+          {/* ♪ Recently played for Mic — preset-aware: shows voice recent in voice
+              mode, music recent in music mode. Only visible if that preset's
+              store has entries. */}
+          {micActive && ((micPainting && micVoiceRecent.length>0) || (micListening && micMusicRecent.length>0)) && (
+            <button onClick={()=>{if(recording)return;setShowMicRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recent'}</button>
           )}
         </div>
         <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
@@ -14677,6 +14802,22 @@ Composition rules:
               ))}
             </div>
             <button onClick={()=>setShowComposeRecent(false)} style={{display:'block',margin:'0 auto',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em'}}>cancel</button>
+          </div>
+        </div>
+      )}
+
+      {showMicRecent && (
+        <div onClick={()=>setShowMicRecent(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recently played'}</div>
+            <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
+              {(()=>{ const preset = micListening ? 'music' : 'voice'; const list = preset==='voice' ? micVoiceRecent : micMusicRecent; return list.map(entry=>(
+                <button key={entry.id} onClick={()=>{ _micRecall(preset,entry); setShowMicRecent(false); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.66*effScale)+'rem',textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  {_composeRecentLabel(entry.ts)}
+                </button>
+              )); })()}
+            </div>
+            <button onClick={()=>setShowMicRecent(false)} style={{display:'block',margin:'0 auto',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em'}}>cancel</button>
           </div>
         </div>
       )}

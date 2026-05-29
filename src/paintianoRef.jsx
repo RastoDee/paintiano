@@ -11074,6 +11074,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(_owner==='compose'){
       composeStashRef.current=null;
       setHasComposeDraft(false);
+      // Clear breaks "currently editing recall" identity. The next Back will
+      // create a NEW entry instead of overwriting whatever was recalled.
+      composeActiveRecallIdRef.current=null;
     } else if(_owner==='sing'){
       // Voice and Music are independent — clear discards only the active
       // preset's stash, leaving the other preset's draft intact.
@@ -11677,6 +11680,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       return '♪ '+d.getDate()+' '+mons[d.getMonth()]+' '+tm;
     }catch(_){ return '♪ '+(t('recentPlayed')||'recent'); }
   },[t]);
+  // Tracks which Compose recent entry the user is currently working on. Set
+  // when they Recall an entry; cleared on Clear (user starts something new).
+  // Back uses it to decide UPDATE (preserve identity) vs ADD NEW.
+  const composeActiveRecallIdRef=useRef(null);
   const _composeRecentAdd=useCallback((chordsArr,gridSnap)=>{
     // Strip down chord events to a compact, replayable shape. We only need
     // notes (m/v/durMs), startMs (so timing is preserved), and basic structure
@@ -11703,6 +11710,33 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         return next;
       });
     }catch(_){ /* storage disabled — skip silently */ }
+  },[]);
+  // Update an existing compose entry — used when user Recall-ed it, made
+  // changes (style, notes), and pressed Back. Preserves identity (same id +
+  // position-ish in list) but writes the fresh state on top. Timestamp refreshed
+  // so it bubbles to the top of the list as the "latest" performance.
+  const _composeRecentUpdate=useCallback((id,chordsArr,gridSnap)=>{
+    if(!id || !chordsArr || !chordsArr.length) return;
+    try{
+      const compact = chordsArr.map(c=>({
+        n: (c.n||[]).map(nn=>({m:nn.m, v:nn.v, durMs:nn.durMs})),
+        startMs: c.startMs||0,
+        durQ: c.durQ
+      }));
+      setComposeRecent(prev=>{
+        const idx = prev.findIndex(p=>p.id===id);
+        if(idx<0) return prev;
+        const next = prev.slice();
+        next[idx] = { ...prev[idx], ts: Date.now(), chords: compact,
+                      grid: gridSnap || prev[idx].grid || null,
+                      style: styleRef.current || prev[idx].style || null };
+        // Bubble updated entry to front so user sees their freshly-edited piece on top.
+        const updated = next.splice(idx,1)[0];
+        next.unshift(updated);
+        try{ localStorage.setItem(COMPOSE_RECENT_KEY, JSON.stringify(next)); }catch(_){}
+        return next;
+      });
+    }catch(_){}
   },[]);
   const _composeRecall=useCallback((entry)=>{
     if(!entry || !entry.chords || !entry.chords.length) return;
@@ -11732,6 +11766,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // composeMode was already on (recent button only shows in compose mode), so
       // we keep it that way. draftOwnerRef stays 'compose' so Clear keeps mode.
       draftOwnerRef.current='compose';
+      // Mark this entry as "currently being edited". Back will UPDATE this id
+      // instead of adding a new entry; Clear will reset it (= start fresh).
+      composeActiveRecallIdRef.current = entry.id;
     }catch(_){}
   },[stopAll,_composeRecentLabel]);
   const [showComposeRecent,setShowComposeRecent]=useState(false);
@@ -13822,9 +13859,19 @@ Composition rules:
             // Save the compose performance to "Recently played" before tearing
             // down. Min 3 chords so accidental opens aren't saved. Captured here
             // (before wipeCanvasNow / clear) while chords still hold the user's notes.
+            // If user Recall-ed an entry first (activeRecallId set), UPDATE that
+            // entry to preserve identity; otherwise ADD a new entry. Either way
+            // the recall id is reset after so the next session starts fresh.
             if(composeMode && chordsRef.current && chordsRef.current.length>=3){
-              try{ _composeRecentAdd(chordsRef.current, gridRef.current); }catch(_){}
+              try{
+                if(composeActiveRecallIdRef.current){
+                  _composeRecentUpdate(composeActiveRecallIdRef.current, chordsRef.current, gridRef.current);
+                } else {
+                  _composeRecentAdd(chordsRef.current, gridRef.current);
+                }
+              }catch(_){}
             }
+            composeActiveRecallIdRef.current=null;
             if(keepResume){
               resumeFromRef.current=dispRef.current; setHoldPaused(true);
               genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];timersSet.current.clear();
