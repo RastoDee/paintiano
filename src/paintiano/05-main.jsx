@@ -5764,6 +5764,7 @@ Composition rules:
           onActivated={()=>setPaywallReason(null)}
           openCheckout={openCheckout}
           activateLicense={activateLicense}
+          readScale={effScale}
         />
       )}
     </div>
