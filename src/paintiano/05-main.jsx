@@ -747,6 +747,11 @@ export default function Paintiano() {
   // "+ New <source>" button stays after clearing, exactly like "+ New mood".
   // Set when a file source loads; replaced by moodContext when a mood takes over.
   const [sourceContext, setSourceContext] = useState(null);
+  // Mirror for MIC sessions — stays true from mic start through STOP REC until
+  // Back/Clear/source-switch, so UI bits like "♪ Recently played" keep showing
+  // after the user pressed STOP REC (which resets micPainting/micListening to
+  // false but leaves chords intact and the user still on the mic canvas).
+  const [micContext, setMicContext] = useState(false);
   // Pollock/Kandinsky overlay seed — DERIVED FROM CHORD CONTENT, not random.
   // Same song → same hash → same painting (deterministic). Different chords
   // (load a new song, or Vary) → different hash → different painting.
@@ -4355,7 +4360,7 @@ Composition rules:
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
-      setMicListening(true);setMicArmed(false);
+      setMicListening(true);setMicArmed(false);setMicContext(true);
       startMicVol();
       stopAll();
       // Continuation (sibling preset or re-entering): preserve canvas.
@@ -4477,7 +4482,7 @@ Composition rules:
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
-      setMicPainting(true);setMicArmed(false);
+      setMicPainting(true);setMicArmed(false);setMicContext(true);
       // Frame the collapsed Color·Style strip at the top with the canvas below,
       // same as Play and compose — MIC (Voice/Music) is another "performing"
       // entry point, so it gets the same scroll framing on mobile and desktop.
@@ -5221,10 +5226,15 @@ Composition rules:
             // use separate stores. The preset at save time decides which store
             // gets the new entry. For updates we use the preset captured at
             // recall time so toggling preset after recall doesn't misroute.
-            if((micPainting||micListening) && chordsRef.current && chordsRef.current.length>=3){
+            // NOTE: we check draftOwnerRef instead of live micPainting/micListening
+            // because stopRecord → stopAll resets those flags to false BEFORE the
+            // user gets to press Back. draftOwnerRef stays 'sing'/'listen' until
+            // the mode actually ends, which is exactly when we need to save.
+            const _micOwner = draftOwnerRef.current;
+            if((_micOwner==='sing' || _micOwner==='listen') && chordsRef.current && chordsRef.current.length>=3){
               try{
                 const updatePreset = micActiveRecallPresetRef.current;
-                const addPreset    = micListening ? 'music' : 'voice';
+                const addPreset    = _micOwner==='listen' ? 'music' : 'voice';
                 if(micActiveRecallIdRef.current && updatePreset){
                   _micRecentUpdate(updatePreset, micActiveRecallIdRef.current, chordsRef.current, gridRef.current);
                 } else {
@@ -5234,6 +5244,7 @@ Composition rules:
             }
             micActiveRecallIdRef.current=null;
             micActiveRecallPresetRef.current=null;
+            setMicContext(false);
             if(keepResume){
               resumeFromRef.current=dispRef.current; setHoldPaused(true);
               genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];timersSet.current.clear();
@@ -5272,11 +5283,13 @@ Composition rules:
           {composeMode && composeRecent.length>0 && (
             <button onClick={()=>{if(recording)return;setShowComposeRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recent'}</button>
           )}
-          {/* ♪ Recently played for Mic — preset-aware: shows voice recent when
-              the user is set to voice preset, music recent in music. Visible as
-              soon as the user is in mic context (armed or actively streaming),
-              so they can browse history BEFORE starting a new performance. */}
-          {(micActive || micArmed) && ((micPreset==='voice' && micVoiceRecent.length>0) || (micPreset==='music' && micMusicRecent.length>0)) && (
+          {/* ♪ Recently played for Mic — preset-aware: voice store in voice mode,
+              music store in music. Visible across the entire mic context window:
+              from picking the mic source (armed) through active streaming and
+              even after STOP REC (where micPainting/micListening flip false but
+              the user is still on the mic canvas). micContext stays true until
+              Back/Clear, so the button does too. */}
+          {(micActive || micArmed || micContext) && ((micPreset==='voice' && micVoiceRecent.length>0) || (micPreset==='music' && micMusicRecent.length>0)) && (
             <button onClick={()=>{if(recording)return;setShowMicRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recent'}</button>
           )}
         </div>
