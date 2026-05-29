@@ -583,19 +583,15 @@ export default function Paintiano() {
   },[err,errInfo]);
 
   // ── AI trial countdown banner ───────────────────────────────────────────────
-  // Show a gold info banner when the free user has only 1 or 2 AI trials left
-  // (Math.ceil to avoid showing "0.5" or "1.5"). Suppressed for Pro users and
-  // when trial is fully exhausted (the paywall handles that case explicitly).
-  // Uses a ref to only fire the banner ONCE per threshold crossing (consume
-  // event), not on every rerender. Set to null on activation/reset for replay.
-  const _trialBannerLastShown=useRef(null);
+  // Show a gold info banner whenever a free user has only 1 or 2 AI trials left
+  // (Math.ceil to avoid showing "0.5" or "1.5"). Re-fires on EVERY trialLeft
+  // change while in the danger zone — so the user can't miss it after a quick
+  // consume. Suppressed for Pro users and when trial is fully exhausted (the
+  // paywall handles that case explicitly).
   useEffect(()=>{
-    if(isPro||trialExhausted) { _trialBannerLastShown.current=null; return; }
+    if(isPro||trialExhausted) return;
     const left=Math.ceil(trialLeft);
     if(left>2||left<=0) return;
-    // Only re-trigger when the displayed number actually changed
-    if(_trialBannerLastShown.current===left) return;
-    _trialBannerLastShown.current=left;
     const msg = left===1
       ? (t('trialBanner1')||'Only 1 AI trial left · Get Pro for unlimited')
       : (t('trialBanner2')||'Only '+left+' AI trials left · Get Pro for unlimited');
@@ -987,7 +983,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // audio input, producing a truncated / silent saved file.
   // Centralizing here both fixes the missing `disabled` attribute and removes
   // four-way repetition in the JSX.
-  const sourcePickerLocked = busy || composeMode || micPainting || micListening || recording;
+  const sourcePickerLocked = busy || composeMode || micPainting || micListening || recording || playing;
   // Import tiles (MIDI/Audio/Score/Image) stay usable DURING a Compose/MIC
   // session so the user can switch source at any time — they only lock while a
   // file is transcribing (busy) or a recording is running. The tile's onClick
@@ -2711,13 +2707,33 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const entry={ id:Date.now(), thumb, title:recipe.title||'✦',
                     notes:recipe.notes||[], tempo:recipe.tempo||90 };
       setMfiRecent(prev=>{
-        const same=(a,b)=>a.title===b.title && (a.notes&&a.notes.length)===(b.notes&&b.notes.length);
-        const next=[entry,...prev.filter(p=>!same(p,entry))].slice(0,3);
+        // Dedupe by title only — Vary creates new note arrays with the same
+        // title, and we want the latest variation to replace the old entry
+        // (preserves user's "last seen" version automatically).
+        const next=[entry,...prev.filter(p=>p.title!==entry.title)].slice(0,3);
         try{ localStorage.setItem(MFI_RECENT_KEY, JSON.stringify(next)); }catch(_){}
         return next;
       });
     }catch(_){ /* storage disabled — skip silently */ }
   },[_mfiTinyThumb]);
+
+  // Update the most-recent MFI entry with new notes/tempo (called after Vary).
+  // Keeps title + thumb, only swaps the recipe. Lets the user return to their
+  // last-seen variation rather than the original AI generation.
+  const _mfiRecentUpdate=useCallback((title,notes,tempo)=>{
+    if(!title||!notes||!notes.length) return;
+    setMfiRecent(prev=>{
+      const idx=prev.findIndex(p=>p.title===title);
+      if(idx<0) return prev;
+      const next=prev.slice();
+      next[idx]={ ...prev[idx], notes, tempo:tempo||prev[idx].tempo||90, id:Date.now() };
+      // Move updated entry to front so it stays "latest" in the picker.
+      const updated=next.splice(idx,1)[0];
+      next.unshift(updated);
+      try{ localStorage.setItem(MFI_RECENT_KEY, JSON.stringify(next)); }catch(_){}
+      return next;
+    });
+  },[]);
 
   // Recall a recent MFI piece: rebuild the painting from its stored recipe (no AI
   // call, free for everyone — replay just redraws from localStorage). Free users
@@ -4857,6 +4873,13 @@ Composition rules:
               const bytes=encodeMidi(evts,varied.tempo||100);
               setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
               setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
+              // If we're varying an MFI piece, keep the recent entry in sync with
+              // the latest variation (replaces notes, keeps thumbnail + title).
+              // So when user revisits via Recently AI generated, they get THIS
+              // version — not the original AI generation.
+              if(moodFromImg && currentMood){
+                try{ _mfiRecentUpdate(currentMood, varied.notes, varied.tempo); }catch(_){}
+              }
               setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
               // Keep the Color·Style strip OPEN after Vary so the user can keep
               // varying without re-expanding it each time. It stays open until the
