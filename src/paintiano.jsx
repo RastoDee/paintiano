@@ -5787,6 +5787,8 @@ const I18N = {
     mfiRecent:'Recent',
     recentAiGenerated:'Recently AI generated',
     recentPlayed:'Recently played',
+    trialBanner1:'Only 1 AI trial left · Get Pro for unlimited',
+    trialBanner2:'Only 2 AI trials left · Get Pro for unlimited',
     proPaywallTitle:'This is part of Paintiano Pro',
     proPaywallTitleAi:'You’ve used your free AI compositions',
     proPaywallBody:'Unlock unlimited AI compositions, remove the watermark from exports, and support an independent art project.',
@@ -5883,6 +5885,8 @@ const I18N = {
     mfiRecent:'Zuletzt',
     recentAiGenerated:'Zuletzt KI-generiert',
     recentPlayed:'Zuletzt gespielt',
+    trialBanner1:'Nur noch 1 KI-Versuch · Hol dir Pro für unbegrenzt',
+    trialBanner2:'Nur noch 2 KI-Versuche · Hol dir Pro für unbegrenzt',
     proPaywallTitle:'Das ist Teil von Paintiano Pro',
     proPaywallTitleAi:'Du hast deine kostenlosen KI-Kompositionen aufgebraucht',
     proPaywallBody:'Schalte unbegrenzte KI-Kompositionen frei, entferne das Wasserzeichen aus Exporten und unterstütze ein unabhängiges Kunstprojekt.',
@@ -5979,6 +5983,8 @@ const I18N = {
     mfiRecent:'Récents',
     recentAiGenerated:'Générés par IA récemment',
     recentPlayed:'Joués récemment',
+    trialBanner1:"Plus qu'1 essai IA · Passez à Pro pour l'illimité",
+    trialBanner2:"Plus que 2 essais IA · Passez à Pro pour l'illimité",
     proPaywallTitle:'Cela fait partie de Paintiano Pro',
     proPaywallTitleAi:'Vous avez utilisé vos compositions IA gratuites',
     proPaywallBody:'Débloquez les compositions IA illimitées, supprimez le filigrane des exports et soutenez un projet artistique indépendant.',
@@ -6075,6 +6081,8 @@ const I18N = {
     mfiRecent:'Recientes',
     recentAiGenerated:'Generados por IA recientemente',
     recentPlayed:'Reproducidos recientemente',
+    trialBanner1:'Solo 1 prueba IA restante · Pro para ilimitado',
+    trialBanner2:'Solo 2 pruebas IA restantes · Pro para ilimitado',
     proPaywallTitle:'Esto forma parte de Paintiano Pro',
     proPaywallTitleAi:'Has usado tus composiciones de IA gratuitas',
     proPaywallBody:'Desbloquea composiciones de IA ilimitadas, elimina la marca de agua de las exportaciones y apoya un proyecto artístico independiente.',
@@ -6171,6 +6179,8 @@ const I18N = {
     mfiRecent:'Nedávne',
     recentAiGenerated:'Nedávno AI vygenerované',
     recentPlayed:'Nedávno prehraté',
+    trialBanner1:'Zostáva už len 1 AI skúška · Pro pre neobmedzené',
+    trialBanner2:'Zostávajú už len 2 AI skúšky · Pro pre neobmedzené',
     proPaywallTitle:'Toto je súčasťou Paintiano Pro',
     proPaywallTitleAi:'Využil si svoje bezplatné AI kompozície',
     proPaywallBody:'Odomkni neobmedzené AI kompozície, odstráň vodoznak z exportov a podpor nezávislý umelecký projekt.',
@@ -6267,8 +6277,12 @@ const I18N = {
     mfiRecent:'最近',
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
+    trialBanner1:'仅剩 1 次 AI 试用 · 升级 Pro 享无限',
+    trialBanner2:'仅剩 2 次 AI 试用 · 升级 Pro 享无限',
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
+    trialBanner1:'僅剩 1 次 AI 試用 · 升級 Pro 享無限',
+    trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro 享無限',
     proPaywallTitle:'这是 Paintiano Pro 的功能',
     proPaywallTitleAi:'您已用完免费的 AI 作曲次数',
     proPaywallBody:'解锁无限 AI 作曲、移除导出图像的水印,并支持一个独立的艺术项目。',
@@ -6459,6 +6473,8 @@ const I18N = {
     mfiRecent:'Recentes',
     recentAiGenerated:'Gerados por IA recentemente',
     recentPlayed:'Reproduzidos recentemente',
+    trialBanner1:'Resta apenas 1 teste IA · Pro para ilimitado',
+    trialBanner2:'Restam apenas 2 testes IA · Pro para ilimitado',
     proPaywallTitle:'Isso faz parte do Paintiano Pro',
     proPaywallTitleAi:'Você usou suas composições de IA gratuitas',
     proPaywallBody:'Desbloqueie composições de IA ilimitadas, remova a marca d\'água das exportações e apoie um projeto de arte independente.',
@@ -8383,15 +8399,19 @@ function useProStatus() {
 }
 
 // ─── AI trial counter hook (free tier: PRO_CFG.trialMax heavy AI calls) ────────
+// trialUsed is a FLOAT — full AI calls (composeFromImage, aiCompose) consume
+// 1.0, while lighter calls (atmosphere detect) consume 0.5. trialLeft is
+// rounded UP for user-facing display via Math.ceil at the callsite.
 function useAiTrial() {
   const [trialUsed, setTrialUsed] = useState(() => {
-    try { return Math.max(0, parseInt(localStorage.getItem(PRO_CFG.trialStoreKey) || '0', 10)) || 0; }
+    try { return Math.max(0, parseFloat(localStorage.getItem(PRO_CFG.trialStoreKey) || '0')) || 0; }
     catch (_) { return 0; }
   });
 
-  const consumeTrial = useCallback(() => {
+  // Optional amount (default 1 = full AI call). Pass 0.5 for atmo/lighter calls.
+  const consumeTrial = useCallback((amount = 1) => {
     setTrialUsed((n) => {
-      const next = n + 1;
+      const next = n + amount;
       try { localStorage.setItem(PRO_CFG.trialStoreKey, String(next)); } catch (_) {}
       return next;
     });
@@ -9302,6 +9322,26 @@ export default function Paintiano() {
     const t=setTimeout(()=>{setErr('');setErrInfo(false);},6000);
     return()=>clearTimeout(t);
   },[err,errInfo]);
+
+  // ── AI trial countdown banner ───────────────────────────────────────────────
+  // Show a gold info banner when the free user has only 1 or 2 AI trials left
+  // (Math.ceil to avoid showing "0.5" or "1.5"). Suppressed for Pro users and
+  // when trial is fully exhausted (the paywall handles that case explicitly).
+  // Uses a ref to only fire the banner ONCE per threshold crossing (consume
+  // event), not on every rerender. Set to null on activation/reset for replay.
+  const _trialBannerLastShown=useRef(null);
+  useEffect(()=>{
+    if(isPro||trialExhausted) { _trialBannerLastShown.current=null; return; }
+    const left=Math.ceil(trialLeft);
+    if(left>2||left<=0) return;
+    // Only re-trigger when the displayed number actually changed
+    if(_trialBannerLastShown.current===left) return;
+    _trialBannerLastShown.current=left;
+    const msg = left===1
+      ? (t('trialBanner1')||'Only 1 AI trial left · Get Pro for unlimited')
+      : (t('trialBanner2')||'Only '+left+' AI trials left · Get Pro for unlimited');
+    setErr(msg); setErrInfo(true);
+  },[trialLeft,isPro,trialExhausted,t]);
 
   const [working,   setWorking]   = useState(false);
   const [wLabel,    setWLabel]    = useState('');
@@ -11421,11 +11461,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[_mfiTinyThumb]);
 
   // Recall a recent MFI piece: rebuild the painting from its stored recipe (no AI
-  // call, free to replay) and restore its source thumbnail. Pro-gated — free
-  // users tapping the strip get the paywall instead.
+  // call, free for everyone — replay just redraws from localStorage). Free users
+  // who exhausted their AI trial can still revisit their past pieces; only NEW
+  // generation costs trial (sample/choose file paths go through composeFromImage
+  // which has the paywall gate).
   const _mfiRecall=useCallback((entry)=>{
     if(!entry) return;
-    if(!isPro){ setPaywallReason('ai_trial'); return; }
     try{
       const evts=noteArr2events(entry.notes||[],entry.tempo||90);
       if(!evts.length) return;
@@ -11440,7 +11481,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setSongQ(''); setImgMoodThumb(entry.thumb||null); setMoodFromImg(true);
       try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(_){}
-  },[isPro,stopAll,applyEvents]);
+  },[stopAll,applyEvents]);
 
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   const composeFromImage=useCallback(async(srcUrl)=>{
@@ -11981,6 +12022,10 @@ Composition rules:
   // turns the atmosphere effect ON; the on/off toggle then re-uses it for free.
   const detectAtmosphere=useCallback(async()=>{
     if(atmoBusy||!originalImgUrl) return;
+    // Atmosphere is an Anthropic API call (image → emotion analysis), so it
+    // counts toward the free 5-AI trial pool same as composeFromImage and
+    // aiCompose. Exhausted free users get the paywall; Pro users skip the gate.
+    if(!isPro && trialExhausted){ setPaywallReason('ai_trial'); return; }
     setAtmoBusy(true); setErr('');
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
@@ -12004,9 +12049,14 @@ Composition rules:
       if(isNaN(vv)||isNaN(ee)) throw new Error('bad');
       setAtmoMood({v:vv,e:ee,root:0,title:(parsed.title&&String(parsed.title).trim())||''});
       setAtmoOn(true);
+      // Successful fresh AI call — count toward trial for free users.
+      // Atmosphere is a lighter call (just emotion analysis, no full composition)
+      // so it costs 0.5 of a trial credit instead of a full 1.
+      // (Toggling atmo on/off after this uses cached atmoMood, no extra call.)
+      if(!isPro) consumeTrial(0.5);
     }catch(e){ if(e&&e.message==='AI unavailable') setAiDown(true); setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.'); }
     finally{ setAtmoBusy(false); }
-  },[atmoBusy,originalImgUrl,lang,t]);
+  },[atmoBusy,originalImgUrl,lang,t,isPro,trialExhausted,consumeTrial]);
 
   const paintSong=()=>{
     const q=songQ.trim().toLowerCase();if(!q||busy)return;
@@ -13848,9 +13898,8 @@ Composition rules:
                     {t('recentAiGenerated')||'Recently AI generated'}
                   </div>
                   {mfiRecent.map((entry)=>(
-                    <button key={entry.id} onClick={()=>{ _mfiRecall(entry); if(isPro) setPickMode(null); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.7*effScale)+'rem',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,opacity:isPro?1:.7}}>
+                    <button key={entry.id} onClick={()=>{ _mfiRecall(entry); setPickMode(null); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.7*effScale)+'rem',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
                       <span style={{flex:1,textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>✦ {entry.title}</span>
-                      {!isPro && <span style={{fontSize:(.6*effScale)+'rem',opacity:.85}}>🔒</span>}
                     </button>
                   ))}
                 </div>

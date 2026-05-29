@@ -582,6 +582,26 @@ export default function Paintiano() {
     return()=>clearTimeout(t);
   },[err,errInfo]);
 
+  // ── AI trial countdown banner ───────────────────────────────────────────────
+  // Show a gold info banner when the free user has only 1 or 2 AI trials left
+  // (Math.ceil to avoid showing "0.5" or "1.5"). Suppressed for Pro users and
+  // when trial is fully exhausted (the paywall handles that case explicitly).
+  // Uses a ref to only fire the banner ONCE per threshold crossing (consume
+  // event), not on every rerender. Set to null on activation/reset for replay.
+  const _trialBannerLastShown=useRef(null);
+  useEffect(()=>{
+    if(isPro||trialExhausted) { _trialBannerLastShown.current=null; return; }
+    const left=Math.ceil(trialLeft);
+    if(left>2||left<=0) return;
+    // Only re-trigger when the displayed number actually changed
+    if(_trialBannerLastShown.current===left) return;
+    _trialBannerLastShown.current=left;
+    const msg = left===1
+      ? (t('trialBanner1')||'Only 1 AI trial left · Get Pro for unlimited')
+      : (t('trialBanner2')||'Only '+left+' AI trials left · Get Pro for unlimited');
+    setErr(msg); setErrInfo(true);
+  },[trialLeft,isPro,trialExhausted,t]);
+
   const [working,   setWorking]   = useState(false);
   const [wLabel,    setWLabel]    = useState('');
   const [wPct,      setWPct]      = useState(0);
@@ -2700,11 +2720,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[_mfiTinyThumb]);
 
   // Recall a recent MFI piece: rebuild the painting from its stored recipe (no AI
-  // call, free to replay) and restore its source thumbnail. Pro-gated — free
-  // users tapping the strip get the paywall instead.
+  // call, free for everyone — replay just redraws from localStorage). Free users
+  // who exhausted their AI trial can still revisit their past pieces; only NEW
+  // generation costs trial (sample/choose file paths go through composeFromImage
+  // which has the paywall gate).
   const _mfiRecall=useCallback((entry)=>{
     if(!entry) return;
-    if(!isPro){ setPaywallReason('ai_trial'); return; }
     try{
       const evts=noteArr2events(entry.notes||[],entry.tempo||90);
       if(!evts.length) return;
@@ -2719,7 +2740,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setSongQ(''); setImgMoodThumb(entry.thumb||null); setMoodFromImg(true);
       try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(_){}
-  },[isPro,stopAll,applyEvents]);
+  },[stopAll,applyEvents]);
 
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   const composeFromImage=useCallback(async(srcUrl)=>{
@@ -3260,6 +3281,10 @@ Composition rules:
   // turns the atmosphere effect ON; the on/off toggle then re-uses it for free.
   const detectAtmosphere=useCallback(async()=>{
     if(atmoBusy||!originalImgUrl) return;
+    // Atmosphere is an Anthropic API call (image → emotion analysis), so it
+    // counts toward the free 5-AI trial pool same as composeFromImage and
+    // aiCompose. Exhausted free users get the paywall; Pro users skip the gate.
+    if(!isPro && trialExhausted){ setPaywallReason('ai_trial'); return; }
     setAtmoBusy(true); setErr('');
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
@@ -3283,9 +3308,14 @@ Composition rules:
       if(isNaN(vv)||isNaN(ee)) throw new Error('bad');
       setAtmoMood({v:vv,e:ee,root:0,title:(parsed.title&&String(parsed.title).trim())||''});
       setAtmoOn(true);
+      // Successful fresh AI call — count toward trial for free users.
+      // Atmosphere is a lighter call (just emotion analysis, no full composition)
+      // so it costs 0.5 of a trial credit instead of a full 1.
+      // (Toggling atmo on/off after this uses cached atmoMood, no extra call.)
+      if(!isPro) consumeTrial(0.5);
     }catch(e){ if(e&&e.message==='AI unavailable') setAiDown(true); setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.'); }
     finally{ setAtmoBusy(false); }
-  },[atmoBusy,originalImgUrl,lang,t]);
+  },[atmoBusy,originalImgUrl,lang,t,isPro,trialExhausted,consumeTrial]);
 
   const paintSong=()=>{
     const q=songQ.trim().toLowerCase();if(!q||busy)return;
@@ -5127,9 +5157,8 @@ Composition rules:
                     {t('recentAiGenerated')||'Recently AI generated'}
                   </div>
                   {mfiRecent.map((entry)=>(
-                    <button key={entry.id} onClick={()=>{ _mfiRecall(entry); if(isPro) setPickMode(null); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.7*effScale)+'rem',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,opacity:isPro?1:.7}}>
+                    <button key={entry.id} onClick={()=>{ _mfiRecall(entry); setPickMode(null); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.7*effScale)+'rem',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
                       <span style={{flex:1,textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>✦ {entry.title}</span>
-                      {!isPro && <span style={{fontSize:(.6*effScale)+'rem',opacity:.85}}>🔒</span>}
                     </button>
                   ))}
                 </div>

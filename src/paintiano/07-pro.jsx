@@ -132,15 +132,19 @@ function useProStatus() {
 }
 
 // ─── AI trial counter hook (free tier: PRO_CFG.trialMax heavy AI calls) ────────
+// trialUsed is a FLOAT — full AI calls (composeFromImage, aiCompose) consume
+// 1.0, while lighter calls (atmosphere detect) consume 0.5. trialLeft is
+// rounded UP for user-facing display via Math.ceil at the callsite.
 function useAiTrial() {
   const [trialUsed, setTrialUsed] = useState(() => {
-    try { return Math.max(0, parseInt(localStorage.getItem(PRO_CFG.trialStoreKey) || '0', 10)) || 0; }
+    try { return Math.max(0, parseFloat(localStorage.getItem(PRO_CFG.trialStoreKey) || '0')) || 0; }
     catch (_) { return 0; }
   });
 
-  const consumeTrial = useCallback(() => {
+  // Optional amount (default 1 = full AI call). Pass 0.5 for atmo/lighter calls.
+  const consumeTrial = useCallback((amount = 1) => {
     setTrialUsed((n) => {
-      const next = n + 1;
+      const next = n + amount;
       try { localStorage.setItem(PRO_CFG.trialStoreKey, String(next)); } catch (_) {}
       return next;
     });
