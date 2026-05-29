@@ -2656,6 +2656,71 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(_){ /* quota or disabled storage — silently skip caching */ }
   },[]);
 
+  // ── MFI "recent 3" list ─────────────────────────────────────────────────────
+  // Separate from the cost-cache above: this powers the small thumbnail strip
+  // that lets the user return to their last 3 mood-from-image pieces. Each entry
+  // stores a tiny (~64px) source thumbnail + the recipe (notes/tempo/title) only
+  // — never audio or full images — so it stays well under the localStorage quota.
+  // Saved for ALL users (so free users see the locked strip as a Pro nudge);
+  // RECALL (clicking an entry) is Pro-gated in the render below.
+  const MFI_RECENT_KEY='paintiano_mfi_recent_v1';
+  const [mfiRecent,setMfiRecent]=useState(()=>{
+    try{ const raw=localStorage.getItem(MFI_RECENT_KEY); return raw?(JSON.parse(raw)||[]):[]; }
+    catch(_){ return []; }
+  });
+  // Make a tiny ~64px thumbnail from a source image URL for the strip. Kept small
+  // on purpose: 3 entries × small jpeg stays tiny in storage.
+  const _mfiTinyThumb=useCallback((srcUrl)=>new Promise((res)=>{
+    try{
+      const im=new Image();
+      im.onload=()=>{ try{
+        const max=64; let w=im.naturalWidth||64,h=im.naturalHeight||64;
+        const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(im,0,0,w,h);
+        res(cv.toDataURL('image/jpeg',0.72));
+      }catch(_){ res(null); } };
+      im.onerror=()=>res(null); im.src=srcUrl;
+    }catch(_){ res(null); }
+  }),[]);
+  // Push a new piece to the front of the recent list, dedupe by recipe hash,
+  // cap at 3. recipe = {notes, tempo, title}; thumb = tiny data URL.
+  const _mfiRecentAdd=useCallback(async(srcUrl,recipe)=>{
+    try{
+      const thumb=await _mfiTinyThumb(srcUrl);
+      const entry={ id:Date.now(), thumb, title:recipe.title||'✦',
+                    notes:recipe.notes||[], tempo:recipe.tempo||90 };
+      setMfiRecent(prev=>{
+        const same=(a,b)=>a.title===b.title && (a.notes&&a.notes.length)===(b.notes&&b.notes.length);
+        const next=[entry,...prev.filter(p=>!same(p,entry))].slice(0,3);
+        try{ localStorage.setItem(MFI_RECENT_KEY, JSON.stringify(next)); }catch(_){}
+        return next;
+      });
+    }catch(_){ /* storage disabled — skip silently */ }
+  },[_mfiTinyThumb]);
+
+  // Recall a recent MFI piece: rebuild the painting from its stored recipe (no AI
+  // call, free to replay) and restore its source thumbnail. Pro-gated — free
+  // users tapping the strip get the paywall instead.
+  const _mfiRecall=useCallback((entry)=>{
+    if(!entry) return;
+    if(!isPro){ setPaywallReason('ai_trial'); return; }
+    try{
+      const evts=noteArr2events(entry.notes||[],entry.tempo||90);
+      if(!evts.length) return;
+      const title=entry.title||'✦';
+      const _varyNotes=(entry.notes||[]).map(n=>Array.isArray(n)
+        ? {note:n[0],dur:n[1],beat:n[2],vel:n[3]}
+        : {note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
+      stopAll();
+      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false);
+      setStructureSeedLock(null); setVarySource({notes:_varyNotes,tempo:entry.tempo||90,title});
+      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title);
+      setSongQ(''); setImgMoodThumb(entry.thumb||null); setMoodFromImg(true);
+      try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+    }catch(_){}
+  },[isPro,stopAll,applyEvents]);
+
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   const composeFromImage=useCallback(async(srcUrl)=>{
     const _src=srcUrl||originalImgUrl;
@@ -2710,6 +2775,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       stopAll();
       setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(_imgVarySource);
       applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(''); setImgMoodThumb(_src); setMoodFromImg(true);
+      // Remember this piece in the recent-3 strip (recipe + tiny thumb only).
+      try{ _mfiRecentAdd(_src,{notes:parsed.notes||[],tempo:parsed.tempo||90,title}); }catch(_){}
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
       // Only latch AI-down for genuine availability failures (network/budget),
@@ -2720,7 +2787,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setImgMoodThumb(null); setMoodContext(false); setMoodFromImg(false);
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
-  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet]);
+  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet,_mfiRecentAdd]);
   // Standalone "mood from image" mode: pick a picture, AI reads its emotion and
   // composes a mood on the canvas; a small thumbnail of the source sits on top.
   const loadImgMood=useCallback(e=>{
@@ -5185,6 +5252,32 @@ Composition rules:
           </div>
         );
       })()}
+      {/* Recent-3 MFI strip — sits with the source thumbnail. Shows only in the
+          mood-from-image context and only when at least one piece is remembered.
+          Pro users tap to recall (free replay); free users see it locked with a
+          small badge and tapping opens the paywall. */}
+      {moodFromImg && moodContext && viewMode!=='image' && mfiRecent.length>0 && (
+        <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+          <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(242,238,232,.45)',marginRight:2}}>{t('mfiRecent')||'Recent'}</span>
+          {mfiRecent.map((entry)=>{
+            const active = currentMood===entry.title && imgMoodThumb===entry.thumb;
+            return (
+              <button key={entry.id} type="button" onClick={()=>_mfiRecall(entry)} title={entry.title}
+                style={{position:'relative',width:44,height:44,padding:0,borderRadius:9,overflow:'hidden',cursor:'pointer',
+                  border:'1px solid '+(active?PF.gold:'rgba(220,150,255,.35)'),
+                  boxShadow:active?'0 0 0 1px '+PF.gold+', 0 2px 8px rgba(0,0,0,.45)':'0 2px 8px rgba(0,0,0,.4)',
+                  background:PF.card2,transition:'all .2s ease',opacity:isPro?1:.85}}>
+                {entry.thumb
+                  ? <img src={entry.thumb} alt={entry.title} style={{width:'100%',height:'100%',objectFit:'cover',display:'block',filter:isPro?'none':'grayscale(.4) brightness(.7)'}}/>
+                  : <span style={{display:'flex',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',color:PF.cream,fontSize:'1rem'}}>✦</span>}
+                {!isPro && (
+                  <span style={{position:'absolute',right:2,bottom:2,fontSize:'.6rem',lineHeight:1,filter:'drop-shadow(0 1px 1px rgba(0,0,0,.8))'}}>🔒</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`})}}
         onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
