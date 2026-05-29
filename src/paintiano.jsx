@@ -5772,7 +5772,7 @@ const I18N = {
     guideTitle:'guide', conceptTitle:'concept', gsec_start:'getting started', gsec_sources:'sources', gsec_playing:'while playing', gsec_output:'save & share', gsec_more:'more', fsNormal:'A', fsLarge:'A+', fsLabel:'text size',
     pickMoodFirst:'pick a mood first', morphInto:'morph current mood into another', morphTitle:'morph {mood} into…', morphHint:'pick up to 3 — in order', morphGo:'morph',
     reroll:'reroll: a fresh take',
-    demoMode:'demo mode — clear to play again', demoSkip:'tap to skip',
+    demoMode:'demo mode — clear to play again', demoSkip:'tap canvas to skip',
     stopRecFirst:'stop recording to use playback controls',
     stopListenFirst:'stop listening first', stopSingFirst:'stop singing first',
     scaleBtn:'⚙ scale',
@@ -5872,7 +5872,7 @@ const I18N = {
     guideTitle:'anleitung', conceptTitle:'konzept', gsec_start:'erste schritte', gsec_sources:'quellen', gsec_playing:'beim abspielen', gsec_output:'speichern & teilen', gsec_more:'mehr', fsNormal:'A', fsLarge:'A+', fsLabel:'schriftgröße',
     pickMoodFirst:'zuerst stimmung wählen', morphInto:'aktuelle stimmung transformieren', morphTitle:'{mood} verwandeln in…', morphHint:'bis zu 3 wählen — der Reihe nach', morphGo:'verwandeln',
     reroll:'neu würfeln',
-    demoMode:'demo-modus — löschen zum erneuten spielen', demoSkip:'tippen zum Überspringen',
+    demoMode:'demo-modus — löschen zum erneuten spielen', demoSkip:'auf canvas tippen zum überspringen',
     stopRecFirst:'aufnahme stoppen für wiedergabe',
     stopListenFirst:'erst lauschen stoppen', stopSingFirst:'erst singen stoppen',
     scaleBtn:'⚙ tonart',
@@ -5972,7 +5972,7 @@ const I18N = {
     guideTitle:'guide', conceptTitle:'concept', gsec_start:'pour commencer', gsec_sources:'sources', gsec_playing:'pendant la lecture', gsec_output:'enregistrer & partager', gsec_more:'plus', fsNormal:'A', fsLarge:'A+', fsLabel:'taille du texte',
     pickMoodFirst:'choisir d\'abord une humeur', morphInto:'transformer l\'humeur actuelle', morphTitle:'transformer {mood} en…', morphHint:'choisir jusqu’à 3 — dans l’ordre', morphGo:'transformer',
     reroll:'relancer',
-    demoMode:'mode démo — effacer pour rejouer', demoSkip:'toucher pour passer',
+    demoMode:'mode démo — effacer pour rejouer', demoSkip:'toucher la toile pour passer',
     stopRecFirst:'arrêter l\'enregistrement pour contrôler',
     stopListenFirst:'arrêter l\'écoute d\'abord', stopSingFirst:'arrêter le chant d\'abord',
     scaleBtn:'⚙ gamme',
@@ -6072,7 +6072,7 @@ const I18N = {
     guideTitle:'guía', conceptTitle:'concepto', gsec_start:'primeros pasos', gsec_sources:'fuentes', gsec_playing:'durante la reproducción', gsec_output:'guardar & compartir', gsec_more:'más', fsNormal:'A', fsLarge:'A+', fsLabel:'tamaño del texto',
     pickMoodFirst:'primero elegir un estado', morphInto:'transformar el estado actual', morphTitle:'transformar {mood} en…', morphHint:'elige hasta 3 — en orden', morphGo:'transformar',
     reroll:'relanzar',
-    demoMode:'modo demo — borrar para volver a tocar', demoSkip:'toca para saltar',
+    demoMode:'modo demo — borrar para volver a tocar', demoSkip:'toca el lienzo para saltar',
     stopRecFirst:'detener grabación para controlar',
     stopListenFirst:'detener escucha primero', stopSingFirst:'detener canto primero',
     scaleBtn:'⚙ escala',
@@ -6172,7 +6172,7 @@ const I18N = {
     guideTitle:'príručka', conceptTitle:'koncept', gsec_start:'začíname', gsec_sources:'zdroje', gsec_playing:'počas prehrávania', gsec_output:'uložiť & zdieľať', gsec_more:'viac', fsNormal:'A', fsLarge:'A+', fsLabel:'veľkosť textu',
     pickMoodFirst:'najprv vyber náladu', morphInto:'morfovať súčasnú náladu do inej', morphTitle:'plynule prejdi z {mood} do…', morphHint:'vyber max 3 — v poradí', morphGo:'morfovať',
     reroll:'prehodiť: čerstvé prevedenie',
-    demoMode:'režim demo — vyčisti pre nové prehratie', demoSkip:'klikni pre preskočenie',
+    demoMode:'režim demo — vyčisti pre nové prehratie', demoSkip:'klikni na plátno pre preskočenie',
     stopRecFirst:'najprv zastav nahrávanie pre použitie ovládania',
     stopListenFirst:'najprv zastav počúvanie', stopSingFirst:'najprv zastav spievanie',
     scaleBtn:'⚙ stupnica',
@@ -6272,7 +6272,7 @@ const I18N = {
     guideTitle:'指南', conceptTitle:'理念', gsec_start:'入门', gsec_sources:'来源', gsec_playing:'演奏中', gsec_output:'保存与分享', gsec_more:'更多', fsNormal:'A', fsLarge:'A+', fsLabel:'字号',
     pickMoodFirst:'请先选择情绪', morphInto:'将当前情绪变形为另一种', morphTitle:'将 {mood} 变形为…', morphHint:'最多选 3 种 — 按顺序', morphGo:'变形',
     reroll:'重掷:换一种诠释',
-    demoMode:'演示模式 — 清空以重新播放', demoSkip:'点击跳过',
+    demoMode:'演示模式 — 清空以重新播放', demoSkip:'点击画布跳过',
     stopRecFirst:'请先停止录音以使用播放控制',
     stopListenFirst:'请先停止聆听', stopSingFirst:'请先停止演唱',
     scaleBtn:'⚙ 音阶',
@@ -6378,7 +6378,7 @@ const I18N = {
     guideTitle:'指南', conceptTitle:'理念', gsec_start:'入門', gsec_sources:'來源', gsec_playing:'演奏中', gsec_output:'儲存與分享', gsec_more:'更多', fsNormal:'A', fsLarge:'A+', fsLabel:'字級',
     pickMoodFirst:'請先選擇情緒', morphInto:'將目前情緒變形為另一種', morphTitle:'將 {mood} 變形為…', morphHint:'最多選 3 種 — 按順序', morphGo:'變形',
     reroll:'重擲：換一種詮釋',
-    demoMode:'示範模式 — 清空以重新播放', demoSkip:'點擊跳過',
+    demoMode:'示範模式 — 清空以重新播放', demoSkip:'點擊畫布跳過',
     stopRecFirst:'請先停止錄音以使用播放控制',
     stopListenFirst:'請先停止聆聽', stopSingFirst:'請先停止演唱',
     scaleBtn:'⚙ 音階',
@@ -6472,7 +6472,7 @@ const I18N = {
     guideTitle:'guia', conceptTitle:'conceito', gsec_start:'começando', gsec_sources:'fontes', gsec_playing:'durante a reprodução', gsec_output:'salvar & compartilhar', gsec_more:'mais', fsNormal:'A', fsLarge:'A+', fsLabel:'tamanho do texto',
     pickMoodFirst:'escolha um humor primeiro', morphInto:'transformar o humor atual em outro', morphTitle:'transformar {mood} em…', morphHint:'escolha até 3 — em ordem', morphGo:'transformar',
     reroll:'rerrolar: uma nova versão',
-    demoMode:'modo demo — limpe para tocar novamente', demoSkip:'toque para pular',
+    demoMode:'modo demo — limpe para tocar novamente', demoSkip:'toque a tela para pular',
     stopRecFirst:'pare a gravação para usar os controles de reprodução',
     stopListenFirst:'pare de ouvir primeiro', stopSingFirst:'pare de cantar primeiro',
     scaleBtn:'⚙ escala',
@@ -15423,8 +15423,14 @@ Composition rules:
               </div>
             );
           })()}
-          {/* Skip hint — small, top-right of viewport */}
-          <div style={{position:'fixed',top:14,right:18,fontSize:'.62rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(247,243,236,.55)',background:'rgba(16,12,24,.45)',padding:'5px 12px',borderRadius:14,pointerEvents:'none',backdropFilter:'blur(4px)'}}>{t('demoSkip')||'tap to skip'}</div>
+          {/* Skip hint — sits in the bottom-centre of the viewport so it's
+              visible the whole reel but never collides with the title cards
+              (which centre in the middle). Visual only — actual skip is the
+              canvas tap (canvasWrap onClick → demoReelStop). */}
+          <div style={{position:'fixed',bottom:'7vh',left:'50%',transform:'translateX(-50%)',display:'inline-flex',alignItems:'center',gap:8,padding:'8px 18px',fontSize:`clamp(${.65*effScale}rem,${1.7*effScale}vw,${.95*effScale}rem)`,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(247,243,236,.78)',background:'rgba(16,12,24,.55)',borderRadius:20,pointerEvents:'none',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(247,243,236,.18)',whiteSpace:'nowrap'}}>
+            <span style={{fontSize:'.9em',opacity:.7}}>✕</span>
+            {t('demoSkip')||'tap canvas to skip'}
+          </div>
         </div>
       )}
     </div>

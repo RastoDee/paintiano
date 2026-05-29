@@ -6560,8 +6560,14 @@ Composition rules:
               </div>
             );
           })()}
-          {/* Skip hint — small, top-right of viewport */}
-          <div style={{position:'fixed',top:14,right:18,fontSize:'.62rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(247,243,236,.55)',background:'rgba(16,12,24,.45)',padding:'5px 12px',borderRadius:14,pointerEvents:'none',backdropFilter:'blur(4px)'}}>{t('demoSkip')||'tap to skip'}</div>
+          {/* Skip hint — sits in the bottom-centre of the viewport so it's
+              visible the whole reel but never collides with the title cards
+              (which centre in the middle). Visual only — actual skip is the
+              canvas tap (canvasWrap onClick → demoReelStop). */}
+          <div style={{position:'fixed',bottom:'7vh',left:'50%',transform:'translateX(-50%)',display:'inline-flex',alignItems:'center',gap:8,padding:'8px 18px',fontSize:`clamp(${.65*effScale}rem,${1.7*effScale}vw,${.95*effScale}rem)`,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(247,243,236,.78)',background:'rgba(16,12,24,.55)',borderRadius:20,pointerEvents:'none',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(247,243,236,.18)',whiteSpace:'nowrap'}}>
+            <span style={{fontSize:'.9em',opacity:.7}}>✕</span>
+            {t('demoSkip')||'tap canvas to skip'}
+          </div>
         </div>
       )}
     </div>
