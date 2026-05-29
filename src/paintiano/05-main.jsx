@@ -19,7 +19,7 @@ const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered,
       onTouchEnd={(e)=>{e.preventDefault();if(!disabled)releaseNote(midi);}}
       onTouchCancel={()=>{if(!disabled)releaseNote(midi);}}
       onContextMenu={(e)=>e.preventDefault()}
-      style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:isActive?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:(.42*readScale)+'rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
+      style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:isActive?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
       {midi%12===0?'C'+(Math.floor(midi/12)-1):''}
     </div>
   );
@@ -205,7 +205,7 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-palette-title" style={{maxWidth:420,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'24px 22px',color:'rgba(207,197,168,.88)',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-palette-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('paletteEditorTitle')}</div>
+        <div id="paintiano-palette-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('paletteEditorTitle')}</div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(4, 1fr)',gap:10,marginBottom:18}}>
           {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].map((label,pc)=>(
             <label key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,cursor:'pointer'}}>
@@ -216,7 +216,7 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
                   setCustomPalette(next);
                 }} style={{position:'absolute',inset:0,opacity:0,cursor:'pointer',width:'100%',height:'100%'}} aria-label={label}/>
               </div>
-              <span style={{fontSize:(.65*readScale)+'rem',letterSpacing:'.06em',color:'rgba(207,197,168,.7)'}}>{label}</span>
+              <span style={{fontSize:'.65rem',letterSpacing:'.06em',color:'rgba(207,197,168,.7)'}}>{label}</span>
             </label>
           ))}
         </div>
@@ -230,14 +230,14 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
               const [r,g,b]=fromHsl(oppHue,80,55);
               return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
             }));
-          }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
+          }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
           <button onClick={()=>{
             // Clear all: reset every pitch class to neutral light grey.
             // The user starts from a blank slate and picks each color
             // themselves — no implicit harmony or spectral seed.
             setCustomPalette(Array(12).fill('#888888'));
-          }} style={{padding:'8px 16px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.3)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('resetPalette')}</button>
-          <button onClick={onClose} style={{padding:'8px 22px',background:'rgba(201,168,76,.15)',color:GOLD,border:'1px solid rgba(201,168,76,.45)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.12em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
+          }} style={{padding:'8px 16px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.3)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('resetPalette')}</button>
+          <button onClick={onClose} style={{padding:'8px 22px',background:'rgba(201,168,76,.15)',color:GOLD,border:'1px solid rgba(201,168,76,.45)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.12em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
         </div>
       </div>
     </div>
@@ -344,10 +344,10 @@ function IntroSplash({ onDone, tagline, skipLabel }){
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'3rem',fontWeight:600,letterSpacing:'.04em',
           background:`linear-gradient(95deg,${PF.gold2},${PF.cream} 50%,${PF.gold})`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent',
           opacity:titleIn?1:0,transform:titleIn?'translateY(0) scale(1)':'translateY(10px) scale(.96)',transition:'opacity .8s ease, transform .9s cubic-bezier(.2,.8,.2,1)',textShadow:'0 4px 30px rgba(0,0,0,.5)'}}>Paintiano</div>
-        <div style={{fontFamily:"'Outfit',sans-serif",fontSize:(.6*readScale)+'rem',letterSpacing:'.34em',textTransform:'uppercase',color:PF.cream,marginTop:12,transformOrigin:'center top',
+        <div style={{fontFamily:"'Outfit',sans-serif",fontSize:'.6rem',letterSpacing:'.34em',textTransform:'uppercase',color:PF.cream,marginTop:12,transformOrigin:'center top',
           opacity:titleIn?0.8:0,transform:titleIn?'scale(1)':'scale(2.4)',transition:'opacity .7s ease .8s, transform 1.0s cubic-bezier(.18,.7,.16,1) .8s'}}>{tagline}</div>
       </div>
-      <div style={{position:'absolute',bottom:30,left:0,right:0,textAlign:'center',fontFamily:"'Outfit',sans-serif",fontSize:(.5*readScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.28)',pointerEvents:'none'}}>{skipLabel}</div>
+      <div style={{position:'absolute',bottom:30,left:0,right:0,textAlign:'center',fontFamily:"'Outfit',sans-serif",fontSize:'.5rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.28)',pointerEvents:'none'}}>{skipLabel}</div>
     </div>
   );
 }
@@ -4428,7 +4428,7 @@ Composition rules:
             });
             return (
               <>
-                <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{padding:'4px 10px 4px 4px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:(.62*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:7}}><span style={pill(meta.code,true)}>{meta.code}</span><span>{meta.name}</span><span style={{fontSize:(.55*readScale)+'rem',opacity:.6,marginLeft:1}}>▾</span></button>
+                <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{padding:'4px 8px 4px 4px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:(.62*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:5}}><span style={pill(meta.code,true)}>{meta.code}</span><span style={{fontSize:(.55*readScale)+'rem',opacity:.6}}>▾</span></button>
                 {langOpen && (
                   <>
                     <div onClick={()=>setLangOpen(false)} style={{position:'fixed',inset:0,zIndex:50}}/>
