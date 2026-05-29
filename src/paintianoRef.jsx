@@ -11726,8 +11726,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setPlaybackSpeed(1); playbackSpeedRef.current = 1;
       composedModeRef.current = false;
       if(entry.style){ setStyle(entry.style); }
-      // Leave composeMode OFF — recall opens on the canvas, not keyboard.
-      setComposeMode(false);
+      // Stay in compose mode — recall is meant as a starting point the user can
+      // build on (add more notes, Vary, Play, then Clear & start fresh). Without
+      // composeMode the keyboard disappears and the canvas drops to a half-state.
+      // composeMode was already on (recent button only shows in compose mode), so
+      // we keep it that way. draftOwnerRef stays 'compose' so Clear keeps mode.
+      draftOwnerRef.current='compose';
     }catch(_){}
   },[stopAll,_composeRecentLabel]);
   const [showComposeRecent,setShowComposeRecent]=useState(false);
