@@ -2821,7 +2821,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stopAll,applyEvents]);
 
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
-  const composeFromImage=useCallback(async(srcUrl)=>{
+  // isSample=true means it's the built-in sample (loadSampleImgMood), which we
+  // don't add to "Recently AI generated" — sample stays accessible via its own
+  // "Built-in sample" button in the picker, no need to clutter recent slots.
+  const composeFromImage=useCallback(async(srcUrl,isSample)=>{
     const _src=srcUrl||originalImgUrl;
     if(imgAiBusy||!_src) return;
     // NOTE: trial gate is INSIDE the try-block below, AFTER the cache check.
@@ -2908,7 +2911,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
       setComposeSource('ai'); setCurrentMood(title); setSongQ('');
       // Remember this piece in the recent-3 strip (recipe + tiny thumb only).
-      try{ _mfiRecentAdd(_src,{notes:parsed.notes||[],tempo:parsed.tempo||90,title}); }catch(_){}
+      // Skip for the built-in sample: it's always reachable via its own button.
+      if(!isSample){ try{ _mfiRecentAdd(_src,{notes:parsed.notes||[],tempo:parsed.tempo||90,title}); }catch(_){} }
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
       // Only latch AI-down for genuine availability failures (network/budget),
@@ -2943,7 +2947,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // (see composeFromImage sample-cache) so it stays free + works without a network.
   const loadSampleImgMood=useCallback(()=>{
     if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; }
-    composeFromImage(SAMPLE_IMAGE_B64);
+    composeFromImage(SAMPLE_IMAGE_B64, true);  // isSample=true → skip recent
   },[composeFromImage,stashDraft]);
 
   // MusicXML upload — exact, structured score data from MuseScore / Finale / Dorico.
