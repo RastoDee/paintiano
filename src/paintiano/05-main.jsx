@@ -5119,6 +5119,21 @@ Composition rules:
               <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
               </div>
+              {/* Recently AI generated — Pro feature. Free users see locked items;
+                  tapping any opens the paywall via _mfiRecall. Only in MFI picker. */}
+              {pickMode==='imgmood' && mfiRecent.length>0 && (
+                <div style={{marginTop:6,display:'flex',flexDirection:'column',gap:6}}>
+                  <div style={{fontSize:(.55*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(242,238,232,.45)',textAlign:'center',marginTop:4,marginBottom:2}}>
+                    {t('recentAiGenerated')||'Recently AI generated'}
+                  </div>
+                  {mfiRecent.map((entry)=>(
+                    <button key={entry.id} onClick={()=>{ _mfiRecall(entry); if(isPro) setPickMode(null); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.7*effScale)+'rem',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,opacity:isPro?1:.7}}>
+                      <span style={{flex:1,textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>✦ {entry.title}</span>
+                      {!isPro && <span style={{fontSize:(.6*effScale)+'rem',opacity:.85}}>🔒</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
               <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*effScale)+'rem',marginTop:4}}>
                 {t('cancel')}
               </button>
@@ -5252,32 +5267,8 @@ Composition rules:
           </div>
         );
       })()}
-      {/* Recent-3 MFI strip — sits with the source thumbnail. Shows only in the
-          mood-from-image context and only when at least one piece is remembered.
-          Pro users tap to recall (free replay); free users see it locked with a
-          small badge and tapping opens the paywall. */}
-      {moodFromImg && moodContext && viewMode!=='image' && mfiRecent.length>0 && (
-        <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:8,marginBottom:12,flexWrap:'wrap'}}>
-          <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(242,238,232,.45)',marginRight:2}}>{t('mfiRecent')||'Recent'}</span>
-          {mfiRecent.map((entry)=>{
-            const active = currentMood===entry.title && imgMoodThumb===entry.thumb;
-            return (
-              <button key={entry.id} type="button" onClick={()=>_mfiRecall(entry)} title={entry.title}
-                style={{position:'relative',width:44,height:44,padding:0,borderRadius:9,overflow:'hidden',cursor:'pointer',
-                  border:'1px solid '+(active?PF.gold:'rgba(220,150,255,.35)'),
-                  boxShadow:active?'0 0 0 1px '+PF.gold+', 0 2px 8px rgba(0,0,0,.45)':'0 2px 8px rgba(0,0,0,.4)',
-                  background:PF.card2,transition:'all .2s ease',opacity:isPro?1:.85}}>
-                {entry.thumb
-                  ? <img src={entry.thumb} alt={entry.title} style={{width:'100%',height:'100%',objectFit:'cover',display:'block',filter:isPro?'none':'grayscale(.4) brightness(.7)'}}/>
-                  : <span style={{display:'flex',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',color:PF.cream,fontSize:'1rem'}}>✦</span>}
-                {!isPro && (
-                  <span style={{position:'absolute',right:2,bottom:2,fontSize:'.6rem',lineHeight:1,filter:'drop-shadow(0 1px 1px rgba(0,0,0,.8))'}}>🔒</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* MFI Recent strip removed from here — now rendered inside the MFI picker
+          as 'Recently AI generated' button + text labels (no thumbnails). */}
       <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`})}}
         onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
