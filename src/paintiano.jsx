@@ -4202,7 +4202,7 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   ctx.fillStyle=rgba([28,18,12],1);
   ctx.fillRect(0,0,CW,CH);
   const speckRnd=_seedRnd(9999,ss,0,0);
-  const speckCount=Math.round(CW*CH*0.0018);
+  const speckCount=Math.round(CW*CH*0.0011);
   for(let i=0;i<speckCount;i++){
     const sx=speckRnd()*CW,sy=speckRnd()*CH;
     const sc=speckRnd();
@@ -4215,12 +4215,15 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 
   // Dense pass count -- fills canvas like Constellations series
-  const passCount=Math.min(N,Math.min(500,
+  // Object density. Up to N=40 the original counts are kept verbatim (this
+  // range looked fine); above 40 the slope is eased so larger pieces breathe
+  // more — airier Constellations. Cap lowered 500→300.
+  const passCount=Math.min(N,Math.min(300,
     N<20  ? N
-    :N<60  ? 20+Math.floor((N-20)*1.2)
-    :N<150 ? 68+Math.floor((N-60)*1.0)
-    :N<500 ? 158+Math.floor((N-150)*0.48)
-    :350+Math.floor((N-500)*0.50)
+    :N<=40 ? 20+Math.floor((N-20)*1.2)
+    :N<60  ? 44+Math.floor((N-40)*0.60)
+    :N<150 ? 56+Math.floor((N-60)*0.55)
+    :        106+Math.floor((N-150)*0.30)
   ));
 
   // 2. SHAPES -- one constellation unit per pass
@@ -4233,12 +4236,12 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     const ay=CH*(0.03+rnd()*0.94);
     const roll=rnd();
 
-    if(roll<0.22){
+    if(roll<0.14){
       // -- CONNECTOR LINE + BEAD NODES --
       const segs=2+Math.floor(rnd()*5);
       const pts=[{x:ax,y:ay}];
       for(let s=0;s<segs;s++)
-        pts.push({x:pts[s].x+(rnd()-0.5)*CW*0.20,y:pts[s].y+(rnd()-0.5)*CH*0.20});
+        pts.push({x:pts[s].x+(rnd()-0.5)*CW*0.14,y:pts[s].y+(rnd()-0.5)*CH*0.14});
       ctx.strokeStyle=rgba(BLK,0.85);
       ctx.lineWidth=Math.max(0.8,D*0.004);ctx.lineCap='round';ctx.lineJoin='round';
       ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
@@ -14448,7 +14451,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.1</footer>
       {paywallReason && (
         <ProPaywall
           t={t}
