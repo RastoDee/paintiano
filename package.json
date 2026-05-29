@@ -1,7 +1,7 @@
 {
   "name": "paintiano",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.0.0",
   "type": "module",
   "description": "Music → φ painting. Turn MIDI / audio / images / typed song names into a colored chord painting on the golden-ratio grid.",
   "scripts": {
