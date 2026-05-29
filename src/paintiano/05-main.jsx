@@ -4128,21 +4128,25 @@ Composition rules:
             if(bag.parade){ clearInterval(bag.parade); bag.parade=null; }
             // Same reasoning as ai-type — pick an explicit style for the MFI beat.
             setStyle('matisse');
+            // Stage 1: show the picture FIRST. loadSampleImgMood sets
+            // originalImgUrl + viewMode='image' → big image fills the canvas
+            // box. We linger here so the viewer reads "this is a picture",
+            // not "this is a painting that has a thumbnail". The first text
+            // card spells out the source: "From a picture."
             setDemoText(T(ph.textKey));
-            // Built-in sample image — composeFromImage cache hit, no network.
-            // Shows the big image first (per the standard MFI flow), then we
-            // auto-trigger Play after a short beat so the canvas paints itself
-            // — viewer sees the picture become music + painting end-to-end.
             try{ loadSampleImgMood(); }catch(_){}
-            const playId = setTimeout(()=>{
+            // Stage 2: AFTER a long beat, swap to paint. startPlay handles the
+            // MFI hand-off (image collapses to a small thumb, canvas paints).
+            // A second text card ("Becomes painting.") makes the transformation
+            // explicit so the viewer doesn't just see the picture replaced —
+            // they read what happened.
+            const swapId = setTimeout(()=>{
               if(!bag.active) return;
-              // startPlay handles the MFI hand-off (image → thumb + paint mode).
+              setDemoText(T('imageBecomes'));
               try{ startPlayRef.current?.(); }catch(_){}
-              // Re-assert style after the MFI hand-off since it also goes
-              // through paths that may reset style state.
               setStyle('matisse');
             }, DEMO_REEL_MFI_PLAY_DELAY);
-            bag.timers.push(playId);
+            bag.timers.push(swapId);
             break;
           }
           case 'vary': {
@@ -6480,18 +6484,35 @@ Composition rules:
           Print-beat (golden frame around the canvas) stays inside canvasWrap
           because it visually wraps the canvas, not the screen. ── */}
       {demoReelOn && (
-        <div onClick={demoReelStop} role="button" aria-label={t('demoSkip')||'skip demo'}
-          style={{position:'fixed',inset:0,zIndex:99998,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',background:'transparent'}}>
-          {/* Centred title slot — uses flex on the overlay itself, so text
-              always sits dead-centre of the viewport regardless of canvas size. */}
+        <div
+          onClick={(e)=>{e.stopPropagation();demoReelStop();}}
+          onPointerDown={(e)=>e.stopPropagation()}
+          onPointerUp={(e)=>e.stopPropagation()}
+          onMouseDown={(e)=>e.stopPropagation()}
+          onMouseUp={(e)=>e.stopPropagation()}
+          onTouchStart={(e)=>e.stopPropagation()}
+          onTouchEnd={(e)=>e.stopPropagation()}
+          role="button" aria-label={t('demoSkip')||'skip demo'}
+          /* iOS Safari mis-handles inset:0 on fixed overlays when the address
+             bar is dynamic — element ends up shorter than the visual viewport
+             and content rides up to the top. Use explicit 100vw × 100dvh so
+             the overlay fills the *dynamic* viewport correctly. dvh is well
+             supported (iOS 15.4+, every shipping Android Chrome) and falls
+             back to vh on older browsers. */
+          style={{position:'fixed',top:0,left:0,width:'100vw',height:'100dvh',zIndex:99998,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',background:'rgba(6,5,10,0.18)',touchAction:'none'}}>
+          {/* Title sits dead-centre. The text-box has its own dark scrim so
+              the gold gradient stays readable against ANY canvas style behind
+              it (Pollock chaos, Mondrian blocks, Rothko fields, etc.). Earlier
+              "transparent + drop-shadow" approach failed against bright canvas
+              regions. */}
           {demoTyping && (
-            <div style={{padding:'12px 24px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center'}}>
-              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.6rem,5vw,3.2rem)',color:'#fff',textShadow:'0 2px 18px rgba(0,0,0,.85), 0 0 30px rgba(0,0,0,.6)',letterSpacing:'.02em'}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
+            <div style={{padding:'14px 26px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',background:'rgba(8,6,14,.55)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:12,border:'1px solid rgba(240,192,64,.18)'}}>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.4rem,4.2vw,2.4rem)',color:'#fff',letterSpacing:'.02em'}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
             </div>
           )}
           {demoText && !demoTyping && (
-            <div style={{padding:'14px 32px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',animation:'pfDemoFade .55s ease'}}>
-              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.8rem,5.5vw,3.6rem)',letterSpacing:'.025em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent',textShadow:'0 6px 30px rgba(0,0,0,.55)',filter:'drop-shadow(0 2px 8px rgba(0,0,0,.65))'}}>{demoText}</span>
+            <div style={{padding:'16px 34px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',background:'rgba(8,6,14,.55)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:14,border:'1px solid rgba(240,192,64,.28)',animation:'pfDemoFade .55s ease'}}>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.5rem,4.6vw,2.6rem)',letterSpacing:'.025em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>{demoText}</span>
             </div>
           )}
           {/* Skip hint — small, top-right of viewport */}
