@@ -64,7 +64,7 @@ const DEMO_REEL_I18N = {
     mfiMusic:     'Music.',
     mfiPainting:  'Painting.',
     variations:   'Endless variations.',
-    print:        'Take it home.',
+    print:        'Print it.',
     outro:        'Paintiano',
   },
   SK: {
@@ -76,7 +76,7 @@ const DEMO_REEL_I18N = {
     mfiMusic:     'Hudba.',
     mfiPainting:  'Maľba.',
     variations:   'Nekonečné variácie.',
-    print:        'Vezmi si ho.',
+    print:        'Vytlač si ju.',
     outro:        'Paintiano',
   },
   DE: {
@@ -88,7 +88,7 @@ const DEMO_REEL_I18N = {
     mfiMusic:     'Musik.',
     mfiPainting:  'Malerei.',
     variations:   'Endlose Variationen.',
-    print:        'Nimm es mit.',
+    print:        'Drucke es.',
     outro:        'Paintiano',
   },
   FR: {
@@ -100,7 +100,7 @@ const DEMO_REEL_I18N = {
     mfiMusic:     'Musique.',
     mfiPainting:  'Peinture.',
     variations:   'Variations infinies.',
-    print:        'Emporte-le.',
+    print:        'Imprime-la.',
     outro:        'Paintiano',
   },
   ES: {
@@ -112,7 +112,7 @@ const DEMO_REEL_I18N = {
     mfiMusic:     'Música.',
     mfiPainting:  'Pintura.',
     variations:   'Variaciones infinitas.',
-    print:        'Llévatelo.',
+    print:        'Imprímela.',
     outro:        'Paintiano',
   },
   PT: {
@@ -124,7 +124,7 @@ const DEMO_REEL_I18N = {
     mfiMusic:     'Música.',
     mfiPainting:  'Pintura.',
     variations:   'Variações infinitas.',
-    print:        'Leva-o contigo.',
+    print:        'Imprime-a.',
     outro:        'Paintiano',
   },
   zh: {
@@ -136,7 +136,7 @@ const DEMO_REEL_I18N = {
     mfiMusic:     '音乐。',
     mfiPainting:  '画作。',
     variations:   '无尽变奏。',
-    print:        '带回家。',
+    print:        '打印它。',
     outro:        'Paintiano',
   },
   zhTW: {
@@ -148,7 +148,7 @@ const DEMO_REEL_I18N = {
     mfiMusic:     '音樂。',
     mfiPainting:  '畫作。',
     variations:   '無盡變奏。',
-    print:        '帶回家。',
+    print:        '列印它。',
     outro:        'Paintiano',
   },
 };

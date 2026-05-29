@@ -4050,6 +4050,45 @@ Composition rules:
     setStyle(null);
   },[stopAll]);
 
+  // ── Global event blocker while the reel is running ─────────────────────
+  // The fullscreen overlay alone isn't enough — on some setups (iOS quirks,
+  // stacking contexts from transforms on ancestors, third-party CSS) click
+  // events still reach buttons UNDERNEATH the overlay, so users can hit Clear
+  // / Play / lang switches mid-reel and break the flow.
+  //
+  // Solution: register `capture`-phase listeners on `document` itself. The
+  // capture phase runs BEFORE any element-level handler, so we can:
+  //   • detect the event reliably regardless of where it lands
+  //   • either route it to demoReelStop (skip) — for any tap
+  //   • OR block it completely with preventDefault + stopImmediatePropagation
+  // We listen on the events that actually trigger buttons: pointerdown (the
+  // earliest reliable signal), mousedown (desktop fallback), and click
+  // (the one buttons listen to in React). touchstart isn't needed because
+  // pointerdown covers touch too on modern browsers.
+  useEffect(()=>{
+    if(!demoReelOn) return;
+    const trap = (e)=>{
+      // Always swallow — block buttons, links, anything in the page.
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      // On the click event (the "decision" moment for a tap), route to skip.
+      // pointerdown/mousedown only block; click does the action so we don't
+      // skip-then-skip on the same gesture.
+      if(e.type === 'click'){ demoReelStop(); }
+    };
+    document.addEventListener('click',       trap, true);
+    document.addEventListener('pointerdown', trap, true);
+    document.addEventListener('mousedown',   trap, true);
+    document.addEventListener('keydown',     trap, true);
+    return ()=>{
+      document.removeEventListener('click',       trap, true);
+      document.removeEventListener('pointerdown', trap, true);
+      document.removeEventListener('mousedown',   trap, true);
+      document.removeEventListener('keydown',     trap, true);
+    };
+  },[demoReelOn,demoReelStop]);
+
   // The promo tour. Walks DEMO_REEL_PHASES, scheduling each beat with a timer.
   // Reuses the real engine so it doubles as a working demo. Tap anywhere to skip
   // (wired to demoReelStop via the overlay + a global pointer handler).
