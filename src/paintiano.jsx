@@ -8161,16 +8161,27 @@ function rerollSong(song, structureStable) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
-// §6b  DEMO REEL  — a ~58s self-playing cinematic trailer.
+// §6b  DEMO REEL  — a ~60s self-playing cinematic trailer.
 //
 // Pure data + helpers (no React). The orchestration (timer chain that drives
 // React state) lives in the main component because it needs the live setters.
-// Here we only declare WHAT happens and WHEN, plus the 8-language overlay copy,
-// so the sequence is easy to tweak in one place.
+// Here we only declare WHAT happens and WHEN, plus the 8-language overlay copy.
 //
 // Reuses the real engine end-to-end (paints, swaps styles, runs Vary, MFI,
 // frame/print beat) — a working demo, not a canned video. Tap to skip (handled
-// in the component).
+// in the component via a fullscreen overlay).
+//
+// VISUAL RULES (from the pre-code spec):
+//   1. Fullscreen overlay covers the WHOLE viewport (not just canvas).
+//      All user interactions blocked beneath. Tap anywhere = skip.
+//   2. Title text is centred in the viewport, not in the canvas box.
+//      Large cinematic typography, gold-gradient, drop shadow. No frames.
+//   3. NO Mosaic fallback. Every beat sets an explicit style. The
+//      orchestrator re-asserts style after any load that resets it.
+//   4. Cinematic flow — fade between cards, no hard cuts.
+//   5. Short punchy text (≤4 words per card, ~3-4s on screen).
+//   6. Stable canvas size — no resizes during the reel.
+//   7. Subtle "Tap to skip" in the corner.
 //
 // Phases are time-anchored in ms from reel start. Each phase has:
 //   at      — when it fires (ms from start)
@@ -8180,104 +8191,104 @@ function rerollSong(song, structureStable) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Best-mix 7 styles for the parade beat — chosen for MAXIMUM visual contrast
-// between consecutive beats so the reel reads as "many different art worlds":
-//   pollock (chaos/drip) → mondrian (geometric grid, total contrast)
-//   → rothko (color-field calm, meditative pause)
-//   → gold (luxe metallic, retina grab)
-//   → kandinsky (Bauhaus circles+geom, detail-rich)
-//   → wave (op-art fluid motion)
-//   → pop (Lichtenstein dots+blocks, crescendo)
-// No Mosaic here — it's the default everywhere else; the parade should feel
-// fresh, like a curated gallery flash, not a repeat of the start state.
+// between consecutive beats so the reel reads as "many different art worlds".
+// No Mosaic here — it's the engine's implicit default and would feel like a
+// repeat of states between beats. The parade is a curated gallery flash.
 const DEMO_REEL_STYLE_PARADE = [
-  'pollock','mondrian','rothko','gold','kandinsky','wave','pop',
+  'pollock',    // chaos / drip — gestural, kinetic
+  'mondrian',   // geometric grid — total contrast to Pollock
+  'rothko',     // color-field — meditative pause
+  'gold',       // luxe metallic — retina grab
+  'kandinsky',  // Bauhaus circles+geom — detail-rich
+  'wave',       // op-art fluid motion
+  'pop',        // Lichtenstein dots+blocks — crescendo
 ];
 
-// The mood phrase the "AI" beat types out, then plays (offline moodToSong, so
-// it's instant + reliable — no network in the reel).
+// The mood phrase the "AI" beat types out, then plays (offline moodToSong,
+// instant + reliable — no network in the reel).
 const DEMO_REEL_MOOD = 'longing';
 
-// Overlay copy, per language. Trailer-style title cards — short, punchy. Key
-// order mirrors the phase timeline below.
+// Overlay copy, per language. Trailer-style title cards — ≤4 words, punchy.
+// Key order mirrors the phase timeline below.
 const DEMO_REEL_I18N = {
   EN: {
-    becomes:    'Music becomes painting',
-    artists:    'Many artists. One song.',
-    aiType:     'Type a feeling…',
-    aiResult:   '…and it paints itself',
-    image:      'Or paint from a picture',
-    variations: 'Endless variations',
-    print:      'Take it home',
+    becomes:    'Music. Painting.',
+    artists:    'Many artists.',
+    aiType:     'Type a feeling.',
+    aiResult:   'It paints itself.',
+    image:      'From a picture.',
+    variations: 'Endless variations.',
+    print:      'Take it home.',
     outro:      'Paintiano',
   },
   SK: {
-    becomes:    'Hudba sa mení na maľbu',
-    artists:    'Mnoho umelcov. Jedna pieseň.',
-    aiType:     'Napíš pocit…',
-    aiResult:  '…a namaľuje sa sám',
-    image:      'Alebo maľuj z obrázka',
-    variations: 'Nekonečné variácie',
-    print:      'Vezmi si ho domov',
+    becomes:    'Hudba. Maľba.',
+    artists:    'Mnoho umelcov.',
+    aiType:     'Napíš pocit.',
+    aiResult:   'Maľuje sa sám.',
+    image:      'Z obrázka.',
+    variations: 'Nekonečné variácie.',
+    print:      'Vezmi si ho.',
     outro:      'Paintiano',
   },
   DE: {
-    becomes:    'Musik wird zu Malerei',
-    artists:    'Viele Künstler. Ein Lied.',
-    aiType:     'Tippe ein Gefühl…',
-    aiResult:   '…und es malt sich selbst',
-    image:      'Oder male aus einem Bild',
-    variations: 'Endlose Variationen',
-    print:      'Nimm es mit nach Hause',
+    becomes:    'Musik. Malerei.',
+    artists:    'Viele Künstler.',
+    aiType:     'Tippe ein Gefühl.',
+    aiResult:   'Es malt sich selbst.',
+    image:      'Aus einem Bild.',
+    variations: 'Endlose Variationen.',
+    print:      'Nimm es mit.',
     outro:      'Paintiano',
   },
   FR: {
-    becomes:    'La musique devient peinture',
-    artists:    'Beaucoup d\'artistes. Une chanson.',
-    aiType:     'Écris une émotion…',
-    aiResult:   '…et ça se peint tout seul',
-    image:      'Ou peins depuis une image',
-    variations: 'Variations infinies',
-    print:      'Emporte-le chez toi',
+    becomes:    'Musique. Peinture.',
+    artists:    'Beaucoup d\'artistes.',
+    aiType:     'Écris une émotion.',
+    aiResult:   'Ça se peint seul.',
+    image:      'D\'une image.',
+    variations: 'Variations infinies.',
+    print:      'Emporte-le.',
     outro:      'Paintiano',
   },
   ES: {
-    becomes:    'La música se vuelve pintura',
-    artists:    'Muchos artistas. Una canción.',
-    aiType:     'Escribe un sentimiento…',
-    aiResult:   '…y se pinta solo',
-    image:      'O pinta desde una imagen',
-    variations: 'Variaciones infinitas',
-    print:      'Llévalo a casa',
+    becomes:    'Música. Pintura.',
+    artists:    'Muchos artistas.',
+    aiType:     'Escribe un sentimiento.',
+    aiResult:   'Se pinta solo.',
+    image:      'De una imagen.',
+    variations: 'Variaciones infinitas.',
+    print:      'Llévatelo.',
     outro:      'Paintiano',
   },
   PT: {
-    becomes:    'A música torna-se pintura',
-    artists:    'Muitos artistas. Uma canção.',
-    aiType:     'Escreve um sentimento…',
-    aiResult:   '…e pinta-se sozinho',
-    image:      'Ou pinta a partir de uma imagem',
-    variations: 'Variações infinitas',
-    print:      'Leva-o para casa',
+    becomes:    'Música. Pintura.',
+    artists:    'Muitos artistas.',
+    aiType:     'Escreve um sentimento.',
+    aiResult:   'Pinta-se sozinho.',
+    image:      'De uma imagem.',
+    variations: 'Variações infinitas.',
+    print:      'Leva-o contigo.',
     outro:      'Paintiano',
   },
   zh: {
-    becomes:    '音乐化作画作',
-    artists:    '众多艺术家。一首乐曲。',
-    aiType:     '输入一种感觉…',
-    aiResult:   '…它自己作画',
-    image:      '或从图像作画',
-    variations: '无尽变奏',
-    print:      '带回家收藏',
+    becomes:    '音乐。绘画。',
+    artists:    '众多艺术家。',
+    aiType:     '输入感觉。',
+    aiResult:   '自己作画。',
+    image:      '从图像。',
+    variations: '无尽变奏。',
+    print:      '带回家。',
     outro:      'Paintiano',
   },
   zhTW: {
-    becomes:    '音樂化作畫作',
-    artists:    '眾多藝術家。一首樂曲。',
-    aiType:     '輸入一種感覺…',
-    aiResult:   '…它自己作畫',
-    image:      '或從圖像作畫',
-    variations: '無盡變奏',
-    print:      '帶回家收藏',
+    becomes:    '音樂。繪畫。',
+    artists:    '眾多藝術家。',
+    aiType:     '輸入感覺。',
+    aiResult:   '自己作畫。',
+    image:      '從圖像。',
+    variations: '無盡變奏。',
+    print:      '帶回家。',
     outro:      'Paintiano',
   },
 };
@@ -8288,13 +8299,13 @@ function demoReelText(lang, key){
   return tbl[key] || DEMO_REEL_I18N.EN[key] || '';
 }
 
-// The phase timeline. Times are ms from reel start. The orchestrator in the
-// component reads `kind` and acts:
-//   'play-song'   — load the demo song (Für Elise) + start playback, paint live
+// The phase timeline. Times are ms from reel start. The orchestrator reads
+// `kind` and acts:
+//   'play-song'   — load demo song (Für Elise) + start playback, paint live
 //   'show-text'   — flash overlay copy (textKey)
 //   'set-style'   — switch artist style (style)
 //   'style-parade'— cycle DEMO_REEL_STYLE_PARADE on a sub-interval
-//   'ai-type'     — animate the mood phrase typing into the box
+//   'ai-type'     — animate the mood phrase typing
 //   'ai-play'     — load the offline mood song + paint
 //   'mfi'         — load built-in sample image + AI mood → paint
 //   'vary'        — trigger advanceVariation a few times
@@ -8302,44 +8313,47 @@ function demoReelText(lang, key){
 //   'outro'       — final logo card
 //   'end'         — tear down, restore UI
 //
-// Total ~58s. Tunable here without touching the orchestrator.
+// Total ~60s. Tunable here without touching the orchestrator.
 //
-// Timeline rationale (cinematic, not tutorial):
-//   0-5s   Music begins, canvas paints (single style, no parade yet)
-//          → "Music becomes painting" reads short, leaves screen by 5s
-//   5-13s  7-style parade (1.1s each) → "Many artists. One song."
-//   13-21s AI compose: type mood + auto-play offline song
-//   21-29s MFI: built-in sample image → mood → paint
-//   29-39s Variations beat (Vary 4x) with fresh styles
-//   39-46s Print/frame flourish
-//   46-52s Outro logo
-//   52s    End
+// Timeline rationale (cinematic, sustained beats, no rushed cuts):
+//   0-5s    Music begins, canvas paints (bloom style — lyrical intro)
+//           → "Music. Painting." reads short, leaves screen by 5s
+//   5-13s   7-style parade (1.1s each) → "Many artists."
+//   13-17s  AI type "longing" — typed-out phrase + "Type a feeling."
+//   17-23s  AI plays own composition (spiral style) → "It paints itself."
+//   23-31s  MFI: built-in sample image → matisse → paint → "From a picture."
+//   31-41s  Variations beat (Vary 4×) → "Endless variations."
+//   41-48s  Print/frame flourish (gold style) → "Take it home."
+//   48-54s  Outro logo
+//   54s     End
 const DEMO_REEL_PHASES = [
   { at: 0,     kind: 'play-song' },
   { at: 300,   kind: 'show-text',    textKey: 'becomes' },
   { at: 5000,  kind: 'show-text',    textKey: 'artists' },
-  { at: 5200,  kind: 'style-parade' },                              // cycles 7 styles ~1.1s each
+  { at: 5200,  kind: 'style-parade' },
   { at: 13000, kind: 'ai-type',      textKey: 'aiType' },
   { at: 17000, kind: 'ai-play',      textKey: 'aiResult' },
-  { at: 21000, kind: 'mfi',          textKey: 'image' },
-  { at: 29000, kind: 'show-text',    textKey: 'variations' },
-  { at: 29200, kind: 'vary' },
-  { at: 39000, kind: 'print-beat',   textKey: 'print' },
-  { at: 46000, kind: 'outro',        textKey: 'outro' },
-  { at: 52000, kind: 'end' },
+  { at: 23000, kind: 'mfi',          textKey: 'image' },
+  { at: 31000, kind: 'show-text',    textKey: 'variations' },
+  { at: 31200, kind: 'vary' },
+  { at: 41000, kind: 'set-style',    style: 'gold' },
+  { at: 41100, kind: 'print-beat',   textKey: 'print' },
+  { at: 48000, kind: 'outro',        textKey: 'outro' },
+  { at: 54000, kind: 'end' },
 ];
 
 // Sub-interval (ms) for the style parade beat. 7 styles × 1100ms = 7.7s, fits
-// snugly inside the 5.2s → 13s window (slight overshoot OK; the parade clears
-// when the next phase starts).
+// inside the 5.2s → 13s window. The orchestrator clears the parade when
+// ai-type fires, so a slight overshoot is OK.
 const DEMO_REEL_PARADE_STEP = 1100;
 // How many Vary triggers during the variations beat, and their spacing.
+// 4 × 2200ms = 8.8s, fits the 31.2s → 41s window.
 const DEMO_REEL_VARY_COUNT = 4;
 const DEMO_REEL_VARY_STEP = 2200;
 // MFI sub-timing: when (from start of mfi beat) to auto-press Play so the
 // sample image transitions into a painting. composeFromImage is async; for
-// the built-in sample it's a cache hit so well under 1s, but we wait a bit
-// for visual "thinking" presence + state to settle before triggering Play.
+// the built-in sample it's a cache hit so well under 1s, but we wait a beat
+// for visual "thinking" + state settle before triggering Play.
 const DEMO_REEL_MFI_PLAY_DELAY = 1800;
 // ═════════════════════════════════════════════════════════════════════════════
 // §7  PAINTIANO PRO  —  monetization (license keys, paywall, AI trial, watermark)
@@ -12886,6 +12900,10 @@ Composition rules:
         switch(ph.kind){
           case 'play-song':
             demoLoadAndPlay();
+            // demoLoadAndPlay → fullClear → stopAll → setStyle(null) under the
+            // hood. Re-assert intro style right after so the engine doesn't
+            // fall back to its implicit Mosaic default for the first beat.
+            setStyle('bloom');
             break;
           case 'show-text':
             setDemoTyping(''); setDemoPrintBeat(false);
@@ -12908,7 +12926,10 @@ Composition rules:
           }
           case 'ai-type': {
             if(bag.parade){ clearInterval(bag.parade); bag.parade=null; }
-            setStyle(null);
+            // NOTE: do NOT setStyle(null) here. style=null falls through to
+            // the engine's implicit default (Mosaic), which made the AI beat
+            // look like every other beat. Each phase explicitly owns a style.
+            setStyle('spiral');
             setDemoText('');
             const phrase=T(ph.textKey);
             let k=0; setDemoTyping('');
@@ -12924,16 +12945,20 @@ Composition rules:
             setDemoText(T(ph.textKey));
             // Offline mood song — instant, no network. Use the SAME loader as the
             // Für Elise beat (state + refs set together → canvas paints reliably).
+            // demoLoadAndPlay internally calls fullClear → stopAll → setStyle(null),
+            // so we re-assert our chosen style RIGHT AFTER, before paint starts.
             try{
               const song=moodToSong(DEMO_REEL_MOOD);
               if(song){ song._mood=DEMO_REEL_MOOD; demoLoadAndPlay(song); }
             }catch(_){}
+            setStyle('spiral');
             break;
           }
           case 'mfi': {
             // Stop the parade if still cycling.
             if(bag.parade){ clearInterval(bag.parade); bag.parade=null; }
-            setStyle(null);
+            // Same reasoning as ai-type — pick an explicit style for the MFI beat.
+            setStyle('matisse');
             setDemoText(T(ph.textKey));
             // Built-in sample image — composeFromImage cache hit, no network.
             // Shows the big image first (per the standard MFI flow), then we
@@ -12944,6 +12969,9 @@ Composition rules:
               if(!bag.active) return;
               // startPlay handles the MFI hand-off (image → thumb + paint mode).
               try{ startPlayRef.current?.(); }catch(_){}
+              // Re-assert style after the MFI hand-off since it also goes
+              // through paths that may reset style state.
+              setStyle('matisse');
             }, DEMO_REEL_MFI_PLAY_DELAY);
             bag.timers.push(playId);
             break;
@@ -14701,28 +14729,11 @@ Composition rules:
         <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
-        {demoReelOn && (
-          <div onClick={demoReelStop} role="button" aria-label="skip demo"
-            style={{position:'absolute',inset:0,zIndex:6,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'auto'}}>
-            {/* Print/frame take-out flourish — a golden mat around the canvas */}
-            {demoPrintBeat && (
-              <div style={{position:'absolute',inset:0,border:'min(5vw,28px) solid #f6f3ec',boxShadow:'inset 0 0 0 2px rgba(180,140,40,.6), 0 24px 60px rgba(0,0,0,.5)',pointerEvents:'none',transition:'all .5s ease'}}/>
-            )}
-            {/* Typed "AI" phrase — centred, same slot as the title card */}
-            {demoTyping && (
-              <div style={{padding:'10px 20px',background:'rgba(20,16,28,.6)',backdropFilter:'blur(6px)',borderRadius:10,pointerEvents:'none',maxWidth:'88%',textAlign:'center'}}>
-                <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.1rem,4vw,1.9rem)',color:'#fff',textShadow:'0 2px 14px rgba(0,0,0,.7)'}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
-              </div>
-            )}
-            {/* Trailer title card — centred */}
-            {demoText && !demoTyping && (
-              <div style={{padding:'12px 26px',background:'rgba(16,12,24,.62)',backdropFilter:'blur(6px)',borderRadius:30,border:'1px solid rgba(240,192,64,.35)',pointerEvents:'none',animation:'pfDemoFade .5s ease',maxWidth:'90%',textAlign:'center'}}>
-                <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.2rem,4.5vw,2.1rem)',letterSpacing:'.02em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>{demoText}</span>
-              </div>
-            )}
-            {/* Skip hint, top-right */}
-            <div style={{position:'absolute',top:10,right:12,fontSize:(.58*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(247,243,236,.7)',background:'rgba(16,12,24,.55)',padding:'4px 10px',borderRadius:14,pointerEvents:'none'}}>{t('demoSkip')}</div>
-          </div>
+        {demoReelOn && demoPrintBeat && (
+          /* Golden frame around the canvas — print-beat flourish. Stays here
+             (not in the fullscreen overlay) because it visually wraps the
+             canvas itself, not the whole screen. No pointer events. */
+          <div style={{position:'absolute',inset:0,border:'min(5vw,28px) solid #f6f3ec',boxShadow:'inset 0 0 0 2px rgba(180,140,40,.6), 0 24px 60px rgba(0,0,0,.5)',pointerEvents:'none',transition:'all .5s ease',zIndex:5}}/>
         )}
         {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(()=>{
           const cell=grid.cells[selectedChordIdx];
@@ -15285,6 +15296,38 @@ Composition rules:
           activateLicense={activateLicense}
           readScale={effScale}
         />
+      )}
+      {/* ── FULLSCREEN DEMO REEL OVERLAY ───────────────────────────────────
+          Renders OUTSIDE canvasWrap so it covers the ENTIRE viewport, not
+          just the canvas box. On PC the canvas is centred in a wide layout,
+          so an overlay scoped to the canvas leaves titles cramped and lets
+          buttons (Clear, Play, language, etc.) stay clickable underneath.
+          This fixed overlay:
+            • covers 100dvw × 100dvh
+            • centres text in the actual viewport
+            • blocks ALL user interactions (pointer-events: auto, no children
+              are clickable except the skip layer itself)
+            • tap anywhere = skip
+          Print-beat (golden frame around the canvas) stays inside canvasWrap
+          because it visually wraps the canvas, not the screen. ── */}
+      {demoReelOn && (
+        <div onClick={demoReelStop} role="button" aria-label={t('demoSkip')||'skip demo'}
+          style={{position:'fixed',inset:0,zIndex:99998,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',background:'transparent'}}>
+          {/* Centred title slot — uses flex on the overlay itself, so text
+              always sits dead-centre of the viewport regardless of canvas size. */}
+          {demoTyping && (
+            <div style={{padding:'12px 24px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center'}}>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.6rem,5vw,3.2rem)',color:'#fff',textShadow:'0 2px 18px rgba(0,0,0,.85), 0 0 30px rgba(0,0,0,.6)',letterSpacing:'.02em'}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
+            </div>
+          )}
+          {demoText && !demoTyping && (
+            <div style={{padding:'14px 32px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',animation:'pfDemoFade .55s ease'}}>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.8rem,5.5vw,3.6rem)',letterSpacing:'.025em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent',textShadow:'0 6px 30px rgba(0,0,0,.55)',filter:'drop-shadow(0 2px 8px rgba(0,0,0,.65))'}}>{demoText}</span>
+            </div>
+          )}
+          {/* Skip hint — small, top-right of viewport */}
+          <div style={{position:'fixed',top:14,right:18,fontSize:'.62rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(247,243,236,.55)',background:'rgba(16,12,24,.45)',padding:'5px 12px',borderRadius:14,pointerEvents:'none',backdropFilter:'blur(4px)'}}>{t('demoSkip')||'tap to skip'}</div>
+        </div>
       )}
     </div>
   );
