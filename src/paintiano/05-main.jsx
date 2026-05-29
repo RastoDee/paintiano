@@ -510,6 +510,7 @@ export default function Paintiano() {
   const saltIdxRef = useRef(0);
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
   const [lang, setLang] = useState(()=>{try{return localStorage.getItem('paintiano_lang')||'EN';}catch(_){return 'EN';}});
+  const [langOpen, setLangOpen] = useState(false);
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
 
   // ─── Paintiano Pro state (from 07-pro.jsx) ───
@@ -4378,11 +4379,11 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20}}>
-        <nav style={{display:'flex',gap:18,fontSize:'.6rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
+        <nav style={{display:'flex',gap:18,fontSize:(0.6*readScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)'}}>{t('concept')}</span>
           <span onClick={()=>{
             if(busy)return;
@@ -4401,7 +4402,59 @@ Composition rules:
           {!isPro && <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.9)',color:'rgba(201,168,76,.95)',fontWeight:600}}>{t('proBadge')}</span>}
           {isPro && <span title={maskedEmail||''} style={{paddingBottom:2,color:'rgba(201,168,76,.7)'}}>✦ {t('proManageActive')}</span>}
         </nav>
-        <button onClick={()=>changeLang(LANGS[(LANGS.indexOf(lang)+1)%LANGS.length])} aria-label={`switch language (currently ${lang})`} title={`switch language (currently ${lang})`} style={{padding:'5px 13px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.14em'}}>{lang}</button>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{padding:'4px 10px',background:readScale>1?'rgba(201,168,76,.12)':PF.faint,color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'1px solid '+(readScale>1?'rgba(201,168,76,.4)':'rgba(242,238,232,.15)'),borderRadius:20,cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:5,fontWeight:600}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>
+        <div style={{position:'relative'}}>
+          {(() => {
+            const LANG_META = {
+              EN:{code:'EN',name:'English'},
+              DE:{code:'DE',name:'Deutsch'},
+              FR:{code:'FR',name:'Français'},
+              ES:{code:'ES',name:'Español'},
+              PT:{code:'PT',name:'Português'},
+              SK:{code:'SK',name:'Slovenčina'},
+              zh:{code:'ZH',name:'中文'},
+              zhTW:{code:'ZH-TW',name:'繁體中文'},
+            };
+            const meta = LANG_META[lang] || {code:lang,name:lang};
+            const pill = (code, active=false) => ({
+              display:'inline-flex',alignItems:'center',justifyContent:'center',
+              minWidth: code.length>2 ? 38 : 26, height:20,
+              padding:'0 6px', borderRadius:4,
+              background: active ? 'rgba(201,168,76,.18)' : 'rgba(242,238,232,.08)',
+              border: active ? '1px solid rgba(201,168,76,.45)' : '1px solid rgba(242,238,232,.12)',
+              color: active ? 'rgba(220,180,90,.95)' : 'rgba(207,197,168,.78)',
+              fontSize:'.58rem', fontWeight:600, letterSpacing:'.08em', fontFamily:'inherit',
+            });
+            return (
+              <>
+                <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{padding:'4px 10px 4px 4px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:7}}><span style={pill(meta.code,true)}>{meta.code}</span><span>{meta.name}</span><span style={{fontSize:'.55rem',opacity:.6,marginLeft:1}}>▾</span></button>
+                {langOpen && (
+                  <>
+                    <div onClick={()=>setLangOpen(false)} style={{position:'fixed',inset:0,zIndex:50}}/>
+                    <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,minWidth:200,background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'6px 0',boxShadow:'0 12px 30px rgba(0,0,0,.6)',zIndex:51,backdropFilter:'blur(8px)'}}>
+                      {LANGS.map(l => {
+                        const m = LANG_META[l] || {code:l,name:l};
+                        const active = l === lang;
+                        return (
+                          <div key={l} role="button" tabIndex={0}
+                            onClick={()=>{changeLang(l);setLangOpen(false);}}
+                            onKeyDown={(e)=>{if(e.key==='Enter'||e.key==='\u0020'){e.preventDefault();changeLang(l);setLangOpen(false);}}}
+                            style={{padding:'8px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:11,fontSize:'.72rem',color:active?'rgba(220,180,90,.95)':'rgba(242,238,232,.85)',background:active?'rgba(201,168,76,.06)':'transparent',fontWeight:active?500:400,letterSpacing:'.02em'}}>
+                            <span style={pill(m.code,active)}>{m.code}</span>
+                            <span style={{flex:1}}>{m.name}</span>
+                            {active && <span style={{color:'rgba(201,168,76,.9)',fontSize:'.7rem'}}>✓</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </>
+            );
+          })()}
+        </div>
+        </div>
       </div>
       <header style={{textAlign:'center',marginBottom:isActiveView?8:18}}>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
@@ -4465,7 +4518,7 @@ Composition rules:
                 disabled={sourcePickerLocked}
                 placeholder={t('moodPlaceholder')}
                 title={recording?t('stopRecFirst'):t('moodPlaceholder')}
-                style={{flex:1,minWidth:0,background:'transparent',border:'none',padding:'13px 48px 13px 36px',color:PF.cream,fontSize:'16px',fontFamily:"'Cormorant Garamond',serif",outline:'none',opacity:sourcePickerLocked?0.4:1}}/>
+                style={{flex:1,minWidth:0,background:'transparent',border:'none',padding:'13px 48px 13px 36px',color:PF.cream,fontSize:(16*readScale)+'px',fontFamily:'inherit',outline:'none',opacity:sourcePickerLocked?0.4:1}}/>
               <button onClick={()=>{ goMood(songQ); }} disabled={sourcePickerLocked||!songQ.trim()} aria-label={t('moodGo')||'go'} title={t('moodGo')||'go'} style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,border:'none',cursor:(sourcePickerLocked||!songQ.trim())?'default':'pointer',background:songQ.trim()?PF.gold:'rgba(201,168,76,.2)',color:songQ.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700,opacity:sourcePickerLocked?0.4:1,transition:'all .18s'}}>→</button>
               </div>
               {showSug && (
@@ -5011,7 +5064,7 @@ Composition rules:
 
       {working && (
         <div style={{width:'100%',maxWidth:480,marginBottom:10}}>
-          <div style={{fontSize:'.7rem',letterSpacing:'.06em',marginBottom:6,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
+          <div style={{fontSize:(0.7*readScale)+'rem',letterSpacing:'.06em',marginBottom:6,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
           <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
             <div style={{height:'100%',width:wPct+'%',background:'rgba(210,140,255,.85)',borderRadius:2,transition:'width .3s'}}/>
           </div>
