@@ -5787,6 +5787,7 @@ const I18N = {
     mfiRecent:'Recent',
     recentAiGenerated:'Recently AI generated',
     recentPlayed:'Recently played',
+    today:'Today',
     trialBanner1:'Only 1 AI trial left · Get Pro for unlimited',
     trialBanner2:'Only 2 AI trials left · Get Pro for unlimited',
     morphAiUnavailable:'Morph for AI generated mood unavailable',
@@ -5886,6 +5887,7 @@ const I18N = {
     mfiRecent:'Zuletzt',
     recentAiGenerated:'Zuletzt KI-generiert',
     recentPlayed:'Zuletzt gespielt',
+    today:'Heute',
     trialBanner1:'Nur noch 1 KI-Versuch · Hol dir Pro für unbegrenzt',
     trialBanner2:'Nur noch 2 KI-Versuche · Hol dir Pro für unbegrenzt',
     morphAiUnavailable:'Morph für KI-generierte Stimmung nicht verfügbar',
@@ -5985,6 +5987,7 @@ const I18N = {
     mfiRecent:'Récents',
     recentAiGenerated:'Générés par IA récemment',
     recentPlayed:'Joués récemment',
+    today:"Aujourd'hui",
     trialBanner1:"Plus qu'1 essai IA · Passez à Pro pour l'illimité",
     trialBanner2:"Plus que 2 essais IA · Passez à Pro pour l'illimité",
     morphAiUnavailable:'Morph indisponible pour les ambiances IA',
@@ -6084,6 +6087,7 @@ const I18N = {
     mfiRecent:'Recientes',
     recentAiGenerated:'Generados por IA recientemente',
     recentPlayed:'Reproducidos recientemente',
+    today:'Hoy',
     trialBanner1:'Solo 1 prueba IA restante · Pro para ilimitado',
     trialBanner2:'Solo 2 pruebas IA restantes · Pro para ilimitado',
     morphAiUnavailable:'Morph no disponible para mood generado por IA',
@@ -6183,6 +6187,7 @@ const I18N = {
     mfiRecent:'Nedávne',
     recentAiGenerated:'Nedávno AI vygenerované',
     recentPlayed:'Nedávno prehraté',
+    today:'Dnes',
     trialBanner1:'Zostáva už len 1 AI skúška · Pro pre neobmedzené',
     trialBanner2:'Zostávajú už len 2 AI skúšky · Pro pre neobmedzené',
     morphAiUnavailable:'Morph nedostupný pre AI generovaný mood',
@@ -6282,11 +6287,13 @@ const I18N = {
     mfiRecent:'最近',
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
+    today:'今天',
     trialBanner1:'仅剩 1 次 AI 试用 · 升级 Pro 享无限',
     trialBanner2:'仅剩 2 次 AI 试用 · 升级 Pro 享无限',
     morphAiUnavailable:'AI 生成的情绪不支持 Morph',
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
+    today:'今天',
     trialBanner1:'僅剩 1 次 AI 試用 · 升級 Pro 享無限',
     trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro 享無限',
     morphAiUnavailable:'AI 生成的情緒不支援 Morph',
@@ -6480,6 +6487,7 @@ const I18N = {
     mfiRecent:'Recentes',
     recentAiGenerated:'Gerados por IA recentemente',
     recentPlayed:'Reproduzidos recentemente',
+    today:'Hoje',
     trialBanner1:'Resta apenas 1 teste IA · Pro para ilimitado',
     trialBanner2:'Restam apenas 2 testes IA · Pro para ilimitado',
     morphAiUnavailable:'Morph indisponível para mood gerado por IA',
@@ -11643,6 +11651,87 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
   },[style,aiRecording,currentMood,moodFromImg,composeSource]);
 
+  // ── Compose piano "recent 3" list ───────────────────────────────────────────
+  // Live keyboard performances are saved on Back (when chords were recorded).
+  // No AI was involved — these are pure local creations. Label is "♪ Today HH:MM"
+  // or "♪ DD Mon HH:MM" depending on the timestamp. Style picked at save time
+  // is restored on recall, matching the MFI / AI compose behaviour.
+  const COMPOSE_RECENT_KEY='paintiano_compose_recent_v1';
+  const [composeRecent,setComposeRecent]=useState(()=>{
+    try{ const raw=localStorage.getItem(COMPOSE_RECENT_KEY); return raw?(JSON.parse(raw)||[]):[]; }
+    catch(_){ return []; }
+  });
+  // Show "♪ Today 17:48" if from today, else "♪ 29 May 17:48".
+  const _composeRecentLabel=useCallback((ts)=>{
+    try{
+      const d=new Date(ts||Date.now());
+      const now=new Date();
+      const sameDay = d.getFullYear()===now.getFullYear()
+                   && d.getMonth()===now.getMonth()
+                   && d.getDate()===now.getDate();
+      const hh=String(d.getHours()).padStart(2,'0');
+      const mm=String(d.getMinutes()).padStart(2,'0');
+      const tm=hh+':'+mm;
+      if(sameDay) return '♪ '+(t('today')||'Today')+' '+tm;
+      const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return '♪ '+d.getDate()+' '+mons[d.getMonth()]+' '+tm;
+    }catch(_){ return '♪ '+(t('recentPlayed')||'recent'); }
+  },[t]);
+  const _composeRecentAdd=useCallback((chordsArr,gridSnap)=>{
+    // Strip down chord events to a compact, replayable shape. We only need
+    // notes (m/v/durMs), startMs (so timing is preserved), and basic structure
+    // info to redraw — same fields applyEvents expects to find.
+    if(!chordsArr || !chordsArr.length) return;
+    try{
+      // Compact chord serialization: drop derived fields, keep essential.
+      const compact = chordsArr.map(c=>({
+        n: (c.n||[]).map(nn=>({m:nn.m, v:nn.v, durMs:nn.durMs})),
+        startMs: c.startMs||0,
+        durQ: c.durQ
+      }));
+      const entry={
+        id: Date.now(),
+        ts: Date.now(),
+        chords: compact,
+        grid: gridSnap || null,   // saved grid so we redraw on the same N×rows
+        style: styleRef.current || null
+      };
+      setComposeRecent(prev=>{
+        // No dedupe by content — every Back is a separate performance. Just cap 3.
+        const next=[entry,...prev].slice(0,3);
+        try{ localStorage.setItem(COMPOSE_RECENT_KEY, JSON.stringify(next)); }catch(_){}
+        return next;
+      });
+    }catch(_){ /* storage disabled — skip silently */ }
+  },[]);
+  const _composeRecall=useCallback((entry)=>{
+    if(!entry || !entry.chords || !entry.chords.length) return;
+    try{
+      stopAll();
+      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null);
+      setImgMoodThumb(null); setMoodFromImg(false); setForceSetup(false);
+      setStructureSeedLock(null); setMoodContext(false); setCurrentMood(null);
+      setVarySource(null); setComposeSource(null);
+      // Rehydrate chords — pre-sort notes high→low like applyEvents does, and
+      // re-index idx so draw functions stay happy.
+      const evts = entry.chords.map((c,i)=>{
+        const n = (c.n||[]).slice().sort((a,b)=>b.m-a.m);
+        return { n, startMs:c.startMs||0, durQ:c.durQ, idx:i };
+      });
+      const lastMs = evts[evts.length-1]?.startMs || 0;
+      if(entry.grid) setGrid(entry.grid);
+      setChords(evts);
+      setInfo({ title: _composeRecentLabel(entry.ts), count: evts.length, dur: Math.round(lastMs/1000) });
+      setDisp(evts.length); idxRef.current = evts.length;
+      setPlaybackSpeed(1); playbackSpeedRef.current = 1;
+      composedModeRef.current = false;
+      if(entry.style){ setStyle(entry.style); }
+      // Leave composeMode OFF — recall opens on the canvas, not keyboard.
+      setComposeMode(false);
+    }catch(_){}
+  },[stopAll,_composeRecentLabel]);
+  const [showComposeRecent,setShowComposeRecent]=useState(false);
+
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   // isSample=true means it's the built-in sample (loadSampleImgMood), which we
   // don't add to "Recently AI generated" — sample stays accessible via its own
@@ -13726,6 +13815,12 @@ Composition rules:
             // then just flip the mode off, draft safely preserved for ← Canvas.
             if(composeMode && draftOwnerRef.current==='compose') stashDraft('compose');
             if((micPainting||micListening) && (draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen')) stashDraft(draftOwnerRef.current);
+            // Save the compose performance to "Recently played" before tearing
+            // down. Min 3 chords so accidental opens aren't saved. Captured here
+            // (before wipeCanvasNow / clear) while chords still hold the user's notes.
+            if(composeMode && chordsRef.current && chordsRef.current.length>=3){
+              try{ _composeRecentAdd(chordsRef.current, gridRef.current); }catch(_){}
+            }
             if(keepResume){
               resumeFromRef.current=dispRef.current; setHoldPaused(true);
               genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];timersSet.current.clear();
@@ -13758,6 +13853,11 @@ Composition rules:
           {/* ← back to image — shown after an image→atmosphere jump, restores the photo */}
           {imgReturnUrl && !composeMode && !micActive && moodContext && (
             <button onClick={()=>{if(recording)return;returnToImage();}} disabled={recording} className="pf-lift" title={t('backToImage')||'back to image'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToImage')||'image'}</button>
+          )}
+          {/* ♪ Recently played — opens a picker of saved compose performances.
+              Only visible in compose mode and only if any saved entries exist. */}
+          {composeMode && composeRecent.length>0 && (
+            <button onClick={()=>{if(recording)return;setShowComposeRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recent'}</button>
           )}
         </div>
         <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
@@ -14512,6 +14612,22 @@ Composition rules:
           readScale={effScale}
           setReadScale={setReadScale}
         />
+      )}
+
+      {showComposeRecent && (
+        <div onClick={()=>setShowComposeRecent(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recently played'}</div>
+            <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
+              {composeRecent.map(entry=>(
+                <button key={entry.id} onClick={()=>{ _composeRecall(entry); setShowComposeRecent(false); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.66*effScale)+'rem',textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  {_composeRecentLabel(entry.ts)}
+                </button>
+              ))}
+            </div>
+            <button onClick={()=>setShowComposeRecent(false)} style={{display:'block',margin:'0 auto',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em'}}>cancel</button>
+          </div>
+        </div>
       )}
 
       {showMoodMenu && (
