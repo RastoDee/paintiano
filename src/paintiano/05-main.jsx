@@ -711,6 +711,11 @@ export default function Paintiano() {
   // Clicking the active artist a second time deselects, returning to mosaic.
   // Only affects music-mode rendering; image-mode ignores this.
   const [style, setStyle] = useState(null);
+  // Mirror `style` into a ref so callbacks reading the current style at trigger
+  // time (e.g. _mfiRecentAdd, _aiComposeRecentAdd) get the freshest value
+  // without becoming dependent on `style` (and re-creating on every switch).
+  const styleRef = useRef(null);
+  useEffect(()=>{ styleRef.current = style; }, [style]);
   // Notes mode: a Mosaic sub-mode (mood only) that writes note NAMES instead of
   // colour blocks. Toggled by tapping the active Mosaic chip; auto-reset when any
   // artist style is chosen, or when the source is not a mood.
@@ -2701,11 +2706,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   }),[]);
   // Push a new piece to the front of the recent list, dedupe by recipe hash,
   // cap at 3. recipe = {notes, tempo, title}; thumb = tiny data URL.
+  // `style` is captured as the user's currently picked art style at gen time;
+  // null = random (which is the default when no specific style has been picked).
   const _mfiRecentAdd=useCallback(async(srcUrl,recipe)=>{
     try{
       const thumb=await _mfiTinyThumb(srcUrl);
       const entry={ id:Date.now(), thumb, title:recipe.title||'✦',
-                    notes:recipe.notes||[], tempo:recipe.tempo||90 };
+                    notes:recipe.notes||[], tempo:recipe.tempo||90,
+                    style: styleRef.current || null };
       setMfiRecent(prev=>{
         // Dedupe by title only — Vary creates new note arrays with the same
         // title, and we want the latest variation to replace the old entry
@@ -2726,7 +2734,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const idx=prev.findIndex(p=>p.title===title);
       if(idx<0) return prev;
       const next=prev.slice();
-      next[idx]={ ...prev[idx], notes, tempo:tempo||prev[idx].tempo||90, id:Date.now() };
+      next[idx]={ ...prev[idx], notes, tempo:tempo||prev[idx].tempo||90,
+                  style: styleRef.current || prev[idx].style || null,
+                  id:Date.now() };
       // Move updated entry to front so it stays "latest" in the picker.
       const updated=next.splice(idx,1)[0];
       next.unshift(updated);
@@ -2754,6 +2764,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setStructureSeedLock(null); setVarySource({notes:_varyNotes,tempo:entry.tempo||90,title});
       applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title);
       setSongQ(''); setImgMoodThumb(entry.thumb||null); setMoodFromImg(true);
+      // Restore the style the user had picked when this piece was saved. If the
+      // entry pre-dates the style-snapshot feature, entry.style is null and we
+      // leave the current style untouched.
+      if(entry.style){ setStyle(entry.style); }
       // Recall = full painting visible immediately in current style (no Play needed
       // to reveal it). applyEvents sets disp=0; override so all blocks render now.
       setDisp(evts.length); idxRef.current=evts.length;
@@ -2774,7 +2788,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _aiComposeRecentAdd=useCallback((title,notes,tempo)=>{
     if(!title||!notes||!notes.length) return;
     try{
-      const entry={ id:Date.now(), title, notes, tempo:tempo||90 };
+      const entry={ id:Date.now(), title, notes, tempo:tempo||90,
+                    style: styleRef.current || null };
       setAiComposeRecent(prev=>{
         // Dedupe by title — same title (cache hit OR replayed Vary) replaces.
         const next=[entry,...prev.filter(p=>p.title!==entry.title)].slice(0,3);
@@ -2790,7 +2805,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const idx=prev.findIndex(p=>p.title===title);
       if(idx<0) return prev;
       const next=prev.slice();
-      next[idx]={ ...prev[idx], notes, tempo:tempo||prev[idx].tempo||90, id:Date.now() };
+      next[idx]={ ...prev[idx], notes, tempo:tempo||prev[idx].tempo||90,
+                  style: styleRef.current || prev[idx].style || null,
+                  id:Date.now() };
       const updated=next.splice(idx,1)[0];
       next.unshift(updated);
       try{ localStorage.setItem(AI_COMPOSE_RECENT_KEY, JSON.stringify(next)); }catch(_){}
@@ -2814,11 +2831,43 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setImgMoodThumb(null); setMoodFromImg(false);
       applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title);
       setSongQ(title);
+      // Restore the style the user had picked when this piece was saved. Null
+      // in legacy entries (pre style-snapshot) → leave current style untouched.
+      if(entry.style){ setStyle(entry.style); }
       // Recall = full painting visible immediately in current style.
       setDisp(evts.length); idxRef.current=evts.length;
       try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(_){}
   },[stopAll,applyEvents]);
+
+  // When the user picks a different style while an AI piece is on-screen, sync
+  // it into that piece's recent entry so revisiting it later restores the same
+  // style automatically. Lookup is by currentMood (=== entry.title). MFI vs AI
+  // compose is distinguished by moodFromImg + composeSource. No write happens
+  // if no matching entry is found, so picking style with no piece active or for
+  // a library/offline mood is a no-op.
+  useEffect(()=>{
+    if(!currentMood || composeSource!=='ai') return;
+    if(moodFromImg){
+      setMfiRecent(prev=>{
+        const idx=prev.findIndex(p=>p.title===currentMood);
+        if(idx<0 || prev[idx].style===style) return prev;
+        const next=prev.slice();
+        next[idx]={ ...prev[idx], style: style||null };
+        try{ localStorage.setItem(MFI_RECENT_KEY, JSON.stringify(next)); }catch(_){}
+        return next;
+      });
+    } else {
+      setAiComposeRecent(prev=>{
+        const idx=prev.findIndex(p=>p.title===currentMood);
+        if(idx<0 || prev[idx].style===style) return prev;
+        const next=prev.slice();
+        next[idx]={ ...prev[idx], style: style||null };
+        try{ localStorage.setItem(AI_COMPOSE_RECENT_KEY, JSON.stringify(next)); }catch(_){}
+        return next;
+      });
+    }
+  },[style,currentMood,moodFromImg,composeSource]);
 
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   // isSample=true means it's the built-in sample (loadSampleImgMood), which we
