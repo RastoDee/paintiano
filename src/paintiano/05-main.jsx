@@ -4113,6 +4113,24 @@ Composition rules:
             }catch(_){}
             break;
           }
+          case 'mfi': {
+            // Stop the parade if still cycling.
+            if(bag.parade){ clearInterval(bag.parade); bag.parade=null; }
+            setStyle(null);
+            setDemoText(T(ph.textKey));
+            // Built-in sample image — composeFromImage cache hit, no network.
+            // Shows the big image first (per the standard MFI flow), then we
+            // auto-trigger Play after a short beat so the canvas paints itself
+            // — viewer sees the picture become music + painting end-to-end.
+            try{ loadSampleImgMood(); }catch(_){}
+            const playId = setTimeout(()=>{
+              if(!bag.active) return;
+              // startPlay handles the MFI hand-off (image → thumb + paint mode).
+              try{ startPlayRef.current?.(); }catch(_){}
+            }, DEMO_REEL_MFI_PLAY_DELAY);
+            bag.timers.push(playId);
+            break;
+          }
           case 'vary': {
             setDemoText(T(ph.textKey||'variations'));
             let n=0;
@@ -4139,7 +4157,7 @@ Composition rules:
         }
       });
     });
-  },[busy,lang,demoLoadAndPlay,demoReelStop,advanceVariation]);
+  },[busy,lang,demoLoadAndPlay,demoReelStop,advanceVariation,loadSampleImgMood]);
 
   const handlePauseClick=useCallback(()=>{
     // If a live mic mode is active (Voice=micPainting or Music=micListening),
