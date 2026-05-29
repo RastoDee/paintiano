@@ -19,7 +19,7 @@ const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered,
       onTouchEnd={(e)=>{e.preventDefault();if(!disabled)releaseNote(midi);}}
       onTouchCancel={()=>{if(!disabled)releaseNote(midi);}}
       onContextMenu={(e)=>e.preventDefault()}
-      style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:isActive?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:'.42rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
+      style={{position:'absolute',left:wi*WKW,width:WKW-1,height:WKH,background:wkBg,borderRadius:'0 0 5px 5px',border:'1px solid rgba(0,0,0,.28)',cursor:busy&&!playing?'default':'pointer',boxShadow:isActive?'0 2px 4px rgba(0,0,0,.3)':'0 4px 8px rgba(0,0,0,.4)',zIndex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:4,fontSize:(.42*readScale)+'rem',color:'rgba(0,0,0,.35)',transition:'background .08s ease',WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none'}}>
       {midi%12===0?'C'+(Math.floor(midi/12)-1):''}
     </div>
   );
@@ -119,16 +119,16 @@ const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setRea
   useModalFocusTrap(panelRef);
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.65,fontFamily:'inherit',position:'relative'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:(.78*readScale)+'rem',lineHeight:1.65,fontFamily:'inherit',position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:14,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
+        <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:14,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
         <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(201,168,76,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
         <style>{`#pf-concept-body{font-size:${(0.78*readScale).toFixed(3)}rem;}
 #pf-concept-body h3{font-size:${(1*readScale).toFixed(3)}rem !important;}
 #pf-concept-body p,#pf-concept-body li{font-size:${(0.82*readScale).toFixed(3)}rem !important;line-height:1.65;}
 #pf-concept-body strong,#pf-concept-body em{font-size:inherit !important;}`}</style>
         <div id="pf-concept-body">{getConcept(lang)}</div>
-        <button onClick={onClose} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
+        <button onClick={onClose} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
       </div>
     </div>
   );
@@ -144,9 +144,9 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
   useModalFocusTrap(panelRef);
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:'.78rem',lineHeight:1.6,fontFamily:'inherit',position:'relative'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:(.78*readScale)+'rem',lineHeight:1.6,fontFamily:'inherit',position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
+        <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
         <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(140,200,255,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(140,200,255,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
         <input
           type="search"
@@ -161,7 +161,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
           inputMode="search"
           enterKeyHint="search"
           aria-label={t('searchGuide')}
-          style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:'.78rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
+          style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:(.78*readScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
         />
         <div>
         {(() => {
@@ -187,7 +187,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
           });
         })()}
         </div>
-        <button onClick={onClose} style={{display:'block',margin:'20px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
+        <button onClick={onClose} style={{display:'block',margin:'20px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
       </div>
     </div>
   );
@@ -205,7 +205,7 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-palette-title" style={{maxWidth:420,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'24px 22px',color:'rgba(207,197,168,.88)',fontFamily:"'Cormorant Garamond','Palatino Linotype',Georgia,serif",position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-palette-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>{t('paletteEditorTitle')}</div>
+        <div id="paintiano-palette-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('paletteEditorTitle')}</div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(4, 1fr)',gap:10,marginBottom:18}}>
           {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].map((label,pc)=>(
             <label key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,cursor:'pointer'}}>
@@ -216,7 +216,7 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
                   setCustomPalette(next);
                 }} style={{position:'absolute',inset:0,opacity:0,cursor:'pointer',width:'100%',height:'100%'}} aria-label={label}/>
               </div>
-              <span style={{fontSize:'.65rem',letterSpacing:'.06em',color:'rgba(207,197,168,.7)'}}>{label}</span>
+              <span style={{fontSize:(.65*readScale)+'rem',letterSpacing:'.06em',color:'rgba(207,197,168,.7)'}}>{label}</span>
             </label>
           ))}
         </div>
@@ -230,14 +230,14 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
               const [r,g,b]=fromHsl(oppHue,80,55);
               return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
             }));
-          }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
+          }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
           <button onClick={()=>{
             // Clear all: reset every pitch class to neutral light grey.
             // The user starts from a blank slate and picks each color
             // themselves — no implicit harmony or spectral seed.
             setCustomPalette(Array(12).fill('#888888'));
-          }} style={{padding:'8px 16px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.3)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('resetPalette')}</button>
-          <button onClick={onClose} style={{padding:'8px 22px',background:'rgba(201,168,76,.15)',color:GOLD,border:'1px solid rgba(201,168,76,.45)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.12em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
+          }} style={{padding:'8px 16px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.3)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('resetPalette')}</button>
+          <button onClick={onClose} style={{padding:'8px 22px',background:'rgba(201,168,76,.15)',color:GOLD,border:'1px solid rgba(201,168,76,.45)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.12em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
         </div>
       </div>
     </div>
@@ -344,10 +344,10 @@ function IntroSplash({ onDone, tagline, skipLabel }){
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'3rem',fontWeight:600,letterSpacing:'.04em',
           background:`linear-gradient(95deg,${PF.gold2},${PF.cream} 50%,${PF.gold})`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent',
           opacity:titleIn?1:0,transform:titleIn?'translateY(0) scale(1)':'translateY(10px) scale(.96)',transition:'opacity .8s ease, transform .9s cubic-bezier(.2,.8,.2,1)',textShadow:'0 4px 30px rgba(0,0,0,.5)'}}>Paintiano</div>
-        <div style={{fontFamily:"'Outfit',sans-serif",fontSize:'.6rem',letterSpacing:'.34em',textTransform:'uppercase',color:PF.cream,marginTop:12,transformOrigin:'center top',
+        <div style={{fontFamily:"'Outfit',sans-serif",fontSize:(.6*readScale)+'rem',letterSpacing:'.34em',textTransform:'uppercase',color:PF.cream,marginTop:12,transformOrigin:'center top',
           opacity:titleIn?0.8:0,transform:titleIn?'scale(1)':'scale(2.4)',transition:'opacity .7s ease .8s, transform 1.0s cubic-bezier(.18,.7,.16,1) .8s'}}>{tagline}</div>
       </div>
-      <div style={{position:'absolute',bottom:30,left:0,right:0,textAlign:'center',fontFamily:"'Outfit',sans-serif",fontSize:'.5rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.28)',pointerEvents:'none'}}>{skipLabel}</div>
+      <div style={{position:'absolute',bottom:30,left:0,right:0,textAlign:'center',fontFamily:"'Outfit',sans-serif",fontSize:(.5*readScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.28)',pointerEvents:'none'}}>{skipLabel}</div>
     </div>
   );
 }
@@ -4175,7 +4175,7 @@ Composition rules:
   const pianoColor={loading:'rgba(207,197,168,.35)',ready:'rgba(90,190,110,.55)',error:'rgba(201,168,76,.55)'};
   const pianoLabel={loading:t('loadingPiano'),ready:t('grandPiano'),error:t('synthPiano')};
   const changeLang=(l)=>{setLang(l);try{localStorage.setItem('paintiano_lang',l);}catch(_){}}
-  const btn=(ex={})=>({background:'transparent',border:'1px solid',borderRadius:2,fontSize:'.7rem',letterSpacing:'.12em',padding:'5px 14px',cursor:'pointer',textTransform:'uppercase',color:'rgba(207,197,168,.7)',borderColor:'rgba(207,197,168,.2)',...ex});
+  const btn=(ex={})=>({background:'transparent',border:'1px solid',borderRadius:2,fontSize:(.7*readScale)+'rem',letterSpacing:'.12em',padding:'5px 14px',cursor:'pointer',textTransform:'uppercase',color:'rgba(207,197,168,.7)',borderColor:'rgba(207,197,168,.2)',...ex});
 
   // Export the painting as a high-resolution PNG.
   // Artifact iframes block <a download>, window.open, and rewrite blob: URLs to a
@@ -4424,11 +4424,11 @@ Composition rules:
               background: active ? 'rgba(201,168,76,.18)' : 'rgba(242,238,232,.08)',
               border: active ? '1px solid rgba(201,168,76,.45)' : '1px solid rgba(242,238,232,.12)',
               color: active ? 'rgba(220,180,90,.95)' : 'rgba(207,197,168,.78)',
-              fontSize:'.58rem', fontWeight:600, letterSpacing:'.08em', fontFamily:'inherit',
+              fontSize:(.58*readScale)+'rem', fontWeight:600, letterSpacing:'.08em', fontFamily:'inherit',
             });
             return (
               <>
-                <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{padding:'4px 10px 4px 4px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:7}}><span style={pill(meta.code,true)}>{meta.code}</span><span>{meta.name}</span><span style={{fontSize:'.55rem',opacity:.6,marginLeft:1}}>▾</span></button>
+                <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{padding:'4px 10px 4px 4px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:(.62*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:7}}><span style={pill(meta.code,true)}>{meta.code}</span><span>{meta.name}</span><span style={{fontSize:(.55*readScale)+'rem',opacity:.6,marginLeft:1}}>▾</span></button>
                 {langOpen && (
                   <>
                     <div onClick={()=>setLangOpen(false)} style={{position:'fixed',inset:0,zIndex:50}}/>
@@ -4440,10 +4440,10 @@ Composition rules:
                           <div key={l} role="button" tabIndex={0}
                             onClick={()=>{changeLang(l);setLangOpen(false);}}
                             onKeyDown={(e)=>{if(e.key==='Enter'||e.key==='\u0020'){e.preventDefault();changeLang(l);setLangOpen(false);}}}
-                            style={{padding:'8px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:11,fontSize:'.72rem',color:active?'rgba(220,180,90,.95)':'rgba(242,238,232,.85)',background:active?'rgba(201,168,76,.06)':'transparent',fontWeight:active?500:400,letterSpacing:'.02em'}}>
+                            style={{padding:'8px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:11,fontSize:(.72*readScale)+'rem',color:active?'rgba(220,180,90,.95)':'rgba(242,238,232,.85)',background:active?'rgba(201,168,76,.06)':'transparent',fontWeight:active?500:400,letterSpacing:'.02em'}}>
                             <span style={pill(m.code,active)}>{m.code}</span>
                             <span style={{flex:1}}>{m.name}</span>
-                            {active && <span style={{color:'rgba(201,168,76,.9)',fontSize:'.7rem'}}>✓</span>}
+                            {active && <span style={{color:'rgba(201,168,76,.9)',fontSize:(.7*readScale)+'rem'}}>✓</span>}
                           </div>
                         );
                       })}
@@ -4476,7 +4476,7 @@ Composition rules:
             returns to the canvas without changing anything. Only shown when
             there's still content to go back to. */}
         {forceSetup && hasContent && (
-          <button className="pf-lift" onClick={()=>setForceSetup(false)} style={{display:'inline-flex',alignSelf:'flex-start',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(201,168,76,.12)',color:PF.gold2,border:'1px solid rgba(201,168,76,.4)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToCanvas')}</button>
+          <button className="pf-lift" onClick={()=>setForceSetup(false)} style={{display:'inline-flex',alignSelf:'flex-start',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(201,168,76,.12)',color:PF.gold2,border:'1px solid rgba(201,168,76,.4)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToCanvas')}</button>
         )}
 
         {/* ── MAIN PANEL ── mood · source (color/style/scan live in the canvas
@@ -4486,7 +4486,7 @@ Composition rules:
           {/* MOOD — type any feeling (Enter → generate) or tap a favourite.
               Known moods play the crafted piece; anything else is synthesised. */}
           <div>
-            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
+            <div style={{fontSize:(.5*readScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
             {(()=>{ const goMood=(val)=>{ const txt=(val||'').trim(); if(!txt||sourcePickerLocked)return; setMicArmed(false);setStructureSeedLock(null);setForceSetup(false);setCurrentMood(txt);setLoadedSource(null);setImgMoodThumb(null);setMoodFromImg(false);setVarySource(null);setMoodContext(true); aiMoodFromText(txt); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false); };
               // Autocomplete: as you type, list moods whose localized name (or key)
               // starts with the query. Diacritics are stripped on both sides so "z"
@@ -4506,7 +4506,7 @@ Composition rules:
               const showSug = sug.length>0 && !sourcePickerLocked;
               return (<>
               <div style={{position:'relative',display:'flex',alignItems:'center',background:PF.card2,border:`1px solid ${PF.gold}`,borderRadius:12,overflow:'hidden',marginBottom:showSug?6:10}}>
-              <span style={{position:'absolute',left:13,fontSize:'.9rem',color:PF.gold,pointerEvents:'none',zIndex:1}}>✦</span>
+              <span style={{position:'absolute',left:13,fontSize:(.9*readScale)+'rem',color:PF.gold,pointerEvents:'none',zIndex:1}}>✦</span>
               <input
                 value={songQ}
                 onChange={e=>setSongQ(e.target.value)}
@@ -4526,7 +4526,7 @@ Composition rules:
                   {sug.map(o=>(
                     <button key={o.k} role="option" onMouseDown={e=>e.preventDefault()} onClick={()=>{ setSongQ(o.label); setMoodFocused(false); goMood(o.label); }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',borderRadius:12,background:PF.card2,border:'1px solid rgba(242,238,232,.08)',color:PF.cream,cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
                       <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[o.k]||'✦'}</span>
-                      <span style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{o.label}</span>
+                      <span style={{fontSize:(.5*readScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{o.label}</span>
                     </button>
                   ))}
                 </div>
@@ -4536,20 +4536,20 @@ Composition rules:
 
           {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
           <div style={{marginBottom:14}}>
-            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgMood')||'mood from image')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'rgba(220,150,255,.08)',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}{!aiUsable&&<span style={{fontSize:'.5rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}</button>
+            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgMood')||'mood from image')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'rgba(220,150,255,.08)',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}{!aiUsable&&<span style={{fontSize:(.5*readScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}</button>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
 
           {/* SOURCE — input tiles, split into IMPORT (files) and CREATE (live) */}
           <div>
-            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
+            <div style={{fontSize:(.5*readScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'){setForceSetup(false);return;}setPickMode('midi');}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^\p{L}]/gu,'')}</span></button>
-              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;if(activeSource==='audio'){setForceSetup(false);return;}setPickMode('audio');}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^\p{L}]/gu,'')}</span></button>
-              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;if(activeSource==='score'){setForceSetup(false);return;}setPickMode('score');}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^\p{L}]/gu,'')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:'.56rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'){setForceSetup(false);return;}setPickMode('midi');}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:(.56*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;if(activeSource==='audio'){setForceSetup(false);return;}setPickMode('audio');}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.56*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;if(activeSource==='score'){setForceSetup(false);return;}setPickMode('score');}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:(.56*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.56*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
             </div>
-            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,margin:'16px 0 10px',textTransform:'uppercase'}}>{t('createLabel')}</div>
+            <div style={{fontSize:(.5*readScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,margin:'16px 0 10px',textTransform:'uppercase'}}>{t('createLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               <button className="pf-compose" onClick={()=>{
                 if(busy)return;
@@ -4582,7 +4582,7 @@ Composition rules:
                   setComposeMode(true);
                   setMicArmed(false);
                 } else setComposeMode(false);
-              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}♪ {composeMode?t('composing').replace(/[^\p{L} ]/gu,''):t('compose').replace(/[^\p{L} ]/gu,'')}</button>
+              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}♪ {composeMode?t('composing').replace(/[^\p{L} ]/gu,''):t('compose').replace(/[^\p{L} ]/gu,'')}</button>
               <button className="pf-mic" onClick={()=>{
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
@@ -4614,7 +4614,7 @@ Composition rules:
                 }
                 setMicArmed(true);
                 setStayActive(true);
-              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:'.66rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
+              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':PF.card2,border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
             </div>
           </div>
 
@@ -4661,12 +4661,12 @@ Composition rules:
               try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
               setActive(new Set());setPlaying(false);setAnim(false);
             } else { stopAll(); wipeCanvasNow(); }
-            setWorking(false);setWLabel('');setWPct(0);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setMicArmed(false);setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+            setWorking(false);setWLabel('');setWPct(0);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setMicArmed(false);setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; return (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(srcBtn);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+t(srcBtn).replace(/[^\p{L}]/gu,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(srcBtn);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+t(srcBtn).replace(/[^\p{L}]/gu,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
           ); })()}
           {/* New MOOD — opens an inline mood picker right over the canvas (no
               jump back to setup); picking one loads it immediately. Shown for the
@@ -4674,22 +4674,22 @@ Composition rules:
               Clear, when currentMood is null but we're still on the mood canvas. */}
           {!loadedSource && !composeMode && !micActive && moodContext && (
             moodFromImg ? (
-            <button onClick={()=>{if(recording||sourcePickerLocked||!aiUsable)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode('imgmood');}} disabled={recording||sourcePickerLocked||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(((t('newBy')||{}).image||t('newSource'))+' '+(t('backToImage')||'image'))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:(recording||sourcePickerLocked||!aiUsable)?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:(recording||sourcePickerLocked||!aiUsable)?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}>+ {((t('newBy')||{}).image||t('newSource'))} {t('backToImage')||'image'}{!aiUsable&&<span style={{fontSize:'.5rem',opacity:.8}}>· {t('aiOffline')||'offline'}</span>}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked||!aiUsable)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode('imgmood');}} disabled={recording||sourcePickerLocked||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(((t('newBy')||{}).image||t('newSource'))+' '+(t('backToImage')||'image'))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:(recording||sourcePickerLocked||!aiUsable)?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:(recording||sourcePickerLocked||!aiUsable)?'default':'pointer',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}>+ {((t('newBy')||{}).image||t('newSource'))} {t('backToImage')||'image'}{!aiUsable&&<span style={{fontSize:(.5*readScale)+'rem',opacity:.8}}>· {t('aiOffline')||'offline'}</span>}</button>
             ) : (
-            <button onClick={()=>{if(recording)return;setMoodEdit('');setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={((t('newBy')||{}).mood||t('newSource'))+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).mood||t('newSource'))} {t('moodLabel')}</button>
+            <button onClick={()=>{if(recording)return;setMoodEdit('');setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={((t('newBy')||{}).mood||t('newSource'))+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).mood||t('newSource'))} {t('moodLabel')}</button>
             )
           )}
           {/* ← back to image — shown after an image→atmosphere jump, restores the photo */}
           {imgReturnUrl && !composeMode && !micActive && moodContext && (
-            <button onClick={()=>{if(recording)return;returnToImage();}} disabled={recording} className="pf-lift" title={t('backToImage')||'back to image'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToImage')||'image'}</button>
+            <button onClick={()=>{if(recording)return;returnToImage();}} disabled={recording} className="pf-lift" title={t('backToImage')||'back to image'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToImage')||'image'}</button>
           )}
         </div>
-        <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:'.5rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
+        <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:(.5*readScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
           <span>{loadedSource==='image' ? (t('colorLabel') + ' · ' + t('dirLabel')) : (t('colorLabel') + ' · ' + t('styleLabel'))}</span>
-          <span style={{fontSize:'.7rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
+          <span style={{fontSize:(.7*readScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
         </button>
         {loadedSource!=='image' && style && STYLE_INSPIRED[style] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:'.5rem',letterSpacing:'.12em',color:'rgba(230,222,196,.32)',fontStyle:'italic',textTransform:'none'}}>{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.5*readScale)+'rem',letterSpacing:'.12em',color:'rgba(230,222,196,.32)',fontStyle:'italic',textTransform:'none'}}>{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
         )}
         {stripOpen && (
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
@@ -4724,7 +4724,7 @@ Composition rules:
                   }
                 });
               }
-            }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:'.64rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:chords.length&&currentMood&&!sourcePickerLocked?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.3)',opacity:chords.length&&currentMood&&!sourcePickerLocked?1:.55,transition:'all .18s'}}>{t('morph')}</button>
+            }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.64*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:chords.length&&currentMood&&!sourcePickerLocked?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.3)',opacity:chords.length&&currentMood&&!sourcePickerLocked?1:.55,transition:'all .18s'}}>{t('morph')}</button>
             )}
             <button className="pf-vary" onClick={()=>{
               // VARY is allowed while PLAYING (no need to pause first), but not
@@ -4764,7 +4764,7 @@ Composition rules:
               // startPlay collapses the strip — re-open it just after so Vary's
               // "stay open" wins even when Vary restarts playback.
               if(wasPlaying){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
-            }} disabled={composeMode||micPainting||micListening||recording||working||!chords.length} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:'.64rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?1:.55,transition:'all .18s'}}>{t('vary')}</button>
+            }} disabled={composeMode||micPainting||micListening||recording||working||!chords.length} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.64*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?1:.55,transition:'all .18s'}}>{t('vary')}</button>
           </div>
           )}
           {/* Color */}
@@ -4794,7 +4794,7 @@ Composition rules:
                     }
                   }}
                   title={t('appChoseColour')}
-                  style={{padding:'8px 0',textAlign:'center',fontSize:'.6rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',border:'1px solid transparent',color:appActive?PF.bg:PF.cream,background:appActive?PF.gold:PF.card2,boxShadow:appActive?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{appLabel}</button>
+                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*readScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',border:'1px solid transparent',color:appActive?PF.bg:PF.cream,background:appActive?PF.gold:PF.card2,boxShadow:appActive?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{appLabel}</button>
                 <button onClick={()=>{
                     // Custom chip cycle:
                     //  1st tap (not custom yet) → activate Custom (label "Custom")
@@ -4813,7 +4813,7 @@ Composition rules:
                       setShowPaletteEditor(true);
                     }
                   }}
-                  style={{padding:'8px 0',textAlign:'center',fontSize:'.6rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',border:'1px solid transparent',color:customActive?PF.bg:PF.cream,background:customActive?PF.gold:PF.card2,boxShadow:customActive?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{customActive&&customArmed?('✎ '+t('editShort')):t('custom')}</button>
+                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*readScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',border:'1px solid transparent',color:customActive?PF.bg:PF.cream,background:customActive?PF.gold:PF.card2,boxShadow:customActive?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{customActive&&customArmed?('✎ '+t('editShort')):t('custom')}</button>
               </div>
               {/* READ-ONLY preview of the 12 Harmony colours — shown when the Color
                   reading is active and the user tapped to reveal it. Purely
@@ -4825,21 +4825,21 @@ Composition rules:
                     return (
                       <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
                         <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />
-                        <span style={{fontSize:'.42rem',letterSpacing:'.04em',color:PF.muted,opacity:.7}}>{nm}</span>
+                        <span style={{fontSize:(.42*readScale)+'rem',letterSpacing:'.04em',color:PF.muted,opacity:.7}}>{nm}</span>
                       </div>
                     );
                   })}
                 </div>
               )}
               {/* SCAN direction — the order pixels are read into music (image only) */}
-              <div style={{fontSize:'.46rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('dirLabel')}</div>
+              <div style={{fontSize:(.46*readScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('dirLabel')}</div>
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['lr','vert','spiralIn','spiralOut'].map(d=>{
                   const sel = imgDir===d;
                   const locked = playing||holdPaused;
                   const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
                   return (
-                    <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{padding:'7px 0',textAlign:'center',fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',border:'1px solid transparent',opacity:locked&&!sel?0.4:1,color:sel?PF.bg:PF.cream,background:sel?PF.gold:PF.card2,boxShadow:sel?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{glyph} {t('dir_'+d)}</button>
+                    <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{padding:'7px 0',textAlign:'center',fontSize:(.5*readScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',border:'1px solid transparent',opacity:locked&&!sel?0.4:1,color:sel?PF.bg:PF.cream,background:sel?PF.gold:PF.card2,boxShadow:sel?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{glyph} {t('dir_'+d)}</button>
                   );
                 })}
               </div>
@@ -4861,7 +4861,7 @@ Composition rules:
                 else setShowColorPalette(false);
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-              }} style={{padding:'8px 0',textAlign:'center',fontSize:'.6rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s',border:'1px solid transparent',color:mode===m?PF.bg:PF.cream,background:mode===m?PF.gold:PF.card2,boxShadow:mode===m?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{armed?('✎ '+t('editShort')):t(m)}</button>
+              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*readScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s',border:'1px solid transparent',color:mode===m?PF.bg:PF.cream,background:mode===m?PF.gold:PF.card2,boxShadow:mode===m?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{armed?('✎ '+t('editShort')):t(m)}</button>
               );})}
             </div>
             {showColorPalette && mode!=='custom' && (
@@ -4871,7 +4871,7 @@ Composition rules:
                   return (
                     <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
                       <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />
-                      <span style={{fontSize:'.42rem',letterSpacing:'.04em',color:PF.muted,opacity:.7}}>{nm}</span>
+                      <span style={{fontSize:(.42*readScale)+'rem',letterSpacing:'.04em',color:PF.muted,opacity:.7}}>{nm}</span>
                     </div>
                   );
                 })}
@@ -4884,7 +4884,7 @@ Composition rules:
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
             {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
-            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',color:mosaicOn?PF.bg:(mosaicInert?PF.muted:PF.cream),background:mosaicOn?PF.gold:PF.card2,border:'1px solid '+(mosaicOn?PF.gold:'rgba(242,238,232,.08)'),boxShadow:mosaicOn?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
+            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*readScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',color:mosaicOn?PF.bg:(mosaicInert?PF.muted:PF.cream),background:mosaicOn?PF.gold:PF.card2,border:'1px solid '+(mosaicOn?PF.gold:'rgba(242,238,232,.08)'),boxShadow:mosaicOn?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
             ); })()}
             {STYLE_PAIRS.map(([a,b])=>{
               // Which of the pair is active? Determines label + next target.
@@ -4908,7 +4908,7 @@ Composition rules:
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:'.54rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:isOn?PF.bg:PF.cream,background:isOn?PF.gold:PF.card2,border:'1px solid '+(isOn?PF.gold:(shufHit?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:isOn?'0 3px 10px rgba(240,192,64,.3)':(shufHit?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*readScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:isOn?PF.bg:PF.cream,background:isOn?PF.gold:PF.card2,border:'1px solid '+(isOn?PF.gold:(shufHit?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:isOn?'0 3px 10px rgba(240,192,64,.3)':(shufHit?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
               );
             })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
@@ -4925,8 +4925,8 @@ Composition rules:
       {preview && (
         <div onClick={closePreview} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1100,padding:10,overflow:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="image preview" style={{maxWidth:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
-            <div style={{letterSpacing:'.12em',color:'rgba(201,168,76,.85)',fontSize:'.65rem',textAlign:'center'}}>🖨 {preview.w}×{preview.h}{preview.dpi?` · ${preview.dpi}dpi`:''}{preview.label?' · '+preview.label:''} · {(preview.size/1024/1024).toFixed(1)} MB</div>
-            {compositionName.trim()&&(<div style={{fontSize:'.6rem',color:'rgba(201,168,76,.6)',textAlign:'center',letterSpacing:'.08em'}}>{compositionName}</div>)}
+            <div style={{letterSpacing:'.12em',color:'rgba(201,168,76,.85)',fontSize:(.65*readScale)+'rem',textAlign:'center'}}>🖨 {preview.w}×{preview.h}{preview.dpi?` · ${preview.dpi}dpi`:''}{preview.label?' · '+preview.label:''} · {(preview.size/1024/1024).toFixed(1)} MB</div>
+            {compositionName.trim()&&(<div style={{fontSize:(.6*readScale)+'rem',color:'rgba(201,168,76,.6)',textAlign:'center',letterSpacing:'.08em'}}>{compositionName}</div>)}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'center'}}>
               <button onClick={()=>{
                 // Desktop (mouse + hover) always downloads straight to disk — on
@@ -4946,22 +4946,22 @@ Composition rules:
                 } else {
                   doDownload();
                 }
-              }} style={{padding:'12px 20px',background:'rgba(140,180,255,.15)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.6)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:'.75rem',textTransform:'uppercase',fontWeight:'bold'}}>↓ {t('save')}</button>
-              <button onClick={copyPreview} style={{padding:'12px 20px',background:'rgba(140,180,255,.06)',color:'rgba(160,200,255,.75)',border:'1px solid rgba(140,180,255,.3)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:'.75rem',textTransform:'uppercase'}}>⎘ copy</button>
+              }} style={{padding:'12px 20px',background:'rgba(140,180,255,.15)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.6)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:(.75*readScale)+'rem',textTransform:'uppercase',fontWeight:'bold'}}>↓ {t('save')}</button>
+              <button onClick={copyPreview} style={{padding:'12px 20px',background:'rgba(140,180,255,.06)',color:'rgba(160,200,255,.75)',border:'1px solid rgba(140,180,255,.3)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:(.75*readScale)+'rem',textTransform:'uppercase'}}>⎘ copy</button>
             </div>
             {previewMsg && (
-              <div style={{fontSize:'.6rem',padding:'8px 12px',borderRadius:4,maxWidth:340,textAlign:'center',lineHeight:1.4,wordBreak:'break-word',color:previewMsg.tone==='ok'?'rgba(140,255,180,.95)':previewMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.95)',border:'1px solid '+(previewMsg.tone==='ok'?'rgba(140,255,180,.4)':previewMsg.tone==='wait'?'rgba(201,168,76,.25)':'rgba(255,140,120,.3)'),background:previewMsg.tone==='ok'?'rgba(140,255,180,.08)':'transparent'}}>
+              <div style={{fontSize:(.6*readScale)+'rem',padding:'8px 12px',borderRadius:4,maxWidth:340,textAlign:'center',lineHeight:1.4,wordBreak:'break-word',color:previewMsg.tone==='ok'?'rgba(140,255,180,.95)':previewMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.95)',border:'1px solid '+(previewMsg.tone==='ok'?'rgba(140,255,180,.4)':previewMsg.tone==='wait'?'rgba(201,168,76,.25)':'rgba(255,140,120,.3)'),background:previewMsg.tone==='ok'?'rgba(140,255,180,.08)':'transparent'}}>
                 {previewMsg.text}
               </div>
             )}
             <img src={preview.url} alt={preview.filename} style={{maxWidth:'100%',maxHeight:'50vh',border:'1px solid rgba(201,168,76,.25)',borderRadius:4,display:'block',WebkitTouchCallout:'default'}}/>
-            <div style={{fontSize:'.5rem',color:'rgba(180,170,150,.4)',textAlign:'center',wordBreak:'break-all',padding:'0 8px',maxWidth:340}}>{preview.filename}</div>
-            <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 14px',maxWidth:340,lineHeight:1.5}}>
+            <div style={{fontSize:(.5*readScale)+'rem',color:'rgba(180,170,150,.4)',textAlign:'center',wordBreak:'break-all',padding:'0 8px',maxWidth:340}}>{preview.filename}</div>
+            <div style={{fontSize:(.55*readScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 14px',maxWidth:340,lineHeight:1.5}}>
               {(typeof window!=='undefined' && window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches)
                 ? <>{t('saveAlternative')} <b>{t('saveRightClickHint')}</b> {t('saveRightClickTail')}</>
                 : <>{t('saveAlternatives')} <b>{t('saveLongPressHint')}</b> {t('saveLongPressTail')}</>}
             </div>
-            <button onClick={closePreview} style={{padding:'8px 22px',background:'transparent',color:'rgba(207,197,168,.6)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:'.55rem',textTransform:'uppercase',marginTop:4}}>close</button>
+            <button onClick={closePreview} style={{padding:'8px 22px',background:'transparent',color:'rgba(207,197,168,.6)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.12em',fontSize:(.55*readScale)+'rem',textTransform:'uppercase',marginTop:4}}>close</button>
           </div>
         </div>
       )}
@@ -4980,7 +4980,7 @@ Composition rules:
       {pickMode && (
         <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
-            <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:'.65rem'}}>
+            <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:(.65*readScale)+'rem'}}>
               {pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')}
             </div>
             {pickMode==='mic' ? (
@@ -4990,10 +4990,10 @@ Composition rules:
                 if(micListening) stopMicListening();
                 startMicPainting();
                 setPickMode(null);
-              }} style={{padding:'12px',background:((micActive||hasMicDraft)&&micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+(((micActive||hasMicDraft)&&micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:((micActive||hasMicDraft)&&micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
+              }} style={{padding:'12px',background:((micActive||hasMicDraft)&&micPreset==='voice')?'rgba(255,140,140,.16)':'transparent',color:'rgba(255,140,140,.9)',border:'1px solid '+(((micActive||hasMicDraft)&&micPreset==='voice')?'rgba(255,140,140,.85)':'rgba(255,140,140,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*readScale)+'rem',boxShadow:((micActive||hasMicDraft)&&micPreset==='voice')?'0 0 0 2px rgba(255,140,140,.18)':'none'}}>
                 {((micActive||hasMicDraft)&&micPreset==='voice')?'● ':''}{t('voicePreset')}
               </button>
-              <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
+              <div style={{fontSize:(.55*readScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micVoiceHint')}
               </div>
               <button onClick={()=>{
@@ -5001,13 +5001,13 @@ Composition rules:
                 if(micPainting) stopMicPainting();
                 startMicListening();
                 setPickMode(null);
-              }} style={{padding:'12px',background:((micActive||hasMicDraft)&&micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+(((micActive||hasMicDraft)&&micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem',boxShadow:((micActive||hasMicDraft)&&micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
+              }} style={{padding:'12px',background:((micActive||hasMicDraft)&&micPreset==='music')?'rgba(140,200,255,.16)':'transparent',color:'rgba(140,200,255,.9)',border:'1px solid '+(((micActive||hasMicDraft)&&micPreset==='music')?'rgba(100,180,255,.85)':'rgba(100,180,255,.4)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*readScale)+'rem',boxShadow:((micActive||hasMicDraft)&&micPreset==='music')?'0 0 0 2px rgba(100,180,255,.18)':'none'}}>
                 {((micActive||hasMicDraft)&&micPreset==='music')?'● ':''}{t('musicPreset')}
               </button>
-              <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
+              <div style={{fontSize:(.55*readScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {t('micMusicHint')}
               </div>
-              <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.6rem',marginTop:4}}>
+              <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*readScale)+'rem',marginTop:4}}>
                 {t('cancel')}
               </button>
             </div>
@@ -5023,10 +5023,10 @@ Composition rules:
                 else loadSampleImage();
                 setForceSetup(false);
                 setPickMode(null);
-              }} style={{padding:'12px',background:'transparent',color:pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':pickMode==='imgmood'?'rgba(228,178,255,.95)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':pickMode==='imgmood'?'rgba(220,150,255,.45)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
+              }} style={{padding:'12px',background:'transparent',color:pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':pickMode==='imgmood'?'rgba(228,178,255,.95)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':pickMode==='imgmood'?'rgba(220,150,255,.45)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*readScale)+'rem'}}>
                 {t('builtInSample')}
               </button>
-              <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
+              <div style={{fontSize:(.55*readScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:SAMPLE_IMAGE_NAME}
               </div>
               <button onClick={()=>{
@@ -5040,13 +5040,13 @@ Composition rules:
                 // opens, cancelling it (Choose File appeared to do nothing). The
                 // loaders (loadMidi/loadAudio/loadScore/loadImage) close the modal
                 // via setPickMode(null) once a file is actually selected.
-              }} style={{padding:'12px',background:'transparent',color:'rgba(201,168,76,.85)',border:'1px solid rgba(201,168,76,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.75rem'}}>
+              }} style={{padding:'12px',background:'transparent',color:'rgba(201,168,76,.85)',border:'1px solid rgba(201,168,76,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*readScale)+'rem'}}>
                 {t('chooseFile')}
               </button>
-              <div style={{fontSize:'.55rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
+              <div style={{fontSize:(.55*readScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
                 {pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
               </div>
-              <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.6rem',marginTop:4}}>
+              <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*readScale)+'rem',marginTop:4}}>
                 {t('cancel')}
               </button>
             </div>
@@ -5056,9 +5056,9 @@ Composition rules:
       )}
 
       {err && (
-        <div role={errInfo?'status':'alert'} aria-live={errInfo?'polite':'assertive'} style={{width:'100%',maxWidth:480,marginBottom:10,fontSize:'.6rem',lineHeight:1.5,textAlign:'left',padding:'8px 12px',borderRadius:2,maxHeight:240,overflow:'auto',wordBreak:'break-word',fontFamily:'monospace',color:errInfo?'rgba(201,168,76,.85)':'rgba(255,100,80,.85)',border:errInfo?'1px solid rgba(201,168,76,.25)':'1px solid rgba(255,100,80,.2)',display:'flex',alignItems:'flex-start',gap:8}}>
+        <div role={errInfo?'status':'alert'} aria-live={errInfo?'polite':'assertive'} style={{width:'100%',maxWidth:480,marginBottom:10,fontSize:(.6*readScale)+'rem',lineHeight:1.5,textAlign:'left',padding:'8px 12px',borderRadius:2,maxHeight:240,overflow:'auto',wordBreak:'break-word',fontFamily:'monospace',color:errInfo?'rgba(201,168,76,.85)':'rgba(255,100,80,.85)',border:errInfo?'1px solid rgba(201,168,76,.25)':'1px solid rgba(255,100,80,.2)',display:'flex',alignItems:'flex-start',gap:8}}>
           <span style={{flex:1}}>{errInfo?'𝄞 ':'✕ '}{err}</span>
-          <button onClick={()=>{setErr('');setErrInfo(false);}} aria-label="dismiss" style={{flexShrink:0,background:'transparent',border:'none',color:'inherit',opacity:.5,cursor:'pointer',fontSize:'.85rem',lineHeight:1,padding:'0 4px',fontFamily:'inherit'}}>×</button>
+          <button onClick={()=>{setErr('');setErrInfo(false);}} aria-label="dismiss" style={{flexShrink:0,background:'transparent',border:'none',color:'inherit',opacity:.5,cursor:'pointer',fontSize:(.85*readScale)+'rem',lineHeight:1,padding:'0 4px',fontFamily:'inherit'}}>×</button>
         </div>
       )}
 
@@ -5084,8 +5084,8 @@ Composition rules:
         const _atmoTitle = _imgAtmo ? (()=>{ const w=_atmoWordSeek(atmoMood.v,atmoMood.e); const ti=(atmoMood.title&&String(atmoMood.title).trim())||''; return ti?(ti+' · '+w):w; })() : null;
         const seekTitle = _atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : t('mic').replace(/[^\p{L} ]/gu,''))); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
         <div style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
-          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.57rem',marginBottom:4}}>
-            <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{(moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:'.46rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:'.46rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>))}</span>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:(.57*readScale)+'rem',marginBottom:4}}>
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{(moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:(.46*readScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:(.46*readScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>))}</span>
             <span style={{opacity:.75}}>
               {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
             </span>
@@ -5243,7 +5243,7 @@ Composition rules:
               </div>
             )}
             {/* Skip hint, top-right */}
-            <div style={{position:'absolute',top:10,right:12,fontSize:'.58rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(247,243,236,.7)',background:'rgba(16,12,24,.55)',padding:'4px 10px',borderRadius:14,pointerEvents:'none'}}>{t('demoSkip')}</div>
+            <div style={{position:'absolute',top:10,right:12,fontSize:(.58*readScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(247,243,236,.7)',background:'rgba(16,12,24,.55)',padding:'4px 10px',borderRadius:14,pointerEvents:'none'}}>{t('demoSkip')}</div>
           </div>
         )}
         {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(()=>{
@@ -5299,10 +5299,10 @@ Composition rules:
                   composedModeRef.current=false; draftOwnerRef.current=null;
                 }
               }
-            }} title={micPreset==='voice'?t('micMusicHint'):t('micVoiceHint')} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:'.55rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:'transparent',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),textShadow:'0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
+            }} title={micPreset==='voice'?t('micMusicHint'):t('micVoiceHint')} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:(.55*readScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",color:micPreset==='voice'?'#ff8a8a':'#8accff',background:'transparent',border:'1px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),textShadow:'0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}>
               {micPreset==='voice'?t('voicePreset').replace(/[^\p{L}]/gu,''):t('musicPreset').replace(/[^\p{L}]/gu,'')} ⇄{(micPreset==='voice'?listenStashRef.current:singStashRef.current)?' ●':''}
             </button>
-            <div style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
+            <div style={{fontSize:(.5*readScale)+'rem',fontWeight:600,letterSpacing:'.06em',color:'rgba(230,222,196,.7)',background:'rgba(8,6,14,.6)',borderRadius:10,padding:'2px 8px',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',maxWidth:220}}>{t('micTapToSwitch')}</div>
           </div>
         )}
         {/* Hidden state-tracker — DO NOT REMOVE.
@@ -5320,18 +5320,18 @@ Composition rules:
             <button onClick={()=>{
               setMicArmed(false);
               if(micPreset==='music') startMicListening(); else startMicPainting();
-            }} title={t('micTapToRecord')} style={{pointerEvents:'auto',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:10,width:108,height:108,borderRadius:'50%',cursor:'pointer',fontFamily:"'Outfit',sans-serif",fontSize:'.78rem',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'2px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),boxShadow:'0 6px 24px '+(micPreset==='voice'?'rgba(255,80,80,.25)':'rgba(80,160,255,.25)')+', inset 0 0 0 1px rgba(255,255,255,.04)',transition:'transform .14s, box-shadow .14s'}} onMouseDown={e=>e.currentTarget.style.transform='scale(.96)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+            }} title={t('micTapToRecord')} style={{pointerEvents:'auto',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:10,width:108,height:108,borderRadius:'50%',cursor:'pointer',fontFamily:"'Outfit',sans-serif",fontSize:(.78*readScale)+'rem',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:micPreset==='voice'?'#ff8a8a':'#8accff',background:micPreset==='voice'?'rgba(255,40,40,.16)':'rgba(40,140,255,.16)',border:'2px solid '+(micPreset==='voice'?'rgba(255,120,120,.7)':'rgba(100,180,255,.7)'),boxShadow:'0 6px 24px '+(micPreset==='voice'?'rgba(255,80,80,.25)':'rgba(80,160,255,.25)')+', inset 0 0 0 1px rgba(255,255,255,.04)',transition:'transform .14s, box-shadow .14s'}} onMouseDown={e=>e.currentTarget.style.transform='scale(.96)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
               <span style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,lineHeight:1}}>
                 <span style={{width:18,height:18,borderRadius:'50%',background:micPreset==='voice'?'#ff5a5a':'#5aacff',boxShadow:'0 0 12px '+(micPreset==='voice'?'#ff5a5a':'#5aacff')}}/>
-                <span style={{fontSize:'.62rem',marginTop:2}}>REC</span>
+                <span style={{fontSize:(.62*readScale)+'rem',marginTop:2}}>REC</span>
               </span>
             </button>
-            <div style={{fontSize:'.55rem',letterSpacing:'.18em',textTransform:'uppercase',color:micPreset==='voice'?'rgba(255,138,138,.85)':'rgba(140,200,255,.85)',textShadow:'0 1px 3px rgba(0,0,0,.6)'}}>{t('micTapToRecord')}</div>
+            <div style={{fontSize:(.55*readScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',color:micPreset==='voice'?'rgba(255,138,138,.85)':'rgba(140,200,255,.85)',textShadow:'0 1px 3px rgba(0,0,0,.6)'}}>{t('micTapToRecord')}</div>
           </div>
         )}
         {chords.length===0 && !(micArmed && !micActive) && (
           <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
-            <div style={{opacity:composeMode?.22:.12,fontSize:'.6rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':'inherit'}}>
+            <div style={{opacity:composeMode?.22:.12,fontSize:(.6*readScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:composeMode?'rgba(201,168,76,1)':'inherit'}}>
               {composeMode?'play the keys to paint':'play · paint · upload'}
             </div>
             <div style={{opacity:composeMode?.08:.05,fontSize:'2.8rem'}}>♩</div>
@@ -5339,7 +5339,7 @@ Composition rules:
         )}
       </div>
 
-      <div style={{marginBottom:10,fontSize:'.57rem',letterSpacing:'.18em',opacity:.6,textAlign:'center',textTransform:'uppercase'}}>
+      <div style={{marginBottom:10,fontSize:(.57*readScale)+'rem',letterSpacing:'.18em',opacity:.6,textAlign:'center',textTransform:'uppercase'}}>
         music → φ painting
       </div>
       </>)}
@@ -5348,7 +5348,7 @@ Composition rules:
       {showSizePicker && (
         <div onClick={()=>setShowSizePicker(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export size" style={{background:'#0a0a14',border:'1px solid rgba(200,160,255,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:'rgba(200,160,255,.75)',fontSize:'.65rem'}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:'rgba(200,160,255,.75)',fontSize:(.65*readScale)+'rem'}}>
               🖨 {t('print').replace('🖨 ','')}</div>
             <input
               type="text"
@@ -5359,18 +5359,18 @@ Composition rules:
               placeholder={t('nameThisPiece')}
               maxLength={80}
               aria-label={t('nameThisPiece')}
-              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid '+(focusedInput==='comp'?'rgba(201,168,76,.85)':'rgba(201,168,76,.35)'),borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:'.72rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14,boxShadow:focusedInput==='comp'?'0 0 0 2px rgba(201,168,76,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
+              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid '+(focusedInput==='comp'?'rgba(201,168,76,.85)':'rgba(201,168,76,.35)'),borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:(.72*readScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14,boxShadow:focusedInput==='comp'?'0 0 0 2px rgba(201,168,76,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
             />
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:'.72rem'}}>
+              <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*readScale)+'rem'}}>
                 🖥 {t('sizeWeb')}
-                <div style={{fontSize:'.52rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
+                <div style={{fontSize:(.52*readScale)+'rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
               </button>
-              <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:'.72rem'}}>
+              <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*readScale)+'rem'}}>
                 🖨 {t('sizePrint')}
-                <div style={{fontSize:'.52rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
+                <div style={{fontSize:(.52*readScale)+'rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
               </button>
-              <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:'.6rem',marginTop:4}}>
+              <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*readScale)+'rem',marginTop:4}}>
                 {t('cancel')}
               </button>
             </div>
@@ -5407,7 +5407,7 @@ Composition rules:
       {showMoodMenu && (
         <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:'.7rem',textTransform:'uppercase'}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
             {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null); setMoodFromImg(false); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
               <div style={{display:'flex',gap:6,marginBottom:12}}>
                 <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder={t('moodPlaceholder')} autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{flex:1,minWidth:0,background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
@@ -5434,21 +5434,21 @@ Composition rules:
                   setMoodHint(false);
                 }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',borderRadius:12,background: (m===currentMood&&!imgMoodThumb)?PF.gold:PF.card2,color: (m===currentMood&&!imgMoodThumb)?PF.bg:PF.cream,border:'1px solid '+((m===currentMood&&!imgMoodThumb)?PF.gold:'rgba(242,238,232,.08)'),cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
                   <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
-                  <span style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{(t('moodNames')||{})[m]||m}</span>
+                  <span style={{fontSize:(.5*readScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{(t('moodNames')||{})[m]||m}</span>
                 </button>
               ))}
             </div>
-            <button onClick={()=>setShowMoodMenu(false)} style={{display:'block',margin:'14px auto 0',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em'}}>cancel</button>
+            <button onClick={()=>setShowMoodMenu(false)} style={{display:'block',margin:'14px auto 0',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em'}}>cancel</button>
           </div>
         </div>
       )}
       {showMorphMenu && (
         <div onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="morph mood" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(220,150,255,.35)',borderRadius:8,padding:'22px 18px'}}>
-            <div style={{textAlign:'center',marginBottom:4,letterSpacing:'.18em',color:'rgba(220,170,255,.85)',fontSize:'.7rem',textTransform:'uppercase'}}>✦ {t('morphTitle').replace('{mood}',(t('moodNames')||{})[currentMood]||currentMood||'')}</div>
-            <div style={{textAlign:'center',marginBottom:12,fontSize:'.55rem',letterSpacing:'.04em',color:'rgba(207,197,168,.45)'}}>{t('morphHint')} · <span role="button" tabIndex={0} onClick={()=>{setMorphPool([...morphSel, ...makeMorphPool(currentMood, morphSel)]);setMorphPoolSource('offline');setMorphPoolLoading(false);}} title="shuffle / iné" style={{cursor:'pointer',color:'rgba(220,180,255,.85)',userSelect:'none'}}>↻</span> · <span style={{fontSize:'.5rem',letterSpacing:'.06em',textTransform:'uppercase',color:morphPoolLoading?'rgba(220,180,255,.7)':morphPoolSource==='ai'?'rgba(220,170,255,.95)':'rgba(207,197,168,.5)'}}>{morphPoolLoading?'✦ …':morphPoolSource==='ai'?'✦ AI':'offline'}</span></div>
+            <div style={{textAlign:'center',marginBottom:4,letterSpacing:'.18em',color:'rgba(220,170,255,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>✦ {t('morphTitle').replace('{mood}',(t('moodNames')||{})[currentMood]||currentMood||'')}</div>
+            <div style={{textAlign:'center',marginBottom:12,fontSize:(.55*readScale)+'rem',letterSpacing:'.04em',color:'rgba(207,197,168,.45)'}}>{t('morphHint')} · <span role="button" tabIndex={0} onClick={()=>{setMorphPool([...morphSel, ...makeMorphPool(currentMood, morphSel)]);setMorphPoolSource('offline');setMorphPoolLoading(false);}} title="shuffle / iné" style={{cursor:'pointer',color:'rgba(220,180,255,.85)',userSelect:'none'}}>↻</span> · <span style={{fontSize:(.5*readScale)+'rem',letterSpacing:'.06em',textTransform:'uppercase',color:morphPoolLoading?'rgba(220,180,255,.7)':morphPoolSource==='ai'?'rgba(220,170,255,.95)':'rgba(207,197,168,.5)'}}>{morphPoolLoading?'✦ …':morphPoolSource==='ai'?'✦ AI':'offline'}</span></div>
             {/* Live chain preview: current → sel1 → sel2 → sel3 */}
-            <div style={{textAlign:'center',marginBottom:12,fontSize:'.62rem',letterSpacing:'.04em',color:'rgba(220,180,255,.9)',textTransform:'capitalize',minHeight:'1.2em'}}>
+            <div style={{textAlign:'center',marginBottom:12,fontSize:(.62*readScale)+'rem',letterSpacing:'.04em',color:'rgba(220,180,255,.9)',textTransform:'capitalize',minHeight:'1.2em'}}>
               {[(t('moodNames')||{})[currentMood]||currentMood, ...morphSel.map(m=>(t('moodNames')||{})[m]||m)].join(' → ')}
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,maxHeight:'46vh',overflowY:'auto',paddingRight:2}}>
@@ -5465,15 +5465,15 @@ Composition rules:
                     return [...prev, m];                     // add to end of chain
                   });
                 }} style={{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',background:isSel?'rgba(220,150,255,.22)':'rgba(220,150,255,.06)',color:isSel?'#fff':(full?'rgba(220,180,255,.3)':PF.cream),border:'1px solid '+(isSel?'rgba(220,150,255,.8)':'rgba(220,150,255,.25)'),borderRadius:12,cursor:full?'default':'pointer',fontFamily:'inherit',opacity:full?.5:1,transition:'all .18s'}}>
-                  {isSel && <span style={{position:'absolute',top:3,right:4,fontSize:'.5rem',fontWeight:700,color:'#e9c8ff'}}>{selIdx+1}</span>}
+                  {isSel && <span style={{position:'absolute',top:3,right:4,fontSize:(.5*readScale)+'rem',fontWeight:700,color:'#e9c8ff'}}>{selIdx+1}</span>}
                   <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
-                  <span style={{fontSize:'.5rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{(t('moodNames')||{})[m]||m}</span>
+                  <span style={{fontSize:(.5*readScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{(t('moodNames')||{})[m]||m}</span>
                 </button>
                 );
               })}
             </div>
             <div style={{display:'flex',gap:8,marginTop:16}}>
-              <button onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flex:1,padding:'9px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>cancel</button>
+              <button onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flex:1,padding:'9px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>cancel</button>
               <button disabled={morphSel.length===0} onClick={()=>{
                 const chain=[findSong(currentMood), ...morphSel.map(findSong)];
                 const morphed = morphSel.length===1 ? morphSongs(chain[0],chain[1]) : morphChain(chain);
@@ -5492,7 +5492,7 @@ Composition rules:
                 const bytes=encodeMidi(evts,morphed.tempo||100);
                 setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                 setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
-              }} style={{flex:1,padding:'9px 16px',background:morphSel.length?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.25)',color:'#fff',border:'none',borderRadius:4,cursor:morphSel.length?'pointer':'default',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase',opacity:morphSel.length?1:.5}}>✦ {t('morphGo')}</button>
+              }} style={{flex:1,padding:'9px 16px',background:morphSel.length?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.25)',color:'#fff',border:'none',borderRadius:4,cursor:morphSel.length?'pointer':'default',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase',opacity:morphSel.length?1:.5}}>✦ {t('morphGo')}</button>
             </div>
           </div>
         </div>
@@ -5505,7 +5505,7 @@ Composition rules:
       <div role="region" aria-label="playback controls" style={isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(
-        <div style={{fontSize:'.48rem',letterSpacing:'.08em',color:'rgba(100,200,255,.35)',textAlign:'center',marginBottom:4,lineHeight:1.5}}>
+        <div style={{fontSize:(.48*readScale)+'rem',letterSpacing:'.08em',color:'rgba(100,200,255,.35)',textAlign:'center',marginBottom:4,lineHeight:1.5}}>
           🔊 {t('listenHint')}
         </div>
       )}
@@ -5514,16 +5514,16 @@ Composition rules:
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {(()=>{ const m=recName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:recName; const ext=m?m[2]:''; return (
               <span style={{flex:1,display:'flex',alignItems:'center',gap:2,minWidth:0}}>
-                <input value={base} onFocus={()=>{inputFocus.current=true;}} onBlur={()=>{inputFocus.current=false;}} onChange={e=>setRecName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:'.6rem',color:'rgba(255,170,150,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(220,90,90,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
-                <span style={{fontSize:'.55rem',color:'rgba(255,140,120,.6)',flexShrink:0}}>{ext} · {(recBlob.size/1024).toFixed(0)}KB</span>
+                <input value={base} onFocus={()=>{inputFocus.current=true;}} onBlur={()=>{inputFocus.current=false;}} onChange={e=>setRecName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:(.6*readScale)+'rem',color:'rgba(255,170,150,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(220,90,90,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
+                <span style={{fontSize:(.55*readScale)+'rem',color:'rgba(255,140,120,.6)',flexShrink:0}}>{ext} · {(recBlob.size/1024).toFixed(0)}KB</span>
               </span>
             ); })()}
-            {audioShareMsg&&<span style={{fontSize:'.5rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
-            <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
-            <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
+            {audioShareMsg&&<span style={{fontSize:(.5*readScale)+'rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
+            <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
+            <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
           </div>
           {recBlob.type&&recBlob.type.includes('webm')&&(
-            <div style={{fontSize:'.48rem',color:'rgba(255,180,120,.55)',letterSpacing:'.04em'}}>webm/opus format · plays in most apps and browsers; some older Windows players may not open it</div>
+            <div style={{fontSize:(.48*readScale)+'rem',color:'rgba(255,180,120,.55)',letterSpacing:'.04em'}}>webm/opus format · plays in most apps and browsers; some older Windows players may not open it</div>
           )}
         </div>
       )}
@@ -5532,29 +5532,29 @@ Composition rules:
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {(()=>{ const m=scoreFileName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:scoreFileName; const ext=m?m[2]:''; return (
               <span style={{flex:1,display:'flex',alignItems:'center',gap:2,minWidth:0}}>
-                <input value={base} onFocus={()=>{inputFocus.current=true;}} onBlur={()=>{inputFocus.current=false;}} onChange={e=>setScoreFileName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:'.6rem',color:'rgba(160,230,195,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(120,200,160,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
-                <span style={{fontSize:'.55rem',color:'rgba(150,225,185,.6)',flexShrink:0}}>{ext} · {(scoreBlob.size/1024).toFixed(0)}KB</span>
+                <input value={base} onFocus={()=>{inputFocus.current=true;}} onBlur={()=>{inputFocus.current=false;}} onChange={e=>setScoreFileName(e.target.value.replace(/[\/\\:*?"<>|]/g,'')+ext)} aria-label="file name" style={{flex:1,minWidth:0,fontSize:(.6*readScale)+'rem',color:'rgba(160,230,195,1)',background:'rgba(255,255,255,.06)',border:'1px solid rgba(120,200,160,.3)',borderRadius:4,padding:'4px 6px',fontFamily:'inherit',outline:'none'}}/>
+                <span style={{fontSize:(.55*readScale)+'rem',color:'rgba(150,225,185,.6)',flexShrink:0}}>{ext} · {(scoreBlob.size/1024).toFixed(0)}KB</span>
               </span>
             ); })()}
-            {scoreMsg&&<span style={{fontSize:'.5rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{scoreMsg.text}</span>}
-            <button onClick={shareScore} style={{padding:'6px 14px',background:'rgba(120,200,160,.2)',color:'rgba(150,225,185,1)',border:'1px solid rgba(120,200,160,.5)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
-            <button onClick={()=>{setScoreBlob(null);setScoreFileName('');setScoreMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
+            {scoreMsg&&<span style={{fontSize:(.5*readScale)+'rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{scoreMsg.text}</span>}
+            <button onClick={shareScore} style={{padding:'6px 14px',background:'rgba(120,200,160,.2)',color:'rgba(150,225,185,1)',border:'1px solid rgba(120,200,160,.5)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
+            <button onClick={()=>{setScoreBlob(null);setScoreFileName('');setScoreMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
           </div>
-          <div style={{fontSize:'.48rem',color:'rgba(150,225,185,.55)',letterSpacing:'.04em'}}>{t('scoreXmlHint')}</div>
+          <div style={{fontSize:(.48*readScale)+'rem',color:'rgba(150,225,185,.55)',letterSpacing:'.04em'}}>{t('scoreXmlHint')}</div>
         </div>
       )}
       {/* Note-name readout */}
-      <div style={{textAlign:'center',marginBottom:4,fontSize:'.7rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.6)':'rgba(201,168,76,.45)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
+      <div style={{textAlign:'center',marginBottom:4,fontSize:(.7*readScale)+'rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.6)':'rgba(201,168,76,.45)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
         {active.size>0?(()=>{
           const sorted=[...active].sort((a,b)=>a-b);
           const chord=recognizeChord(sorted);
           return chord
-            ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.55)',fontSize:'.6rem',letterSpacing:'.08em'}}>· {chord}</span></span>
+            ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.55)',fontSize:(.6*readScale)+'rem',letterSpacing:'.08em'}}>· {chord}</span></span>
             : sorted.map(noteName).join(' · ');
         })():composeMode&&chords.length>0?`${chords.length} ${t('chordsPlay')}`:'—'}
       </div>
       {showAdvanced && composeMode && (
-        <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*readScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
           <button onClick={()=>{
             const cur=PAINT_SCALE_KEYS.indexOf(paintScale);
             setPaintScale(PAINT_SCALE_KEYS[(cur+1)%PAINT_SCALE_KEYS.length]);
@@ -5563,7 +5563,7 @@ Composition rules:
           </button>
         </div>
       )}
-      <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:'.55rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
+      <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*readScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
         <button onClick={()=>{if(paintScale!=='off'){setPaintScale('off');setShowAdvanced(false);}else setShowAdvanced(v=>!v);}} title="advanced: scale snap" style={{display:composeMode?'inline-block':'none',padding:'7px 10px',background:paintScale!=='off'?'rgba(140,255,180,.08)':'transparent',color:paintScale!=='off'?'rgba(140,255,180,.85)':showAdvanced?'rgba(201,168,76,.85)':'rgba(180,180,180,.5)',border:'1px solid '+(paintScale!=='off'?'rgba(140,255,180,.45)':showAdvanced?'rgba(201,168,76,.45)':'rgba(180,180,180,.25)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
           {t('scaleBtn')}
         </button>
@@ -5572,34 +5572,34 @@ Composition rules:
           onClick={handlePauseClick}
           disabled={recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
           title={recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
-          style={{padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:'.62rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'default':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.25)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.6:1,transition:'all .18s'}}>
+          style={{padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'default':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.25)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.6:1,transition:'all .18s'}}>
           {holdPaused?t('resume'):playing?t('pause'):t('play')}
         </button>{/* MIC STOP / REC — in the transport row UNDER the canvas (not in
             the strip above it). Replaces the on-canvas STOP/REC buttons; the
             on-canvas voice/music toggle remains for live preset switching. */}
         {micActive && (
-          <button onClick={()=>{ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); }} className="pf-lift" title={t('micActive')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,40,40,.16)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
+          <button onClick={()=>{ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); }} className="pf-lift" title={t('micActive')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,40,40,.16)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
             <span style={{width:8,height:8,borderRadius:2,background:'#ff5a5a',boxShadow:'0 0 6px #ff5a5a',display:'inline-block'}}/>⏹ {t('micActive').replace(/[^\p{L} ]/gu,'')}
           </button>
         )}
         {micArmed && !micActive && chords.length>0 && (
-          <button onClick={()=>{ setMicArmed(false); if(micPreset==='music') startMicListening(); else startMicPainting(); }} className="pf-lift" title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,40,40,.14)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
+          <button onClick={()=>{ setMicArmed(false); if(micPreset==='music') startMicListening(); else startMicPainting(); }} className="pf-lift" title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,40,40,.14)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
             <span style={{width:9,height:9,borderRadius:'50%',background:'#ff5a5a',boxShadow:'0 0 8px #ff5a5a',display:'inline-block'}}/>🎙 REC
           </button>
         )}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
         {currentMood&&(
-          <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
+          <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
         {randomMode&&effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(
-          <button className="pf-lift" onClick={()=>{if(playing||holdPaused)advanceVariation();}} disabled={!(playing||holdPaused)} title={(playing||holdPaused)?'next painting — jump to a new variation':'play to browse variations'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:(playing||holdPaused)?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:(playing||holdPaused)?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+((playing||holdPaused)?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:(playing||holdPaused)?'pointer':'default',fontFamily:'inherit',fontSize:'.55rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
+          <button className="pf-lift" onClick={()=>{if(playing||holdPaused)advanceVariation();}} disabled={!(playing||holdPaused)} title={(playing||holdPaused)?'next painting — jump to a new variation':'play to browse variations'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:(playing||holdPaused)?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:(playing||holdPaused)?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+((playing||holdPaused)?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:(playing||holdPaused)?'pointer':'default',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
         )}
         {viewMode!=='image'&&(
-          <button className="pf-lift" onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'8px 14px',background:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(169,127,245,.14)':'rgba(28,24,40,.5)',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.92)':'rgba(180,140,255,.25)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.5)':'rgba(180,140,255,.18)'),borderRadius:22,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>
+          <button className="pf-lift" onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'8px 14px',background:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(169,127,245,.14)':'rgba(28,24,40,.5)',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.92)':'rgba(180,140,255,.25)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.5)':'rgba(180,140,255,.18)'),borderRadius:22,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,textTransform:'uppercase'}}>
             {t('print')}
           </button>
         )}
         {viewMode==='image'&&originalImgUrl&&(
-          <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
+          <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
         {viewMode==='image'&&chords.length>0&&(
           <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
@@ -5607,7 +5607,7 @@ Composition rules:
           </button>
         )}
         {viewMode==='image'&&chords.length>0&&!composeMode&&!micPainting&&!micListening&&(
-          <button className="pf-lift" onClick={saveScore} disabled={recording||playing} title={recording?t('stopRecFirst'):playing?t('exportNeedsPlay'):t('scoreExport')} style={{padding:'8px 14px',background:'rgba(120,200,160,.12)',color:(recording||playing)?'rgba(120,200,160,.25)':'rgba(150,225,185,.92)',border:'1px solid '+((recording||playing)?'rgba(120,200,160,.15)':'rgba(120,200,160,.45)'),borderRadius:22,cursor:(recording||playing)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase'}}>♫ {t('scoreExport')}{scoreMsg?<span style={{marginLeft:6,fontSize:'.5rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)'}}>{scoreMsg.text}</span>:null}</button>
+          <button className="pf-lift" onClick={saveScore} disabled={recording||playing} title={recording?t('stopRecFirst'):playing?t('exportNeedsPlay'):t('scoreExport')} style={{padding:'8px 14px',background:'rgba(120,200,160,.12)',color:(recording||playing)?'rgba(120,200,160,.25)':'rgba(150,225,185,.92)',border:'1px solid '+((recording||playing)?'rgba(120,200,160,.15)':'rgba(120,200,160,.45)'),borderRadius:22,cursor:(recording||playing)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,textTransform:'uppercase'}}>♫ {t('scoreExport')}{scoreMsg?<span style={{marginLeft:6,fontSize:(.5*readScale)+'rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)'}}>{scoreMsg.text}</span>:null}</button>
         )}
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
@@ -5649,7 +5649,7 @@ Composition rules:
                 disabled={lockSpeed}
                 title={lockSpeed?t('stopRecFirst'):'playback speed — tap to reset to 1×, hold to change'}
                 aria-label="playback speed — tap to reset, hold to change"
-                style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4,padding:'5px 11px',minWidth:42,border:'1px solid '+(spd===1?'rgba(201,168,76,.2)':'rgba(201,168,76,.45)'),borderRadius:22,background:spd===1?'rgba(28,24,40,.4)':'rgba(201,168,76,.12)',color:spd===1?'rgba(201,168,76,.6)':GOLD,cursor:lockSpeed?'default':'pointer',fontSize:'.5rem',letterSpacing:'.06em',fontFamily:'inherit',fontWeight:600,opacity:lockSpeed?0.4:1,userSelect:'none',WebkitUserSelect:'none',touchAction:'none'}}>{label}</button>
+                style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4,padding:'5px 11px',minWidth:42,border:'1px solid '+(spd===1?'rgba(201,168,76,.2)':'rgba(201,168,76,.45)'),borderRadius:22,background:spd===1?'rgba(28,24,40,.4)':'rgba(201,168,76,.12)',color:spd===1?'rgba(201,168,76,.6)':GOLD,cursor:lockSpeed?'default':'pointer',fontSize:(.5*readScale)+'rem',letterSpacing:'.06em',fontFamily:'inherit',fontWeight:600,opacity:lockSpeed?0.4:1,userSelect:'none',WebkitUserSelect:'none',touchAction:'none'}}>{label}</button>
             </span>
           );
         })()}
@@ -5682,10 +5682,10 @@ Composition rules:
           className="pf-lift"
           disabled={recording}
           title={recording?t('stopRecFirst'):undefined}
-          style={{padding:'8px 14px',background:clearArmed?'rgba(220,90,90,.18)':'rgba(28,24,40,.5)',color:recording?'rgba(207,197,168,.2)':clearArmed?'rgba(255,140,120,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(recording?'rgba(207,197,168,.12)':clearArmed?'rgba(255,90,90,.55)':'rgba(207,197,168,.3)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:'.55rem',fontWeight:600,textTransform:'uppercase',transition:'background .15s ease, color .15s ease, border-color .15s ease'}}>{clearArmed?t('clearConfirm'):t('clear')}</button>
+          style={{padding:'8px 14px',background:clearArmed?'rgba(220,90,90,.18)':'rgba(28,24,40,.5)',color:recording?'rgba(207,197,168,.2)':clearArmed?'rgba(255,140,120,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(recording?'rgba(207,197,168,.12)':clearArmed?'rgba(255,90,90,.55)':'rgba(207,197,168,.3)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*readScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'background .15s ease, color .15s ease, border-color .15s ease'}}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
         {composeMode&&(
-          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{padding:'8px 13px',background:'rgba(28,24,40,.5)',color:chords.length&&!busy&&!recording?'rgba(207,197,168,.7)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!busy&&!recording?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:22,cursor:chords.length&&!busy&&!recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:'.6rem'}}>↩</button>
+          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{padding:'8px 13px',background:'rgba(28,24,40,.5)',color:chords.length&&!busy&&!recording?'rgba(207,197,168,.7)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!busy&&!recording?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:22,cursor:chords.length&&!busy&&!recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:(.6*readScale)+'rem'}}>↩</button>
         )}
       </div>
       {composeMode && (
@@ -5748,7 +5748,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:'.5rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.3</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*readScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano v3.5.3</footer>
       {paywallReason && (
         <ProPaywall
           t={t}
