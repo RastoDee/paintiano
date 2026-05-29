@@ -11573,9 +11573,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const composeFromImage=useCallback(async(srcUrl)=>{
     const _src=srcUrl||originalImgUrl;
     if(imgAiBusy||!_src) return;
-    // Pro gate (mood-from-image shares the same free trial pool as aiCompose).
-    // A cached image replays free (handled below); only a fresh AI call counts.
-    if(!isPro && trialExhausted){ setPaywallReason('ai_trial'); return; }
+    // NOTE: trial gate is INSIDE the try-block below, AFTER the cache check.
+    // This lets free trial-exhausted users replay the built-in sample image
+    // (which is always pre-cached, no AI call needed) and any other image they
+    // previously paid for. Only a genuine fresh AI call triggers the paywall.
     // Show the chosen picture immediately as a FULL canvas image (not a thumb)
     // so the user sees what they picked while AI composes. The thumb appears
     // only after Play is pressed (handled at startPlay → setImgMoodThumb).
@@ -11591,6 +11592,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const _hash=_imgMoodHash(dataUrl);
       let parsed=_imgMoodCacheGet(_hash);
       let _fromCache=!!parsed;
+      // Pro gate AFTER the cache check: cache hit = free replay even for
+      // exhausted free users (sample is always cached, so it always plays).
+      // Only a real, paid AI call costs a trial credit.
+      if(!parsed && !isPro && trialExhausted){
+        // Revert the eagerly-set canvas state — no AI call will happen.
+        setImgMoodThumb(null); setMoodContext(false); setMoodFromImg(false);
+        setOriginalImgUrl(null); setLoadedSource(null); setViewMode('paint');
+        setPaywallReason('ai_trial');
+        return;
+      }
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
         const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';

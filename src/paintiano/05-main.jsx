@@ -2831,7 +2831,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Show the chosen picture immediately as a FULL canvas image (not a thumb)
     // so the user sees what they picked while AI composes. The thumb appears
     // only after Play is pressed (handled at startPlay → setImgMoodThumb).
-    setOriginalImgUrl(_src); setLoadedSource('image'); setImgMoodThumb(null);
+    // DO NOT setLoadedSource('image') here — that activates classic image UI
+    // (Score, Atmosphere · OFF, Rows/Columns/Spiral) which doesn't belong in MFI.
+    // viewMode='image' alone is enough to render originalImgUrl as the big picture.
+    setOriginalImgUrl(_src); setImgMoodThumb(null);
     setMoodContext(true); setMoodFromImg(true); setViewMode('image');
     setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
     try{
