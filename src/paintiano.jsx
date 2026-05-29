@@ -5789,6 +5789,7 @@ const I18N = {
     recentPlayed:'Recently played',
     trialBanner1:'Only 1 AI trial left · Get Pro for unlimited',
     trialBanner2:'Only 2 AI trials left · Get Pro for unlimited',
+    morphAiUnavailable:'Morph for AI generated mood unavailable',
     proPaywallTitle:'This is part of Paintiano Pro',
     proPaywallTitleAi:'You’ve used your free AI compositions',
     proPaywallBody:'Unlock unlimited AI compositions, remove the watermark from exports, and support an independent art project.',
@@ -5887,6 +5888,7 @@ const I18N = {
     recentPlayed:'Zuletzt gespielt',
     trialBanner1:'Nur noch 1 KI-Versuch · Hol dir Pro für unbegrenzt',
     trialBanner2:'Nur noch 2 KI-Versuche · Hol dir Pro für unbegrenzt',
+    morphAiUnavailable:'Morph für KI-generierte Stimmung nicht verfügbar',
     proPaywallTitle:'Das ist Teil von Paintiano Pro',
     proPaywallTitleAi:'Du hast deine kostenlosen KI-Kompositionen aufgebraucht',
     proPaywallBody:'Schalte unbegrenzte KI-Kompositionen frei, entferne das Wasserzeichen aus Exporten und unterstütze ein unabhängiges Kunstprojekt.',
@@ -5985,6 +5987,7 @@ const I18N = {
     recentPlayed:'Joués récemment',
     trialBanner1:"Plus qu'1 essai IA · Passez à Pro pour l'illimité",
     trialBanner2:"Plus que 2 essais IA · Passez à Pro pour l'illimité",
+    morphAiUnavailable:'Morph indisponible pour les ambiances IA',
     proPaywallTitle:'Cela fait partie de Paintiano Pro',
     proPaywallTitleAi:'Vous avez utilisé vos compositions IA gratuites',
     proPaywallBody:'Débloquez les compositions IA illimitées, supprimez le filigrane des exports et soutenez un projet artistique indépendant.',
@@ -6083,6 +6086,7 @@ const I18N = {
     recentPlayed:'Reproducidos recientemente',
     trialBanner1:'Solo 1 prueba IA restante · Pro para ilimitado',
     trialBanner2:'Solo 2 pruebas IA restantes · Pro para ilimitado',
+    morphAiUnavailable:'Morph no disponible para mood generado por IA',
     proPaywallTitle:'Esto forma parte de Paintiano Pro',
     proPaywallTitleAi:'Has usado tus composiciones de IA gratuitas',
     proPaywallBody:'Desbloquea composiciones de IA ilimitadas, elimina la marca de agua de las exportaciones y apoya un proyecto artístico independiente.',
@@ -6181,6 +6185,7 @@ const I18N = {
     recentPlayed:'Nedávno prehraté',
     trialBanner1:'Zostáva už len 1 AI skúška · Pro pre neobmedzené',
     trialBanner2:'Zostávajú už len 2 AI skúšky · Pro pre neobmedzené',
+    morphAiUnavailable:'Morph nedostupný pre AI generovaný mood',
     proPaywallTitle:'Toto je súčasťou Paintiano Pro',
     proPaywallTitleAi:'Využil si svoje bezplatné AI kompozície',
     proPaywallBody:'Odomkni neobmedzené AI kompozície, odstráň vodoznak z exportov a podpor nezávislý umelecký projekt.',
@@ -6279,10 +6284,12 @@ const I18N = {
     recentPlayed:'最近播放',
     trialBanner1:'仅剩 1 次 AI 试用 · 升级 Pro 享无限',
     trialBanner2:'仅剩 2 次 AI 试用 · 升级 Pro 享无限',
+    morphAiUnavailable:'AI 生成的情绪不支持 Morph',
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
     trialBanner1:'僅剩 1 次 AI 試用 · 升級 Pro 享無限',
     trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro 享無限',
+    morphAiUnavailable:'AI 生成的情緒不支援 Morph',
     proPaywallTitle:'这是 Paintiano Pro 的功能',
     proPaywallTitleAi:'您已用完免费的 AI 作曲次数',
     proPaywallBody:'解锁无限 AI 作曲、移除导出图像的水印,并支持一个独立的艺术项目。',
@@ -6475,6 +6482,7 @@ const I18N = {
     recentPlayed:'Reproduzidos recentemente',
     trialBanner1:'Resta apenas 1 teste IA · Pro para ilimitado',
     trialBanner2:'Restam apenas 2 testes IA · Pro para ilimitado',
+    morphAiUnavailable:'Morph indisponível para mood gerado por IA',
     proPaywallTitle:'Isso faz parte do Paintiano Pro',
     proPaywallTitleAi:'Você usou suas composições de IA gratuitas',
     proPaywallBody:'Desbloqueie composições de IA ilimitadas, remova a marca d\'água das exportações e apoie um projeto de arte independente.',
@@ -11499,6 +11507,63 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(_){}
   },[stopAll,applyEvents]);
 
+  // ── AI Compose "recent 3" list ──────────────────────────────────────────────
+  // Tracks only AI-generated moods from the free-text path (composeSource='ai',
+  // !moodFromImg). Library / offline moods are NOT stored — they're already
+  // pickable from the mood grid. Stored: title + recipe (notes/tempo). No thumb.
+  // Saved for ALL users; recall is free for everyone (replay = no AI call).
+  const AI_COMPOSE_RECENT_KEY='paintiano_aicompose_recent_v1';
+  const [aiComposeRecent,setAiComposeRecent]=useState(()=>{
+    try{ const raw=localStorage.getItem(AI_COMPOSE_RECENT_KEY); return raw?(JSON.parse(raw)||[]):[]; }
+    catch(_){ return []; }
+  });
+  const _aiComposeRecentAdd=useCallback((title,notes,tempo)=>{
+    if(!title||!notes||!notes.length) return;
+    try{
+      const entry={ id:Date.now(), title, notes, tempo:tempo||90 };
+      setAiComposeRecent(prev=>{
+        // Dedupe by title — same title (cache hit OR replayed Vary) replaces.
+        const next=[entry,...prev.filter(p=>p.title!==entry.title)].slice(0,3);
+        try{ localStorage.setItem(AI_COMPOSE_RECENT_KEY, JSON.stringify(next)); }catch(_){}
+        return next;
+      });
+    }catch(_){ /* storage disabled — skip silently */ }
+  },[]);
+  // Update the latest entry's notes after Vary (keeps title, swaps recipe).
+  const _aiComposeRecentUpdate=useCallback((title,notes,tempo)=>{
+    if(!title||!notes||!notes.length) return;
+    setAiComposeRecent(prev=>{
+      const idx=prev.findIndex(p=>p.title===title);
+      if(idx<0) return prev;
+      const next=prev.slice();
+      next[idx]={ ...prev[idx], notes, tempo:tempo||prev[idx].tempo||90, id:Date.now() };
+      const updated=next.splice(idx,1)[0];
+      next.unshift(updated);
+      try{ localStorage.setItem(AI_COMPOSE_RECENT_KEY, JSON.stringify(next)); }catch(_){}
+      return next;
+    });
+  },[]);
+  // Replay a recent AI compose — rebuild the painting, no AI call. Free for all
+  // users (exhausted free trial doesn't block replay; only new generation does).
+  const _aiComposeRecall=useCallback((entry)=>{
+    if(!entry) return;
+    try{
+      const evts=noteArr2events(entry.notes||[],entry.tempo||90);
+      if(!evts.length) return;
+      const title=entry.title||'✦';
+      const _varyNotes=(entry.notes||[]).map(n=>Array.isArray(n)
+        ? {note:n[0],dur:n[1],beat:n[2],vel:n[3]}
+        : {note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
+      stopAll();
+      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false);
+      setStructureSeedLock(null); setVarySource({notes:_varyNotes,tempo:entry.tempo||90,title});
+      setImgMoodThumb(null); setMoodFromImg(false);
+      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title);
+      setSongQ(title);
+      try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+    }catch(_){}
+  },[stopAll,applyEvents]);
+
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   const composeFromImage=useCallback(async(srcUrl)=>{
     const _src=srcUrl||originalImgUrl;
@@ -11506,10 +11571,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Pro gate (mood-from-image shares the same free trial pool as aiCompose).
     // A cached image replays free (handled below); only a fresh AI call counts.
     if(!isPro && trialExhausted){ setPaywallReason('ai_trial'); return; }
-    // Show the chosen picture immediately so the screen isn't blank while the AI
-    // composes. moodContext+moodFromImg gate the preview render; set them now and
-    // re-affirm after applyEvents (which clears the thumb) on success below.
-    setImgMoodThumb(_src); setMoodContext(true); setMoodFromImg(true); setViewMode('paint');
+    // Show the chosen picture immediately as a FULL canvas image (not a thumb)
+    // so the user sees what they picked while AI composes. The thumb appears
+    // only after Play is pressed (handled at startPlay → setImgMoodThumb).
+    setOriginalImgUrl(_src); setLoadedSource('image'); setImgMoodThumb(null);
+    setMoodContext(true); setMoodFromImg(true); setViewMode('image');
     setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=_src; });
@@ -11551,8 +11617,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         : {note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
       const _imgVarySource={notes:_varyNotes,tempo:parsed.tempo||90,title};
       stopAll();
-      setViewMode('paint'); setOriginalImgUrl(null); setLoadedSource(null); setForceSetup(false); setStructureSeedLock(null); setVarySource(_imgVarySource);
-      applyEvents(evts,title); setComposeSource('ai'); setMoodContext(true); setCurrentMood(title); setSongQ(''); setImgMoodThumb(_src); setMoodFromImg(true);
+      setForceSetup(false); setStructureSeedLock(null); setVarySource(_imgVarySource);
+      // Prepare chords WITHOUT calling applyEvents (which would flip viewMode to
+      // 'paint'). Instead set chords/grid/info manually — same shape applyEvents
+      // produces — so the canvas is Play-ready while the big image stays visible.
+      // startPlay will detect MFI image-view and swap to thumb + paint at Play time.
+      const _events = evts.map((c,i)=>{
+        if(c.durQ==null){const md=Math.max(...c.n.map(n=>n.durMs||0),0);c.durQ=md>0?snapDurQ(md/500):1;}
+        if(c.n.length>1) c.n=[...c.n].sort((a,b)=>b.m-a.m);
+        return {...c,idx:i};
+      });
+      const _grid=computeGrid(_events); const _lastMs=_events[_events.length-1]?.startMs||0;
+      pixelRef.current=null;
+      setGrid(_grid); setChords(_events); setDisp(0);
+      setInfo({title,count:_events.length,dur:Math.round(_lastMs/1000)});
+      idxRef.current=_events.length;
+      setComposeMode(false); setDemoMode(false);
+      setPlaybackSpeed(1); playbackSpeedRef.current=1;
+      composedModeRef.current=false;
+      if(introRafRef.current){cancelAnimationFrame(introRafRef.current);introRafRef.current=null;}
+      setComposeSource('ai'); setCurrentMood(title); setSongQ('');
       // Remember this piece in the recent-3 strip (recipe + tiny thumb only).
       try{ _mfiRecentAdd(_src,{notes:parsed.notes||[],tempo:parsed.tempo||90,title}); }catch(_){}
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
@@ -11762,6 +11846,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           setVarySource({notes:_varyNotes,tempo:parsed.tempo||90,title:(parsed.title&&String(parsed.title).trim())||title});
           const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed);
           applyEvents(evts,_dispT); setComposeSource('ai'); setErr(''); setErrInfo(false);
+          // Remember in recent (cache hit also counts — moves entry to front).
+          try{ _aiComposeRecentAdd(_dispT, parsed.notes||[], parsed.tempo||90); }catch(_){}
           try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
           return;
         }
@@ -11839,6 +11925,9 @@ Composition rules:
       { const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:{note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
         setVarySource({notes:_varyNotes,tempo:parsed.tempo||90,title:(parsed.title&&String(parsed.title).trim())||title}); }
       const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed); applyEvents(evts,_dispT); setComposeSource('ai');
+      // Remember this AI-generated mood in the recent-3 list (text path only —
+      // moodFromImg goes through composeFromImage which already adds to mfiRecent).
+      try{ _aiComposeRecentAdd(_dispT, parsed.notes||[], parsed.tempo||90); }catch(_){}
       const bytes=encodeMidi(evts,parsed.tempo||120);
       setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
       setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -12134,6 +12223,15 @@ Composition rules:
     const info=infoRef.current;
     const viewMode=viewModeRef.current;
     if(busy||!chords.length)return;unlockAudio();
+    // MFI hand-off: if we're showing the full picked image (mood-from-image AI
+    // ready but Play not pressed yet), swap to thumbnail + paint mode now so the
+    // canvas can start drawing. This is what makes Play work for MFI new images.
+    if(viewMode==='image' && moodFromImg && originalImgUrl){
+      setImgMoodThumb(originalImgUrl);
+      setOriginalImgUrl(null);
+      setLoadedSource(null);
+      setViewMode('paint');
+    }
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
     if(!isResume){
@@ -13560,6 +13658,14 @@ Composition rules:
             {(!moodFromImg) && (
             <button className="pf-morph" onClick={()=>{
               if(sourcePickerLocked)return;
+              // Morph cannot remix AI-generated moods (it only works against the
+              // library/offline mood pool with known recipes). Show a clear gold
+              // hint instead of opening a picker that would fail at commit time.
+              if(composeSource==='ai'){
+                setErr(t('morphAiUnavailable')||'Morph for AI generated mood unavailable');
+                setErrInfo(true);
+                return;
+              }
               if(!currentMood){flashMoodHint();return;}
               if(!chords.length)return;
               const pre=morphTargets.filter(m=>MOODS.includes(m));
@@ -13584,7 +13690,7 @@ Composition rules:
                   }
                 });
               }
-            }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.64*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:chords.length&&currentMood&&!sourcePickerLocked?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.3)',opacity:chords.length&&currentMood&&!sourcePickerLocked?1:.55,transition:'all .18s'}}>{t('morph')}</button>
+            }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):composeSource==='ai'?(t('morphAiUnavailable')||'Morph for AI generated mood unavailable'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.64*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:chords.length&&currentMood&&!sourcePickerLocked&&composeSource!=='ai'?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.3)',opacity:chords.length&&currentMood&&!sourcePickerLocked&&composeSource!=='ai'?1:.55,transition:'all .18s'}}>{t('morph')}</button>
             )}
             <button className="pf-vary" onClick={()=>{
               // VARY is allowed while PLAYING (no need to pause first), but not
@@ -13620,6 +13726,9 @@ Composition rules:
               // version — not the original AI generation.
               if(moodFromImg && currentMood){
                 try{ _mfiRecentUpdate(currentMood, varied.notes, varied.tempo); }catch(_){}
+              } else if(composeSource==='ai' && currentMood){
+                // Same idea for AI Compose (text-mood path) — update its recent.
+                try{ _aiComposeRecentUpdate(currentMood, varied.notes, varied.tempo); }catch(_){}
               }
               setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
               // Keep the Color·Style strip OPEN after Vary so the user can keep
@@ -14297,6 +14406,21 @@ Composition rules:
                 <button onClick={()=>submit(moodEdit)} disabled={!moodEdit.trim()} aria-label={t('moodGo')} title={t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:moodEdit.trim()?'pointer':'default',background:moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)',color:moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
               </div>
             ); })()}
+            {/* Recently AI generated — appears between text input and mood grid.
+                Shows only when the user has at least one prior AI compose (text path,
+                not library/offline). Click replays the piece for free, no AI call. */}
+            {aiComposeRecent.length>0 && (
+              <div style={{marginBottom:12,display:'flex',flexDirection:'column',gap:6}}>
+                <div style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(242,238,232,.45)',textAlign:'center',marginBottom:2}}>
+                  {t('recentAiGenerated')||'Recently AI generated'}
+                </div>
+                {aiComposeRecent.map((entry)=>(
+                  <button key={entry.id} onClick={()=>{ _aiComposeRecall(entry); setShowMoodMenu(false); }} style={{padding:'9px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.66*effScale)+'rem',textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    ✦ {entry.title}
+                  </button>
+                ))}
+              </div>
+            )}
             <div style={{maxHeight:'42vh',overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4}}>
               {MOODS.filter(m=>{ const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=_n(moodEdit.trim()); if(!q)return false; return _n((t('moodNames')||{})[m]||m).includes(q); }).map(m=>(
                 <button key={m} onClick={()=>{
