@@ -119,16 +119,16 @@ const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setRea
   useModalFocusTrap(panelRef);
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:(.78*effScale)+'rem',lineHeight:1.65,fontFamily:'inherit',position:'relative'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:(.78*readScale)+'rem',lineHeight:1.65,fontFamily:'inherit',position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:14,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*effScale)+'rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
-        <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(201,168,76,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*effScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
-        <style>{`#pf-concept-body{font-size:${(0.78*effScale).toFixed(3)}rem;}
-#pf-concept-body h3{font-size:${(1*effScale).toFixed(3)}rem !important;}
-#pf-concept-body p,#pf-concept-body li{font-size:${(0.82*effScale).toFixed(3)}rem !important;line-height:1.65;}
+        <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:14,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
+        <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(201,168,76,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
+        <style>{`#pf-concept-body{font-size:${(0.78*readScale).toFixed(3)}rem;}
+#pf-concept-body h3{font-size:${(1*readScale).toFixed(3)}rem !important;}
+#pf-concept-body p,#pf-concept-body li{font-size:${(0.82*readScale).toFixed(3)}rem !important;line-height:1.65;}
 #pf-concept-body strong,#pf-concept-body em{font-size:inherit !important;}`}</style>
         <div id="pf-concept-body">{getConcept(lang)}</div>
-        <button onClick={onClose} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
+        <button onClick={onClose} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
       </div>
     </div>
   );
@@ -144,10 +144,10 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
   useModalFocusTrap(panelRef);
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:(.78*effScale)+'rem',lineHeight:1.6,fontFamily:'inherit',position:'relative'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:(.78*readScale)+'rem',lineHeight:1.6,fontFamily:'inherit',position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:(.7*effScale)+'rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
-        <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(140,200,255,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(140,200,255,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*effScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
+        <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
+        <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(140,200,255,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(140,200,255,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
         <input
           type="search"
           value={guideQuery}
@@ -161,7 +161,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
           inputMode="search"
           enterKeyHint="search"
           aria-label={t('searchGuide')}
-          style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:(.78*effScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
+          style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:(.78*readScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
         />
         <div>
         {(() => {
@@ -174,12 +174,12 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
             return (
             <Fragment key={entry.id}>
               {sec && (
-                <div style={{margin:'16px 0 7px',padding:'0 4px',fontSize:(0.58*effScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(140,200,255,.55)'}}>{t('gsec_'+sec)}</div>
+                <div style={{margin:'16px 0 7px',padding:'0 4px',fontSize:(0.58*readScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(140,200,255,.55)'}}>{t('gsec_'+sec)}</div>
               )}
               <details open={!!guideQuery.trim()} style={{marginBottom:6,border:'1px solid rgba(207,197,168,.08)',borderRadius:4,padding:'2px 0',background:'rgba(255,255,255,0.012)'}}>
-                <summary style={{cursor:'pointer',padding:'9px 12px',color:'rgba(140,200,255,.92)',fontWeight:500,fontSize:(0.82*effScale)+'rem',letterSpacing:'.02em',listStyle:'none',userSelect:'none'}}>{entry.title}</summary>
+                <summary style={{cursor:'pointer',padding:'9px 12px',color:'rgba(140,200,255,.92)',fontWeight:500,fontSize:(0.82*readScale)+'rem',letterSpacing:'.02em',listStyle:'none',userSelect:'none'}}>{entry.title}</summary>
                 {entry.body.split('◆').map((para,i)=>(
-                  <p key={i} style={{margin:i===0?0:'8px 0 0',padding:'2px 14px 12px',color:'rgba(207,197,168,.82)',fontSize:(0.76*effScale)+'rem',lineHeight:1.65}}>{para.trim()}</p>
+                  <p key={i} style={{margin:i===0?0:'8px 0 0',padding:'2px 14px 12px',color:'rgba(207,197,168,.82)',fontSize:(0.76*readScale)+'rem',lineHeight:1.65}}>{para.trim()}</p>
                 ))}
               </details>
             </Fragment>
@@ -187,7 +187,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
           });
         })()}
         </div>
-        <button onClick={onClose} style={{display:'block',margin:'20px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
+        <button onClick={onClose} style={{display:'block',margin:'20px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
       </div>
     </div>
   );
