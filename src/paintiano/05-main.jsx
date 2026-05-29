@@ -510,6 +510,12 @@ export default function Paintiano() {
   const saltIdxRef = useRef(0);
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
   const [lang, setLang] = useState(()=>{try{return localStorage.getItem('paintiano_lang')||'EN';}catch(_){return 'EN';}});
+  // Mirror lang into a ref so the demo reel orchestrator (whose timers were
+  // scheduled with closure over the old lang) can resolve text at fire time
+  // against the current language. Otherwise switching language mid-reel
+  // updates the navigation but the title cards keep the original lang.
+  const langRef = useRef(lang);
+  useEffect(()=>{ langRef.current = lang; }, [lang]);
   const [langOpen, setLangOpen] = useState(false);
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
 
@@ -859,6 +865,11 @@ export default function Paintiano() {
   // Demo-reel (promo tour) state: overlay copy currently shown + a ref bag of
   // timers so a skip can tear the whole sequence down cleanly.
   const [demoText, setDemoText] = useState('');     // overlay card text ('' = hidden)
+  // Companion to demoText: holds the i18n key for the currently-showing card,
+  // so a language switch mid-reel can re-resolve the text against the new
+  // lang. setDemoText is still used for ad-hoc strings; setDemoTextKey wins
+  // when both are present (key → resolved on every render).
+  const [demoTextKey, setDemoTextKey] = useState('');
   const [demoTyping, setDemoTyping] = useState('');  // AI-beat "typed" phrase
   const [demoPrintBeat, setDemoPrintBeat] = useState(false); // frame/print flourish
   const [demoReelOn, setDemoReelOn] = useState(false);       // reel active → render overlay
@@ -1011,7 +1022,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // audio input, producing a truncated / silent saved file.
   // Centralizing here both fixes the missing `disabled` attribute and removes
   // four-way repetition in the JSX.
-  const sourcePickerLocked = busy || composeMode || micPainting || micListening || recording || playing;
+  const sourcePickerLocked = busy || composeMode || micPainting || micListening || recording || playing || demoReelOn;
   // Import tiles (MIDI/Audio/Score/Image) stay usable DURING a Compose/MIC
   // session so the user can switch source at any time — they only lock while a
   // file is transcribing (busy) or a recording is running. The tile's onClick
@@ -4044,50 +4055,11 @@ Composition rules:
     if(bag.parade){ try{clearInterval(bag.parade);}catch(_){} bag.parade=null; }
     if(bag.vary){ try{clearInterval(bag.vary);}catch(_){} bag.vary=null; }
     if(bag.type){ try{clearInterval(bag.type);}catch(_){} bag.type=null; }
-    setDemoText(''); setDemoTyping(''); setDemoPrintBeat(false);
+    setDemoText(''); setDemoTextKey(''); setDemoTyping(''); setDemoPrintBeat(false);
     try{ stopAll(); }catch(_){}
     setDemoMode(false);
     setStyle(null);
   },[stopAll]);
-
-  // ── Global event blocker while the reel is running ─────────────────────
-  // The fullscreen overlay alone isn't enough — on some setups (iOS quirks,
-  // stacking contexts from transforms on ancestors, third-party CSS) click
-  // events still reach buttons UNDERNEATH the overlay, so users can hit Clear
-  // / Play / lang switches mid-reel and break the flow.
-  //
-  // Solution: register `capture`-phase listeners on `document` itself. The
-  // capture phase runs BEFORE any element-level handler, so we can:
-  //   • detect the event reliably regardless of where it lands
-  //   • either route it to demoReelStop (skip) — for any tap
-  //   • OR block it completely with preventDefault + stopImmediatePropagation
-  // We listen on the events that actually trigger buttons: pointerdown (the
-  // earliest reliable signal), mousedown (desktop fallback), and click
-  // (the one buttons listen to in React). touchstart isn't needed because
-  // pointerdown covers touch too on modern browsers.
-  useEffect(()=>{
-    if(!demoReelOn) return;
-    const trap = (e)=>{
-      // Always swallow — block buttons, links, anything in the page.
-      e.preventDefault();
-      e.stopPropagation();
-      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-      // On the click event (the "decision" moment for a tap), route to skip.
-      // pointerdown/mousedown only block; click does the action so we don't
-      // skip-then-skip on the same gesture.
-      if(e.type === 'click'){ demoReelStop(); }
-    };
-    document.addEventListener('click',       trap, true);
-    document.addEventListener('pointerdown', trap, true);
-    document.addEventListener('mousedown',   trap, true);
-    document.addEventListener('keydown',     trap, true);
-    return ()=>{
-      document.removeEventListener('click',       trap, true);
-      document.removeEventListener('pointerdown', trap, true);
-      document.removeEventListener('mousedown',   trap, true);
-      document.removeEventListener('keydown',     trap, true);
-    };
-  },[demoReelOn,demoReelStop]);
 
   // The promo tour. Walks DEMO_REEL_PHASES, scheduling each beat with a timer.
   // Reuses the real engine so it doubles as a working demo. Tap anywhere to skip
@@ -4100,7 +4072,7 @@ Composition rules:
     const bag=demoReelRef.current;
     bag.active=true;
     setDemoReelOn(true);
-    const T=(key)=>demoReelText(lang, key);
+    const T=(key)=>demoReelText(langRef.current, key);
     const sched=(ms,fn)=>{ const id=setTimeout(()=>{ if(bag.active) fn(); }, ms); bag.timers.push(id); };
 
     DEMO_REEL_PHASES.forEach(ph=>{
@@ -4115,13 +4087,13 @@ Composition rules:
             break;
           case 'show-text':
             setDemoTyping(''); setDemoPrintBeat(false);
-            setDemoText(T(ph.textKey));
+            setDemoTextKey(ph.textKey);
             break;
           case 'set-style':
             if(ph.style) setStyle(ph.style);
             break;
           case 'style-parade': {
-            setDemoText(T(ph.textKey||'artists'));
+            setDemoTextKey(ph.textKey||'artists');
             let i=0;
             // immediate first swap
             setStyle(DEMO_REEL_STYLE_PARADE[0]);
@@ -4138,7 +4110,7 @@ Composition rules:
             // the engine's implicit default (Mosaic), which made the AI beat
             // look like every other beat. Each phase explicitly owns a style.
             setStyle('spiral');
-            setDemoText('');
+            setDemoTextKey('');
             const phrase=T(ph.textKey);
             let k=0; setDemoTyping('');
             bag.type=setInterval(()=>{
@@ -4150,7 +4122,7 @@ Composition rules:
           }
           case 'ai-play': {
             setDemoTyping('');
-            setDemoText(T(ph.textKey));
+            setDemoTextKey(ph.textKey);
             // Offline mood song — instant, no network. Use the SAME loader as the
             // Für Elise beat (state + refs set together → canvas paints reliably).
             // demoLoadAndPlay internally calls fullClear → stopAll → setStyle(null),
@@ -4174,7 +4146,7 @@ Composition rules:
             //
             // Stage 1 (now): big picture alone, "Picture." card. The viewer
             // reads "this is the input".
-            setDemoText(T('mfiPicture'));
+            setDemoTextKey('mfiPicture');
             try{ loadSampleImgMood(); }catch(_){}
             // Stage 2: music begins playing. startPlay triggers the MFI
             // hand-off (image collapses to a thumb, canvas paints). The
@@ -4182,7 +4154,7 @@ Composition rules:
             // image → AI-composed song.
             const stage2Id = setTimeout(()=>{
               if(!bag.active) return;
-              setDemoText(T('mfiMusic'));
+              setDemoTextKey('mfiMusic');
               try{ startPlayRef.current?.(); }catch(_){}
               setStyle('matisse');
             }, DEMO_REEL_MFI_STAGE2_AT);
@@ -4192,14 +4164,14 @@ Composition rules:
             // the third card explicitly labels the final result.
             const stage3Id = setTimeout(()=>{
               if(!bag.active) return;
-              setDemoText(T('mfiPainting'));
+              setDemoTextKey('mfiPainting');
               setStyle('matisse');
             }, DEMO_REEL_MFI_STAGE3_AT);
             bag.timers.push(stage3Id);
             break;
           }
           case 'vary': {
-            setDemoText(T(ph.textKey||'variations'));
+            setDemoTextKey(ph.textKey||'variations');
             let n=0;
             bag.vary=setInterval(()=>{
               if(!bag.active){ clearInterval(bag.vary); bag.vary=null; return; }
@@ -4210,12 +4182,12 @@ Composition rules:
             break;
           }
           case 'print-beat':
-            setDemoText(T(ph.textKey));
+            setDemoTextKey(ph.textKey);
             setDemoPrintBeat(true);
             break;
           case 'outro':
             setDemoPrintBeat(false);
-            setDemoText(T(ph.textKey));
+            setDemoTextKey(ph.textKey);
             break;
           case 'end':
             demoReelStop();
@@ -4224,7 +4196,7 @@ Composition rules:
         }
       });
     });
-  },[busy,lang,demoLoadAndPlay,demoReelStop,advanceVariation,loadSampleImgMood]);
+  },[busy,demoLoadAndPlay,demoReelStop,advanceVariation,loadSampleImgMood]);
 
   const handlePauseClick=useCallback(()=>{
     // If a live mic mode is active (Voice=micPainting or Music=micListening),
@@ -5024,6 +4996,7 @@ Composition rules:
         <nav style={{display:'flex',gap:18,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)'}}>{t('concept')}</span>
           <span onClick={()=>{
+            if(demoReelOn){ demoReelStop(); return; }
             if(busy)return;
             if(demoArmed){
               if(demoArmRef.current){clearTimeout(demoArmRef.current);demoArmRef.current=null;}
@@ -5269,7 +5242,7 @@ Composition rules:
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?4:8,position:'relative'}}>
-          <button onClick={()=>{if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);
+          <button onClick={()=>{if(demoReelOn){demoReelStop();return;}if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);
             // Leaving to Setup while a painting is playing/paused should PRESERVE
             // the position so "← Canvas" (Resume) picks up exactly where it left
             // off — capture disp into resumeFromRef and pause, instead of the full
@@ -5378,7 +5351,7 @@ Composition rules:
             <button onClick={()=>{if(recording)return;setShowMicRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recent'}</button>
           )}
         </div>
-        <button onClick={()=>setStripOpen(o=>!o)} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase'}}>
+        <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:'rgba(230,222,196,.5)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1}}>
           <span>{loadedSource==='image' ? (t('colorLabel') + ' · ' + t('dirLabel')) : (t('colorLabel') + ' · ' + t('styleLabel'))}</span>
           <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
         </button>
@@ -5612,6 +5585,7 @@ Composition rules:
               // The deselect step lets the user click back out to plain Mosaic
               // (and so re-enable 🎲 shuffle) without reaching for the Mosaic button.
               const onClick = ()=>{
+                if(demoReelOn) return;
                 if(style===a) setStyleTo(b);
                 else if(style===b) setStyleTo(null);
                 else setStyleTo(a);
@@ -5910,6 +5884,10 @@ Composition rules:
       <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`})}}
         onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
+          // During the demo reel a canvas tap is the "escape" gesture — kill
+          // the reel and stop processing the click (so we don't also try to
+          // select a chord on the painting that's mid-render).
+          if(demoReelOn){ demoReelStop(); return; }
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
           const rect=cv.getBoundingClientRect();
@@ -6328,8 +6306,8 @@ Composition rules:
         <button
           className="pf-lift"
           onClick={handlePauseClick}
-          disabled={recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
-          title={recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
+          disabled={demoReelOn||recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
+          title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
           style={{padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'default':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.25)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.6:1,transition:'all .18s'}}>
           {holdPaused?t('resume'):playing?t('pause'):t('play')}
         </button>{/* MIC STOP / REC — in the transport row UNDER the canvas (not in
@@ -6352,7 +6330,7 @@ Composition rules:
           <button className="pf-lift" onClick={()=>{if(playing||holdPaused)advanceVariation();}} disabled={!(playing||holdPaused)} title={(playing||holdPaused)?'next painting — jump to a new variation':'play to browse variations'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:(playing||holdPaused)?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:(playing||holdPaused)?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+((playing||holdPaused)?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:(playing||holdPaused)?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
         )}
         {viewMode!=='image'&&(
-          <button className="pf-lift" onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening} title={busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'8px 14px',background:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(169,127,245,.14)':'rgba(28,24,40,.5)',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(200,160,255,.92)':'rgba(180,140,255,.25)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'rgba(180,140,255,.5)':'rgba(180,140,255,.18)'),borderRadius:22,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase'}}>
+          <button className="pf-lift" onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening||demoReelOn} title={demoReelOn?(t('demoMode')||'demo mode'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'8px 14px',background:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn?'rgba(169,127,245,.14)':'rgba(28,24,40,.5)',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn?'rgba(200,160,255,.92)':'rgba(180,140,255,.25)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn?'rgba(180,140,255,.5)':'rgba(180,140,255,.18)'),borderRadius:22,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase'}}>
             {t('print')}
           </button>
         )}
@@ -6413,6 +6391,10 @@ Composition rules:
         })()}
         <button
           onClick={()=>{
+            // During the demo reel, Clear is an escape gesture: stop the reel
+            // and DO NOT actually clear the canvas — leaving the painting
+            // intact so the viewer can keep it or interact further.
+            if(demoReelOn){ demoReelStop(); return; }
             // L3: clear() doesn't gracefully handle being called while recording —
             // it stops playback (the recorder's audio source) but leaves the
             // recorder running with no input, producing a silent / truncated
@@ -6534,36 +6516,38 @@ Composition rules:
           because it visually wraps the canvas, not the screen. ── */}
       {demoReelOn && (
         <div
-          onClick={(e)=>{e.stopPropagation();demoReelStop();}}
-          onPointerDown={(e)=>e.stopPropagation()}
-          onPointerUp={(e)=>e.stopPropagation()}
-          onMouseDown={(e)=>e.stopPropagation()}
-          onMouseUp={(e)=>e.stopPropagation()}
-          onTouchStart={(e)=>e.stopPropagation()}
-          onTouchEnd={(e)=>e.stopPropagation()}
+          onClick={demoReelStop}
           role="button" aria-label={t('demoSkip')||'skip demo'}
-          /* iOS Safari mis-handles inset:0 on fixed overlays when the address
-             bar is dynamic — element ends up shorter than the visual viewport
-             and content rides up to the top. Use explicit 100vw × 100dvh so
-             the overlay fills the *dynamic* viewport correctly. dvh is well
-             supported (iOS 15.4+, every shipping Android Chrome) and falls
-             back to vh on older browsers. */
-          style={{position:'fixed',top:0,left:0,width:'100vw',height:'100dvh',zIndex:99998,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',background:'rgba(6,5,10,0.18)',touchAction:'none'}}>
+          /* The overlay shows text and listens for tap-to-skip, but it does
+             NOT block buttons underneath. Mute / Speed / Back / nav links
+             still work normally — they each have their own demo-aware
+             handlers (escape or pass-through). Buttons that WOULD break the
+             paint flow (Play, Print, Color/Style, source tiles) are
+             individually `disabled={demoReelOn}` at their own callsites.
+             This way the demo feels alive (you can mute or speed up) rather
+             than a frozen modal, while the destructive interactions are
+             gated cleanly. */
+          style={{position:'fixed',top:0,left:0,width:'100vw',height:'100dvh',zIndex:99998,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',background:'transparent'}}>
           {/* Title sits dead-centre. The text-box has its own dark scrim so
               the gold gradient stays readable against ANY canvas style behind
-              it (Pollock chaos, Mondrian blocks, Rothko fields, etc.). Earlier
-              "transparent + drop-shadow" approach failed against bright canvas
-              regions. */}
+              it (Pollock chaos, Mondrian blocks, Rothko fields, etc.). */}
           {demoTyping && (
             <div style={{padding:'14px 26px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',background:'rgba(8,6,14,.55)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:12,border:'1px solid rgba(240,192,64,.18)'}}>
-              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.4rem,4.2vw,2.4rem)',color:'#fff',letterSpacing:'.02em'}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:`clamp(${1.4*effScale}rem,${4.2*effScale}vw,${2.4*effScale}rem)`,color:'#fff',letterSpacing:'.02em'}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
             </div>
           )}
-          {demoText && !demoTyping && (
-            <div style={{padding:'16px 34px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',background:'rgba(8,6,14,.55)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:14,border:'1px solid rgba(240,192,64,.28)',animation:'pfDemoFade .55s ease'}}>
-              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.5rem,4.6vw,2.6rem)',letterSpacing:'.025em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>{demoText}</span>
-            </div>
-          )}
+          {/* Resolved title text: prefer the live-resolved key (so a language
+              switch mid-reel re-translates without restarting), fall back to
+              demoText for any ad-hoc string we still set directly. */}
+          {(() => {
+            const resolved = demoTextKey ? demoReelText(lang, demoTextKey) : demoText;
+            if(!resolved || demoTyping) return null;
+            return (
+              <div style={{padding:'16px 34px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',background:'rgba(8,6,14,.55)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:14,border:'1px solid rgba(240,192,64,.28)',animation:'pfDemoFade .55s ease'}}>
+                <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:`clamp(${1.5*effScale}rem,${4.6*effScale}vw,${2.6*effScale}rem)`,letterSpacing:'.025em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>{resolved}</span>
+              </div>
+            );
+          })()}
           {/* Skip hint — small, top-right of viewport */}
           <div style={{position:'fixed',top:14,right:18,fontSize:'.62rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(247,243,236,.55)',background:'rgba(16,12,24,.45)',padding:'5px 12px',borderRadius:14,pointerEvents:'none',backdropFilter:'blur(4px)'}}>{t('demoSkip')||'tap to skip'}</div>
         </div>
