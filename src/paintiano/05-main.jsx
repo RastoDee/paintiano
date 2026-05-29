@@ -570,6 +570,10 @@ export default function Paintiano() {
   const [songQ,     setSongQ]     = useState('');
   const [moodFocused, setMoodFocused] = useState(false); // mood input focused → show autocomplete suggestions
   const [composeSource, setComposeSource] = useState(null); // 'ai' | 'offline' | 'crafted' — how the current mood piece was made
+  // Mirror composeSource into a ref for callbacks (startPlay reads it without
+  // becoming dependent on composeSource and re-creating per change).
+  const composeSourceRef = useRef(null);
+  useEffect(()=>{ composeSourceRef.current = composeSource; }, [composeSource]);
   const [err,       setErr]       = useState('');
   const [errInfo,   setErrInfo]   = useState(false);
 
@@ -716,6 +720,20 @@ export default function Paintiano() {
   // without becoming dependent on `style` (and re-creating on every switch).
   const styleRef = useRef(null);
   useEffect(()=>{ styleRef.current = style; }, [style]);
+  // ── AI "recording" lifecycle ────────────────────────────────────────────────
+  // After AI generates (or you Recall an existing piece), the recent entry can
+  // be RE-RECORDED by playing it once and tweaking. The "recording" window
+  // opens on the FIRST Play after Add/Recall, captures every style switch and
+  // Vary into the entry while playing, then SEALS when the song finishes a full
+  // playthrough (loop ON or OFF). Stop/pause behaves like Add — closes the
+  // window but next Play re-opens it. Sealed → no further changes possible
+  // until a new Add/Recall opens the window again.
+  const [aiRecording, setAiRecording] = useState(false);
+  const aiRecordingRef = useRef(false);
+  useEffect(()=>{ aiRecordingRef.current = aiRecording; }, [aiRecording]);
+  const [aiSealed, setAiSealed] = useState(false);
+  const aiSealedRef = useRef(false);
+  useEffect(()=>{ aiSealedRef.current = aiSealed; }, [aiSealed]);
   // Notes mode: a Mosaic sub-mode (mood only) that writes note NAMES instead of
   // colour blocks. Toggled by tapping the active Mosaic chip; auto-reset when any
   // artist style is chosen, or when the source is not a mood.
@@ -2722,6 +2740,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         try{ localStorage.setItem(MFI_RECENT_KEY, JSON.stringify(next)); }catch(_){}
         return next;
       });
+      // Fresh Add → recording lifecycle reset. Recording opens on first Play.
+      setAiRecording(false); setAiSealed(false);
     }catch(_){ /* storage disabled — skip silently */ }
   },[_mfiTinyThumb]);
 
@@ -2768,6 +2788,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // entry pre-dates the style-snapshot feature, entry.style is null and we
       // leave the current style untouched.
       if(entry.style){ setStyle(entry.style); }
+      // Recall = open re-record window. Sealed=false, recording=false; first
+      // Play after this opens recording so user can tweak style / Vary.
+      setAiRecording(false); setAiSealed(false);
       // Recall = full painting visible immediately in current style (no Play needed
       // to reveal it). applyEvents sets disp=0; override so all blocks render now.
       setDisp(evts.length); idxRef.current=evts.length;
@@ -2796,6 +2819,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         try{ localStorage.setItem(AI_COMPOSE_RECENT_KEY, JSON.stringify(next)); }catch(_){}
         return next;
       });
+      // Fresh Add → recording lifecycle reset. Recording opens on first Play.
+      setAiRecording(false); setAiSealed(false);
     }catch(_){ /* storage disabled — skip silently */ }
   },[]);
   // Update the latest entry's notes after Vary (keeps title, swaps recipe).
@@ -2834,20 +2859,20 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Restore the style the user had picked when this piece was saved. Null
       // in legacy entries (pre style-snapshot) → leave current style untouched.
       if(entry.style){ setStyle(entry.style); }
+      // Recall = open re-record window. First Play after this opens recording.
+      setAiRecording(false); setAiSealed(false);
       // Recall = full painting visible immediately in current style.
       setDisp(evts.length); idxRef.current=evts.length;
       try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(_){}
   },[stopAll,applyEvents]);
 
-  // When the user picks a different style while an AI piece is on-screen, sync
-  // it into that piece's recent entry so revisiting it later restores the same
-  // style automatically. Lookup is by currentMood (=== entry.title). MFI vs AI
-  // compose is distinguished by moodFromImg + composeSource. No write happens
-  // if no matching entry is found, so picking style with no piece active or for
-  // a library/offline mood is a no-op.
+  // Style sync during recording window: when the user switches style WHILE the
+  // re-record window is open (after first Play, before song fully plays once),
+  // write it into the active recent entry. Outside the window this is a no-op
+  // so just browsing styles after Recall doesn't overwrite saved choices.
   useEffect(()=>{
-    if(!currentMood || composeSource!=='ai') return;
+    if(!aiRecording || !currentMood) return;
     if(moodFromImg){
       setMfiRecent(prev=>{
         const idx=prev.findIndex(p=>p.title===currentMood);
@@ -2857,7 +2882,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         try{ localStorage.setItem(MFI_RECENT_KEY, JSON.stringify(next)); }catch(_){}
         return next;
       });
-    } else {
+    } else if(composeSource==='ai') {
       setAiComposeRecent(prev=>{
         const idx=prev.findIndex(p=>p.title===currentMood);
         if(idx<0 || prev[idx].style===style) return prev;
@@ -2867,7 +2892,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         return next;
       });
     }
-  },[style,currentMood,moodFromImg,composeSource]);
+  },[style,aiRecording,currentMood,moodFromImg,composeSource]);
 
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   // isSample=true means it's the built-in sample (loadSampleImgMood), which we
@@ -3555,6 +3580,16 @@ Composition rules:
       setLoadedSource(null);
       setViewMode('paint');
     }
+    // AI recording: first Play after Add/Recall opens the re-record window so
+    // style switches + Vary during this listen get written into the entry.
+    // Sealed (after a full playthrough completed) blocks reopening. Resume from
+    // a paused mid-song position doesn't re-open the window either — only the
+    // first FRESH Play does. (resumeFromRef !=null means user is resuming.)
+    if(currentMood && composeSourceRef.current==='ai'
+       && !aiSealedRef.current && !aiRecordingRef.current
+       && (resumeFromRef.current==null || resumeFromRef.current===0)){
+      setAiRecording(true);
+    }
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
     if(!isResume){
@@ -3698,6 +3733,11 @@ Composition rules:
           const last=chords[chords.length-1];
           const tail=Math.round((last?.n?.reduce((mx,nn)=>Math.max(mx,nn.durMs||0),0)||500)/playbackSpeedRef.current)+300;
           timers.current.push(setTimeout(()=>{
+            // Seal AI recording on first full playthrough — applies whether loop
+            // is ON or OFF. Style/Vary picks during this listen are now locked
+            // into the entry; future Play won't reopen recording until a new
+            // Add/Recall resets the lifecycle.
+            if(aiRecordingRef.current){ setAiRecording(false); setAiSealed(true); }
             if(loopModeRef.current && !composedModeRef.current){
               resumeFromRef.current=0;
               startPlay();
@@ -3895,6 +3935,9 @@ Composition rules:
       try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current=null;}}catch(_){}
       setActive(new Set());
       setPlaying(false);setAnim(false);
+      // User-initiated pause/stop = close recording window without sealing.
+      // Next fresh Play will re-open it (same semantics as Add).
+      if(aiRecordingRef.current){ setAiRecording(false); }
     }else if(holdPaused){
       setHoldPaused(false);
       setStripOpen(false); // free the canvas on Resume
@@ -4942,7 +4985,10 @@ Composition rules:
               try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
               setActive(new Set());setPlaying(false);setAnim(false);
             } else { stopAll(); wipeCanvasNow(); }
-            setWorking(false);setWLabel('');setWPct(0);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setMicArmed(false);setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+            setWorking(false);setWLabel('');setWPct(0);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setMicArmed(false);setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);
+            // Back to setup = close any active AI recording window (no seal —
+            // next Play after another Add/Recall reopens recording normally).
+            if(aiRecordingRef.current){ setAiRecording(false); }}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
