@@ -4043,8 +4043,11 @@ Composition rules:
     startPlay();
   },[stopAll,startPlay,fullClear,stashDraft]);
 
-  // Tear the reel down completely: clear every timer/interval, hide overlays,
-  // stop audio, drop demo flags. Safe to call multiple times (idempotent).
+  // Tear the reel down completely AND reset to the clean Setup screen.
+  // Earlier implementation only paused (stopAll + setStyle(null)), which left
+  // the canvas mid-painted in Mosaic — confusing because the user pressed
+  // "escape" expecting a fresh start, not a paused state. Now escape = back
+  // to the empty Setup just like pressing Back manually.
   const demoReelStop=useCallback(()=>{
     const bag=demoReelRef.current;
     if(!bag) return;
@@ -4056,10 +4059,19 @@ Composition rules:
     if(bag.vary){ try{clearInterval(bag.vary);}catch(_){} bag.vary=null; }
     if(bag.type){ try{clearInterval(bag.type);}catch(_){} bag.type=null; }
     setDemoText(''); setDemoTextKey(''); setDemoTyping(''); setDemoPrintBeat(false);
-    try{ stopAll(); }catch(_){}
-    setDemoMode(false);
+    // Full reset: wipe chords/canvas/source/mood, exit any active modes, and
+    // surface the Setup screen so the user lands in the same empty starting
+    // state they'd see after pressing Back.
+    try{ fullClear(); }catch(_){}
+    try{ wipeCanvasNow(); }catch(_){}
+    setStripOpen(false);
+    setShowColorPalette(false);
+    setCustomArmed(false);
+    setSourceContext(null);
+    setMoodContext(false);
     setStyle(null);
-  },[stopAll]);
+    setForceSetup(true);
+  },[stopAll,fullClear,wipeCanvasNow]);
 
   // The promo tour. Walks DEMO_REEL_PHASES, scheduling each beat with a timer.
   // Reuses the real engine so it doubles as a working demo. Tap anywhere to skip
@@ -4992,7 +5004,7 @@ Composition rules:
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
-      <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20}}>
+      <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999}}>
         <nav style={{display:'flex',gap:18,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)'}}>{t('concept')}</span>
           <span onClick={()=>{
