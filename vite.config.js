@@ -2,7 +2,22 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// ── Build identity (for the dev-only footer build label) ──────────────────────
+// Vercel injects these at build time. Locally they're undefined, so we fall back
+// to a short local-time stamp + 'local' so the footer never shows "undefined".
+//   __BUILD_SHA__ : short git commit hash on Vercel (e.g. "a3f9c2"), "local" otherwise
+//   __BUILD_ENV__ : "production" on paintiano.app, "preview" on dev preview URLs,
+//                   "development" for `npm run dev`. The footer only shows the
+//                   build label when this is NOT "production".
+const __BUILD_SHA__ = JSON.stringify(
+  (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 6) || 'local'
+);
+const __BUILD_ENV__ = JSON.stringify(
+  process.env.VERCEL_ENV || 'development'
+);
+
 export default defineConfig({
+  define: { __BUILD_SHA__, __BUILD_ENV__ },
   plugins: [
     react(),
     VitePWA({
