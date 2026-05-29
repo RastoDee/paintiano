@@ -49,17 +49,20 @@ const DEMO_REEL_MOOD = 'longing';
 // Overlay copy, per language. Trailer-style title cards — ≤4 words, punchy.
 // Key order mirrors the phase timeline below.
 //
-// MFI uses TWO cards back-to-back: `image` reads while the picture is on
-// screen alone (5s), then `imageBecomes` swaps in when the painting takes
-// over — so the viewer literally reads the transformation.
+// MFI uses THREE cards back-to-back. Picture → Music → Painting reads as a
+// chronological transformation: the input image triggers AI composition (the
+// music carries the image's mood), which Paintiano then visualizes through
+// the chosen style. Each card lingers a few seconds so the viewer absorbs
+// the sequence as separate, deliberate steps — not a quick swap.
 const DEMO_REEL_I18N = {
   EN: {
     becomes:      'Music. Painting.',
     artists:      'Many artists.',
     aiType:       'Type a feeling.',
     aiResult:     'It paints itself.',
-    image:        'From a picture.',
-    imageBecomes: 'Becomes painting.',
+    mfiPicture:   'Picture.',
+    mfiMusic:     'Music.',
+    mfiPainting:  'Painting.',
     variations:   'Endless variations.',
     print:        'Take it home.',
     outro:        'Paintiano',
@@ -69,8 +72,9 @@ const DEMO_REEL_I18N = {
     artists:      'Mnoho umelcov.',
     aiType:       'Napíš pocit.',
     aiResult:     'Maľuje sa sám.',
-    image:        'Z obrázka.',
-    imageBecomes: 'Stáva sa maľbou.',
+    mfiPicture:   'Obrázok.',
+    mfiMusic:     'Hudba.',
+    mfiPainting:  'Maľba.',
     variations:   'Nekonečné variácie.',
     print:        'Vezmi si ho.',
     outro:        'Paintiano',
@@ -80,8 +84,9 @@ const DEMO_REEL_I18N = {
     artists:      'Viele Künstler.',
     aiType:       'Tippe ein Gefühl.',
     aiResult:     'Es malt sich selbst.',
-    image:        'Aus einem Bild.',
-    imageBecomes: 'Wird zu Malerei.',
+    mfiPicture:   'Bild.',
+    mfiMusic:     'Musik.',
+    mfiPainting:  'Malerei.',
     variations:   'Endlose Variationen.',
     print:        'Nimm es mit.',
     outro:        'Paintiano',
@@ -91,8 +96,9 @@ const DEMO_REEL_I18N = {
     artists:      'Beaucoup d\'artistes.',
     aiType:       'Écris une émotion.',
     aiResult:     'Ça se peint seul.',
-    image:        'D\'une image.',
-    imageBecomes: 'Devient peinture.',
+    mfiPicture:   'Image.',
+    mfiMusic:     'Musique.',
+    mfiPainting:  'Peinture.',
     variations:   'Variations infinies.',
     print:        'Emporte-le.',
     outro:        'Paintiano',
@@ -102,8 +108,9 @@ const DEMO_REEL_I18N = {
     artists:      'Muchos artistas.',
     aiType:       'Escribe un sentimiento.',
     aiResult:     'Se pinta solo.',
-    image:        'De una imagen.',
-    imageBecomes: 'Se vuelve pintura.',
+    mfiPicture:   'Imagen.',
+    mfiMusic:     'Música.',
+    mfiPainting:  'Pintura.',
     variations:   'Variaciones infinitas.',
     print:        'Llévatelo.',
     outro:        'Paintiano',
@@ -113,8 +120,9 @@ const DEMO_REEL_I18N = {
     artists:      'Muitos artistas.',
     aiType:       'Escreve um sentimento.',
     aiResult:     'Pinta-se sozinho.',
-    image:        'De uma imagem.',
-    imageBecomes: 'Torna-se pintura.',
+    mfiPicture:   'Imagem.',
+    mfiMusic:     'Música.',
+    mfiPainting:  'Pintura.',
     variations:   'Variações infinitas.',
     print:        'Leva-o contigo.',
     outro:        'Paintiano',
@@ -124,8 +132,9 @@ const DEMO_REEL_I18N = {
     artists:      '众多艺术家。',
     aiType:       '输入感觉。',
     aiResult:     '自己作画。',
-    image:        '从图像。',
-    imageBecomes: '化作画作。',
+    mfiPicture:   '图像。',
+    mfiMusic:     '音乐。',
+    mfiPainting:  '画作。',
     variations:   '无尽变奏。',
     print:        '带回家。',
     outro:        'Paintiano',
@@ -135,8 +144,9 @@ const DEMO_REEL_I18N = {
     artists:      '眾多藝術家。',
     aiType:       '輸入感覺。',
     aiResult:     '自己作畫。',
-    image:        '從圖像。',
-    imageBecomes: '化作畫作。',
+    mfiPicture:   '圖像。',
+    mfiMusic:     '音樂。',
+    mfiPainting:  '畫作。',
     variations:   '無盡變奏。',
     print:        '帶回家。',
     outro:        'Paintiano',
@@ -163,22 +173,24 @@ function demoReelText(lang, key){
 //   'outro'       — final logo card
 //   'end'         — tear down, restore UI
 //
-// Total ~64s. Tunable here without touching the orchestrator.
+// Total ~66s. Tunable here without touching the orchestrator.
 //
-// Timeline rationale (cinematic, sustained beats, MFI now lingers on the
-// picture so the viewer actually reads "this is an image", not "this is a
-// painting with a thumbnail tacked on"):
+// Timeline rationale (cinematic, sustained beats, MFI now reads as a true
+// 3-step transformation — picture, then music, then painting — so the viewer
+// understands the flow: image triggers AI composition; the music carries the
+// image's mood; Paintiano then visualizes that music in the chosen style):
 //   0-5s    Music begins, canvas paints (bloom — lyrical intro)
 //           → "Music. Painting." reads short, leaves screen by 5s
 //   5-13s   7-style parade (1.1s each) → "Many artists."
 //   13-17s  AI type "longing" + "Type a feeling."
 //   17-23s  AI plays own composition (spiral) → "It paints itself."
-//   23-28s  MFI stage 1: BIG PICTURE alone → "From a picture."
-//   28-35s  MFI stage 2: picture transforms → painting → "Becomes painting."
-//   35-45s  Variations beat (Vary 4×) → "Endless variations."
-//   45-52s  Print/frame flourish (gold) → "Take it home."
-//   52-58s  Outro logo
-//   58s     End
+//   23-27s  MFI stage 1: BIG PICTURE alone → "Picture."
+//   27-30s  MFI stage 2: music begins playing → "Music."
+//   30-37s  MFI stage 3: canvas paints the music → "Painting."
+//   37-47s  Variations beat (Vary 4×) → "Endless variations."
+//   47-54s  Print/frame flourish (gold) → "Take it home."
+//   54-60s  Outro logo
+//   60s     End
 const DEMO_REEL_PHASES = [
   { at: 0,     kind: 'play-song' },
   { at: 300,   kind: 'show-text',    textKey: 'becomes' },
@@ -186,13 +198,13 @@ const DEMO_REEL_PHASES = [
   { at: 5200,  kind: 'style-parade' },
   { at: 13000, kind: 'ai-type',      textKey: 'aiType' },
   { at: 17000, kind: 'ai-play',      textKey: 'aiResult' },
-  { at: 23000, kind: 'mfi',          textKey: 'image' },
-  { at: 35000, kind: 'show-text',    textKey: 'variations' },
-  { at: 35200, kind: 'vary' },
-  { at: 45000, kind: 'set-style',    style: 'gold' },
-  { at: 45100, kind: 'print-beat',   textKey: 'print' },
-  { at: 52000, kind: 'outro',        textKey: 'outro' },
-  { at: 58000, kind: 'end' },
+  { at: 23000, kind: 'mfi' },
+  { at: 37000, kind: 'show-text',    textKey: 'variations' },
+  { at: 37200, kind: 'vary' },
+  { at: 47000, kind: 'set-style',    style: 'gold' },
+  { at: 47100, kind: 'print-beat',   textKey: 'print' },
+  { at: 54000, kind: 'outro',        textKey: 'outro' },
+  { at: 60000, kind: 'end' },
 ];
 
 // Sub-interval (ms) for the style parade beat. 7 styles × 1100ms = 7.7s, fits
@@ -200,11 +212,16 @@ const DEMO_REEL_PHASES = [
 // ai-type fires, so a slight overshoot is OK.
 const DEMO_REEL_PARADE_STEP = 1100;
 // How many Vary triggers during the variations beat, and their spacing.
-// 4 × 2200ms = 8.8s, fits the 35.2s → 45s window.
+// 4 × 2200ms = 8.8s, fits the 37.2s → 47s window.
 const DEMO_REEL_VARY_COUNT = 4;
 const DEMO_REEL_VARY_STEP = 2200;
-// MFI stage 1 duration: how long the picture sits alone on screen before
-// startPlay swaps to paint mode. 5 seconds gives the viewer a clear read
-// of "this is the input image" before the transformation begins.
-const DEMO_REEL_MFI_PLAY_DELAY = 5000;
+// MFI 3-stage sub-timing (ms from start of mfi beat). The orchestrator uses
+// these to schedule sub-cards so the viewer reads the transformation as
+// distinct steps, not a single swap:
+//   Stage 1 — picture alone on screen
+//   Stage 2 — music begins playing (startPlay triggers MFI hand-off)
+//   Stage 3 — painting takes over (already set by stage 2; this is the
+//             text-swap moment so the third card explicitly labels the result)
+const DEMO_REEL_MFI_STAGE2_AT = 4000;  // 23s + 4s = 27s
+const DEMO_REEL_MFI_STAGE3_AT = 7000;  // 23s + 7s = 30s
 

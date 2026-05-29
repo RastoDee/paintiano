@@ -8210,86 +8210,98 @@ const DEMO_REEL_MOOD = 'longing';
 
 // Overlay copy, per language. Trailer-style title cards — ≤4 words, punchy.
 // Key order mirrors the phase timeline below.
+//
+// MFI uses TWO cards back-to-back: `image` reads while the picture is on
+// screen alone (5s), then `imageBecomes` swaps in when the painting takes
+// over — so the viewer literally reads the transformation.
 const DEMO_REEL_I18N = {
   EN: {
-    becomes:    'Music. Painting.',
-    artists:    'Many artists.',
-    aiType:     'Type a feeling.',
-    aiResult:   'It paints itself.',
-    image:      'From a picture.',
-    variations: 'Endless variations.',
-    print:      'Take it home.',
-    outro:      'Paintiano',
+    becomes:      'Music. Painting.',
+    artists:      'Many artists.',
+    aiType:       'Type a feeling.',
+    aiResult:     'It paints itself.',
+    image:        'From a picture.',
+    imageBecomes: 'Becomes painting.',
+    variations:   'Endless variations.',
+    print:        'Take it home.',
+    outro:        'Paintiano',
   },
   SK: {
-    becomes:    'Hudba. Maľba.',
-    artists:    'Mnoho umelcov.',
-    aiType:     'Napíš pocit.',
-    aiResult:   'Maľuje sa sám.',
-    image:      'Z obrázka.',
-    variations: 'Nekonečné variácie.',
-    print:      'Vezmi si ho.',
-    outro:      'Paintiano',
+    becomes:      'Hudba. Maľba.',
+    artists:      'Mnoho umelcov.',
+    aiType:       'Napíš pocit.',
+    aiResult:     'Maľuje sa sám.',
+    image:        'Z obrázka.',
+    imageBecomes: 'Stáva sa maľbou.',
+    variations:   'Nekonečné variácie.',
+    print:        'Vezmi si ho.',
+    outro:        'Paintiano',
   },
   DE: {
-    becomes:    'Musik. Malerei.',
-    artists:    'Viele Künstler.',
-    aiType:     'Tippe ein Gefühl.',
-    aiResult:   'Es malt sich selbst.',
-    image:      'Aus einem Bild.',
-    variations: 'Endlose Variationen.',
-    print:      'Nimm es mit.',
-    outro:      'Paintiano',
+    becomes:      'Musik. Malerei.',
+    artists:      'Viele Künstler.',
+    aiType:       'Tippe ein Gefühl.',
+    aiResult:     'Es malt sich selbst.',
+    image:        'Aus einem Bild.',
+    imageBecomes: 'Wird zu Malerei.',
+    variations:   'Endlose Variationen.',
+    print:        'Nimm es mit.',
+    outro:        'Paintiano',
   },
   FR: {
-    becomes:    'Musique. Peinture.',
-    artists:    'Beaucoup d\'artistes.',
-    aiType:     'Écris une émotion.',
-    aiResult:   'Ça se peint seul.',
-    image:      'D\'une image.',
-    variations: 'Variations infinies.',
-    print:      'Emporte-le.',
-    outro:      'Paintiano',
+    becomes:      'Musique. Peinture.',
+    artists:      'Beaucoup d\'artistes.',
+    aiType:       'Écris une émotion.',
+    aiResult:     'Ça se peint seul.',
+    image:        'D\'une image.',
+    imageBecomes: 'Devient peinture.',
+    variations:   'Variations infinies.',
+    print:        'Emporte-le.',
+    outro:        'Paintiano',
   },
   ES: {
-    becomes:    'Música. Pintura.',
-    artists:    'Muchos artistas.',
-    aiType:     'Escribe un sentimiento.',
-    aiResult:   'Se pinta solo.',
-    image:      'De una imagen.',
-    variations: 'Variaciones infinitas.',
-    print:      'Llévatelo.',
-    outro:      'Paintiano',
+    becomes:      'Música. Pintura.',
+    artists:      'Muchos artistas.',
+    aiType:       'Escribe un sentimiento.',
+    aiResult:     'Se pinta solo.',
+    image:        'De una imagen.',
+    imageBecomes: 'Se vuelve pintura.',
+    variations:   'Variaciones infinitas.',
+    print:        'Llévatelo.',
+    outro:        'Paintiano',
   },
   PT: {
-    becomes:    'Música. Pintura.',
-    artists:    'Muitos artistas.',
-    aiType:     'Escreve um sentimento.',
-    aiResult:   'Pinta-se sozinho.',
-    image:      'De uma imagem.',
-    variations: 'Variações infinitas.',
-    print:      'Leva-o contigo.',
-    outro:      'Paintiano',
+    becomes:      'Música. Pintura.',
+    artists:      'Muitos artistas.',
+    aiType:       'Escreve um sentimento.',
+    aiResult:     'Pinta-se sozinho.',
+    image:        'De uma imagem.',
+    imageBecomes: 'Torna-se pintura.',
+    variations:   'Variações infinitas.',
+    print:        'Leva-o contigo.',
+    outro:        'Paintiano',
   },
   zh: {
-    becomes:    '音乐。绘画。',
-    artists:    '众多艺术家。',
-    aiType:     '输入感觉。',
-    aiResult:   '自己作画。',
-    image:      '从图像。',
-    variations: '无尽变奏。',
-    print:      '带回家。',
-    outro:      'Paintiano',
+    becomes:      '音乐。绘画。',
+    artists:      '众多艺术家。',
+    aiType:       '输入感觉。',
+    aiResult:     '自己作画。',
+    image:        '从图像。',
+    imageBecomes: '化作画作。',
+    variations:   '无尽变奏。',
+    print:        '带回家。',
+    outro:        'Paintiano',
   },
   zhTW: {
-    becomes:    '音樂。繪畫。',
-    artists:    '眾多藝術家。',
-    aiType:     '輸入感覺。',
-    aiResult:   '自己作畫。',
-    image:      '從圖像。',
-    variations: '無盡變奏。',
-    print:      '帶回家。',
-    outro:      'Paintiano',
+    becomes:      '音樂。繪畫。',
+    artists:      '眾多藝術家。',
+    aiType:       '輸入感覺。',
+    aiResult:     '自己作畫。',
+    image:        '從圖像。',
+    imageBecomes: '化作畫作。',
+    variations:   '無盡變奏。',
+    print:        '帶回家。',
+    outro:        'Paintiano',
   },
 };
 
@@ -8307,25 +8319,28 @@ function demoReelText(lang, key){
 //   'style-parade'— cycle DEMO_REEL_STYLE_PARADE on a sub-interval
 //   'ai-type'     — animate the mood phrase typing
 //   'ai-play'     — load the offline mood song + paint
-//   'mfi'         — load built-in sample image + AI mood → paint
+//   'mfi'         — load built-in sample image, linger on the picture, then paint
 //   'vary'        — trigger advanceVariation a few times
 //   'print-beat'  — show the framed/print take-out flourish
 //   'outro'       — final logo card
 //   'end'         — tear down, restore UI
 //
-// Total ~60s. Tunable here without touching the orchestrator.
+// Total ~64s. Tunable here without touching the orchestrator.
 //
-// Timeline rationale (cinematic, sustained beats, no rushed cuts):
-//   0-5s    Music begins, canvas paints (bloom style — lyrical intro)
+// Timeline rationale (cinematic, sustained beats, MFI now lingers on the
+// picture so the viewer actually reads "this is an image", not "this is a
+// painting with a thumbnail tacked on"):
+//   0-5s    Music begins, canvas paints (bloom — lyrical intro)
 //           → "Music. Painting." reads short, leaves screen by 5s
 //   5-13s   7-style parade (1.1s each) → "Many artists."
-//   13-17s  AI type "longing" — typed-out phrase + "Type a feeling."
-//   17-23s  AI plays own composition (spiral style) → "It paints itself."
-//   23-31s  MFI: built-in sample image → matisse → paint → "From a picture."
-//   31-41s  Variations beat (Vary 4×) → "Endless variations."
-//   41-48s  Print/frame flourish (gold style) → "Take it home."
-//   48-54s  Outro logo
-//   54s     End
+//   13-17s  AI type "longing" + "Type a feeling."
+//   17-23s  AI plays own composition (spiral) → "It paints itself."
+//   23-28s  MFI stage 1: BIG PICTURE alone → "From a picture."
+//   28-35s  MFI stage 2: picture transforms → painting → "Becomes painting."
+//   35-45s  Variations beat (Vary 4×) → "Endless variations."
+//   45-52s  Print/frame flourish (gold) → "Take it home."
+//   52-58s  Outro logo
+//   58s     End
 const DEMO_REEL_PHASES = [
   { at: 0,     kind: 'play-song' },
   { at: 300,   kind: 'show-text',    textKey: 'becomes' },
@@ -8334,12 +8349,12 @@ const DEMO_REEL_PHASES = [
   { at: 13000, kind: 'ai-type',      textKey: 'aiType' },
   { at: 17000, kind: 'ai-play',      textKey: 'aiResult' },
   { at: 23000, kind: 'mfi',          textKey: 'image' },
-  { at: 31000, kind: 'show-text',    textKey: 'variations' },
-  { at: 31200, kind: 'vary' },
-  { at: 41000, kind: 'set-style',    style: 'gold' },
-  { at: 41100, kind: 'print-beat',   textKey: 'print' },
-  { at: 48000, kind: 'outro',        textKey: 'outro' },
-  { at: 54000, kind: 'end' },
+  { at: 35000, kind: 'show-text',    textKey: 'variations' },
+  { at: 35200, kind: 'vary' },
+  { at: 45000, kind: 'set-style',    style: 'gold' },
+  { at: 45100, kind: 'print-beat',   textKey: 'print' },
+  { at: 52000, kind: 'outro',        textKey: 'outro' },
+  { at: 58000, kind: 'end' },
 ];
 
 // Sub-interval (ms) for the style parade beat. 7 styles × 1100ms = 7.7s, fits
@@ -8347,14 +8362,14 @@ const DEMO_REEL_PHASES = [
 // ai-type fires, so a slight overshoot is OK.
 const DEMO_REEL_PARADE_STEP = 1100;
 // How many Vary triggers during the variations beat, and their spacing.
-// 4 × 2200ms = 8.8s, fits the 31.2s → 41s window.
+// 4 × 2200ms = 8.8s, fits the 35.2s → 45s window.
 const DEMO_REEL_VARY_COUNT = 4;
 const DEMO_REEL_VARY_STEP = 2200;
-// MFI sub-timing: when (from start of mfi beat) to auto-press Play so the
-// sample image transitions into a painting. composeFromImage is async; for
-// the built-in sample it's a cache hit so well under 1s, but we wait a beat
-// for visual "thinking" + state settle before triggering Play.
-const DEMO_REEL_MFI_PLAY_DELAY = 1800;
+// MFI stage 1 duration: how long the picture sits alone on screen before
+// startPlay swaps to paint mode. 5 seconds gives the viewer a clear read
+// of "this is the input image" before the transformation begins.
+const DEMO_REEL_MFI_PLAY_DELAY = 5000;
+
 // ═════════════════════════════════════════════════════════════════════════════
 // §7  PAINTIANO PRO  —  monetization (license keys, paywall, AI trial, watermark)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -12959,21 +12974,25 @@ Composition rules:
             if(bag.parade){ clearInterval(bag.parade); bag.parade=null; }
             // Same reasoning as ai-type — pick an explicit style for the MFI beat.
             setStyle('matisse');
+            // Stage 1: show the picture FIRST. loadSampleImgMood sets
+            // originalImgUrl + viewMode='image' → big image fills the canvas
+            // box. We linger here so the viewer reads "this is a picture",
+            // not "this is a painting that has a thumbnail". The first text
+            // card spells out the source: "From a picture."
             setDemoText(T(ph.textKey));
-            // Built-in sample image — composeFromImage cache hit, no network.
-            // Shows the big image first (per the standard MFI flow), then we
-            // auto-trigger Play after a short beat so the canvas paints itself
-            // — viewer sees the picture become music + painting end-to-end.
             try{ loadSampleImgMood(); }catch(_){}
-            const playId = setTimeout(()=>{
+            // Stage 2: AFTER a long beat, swap to paint. startPlay handles the
+            // MFI hand-off (image collapses to a small thumb, canvas paints).
+            // A second text card ("Becomes painting.") makes the transformation
+            // explicit so the viewer doesn't just see the picture replaced —
+            // they read what happened.
+            const swapId = setTimeout(()=>{
               if(!bag.active) return;
-              // startPlay handles the MFI hand-off (image → thumb + paint mode).
+              setDemoText(T('imageBecomes'));
               try{ startPlayRef.current?.(); }catch(_){}
-              // Re-assert style after the MFI hand-off since it also goes
-              // through paths that may reset style state.
               setStyle('matisse');
             }, DEMO_REEL_MFI_PLAY_DELAY);
-            bag.timers.push(playId);
+            bag.timers.push(swapId);
             break;
           }
           case 'vary': {
@@ -15311,18 +15330,35 @@ Composition rules:
           Print-beat (golden frame around the canvas) stays inside canvasWrap
           because it visually wraps the canvas, not the screen. ── */}
       {demoReelOn && (
-        <div onClick={demoReelStop} role="button" aria-label={t('demoSkip')||'skip demo'}
-          style={{position:'fixed',inset:0,zIndex:99998,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',background:'transparent'}}>
-          {/* Centred title slot — uses flex on the overlay itself, so text
-              always sits dead-centre of the viewport regardless of canvas size. */}
+        <div
+          onClick={(e)=>{e.stopPropagation();demoReelStop();}}
+          onPointerDown={(e)=>e.stopPropagation()}
+          onPointerUp={(e)=>e.stopPropagation()}
+          onMouseDown={(e)=>e.stopPropagation()}
+          onMouseUp={(e)=>e.stopPropagation()}
+          onTouchStart={(e)=>e.stopPropagation()}
+          onTouchEnd={(e)=>e.stopPropagation()}
+          role="button" aria-label={t('demoSkip')||'skip demo'}
+          /* iOS Safari mis-handles inset:0 on fixed overlays when the address
+             bar is dynamic — element ends up shorter than the visual viewport
+             and content rides up to the top. Use explicit 100vw × 100dvh so
+             the overlay fills the *dynamic* viewport correctly. dvh is well
+             supported (iOS 15.4+, every shipping Android Chrome) and falls
+             back to vh on older browsers. */
+          style={{position:'fixed',top:0,left:0,width:'100vw',height:'100dvh',zIndex:99998,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',background:'rgba(6,5,10,0.18)',touchAction:'none'}}>
+          {/* Title sits dead-centre. The text-box has its own dark scrim so
+              the gold gradient stays readable against ANY canvas style behind
+              it (Pollock chaos, Mondrian blocks, Rothko fields, etc.). Earlier
+              "transparent + drop-shadow" approach failed against bright canvas
+              regions. */}
           {demoTyping && (
-            <div style={{padding:'12px 24px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center'}}>
-              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.6rem,5vw,3.2rem)',color:'#fff',textShadow:'0 2px 18px rgba(0,0,0,.85), 0 0 30px rgba(0,0,0,.6)',letterSpacing:'.02em'}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
+            <div style={{padding:'14px 26px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',background:'rgba(8,6,14,.55)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:12,border:'1px solid rgba(240,192,64,.18)'}}>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.4rem,4.2vw,2.4rem)',color:'#fff',letterSpacing:'.02em'}}>{demoTyping}<span style={{opacity:.6}}>▎</span></span>
             </div>
           )}
           {demoText && !demoTyping && (
-            <div style={{padding:'14px 32px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',animation:'pfDemoFade .55s ease'}}>
-              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.8rem,5.5vw,3.6rem)',letterSpacing:'.025em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent',textShadow:'0 6px 30px rgba(0,0,0,.55)',filter:'drop-shadow(0 2px 8px rgba(0,0,0,.65))'}}>{demoText}</span>
+            <div style={{padding:'16px 34px',pointerEvents:'none',maxWidth:'90vw',textAlign:'center',background:'rgba(8,6,14,.55)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:14,border:'1px solid rgba(240,192,64,.28)',animation:'pfDemoFade .55s ease'}}>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'clamp(1.5rem,4.6vw,2.6rem)',letterSpacing:'.025em',background:`linear-gradient(135deg,${PF.gold2},${PF.gold},#c88a18)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>{demoText}</span>
             </div>
           )}
           {/* Skip hint — small, top-right of viewport */}

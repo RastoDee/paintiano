@@ -4126,27 +4126,37 @@ Composition rules:
           case 'mfi': {
             // Stop the parade if still cycling.
             if(bag.parade){ clearInterval(bag.parade); bag.parade=null; }
-            // Same reasoning as ai-type — pick an explicit style for the MFI beat.
             setStyle('matisse');
-            // Stage 1: show the picture FIRST. loadSampleImgMood sets
-            // originalImgUrl + viewMode='image' → big image fills the canvas
-            // box. We linger here so the viewer reads "this is a picture",
-            // not "this is a painting that has a thumbnail". The first text
-            // card spells out the source: "From a picture."
-            setDemoText(T(ph.textKey));
+            // 3-stage MFI — Picture → Music → Painting, chronologically. Each
+            // card sits on screen long enough to read as a distinct step, so
+            // the viewer sees the whole flow: the image triggers AI composition,
+            // the music carries the image's mood, Paintiano then visualizes it
+            // through the chosen style.
+            //
+            // Stage 1 (now): big picture alone, "Picture." card. The viewer
+            // reads "this is the input".
+            setDemoText(T('mfiPicture'));
             try{ loadSampleImgMood(); }catch(_){}
-            // Stage 2: AFTER a long beat, swap to paint. startPlay handles the
-            // MFI hand-off (image collapses to a small thumb, canvas paints).
-            // A second text card ("Becomes painting.") makes the transformation
-            // explicit so the viewer doesn't just see the picture replaced —
-            // they read what happened.
-            const swapId = setTimeout(()=>{
+            // Stage 2: music begins playing. startPlay triggers the MFI
+            // hand-off (image collapses to a thumb, canvas paints). The
+            // "Music." card frames this moment as the composition step —
+            // image → AI-composed song.
+            const stage2Id = setTimeout(()=>{
               if(!bag.active) return;
-              setDemoText(T('imageBecomes'));
+              setDemoText(T('mfiMusic'));
               try{ startPlayRef.current?.(); }catch(_){}
               setStyle('matisse');
-            }, DEMO_REEL_MFI_PLAY_DELAY);
-            bag.timers.push(swapId);
+            }, DEMO_REEL_MFI_STAGE2_AT);
+            bag.timers.push(stage2Id);
+            // Stage 3: painting takes over. The canvas is already painting
+            // (started in stage 2); this is purely the text-swap moment so
+            // the third card explicitly labels the final result.
+            const stage3Id = setTimeout(()=>{
+              if(!bag.active) return;
+              setDemoText(T('mfiPainting'));
+              setStyle('matisse');
+            }, DEMO_REEL_MFI_STAGE3_AT);
+            bag.timers.push(stage3Id);
             break;
           }
           case 'vary': {
