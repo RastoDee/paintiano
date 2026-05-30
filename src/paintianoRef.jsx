@@ -13876,11 +13876,23 @@ Composition rules:
   // overrides isActiveView; the "→ Canvas" resume button and picking a new
   // mood/source clear it.
   const [forceSetup, setForceSetup] = useState(false);
+  const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too)
   // Anything the user can return to: a painting on the canvas, a live mode, or a
   // parked compose/mic draft. This drives the shared '← Canvas' (Resume) button so
   // the Setup⇄Canvas navigation is consistent across ALL modes.
   const hasContent = chords.length>0 || composeMode || micActive || micArmed || hasComposeDraft || hasMicDraft;
   const isActiveView = !forceSetup && (playing || chords.length>0 || composeMode || micActive || micArmed || working || stayActive);
+  // Immersive painting view is CSS-based (native Fullscreen API doesn't cover
+  // non-video elements on iOS). Lock page scroll + ESC to exit; auto-exit when
+  // we leave the canvas (Clear / back to Setup).
+  useEffect(()=>{
+    if(!immersive) return;
+    const prevOverflow=document.body.style.overflow; document.body.style.overflow='hidden';
+    const onKey=e=>{ if(e.key==='Escape') setImmersive(false); };
+    window.addEventListener('keydown',onKey);
+    return ()=>{ document.body.style.overflow=prevOverflow; window.removeEventListener('keydown',onKey); };
+  },[immersive]);
+  useEffect(()=>{ if(!isActiveView && immersive) setImmersive(false); },[isActiveView,immersive]);
   // Latch stayActive whenever we're genuinely active (content on canvas, a live
   // mode, or processing). Once latched, Clear can empty the canvas without
   // bouncing back to setup; only "← Setup" un-latches it.
@@ -14814,7 +14826,8 @@ Composition rules:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`})}}
+      {immersive && <div onClick={()=>setImmersive(false)} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onClick={e=>{
           // During the demo reel a canvas tap is the "escape" gesture — kill
@@ -14855,11 +14868,14 @@ Composition rules:
           }
         }}
       >
+        <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.55)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'#e8dca8',padding:0,WebkitTapHighlightColor:'transparent'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{immersive?<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>:<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>}</svg>
+        </button>
         {viewMode==='image'&&originalImgUrl&&(
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
