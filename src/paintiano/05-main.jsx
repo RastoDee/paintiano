@@ -3177,7 +3177,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // browser-canvas hash. Any other image still uses the content-hash cache.
       let parsed=(isSample && typeof SAMPLE_IMGMOOD!=='undefined' && SAMPLE_IMGMOOD && SAMPLE_IMGMOOD.result)
         ? SAMPLE_IMGMOOD.result
-        : _imgMoodCacheGet(_hash);
+        : _imgMoodCacheGet(lang+':'+_hash);
       let _fromCache=!!parsed;
       // Pro gate AFTER the cache check: cache hit = free replay even for
       // exhausted free users (sample is always cached, so it always plays).
@@ -3210,7 +3210,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
       const title=(isSample ? (t('mfiSampleTitle')||(parsed.title&&String(parsed.title).trim())) : (parsed.title&&String(parsed.title).trim()))||'✦';
       // Store fresh AI results so the next run of this image is free.
-      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} if(!isPro) consumeTrial(); }
+      if(!_fromCache){ try{ _imgMoodCacheSet(lang+':'+_hash,parsed); }catch(_){} if(!isPro) consumeTrial(); }
       // Body 3: make Vary work in mood-from-image. rerollSong expects notes as
       // {note,dur,beat} objects; the AI returns [pitch,dur,beat,vel] arrays — so
       // normalise here. Vary then re-tunes THIS image's piece locally (transpose
@@ -3254,6 +3254,33 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
   },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet,_mfiRecentAdd]);
+  // When the UI language changes while a CUSTOM mood-from-image piece is shown,
+  // regenerate it in the new language. The per-language cache (lang+hash) makes
+  // already-seen languages replay instantly & free; a new language does one AI
+  // pass (gated by the usual trial/Pro rules). The built-in sample is excluded —
+  // its title is localized directly, no regeneration needed.
+  //
+  // IMPORTANT: regeneration calls stopAll(), so we NEVER run it mid-playback —
+  // that would cut the audio (choppy). If a piece is playing when the language
+  // changes, we just flag it and defer the regen until playback stops.
+  const _mfiLangRef = useRef(lang);
+  const _mfiPendingRegen = useRef(false);
+  const _mfiCustomActive = () => moodFromImg && originalImgUrl && originalImgUrl!==SAMPLE_IMAGE_MFI_B64;
+  useEffect(()=>{
+    const prev=_mfiLangRef.current; _mfiLangRef.current=lang;
+    if(prev===lang) return;
+    if(!_mfiCustomActive()) return;
+    if(playing){ _mfiPendingRegen.current=true; return; } // defer — don't interrupt audio
+    if(imgAiBusy) { _mfiPendingRegen.current=true; return; }
+    composeFromImage(originalImgUrl, false);
+  },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Flush a deferred language regen once playback has stopped.
+  useEffect(()=>{
+    if(playing || imgAiBusy) return;
+    if(!_mfiPendingRegen.current) return;
+    _mfiPendingRegen.current=false;
+    if(_mfiCustomActive()) composeFromImage(originalImgUrl, false);
+  },[playing]); // eslint-disable-line react-hooks/exhaustive-deps
   // Standalone "mood from image" mode: pick a picture, AI reads its emotion and
   // composes a mood on the canvas; a small thumbnail of the source sits on top.
   const loadImgMood=useCallback(e=>{
