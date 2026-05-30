@@ -188,7 +188,7 @@ function applyWatermark(canvas, isPro) {
 }
 
 // ─── ProBadge — small gold PRO pill for the header ─────────────────────────────
-function ProBadge({ t }) {
+function ProBadge({ t, readScale = 1 }) {
   const label = (t && t('proBadge')) || 'PRO';
   return (
     <span style={{

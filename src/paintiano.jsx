@@ -8577,7 +8577,7 @@ function applyWatermark(canvas, isPro) {
 }
 
 // ─── ProBadge — small gold PRO pill for the header ─────────────────────────────
-function ProBadge({ t }) {
+function ProBadge({ t, readScale = 1 }) {
   const label = (t && t('proBadge')) || 'PRO';
   return (
     <span style={{
@@ -13944,7 +13944,7 @@ Composition rules:
       </div>
       <header style={{textAlign:'center',marginBottom:isActiveView?8:18}}>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
-        {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} /></div>}
+        {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} /></div>}
         {!isActiveView && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
 
