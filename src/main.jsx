@@ -17,8 +17,35 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // small, dismissible toast and let the user reload to the fresh build WHEN THEY
 // are ready — one tap, no lost work.
 const updateSW = registerSW({
-  onNeedRefresh() { showUpdateToast(() => updateSW(true)); },
+  onNeedRefresh() { showUpdateToast(hardUpdate); },
 });
+
+// Hard update: tapping "Refresh" must ALWAYS land on the freshest build, even if
+// the service worker is being stubborn. We unregister every SW and wipe all
+// caches, then reload straight from the network. (updateSW(true) alone can race
+// the SW activation against the reload and leave you one version behind.)
+async function hardUpdate() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister().catch(() => {})));
+    }
+    if (window.caches && caches.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k).catch(() => {})));
+    }
+  } catch (_) {
+    /* best effort */
+  }
+  // Cache-busting reload from the network.
+  try {
+    const u = new URL(window.location.href);
+    u.searchParams.set('v', Date.now().toString(36));
+    window.location.replace(u.toString());
+  } catch (_) {
+    window.location.reload();
+  }
+}
 
 // Minimal localized strings (falls back to EN). Reads the language the app saved.
 function _updLang() {

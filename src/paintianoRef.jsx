@@ -13876,7 +13876,10 @@ Composition rules:
   // overrides isActiveView; the "→ Canvas" resume button and picking a new
   // mood/source clear it.
   const [forceSetup, setForceSetup] = useState(false);
-  const hasContent = chords.length>0 || composeMode || micActive || micArmed;
+  // Anything the user can return to: a painting on the canvas, a live mode, or a
+  // parked compose/mic draft. This drives the shared '← Canvas' (Resume) button so
+  // the Setup⇄Canvas navigation is consistent across ALL modes.
+  const hasContent = chords.length>0 || composeMode || micActive || micArmed || hasComposeDraft || hasMicDraft;
   const isActiveView = !forceSetup && (playing || chords.length>0 || composeMode || micActive || micArmed || working || stayActive);
   // Latch stayActive whenever we're genuinely active (content on canvas, a live
   // mode, or processing). Once latched, Clear can empty the canvas without
@@ -14017,7 +14020,7 @@ Composition rules:
             returns to the canvas without changing anything. Only shown when
             there's still content to go back to. */}
         {forceSetup && hasContent && (
-          <button className="pf-lift" onClick={()=>setForceSetup(false)} style={{display:'inline-flex',alignSelf:'flex-start',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(201,168,76,.12)',color:PF.gold2,border:'1px solid rgba(201,168,76,.4)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToCanvas')}</button>
+          <button className="pf-lift" onClick={()=>{ if(chordsRef.current.length===0){ const o=draftOwnerRef.current||(hasComposeDraft?'compose':hasMicDraft?(micPreset==='music'?'listen':'sing'):null); if(o) restoreStash(o); } setForceSetup(false); }} style={{display:'inline-flex',alignSelf:'flex-start',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(201,168,76,.12)',color:PF.gold2,border:'1px solid rgba(201,168,76,.4)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToCanvas')}</button>
         )}
 
         {/* ── MAIN PANEL ── mood · source (color/style/scan live in the canvas
