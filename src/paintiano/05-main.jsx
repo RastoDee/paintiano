@@ -980,6 +980,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // MORPH/VARY) is replaced by the collapsed strip. Auto-open the strip on
   // mood-select so those mood-refinement controls stay immediately reachable.
   useEffect(()=>{ if(currentMood) setStripOpen(true); setMorphTargets([]); },[currentMood]);
+  // Re-translate the built-in MFI sample title when the UI language changes.
+  // The sample is a fixed baked piece, so its title would otherwise stay frozen
+  // in whatever language it was loaded in. Detect it by matching the current
+  // title against every language's mfiSampleTitle, then swap to the active one.
+  useEffect(()=>{
+    const localized=t('mfiSampleTitle'); if(!localized) return;
+    let sampleTitles=[]; try{ sampleTitles=Object.values(I18N).map(x=>x&&x.mfiSampleTitle).filter(Boolean); }catch(_){}
+    const isSampleTitle=v=>!!v && sampleTitles.includes(v);
+    if(isSampleTitle(currentMood) && currentMood!==localized) setCurrentMood(localized);
+    setInfo(prev=> (prev && isSampleTitle(prev.title) && prev.title!==localized) ? {...prev,title:localized} : prev);
+  },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
   // Mood-hint flash: when the user taps a disabled morph/vary, the mood
@@ -3197,7 +3208,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       setWPct(85);
       const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
-      const title=(parsed.title&&String(parsed.title).trim())||'✦';
+      const title=(isSample ? (t('mfiSampleTitle')||(parsed.title&&String(parsed.title).trim())) : (parsed.title&&String(parsed.title).trim()))||'✦';
       // Store fresh AI results so the next run of this image is free.
       if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} if(!isPro) consumeTrial(); }
       // Body 3: make Vary work in mood-from-image. rerollSong expects notes as

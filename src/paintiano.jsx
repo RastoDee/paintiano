@@ -5781,7 +5781,7 @@ const I18N = {
     micMusicHint:'play music from a nearby speaker · paints on chord changes',
     micTapToSwitch:'tap to switch voice ⇄ music',
     micTapToRecord:'tap 🎙 to record',
-    builtInSample:'▶ built-in sample', chooseFile:'📁 choose file', cancel:'cancel',
+    builtInSample:'▶ built-in sample', chooseFile:'📁 choose file', cancel:'cancel', mfiSampleTitle:'A Dream In Crimson',
     close:'close',
     proBadge:'PRO',
     mfiRecent:'Recent',
@@ -5881,7 +5881,7 @@ const I18N = {
     micMusicHint:'musik aus nahem lautsprecher · malt bei akkordwechsel',
     micTapToSwitch:'tippen für Stimme ⇄ Musik',
     micTapToRecord:'🎙 antippen zum Aufnehmen',
-    builtInSample:'▶ integriertes beispiel', chooseFile:'📁 datei wählen', cancel:'abbrechen',
+    builtInSample:'▶ integriertes beispiel', chooseFile:'📁 datei wählen', cancel:'abbrechen', mfiSampleTitle:'Ein Traum in Karmesinrot',
     close:'schließen',
     proBadge:'PRO',
     mfiRecent:'Zuletzt',
@@ -5981,7 +5981,7 @@ const I18N = {
     micMusicHint:'musique d\'un haut-parleur proche · peint aux changements d\'accord',
     micTapToSwitch:'toucher pour voix ⇄ musique',
     micTapToRecord:'toucher 🎙 pour enregistrer',
-    builtInSample:'▶ exemple intégré', chooseFile:'📁 choisir fichier', cancel:'annuler',
+    builtInSample:'▶ exemple intégré', chooseFile:'📁 choisir fichier', cancel:'annuler', mfiSampleTitle:'Un rêve écarlate',
     close:'fermer',
     proBadge:'PRO',
     mfiRecent:'Récents',
@@ -6081,7 +6081,7 @@ const I18N = {
     micMusicHint:'música de un altavoz cercano · pinta en cambios de acorde',
     micTapToSwitch:'toca para voz ⇄ música',
     micTapToRecord:'toca 🎙 para grabar',
-    builtInSample:'▶ ejemplo integrado', chooseFile:'📁 elegir archivo', cancel:'cancelar',
+    builtInSample:'▶ ejemplo integrado', chooseFile:'📁 elegir archivo', cancel:'cancelar', mfiSampleTitle:'Un sueño carmesí',
     close:'cerrar',
     proBadge:'PRO',
     mfiRecent:'Recientes',
@@ -6181,7 +6181,7 @@ const I18N = {
     micMusicHint:'pusti hudbu z blízkeho reproduktora · maľuje pri zmene akordu',
     micTapToSwitch:'ťukni pre prepnutie hlas ⇄ hudba',
     micTapToRecord:'ťukni 🎙 pre nahrávanie',
-    builtInSample:'▶ vstavaná ukážka', chooseFile:'📁 vybrať súbor', cancel:'zrušiť',
+    builtInSample:'▶ vstavaná ukážka', chooseFile:'📁 vybrať súbor', cancel:'zrušiť', mfiSampleTitle:'Sen v karmínovej',
     close:'zavrieť',
     proBadge:'PRO',
     mfiRecent:'Nedávne',
@@ -6281,7 +6281,7 @@ const I18N = {
     micMusicHint:'从附近的扬声器播放音乐 · 在和弦变化时绘制',
     micTapToSwitch:'点击切换 人声 ⇄ 音乐',
     micTapToRecord:'点击 🎙 开始录制',
-    builtInSample:'▶ 内置样本', chooseFile:'📁 选择文件', cancel:'取消',
+    builtInSample:'▶ 内置样本', chooseFile:'📁 选择文件', cancel:'取消', mfiSampleTitle:'绯红之梦',
     close:'关闭',
     proBadge:'PRO',
     mfiRecent:'最近',
@@ -6387,7 +6387,7 @@ const I18N = {
     micMusicHint:'從附近的喇叭播放音樂 · 在和弦變化時繪製',
     micTapToSwitch:'點擊切換 人聲 ⇄ 音樂',
     micTapToRecord:'點擊 🎙 開始錄製',
-    builtInSample:'▶ 內建範例', chooseFile:'📁 選擇檔案', cancel:'取消',
+    builtInSample:'▶ 內建範例', chooseFile:'📁 選擇檔案', cancel:'取消', mfiSampleTitle:'緋紅之夢',
     close:'關閉',
     proBadge:'PRO',
     mfiRecent:'最近',
@@ -6481,7 +6481,7 @@ const I18N = {
     micMusicHint:'toque música de um alto-falante próximo · pinta nas mudanças de acorde',
     micTapToSwitch:'toque para alternar voz ⇄ música',
     micTapToRecord:'toque 🎙 para gravar',
-    builtInSample:'▶ amostra integrada', chooseFile:'📁 escolher arquivo', cancel:'cancelar',
+    builtInSample:'▶ amostra integrada', chooseFile:'📁 escolher arquivo', cancel:'cancelar', mfiSampleTitle:'Um sonho carmesim',
     close:'fechar',
     proBadge:'PRO',
     mfiRecent:'Recentes',
@@ -9845,6 +9845,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // MORPH/VARY) is replaced by the collapsed strip. Auto-open the strip on
   // mood-select so those mood-refinement controls stay immediately reachable.
   useEffect(()=>{ if(currentMood) setStripOpen(true); setMorphTargets([]); },[currentMood]);
+  // Re-translate the built-in MFI sample title when the UI language changes.
+  // The sample is a fixed baked piece, so its title would otherwise stay frozen
+  // in whatever language it was loaded in. Detect it by matching the current
+  // title against every language's mfiSampleTitle, then swap to the active one.
+  useEffect(()=>{
+    const localized=t('mfiSampleTitle'); if(!localized) return;
+    let sampleTitles=[]; try{ sampleTitles=Object.values(I18N).map(x=>x&&x.mfiSampleTitle).filter(Boolean); }catch(_){}
+    const isSampleTitle=v=>!!v && sampleTitles.includes(v);
+    if(isSampleTitle(currentMood) && currentMood!==localized) setCurrentMood(localized);
+    setInfo(prev=> (prev && isSampleTitle(prev.title) && prev.title!==localized) ? {...prev,title:localized} : prev);
+  },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
   // Mood-hint flash: when the user taps a disabled morph/vary, the mood
@@ -12062,7 +12073,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       setWPct(85);
       const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
-      const title=(parsed.title&&String(parsed.title).trim())||'✦';
+      const title=(isSample ? (t('mfiSampleTitle')||(parsed.title&&String(parsed.title).trim())) : (parsed.title&&String(parsed.title).trim()))||'✦';
       // Store fresh AI results so the next run of this image is free.
       if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} if(!isPro) consumeTrial(); }
       // Body 3: make Vary work in mood-from-image. rerollSong expects notes as
