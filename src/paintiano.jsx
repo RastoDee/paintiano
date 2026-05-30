@@ -12049,7 +12049,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Pro gate AFTER the cache check: cache hit = free replay even for
       // exhausted free users (sample is always cached, so it always plays).
       // Only a real, paid AI call costs a trial credit.
-      if(!parsed && !isPro && trialExhausted){
+      if(!parsed && proStatus==='free' && trialExhausted){
         // Revert the eagerly-set canvas state — no AI call will happen.
         setImgMoodThumb(null); setMoodContext(false); setMoodFromImg(false);
         setOriginalImgUrl(null); setLoadedSource(null); setViewMode('paint');
@@ -12080,7 +12080,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Other languages are translated lazily on first switch (title-only, cheap).
       _mfiTitlesRef.current = isSample ? null : {[lang]: title};
       // Store fresh AI results so the next run of this image is free.
-      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} if(!isPro) consumeTrial(); }
+      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} if(proStatus==='free') consumeTrial(); }
       // Body 3: make Vary work in mood-from-image. rerollSong expects notes as
       // {note,dur,beat} objects; the AI returns [pitch,dur,beat,vel] arrays — so
       // normalise here. Vary then re-tunes THIS image's piece locally (transpose
@@ -12123,7 +12123,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setImgMoodThumb(null); setMoodContext(false); setMoodFromImg(false);
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
-  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet,_mfiRecentAdd]);
+  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet,_mfiRecentAdd,proStatus,trialExhausted,consumeTrial]);
   // Lazy, title-only translation: when the UI language changes while a CUSTOM
   // mood-from-image piece is shown, just RE-LABEL it. If we already have the title
   // for that language, swap instantly; otherwise translate the title (a tiny,
@@ -12357,8 +12357,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
     // Pro gate: free tier gets a limited number of heavy AI compositions.
     // Cache hits above already returned free; this point = a real (paid) AI call.
-    if(!isPro && trialExhausted){ setPaywallReason('ai_trial'); return; }
-    if(!isPro) consumeTrial();
+    if(proStatus==='free' && trialExhausted){ setPaywallReason('ai_trial'); return; }
+    if(proStatus==='free') consumeTrial();
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
@@ -12451,7 +12451,7 @@ Composition rules:
       } else { setErr(e.message||'Compose failed');setErrInfo(false); }
     }
     finally{setWorking(false);setWLabel('');setWPct(0);}
-  },[songQ,busy,stopAll,applyEvents,wipeCanvasNow,lang]);
+  },[songQ,busy,stopAll,applyEvents,wipeCanvasNow,lang,proStatus,trialExhausted,consumeTrial]);
 
   // Bridge ref so aiMoodFromText (declared earlier) can invoke aiCompose.
   useEffect(()=>{ aiComposeRef.current=aiCompose; },[aiCompose]);
@@ -12632,7 +12632,7 @@ Composition rules:
     // Atmosphere is an Anthropic API call (image → emotion analysis), so it
     // counts toward the free 5-AI trial pool same as composeFromImage and
     // aiCompose. Exhausted free users get the paywall; Pro users skip the gate.
-    if(!isPro && trialExhausted){ setPaywallReason('ai_trial'); return; }
+    if(proStatus==='free' && trialExhausted){ setPaywallReason('ai_trial'); return; }
     setAtmoBusy(true); setErr('');
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
@@ -12660,10 +12660,10 @@ Composition rules:
       // Atmosphere is a lighter call (just emotion analysis, no full composition)
       // so it costs 0.5 of a trial credit instead of a full 1.
       // (Toggling atmo on/off after this uses cached atmoMood, no extra call.)
-      if(!isPro) consumeTrial(0.5);
+      if(proStatus==='free') consumeTrial(0.5);
     }catch(e){ if(e&&e.message==='AI unavailable') setAiDown(true); setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.'); }
     finally{ setAtmoBusy(false); }
-  },[atmoBusy,originalImgUrl,lang,t,isPro,trialExhausted,consumeTrial]);
+  },[atmoBusy,originalImgUrl,lang,t,isPro,proStatus,trialExhausted,consumeTrial]);
 
   const paintSong=()=>{
     const q=songQ.trim().toLowerCase();if(!q||busy)return;
@@ -13811,7 +13811,7 @@ Composition rules:
           drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
         }
       }
-      applyWatermark(hi, isPro);   // free tier → "paintiano.app" stamp; Pro → no-op
+      applyWatermark(hi, proStatus!=='free');   // free tier → "paintiano.app" stamp; Pro → no-op
       const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
       if(!blob){setErr(t('errs').printEncode);setErrInfo(false);return;}
       const title=compositionName.trim()||info?.title||'painting';
