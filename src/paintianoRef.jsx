@@ -11108,6 +11108,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgAiBusy,setImgAiBusy]=useState(false);
   const [imgReturnUrl,setImgReturnUrl]=useState(null); // original image kept after an image→atmosphere jump, so the user can go back
   const [imgMoodThumb,setImgMoodThumb]=useState(null); // small source-image thumbnail for the "mood from image" mode
+  const _mfiTitlesRef=useRef(null); // per-language titles {EN,DE,FR,ES,SK} for the current custom MFI piece — lets a language switch relabel WITHOUT recomposing
   // True when the current mood piece came FROM AN IMAGE (mood-from-image or the
   // AI-composition-from-image button), false for text moods. Morph is offered for
   // text moods only; Vary is offered for both. Cleared by text-mood entry points.
@@ -12042,7 +12043,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // browser-canvas hash. Any other image still uses the content-hash cache.
       let parsed=(isSample && typeof SAMPLE_IMGMOOD!=='undefined' && SAMPLE_IMGMOOD && SAMPLE_IMGMOOD.result)
         ? SAMPLE_IMGMOOD.result
-        : _imgMoodCacheGet(lang+':'+_hash);
+        : _imgMoodCacheGet(_hash);
       let _fromCache=!!parsed;
       // Pro gate AFTER the cache check: cache hit = free replay even for
       // exhausted free users (sample is always cached, so it always plays).
@@ -12055,8 +12056,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         return;
       }
       if(!parsed){
-        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
-        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
+        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "titles" to an OBJECT giving the SAME short mood phrase (Title Case, max 5 words) translated into each language — en, de, fr, es, pt, sk, zh (Simplified Chinese), zhTW (Traditional Chinese).\nSchema: {"titles":{"en":"...","de":"...","fr":"...","es":"...","pt":"...","sk":"...","zh":"...","zhTW":"..."},"tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -12073,9 +12074,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       setWPct(85);
       const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
-      const title=(isSample ? (t('mfiSampleTitle')||(parsed.title&&String(parsed.title).trim())) : (parsed.title&&String(parsed.title).trim()))||'✦';
+      // Per-language titles. New AI responses carry parsed.titles={en,de,fr,es,sk};
+      // older cached entries only have parsed.title (single string) — fall back to it.
+      const _titleMap=(parsed&&parsed.titles&&typeof parsed.titles==='object')
+        ? Object.fromEntries([['en','EN'],['de','DE'],['fr','FR'],['es','ES'],['pt','PT'],['sk','SK'],['zh','zh'],['zhTW','zhTW']].filter(([k])=>parsed.titles[k]).map(([k,a])=>[a,String(parsed.titles[k]).trim()]))
+        : null;
+      const _pickTitle=(m)=> (m&&(m[lang]||m.EN)) || (parsed&&parsed.title&&String(parsed.title).trim()) || '';
+      const title=(isSample ? (t('mfiSampleTitle')||_pickTitle(_titleMap)) : _pickTitle(_titleMap))||'✦';
+      // Remember the map so a later language switch can relabel without recomposing.
+      _mfiTitlesRef.current = isSample ? null : (_titleMap || (parsed&&parsed.title?{[lang]:String(parsed.title).trim()}:null));
       // Store fresh AI results so the next run of this image is free.
-      if(!_fromCache){ try{ _imgMoodCacheSet(lang+':'+_hash,parsed); }catch(_){} if(!isPro) consumeTrial(); }
+      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} if(!isPro) consumeTrial(); }
       // Body 3: make Vary work in mood-from-image. rerollSong expects notes as
       // {note,dur,beat} objects; the AI returns [pitch,dur,beat,vel] arrays — so
       // normalise here. Vary then re-tunes THIS image's piece locally (transpose
@@ -12119,33 +12128,19 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
   },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet,_mfiRecentAdd]);
-  // When the UI language changes while a CUSTOM mood-from-image piece is shown,
-  // regenerate it in the new language. The per-language cache (lang+hash) makes
-  // already-seen languages replay instantly & free; a new language does one AI
-  // pass (gated by the usual trial/Pro rules). The built-in sample is excluded —
-  // its title is localized directly, no regeneration needed.
-  //
-  // IMPORTANT: regeneration calls stopAll(), so we NEVER run it mid-playback —
-  // that would cut the audio (choppy). If a piece is playing when the language
-  // changes, we just flag it and defer the regen until playback stops.
-  const _mfiLangRef = useRef(lang);
-  const _mfiPendingRegen = useRef(false);
+  // When the UI language changes, just RE-LABEL the current custom mood-from-image
+  // piece using the titles the AI already produced for every language — NO new
+  // composition and NO audio interruption. (The built-in sample is localized via
+  // its own i18n effect above; real AI pieces carry a {EN,DE,FR,ES,SK} title map.)
   const _mfiCustomActive = () => moodFromImg && originalImgUrl && originalImgUrl!==SAMPLE_IMAGE_MFI_B64;
   useEffect(()=>{
-    const prev=_mfiLangRef.current; _mfiLangRef.current=lang;
-    if(prev===lang) return;
     if(!_mfiCustomActive()) return;
-    if(playing){ _mfiPendingRegen.current=true; return; } // defer — don't interrupt audio
-    if(imgAiBusy) { _mfiPendingRegen.current=true; return; }
-    composeFromImage(originalImgUrl, false);
+    const m=_mfiTitlesRef.current; if(!m) return;
+    const nt=m[lang]||m.EN; if(!nt || nt===currentMood) return;
+    setCurrentMood(nt);
+    setInfo(prev=> prev?{...prev,title:nt}:prev);
+    setVarySource(prev=> prev?{...prev,title:nt}:prev);
   },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Flush a deferred language regen once playback has stopped.
-  useEffect(()=>{
-    if(playing || imgAiBusy) return;
-    if(!_mfiPendingRegen.current) return;
-    _mfiPendingRegen.current=false;
-    if(_mfiCustomActive()) composeFromImage(originalImgUrl, false);
-  },[playing]); // eslint-disable-line react-hooks/exhaustive-deps
   // Standalone "mood from image" mode: pick a picture, AI reads its emotion and
   // composes a mood on the canvas; a small thumbnail of the source sits on top.
   const loadImgMood=useCallback(e=>{
@@ -12355,7 +12350,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!isPro) consumeTrial();
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
-      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang]||'English';
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
       const prompt=`Compose a short expressive solo piano piece inspired by this mood phrase: "${title.slice(0,80)}".
 The phrase may be written in ANY language and may be colloquial, slang or idiomatic. FIRST translate it and work out the genuine emotion it expresses (e.g. anger, irritation, joy, calm, sadness, longing) — do NOT read it word-by-word and do NOT assume it is English. THEN compose music that fits that real emotion.
 Set the "title" field to a short, natural translation of the phrase into ${_langName} that captures its meaning (Title Case, max 5 words).
@@ -12631,7 +12626,7 @@ Composition rules:
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
       const b64=dataUrl.split(',')[1];
-      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',SK:'Slovak'}[lang])||'English';
+      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
       const prompt='Look at this image and judge the EMOTION / atmosphere of the scene. Output ONLY a single JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."} where valence is -1 (sad/dark) to 1 (happy/bright), energy is 0 (calm/still) to 1 (intense/dramatic), and title is a short mood phrase in '+_langName+' (max 4 words, Title Case).';
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
