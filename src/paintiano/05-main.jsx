@@ -3161,7 +3161,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Body 4: cache lookup on the downsampled image's content hash. A hit means
       // we already paid for this picture (or it's the baked sample) → replay free.
       const _hash=_imgMoodHash(dataUrl);
-      let parsed=_imgMoodCacheGet(_hash);
+      // Sample shortcut: the built-in sample always replays its baked mood
+      // (offline + free), matched by the isSample flag — NOT by the fragile
+      // browser-canvas hash. Any other image still uses the content-hash cache.
+      let parsed=(isSample && typeof SAMPLE_IMGMOOD!=='undefined' && SAMPLE_IMGMOOD && SAMPLE_IMGMOOD.result)
+        ? SAMPLE_IMGMOOD.result
+        : _imgMoodCacheGet(_hash);
       let _fromCache=!!parsed;
       // Pro gate AFTER the cache check: cache hit = free replay even for
       // exhausted free users (sample is always cached, so it always plays).
@@ -3261,7 +3266,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // (see composeFromImage sample-cache) so it stays free + works without a network.
   const loadSampleImgMood=useCallback(()=>{
     if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; }
-    composeFromImage(SAMPLE_IMAGE_B64, true);  // isSample=true → skip recent
+    composeFromImage(SAMPLE_IMAGE_MFI_B64, true);  // isSample=true → skip recent
   },[composeFromImage,stashDraft]);
 
   // MusicXML upload — exact, structured score data from MuseScore / Finale / Dorico.
@@ -5725,7 +5730,7 @@ Composition rules:
                 {t('builtInSample')}
               </button>
               <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
-                {pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:SAMPLE_IMAGE_NAME}
+                {pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}
               </div>
               <button onClick={()=>{
                 if(pickMode==='midi') refMidi.current?.click();
