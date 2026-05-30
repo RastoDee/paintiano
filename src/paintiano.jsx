@@ -11109,6 +11109,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgReturnUrl,setImgReturnUrl]=useState(null); // original image kept after an image→atmosphere jump, so the user can go back
   const [imgMoodThumb,setImgMoodThumb]=useState(null); // small source-image thumbnail for the "mood from image" mode
   const _mfiTitlesRef=useRef(null); // per-language titles {EN,DE,FR,ES,SK} for the current custom MFI piece — lets a language switch relabel WITHOUT recomposing
+  const [mfiImgAspect,setMfiImgAspect]=useState(null); // natural aspect ratio of the loaded MFI image — keeps the box stable (no jump) during compose
   // True when the current mood piece came FROM AN IMAGE (mood-from-image or the
   // AI-composition-from-image button), false for text moods. Morph is offered for
   // text moods only; Vary is offered for both. Cleared by text-mood entry points.
@@ -12032,7 +12033,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setMoodContext(true); setMoodFromImg(true); setViewMode('image');
     setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
     try{
-      const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=_src; });
+      const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ if(im.naturalWidth&&im.naturalHeight) setMfiImgAspect(im.naturalWidth+' / '+im.naturalHeight); const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=_src; });
       setWPct(40);
       const b64=dataUrl.split(',')[1];
       // Body 4: cache lookup on the downsampled image's content hash. A hit means
@@ -12057,7 +12058,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
-        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "titles" to an OBJECT giving the SAME short mood phrase (Title Case, max 5 words) translated into each language — en, de, fr, es, pt, sk, zh (Simplified Chinese), zhTW (Traditional Chinese).\nSchema: {"titles":{"en":"...","de":"...","fr":"...","es":"...","pt":"...","sk":"...","zh":"...","zhTW":"..."},"tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -12074,15 +12075,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       setWPct(85);
       const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
-      // Per-language titles. New AI responses carry parsed.titles={en,de,fr,es,sk};
-      // older cached entries only have parsed.title (single string) — fall back to it.
-      const _titleMap=(parsed&&parsed.titles&&typeof parsed.titles==='object')
-        ? Object.fromEntries([['en','EN'],['de','DE'],['fr','FR'],['es','ES'],['pt','PT'],['sk','SK'],['zh','zh'],['zhTW','zhTW']].filter(([k])=>parsed.titles[k]).map(([k,a])=>[a,String(parsed.titles[k]).trim()]))
-        : null;
-      const _pickTitle=(m)=> (m&&(m[lang]||m.EN)) || (parsed&&parsed.title&&String(parsed.title).trim()) || '';
-      const title=(isSample ? (t('mfiSampleTitle')||_pickTitle(_titleMap)) : _pickTitle(_titleMap))||'✦';
-      // Remember the map so a later language switch can relabel without recomposing.
-      _mfiTitlesRef.current = isSample ? null : (_titleMap || (parsed&&parsed.title?{[lang]:String(parsed.title).trim()}:null));
+      const title=(isSample ? (t('mfiSampleTitle')||(parsed.title&&String(parsed.title).trim())) : (parsed.title&&String(parsed.title).trim()))||'✦';
+      // Seed the per-language title map with the language this piece was generated in.
+      // Other languages are translated lazily on first switch (title-only, cheap).
+      _mfiTitlesRef.current = isSample ? null : {[lang]: title};
       // Store fresh AI results so the next run of this image is free.
       if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} if(!isPro) consumeTrial(); }
       // Body 3: make Vary work in mood-from-image. rerollSong expects notes as
@@ -12128,18 +12124,33 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
   },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet,_mfiRecentAdd]);
-  // When the UI language changes, just RE-LABEL the current custom mood-from-image
-  // piece using the titles the AI already produced for every language — NO new
-  // composition and NO audio interruption. (The built-in sample is localized via
-  // its own i18n effect above; real AI pieces carry a {EN,DE,FR,ES,SK} title map.)
+  // Lazy, title-only translation: when the UI language changes while a CUSTOM
+  // mood-from-image piece is shown, just RE-LABEL it. If we already have the title
+  // for that language, swap instantly; otherwise translate the title (a tiny,
+  // async, title-only AI call — NO new composition, NO audio interruption) and
+  // cache it in the map. The built-in sample is localized via its own i18n effect.
   const _mfiCustomActive = () => moodFromImg && originalImgUrl && originalImgUrl!==SAMPLE_IMAGE_MFI_B64;
+  const _mfiTitleBusyRef = useRef(false);
+  const _mfiTranslateTitle = useCallback(async (text, targetAppLang)=>{
+    const _ln=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[targetAppLang])||'English';
+    const host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+    const isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(host);
+    const eps=isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+    const messages=[{role:'user',content:[{type:'text',text:'Translate this short art-piece title into '+_ln+'. Keep it Title Case, max 5 words. Output ONLY the translated phrase \u2014 no quotes, no extra text:\n'+text}]}];
+    for(const ep of eps){ try{ const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:40,messages})}); const txt=await r.text(); if(r.ok&&txt){ const d=JSON.parse(txt); const out=((d.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('')).trim().replace(/^["'\s]+|["'\s]+$/g,''); if(out) return out; } }catch(_){} }
+    return null;
+  },[]);
   useEffect(()=>{
     if(!_mfiCustomActive()) return;
     const m=_mfiTitlesRef.current; if(!m) return;
-    const nt=m[lang]||m.EN; if(!nt || nt===currentMood) return;
-    setCurrentMood(nt);
-    setInfo(prev=> prev?{...prev,title:nt}:prev);
-    setVarySource(prev=> prev?{...prev,title:nt}:prev);
+    if(m[lang]){ if(m[lang]!==currentMood){ setCurrentMood(m[lang]); setInfo(prev=>prev?{...prev,title:m[lang]}:prev); setVarySource(prev=>prev?{...prev,title:m[lang]}:prev); } return; }
+    const base=Object.values(m)[0]; if(!base || _mfiTitleBusyRef.current) return;
+    const want=lang; _mfiTitleBusyRef.current=true;
+    _mfiTranslateTitle(base, want).then(out=>{
+      _mfiTitleBusyRef.current=false; if(!out) return;
+      const map=_mfiTitlesRef.current||{}; map[want]=out; _mfiTitlesRef.current=map;
+      if(want===lang && _mfiCustomActive()){ setCurrentMood(out); setInfo(prev=>prev?{...prev,title:out}:prev); setVarySource(prev=>prev?{...prev,title:out}:prev); }
+    }).catch(()=>{ _mfiTitleBusyRef.current=false; });
   },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
   // Standalone "mood from image" mode: pick a picture, AI reads its emotion and
   // composes a mood on the canvas; a small thumbnail of the source sits on top.
@@ -14838,10 +14849,10 @@ Composition rules:
         }}
       >
         {viewMode==='image'&&originalImgUrl&&(
-          <img src={originalImgUrl} alt="original" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
+          <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (

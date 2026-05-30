@@ -16,7 +16,7 @@ const API_MODEL = 'claude-sonnet-4-6';
 // Povolené modely, ktoré smie appka vyžiadať (inak sa použije API_MODEL).
 // Haiku = lacný (napr. výber morph poolu), Sonnet = kvalitný (kompozícia).
 const ALLOWED_MODELS = new Set(['claude-sonnet-4-6','claude-sonnet-4-6-20260218','claude-haiku-4-5','claude-haiku-4-5-20251001']);   // vždy aktuálny model (ignoruje sa to, čo pošle appka)
-const MAX_TOKENS = 1500;                  // strop na výstup (appka pýta 2000 → orežeme)
+const MAX_TOKENS = 2000;                  // strop na výstup (8-jazyčné MFI názvy + noty potrebujú viac miesta)
 const RATE_MAX = 30;                      // max požiadaviek
 const RATE_WINDOW_MS = 60 * 1000;         // za 60 sekúnd na jednu IP
 
