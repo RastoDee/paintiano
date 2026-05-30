@@ -12030,6 +12030,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // (Score, Atmosphere · OFF, Rows/Columns/Spiral) which doesn't belong in MFI.
     // viewMode='image' alone is enough to render originalImgUrl as the big picture.
     setOriginalImgUrl(_src); setImgMoodThumb(null);
+    // Clear the previous piece title so it doesn't linger over the new image while AI composes.
+    setCurrentMood(null); setInfo(null);
     setMoodContext(true); setMoodFromImg(true); setViewMode('image');
     setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
     try{
@@ -12112,7 +12114,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setComposeSource('ai'); setCurrentMood(title); setSongQ('');
       // Remember this piece in the recent-3 strip (recipe + tiny thumb only).
       // Skip for the built-in sample: it's always reachable via its own button.
-      if(!isSample){ try{ _mfiRecentAdd(_src,{notes:parsed.notes||[],tempo:parsed.tempo||90,title}); }catch(_){} }
+      if(!isSample && !_fromCache){ try{ _mfiRecentAdd(_src,{notes:parsed.notes||[],tempo:parsed.tempo||90,title}); }catch(_){} }  // only FRESH generations enter recent; cache replays do not
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
       // Only latch AI-down for genuine availability failures (network/budget),
