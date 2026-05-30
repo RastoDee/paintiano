@@ -12114,7 +12114,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setComposeSource('ai'); setCurrentMood(title); setSongQ('');
       // Remember this piece in the recent-3 strip (recipe + tiny thumb only).
       // Skip for the built-in sample: it's always reachable via its own button.
-      if(!isSample && !_fromCache){ try{ _mfiRecentAdd(_src,{notes:parsed.notes||[],tempo:parsed.tempo||90,title}); }catch(_){} }  // only FRESH generations enter recent; cache replays do not
+      // A shown result (freshly composed OR replayed from cache) is relevant for the
+      // recent list right away — from the user's view it's just 'gave an image, got a result'.
+      if(!isSample){ try{ _mfiRecentAdd(_src,{notes:parsed.notes||[],tempo:parsed.tempo||90,title}); }catch(_){} }
       try{ const bytes=encodeMidi(evts,parsed.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(e){
       // Only latch AI-down for genuine availability failures (network/budget),
