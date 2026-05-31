@@ -14838,7 +14838,7 @@ Composition rules:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onClick={()=>setImmersive(false)} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {immersive && <div onClick={()=>setImmersive(false)} onPointerMove={()=>{ if(playing) wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
       <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing) wakeControls(); }}
@@ -14885,7 +14885,7 @@ Composition rules:
           }
         }}
       >
-        <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.55)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'#e8dca8',padding:0,WebkitTapHighlightColor:'transparent',opacity:(immersive||controlsAwake)?1:0,pointerEvents:(immersive||controlsAwake)?'auto':'none',transition:'opacity .4s ease'}}>
+        <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.55)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'#e8dca8',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{immersive?<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>:<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>}</svg>
         </button>
         {viewMode==='image'&&originalImgUrl&&(
