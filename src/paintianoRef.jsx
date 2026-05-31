@@ -15085,8 +15085,8 @@ Composition rules:
         {immersive && (()=>{
           const exportReadyFs =
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
-             !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording)
-            || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording);
+             !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
+            || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && !recording && viewMode!=='image' && (playing||holdPaused);
           if(!exportReadyFs && !showNextFs) return null;
           return (

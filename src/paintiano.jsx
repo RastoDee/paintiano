@@ -5806,7 +5806,7 @@ const I18N = {
     chordsPlay:'chords · tap to play',
     chordsOnly:'chords',
     nameThisPiece:'name this piece…',
-    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · for IG / TikTok stories', shareStory:'Story',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · for IG / TikTok stories', shareStory:'Story', recent:'recent',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · fast · share online',
     sizePrint:'Print A1 · 300 DPI', sizePrintHint:'~20× · large file · print-ready',
     saveLongPressHint:'long-press the image', saveLongPressTail:'for Save to Photos · or an iOS screenshot (Side + Vol↑) at screen resolution',
@@ -5908,7 +5908,7 @@ const I18N = {
     chordsPlay:'akkorde · zum spielen tippen',
     chordsOnly:'akkorde',
     nameThisPiece:'dieses stück benennen…',
-    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · für IG / TikTok Storys', shareStory:'Story',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · für IG / TikTok Storys', shareStory:'Story', recent:'zuletzt',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · schnell · online teilen',
     sizePrint:'Druck A1 · 300 DPI', sizePrintHint:'~20× · große datei · druckfertig',
     saveLongPressHint:'lange auf das bild drücken', saveLongPressTail:'für „in fotos sichern" · oder iOS-screenshot (Seite + Lauter) in bildschirmauflösung',
@@ -6010,7 +6010,7 @@ const I18N = {
     chordsPlay:'accords · appuyer pour jouer',
     chordsOnly:'accords',
     nameThisPiece:'nommer cette pièce…',
-    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · pour stories IG / TikTok', shareStory:'Story',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · pour stories IG / TikTok', shareStory:'Story', recent:'récents',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rapide · partager en ligne',
     sizePrint:'Impression A1 · 300 DPI', sizePrintHint:'~20× · gros fichier · prêt à imprimer',
     saveLongPressHint:'appui long sur l\'image', saveLongPressTail:'pour « enregistrer dans photos » · ou capture iOS (Côté + Vol↑) en résolution écran',
@@ -6112,7 +6112,7 @@ const I18N = {
     chordsPlay:'acordes · pulsar para tocar',
     chordsOnly:'acordes',
     nameThisPiece:'nombrar esta pieza…',
-    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · para historias IG / TikTok', shareStory:'Story',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · para historias IG / TikTok', shareStory:'Story', recent:'recientes',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rápido · compartir en línea',
     sizePrint:'Impresión A1 · 300 DPI', sizePrintHint:'~20× · archivo grande · listo para imprimir',
     saveLongPressHint:'mantén pulsada la imagen', saveLongPressTail:'para guardar en fotos · o captura iOS (Lateral + Vol↑) a resolución de pantalla',
@@ -6214,7 +6214,7 @@ const I18N = {
     chordsPlay:'akordy · ťukni pre hranie',
     chordsOnly:'akordy',
     nameThisPiece:'pomenuj túto skladbu…',
-    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · pre IG / TikTok stories', shareStory:'Story',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · pre IG / TikTok stories', shareStory:'Story', recent:'nedávne',
     sizeWeb:'Web / Sociálne', sizeWebHint:'~4× · rýchle · zdieľať online',
     sizePrint:'Tlač A1 · 300 DPI', sizePrintHint:'~20× · veľký súbor · pripravené na tlač',
     saveLongPressHint:'podrž obrázok', saveLongPressTail:'pre uloženie do Fotiek · alebo iOS screenshot (Bok + Hlas↑) v rozlíšení obrazovky',
@@ -6316,7 +6316,7 @@ const I18N = {
     chordsPlay:'和弦 · 点击播放',
     chordsOnly:'和弦',
     nameThisPiece:'为此作品命名…',
-    sizeStory:'竖屏 · 9:16', sizeStoryHint:'1080×1920 · 适合 IG / TikTok 快拍', shareStory:'竖屏',
+    sizeStory:'竖屏 · 9:16', sizeStoryHint:'1080×1920 · 适合 IG / TikTok 快拍', shareStory:'竖屏', recent:'最近',
     sizeWeb:'网络 / 社交', sizeWebHint:'~4× · 快速 · 在线分享',
     sizePrint:'打印 A1 · 300 DPI', sizePrintHint:'~20× · 大文件 · 适合打印',
     saveLongPressHint:'长按图像', saveLongPressTail:'保存到相册 · 或 iOS 截屏(侧边键 + 音量↑)以屏幕分辨率保存',
@@ -6424,7 +6424,7 @@ const I18N = {
     chordsPlay:'和弦 · 點擊播放',
     chordsOnly:'和弦',
     nameThisPiece:'為此作品命名…',
-    sizeStory:'直式 · 9:16', sizeStoryHint:'1080×1920 · 適合 IG / TikTok 限動', shareStory:'直式',
+    sizeStory:'直式 · 9:16', sizeStoryHint:'1080×1920 · 適合 IG / TikTok 限動', shareStory:'直式', recent:'最近',
     sizeWeb:'網路 / 社群', sizeWebHint:'~4× · 快速 · 線上分享',
     sizePrint:'列印 A1 · 300 DPI', sizePrintHint:'~20× · 大檔案 · 適合列印',
     saveLongPressHint:'長按圖像', saveLongPressTail:'儲存到相簿 · 或 iOS 截圖（側邊鍵 + 音量↑）以螢幕解析度儲存',
@@ -6520,7 +6520,7 @@ const I18N = {
     chordsPlay:'acordes · toque para tocar',
     chordsOnly:'acordes',
     nameThisPiece:'nomeie esta peça…',
-    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · para stories IG / TikTok', shareStory:'Story',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · para stories IG / TikTok', shareStory:'Story', recent:'recentes',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rápido · compartilhar online',
     sizePrint:'Imprimir A1 · 300 DPI', sizePrintHint:'~20× · arquivo grande · pronto para imprimir',
     saveLongPressHint:'pressione e segure a imagem', saveLongPressTail:'para Salvar nas Fotos · ou screenshot do iOS (Lateral + Vol↑) na resolução da tela',
@@ -9080,15 +9080,21 @@ const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setRea
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
   return (
-    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:(.78*readScale)+'rem',lineHeight:1.65,fontFamily:'inherit',position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
         <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:14,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
         <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(201,168,76,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
         <style>{`#pf-concept-body{font-size:${(0.78*readScale).toFixed(3)}rem;}
-#pf-concept-body h3{font-size:${(1*readScale).toFixed(3)}rem !important;}
-#pf-concept-body p,#pf-concept-body li{font-size:${(0.82*readScale).toFixed(3)}rem !important;line-height:1.65;}
-#pf-concept-body strong,#pf-concept-body em{font-size:inherit !important;}`}</style>
+#pf-concept-body h3{font-size:${(1.02*readScale).toFixed(3)}rem !important;font-weight:600 !important;letter-spacing:.02em !important;border-bottom:none !important;padding:0 0 0 14px !important;margin:26px 0 12px !important;position:relative;line-height:1.25 !important;}
+#pf-concept-body h3:first-of-type{margin-top:0 !important;}
+#pf-concept-body h3::before{content:"";position:absolute;left:0;top:0.15em;bottom:0.15em;width:3px;border-radius:2px;background:currentColor;opacity:.65;}
+#pf-concept-body p,#pf-concept-body li{font-size:${(0.84*readScale).toFixed(3)}rem !important;line-height:1.7 !important;margin:0 0 14px !important;}
+#pf-concept-body p+p{margin-top:-2px !important;}
+#pf-concept-body strong,#pf-concept-body em{font-size:inherit !important;}
+#pf-concept-body p[style*="italic"]{padding:10px 14px !important;margin:4px 0 22px !important;background:rgba(255,255,255,0.025) !important;border-left:2px solid rgba(201,168,76,.45) !important;border-radius:0 8px 8px 0 !important;line-height:1.6 !important;}
+#pf-concept-body h3+p,#pf-concept-body h3+p+p{padding:12px 14px !important;margin-bottom:10px !important;background:rgba(255,255,255,0.018) !important;border:1px solid rgba(255,255,255,0.05) !important;border-radius:10px !important;}
+#pf-concept-body h3+p+p+p{padding:0 !important;background:transparent !important;border:none !important;margin-top:14px !important;}`}</style>
         <div id="pf-concept-body">{getConcept(lang)}</div>
         <button onClick={onClose} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
       </div>
@@ -9105,10 +9111,23 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
   return (
-    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:(.78*readScale)+'rem',lineHeight:1.6,fontFamily:'inherit',position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
         <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
+        <style>{`#pf-guide-body{font-size:${(0.78*readScale).toFixed(3)}rem;}
+#pf-guide-body .pf-gsec{font-size:${(0.6*readScale).toFixed(3)}rem !important;font-weight:600 !important;letter-spacing:.06em !important;text-transform:uppercase !important;margin:24px 0 10px !important;padding:0 0 0 12px !important;position:relative !important;color:rgba(140,200,255,.85) !important;line-height:1.25 !important;}
+#pf-guide-body .pf-gsec:first-of-type{margin-top:6px !important;}
+#pf-guide-body .pf-gsec::before{content:"";position:absolute;left:0;top:0.2em;bottom:0.2em;width:2px;border-radius:1px;background:rgba(140,200,255,.6);}
+#pf-guide-body details{margin-bottom:8px !important;border:1px solid rgba(140,200,255,.10) !important;border-radius:10px !important;padding:0 !important;background:rgba(255,255,255,0.018) !important;transition:border-color .18s ease, background .18s ease;}
+#pf-guide-body details:hover{border-color:rgba(140,200,255,.22) !important;background:rgba(255,255,255,0.028) !important;}
+#pf-guide-body details[open]{border-color:rgba(140,200,255,.35) !important;background:rgba(140,200,255,0.04) !important;}
+#pf-guide-body summary{cursor:pointer;padding:11px 14px 11px 14px !important;color:rgba(140,200,255,.92) !important;font-weight:500 !important;font-size:${(0.84*readScale).toFixed(3)}rem !important;letter-spacing:.01em !important;list-style:none !important;user-select:none;display:flex;align-items:center;gap:10px;line-height:1.35;}
+#pf-guide-body summary::-webkit-details-marker{display:none;}
+#pf-guide-body summary::after{content:"›";margin-left:auto;font-size:1.1em;color:rgba(140,200,255,.5);transition:transform .2s ease;display:inline-block;}
+#pf-guide-body details[open] summary::after{transform:rotate(90deg);color:rgba(140,200,255,.85);}
+#pf-guide-body details p{margin:0 !important;padding:2px 14px 12px !important;color:rgba(207,197,168,.82) !important;font-size:${(0.78*readScale).toFixed(3)}rem !important;line-height:1.7 !important;}
+#pf-guide-body details p+p{padding-top:6px !important;}`}</style>
         <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(140,200,255,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(140,200,255,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
         <input
           type="search"
@@ -9125,7 +9144,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
           aria-label={t('searchGuide')}
           style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:(.78*readScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
         />
-        <div>
+        <div id="pf-guide-body">
         {(() => {
           const matches = orderedGuide(lang).filter(e => guideMatch(e, guideQuery));
           if (matches.length === 0) {
@@ -9136,7 +9155,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
             return (
             <Fragment key={entry.id}>
               {sec && (
-                <div style={{margin:'16px 0 7px',padding:'0 4px',fontSize:(0.58*readScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(140,200,255,.55)'}}>{t('gsec_'+sec)}</div>
+                <div className="pf-gsec">{t('gsec_'+sec)}</div>
               )}
               <details open={!!guideQuery.trim()} style={{marginBottom:6,border:'1px solid rgba(207,197,168,.08)',borderRadius:4,padding:'2px 0',background:'rgba(255,255,255,0.012)'}}>
                 <summary style={{cursor:'pointer',padding:'9px 12px',color:'rgba(140,200,255,.92)',fontWeight:500,fontSize:(0.82*readScale)+'rem',letterSpacing:'.02em',listStyle:'none',userSelect:'none'}}>{entry.title}</summary>
@@ -14224,55 +14243,17 @@ Composition rules:
             attributes strip, shown contextually after a source is picked) ── */}
         <div style={{background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:20,padding:20,display:'flex',flexDirection:'column',gap:18}}>
 
-          {/* MOOD — type any feeling (Enter → generate) or tap a favourite.
-              Known moods play the crafted piece; anything else is synthesised. */}
+          {/* MOOD — single entry point. Opens the same showMoodMenu modal as
+              "+ NEW MOOD" on the canvas screen, where input, suggestions, recents
+              and the mood grid live together. Keeps setup minimal and means there
+              is one canonical mood UX shared across the app. */}
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
-            {(()=>{ const goMood=(val)=>{ const txt=(val||'').trim(); if(!txt||sourcePickerLocked)return; setMicArmed(false);setStructureSeedLock(null);setForceSetup(false);setCurrentMood(txt);setLoadedSource(null);setImgMoodThumb(null);setMoodFromImg(false);setVarySource(null);setMoodContext(true); aiMoodFromText(txt); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false); };
-              // Autocomplete: as you type, list moods whose localized name (or key)
-              // starts with the query. Diacritics are stripped on both sides so "z"
-              // also matches "žiarivá". Deduped by label, current language.
-              const mn=t('moodNames')||{};
-              const norm=s=>(s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-              const q=norm(songQ);
-              const sugMap=new Map(); // lowercased word → {k,label}
-              if(q){
-                // 1) current language labels (clean, canonical — one per mood)
-                for(const k of MOODS){ const label=mn[k]||k; const key=label.toLowerCase(); if(sugMap.has(key))continue; if(norm(label).startsWith(q)) sugMap.set(key,{k,label}); }
-                // SK synonym aliases (zlostná, nadšená, …) when UI is Slovak
-                if(lang==='SK'){ for(const w in MOOD_ALIASES_EXTRA){ const key=w.toLowerCase(); if(sugMap.has(key))continue; if(norm(w).startsWith(q)) sugMap.set(key,{k:MOOD_ALIASES_EXTRA[w],label:w}); } }
-              }
-              const suggestions=[...sugMap.values()].sort((a,b)=>a.label.localeCompare(b.label));
-              const sug=suggestions.slice(0,12);
-              const showSug = sug.length>0 && !sourcePickerLocked;
-              return (<>
-              <div style={{position:'relative',display:'flex',alignItems:'center',background:PF.card2,border:`1px solid ${PF.gold}`,borderRadius:12,overflow:'hidden',marginBottom:showSug?6:10}}>
-              <span style={{position:'absolute',left:13,fontSize:(.9*effScale)+'rem',color:PF.gold,pointerEvents:'none',zIndex:1}}>✦</span>
-              <input
-                value={songQ}
-                onChange={e=>setSongQ(e.target.value)}
-                onFocus={()=>{inputFocus.current=true;setMoodFocused(true);}}
-                onBlur={()=>{inputFocus.current=false;setTimeout(()=>setMoodFocused(false),140);}}
-                enterKeyHint="go"
-                inputMode="text"
-                onKeyDown={e=>{ if(e.key==='Enter'||e.keyCode===13||e.which===13){ e.preventDefault(); setMoodFocused(false); goMood(e.target.value); e.target.blur(); } }}
-                disabled={sourcePickerLocked}
-                placeholder={t('moodPlaceholder')}
-                title={recording?t('stopRecFirst'):t('moodPlaceholder')}
-                style={{flex:1,minWidth:0,background:'transparent',border:'none',padding:'13px 48px 13px 36px',color:PF.cream,fontSize:(16*effScale)+'px',fontFamily:'inherit',outline:'none',opacity:sourcePickerLocked?0.4:1}}/>
-              <button onClick={()=>{ goMood(songQ); }} disabled={sourcePickerLocked||!songQ.trim()} aria-label={t('moodGo')||'go'} title={t('moodGo')||'go'} style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,border:'none',cursor:(sourcePickerLocked||!songQ.trim())?'default':'pointer',background:songQ.trim()?PF.gold:'rgba(201,168,76,.2)',color:songQ.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700,opacity:sourcePickerLocked?0.4:1,transition:'all .18s'}}>→</button>
-              </div>
-              {showSug && (
-                <div role="listbox" aria-label={t('moodLabel')} style={{marginBottom:10,maxHeight:230,overflowY:'auto',borderRadius:10,border:'1px solid rgba(201,168,76,.25)',background:'rgba(20,18,30,.97)',boxShadow:'0 8px 24px rgba(0,0,0,.5)',WebkitOverflowScrolling:'touch',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,padding:8}}>
-                  {sug.map(o=>(
-                    <button key={o.k} role="option" onMouseDown={e=>e.preventDefault()} onClick={()=>{ setSongQ(o.label); setMoodFocused(false); goMood(o.label); }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',borderRadius:12,background:PF.card2,border:'1px solid rgba(242,238,232,.08)',color:PF.cream,cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
-                      <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[o.k]||'✦'}</span>
-                      <span style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{o.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              </>); })()}
+            <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={t('moodPlaceholder')} style={{width:'100%',display:'inline-flex',alignItems:'center',gap:10,padding:'13px 16px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:'transparent',border:'1px solid '+PF.gold,color:PF.gold2,fontFamily:'inherit',fontSize:(.7*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',opacity:sourcePickerLocked?0.4:1,textAlign:'left'}}>
+              <span style={{fontSize:'1.05rem',color:PF.gold}}>✦</span>
+              <span style={{flex:1,opacity:.85}}>{t('moodPlaceholder')}</span>
+              <span style={{color:'rgba(201,168,76,.5)',fontSize:'.85rem'}}>›</span>
+            </button>
           </div>
 
           {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
