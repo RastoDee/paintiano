@@ -6679,8 +6679,8 @@ Composition rules:
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
           // REC button — runs play+record together; on completion the SAVE
           // picker auto-opens so the user can immediately pick Story / Audio /
-          // Score for the fresh recording. Disabled while playing without REC,
-          // animating, working, or with no chords to record yet.
+          // Score for the fresh recording. No separate SAVE button needed: the
+          // picker IS the save flow, and it appears automatically after REC.
           const canStart = !recording && !playing && !anim && !working && chords.length>0;
           return (
             <button onClick={()=>{ if(recording){ stopRecord(); return; } if(!canStart) return; setRecordIntent('picker'); startRecord(); }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
@@ -6688,21 +6688,8 @@ Composition rules:
             </button>
           );
         })()}
-        {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
-          // SAVE button — opens the picker for ALREADY-recorded content (when a
-          // recBlob is on hand from a prior REC). Disabled until the piece has
-          // been recorded at least once.
-          const exportReady =
-            chords.length>0 && playedOnce && !playing && !anim && !holdPaused &&
-            !demoReelOn && !busy && !recording && recBlob;
-          return (
-            <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
-              title={exportReady?t('save'):recBlob?t('exportNeedsPlay'):'tap REC first to record audio'}
-              style={{padding:'8px 14px',background:'transparent',color:exportReady?'rgba(201,168,76,.85)':'rgba(201,168,76,.28)',border:'1px solid '+(exportReady?'rgba(201,168,76,.4)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
-              ↓ {t('save')}
-            </button>
-          );
-        })()}
+        {/* SAVE button removed from image mode — REC auto-opens the picker on
+            completion, so a separate SAVE was duplicate UI. */}
         {/* Score button removed from image-mode toolbar — it now lives inside
             the SAVE picker as one of three choices (Story / Audio / Score). */}
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
