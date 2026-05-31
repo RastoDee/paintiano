@@ -5806,6 +5806,7 @@ const I18N = {
     chordsPlay:'chords · tap to play',
     chordsOnly:'chords',
     nameThisPiece:'name this piece…',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · for IG / TikTok stories',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · fast · share online',
     sizePrint:'Print A1 · 300 DPI', sizePrintHint:'~20× · large file · print-ready',
     saveLongPressHint:'long-press the image', saveLongPressTail:'for Save to Photos · or an iOS screenshot (Side + Vol↑) at screen resolution',
@@ -5907,6 +5908,7 @@ const I18N = {
     chordsPlay:'akkorde · zum spielen tippen',
     chordsOnly:'akkorde',
     nameThisPiece:'dieses stück benennen…',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · für IG / TikTok Storys',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · schnell · online teilen',
     sizePrint:'Druck A1 · 300 DPI', sizePrintHint:'~20× · große datei · druckfertig',
     saveLongPressHint:'lange auf das bild drücken', saveLongPressTail:'für „in fotos sichern" · oder iOS-screenshot (Seite + Lauter) in bildschirmauflösung',
@@ -6008,6 +6010,7 @@ const I18N = {
     chordsPlay:'accords · appuyer pour jouer',
     chordsOnly:'accords',
     nameThisPiece:'nommer cette pièce…',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · pour stories IG / TikTok',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rapide · partager en ligne',
     sizePrint:'Impression A1 · 300 DPI', sizePrintHint:'~20× · gros fichier · prêt à imprimer',
     saveLongPressHint:'appui long sur l\'image', saveLongPressTail:'pour « enregistrer dans photos » · ou capture iOS (Côté + Vol↑) en résolution écran',
@@ -6109,6 +6112,7 @@ const I18N = {
     chordsPlay:'acordes · pulsar para tocar',
     chordsOnly:'acordes',
     nameThisPiece:'nombrar esta pieza…',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · para historias IG / TikTok',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rápido · compartir en línea',
     sizePrint:'Impresión A1 · 300 DPI', sizePrintHint:'~20× · archivo grande · listo para imprimir',
     saveLongPressHint:'mantén pulsada la imagen', saveLongPressTail:'para guardar en fotos · o captura iOS (Lateral + Vol↑) a resolución de pantalla',
@@ -6210,6 +6214,7 @@ const I18N = {
     chordsPlay:'akordy · ťukni pre hranie',
     chordsOnly:'akordy',
     nameThisPiece:'pomenuj túto skladbu…',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · pre IG / TikTok stories',
     sizeWeb:'Web / Sociálne', sizeWebHint:'~4× · rýchle · zdieľať online',
     sizePrint:'Tlač A1 · 300 DPI', sizePrintHint:'~20× · veľký súbor · pripravené na tlač',
     saveLongPressHint:'podrž obrázok', saveLongPressTail:'pre uloženie do Fotiek · alebo iOS screenshot (Bok + Hlas↑) v rozlíšení obrazovky',
@@ -6311,6 +6316,7 @@ const I18N = {
     chordsPlay:'和弦 · 点击播放',
     chordsOnly:'和弦',
     nameThisPiece:'为此作品命名…',
+    sizeStory:'竖屏 · 9:16', sizeStoryHint:'1080×1920 · 适合 IG / TikTok 快拍',
     sizeWeb:'网络 / 社交', sizeWebHint:'~4× · 快速 · 在线分享',
     sizePrint:'打印 A1 · 300 DPI', sizePrintHint:'~20× · 大文件 · 适合打印',
     saveLongPressHint:'长按图像', saveLongPressTail:'保存到相册 · 或 iOS 截屏(侧边键 + 音量↑)以屏幕分辨率保存',
@@ -6418,6 +6424,7 @@ const I18N = {
     chordsPlay:'和弦 · 點擊播放',
     chordsOnly:'和弦',
     nameThisPiece:'為此作品命名…',
+    sizeStory:'直式 · 9:16', sizeStoryHint:'1080×1920 · 適合 IG / TikTok 限動',
     sizeWeb:'網路 / 社群', sizeWebHint:'~4× · 快速 · 線上分享',
     sizePrint:'列印 A1 · 300 DPI', sizePrintHint:'~20× · 大檔案 · 適合列印',
     saveLongPressHint:'長按圖像', saveLongPressTail:'儲存到相簿 · 或 iOS 截圖（側邊鍵 + 音量↑）以螢幕解析度儲存',
@@ -6513,6 +6520,7 @@ const I18N = {
     chordsPlay:'acordes · toque para tocar',
     chordsOnly:'acordes',
     nameThisPiece:'nomeie esta peça…',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · para stories IG / TikTok',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rápido · compartilhar online',
     sizePrint:'Imprimir A1 · 300 DPI', sizePrintHint:'~20× · arquivo grande · pronto para imprimir',
     saveLongPressHint:'pressione e segure a imagem', saveLongPressTail:'para Salvar nas Fotos · ou screenshot do iOS (Lateral + Vol↑) na resolução da tela',
@@ -13835,6 +13843,10 @@ Composition rules:
         SCALE=Math.max(rawScale,8);
         dpi=Math.round((CW*SCALE)/23.39); // A1 width=23.39in
         label='A1-print';
+      } else if(sizeMode==='story'){
+        SCALE=4;          // crisp source; composited onto the 1080×1920 story canvas below
+        dpi=null;
+        label='story';
       } else {
         SCALE=4;
         dpi=null;
@@ -13915,15 +13927,50 @@ Composition rules:
         }
       }
       applyWatermark(hi, proStatus!=='free');   // free tier → "paintiano.app" stamp; Pro → no-op
-      const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
+      // STORY (9:16) — compose the rendered painting onto a tall 1080×1920 dark
+      // canvas, centered, with a small Paintiano wordmark below. Built for IG/
+      // TikTok stories. Everything else ('web'/'print') downloads `hi` as-is.
+      let outCanvas = hi;
+      if(sizeMode==='story'){
+        const SW=1080, SH=1920;
+        const st=document.createElement('canvas'); st.width=SW; st.height=SH;
+        const sctx=st.getContext('2d');
+        // deep radial background (matches the app's stage)
+        const g=sctx.createRadialGradient(SW*0.5,SH*0.34,0,SW*0.5,SH*0.34,SH*0.7);
+        g.addColorStop(0,'#0e0b16'); g.addColorStop(1,'#06060c');
+        sctx.fillStyle=g; sctx.fillRect(0,0,SW,SH);
+        // fit the painting into the width with margins, centered vertically-ish
+        const margin=90;
+        const availW=SW-margin*2;
+        const scale=availW/hi.width;
+        const dw=availW, dh=Math.round(hi.height*scale);
+        const dx=margin, dy=Math.round((SH-dh)/2 - 40);
+        // subtle frame
+        sctx.save();
+        sctx.shadowColor='rgba(0,0,0,.55)'; sctx.shadowBlur=40; sctx.shadowOffsetY=12;
+        sctx.drawImage(hi, dx, dy, dw, dh);
+        sctx.restore();
+        sctx.strokeStyle='rgba(201,168,76,.35)'; sctx.lineWidth=2;
+        sctx.strokeRect(dx, dy, dw, dh);
+        // wordmark + tagline below the art
+        sctx.textAlign='center';
+        sctx.fillStyle='#f0c040';
+        sctx.font='600 64px "Cormorant Garamond", Georgia, serif';
+        sctx.fillText('Paintiano', SW/2, dy+dh+120);
+        sctx.fillStyle='rgba(201,168,76,.7)';
+        sctx.font='500 28px "Outfit", Arial, sans-serif';
+        sctx.fillText('music → φ painting', SW/2, dy+dh+168);
+        outCanvas=st;
+      }
+      const blob=await new Promise(res=>outCanvas.toBlob(res,'image/png'));
       if(!blob){setErr(t('errs').printEncode);setErrInfo(false);return;}
       const title=compositionName.trim()||info?.title||'painting';
-      const filename=`paintiano-${title.replace(/[^\w-]+/g,'_').slice(0,60)}-${hi.width}x${hi.height}-${label}.png`;
+      const filename=`paintiano-${title.replace(/[^\w-]+/g,'_').slice(0,60)}-${outCanvas.width}x${outCanvas.height}-${label}.png`;
       const file=new File([blob],filename,{type:'image/png'});
       const url=URL.createObjectURL(blob);
       setPreviewMsg(null);
       setShowSizePicker(false);
-      setPreview({url,filename,w:hi.width,h:hi.height,size:blob.size,file,dpi,label});
+      setPreview({url,filename,w:outCanvas.width,h:outCanvas.height,size:blob.size,file,dpi,label});
     }catch(e){setErr('Print: '+e.message);setErrInfo(false);}
   };
 
@@ -15180,6 +15227,10 @@ Composition rules:
               style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid '+(focusedInput==='comp'?'rgba(201,168,76,.85)':'rgba(201,168,76,.35)'),borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:(.72*effScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14,boxShadow:focusedInput==='comp'?'0 0 0 2px rgba(201,168,76,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
             />
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <button onClick={()=>exportImage('story')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                ▢ {t('sizeStory')}
+                <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeStoryHint')}</div>
+              </button>
               <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                 🖥 {t('sizeWeb')}
                 <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>

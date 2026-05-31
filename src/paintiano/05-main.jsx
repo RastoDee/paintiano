@@ -4881,6 +4881,10 @@ Composition rules:
         SCALE=Math.max(rawScale,8);
         dpi=Math.round((CW*SCALE)/23.39); // A1 width=23.39in
         label='A1-print';
+      } else if(sizeMode==='story'){
+        SCALE=4;          // crisp source; composited onto the 1080×1920 story canvas below
+        dpi=null;
+        label='story';
       } else {
         SCALE=4;
         dpi=null;
@@ -4961,15 +4965,50 @@ Composition rules:
         }
       }
       applyWatermark(hi, proStatus!=='free');   // free tier → "paintiano.app" stamp; Pro → no-op
-      const blob=await new Promise(res=>hi.toBlob(res,'image/png'));
+      // STORY (9:16) — compose the rendered painting onto a tall 1080×1920 dark
+      // canvas, centered, with a small Paintiano wordmark below. Built for IG/
+      // TikTok stories. Everything else ('web'/'print') downloads `hi` as-is.
+      let outCanvas = hi;
+      if(sizeMode==='story'){
+        const SW=1080, SH=1920;
+        const st=document.createElement('canvas'); st.width=SW; st.height=SH;
+        const sctx=st.getContext('2d');
+        // deep radial background (matches the app's stage)
+        const g=sctx.createRadialGradient(SW*0.5,SH*0.34,0,SW*0.5,SH*0.34,SH*0.7);
+        g.addColorStop(0,'#0e0b16'); g.addColorStop(1,'#06060c');
+        sctx.fillStyle=g; sctx.fillRect(0,0,SW,SH);
+        // fit the painting into the width with margins, centered vertically-ish
+        const margin=90;
+        const availW=SW-margin*2;
+        const scale=availW/hi.width;
+        const dw=availW, dh=Math.round(hi.height*scale);
+        const dx=margin, dy=Math.round((SH-dh)/2 - 40);
+        // subtle frame
+        sctx.save();
+        sctx.shadowColor='rgba(0,0,0,.55)'; sctx.shadowBlur=40; sctx.shadowOffsetY=12;
+        sctx.drawImage(hi, dx, dy, dw, dh);
+        sctx.restore();
+        sctx.strokeStyle='rgba(201,168,76,.35)'; sctx.lineWidth=2;
+        sctx.strokeRect(dx, dy, dw, dh);
+        // wordmark + tagline below the art
+        sctx.textAlign='center';
+        sctx.fillStyle='#f0c040';
+        sctx.font='600 64px "Cormorant Garamond", Georgia, serif';
+        sctx.fillText('Paintiano', SW/2, dy+dh+120);
+        sctx.fillStyle='rgba(201,168,76,.7)';
+        sctx.font='500 28px "Outfit", Arial, sans-serif';
+        sctx.fillText('music → φ painting', SW/2, dy+dh+168);
+        outCanvas=st;
+      }
+      const blob=await new Promise(res=>outCanvas.toBlob(res,'image/png'));
       if(!blob){setErr(t('errs').printEncode);setErrInfo(false);return;}
       const title=compositionName.trim()||info?.title||'painting';
-      const filename=`paintiano-${title.replace(/[^\w-]+/g,'_').slice(0,60)}-${hi.width}x${hi.height}-${label}.png`;
+      const filename=`paintiano-${title.replace(/[^\w-]+/g,'_').slice(0,60)}-${outCanvas.width}x${outCanvas.height}-${label}.png`;
       const file=new File([blob],filename,{type:'image/png'});
       const url=URL.createObjectURL(blob);
       setPreviewMsg(null);
       setShowSizePicker(false);
-      setPreview({url,filename,w:hi.width,h:hi.height,size:blob.size,file,dpi,label});
+      setPreview({url,filename,w:outCanvas.width,h:outCanvas.height,size:blob.size,file,dpi,label});
     }catch(e){setErr('Print: '+e.message);setErrInfo(false);}
   };
 
@@ -6226,6 +6265,10 @@ Composition rules:
               style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid '+(focusedInput==='comp'?'rgba(201,168,76,.85)':'rgba(201,168,76,.35)'),borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:(.72*effScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14,boxShadow:focusedInput==='comp'?'0 0 0 2px rgba(201,168,76,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
             />
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <button onClick={()=>exportImage('story')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                ▢ {t('sizeStory')}
+                <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeStoryHint')}</div>
+              </button>
               <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                 🖥 {t('sizeWeb')}
                 <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
