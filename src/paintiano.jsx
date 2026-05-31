@@ -13622,10 +13622,9 @@ Composition rules:
       if(blob.size<2000){setErr(t('recTooShort'));setErrInfo(false);}
       else{setRecBlob(blob);setRecName(name);}
       setRecording(false);recorderRef.current=null;
-      // Image-mode picker intents: react to what the user picked from SAVE.
-      // 'audio' → immediately open Save/Share for the mp3. 'story' → bundle
-      // the mp3 with a freshly-rendered PNG 9:16 painting and open share with
-      // both files + caption. Reset intent after dispatch.
+      // Image-mode picker intents: react to what the user picked from SAVE,
+      // or from the REC button (which uses 'picker' = auto-open the SAVE picker
+      // after recording so the user can choose Story / Audio / Score next).
       const intent = recordIntentRef.current;
       if(intent && blob.size>=2000){
         setRecordIntent(null);
@@ -13635,6 +13634,7 @@ Composition rules:
         setTimeout(()=>{
           if(intent==='audio') saveAudio();
           else if(intent==='story') exportImage('story', true, blob, name);
+          else if(intent==='picker') setShowSizePicker(true);
         }, 60);
       }
     };
@@ -15544,14 +15544,26 @@ Composition rules:
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {viewMode==='image' ? (
                 <>
-                  {/* Image mode: Story (PNG 9:16 + audio via record) / Audio
-                      (mp3 only) / Score (MusicXML). All three either share or
-                      save a file derived from the played piece. */}
-                  <button onClick={()=>{ setShowSizePicker(false); setRecordIntent('story'); startRecord(); }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
+                  {/* Image mode: Story (PNG 9:16 + audio) / Audio (mp3 only) /
+                      Score (MusicXML). Audio + Story prefer the auto-recorded
+                      blob captured silently during the most recent Play — that
+                      makes them instant, no re-play needed. If for some reason
+                      no blob is on hand (e.g. recording stream failed in the
+                      background), fall back to the legacy picker-intent flow
+                      that records on demand. */}
+                  <button onClick={()=>{
+                    setShowSizePicker(false);
+                    if(recBlob && recName) exportImage('story', true, recBlob, recName);
+                    else { setRecordIntent('story'); startRecord(); }
+                  }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
                     ✦ {t('sizeStory')||'Story'}
                     <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
                   </button>
-                  <button onClick={()=>{ setShowSizePicker(false); setRecordIntent('audio'); startRecord(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                  <button onClick={()=>{
+                    setShowSizePicker(false);
+                    if(recBlob && recName) saveAudio();
+                    else { setRecordIntent('audio'); startRecord(); }
+                  }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     ⏺ {t('saveAudioLabel')||'Audio'}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
                   </button>
@@ -15876,16 +15888,27 @@ Composition rules:
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
-          // Mirror the non-image SAVE gate verbatim — same exportReady logic so
-          // the button enables/disables identically across all modes (e.g. only
-          // after the piece has played through and is still).
+          // REC button — runs play+record together; on completion the SAVE
+          // picker auto-opens so the user can immediately pick Story / Audio /
+          // Score for the fresh recording. Disabled while playing without REC,
+          // animating, working, or with no chords to record yet.
+          const canStart = !recording && !playing && !anim && !working && chords.length>0;
+          return (
+            <button onClick={()=>{ if(recording){ stopRecord(); return; } if(!canStart) return; setRecordIntent('picker'); startRecord(); }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
+              {recording?t('recStop'):t('recArm')}
+            </button>
+          );
+        })()}
+        {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
+          // SAVE button — opens the picker for ALREADY-recorded content (when a
+          // recBlob is on hand from a prior REC). Disabled until the piece has
+          // been recorded at least once.
           const exportReady =
-            (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
-             !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording)
-            || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording);
+            chords.length>0 && playedOnce && !playing && !anim && !holdPaused &&
+            !demoReelOn && !busy && !recording && recBlob;
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
-              title={exportReady?t('save'):t('exportNeedsPlay')}
+              title={exportReady?t('save'):recBlob?t('exportNeedsPlay'):'tap REC first to record audio'}
               style={{padding:'8px 14px',background:'transparent',color:exportReady?'rgba(201,168,76,.85)':'rgba(201,168,76,.28)',border:'1px solid '+(exportReady?'rgba(201,168,76,.4)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
               ↓ {t('save')}
             </button>
