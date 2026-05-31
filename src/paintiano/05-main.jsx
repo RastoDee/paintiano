@@ -6148,11 +6148,19 @@ Composition rules:
       </>)}
 
 
-      {showSizePicker && (
+      {showSizePicker && (()=>{
+        // Tint the export picker to match the active mode: compose = green,
+        // mic = pink, everything else (played pieces) keeps the default violet.
+        const pk = composeMode
+          ? { line:'rgba(78,203,141,.9)', dim:'rgba(120,200,160,.5)', border:'rgba(78,203,141,.45)', edge:'rgba(78,203,141,.35)' }
+          : (micActive||micArmed)
+          ? { line:'rgba(240,106,166,.9)', dim:'rgba(240,150,190,.5)', border:'rgba(240,106,166,.45)', edge:'rgba(240,106,166,.35)' }
+          : { line:'rgba(200,160,255,.85)', dim:'rgba(180,160,255,.45)', border:'rgba(180,140,255,.4)', edge:'rgba(200,160,255,.35)' };
+        return (
         <div onClick={()=>setShowSizePicker(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export size" style={{background:'#0a0a14',border:'1px solid rgba(200,160,255,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:'rgba(200,160,255,.75)',fontSize:(.65*effScale)+'rem'}}>
-              🖨 {t('print').replace('🖨 ','')}</div>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export" style={{background:'#0a0a14',border:'1px solid '+pk.edge,borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:pk.line,fontSize:(.65*effScale)+'rem'}}>
+              ↓ {t('save')}</div>
             <input
               type="text"
               value={compositionName}
@@ -6165,13 +6173,13 @@ Composition rules:
               style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid '+(focusedInput==='comp'?'rgba(201,168,76,.85)':'rgba(201,168,76,.35)'),borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:(.72*effScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14,boxShadow:focusedInput==='comp'?'0 0 0 2px rgba(201,168,76,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
             />
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+              <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                 🖥 {t('sizeWeb')}
-                <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
+                <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
               </button>
-              <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:'rgba(200,160,255,.85)',border:'1px solid rgba(180,140,255,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+              <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                 🖨 {t('sizePrint')}
-                <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(180,160,255,.45)',marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
+                <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
               </button>
               <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*effScale)+'rem',marginTop:4}}>
                 {t('cancel')}
@@ -6179,7 +6187,8 @@ Composition rules:
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {showPaletteEditor && (
         <PaletteEditorModal
