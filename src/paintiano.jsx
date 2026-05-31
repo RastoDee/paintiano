@@ -827,17 +827,11 @@ function drawBlockMosaicFuzzy(ctx,bx,by,notes,gc,BW,BH){
 // paintings have subtle tonal variation. The cream is the dominant background;
 // the dense drip overlay paints on top.
 function drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH){
-  // Solid cream base — covers the dark paintiano canvas with raw-canvas off-white
+  // Solid cream base — covers the dark paintiano canvas with raw-canvas off-white.
+  // Kept uniform (no per-chord colour tint) so nothing coloured shows through
+  // under the drip overlay — the substrate reads as clean raw canvas.
   ctx.fillStyle = '#f2ede0';
   ctx.fillRect(bx-2, by-2, BW+4, BH+4);
-  // Very faint chord-color hint — barely visible, just gives painting tonal variation
-  const sorted=[...notes].sort((a,b)=>b.m-a.m), n=sorted.length, bh=BH/n;
-  sorted.forEach((note,i)=>{
-    const[r,g,b]=gc(note.m, note.v);
-    const y = by + i*bh;
-    ctx.fillStyle = `rgba(${r},${g},${b},0.06)`;
-    ctx.fillRect(bx, y, BW, bh);
-  });
 }
 
 function drawRembrandt(ctx,bx,by,notes,gc,BW,BH){
@@ -5810,6 +5804,7 @@ const I18N = {
     recArm:'⏺ rec', recStop:'⏹ rec…',
     share:'share', save:'save', saving:'saving…', saved:'saved ✓', scoreExport:'score', scoreXmlHint:'opens in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exports the whole piece', exportScore:'score (xml)', exportScoreHint:'opens in MuseScore etc.', exportAudio:'audio', exportAudioHint:'plays & records the full piece', exportBoth:'both', exportBothHint:'score now, then records audio', exportNeedsPlay:'play first to export', rendering:'rendering audio…', renderFail:'audio render failed',
     chordsPlay:'chords · tap to play',
+    chordsOnly:'chords',
     nameThisPiece:'name this piece…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · fast · share online',
     sizePrint:'Print A1 · 300 DPI', sizePrintHint:'~20× · large file · print-ready',
@@ -5910,6 +5905,7 @@ const I18N = {
     recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
     share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓', scoreExport:'noten', scoreXmlHint:'öffnet in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportiert das ganze Stück', exportScore:'noten (xml)', exportScoreHint:'öffnet in MuseScore usw.', exportAudio:'audio', exportAudioHint:'spielt & nimmt das Stück auf', exportBoth:'beides', exportBothHint:'noten jetzt, dann audio', exportNeedsPlay:'zuerst abspielen', rendering:'audio wird erzeugt…', renderFail:'audio-erzeugung fehlgeschlagen',
     chordsPlay:'akkorde · zum spielen tippen',
+    chordsOnly:'akkorde',
     nameThisPiece:'dieses stück benennen…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · schnell · online teilen',
     sizePrint:'Druck A1 · 300 DPI', sizePrintHint:'~20× · große datei · druckfertig',
@@ -6010,6 +6006,7 @@ const I18N = {
     recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
     share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓', scoreExport:'partition', scoreXmlHint:'ouvre dans MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exporter', exportHint:'exporte tout le morceau', exportScore:'partition (xml)', exportScoreHint:'ouvre dans MuseScore etc.', exportAudio:'audio', exportAudioHint:'joue & enregistre le morceau', exportBoth:'les deux', exportBothHint:'partition puis audio', exportNeedsPlay:'jouez d\'abord', rendering:'rendu audio…', renderFail:'échec du rendu audio',
     chordsPlay:'accords · appuyer pour jouer',
+    chordsOnly:'accords',
     nameThisPiece:'nommer cette pièce…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rapide · partager en ligne',
     sizePrint:'Impression A1 · 300 DPI', sizePrintHint:'~20× · gros fichier · prêt à imprimer',
@@ -6110,6 +6107,7 @@ const I18N = {
     recArm:'⏺ grabar', recStop:'⏹ graba…',
     share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓', scoreExport:'partitura', scoreXmlHint:'abre en MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exportar', exportHint:'exporta toda la pieza', exportScore:'partitura (xml)', exportScoreHint:'abre en MuseScore etc.', exportAudio:'audio', exportAudioHint:'reproduce y graba la pieza', exportBoth:'ambos', exportBothHint:'partitura y luego audio', exportNeedsPlay:'reproduce primero', rendering:'renderizando audio…', renderFail:'fallo al renderizar audio',
     chordsPlay:'acordes · pulsar para tocar',
+    chordsOnly:'acordes',
     nameThisPiece:'nombrar esta pieza…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rápido · compartir en línea',
     sizePrint:'Impresión A1 · 300 DPI', sizePrintHint:'~20× · archivo grande · listo para imprimir',
@@ -6210,6 +6208,7 @@ const I18N = {
     recArm:'⏺ nahrať', recStop:'⏹ nahr…',
     share:'zdieľať', save:'uložiť', saving:'ukladám…', saved:'uložené ✓', scoreExport:'noty', scoreXmlHint:'otvorí v MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportuje celú skladbu', exportScore:'noty (xml)', exportScoreHint:'otvorí v MuseScore a pod.', exportAudio:'audio', exportAudioHint:'prehrá a nahrá celú skladbu', exportBoth:'oboje', exportBothHint:'noty hneď, potom audio', exportNeedsPlay:'najprv prehraj', rendering:'renderujem audio…', renderFail:'render audia zlyhal',
     chordsPlay:'akordy · ťukni pre hranie',
+    chordsOnly:'akordy',
     nameThisPiece:'pomenuj túto skladbu…',
     sizeWeb:'Web / Sociálne', sizeWebHint:'~4× · rýchle · zdieľať online',
     sizePrint:'Tlač A1 · 300 DPI', sizePrintHint:'~20× · veľký súbor · pripravené na tlač',
@@ -6310,6 +6309,7 @@ const I18N = {
     recArm:'⏺ 录制', recStop:'⏹ 录制…',
     share:'分享', save:'保存', saving:'保存中…', saved:'已保存 ✓', scoreExport:'乐谱', scoreXmlHint:'可在 MuseScore、Sibelius、Finale 中打开…', exportLabel:'导出', exportTitle:'导出', exportHint:'导出整首作品', exportScore:'乐谱 (xml)', exportScoreHint:'可在 MuseScore 等软件中打开', exportAudio:'音频', exportAudioHint:'播放并录制整首作品', exportBoth:'两者', exportBothHint:'先导出乐谱,再录制音频', exportNeedsPlay:'请先播放再导出', rendering:'渲染音频中…', renderFail:'音频渲染失败',
     chordsPlay:'和弦 · 点击播放',
+    chordsOnly:'和弦',
     nameThisPiece:'为此作品命名…',
     sizeWeb:'网络 / 社交', sizeWebHint:'~4× · 快速 · 在线分享',
     sizePrint:'打印 A1 · 300 DPI', sizePrintHint:'~20× · 大文件 · 适合打印',
@@ -6416,6 +6416,7 @@ const I18N = {
     recArm:'⏺ 錄製', recStop:'⏹ 錄製…',
     share:'分享', save:'儲存', saving:'儲存中…', saved:'已儲存 ✓', scoreExport:'樂譜', scoreXmlHint:'可在 MuseScore、Sibelius、Finale 中開啟…', exportLabel:'匯出', exportTitle:'匯出', exportHint:'匯出整首作品', exportScore:'樂譜 (xml)', exportScoreHint:'可在 MuseScore 等軟體中開啟', exportAudio:'音訊', exportAudioHint:'播放並錄製整首作品', exportBoth:'兩者', exportBothHint:'先匯出樂譜，再錄製音訊', exportNeedsPlay:'請先播放再匯出', rendering:'渲染音訊中…', renderFail:'音訊渲染失敗',
     chordsPlay:'和弦 · 點擊播放',
+    chordsOnly:'和弦',
     nameThisPiece:'為此作品命名…',
     sizeWeb:'網路 / 社群', sizeWebHint:'~4× · 快速 · 線上分享',
     sizePrint:'列印 A1 · 300 DPI', sizePrintHint:'~20× · 大檔案 · 適合列印',
@@ -6510,6 +6511,7 @@ const I18N = {
     recArm:'⏺ grav', recStop:'⏹ grav…',
     share:'compartilhar', save:'salvar', saving:'salvando…', saved:'salvo ✓', scoreExport:'partitura', scoreXmlHint:'abre no MuseScore, Sibelius, Finale…', exportLabel:'exportar', exportTitle:'exportar', exportHint:'exporta a peça inteira', exportScore:'partitura (xml)', exportScoreHint:'abre no MuseScore etc.', exportAudio:'áudio', exportAudioHint:'toca e grava a peça inteira', exportBoth:'ambos', exportBothHint:'partitura primeiro, depois grava áudio', exportNeedsPlay:'toque primeiro para exportar', rendering:'renderizando áudio…', renderFail:'falha ao renderizar áudio',
     chordsPlay:'acordes · toque para tocar',
+    chordsOnly:'acordes',
     nameThisPiece:'nomeie esta peça…',
     sizeWeb:'Web / Social', sizeWebHint:'~4× · rápido · compartilhar online',
     sizePrint:'Imprimir A1 · 300 DPI', sizePrintHint:'~20× · arquivo grande · pronto para imprimir',
@@ -14681,7 +14683,7 @@ Composition rules:
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
             <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
               <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
               </button>
             </div>
           </div>
@@ -14989,11 +14991,13 @@ Composition rules:
             return segs.some(s=>tx>=s.x&&tx<=s.x+s.w&&ty>=s.y&&ty<=s.y+s.h);
           });
           if(!hit)return;
-          // Selection + targeted delete only works in the default (mosaic) mode.
-          // If an artist style is active the cells are painted abstractly, so
-          // tell the user to turn it off (naming the specific artist).
+          // Selection + targeted delete only works in the mosaic reading. The
+          // 'notes' overlay is still a mosaic (just labelled with note names), so
+          // it counts as mosaic here — only true artist styles block selection,
+          // because their cells are painted abstractly.
           if(composeMode || (holdPaused && composedModeRef.current)){
-            if(effectiveStyle){
+            const artistStyle = effectiveStyle && effectiveStyle!=='notes';
+            if(artistStyle){
               const artist=STYLE_INSPIRED[effectiveStyle]||effectiveStyle;
               setErr(t('selectNeedsMosaic').replace('{artist}',artist));
               setErrInfo(true);
@@ -15388,7 +15392,7 @@ Composition rules:
           return chord
             ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.55)',fontSize:(.6*effScale)+'rem',letterSpacing:'.08em'}}>· {chord}</span></span>
             : sorted.map(noteName).join(' · ');
-        })():composeMode&&chords.length>0?`${chords.length} ${t('chordsPlay')}`:'—'}
+        })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'—'}
       </div>
       {showAdvanced && composeMode && (
         <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap'}}>

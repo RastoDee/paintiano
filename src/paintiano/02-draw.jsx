@@ -207,17 +207,11 @@ function drawBlockMosaicFuzzy(ctx,bx,by,notes,gc,BW,BH){
 // paintings have subtle tonal variation. The cream is the dominant background;
 // the dense drip overlay paints on top.
 function drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH){
-  // Solid cream base — covers the dark paintiano canvas with raw-canvas off-white
+  // Solid cream base — covers the dark paintiano canvas with raw-canvas off-white.
+  // Kept uniform (no per-chord colour tint) so nothing coloured shows through
+  // under the drip overlay — the substrate reads as clean raw canvas.
   ctx.fillStyle = '#f2ede0';
   ctx.fillRect(bx-2, by-2, BW+4, BH+4);
-  // Very faint chord-color hint — barely visible, just gives painting tonal variation
-  const sorted=[...notes].sort((a,b)=>b.m-a.m), n=sorted.length, bh=BH/n;
-  sorted.forEach((note,i)=>{
-    const[r,g,b]=gc(note.m, note.v);
-    const y = by + i*bh;
-    ctx.fillStyle = `rgba(${r},${g},${b},0.06)`;
-    ctx.fillRect(bx, y, BW, bh);
-  });
 }
 
 function drawRembrandt(ctx,bx,by,notes,gc,BW,BH){
