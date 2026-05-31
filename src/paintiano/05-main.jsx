@@ -5740,7 +5740,7 @@ Composition rules:
       )}
 
       {preview && (
-        <div onClick={closePreview} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1100,padding:10,overflow:'auto'}}>
+        <div onClick={closePreview} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10011,padding:10,overflow:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="image preview" style={{maxWidth:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
             <div style={{letterSpacing:'.12em',color:'rgba(201,168,76,.85)',fontSize:(.65*effScale)+'rem',textAlign:'center'}}>🖨 {preview.w}×{preview.h}{preview.dpi?` · ${preview.dpi}dpi`:''}{preview.label?' · '+preview.label:''} · {(preview.size/1024/1024).toFixed(1)} MB</div>
             {compositionName.trim()&&(<div style={{fontSize:(.6*effScale)+'rem',color:'rgba(201,168,76,.6)',textAlign:'center',letterSpacing:'.08em'}}>{compositionName}</div>)}
@@ -6064,21 +6064,32 @@ Composition rules:
         <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{immersive?<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>:<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>}</svg>
         </button>
-        {/* Fullscreen Save CTA — only while immersive AND the piece is complete
-            & still (same export-ready gate as the bottom-bar Save). Lets you keep
-            the finished artwork without leaving fullscreen. Fades with the other
-            controls on idle. */}
+        {/* Fullscreen CTA row — Next (shuffle: jump to a new variation, works
+            while playing too) and Save (when the piece is complete & still). Each
+            appears by its own condition; they can show together. Fades with the
+            other controls on idle. */}
         {immersive && (()=>{
           const exportReadyFs =
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording)
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording);
-          if(!exportReadyFs) return null;
+          const showNextFs = randomMode && effectiveStyle && chords.length>0 && !recording && viewMode!=='image' && (playing||holdPaused);
+          if(!exportReadyFs && !showNextFs) return null;
           return (
-            <button onClick={(e)=>{ e.stopPropagation(); setShowSizePicker(true); }} className="pf-lift"
-              style={{position:'absolute',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:13,display:'inline-flex',alignItems:'center',gap:8,padding:'11px 26px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
-              ↓ {t('save')}
-            </button>
+            <div style={{position:'absolute',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:13,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
+              {showNextFs && (
+                <button onClick={(e)=>{ e.stopPropagation(); if(playing||holdPaused) advanceVariation(); }} className="pf-lift" aria-label="next painting"
+                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'11px 22px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#ffd07a',background:'rgba(255,200,120,.16)',border:'1px solid rgba(255,200,120,.55)',boxShadow:'0 0 0 1px rgba(255,200,120,.2)',WebkitTapHighlightColor:'transparent'}}>
+                  {t('nextPainting')||'next'} ›
+                </button>
+              )}
+              {exportReadyFs && (
+                <button onClick={(e)=>{ e.stopPropagation(); setShowSizePicker(true); }} className="pf-lift"
+                  style={{display:'inline-flex',alignItems:'center',gap:8,padding:'11px 26px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent'}}>
+                  ↓ {t('save')}
+                </button>
+              )}
+            </div>
           );
         })()}
         {viewMode==='image'&&originalImgUrl&&(
@@ -6199,7 +6210,7 @@ Composition rules:
           ? { line:'rgba(240,106,166,.9)', dim:'rgba(240,150,190,.5)', border:'rgba(240,106,166,.45)', edge:'rgba(240,106,166,.35)' }
           : { line:'rgba(200,160,255,.85)', dim:'rgba(180,160,255,.45)', border:'rgba(180,140,255,.4)', edge:'rgba(200,160,255,.35)' };
         return (
-        <div onClick={()=>setShowSizePicker(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
+        <div onClick={()=>setShowSizePicker(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export" style={{background:'#0a0a14',border:'1px solid '+pk.edge,borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:pk.line,fontSize:(.65*effScale)+'rem'}}>
               ↓ {t('save')}</div>
