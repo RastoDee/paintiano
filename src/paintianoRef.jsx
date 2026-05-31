@@ -10377,7 +10377,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // COMPOSE buttons), so PC (hardware-keyboard compose) gets the same framing
     // as mobile, which previously only scrolled on the first tapped piano key.
     setStripOpen(false);
-    requestAnimationFrame(()=>{try{(stripWrapRef.current||canvasWrapRef.current)?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}});
     const wrap = kbScrollRef.current;
     if (!wrap) return;
     const c4 = WKEYS.find(k => k.midi === 60);
@@ -12755,16 +12754,8 @@ Composition rules:
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
-    setStripOpen(false); // collapse the attributes strip on Play to free the canvas
-    // Always scroll so the collapsed Color·Style strip sits at the top of the
-    // viewport, with the canvas framed right below it — on mobile and desktop
-    // alike. The strip wrapper is the scroll anchor in every mode (it's always
-    // in the DOM while a painting is active); canvasWrapRef is only a fallback
-    // for the brief frame before the strip ref attaches.
-    requestAnimationFrame(()=>{try{
-      const _tgt = stripWrapRef.current || canvasWrapRef.current;
-      _tgt?.scrollIntoView({block:'start',behavior:'smooth'});
-    }catch(_){}}); // bring the strip + canvas region fully into view
+    // Play no longer auto-collapses the Color·Style strip or scrolls the page into a
+    // framed position — the fullscreen button gives an immersive view on demand.
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -13156,11 +13147,9 @@ Composition rules:
       if(aiRecordingRef.current){ setAiRecording(false); }
     }else if(holdPaused){
       setHoldPaused(false);
-      setStripOpen(false); // free the canvas on Resume
       startPlay(); // startPlay reads and clears resumeFromRef itself
     }else if(!busy){
       resumeFromRef.current=null;
-      setStripOpen(false); // free the canvas on Play
       startPlay();
     }
   },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening]);
@@ -13196,7 +13185,7 @@ Composition rules:
       if(imgScrollResetRef.current)clearTimeout(imgScrollResetRef.current);
       imgScrollResetRef.current=setTimeout(()=>{
         imgScrollResetRef.current=null;
-        try{(stripWrapRef.current||canvasWrapRef.current)?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}
+        /* no auto-scroll on pause/end */
       },600);
     }
     return()=>{if(imgScrollResetRef.current){clearTimeout(imgScrollResetRef.current);imgScrollResetRef.current=null;}};
@@ -13474,7 +13463,6 @@ Composition rules:
       // same as Play and compose — MIC (Voice/Music) is another "performing"
       // entry point, so it gets the same scroll framing on mobile and desktop.
       setStripOpen(false);
-      requestAnimationFrame(()=>{try{(stripWrapRef.current||canvasWrapRef.current)?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}});
       // Same as compose: freeze the artist seed so the overlay (esp. Kusama
       // dots) doesn't re-randomise as sung notes accumulate. Skip on Random.
       if(!continuation && !randomMode){ setStructureSeedLock((pollockSessionSeed>>>0)||1); }
