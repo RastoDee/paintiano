@@ -15566,7 +15566,7 @@ Composition rules:
                 obvious. Hidden when empty (no input or no matches). starts-with
                 matches rank above contains-only matches. */}
             <div style={{flex:'0 1 auto',minHeight:0,overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
-              {(()=>{ const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=_n(moodEdit.trim()); if(!q)return []; const all=MOODS.filter(m=>_n((t('moodNames')||{})[m]||m).includes(q)); const startsWith=all.filter(m=>_n((t('moodNames')||{})[m]||m).startsWith(q)); const contains=all.filter(m=>!_n((t('moodNames')||{})[m]||m).startsWith(q)); return [...startsWith,...contains]; })().map(m=>(
+              {(()=>{ const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=_n(moodEdit.trim()); if(!q)return []; return MOODS.filter(m=>_n((t('moodNames')||{})[m]||m).startsWith(q)); })().map(m=>(
                 <button key={m} onClick={()=>{
                   setShowMoodMenu(false);
                   const s=findSong(m);
