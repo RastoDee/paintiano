@@ -5040,25 +5040,6 @@ Composition rules:
     }
     return ()=>{ if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current); };
   },[playing,wakeControls]);
-  // When a PLAYED piece finishes (playback stops with the canvas fully painted)
-  // and we're NOT in immersive view, the post-completion CTA sits just below the
-  // canvas — which can be under the fold if the user didn't scroll. Gently bring
-  // the bottom of the page (canvas + CTA) into view so "what now?" is seen
-  // without manual scrolling. Immersive renders the CTA as a fixed overlay, so
-  // it needs no scroll. Live compose/mic isn't a "finish" moment — skip it too.
-  const wasPlayingRef = useRef(false);
-  useEffect(()=>{
-    const justFinished = wasPlayingRef.current && !playing &&
-      chords.length>0 && dispRef.current>=chords.length &&
-      !immersive && !composeMode && !micActive && !demoReelOn;
-    wasPlayingRef.current = playing;
-    if(justFinished){
-      // Defer to next frame so the CTA has mounted before we scroll to it.
-      requestAnimationFrame(()=>{ try{
-        window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
-      }catch(_){} });
-    }
-  },[playing,chords.length,immersive,composeMode,micActive,demoReelOn]);
   // Latch stayActive whenever we're genuinely active (content on canvas, a live
   // mode, or processing). Once latched, Clear can empty the canvas without
   // bouncing back to setup; only "← Setup" un-latches it.
@@ -6161,46 +6142,6 @@ Composition rules:
         )}
       </div>
 
-      {/* ── Post-completion CTA strip ──────────────────────────────────────
-          Two cases. (A) A PLAYED piece (MIDI / audio / score / mood) that has
-          finished and is sitting complete & still: full "what now?" CTA — title
-          + save/share/print + start another. Not shown mid-pause. (B) LIVE
-          authoring (compose / mic) with content on the canvas: the current state
-          IS the artwork, so show only a quiet save/share/print of it (no
-          "finished" title, no "new painting" that would wipe live work). Both
-          reuse the existing size-picker preview export. No new logic. */}
-      {(() => {
-        const playedComplete =
-          chords.length > 0 && !playing && !anim && !holdPaused &&
-          disp >= chords.length &&
-          !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording;
-        const liveAuthoring =
-          (composeMode || micActive || micArmed) && chords.length > 0 &&
-          !demoReelOn && !busy && !recording;
-        if (!playedComplete && !liveAuthoring) return null;
-        const canExport = disp>0 || (composedModeRef.current && chords.length>0);
-        // In immersive view the canvas is position:fixed over the whole screen,
-        // so an in-flow strip would sit off-screen below it. Render the CTA as a
-        // fixed overlay pinned to the bottom of the viewport, above the immersive
-        // layers (z 9999). Outside immersive it stays in normal flow under the
-        // canvas (and we auto-scroll it into view — see the effect below).
-        const wrapStyle = immersive
-          ? {position:'fixed',left:'50%',bottom:'max(18px, env(safe-area-inset-bottom))',transform:'translateX(-50%)',zIndex:10001,display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:18,background:'rgba(8,6,14,.72)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',border:'1px solid rgba(201,168,76,.25)',maxWidth:'calc(100vw - 24px)'}
-          : {display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:10,margin:'2px 0 14px'};
-        return (
-          <div className="pf-fade" onClick={e=>{ if(immersive) e.stopPropagation(); }} style={wrapStyle}>
-            {playedComplete && <span style={{width:'100%',textAlign:'center',fontSize:(.52*effScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',marginBottom:2}}>{t('ctaTitle')}</span>}
-            <button className="pf-lift" onClick={(e)=>{ e.stopPropagation(); if(canExport) setShowSizePicker(true); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 4px 18px rgba(240,192,64,.28)'}}>✦ {t('ctaKeep')}</button>
-            {/* "New …" — context label, but always the SAME action as the bottom-bar
-                CLEAR (clearCanvas): in mic it stops capture + re-arms a blank slate,
-                in compose it fully clears, for a played piece it wipes for a fresh
-                start. Compose → "new composing", mic → "new recording", else
-                "new painting". */}
-            <button className="pf-lift" onClick={(e)=>{ e.stopPropagation(); if(!recording){ setImmersive(false); clearCanvas(); } }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {composeMode ? t('ctaNewCompose') : (micActive||micArmed) ? t('ctaNewMic') : t('ctaAnother')}</button>
-          </div>
-        );
-      })()}
-
       <div style={{marginBottom:10,fontSize:(.57*effScale)+'rem',letterSpacing:'.18em',opacity:.6,textAlign:'center',textTransform:'uppercase'}}>
         music → φ painting
       </div>
@@ -6502,10 +6443,25 @@ Composition rules:
         {randomMode&&effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(
           <button className="pf-lift" onClick={()=>{if(playing||holdPaused)advanceVariation();}} disabled={!(playing||holdPaused)} title={(playing||holdPaused)?'next painting — jump to a new variation':'play to browse variations'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:(playing||holdPaused)?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:(playing||holdPaused)?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+((playing||holdPaused)?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:(playing||holdPaused)?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
         )}
-        {/* PRINT button removed — export (save/share/print) now lives in the
-            post-completion CTA strip below the canvas, shown only when a painting
-            is complete & still. This avoids the duplicate entry point and the
-            confusing "print a half-animated piece → get the whole image" state. */}
+        {/* SAVE — opens the export flow (size picker → preview: save / share /
+            print). Replaces the old always-on PRINT. ENABLED only once a piece
+            is finished & still (playedComplete) or there's live compose/mic
+            content to export — mirrors the post-completion gate so you don't
+            export a half-animated piece. Hidden in the image source view (its
+            own controls live elsewhere). */}
+        {viewMode!=='image' && (()=>{
+          const exportReady =
+            (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
+             !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording)
+            || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording);
+          return (
+            <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
+              title={exportReady?t('save'):t('exportNeedsPlay')}
+              style={{padding:'8px 14px',background:exportReady?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:exportReady?GOLD:'rgba(201,168,76,.3)',border:'1px solid '+(exportReady?'rgba(201,168,76,.5)':'rgba(201,168,76,.18)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase'}}>
+              ↓ {t('save')}
+            </button>
+          );
+        })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
