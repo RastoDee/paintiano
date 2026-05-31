@@ -3206,8 +3206,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         setAiDown(false); // a live AI call just succeeded
         const data=JSON.parse(respText);
         const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
-        const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
-        parsed=JSON.parse(m[0]); if(!parsed||!parsed.notes||!parsed.notes.length) throw new Error('no notes');
+        parsed=extractAiJson(rawTxt); if(!parsed) throw new Error('no json');
+        if(!parsed.notes||!parsed.notes.length) throw new Error('no notes');
       }
       setWPct(85);
       const evts=noteArr2events(parsed.notes,parsed.tempo); if(!evts.length) throw new Error('parse');
@@ -3255,11 +3255,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(e){
       // Only latch AI-down for genuine availability failures (network/budget),
       // not for parse hiccups on an otherwise-reachable endpoint.
-      if(e&&e.message==='AI unavailable') setAiDown(true);
+      const _net = e && (e.message==='AI unavailable' || e._aiNet);
+      if(_net) setAiDown(true);
       // The preview was shown up-front (so the compose screen isn't blank); on
       // failure there's no piece, so clear it rather than leave a stranded image.
       setImgMoodThumb(null); setMoodContext(false); setMoodFromImg(false);
-      setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.');
+      // Network down vs the AI replied but the JSON was unusable (truncated /
+      // malformed) — different messages so the user knows whether to check their
+      // connection or just retry. Falls back to the old string if keys missing.
+      const _errs=(t('errs')||{});
+      setErr(_net ? (_errs.aiNet||'AI is unreachable right now.') : (_errs.aiBadResp||'The AI reply was incomplete — try again.'));
+      setErrInfo(false);
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
   },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet,_mfiRecentAdd,proStatus,trialExhausted,consumeTrial]);
   // Lazy, title-only translation: when the UI language changes while a CUSTOM
@@ -3551,11 +3557,8 @@ Composition rules:
       try{data=JSON.parse(respText);}catch(_){throw new Error(`Response not JSON: ${respText.slice(0,200)}`);}
       const raw=(data.content||[]).map(b=>b.type==='text'?b.text:'').join('');
       if(!raw)throw new Error(`Empty content. Full resp: ${respText.slice(0,200)}`);
-      const match=raw.match(/\{[\s\S]*\}/);
-      if(!match)throw new Error(`No JSON found: ${raw.slice(0,200)}`);
-      let parsed;
-      try{parsed=JSON.parse(match[0]);}catch(e){throw new Error(`JSON parse failed: ${match[0].slice(0,200)}`);}
-      if(!parsed?.notes?.length)throw new Error(`No notes in: ${match[0].slice(0,200)}`);
+      let parsed = extractAiJson(raw);
+      if(!parsed?.notes?.length)throw new Error(`No notes in: ${raw.slice(0,200)}`);
       // Cache this AI result so re-entering the same mood replays it for free.
       aiComposeCacheRef.current = { key:_ckey, parsed };
       const evts=noteArr2events(parsed.notes,parsed.tempo);
@@ -3787,8 +3790,7 @@ Composition rules:
       setAiDown(false); // a live AI call just succeeded
       const data=JSON.parse(respText);
       const rawTxt=(data.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('');
-      const m=rawTxt.match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
-      const parsed=JSON.parse(m[0]);
+      const parsed=extractAiJson(rawTxt); if(!parsed) throw new Error('no json');
       const vv=Math.max(-1,Math.min(1,Number(parsed.valence)));
       const ee=Math.max(0,Math.min(1,Number(parsed.energy)));
       if(isNaN(vv)||isNaN(ee)) throw new Error('bad');
@@ -3799,7 +3801,7 @@ Composition rules:
       // so it costs 0.5 of a trial credit instead of a full 1.
       // (Toggling atmo on/off after this uses cached atmoMood, no extra call.)
       if(proStatus==='free') consumeTrial(0.5);
-    }catch(e){ if(e&&e.message==='AI unavailable') setAiDown(true); setErr(((t('errs')||{}).songNotFound)||'Could not read the image mood.'); }
+    }catch(e){ const _net=e&&(e.message==='AI unavailable'||e._aiNet); if(_net) setAiDown(true); const _errs=(t('errs')||{}); setErr(_net?(_errs.aiNet||'AI is unreachable right now.'):(_errs.aiBadResp||'The AI reply was incomplete — try again.')); setErrInfo(false); }
     finally{ setAtmoBusy(false); }
   },[atmoBusy,originalImgUrl,lang,t,isPro,proStatus,trialExhausted,consumeTrial]);
 

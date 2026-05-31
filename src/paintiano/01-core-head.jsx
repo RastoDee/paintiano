@@ -63,6 +63,50 @@ const PF_STYLE = `
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
 // "API in artifacts" feature; bump here when Anthropic publishes a newer one.
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+// ── Defensive JSON extraction for AI responses ──────────────────────────────
+// Model output can be wrapped in ```json fences, prefixed with prose, or — most
+// commonly — TRUNCATED when the response hits max_tokens (a long 8-language
+// title pushes the notes array past the cap, cutting it mid-object). A naive
+// /\{[\s\S]*\}/ + JSON.parse then throws and the user sees a false "not found".
+// This tries, in order: (1) direct parse, (2) fenced/first-object slice,
+// (3) repair a truncated tail by trimming to the last complete array element
+// and closing any open brackets. Returns the parsed object or null.
+function extractAiJson(raw){
+  if(!raw || typeof raw!=='string') return null;
+  let s = raw.trim();
+  // Strip ```json … ``` or ``` … ``` fences if present.
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if(fence) s = fence[1].trim();
+  // Narrow to the first {...} span if there's surrounding prose.
+  const open = s.indexOf('{');
+  if(open>0) s = s.slice(open);
+  // 1) straight parse
+  try{ return JSON.parse(s); }catch(_){}
+  // 2) greedy first-object slice
+  const m = s.match(/\{[\s\S]*\}/);
+  if(m){ try{ return JSON.parse(m[0]); }catch(_){} }
+  // 3) repair a truncated tail: cut back to the last complete array element
+  //    (a `]` or a `}` or a number/quote close) and re-balance brackets.
+  let t = s;
+  // drop a dangling partial token after the last comma/closer
+  const lastClose = Math.max(t.lastIndexOf(']'), t.lastIndexOf('}'));
+  if(lastClose>0) t = t.slice(0, lastClose+1);
+  // count unclosed brackets and append the right closers
+  let curly=0, square=0, inStr=false, esc=false;
+  for(const ch of t){
+    if(esc){ esc=false; continue; }
+    if(ch==='\\'){ esc=true; continue; }
+    if(ch==='"'){ inStr=!inStr; continue; }
+    if(inStr) continue;
+    if(ch==='{') curly++; else if(ch==='}') curly--;
+    else if(ch==='[') square++; else if(ch===']') square--;
+  }
+  if(inStr) t+='"';
+  while(square-->0) t+=']';
+  while(curly-->0) t+='}';
+  try{ return JSON.parse(t); }catch(_){}
+  return null;
+}
 // Body 5: baked AI result for the built-in "mood from image" sample. Generated
 // once on the deployed app and frozen here 1:1 so the sample plays offline and
 // always free — _imgMoodCacheGet returns this whenever the hash matches. The
