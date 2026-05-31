@@ -5287,10 +5287,10 @@ Composition rules:
               is one canonical mood UX shared across the app. */}
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={t('moodPlaceholder')} style={{width:'100%',display:'inline-flex',alignItems:'center',gap:10,padding:'13px 16px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:'transparent',border:'1px solid '+PF.gold,color:PF.gold2,fontFamily:'inherit',fontSize:(.7*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',opacity:sourcePickerLocked?0.4:1,textAlign:'left'}}>
-              <span style={{fontSize:'1.05rem',color:PF.gold}}>✦</span>
-              <span style={{flex:1,opacity:.85}}>{t('moodPlaceholder')}</span>
-              <span style={{color:'rgba(201,168,76,.5)',fontSize:'.85rem'}}>›</span>
+            <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={t('moodHowFeel')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:10,padding:'13px 16px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.35)',color:'rgba(201,168,76,.9)',fontFamily:'inherit',fontSize:(.7*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
+              <span style={{fontSize:'1.05rem',color:'rgba(201,168,76,.85)'}}>✦</span>
+              <span>{t('moodHowFeel')}</span>
+              <span style={{position:'absolute',right:16,color:'rgba(201,168,76,.45)',fontSize:'.85rem'}}>›</span>
             </button>
           </div>
 
@@ -6145,7 +6145,7 @@ Composition rules:
              canvas itself, not the whole screen. No pointer events. */
           <div style={{position:'absolute',inset:0,border:'min(5vw,28px) solid #f6f3ec',boxShadow:'inset 0 0 0 2px rgba(180,140,40,.6), 0 24px 60px rgba(0,0,0,.5)',pointerEvents:'none',transition:'all .5s ease',zIndex:5}}/>
         )}
-        {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(()=>{
+        {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(!effectiveStyle||effectiveStyle==='notes')&&(()=>{
           const cell=grid.cells[selectedChordIdx];
           const segs=cell.segments||[cell];
           // Outline EACH segment separately. A long chord wraps across rows, so a
