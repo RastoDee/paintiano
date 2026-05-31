@@ -6129,6 +6129,29 @@ Composition rules:
         )}
       </div>
 
+      {/* ── Post-completion CTA strip ──────────────────────────────────────
+          Appears only when a painting has finished playing and is sitting
+          complete & still on the canvas (disp reached the last chord, not a
+          mid-piece pause). Surfaces the "what now?" moment the audit flagged:
+          the export flow (save / share / print all funnel through the size
+          picker → preview) and a clean way to start another. Reuses existing
+          handlers — no new export logic. Hidden during demo/compose/mic and
+          while anything is still playing or paused mid-piece. */}
+      {(() => {
+        const paintingComplete =
+          chords.length > 0 && !playing && !anim && !holdPaused &&
+          disp >= chords.length &&
+          !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording;
+        if (!paintingComplete) return null;
+        return (
+          <div className="pf-fade" style={{display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:10,margin:'2px 0 14px'}}>
+            <span style={{width:'100%',textAlign:'center',fontSize:(.52*effScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',marginBottom:2}}>{t('ctaTitle')}</span>
+            <button className="pf-lift" onClick={()=>{ if((disp>0||(composedModeRef.current&&chords.length>0))) setShowSizePicker(true); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 4px 18px rgba(240,192,64,.28)'}}>✦ {t('ctaKeep')}</button>
+            <button className="pf-lift" onClick={()=>{ if(!recording) clearCanvas(); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {t('ctaAnother')}</button>
+          </div>
+        );
+      })()}
+
       <div style={{marginBottom:10,fontSize:(.57*effScale)+'rem',letterSpacing:'.18em',opacity:.6,textAlign:'center',textTransform:'uppercase'}}>
         music → φ painting
       </div>
