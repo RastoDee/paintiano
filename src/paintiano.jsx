@@ -15552,8 +15552,8 @@ Composition rules:
       )}
 
       {showMoodMenu && (
-        <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(6px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'20px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh'}}>
+        <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'20px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase',flexShrink:0}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
             {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null); setMoodFromImg(false); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
               <div style={{display:'flex',gap:6,marginBottom:12,flexShrink:0}}>
@@ -15561,23 +15561,12 @@ Composition rules:
                 <button onClick={()=>submit(moodEdit)} disabled={!moodEdit.trim()} aria-label={t('moodGo')} title={t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:moodEdit.trim()?'pointer':'default',background:moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)',color:moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
               </div>
             ); })()}
-            {/* Recently AI generated — appears between text input and mood grid.
-                Shows only when the user has at least one prior AI compose (text path,
-                not library/offline). Click replays the piece for free, no AI call. */}
-            {aiComposeRecent.length>0 && (
-              <div style={{marginBottom:12,display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
-                <div style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(242,238,232,.45)',textAlign:'center',marginBottom:2}}>
-                  {t('recentAiGenerated')||'Recently AI generated'}
-                </div>
-                {aiComposeRecent.map((entry)=>(
-                  <button key={entry.id} onClick={()=>{ _aiComposeRecall(entry); setShowMoodMenu(false); }} style={{padding:'9px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.66*effScale)+'rem',textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                    ✦ {entry.title}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div style={{flex:1,minHeight:0,overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start'}}>
-              {MOODS.filter(m=>{ const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=_n(moodEdit.trim()); if(!q)return false; return _n((t('moodNames')||{})[m]||m).includes(q); }).map(m=>(
+            {/* Suggestions grid — filtered moods that match what you're typing.
+                Sits directly under the input so the autocomplete relationship is
+                obvious. Hidden when empty (no input or no matches). starts-with
+                matches rank above contains-only matches. */}
+            <div style={{flex:'0 1 auto',minHeight:0,overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
+              {(()=>{ const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=_n(moodEdit.trim()); if(!q)return []; const all=MOODS.filter(m=>_n((t('moodNames')||{})[m]||m).includes(q)); const startsWith=all.filter(m=>_n((t('moodNames')||{})[m]||m).startsWith(q)); const contains=all.filter(m=>!_n((t('moodNames')||{})[m]||m).startsWith(q)); return [...startsWith,...contains]; })().map(m=>(
                 <button key={m} onClick={()=>{
                   setShowMoodMenu(false);
                   const s=findSong(m);
@@ -15600,6 +15589,21 @@ Composition rules:
                 </button>
               ))}
             </div>
+            {/* Recently AI generated — separate "what you made before" section,
+                always at the bottom regardless of typing state. Click replays the
+                piece for free, no AI call. */}
+            {aiComposeRecent.length>0 && (
+              <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
+                <div style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(242,238,232,.45)',textAlign:'center',marginBottom:2}}>
+                  {t('recentAiGenerated')||'Recently AI generated'}
+                </div>
+                {aiComposeRecent.map((entry)=>(
+                  <button key={entry.id} onClick={()=>{ _aiComposeRecall(entry); setShowMoodMenu(false); }} style={{padding:'9px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.66*effScale)+'rem',textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    ✦ {entry.title}
+                  </button>
+                ))}
+              </div>
+            )}
             <button onClick={()=>setShowMoodMenu(false)} style={{display:'block',margin:'14px auto 0',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',flexShrink:0}}>cancel</button>
           </div>
         </div>
