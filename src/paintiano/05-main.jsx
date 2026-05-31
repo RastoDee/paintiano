@@ -682,6 +682,14 @@ export default function Paintiano() {
   const [audioName, setAudioName] = useState('');
   const [recBlob, setRecBlob] = useState(null);   // recording output blob (share row)
   const [recName, setRecName] = useState('');      // recording output name
+  // After a record finishes, recordIntent tells the onstop handler what the
+  // user actually wanted: 'story' = share PNG+audio together, 'audio' = trigger
+  // saveAudio() immediately, null = manual record (show share row, default).
+  // Set by the image-mode SAVE picker right before startRecord(); cleared by
+  // the handler after it runs.
+  const [recordIntent, setRecordIntent] = useState(null);
+  const recordIntentRef = useRef(null);
+  useEffect(()=>{ recordIntentRef.current=recordIntent; },[recordIntent]);
   const [scoreName, setScoreName] = useState('');
   const [recordingName, setRecordingName] = useState('');
   const [audioShareMsg, setAudioShareMsg] = useState(null);
@@ -4403,6 +4411,21 @@ Composition rules:
       if(blob.size<2000){setErr(t('recTooShort'));setErrInfo(false);}
       else{setRecBlob(blob);setRecName(name);}
       setRecording(false);recorderRef.current=null;
+      // Image-mode picker intents: react to what the user picked from SAVE.
+      // 'audio' → immediately open Save/Share for the mp3. 'story' → bundle
+      // the mp3 with a freshly-rendered PNG 9:16 painting and open share with
+      // both files + caption. Reset intent after dispatch.
+      const intent = recordIntentRef.current;
+      if(intent && blob.size>=2000){
+        setRecordIntent(null);
+        recordIntentRef.current=null;
+        // Defer so the recBlob/recName state writes settle before downstream
+        // helpers (saveAudio reads them via closure).
+        setTimeout(()=>{
+          if(intent==='audio') saveAudio();
+          else if(intent==='story') exportImage('story', true, blob, name);
+        }, 60);
+      }
     };
     recorderRef.current=recorder;
     recorder.start(200);
@@ -4888,11 +4911,35 @@ Composition rules:
   const changeLang=(l)=>{setLang(l);try{localStorage.setItem('paintiano_lang',l);}catch(_){}}
   const btn=(ex={})=>({background:'transparent',border:'1px solid',borderRadius:2,fontSize:(.7*effScale)+'rem',letterSpacing:'.12em',padding:'5px 14px',cursor:'pointer',textTransform:'uppercase',color:'rgba(207,197,168,.7)',borderColor:'rgba(207,197,168,.2)',...ex});
 
+  // Build a poetic, mode-aware caption for the Story share dialog. iOS/Android
+  // pass `text` through to IG/TikTok where it pre-fills the post body. Falls
+  // back to a default line if no mode-specific match (or i18n entries are
+  // missing). Mood name (when applicable) is substituted into {mood}.
+  const buildStoryCaption=()=>{
+    const tpl = (t('storyCaption')||{});
+    const pick = (k)=> tpl[k] || tpl.default || 'music turns into paintings ✦ paintiano.com';
+    // Detection order matters — most specific first.
+    if(viewMode==='image' && moodFromImg) return pick('moodFromImg');
+    if(viewMode==='image') return pick('image');
+    if(composeMode || composedModeRef.current) return pick('compose');
+    if(micActive || micArmed){
+      return pick(micPreset==='voice' ? 'micVoice' : 'micMusic');
+    }
+    if(currentMood){
+      const moodName = ((t('moodNames')||{})[currentMood]) || currentMood;
+      return pick('mood').replace('{mood}', moodName);
+    }
+    if(loadedSource==='midi')  return pick('midi');
+    if(loadedSource==='audio') return pick('audio');
+    if(loadedSource==='score') return pick('score');
+    return pick('default');
+  };
+
   // Export the painting as a high-resolution PNG.
   // Artifact iframes block <a download>, window.open, and rewrite blob: URLs to a
   // sandbox-internal scheme — the only thing that reliably works is rendering the PNG
   // inside the iframe as <img> and letting iOS native long-press → Save to Photos do the job.
-  const exportImage=async(sizeMode='web', directShare=false)=>{
+  const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null)=>{
     try{
       if(!chords.length){setErr(t('errs').nothingToPrint);setErrInfo(false);return;}
       // Export the style actually on screen — in shuffle mode that's the
@@ -5037,9 +5084,21 @@ Composition rules:
       // One-tap share: skip the preview step and hand the file straight to the
       // OS share sheet (best path to IG/TikTok stories). Falls back to the normal
       // preview if Web Share isn't available (e.g. sandboxed iframe / desktop).
-      if(directShare && navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
+      // Image-mode Story passes an audioBlob too — share BOTH files together so
+      // the user can pick image + sound for a Story / Reel in one tap.
+      const shareFiles = [file];
+      if(audioBlob && audioName){
+        const audioFile = new File([audioBlob], audioName, {type:audioBlob.type||'audio/mp4'});
+        shareFiles.push(audioFile);
+      }
+      if(directShare && navigator.share && (!navigator.canShare || navigator.canShare({files:shareFiles}))){
         try{
-          await navigator.share({files:[file],title:'Paintiano painting'});
+          // Story exports get a poetic, mode-aware caption that the share sheet
+          // pre-fills into the IG/TikTok post body. Web/Print exports don't (they
+          // go to Photos/Files where caption is irrelevant).
+          const sharePayload = {files:shareFiles, title:'Paintiano'};
+          if(sizeMode==='story') sharePayload.text = buildStoryCaption();
+          await navigator.share(sharePayload);
           URL.revokeObjectURL(url);
           return;
         }catch(e){
@@ -6272,20 +6331,42 @@ Composition rules:
               style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid '+(focusedInput==='comp'?'rgba(201,168,76,.85)':'rgba(201,168,76,.35)'),borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:(.72*effScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14,boxShadow:focusedInput==='comp'?'0 0 0 2px rgba(201,168,76,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
             />
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              {!immersive && (
-                <button onClick={()=>exportImage('story')} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
-                  ✦ {t('sizeStory')||'Story'}
-                  <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('sizeStoryHint')||'9:16 · for IG / TikTok'}</div>
-                </button>
+              {viewMode==='image' ? (
+                <>
+                  {/* Image mode: Story (PNG 9:16 + audio via record) / Audio
+                      (mp3 only) / Score (MusicXML). All three either share or
+                      save a file derived from the played piece. */}
+                  <button onClick={()=>{ setShowSizePicker(false); setRecordIntent('story'); startRecord(); }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
+                    ✦ {t('sizeStory')||'Story'}
+                    <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
+                  </button>
+                  <button onClick={()=>{ setShowSizePicker(false); setRecordIntent('audio'); startRecord(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    ⏺ {t('saveAudioLabel')||'Audio'}
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
+                  </button>
+                  <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    ♫ {t('scoreExport')}
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {!immersive && (
+                    <button onClick={()=>exportImage('story')} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
+                      ✦ {t('sizeStory')||'Story'}
+                      <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('sizeStoryHint')||'9:16 · for IG / TikTok'}</div>
+                    </button>
+                  )}
+                  <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    🖥 {t('sizeWeb')}
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
+                  </button>
+                  <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    🖨 {t('sizePrint')}
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
+                  </button>
+                </>
               )}
-              <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
-                🖥 {t('sizeWeb')}
-                <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
-              </button>
-              <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
-                🖨 {t('sizePrint')}
-                <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
-              </button>
               <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*effScale)+'rem',marginTop:4}}>
                 {t('cancel')}
               </button>
@@ -6584,13 +6665,12 @@ Composition rules:
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(
-          <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
-            {recording?t('recStop'):t('recArm')}
+          <button onClick={()=>{ if(recording||playing||anim||working) return; setShowSizePicker(true); }} disabled={recording||playing||anim||working||!chords.length} title={recording?t('stopRecFirst'):playing?t('exportNeedsPlay'):anim?t('exportNeedsPlay'):working?t('exportNeedsPlay'):t('save')} style={{padding:'8px 14px',background:'transparent',color:(recording||playing||anim||working||!chords.length)?'rgba(201,168,76,.25)':'rgba(220,180,90,.95)',border:'1px solid '+((recording||playing||anim||working||!chords.length)?'rgba(201,168,76,.15)':'rgba(201,168,76,.45)'),borderRadius:22,cursor:(recording||playing||anim||working||!chords.length)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
+            ↓ {t('save')}
           </button>
         )}
-        {viewMode==='image'&&chords.length>0&&!composeMode&&!micPainting&&!micListening&&!moodFromImg&&(
-          <button className="pf-lift" onClick={saveScore} disabled={recording||playing} title={recording?t('stopRecFirst'):playing?t('exportNeedsPlay'):t('scoreExport')} style={{padding:'8px 14px',background:'transparent',color:(recording||playing)?'rgba(120,200,160,.25)':'rgba(140,215,175,.8)',border:'1px solid '+((recording||playing)?'rgba(120,200,160,.15)':'rgba(120,200,160,.35)'),borderRadius:22,cursor:(recording||playing)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>♫ {t('scoreExport')}{scoreMsg?<span style={{marginLeft:6,fontSize:(.5*effScale)+'rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)'}}>{scoreMsg.text}</span>:null}</button>
-        )}
+        {/* Score button removed from image-mode toolbar — it now lives inside
+            the SAVE picker as one of three choices (Story / Audio / Score). */}
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
           const setSpd=setPlaybackSpeed;
