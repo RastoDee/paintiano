@@ -5040,6 +5040,25 @@ Composition rules:
     }
     return ()=>{ if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current); };
   },[playing,wakeControls]);
+  // When a PLAYED piece finishes (playback stops with the canvas fully painted)
+  // and we're NOT in immersive view, the post-completion CTA sits just below the
+  // canvas — which can be under the fold if the user didn't scroll. Gently bring
+  // the bottom of the page (canvas + CTA) into view so "what now?" is seen
+  // without manual scrolling. Immersive renders the CTA as a fixed overlay, so
+  // it needs no scroll. Live compose/mic isn't a "finish" moment — skip it too.
+  const wasPlayingRef = useRef(false);
+  useEffect(()=>{
+    const justFinished = wasPlayingRef.current && !playing &&
+      chords.length>0 && dispRef.current>=chords.length &&
+      !immersive && !composeMode && !micActive && !demoReelOn;
+    wasPlayingRef.current = playing;
+    if(justFinished){
+      // Defer to next frame so the CTA has mounted before we scroll to it.
+      requestAnimationFrame(()=>{ try{
+        window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+      }catch(_){} });
+    }
+  },[playing,chords.length,immersive,composeMode,micActive,demoReelOn]);
   // Latch stayActive whenever we're genuinely active (content on canvas, a live
   // mode, or processing). Once latched, Clear can empty the canvas without
   // bouncing back to setup; only "← Setup" un-latches it.
@@ -5305,10 +5324,23 @@ Composition rules:
                 setLoadedSource(null);
                 setMoodFromImg(false); setImgMoodThumb(null);
                 setForceSetup(false);
-                // Restore the stash for the CURRENT preset (voice/music are
-                // independent) — if it exists, the canvas opens with that draft.
-                // Otherwise armed with a blank canvas.
-                const presetOwner = micPreset==='music' ? 'listen' : 'sing';
+                // Which preset's canvas to open. Rule:
+                //   • draft in exactly ONE preset → open that one (don't strand it)
+                //   • drafts in BOTH (or NEITHER) → last-active preset (micPreset)
+                // This keeps the common cases (none / both) on the standard
+                // last-active behaviour, and only redirects when a single
+                // unfinished draft lives in the OTHER preset.
+                const hasSing   = !!singStashRef.current;
+                const hasListen = !!listenStashRef.current;
+                const lastActiveOwner = micPreset==='music' ? 'listen' : 'sing';
+                let presetOwner;
+                if(hasSing && !hasListen)      presetOwner = 'sing';
+                else if(hasListen && !hasSing) presetOwner = 'listen';
+                else                           presetOwner = lastActiveOwner;  // both or none
+                // Keep the visible preset toggle in sync with where we're routing,
+                // so the canvas chrome (voice/music) matches the restored draft.
+                const targetPreset = presetOwner==='listen' ? 'music' : 'voice';
+                if(targetPreset!==micPreset) setMicPreset(targetPreset);
                 if(!restoreStash(presetOwner)){
                   // No stash for this preset — clean armed canvas.
                   setChords([]); chordsRef.current=[]; idxRef.current=0;
@@ -6147,11 +6179,19 @@ Composition rules:
           !demoReelOn && !busy && !recording;
         if (!playedComplete && !liveAuthoring) return null;
         const canExport = disp>0 || (composedModeRef.current && chords.length>0);
+        // In immersive view the canvas is position:fixed over the whole screen,
+        // so an in-flow strip would sit off-screen below it. Render the CTA as a
+        // fixed overlay pinned to the bottom of the viewport, above the immersive
+        // layers (z 9999). Outside immersive it stays in normal flow under the
+        // canvas (and we auto-scroll it into view — see the effect below).
+        const wrapStyle = immersive
+          ? {position:'fixed',left:'50%',bottom:'max(18px, env(safe-area-inset-bottom))',transform:'translateX(-50%)',zIndex:10001,display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:18,background:'rgba(8,6,14,.72)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',border:'1px solid rgba(201,168,76,.25)',maxWidth:'calc(100vw - 24px)'}
+          : {display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:10,margin:'2px 0 14px'};
         return (
-          <div className="pf-fade" style={{display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:10,margin:'2px 0 14px'}}>
+          <div className="pf-fade" onClick={e=>{ if(immersive) e.stopPropagation(); }} style={wrapStyle}>
             {playedComplete && <span style={{width:'100%',textAlign:'center',fontSize:(.52*effScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',marginBottom:2}}>{t('ctaTitle')}</span>}
-            <button className="pf-lift" onClick={()=>{ if(canExport) setShowSizePicker(true); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 4px 18px rgba(240,192,64,.28)'}}>✦ {t('ctaKeep')}</button>
-            {playedComplete && <button className="pf-lift" onClick={()=>{ if(!recording) clearCanvas(); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {t('ctaAnother')}</button>}
+            <button className="pf-lift" onClick={(e)=>{ e.stopPropagation(); if(canExport) setShowSizePicker(true); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 4px 18px rgba(240,192,64,.28)'}}>✦ {t('ctaKeep')}</button>
+            {playedComplete && <button className="pf-lift" onClick={(e)=>{ e.stopPropagation(); if(!recording) clearCanvas(); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {t('ctaAnother')}</button>}
           </div>
         );
       })()}
