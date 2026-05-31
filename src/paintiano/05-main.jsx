@@ -6130,22 +6130,13 @@ Composition rules:
       </div>
 
       {/* ── Post-completion CTA strip ──────────────────────────────────────
-          Appears only when a painting has finished playing and is sitting
-          complete & still on the canvas (disp reached the last chord, not a
-          mid-piece pause). Surfaces the "what now?" moment the audit flagged:
-          the export flow (save / share / print all funnel through the size
-          picker → preview) and a clean way to start another. Reuses existing
-          handlers — no new export logic. Hidden during demo/compose/mic and
-          while anything is still playing or paused mid-piece. */}
-          Two distinct cases:
-          (A) A PLAYED piece (MIDI / audio / score / mood) that has finished and
-              is sitting complete & still — full "what now?" CTA: title +
-              save/share/print + start another. Not shown mid-pause.
-          (B) LIVE authoring (compose / mic) with content on the canvas — here the
-              current state IS the artwork and there's nothing to "finish", so we
-              show only a quiet "save · share · print" of the current state (no
-              "finished" title, no "new painting" that would wipe live work).
-          Both reuse the existing size-picker → preview export. No new logic. */}
+          Two cases. (A) A PLAYED piece (MIDI / audio / score / mood) that has
+          finished and is sitting complete & still: full "what now?" CTA — title
+          + save/share/print + start another. Not shown mid-pause. (B) LIVE
+          authoring (compose / mic) with content on the canvas: the current state
+          IS the artwork, so show only a quiet save/share/print of it (no
+          "finished" title, no "new painting" that would wipe live work). Both
+          reuse the existing size-picker preview export. No new logic. */}
       {(() => {
         const playedComplete =
           chords.length > 0 && !playing && !anim && !holdPaused &&
