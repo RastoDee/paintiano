@@ -890,6 +890,17 @@ export default function Paintiano() {
   // Jazyk-závislý zoom: čínske znaky majú vyššiu optickú hustotu detailov,
   // preto pre zh/zhTW pridávame 15% k readScale aby boli rovnako čitateľné ako latinka.
   const effScale = readScale * ((lang === 'zh' || lang === 'zhTW') ? 1.15 : 1);
+  // Unified active/idle chip styling for the Color·Style strip (color modes,
+  // scan direction, artist styles). Premium look: the ACTIVE chip is no longer a
+  // heavy solid-gold fill with dark text — instead a soft gold-tinted fill, a
+  // clear gold border and gold text. Lighter, more expensive-looking, and the
+  // selected state still reads instantly. Idle chips stay on the dark card.
+  const chipStyle = useCallback((on)=>({
+    color: on ? PF.gold2 : PF.cream,
+    background: on ? 'rgba(240,192,64,.14)' : PF.card2,
+    border: '1px solid '+(on ? 'rgba(240,192,64,.6)' : 'rgba(242,238,232,.08)'),
+    boxShadow: on ? '0 0 0 1px rgba(240,192,64,.25), 0 4px 14px rgba(240,192,64,.12)' : 'none',
+  }),[]);
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
   const [stripOpen, setStripOpen] = useState(false);
@@ -4846,7 +4857,7 @@ Composition rules:
     () => paintScale!=='off' ? paintScalePCs(paintScale) : null,
     [paintScale]
   );
-  const pianoColor={loading:'rgba(207,197,168,.35)',ready:'rgba(90,190,110,.55)',error:'rgba(201,168,76,.55)'};
+  const pianoColor={loading:'rgba(242,238,232,.4)',ready:'rgba(242,238,232,.5)',error:'rgba(201,168,76,.7)'};
   const pianoLabel={loading:t('loadingPiano'),ready:t('grandPiano'),error:t('synthPiano')};
   const changeLang=(l)=>{setLang(l);try{localStorage.setItem('paintiano_lang',l);}catch(_){}}
   const btn=(ex={})=>({background:'transparent',border:'1px solid',borderRadius:2,fontSize:(.7*effScale)+'rem',letterSpacing:'.12em',padding:'5px 14px',cursor:'pointer',textTransform:'uppercase',color:'rgba(207,197,168,.7)',borderColor:'rgba(207,197,168,.2)',...ex});
@@ -5038,19 +5049,21 @@ Composition rules:
   const wakeControls = useCallback(()=>{
     setControlsAwake(true);
     if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current);
-    if(playing){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 2500); }
-  },[playing]);
-  // When playback stops, always reveal controls and cancel any pending hide.
-  // When it starts, arm the first idle countdown.
+    // Hide the floating exit button after a short idle. During playback this
+    // applies everywhere; in fullscreen (immersive) it also applies once the
+    // piece has FINISHED and is sitting still — so the canvas can be admired as
+    // a clean artwork. A tap / pointer move calls wakeControls again to reveal.
+    if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 2500); }
+  },[playing,immersive]);
+  // When playback stops, reveal controls. Outside fullscreen they then stay put;
+  // in fullscreen we re-arm the idle countdown so a finished, still piece also
+  // fades its controls. Entering/leaving fullscreen re-evaluates this.
   useEffect(()=>{
-    if(!playing){
-      if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current);
-      setControlsAwake(true);
-    } else {
-      wakeControls();
-    }
+    if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current);
+    setControlsAwake(true);
+    if(playing || immersive){ wakeControls(); }
     return ()=>{ if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current); };
-  },[playing,wakeControls]);
+  },[playing,immersive,wakeControls]);
   // Latch stayActive whenever we're genuinely active (content on canvas, a live
   // mode, or processing). Once latched, Clear can empty the canvas without
   // bouncing back to setup; only "← Setup" un-latches it.
@@ -5095,7 +5108,7 @@ Composition rules:
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
-      <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible'}}>
+      <div style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible'}}>
         <nav style={{display:'flex',gap:18,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)'}}>{t('concept')}</span>
           <span onClick={()=>{
@@ -5200,7 +5213,7 @@ Composition rules:
           {/* MOOD — type any feeling (Enter → generate) or tap a favourite.
               Known moods play the crafted piece; anything else is synthesised. */}
           <div>
-            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
+            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
             {(()=>{ const goMood=(val)=>{ const txt=(val||'').trim(); if(!txt||sourcePickerLocked)return; setMicArmed(false);setStructureSeedLock(null);setForceSetup(false);setCurrentMood(txt);setLoadedSource(null);setImgMoodThumb(null);setMoodFromImg(false);setVarySource(null);setMoodContext(true); aiMoodFromText(txt); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}setMoodHint(false); };
               // Autocomplete: as you type, list moods whose localized name (or key)
               // starts with the query. Diacritics are stripped on both sides so "z"
@@ -5256,14 +5269,14 @@ Composition rules:
 
           {/* SOURCE — input tiles, split into IMPORT (files) and CREATE (live) */}
           <div>
-            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
+            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
               <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'){setForceSetup(false);return;}setPickMode('midi');}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^\p{L}]/gu,'')}</span></button>
               <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;if(activeSource==='audio'){setForceSetup(false);return;}setPickMode('audio');}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^\p{L}]/gu,'')}</span></button>
               <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;if(activeSource==='score'){setForceSetup(false);return;}setPickMode('score');}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^\p{L}]/gu,'')}</span></button>
               <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
             </div>
-            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,margin:'16px 0 10px',textTransform:'uppercase'}}>{t('createLabel')}</div>
+            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',margin:'16px 0 10px',textTransform:'uppercase'}}>{t('createLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               <button className="pf-compose" onClick={()=>{
                 if(busy)return;
@@ -5595,7 +5608,7 @@ Composition rules:
                     }
                   }}
                   title={t('appChoseColour')}
-                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',border:'1px solid transparent',color:appActive?PF.bg:PF.cream,background:appActive?PF.gold:PF.card2,boxShadow:appActive?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{appLabel}</button>
+                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(appActive)}}>{appLabel}</button>
                 <button onClick={()=>{
                     // Custom chip cycle:
                     //  1st tap (not custom yet) → activate Custom (label "Custom")
@@ -5614,7 +5627,7 @@ Composition rules:
                       setShowPaletteEditor(true);
                     }
                   }}
-                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',border:'1px solid transparent',color:customActive?PF.bg:PF.cream,background:customActive?PF.gold:PF.card2,boxShadow:customActive?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{customActive&&customArmed?('✎ '+t('editShort')):t('custom')}</button>
+                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(customActive)}}>{customActive&&customArmed?('✎ '+t('editShort')):t('custom')}</button>
               </div>
               {/* READ-ONLY preview of the 12 Harmony colours — shown when the Color
                   reading is active and the user tapped to reveal it. Purely
@@ -5640,7 +5653,7 @@ Composition rules:
                   const locked = playing||holdPaused;
                   const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
                   return (
-                    <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',border:'1px solid transparent',opacity:locked&&!sel?0.4:1,color:sel?PF.bg:PF.cream,background:sel?PF.gold:PF.card2,boxShadow:sel?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{glyph} {t('dir_'+d)}</button>
+                    <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('dir_'+d)}</button>
                   );
                 })}
               </div>
@@ -5662,7 +5675,7 @@ Composition rules:
                 else setShowColorPalette(false);
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s',border:'1px solid transparent',color:mode===m?PF.bg:PF.cream,background:mode===m?PF.gold:PF.card2,boxShadow:mode===m?'0 3px 12px rgba(240,192,64,.35)':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{armed?('✎ '+t('editShort')):t(m)}</button>
+              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(mode===m)}}>{armed?('✎ '+t('editShort')):t(m)}</button>
               );})}
             </div>
             {showColorPalette && mode!=='custom' && (
@@ -5685,7 +5698,7 @@ Composition rules:
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
             {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
-            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',color:mosaicOn?PF.bg:(mosaicInert?PF.muted:PF.cream),background:mosaicOn?PF.gold:PF.card2,border:'1px solid '+(mosaicOn?PF.gold:'rgba(242,238,232,.08)'),boxShadow:mosaicOn?'0 3px 10px rgba(240,192,64,.3)':'none'}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
+            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
             ); })()}
             {STYLE_PAIRS.map(([a,b])=>{
               // Which of the pair is active? Determines label + next target.
@@ -5710,12 +5723,14 @@ Composition rules:
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',color:isOn?PF.bg:PF.cream,background:isOn?PF.gold:PF.card2,border:'1px solid '+(isOn?PF.gold:(shufHit?'rgba(242,238,232,.7)':'rgba(242,238,232,.08)')),boxShadow:isOn?'0 3px 10px rgba(240,192,64,.3)':(shufHit?'0 0 0 1px rgba(242,238,232,.25)':'none')}}>{label}</button>
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
               );
             })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
             <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,borderRadius:'50%',fontSize:'1rem',cursor:'pointer',transition:'all .18s',color:randomMode?PF.bg:PF.muted,background:randomMode?'rgba(255,200,120,.9)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.9)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 3px 10px rgba(240,192,64,.3)':'none'}}>🎲</button>
+              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+              </button>
             </div>
           </div>
           )}
@@ -5997,15 +6012,15 @@ Composition rules:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onClick={()=>setImmersive(false)} onPointerMove={()=>{ if(playing) wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {immersive && <div onClick={wakeControls} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
       <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
-        onPointerMove={()=>{ if(playing) wakeControls(); }}
+        onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onClick={e=>{
           // Any tap on the canvas reveals the fullscreen control and re-arms its
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
-          if(playing) wakeControls();
+          if(playing||immersive) wakeControls();
           // During the demo reel a canvas tap is the "escape" gesture — kill
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
@@ -6044,7 +6059,7 @@ Composition rules:
           }
         }}
       >
-        <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.55)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'#e8dca8',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
+        <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{immersive?<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>:<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>}</svg>
         </button>
         {viewMode==='image'&&originalImgUrl&&(
@@ -6414,7 +6429,7 @@ Composition rules:
         </div>
       )}
       {/* Note-name readout */}
-      <div style={{textAlign:'center',marginBottom:4,fontSize:(.7*effScale)+'rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.6)':'rgba(201,168,76,.45)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
+      <div style={{textAlign:'center',marginBottom:4,fontSize:(.7*effScale)+'rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.78)':'rgba(201,168,76,.55)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
         {active.size>0?(()=>{
           const sorted=[...active].sort((a,b)=>a-b);
           const chord=recognizeChord(sorted);
@@ -6477,21 +6492,21 @@ Composition rules:
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
               title={exportReady?t('save'):t('exportNeedsPlay')}
-              style={{padding:'8px 14px',background:exportReady?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:exportReady?GOLD:'rgba(201,168,76,.3)',border:'1px solid '+(exportReady?'rgba(201,168,76,.5)':'rgba(201,168,76,.18)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase'}}>
+              style={{padding:'8px 14px',background:'transparent',color:exportReady?'rgba(201,168,76,.85)':'rgba(201,168,76,.28)',border:'1px solid '+(exportReady?'rgba(201,168,76,.4)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
               ↓ {t('save')}
             </button>
           );
         })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
-          <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
+          <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(
-          <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'7px 10px',background:recording?'rgba(220,60,60,.12)':'transparent',color:recording?'rgba(255,90,90,.9)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.8)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.55)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.45)':'rgba(220,90,90,.2)'),borderRadius:5,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit'}}>
+          <button onClick={recording?stopRecord:startRecord} disabled={!recording && (!chords.length || playing || anim || working)} title={recording?'stop recording':(!chords.length?'nothing to record yet':playing?'stop playback first':anim?'wait for animation':working?'wait for import':'record audio output')} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':chords.length&&!playing&&!anim&&!working?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||(chords.length&&!playing&&!anim&&!working))?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
             {recording?t('recStop'):t('recArm')}
           </button>
         )}
         {viewMode==='image'&&chords.length>0&&!composeMode&&!micPainting&&!micListening&&!moodFromImg&&(
-          <button className="pf-lift" onClick={saveScore} disabled={recording||playing} title={recording?t('stopRecFirst'):playing?t('exportNeedsPlay'):t('scoreExport')} style={{padding:'8px 14px',background:'rgba(120,200,160,.12)',color:(recording||playing)?'rgba(120,200,160,.25)':'rgba(150,225,185,.92)',border:'1px solid '+((recording||playing)?'rgba(120,200,160,.15)':'rgba(120,200,160,.45)'),borderRadius:22,cursor:(recording||playing)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase'}}>♫ {t('scoreExport')}{scoreMsg?<span style={{marginLeft:6,fontSize:(.5*effScale)+'rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)'}}>{scoreMsg.text}</span>:null}</button>
+          <button className="pf-lift" onClick={saveScore} disabled={recording||playing} title={recording?t('stopRecFirst'):playing?t('exportNeedsPlay'):t('scoreExport')} style={{padding:'8px 14px',background:'transparent',color:(recording||playing)?'rgba(120,200,160,.25)':'rgba(140,215,175,.8)',border:'1px solid '+((recording||playing)?'rgba(120,200,160,.15)':'rgba(120,200,160,.35)'),borderRadius:22,cursor:(recording||playing)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>♫ {t('scoreExport')}{scoreMsg?<span style={{marginLeft:6,fontSize:(.5*effScale)+'rem',color:scoreMsg.tone==='ok'?'rgba(140,255,180,.9)':scoreMsg.tone==='wait'?'rgba(201,168,76,.85)':'rgba(255,140,120,.9)'}}>{scoreMsg.text}</span>:null}</button>
         )}
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;

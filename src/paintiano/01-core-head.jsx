@@ -13,12 +13,22 @@ const GOLD = '#c9a84c';
 // ── Playful design tokens (added v2.6.0) ────────────────────────────────────
 // Layered dark surfaces + bright cream text + saturated accents. Used across
 // the redesigned control panel. Buttons lift + glow on interaction.
+//
+// GOLD ROLES (two intentional golds — keep them distinct, don't blend):
+//   • goldQuiet  #c9a84c (= GOLD, = rgba(201,168,76,a)) — the calm ochre used
+//     for borders, hairlines, muted labels, resting UI. The workhorse gold.
+//   • gold       #f0c040 — the BRIGHT gold reserved for emphasis: the wordmark,
+//     active/primary accents, focus glow. Use sparingly so it stays special.
+//   • gold2      #ffd96e — the lightest gold, for glow/hover highlights only.
+// Helper goldA(a) builds the quiet-gold rgba so call sites stop hand-writing
+// rgba(201,168,76,a) (351 of them) and can't drift.
 const PF = {
   bg:'#0e0c14', card:'#161320', card2:'#1d1929', card3:'#231f31',
-  gold:'#f0c040', gold2:'#ffd96e',
+  gold:'#f0c040', gold2:'#ffd96e', goldQuiet:'#c9a84c', goldQuietRGB:'201,168,76',
   cream:'#f2eee8', muted:'rgba(242,238,232,0.42)', faint:'rgba(242,238,232,0.1)',
   blue:'#5b9cf6', purple:'#a97ff5', green:'#4ecb8d', orange:'#f47c3c', pink:'#f06292',
 };
+const goldA = (a)=>`rgba(${PF.goldQuietRGB},${a})`;
 // Built once at module load — referenced by the render so the style string
 // isn't re-interpolated on every React render (which thrashes during playback
 // when setDisp fires many times per second).
