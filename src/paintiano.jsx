@@ -5885,7 +5885,7 @@ const I18N = {
     proInvalidKey:'This key is not valid. Check your email for the correct key.',
     proWelcomeTitle:'Welcome to Pro',
     proWelcomeBody:'All features unlocked on this device.',
-    proManageActive:'Pro active',
+    proManageActive:'Pro',
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
@@ -5987,7 +5987,7 @@ const I18N = {
     proInvalidKey:'Dieser Schlüssel ist ungültig. Bitte prüfe deine E-Mail.',
     proWelcomeTitle:'Willkommen bei Pro',
     proWelcomeBody:'Alle Funktionen auf diesem Gerät freigeschaltet.',
-    proManageActive:'Pro aktiv',
+    proManageActive:'Pro',
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
@@ -6089,7 +6089,7 @@ const I18N = {
     proInvalidKey:'Cette clé n’est pas valide. Vérifiez votre e-mail.',
     proWelcomeTitle:'Bienvenue dans Pro',
     proWelcomeBody:'Toutes les fonctions débloquées sur cet appareil.',
-    proManageActive:'Pro actif',
+    proManageActive:'Pro',
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
@@ -6191,7 +6191,7 @@ const I18N = {
     proInvalidKey:'Esta clave no es válida. Revisa tu correo electrónico.',
     proWelcomeTitle:'Bienvenido a Pro',
     proWelcomeBody:'Todas las funciones desbloqueadas en este dispositivo.',
-    proManageActive:'Pro activo',
+    proManageActive:'Pro',
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
@@ -6293,7 +6293,7 @@ const I18N = {
     proInvalidKey:'Tento kľúč nie je platný. Skontroluj svoj e-mail.',
     proWelcomeTitle:'Vitaj v Pro',
     proWelcomeBody:'Všetky funkcie odomknuté na tomto zariadení.',
-    proManageActive:'Pro aktívne',
+    proManageActive:'Pro',
   },
   zh:{
     concept:'理念', demo:'演示', guide:'指南',
@@ -6401,7 +6401,7 @@ const I18N = {
     proInvalidKey:'此密钥无效。请检查您的电子邮件。',
     proWelcomeTitle:'欢迎使用 Pro',
     proWelcomeBody:'此设备上所有功能已解锁。',
-    proManageActive:'Pro 已激活',
+    proManageActive:'Pro',
   },
   zhTW:{
     concept:'理念', demo:'示範', guide:'指南',
@@ -6497,7 +6497,7 @@ const I18N = {
     proInvalidKey:'此金鑰無效。請檢查您的電子郵件。',
     proWelcomeTitle:'歡迎使用 Pro',
     proWelcomeBody:'此裝置上所有功能已解鎖。',
-    proManageActive:'Pro 已啟用',
+    proManageActive:'Pro',
   },
   PT:{
     concept:'conceito', demo:'demo', guide:'guia',
@@ -6599,7 +6599,7 @@ const I18N = {
     proInvalidKey:'Esta chave não é válida. Verifique seu e-mail.',
     proWelcomeTitle:'Bem-vindo ao Pro',
     proWelcomeBody:'Todos os recursos desbloqueados neste dispositivo.',
-    proManageActive:'Pro ativo',
+    proManageActive:'Pro',
   },
 };
 
@@ -14416,7 +14416,7 @@ Composition rules:
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
           <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
           {!isPro && <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.5)',color:'rgba(201,168,76,.9)',fontWeight:600}}>{t('proBadge')}</span>}
-          {isPro && <span title={maskedEmail||''} style={{paddingBottom:2,color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>✦ {t('proManageActive')}</span>}
+          {isPro && <span title={maskedEmail||''} style={{paddingBottom:2,color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>✓ {t('proManageActive')}</span>}
         </nav>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{padding:'4px 10px',background:readScale>1?'rgba(201,168,76,.12)':PF.faint,color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'1px solid '+(readScale>1?'rgba(201,168,76,.4)':'rgba(242,238,232,.15)'),borderRadius:20,cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:5,fontWeight:600}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>

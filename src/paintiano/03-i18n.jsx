@@ -102,7 +102,7 @@ const I18N = {
     proInvalidKey:'This key is not valid. Check your email for the correct key.',
     proWelcomeTitle:'Welcome to Pro',
     proWelcomeBody:'All features unlocked on this device.',
-    proManageActive:'Pro active',
+    proManageActive:'Pro',
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
@@ -204,7 +204,7 @@ const I18N = {
     proInvalidKey:'Dieser Schlüssel ist ungültig. Bitte prüfe deine E-Mail.',
     proWelcomeTitle:'Willkommen bei Pro',
     proWelcomeBody:'Alle Funktionen auf diesem Gerät freigeschaltet.',
-    proManageActive:'Pro aktiv',
+    proManageActive:'Pro',
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
@@ -306,7 +306,7 @@ const I18N = {
     proInvalidKey:'Cette clé n’est pas valide. Vérifiez votre e-mail.',
     proWelcomeTitle:'Bienvenue dans Pro',
     proWelcomeBody:'Toutes les fonctions débloquées sur cet appareil.',
-    proManageActive:'Pro actif',
+    proManageActive:'Pro',
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
@@ -408,7 +408,7 @@ const I18N = {
     proInvalidKey:'Esta clave no es válida. Revisa tu correo electrónico.',
     proWelcomeTitle:'Bienvenido a Pro',
     proWelcomeBody:'Todas las funciones desbloqueadas en este dispositivo.',
-    proManageActive:'Pro activo',
+    proManageActive:'Pro',
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
@@ -510,7 +510,7 @@ const I18N = {
     proInvalidKey:'Tento kľúč nie je platný. Skontroluj svoj e-mail.',
     proWelcomeTitle:'Vitaj v Pro',
     proWelcomeBody:'Všetky funkcie odomknuté na tomto zariadení.',
-    proManageActive:'Pro aktívne',
+    proManageActive:'Pro',
   },
   zh:{
     concept:'理念', demo:'演示', guide:'指南',
@@ -618,7 +618,7 @@ const I18N = {
     proInvalidKey:'此密钥无效。请检查您的电子邮件。',
     proWelcomeTitle:'欢迎使用 Pro',
     proWelcomeBody:'此设备上所有功能已解锁。',
-    proManageActive:'Pro 已激活',
+    proManageActive:'Pro',
   },
   zhTW:{
     concept:'理念', demo:'示範', guide:'指南',
@@ -714,7 +714,7 @@ const I18N = {
     proInvalidKey:'此金鑰無效。請檢查您的電子郵件。',
     proWelcomeTitle:'歡迎使用 Pro',
     proWelcomeBody:'此裝置上所有功能已解鎖。',
-    proManageActive:'Pro 已啟用',
+    proManageActive:'Pro',
   },
   PT:{
     concept:'conceito', demo:'demo', guide:'guia',
@@ -816,7 +816,7 @@ const I18N = {
     proInvalidKey:'Esta chave não é válida. Verifique seu e-mail.',
     proWelcomeTitle:'Bem-vindo ao Pro',
     proWelcomeBody:'Todos os recursos desbloqueados neste dispositivo.',
-    proManageActive:'Pro ativo',
+    proManageActive:'Pro',
   },
 };
 
