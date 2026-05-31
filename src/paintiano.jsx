@@ -15061,7 +15061,7 @@ Composition rules:
                 in compose it fully clears, for a played piece it wipes for a fresh
                 start. Compose → "new composing", mic → "new recording", else
                 "new painting". */}
-            <button className="pf-lift" onClick={(e)=>{ e.stopPropagation(); if(!recording) clearCanvas(); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {composeMode ? t('ctaNewCompose') : (micActive||micArmed) ? t('ctaNewMic') : t('ctaAnother')}</button>
+            <button className="pf-lift" onClick={(e)=>{ e.stopPropagation(); if(!recording){ setImmersive(false); clearCanvas(); } }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {composeMode ? t('ctaNewCompose') : (micActive||micArmed) ? t('ctaNewMic') : t('ctaAnother')}</button>
           </div>
         );
       })()}
