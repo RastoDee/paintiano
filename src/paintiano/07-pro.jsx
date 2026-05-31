@@ -164,6 +164,39 @@ function useAiTrial() {
   };
 }
 
+// ─── Unified entitlements (single source of truth for gating) ─────────────────
+// Combines useProStatus + useAiTrial so every caller asks ONE thing instead of
+// re-deriving "free && exhausted → paywall; else consume" at each site (which
+// is where races and inconsistencies creep in). Exposes everything the two
+// hooks did, plus:
+//   ready        — true once Pro status is resolved (not 'loading')
+//   gateAI(amt)  — the single decision for a heavy AI action. Returns
+//                  { allow, reason }:
+//                    • while loading  → { allow:false, reason:'loading' }   (caller waits/no-ops; never silently pays or charges a trial)
+//                    • pro            → { allow:true }                       (no trial spend)
+//                    • free, credits  → { allow:true } and consumes `amt`
+//                    • free, no credit→ { allow:false, reason:'ai_trial' }   (caller opens paywall)
+// Centralizing the loading check fixes the race where a callsite tested
+// proStatus==='free' (false during 'loading') and let an action slip through.
+function useEntitlements() {
+  const pro = useProStatus();
+  const trial = useAiTrial();
+  const gateAI = useCallback((amount = 1, consume = true) => {
+    if (pro.proStatus === 'loading') return { allow: false, reason: 'loading' };
+    if (pro.proStatus === 'pro')     return { allow: true };
+    // free tier
+    if (trial.trialExhausted)        return { allow: false, reason: 'ai_trial' };
+    if (consume) trial.consumeTrial(amount);
+    return { allow: true };
+  }, [pro.proStatus, trial.trialExhausted, trial.consumeTrial]);
+  return {
+    ...pro,            // proStatus, isPro, licenseKey, maskedEmail, activate/deactivate/openCheckout
+    ...trial,          // trialUsed, trialLeft, trialExhausted, consumeTrial, resetTrial
+    ready: pro.proStatus !== 'loading',
+    gateAI,
+  };
+}
+
 // ─── watermark for free exports (no-op for Pro) ───────────────────────────────
 function applyWatermark(canvas, isPro) {
   if (isPro || !canvas) return canvas;

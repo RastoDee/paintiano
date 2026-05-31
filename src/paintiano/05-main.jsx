@@ -520,8 +520,8 @@ export default function Paintiano() {
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
 
   // ─── Paintiano Pro state (from 07-pro.jsx) ───
-  const { proStatus, isPro, maskedEmail, activateLicense, deactivateLicense, openCheckout } = useProStatus();
-  const { trialUsed, trialLeft, trialExhausted, consumeTrial } = useAiTrial();
+  const { proStatus, isPro, maskedEmail, activateLicense, deactivateLicense, openCheckout,
+          trialUsed, trialLeft, trialExhausted, consumeTrial, gateAI } = useEntitlements();
   const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
   // Descriptive style labels shown on the chips (the internal keys —
   // picasso/kusama/… — stay unchanged everywhere in the logic). This keeps the
@@ -3184,13 +3184,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       let _fromCache=!!parsed;
       // Pro gate AFTER the cache check: cache hit = free replay even for
       // exhausted free users (sample is always cached, so it always plays).
-      // Only a real, paid AI call costs a trial credit.
-      if(!parsed && proStatus==='free' && trialExhausted){
-        // Revert the eagerly-set canvas state — no AI call will happen.
-        setImgMoodThumb(null); setMoodContext(false); setMoodFromImg(false);
-        setOriginalImgUrl(null); setLoadedSource(null); setViewMode('paint');
-        setPaywallReason('ai_trial');
-        return;
+      // Only a real, paid AI call costs a trial credit. Check WITHOUT consuming
+      // (consume:false) — the credit is charged after a successful reply below.
+      if(!parsed){
+        const g=gateAI(1,false);
+        if(!g.allow){
+          // Revert the eagerly-set canvas state — no AI call will happen.
+          setImgMoodThumb(null); setMoodContext(false); setMoodFromImg(false);
+          setOriginalImgUrl(null); setLoadedSource(null); setViewMode('paint');
+          if(g.reason==='ai_trial') setPaywallReason('ai_trial');
+          return;
+        }
       }
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
@@ -3216,7 +3220,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Other languages are translated lazily on first switch (title-only, cheap).
       _mfiTitlesRef.current = isSample ? null : {[lang]: title};
       // Store fresh AI results so the next run of this image is free.
-      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} if(proStatus==='free') consumeTrial(); }
+      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} gateAI(1, true); }
       // Body 3: make Vary work in mood-from-image. rerollSong expects notes as
       // {note,dur,beat} objects; the AI returns [pitch,dur,beat,vel] arrays — so
       // normalise here. Vary then re-tunes THIS image's piece locally (transpose
@@ -3267,7 +3271,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setErr(_net ? (_errs.aiNet||'AI is unreachable right now.') : (_errs.aiBadResp||'The AI reply was incomplete — try again.'));
       setErrInfo(false);
     }finally{ setImgAiBusy(false); setWorking(false); setWLabel(''); setWPct(0); }
-  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet,_mfiRecentAdd,proStatus,trialExhausted,consumeTrial]);
+  },[imgAiBusy,originalImgUrl,lang,stopAll,applyEvents,t,_imgMoodHash,_imgMoodCacheGet,_imgMoodCacheSet,_mfiRecentAdd,gateAI]);
   // Lazy, title-only translation: when the UI language changes while a CUSTOM
   // mood-from-image piece is shown, just RE-LABEL it. If we already have the title
   // for that language, swap instantly; otherwise translate the title (a tiny,
@@ -3500,9 +3504,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     // Pro gate: free tier gets a limited number of heavy AI compositions.
-    // Cache hits above already returned free; this point = a real (paid) AI call.
-    if(proStatus==='free' && trialExhausted){ setPaywallReason('ai_trial'); return; }
-    if(proStatus==='free') consumeTrial();
+    // Cache hits above already returned free; this point = a real AI call.
+    // Check WITHOUT consuming (consume:false) — we charge the credit only after
+    // a successful AI reply below, so a failed call that falls back to the
+    // offline generator doesn't burn a trial. Mirrors mood-from-image / atmosphere.
+    { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
@@ -3561,6 +3567,9 @@ Composition rules:
       if(!parsed?.notes?.length)throw new Error(`No notes in: ${raw.slice(0,200)}`);
       // Cache this AI result so re-entering the same mood replays it for free.
       aiComposeCacheRef.current = { key:_ckey, parsed };
+      // Successful fresh AI composition — charge the trial now (free tier only;
+      // no-op for Pro). Reaching here means a real AI reply parsed OK.
+      gateAI(1, true);
       const evts=noteArr2events(parsed.notes,parsed.tempo);
       if(!evts.length)throw new Error('Could not parse composition');
       // Set varySource (normalised note objects) so Vary can re-tune THIS piece
@@ -3592,7 +3601,7 @@ Composition rules:
       } else { setErr(e.message||'Compose failed');setErrInfo(false); }
     }
     finally{setWorking(false);setWLabel('');setWPct(0);}
-  },[songQ,busy,stopAll,applyEvents,wipeCanvasNow,lang,proStatus,trialExhausted,consumeTrial]);
+  },[songQ,busy,stopAll,applyEvents,wipeCanvasNow,lang,gateAI]);
 
   // Bridge ref so aiMoodFromText (declared earlier) can invoke aiCompose.
   useEffect(()=>{ aiComposeRef.current=aiCompose; },[aiCompose]);
@@ -3771,9 +3780,10 @@ Composition rules:
   const detectAtmosphere=useCallback(async()=>{
     if(atmoBusy||!originalImgUrl) return;
     // Atmosphere is an Anthropic API call (image → emotion analysis), so it
-    // counts toward the free 5-AI trial pool same as composeFromImage and
-    // aiCompose. Exhausted free users get the paywall; Pro users skip the gate.
-    if(proStatus==='free' && trialExhausted){ setPaywallReason('ai_trial'); return; }
+    // counts toward the free trial pool. Check the gate WITHOUT consuming yet
+    // (consume:false) — we only charge the 0.5 credit after a successful reply,
+    // so a failed/zero-result call doesn't burn a trial.
+    { const g=gateAI(0.5,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setAtmoBusy(true); setErr('');
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
@@ -3796,14 +3806,13 @@ Composition rules:
       if(isNaN(vv)||isNaN(ee)) throw new Error('bad');
       setAtmoMood({v:vv,e:ee,root:0,title:(parsed.title&&String(parsed.title).trim())||''});
       setAtmoOn(true);
-      // Successful fresh AI call — count toward trial for free users.
-      // Atmosphere is a lighter call (just emotion analysis, no full composition)
-      // so it costs 0.5 of a trial credit instead of a full 1.
-      // (Toggling atmo on/off after this uses cached atmoMood, no extra call.)
-      if(proStatus==='free') consumeTrial(0.5);
+      // Successful fresh AI call — now charge the trial (free tier only).
+      // gateAI with consume:true applies the 0.5 credit through the same path;
+      // for Pro it's a no-op. Toggling atmo on/off later uses cached atmoMood.
+      gateAI(0.5, true);
     }catch(e){ const _net=e&&(e.message==='AI unavailable'||e._aiNet); if(_net) setAiDown(true); const _errs=(t('errs')||{}); setErr(_net?(_errs.aiNet||'AI is unreachable right now.'):(_errs.aiBadResp||'The AI reply was incomplete — try again.')); setErrInfo(false); }
     finally{ setAtmoBusy(false); }
-  },[atmoBusy,originalImgUrl,lang,t,isPro,proStatus,trialExhausted,consumeTrial]);
+  },[atmoBusy,originalImgUrl,lang,t,isPro,gateAI]);
 
   const paintSong=()=>{
     const q=songQ.trim().toLowerCase();if(!q||busy)return;
