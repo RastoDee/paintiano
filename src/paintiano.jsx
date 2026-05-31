@@ -15875,11 +15875,22 @@ Composition rules:
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
-        {viewMode==='image'&&chords.length>0&&!moodFromImg&&(
-          <button onClick={()=>{ if(recording||playing||anim||working) return; setShowSizePicker(true); }} disabled={recording||playing||anim||working||!chords.length} title={recording?t('stopRecFirst'):playing?t('exportNeedsPlay'):anim?t('exportNeedsPlay'):working?t('exportNeedsPlay'):t('save')} style={{padding:'8px 14px',background:'transparent',color:(recording||playing||anim||working||!chords.length)?'rgba(201,168,76,.25)':'rgba(220,180,90,.95)',border:'1px solid '+((recording||playing||anim||working||!chords.length)?'rgba(201,168,76,.15)':'rgba(201,168,76,.45)'),borderRadius:22,cursor:(recording||playing||anim||working||!chords.length)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
-            ↓ {t('save')}
-          </button>
-        )}
+        {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
+          // Mirror the non-image SAVE gate verbatim — same exportReady logic so
+          // the button enables/disables identically across all modes (e.g. only
+          // after the piece has played through and is still).
+          const exportReady =
+            (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
+             !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording)
+            || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording);
+          return (
+            <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
+              title={exportReady?t('save'):t('exportNeedsPlay')}
+              style={{padding:'8px 14px',background:'transparent',color:exportReady?'rgba(201,168,76,.85)':'rgba(201,168,76,.28)',border:'1px solid '+(exportReady?'rgba(201,168,76,.4)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
+              ↓ {t('save')}
+            </button>
+          );
+        })()}
         {/* Score button removed from image-mode toolbar — it now lives inside
             the SAVE picker as one of three choices (Story / Audio / Score). */}
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
