@@ -6137,17 +6137,30 @@ Composition rules:
           picker → preview) and a clean way to start another. Reuses existing
           handlers — no new export logic. Hidden during demo/compose/mic and
           while anything is still playing or paused mid-piece. */}
+          Two distinct cases:
+          (A) A PLAYED piece (MIDI / audio / score / mood) that has finished and
+              is sitting complete & still — full "what now?" CTA: title +
+              save/share/print + start another. Not shown mid-pause.
+          (B) LIVE authoring (compose / mic) with content on the canvas — here the
+              current state IS the artwork and there's nothing to "finish", so we
+              show only a quiet "save · share · print" of the current state (no
+              "finished" title, no "new painting" that would wipe live work).
+          Both reuse the existing size-picker → preview export. No new logic. */}
       {(() => {
-        const paintingComplete =
+        const playedComplete =
           chords.length > 0 && !playing && !anim && !holdPaused &&
           disp >= chords.length &&
           !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording;
-        if (!paintingComplete) return null;
+        const liveAuthoring =
+          (composeMode || micActive) && chords.length > 0 &&
+          !demoReelOn && !busy && !recording;
+        if (!playedComplete && !liveAuthoring) return null;
+        const canExport = disp>0 || (composedModeRef.current && chords.length>0);
         return (
           <div className="pf-fade" style={{display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:10,margin:'2px 0 14px'}}>
-            <span style={{width:'100%',textAlign:'center',fontSize:(.52*effScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',marginBottom:2}}>{t('ctaTitle')}</span>
-            <button className="pf-lift" onClick={()=>{ if((disp>0||(composedModeRef.current&&chords.length>0))) setShowSizePicker(true); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 4px 18px rgba(240,192,64,.28)'}}>✦ {t('ctaKeep')}</button>
-            <button className="pf-lift" onClick={()=>{ if(!recording) clearCanvas(); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {t('ctaAnother')}</button>
+            {playedComplete && <span style={{width:'100%',textAlign:'center',fontSize:(.52*effScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',marginBottom:2}}>{t('ctaTitle')}</span>}
+            <button className="pf-lift" onClick={()=>{ if(canExport) setShowSizePicker(true); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 4px 18px rgba(240,192,64,.28)'}}>✦ {t('ctaKeep')}</button>
+            {playedComplete && <button className="pf-lift" onClick={()=>{ if(!recording) clearCanvas(); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {t('ctaAnother')}</button>}
           </div>
         );
       })()}
@@ -6453,11 +6466,10 @@ Composition rules:
         {randomMode&&effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(
           <button className="pf-lift" onClick={()=>{if(playing||holdPaused)advanceVariation();}} disabled={!(playing||holdPaused)} title={(playing||holdPaused)?'next painting — jump to a new variation':'play to browse variations'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:(playing||holdPaused)?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:(playing||holdPaused)?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+((playing||holdPaused)?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:(playing||holdPaused)?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
         )}
-        {viewMode!=='image'&&(
-          <button className="pf-lift" onClick={()=>(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn&&setShowSizePicker(true)} disabled={!(disp>0||(composedModeRef.current&&chords.length>0))||busy||micPainting||micListening||demoReelOn} title={demoReelOn?(t('demoMode')||'demo mode'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):t('print')} style={{padding:'8px 14px',background:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn?'rgba(169,127,245,.14)':'rgba(28,24,40,.5)',color:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn?'rgba(200,160,255,.92)':'rgba(180,140,255,.25)',border:'1px solid '+((disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn?'rgba(180,140,255,.5)':'rgba(180,140,255,.18)'),borderRadius:22,cursor:(disp>0||(composedModeRef.current&&chords.length>0))&&!busy&&!micPainting&&!micListening&&!demoReelOn?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase'}}>
-            {t('print')}
-          </button>
-        )}
+        {/* PRINT button removed — export (save/share/print) now lives in the
+            post-completion CTA strip below the canvas, shown only when a painting
+            is complete & still. This avoids the duplicate entry point and the
+            confusing "print a half-animated piece → get the whole image" state. */}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.22)':'rgba(120,180,255,.10)',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(165,205,255,.85)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.6':'.4')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}

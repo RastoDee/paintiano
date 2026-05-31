@@ -5752,7 +5752,7 @@ const I18N = {
     mic:'🎙 MIC', micActive:'🎙 LIVE',
     voicePreset:'🎤 voice', musicPreset:'🔊 music',
     play:'▶ play', pause:'⏸ pause', resume:'▶ resume', mute:'mute audio', unmute:'unmute audio', randomOn:'random ON', randomOff:'random OFF',
-    print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', switchConfirm:'clean canvas?', loop:'⟳ loop', appChoseColour:'the app chose the colour reading', undo:'↩',
+    print:'🖨 print', clear:'clear', ctaTitle:'your painting is ready', ctaKeep:'save · share · print', ctaAnother:'new painting', clearConfirm:'tap again to clear', demoConfirm:'replace current?', switchConfirm:'clean canvas?', loop:'⟳ loop', appChoseColour:'the app chose the colour reading', undo:'↩',
     recArm:'⏺ rec', recStop:'⏹ rec…',
     share:'share', save:'save', saving:'saving…', saved:'saved ✓', scoreExport:'score', scoreXmlHint:'opens in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exports the whole piece', exportScore:'score (xml)', exportScoreHint:'opens in MuseScore etc.', exportAudio:'audio', exportAudioHint:'plays & records the full piece', exportBoth:'both', exportBothHint:'score now, then records audio', exportNeedsPlay:'play first to export', rendering:'rendering audio…', renderFail:'audio render failed',
     chordsPlay:'chords · tap to play',
@@ -5852,7 +5852,7 @@ const I18N = {
     mic:'🎙 MIKRO', micActive:'🎙 LIVE',
     voicePreset:'🎤 stimme', musicPreset:'🔊 musik',
     play:'▶ spielen', pause:'⏸ pause', resume:'▶ weiter', mute:'ton aus', unmute:'ton an', randomOn:'zufall AN', randomOff:'zufall AUS',
-    print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', switchConfirm:'leinwand leeren?', loop:'⟳ schleife', appChoseColour:'die App wählte die Farblesung', undo:'↩',
+    print:'🖨 drucken', clear:'löschen', ctaTitle:'dein Bild ist fertig', ctaKeep:'speichern · teilen · drucken', ctaAnother:'neues Bild', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', switchConfirm:'leinwand leeren?', loop:'⟳ schleife', appChoseColour:'die App wählte die Farblesung', undo:'↩',
     recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
     share:'teilen', save:'speichern', saving:'speichert…', saved:'gespeichert ✓', scoreExport:'noten', scoreXmlHint:'öffnet in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportiert das ganze Stück', exportScore:'noten (xml)', exportScoreHint:'öffnet in MuseScore usw.', exportAudio:'audio', exportAudioHint:'spielt & nimmt das Stück auf', exportBoth:'beides', exportBothHint:'noten jetzt, dann audio', exportNeedsPlay:'zuerst abspielen', rendering:'audio wird erzeugt…', renderFail:'audio-erzeugung fehlgeschlagen',
     chordsPlay:'akkorde · zum spielen tippen',
@@ -5952,7 +5952,7 @@ const I18N = {
     mic:'🎙 MICRO', micActive:'🎙 LIVE',
     voicePreset:'🎤 voix', musicPreset:'🔊 musique',
     play:'▶ jouer', pause:'⏸ pause', resume:'▶ reprendre', mute:'couper le son', unmute:'activer le son', randomOn:'aléatoire ON', randomOff:'aléatoire OFF',
-    print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', switchConfirm:'vider la toile ?', loop:'⟳ boucle', appChoseColour:"l'app a choisi la lecture couleur", undo:'↩',
+    print:'🖨 imprimer', clear:'effacer', ctaTitle:'votre tableau est prêt', ctaKeep:'enregistrer · partager · imprimer', ctaAnother:'nouveau tableau', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', switchConfirm:'vider la toile ?', loop:'⟳ boucle', appChoseColour:"l'app a choisi la lecture couleur", undo:'↩',
     recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
     share:'partager', save:'enregistrer', saving:'enregistrement…', saved:'enregistré ✓', scoreExport:'partition', scoreXmlHint:'ouvre dans MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exporter', exportHint:'exporte tout le morceau', exportScore:'partition (xml)', exportScoreHint:'ouvre dans MuseScore etc.', exportAudio:'audio', exportAudioHint:'joue & enregistre le morceau', exportBoth:'les deux', exportBothHint:'partition puis audio', exportNeedsPlay:'jouez d\'abord', rendering:'rendu audio…', renderFail:'échec du rendu audio',
     chordsPlay:'accords · appuyer pour jouer',
@@ -6052,7 +6052,7 @@ const I18N = {
     mic:'🎙 MICRO', micActive:'🎙 EN VIVO',
     voicePreset:'🎤 voz', musicPreset:'🔊 música',
     play:'▶ tocar', pause:'⏸ pausa', resume:'▶ continuar', mute:'silenciar', unmute:'activar sonido', randomOn:'aleatorio ON', randomOff:'aleatorio OFF',
-    print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', switchConfirm:'¿limpiar lienzo?', loop:'⟳ bucle', appChoseColour:'la app eligió la lectura de color', undo:'↩',
+    print:'🖨 imprimir', clear:'borrar', ctaTitle:'tu pintura está lista', ctaKeep:'guardar · compartir · imprimir', ctaAnother:'nueva pintura', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', switchConfirm:'¿limpiar lienzo?', loop:'⟳ bucle', appChoseColour:'la app eligió la lectura de color', undo:'↩',
     recArm:'⏺ grabar', recStop:'⏹ graba…',
     share:'compartir', save:'guardar', saving:'guardando…', saved:'guardado ✓', scoreExport:'partitura', scoreXmlHint:'abre en MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exportar', exportHint:'exporta toda la pieza', exportScore:'partitura (xml)', exportScoreHint:'abre en MuseScore etc.', exportAudio:'audio', exportAudioHint:'reproduce y graba la pieza', exportBoth:'ambos', exportBothHint:'partitura y luego audio', exportNeedsPlay:'reproduce primero', rendering:'renderizando audio…', renderFail:'fallo al renderizar audio',
     chordsPlay:'acordes · pulsar para tocar',
@@ -6152,7 +6152,7 @@ const I18N = {
     mic:'🎙 MIKRO', micActive:'🎙 LIVE',
     voicePreset:'🎤 hlas', musicPreset:'🔊 hudba',
     play:'▶ prehrať', pause:'⏸ pauza', resume:'▶ pokračovať', mute:'stlmiť zvuk', unmute:'zapnúť zvuk', randomOn:'náhoda ZAP', randomOff:'náhoda VYP',
-    print:'🖨 tlačiť', clear:'vyčistiť', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', switchConfirm:'vyčistiť plátno?', loop:'⟳ slučka', appChoseColour:'farbu určila aplikácia', undo:'↩',
+    print:'🖨 tlačiť', clear:'vyčistiť', ctaTitle:'tvoja maľba je hotová', ctaKeep:'uložiť · zdieľať · tlačiť', ctaAnother:'nová maľba', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', switchConfirm:'vyčistiť plátno?', loop:'⟳ slučka', appChoseColour:'farbu určila aplikácia', undo:'↩',
     recArm:'⏺ nahrať', recStop:'⏹ nahr…',
     share:'zdieľať', save:'uložiť', saving:'ukladám…', saved:'uložené ✓', scoreExport:'noty', scoreXmlHint:'otvorí v MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportuje celú skladbu', exportScore:'noty (xml)', exportScoreHint:'otvorí v MuseScore a pod.', exportAudio:'audio', exportAudioHint:'prehrá a nahrá celú skladbu', exportBoth:'oboje', exportBothHint:'noty hneď, potom audio', exportNeedsPlay:'najprv prehraj', rendering:'renderujem audio…', renderFail:'render audia zlyhal',
     chordsPlay:'akordy · ťukni pre hranie',
@@ -6252,7 +6252,7 @@ const I18N = {
     mic:'🎙 麦克风', micActive:'🎙 直播',
     voicePreset:'🎤 人声', musicPreset:'🔊 音乐',
     play:'▶ 播放', pause:'⏸ 暂停', resume:'▶ 继续', mute:'静音', unmute:'取消静音', randomOn:'随机 开', randomOff:'随机 关',
-    print:'🖨 打印', clear:'清空', clearConfirm:'再次点击清空', demoConfirm:'替换当前?', switchConfirm:'清空画布?', loop:'⟳ 循环', appChoseColour:'颜色由应用选择', undo:'↩',
+    print:'🖨 打印', clear:'清空', ctaTitle:'你的画作已完成', ctaKeep:'保存 · 分享 · 打印', ctaAnother:'新画作', clearConfirm:'再次点击清空', demoConfirm:'替换当前?', switchConfirm:'清空画布?', loop:'⟳ 循环', appChoseColour:'颜色由应用选择', undo:'↩',
     recArm:'⏺ 录制', recStop:'⏹ 录制…',
     share:'分享', save:'保存', saving:'保存中…', saved:'已保存 ✓', scoreExport:'乐谱', scoreXmlHint:'可在 MuseScore、Sibelius、Finale 中打开…', exportLabel:'导出', exportTitle:'导出', exportHint:'导出整首作品', exportScore:'乐谱 (xml)', exportScoreHint:'可在 MuseScore 等软件中打开', exportAudio:'音频', exportAudioHint:'播放并录制整首作品', exportBoth:'两者', exportBothHint:'先导出乐谱,再录制音频', exportNeedsPlay:'请先播放再导出', rendering:'渲染音频中…', renderFail:'音频渲染失败',
     chordsPlay:'和弦 · 点击播放',
@@ -6358,7 +6358,7 @@ const I18N = {
     mic:'🎙 麥克風', micActive:'🎙 直播',
     voicePreset:'🎤 人聲', musicPreset:'🔊 音樂',
     play:'▶ 播放', pause:'⏸ 暫停', resume:'▶ 繼續', mute:'靜音', unmute:'取消靜音', randomOn:'隨機 開', randomOff:'隨機 關',
-    print:'🖨 列印', clear:'清空', clearConfirm:'再次點擊清空', demoConfirm:'取代目前？', switchConfirm:'清空畫布？', loop:'⟳ 循環', appChoseColour:'顏色由應用程式選擇', undo:'↩',
+    print:'🖨 列印', clear:'清空', ctaTitle:'你的畫作已完成', ctaKeep:'儲存 · 分享 · 列印', ctaAnother:'新畫作', clearConfirm:'再次點擊清空', demoConfirm:'取代目前？', switchConfirm:'清空畫布？', loop:'⟳ 循環', appChoseColour:'顏色由應用程式選擇', undo:'↩',
     recArm:'⏺ 錄製', recStop:'⏹ 錄製…',
     share:'分享', save:'儲存', saving:'儲存中…', saved:'已儲存 ✓', scoreExport:'樂譜', scoreXmlHint:'可在 MuseScore、Sibelius、Finale 中開啟…', exportLabel:'匯出', exportTitle:'匯出', exportHint:'匯出整首作品', exportScore:'樂譜 (xml)', exportScoreHint:'可在 MuseScore 等軟體中開啟', exportAudio:'音訊', exportAudioHint:'播放並錄製整首作品', exportBoth:'兩者', exportBothHint:'先匯出樂譜，再錄製音訊', exportNeedsPlay:'請先播放再匯出', rendering:'渲染音訊中…', renderFail:'音訊渲染失敗',
     chordsPlay:'和弦 · 點擊播放',
@@ -6452,7 +6452,7 @@ const I18N = {
     mic:'🎙 MIC', micActive:'🎙 AO VIVO',
     voicePreset:'🎤 voz', musicPreset:'🔊 música',
     play:'▶ tocar', pause:'⏸ pausar', resume:'▶ continuar', mute:'silenciar áudio', unmute:'ativar áudio', randomOn:'aleatório LIG', randomOff:'aleatório DES',
-    print:'🖨 imprimir', clear:'limpar', clearConfirm:'toque novamente para limpar', demoConfirm:'substituir atual?', switchConfirm:'limpar tela?', loop:'⟳ loop', appChoseColour:'o app escolheu a cor', undo:'↩',
+    print:'🖨 imprimir', clear:'limpar', ctaTitle:'sua pintura está pronta', ctaKeep:'salvar · compartilhar · imprimir', ctaAnother:'nova pintura', clearConfirm:'toque novamente para limpar', demoConfirm:'substituir atual?', switchConfirm:'limpar tela?', loop:'⟳ loop', appChoseColour:'o app escolheu a cor', undo:'↩',
     recArm:'⏺ grav', recStop:'⏹ grav…',
     share:'compartilhar', save:'salvar', saving:'salvando…', saved:'salvo ✓', scoreExport:'partitura', scoreXmlHint:'abre no MuseScore, Sibelius, Finale…', exportLabel:'exportar', exportTitle:'exportar', exportHint:'exporta a peça inteira', exportScore:'partitura (xml)', exportScoreHint:'abre no MuseScore etc.', exportAudio:'áudio', exportAudioHint:'toca e grava a peça inteira', exportBoth:'ambos', exportBothHint:'partitura primeiro, depois grava áudio', exportNeedsPlay:'toque primeiro para exportar', rendering:'renderizando áudio…', renderFail:'falha ao renderizar áudio',
     chordsPlay:'acordes · toque para tocar',
@@ -14993,6 +14993,29 @@ Composition rules:
           </div>
         )}
       </div>
+
+      {/* ── Post-completion CTA strip ──────────────────────────────────────
+          Appears only when a painting has finished playing and is sitting
+          complete & still on the canvas (disp reached the last chord, not a
+          mid-piece pause). Surfaces the "what now?" moment the audit flagged:
+          the export flow (save / share / print all funnel through the size
+          picker → preview) and a clean way to start another. Reuses existing
+          handlers — no new export logic. Hidden during demo/compose/mic and
+          while anything is still playing or paused mid-piece. */}
+      {(() => {
+        const paintingComplete =
+          chords.length > 0 && !playing && !anim && !holdPaused &&
+          disp >= chords.length &&
+          !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording;
+        if (!paintingComplete) return null;
+        return (
+          <div className="pf-fade" style={{display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:10,margin:'2px 0 14px'}}>
+            <span style={{width:'100%',textAlign:'center',fontSize:(.52*effScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',marginBottom:2}}>{t('ctaTitle')}</span>
+            <button className="pf-lift" onClick={()=>{ if((disp>0||(composedModeRef.current&&chords.length>0))) setShowSizePicker(true); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 4px 18px rgba(240,192,64,.28)'}}>✦ {t('ctaKeep')}</button>
+            <button className="pf-lift" onClick={()=>{ if(!recording) clearCanvas(); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {t('ctaAnother')}</button>
+          </div>
+        );
+      })()}
 
       <div style={{marginBottom:10,fontSize:(.57*effScale)+'rem',letterSpacing:'.18em',opacity:.6,textAlign:'center',textTransform:'uppercase'}}>
         music → φ painting
