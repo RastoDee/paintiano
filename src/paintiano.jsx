@@ -13968,6 +13968,9 @@ Composition rules:
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
+      <div style={{position:'fixed',top:0,left:0,right:0,zIndex:999999,background:'#300',color:'#0f0',fontFamily:'monospace',fontSize:'11px',padding:'2px 6px',textAlign:'center'}}>
+        DBG · active={String(isActiveView)} forceSetup={String(forceSetup)} mic={String(micActive)} armed={String(micArmed)} comp={String(composeMode)} chords={chords.length} chordsRef={chordsRef.current?.length??'?'} disp={disp} owner={String(draftOwnerRef.current)} stay={String(stayActive)}
+      </div>
       <div style={{width:'100%',maxWidth:560,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible'}}>
         <nav style={{display:'flex',gap:18,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.7)',color:'rgba(201,168,76,.95)'}}>{t('concept')}</span>
@@ -15040,9 +15043,13 @@ Composition rules:
           disp >= chords.length &&
           !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording;
         const liveAuthoring =
-          (composeMode || micActive) && chords.length > 0 &&
+          (composeMode || micActive || micArmed) && chords.length > 0 &&
           !demoReelOn && !busy && !recording;
-        if (!playedComplete && !liveAuthoring) return null;
+        if (!playedComplete && !liveAuthoring) return (
+          <div style={{margin:'4px 0',textAlign:'center',fontSize:'.6rem',color:'#f0c040',fontFamily:'monospace',background:'rgba(0,0,0,.5)',padding:4}}>
+            CTA-OFF · mic={String(micActive)} armed={String(micArmed)} comp={String(composeMode)} chords={chords.length} disp={disp} playing={String(playing)} busy={String(busy)} rec={String(recording)} demo={String(demoReelOn)}
+          </div>
+        );
         const canExport = disp>0 || (composedModeRef.current && chords.length>0);
         // In immersive view the canvas is position:fixed over the whole screen,
         // so an in-flow strip would sit off-screen below it. Render the CTA as a
