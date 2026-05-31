@@ -34,6 +34,54 @@ function _seedRnd(bx,by,BW,BH){
 let _artistSeed = 0;
 function _setArtistSeed(s){ _artistSeed = s>>>0; }
 
+// ── Adaptive density helpers (shared by overlay styles) ─────────────────────
+// Problem this solves: overlay styles used to hit a hard ceiling mid-track, so
+// the back half of a long song would just re-render the same objects (visual
+// "flicker" without new content). Now every style declares its own per-chord-
+// count maximum, and the visible count grows linearly with playback progress —
+// so the LAST chord is always when the painting "completes" its build, no
+// matter how long the piece is.
+//
+// _adaptiveMax(cn, curve): pick the max object count for a song of `cn` chords.
+//   `curve` is one of the named density profiles below. Returns an integer ≥ 1.
+//
+// _progressive(lim, cn, max): how many objects should be visible right now?
+//   Linearly interpolates from 1 → max as playback advances from 0 → cn.
+const _DENSITY_CURVES = {
+  // Each row: [thresholdChords, valueAt]. Values between thresholds linearly
+  // interpolate. Above the last threshold: extrapolate at the last slope.
+  pollock: [[10,8],[30,25],[80,68],[200,150],[400,260],[800,400]],   // dense web
+  pop:     [[10,4],[30,8], [80,14],[200,24], [400,36], [800,52]],    // punchy
+  wave:    [[10,2],[30,4], [80,6], [200,8],  [400,11], [800,15]],    // few waves, lots of segments per wave
+  comic:   [[10,4],[30,6], [80,9], [200,12], [400,16], [800,20]],    // panels
+  gold:    [[10,40],[30,80],[80,140],[200,220],[400,300],[800,400]], // dense texture flecks
+  bloom:   [[10,4],[30,10],[80,22],[200,52], [400,90], [800,140]],   // flowers
+  bulge:   [[10,1],[30,2], [80,3], [200,5],  [400,7],  [800,10]],    // few big spheres
+  spiral:  [[10,4],[30,8], [80,15],[200,30], [400,50], [800,75]],    // forms
+  // Default curve for any style that just wants "smoothly grows with length".
+  default: [[10,6],[30,15],[80,32],[200,72], [400,120],[800,180]],
+};
+function _adaptiveMax(cn, curveName){
+  const curve = _DENSITY_CURVES[curveName] || _DENSITY_CURVES.default;
+  if(cn <= curve[0][0]) return Math.max(1, Math.round(cn * (curve[0][1]/curve[0][0])));
+  for(let i=1; i<curve.length; i++){
+    const [t0, v0] = curve[i-1], [t1, v1] = curve[i];
+    if(cn <= t1){
+      const frac = (cn - t0) / (t1 - t0);
+      return Math.max(1, Math.round(v0 + (v1 - v0) * frac));
+    }
+  }
+  // Beyond the last threshold: extrapolate at the slope of the final segment.
+  const [t0, v0] = curve[curve.length-2], [t1, v1] = curve[curve.length-1];
+  const slope = (v1 - v0) / (t1 - t0);
+  return Math.max(1, Math.round(v1 + (cn - t1) * slope));
+}
+function _progressive(lim, cn, max){
+  if(!cn || !lim) return 0;
+  const t = Math.min(1, lim / cn);
+  return Math.max(1, Math.round(max * t));
+}
+
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
@@ -1161,7 +1209,8 @@ function _partitionCanvas(chords, lim, ss, seedBase, capScale){
     :cn<=120 ? 60+Math.floor((cn-60)*0.5)
     :cn<=300 ? 90+Math.floor((cn-120)*0.30)
     :cn<=600 ? 144+Math.floor((cn-300)*0.12)
-    :180
+    :cn<=1200? 180+Math.floor((cn-600)*0.10)
+    :240+Math.floor((cn-1200)*0.05)
   )*cs)));
   const paintCount=Math.min(MAX_RECTS,Math.max(1,Math.round(lim*(MAX_RECTS/cn))));
   const key = cn+'|'+(ss|0)+'|'+seedBase+'|'+cs;
@@ -1206,7 +1255,9 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   const cn=chords.length;
-  // Field count 2–9, scaling with song length (more music → richer stack).
+  // Field count 2–12, scaling with song length (more music → richer stack).
+  // Rothko is intentionally minimal — even 12 fields is at the high end of his
+  // late stacked compositions, so we cap there rather than chasing density.
   const FIELDS = cn<=2 ? Math.max(1,cn)
               : cn<=8  ? 2
               : cn<=20 ? 3
@@ -1215,7 +1266,10 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
               : cn<=160? 6
               : cn<=280? 7
               : cn<=500? 8
-              : 9;
+              : cn<=800? 9
+              : cn<=1200?10
+              : cn<=1800?11
+              : 12;
   const lume=(r,g,b,boost)=>{const mx=Math.max(r,g,b,1),k=(255*boost)/mx;let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);const pull=(x)=>x===m2?x:x*0.7;return[Math.min(255,pull(R)),Math.min(255,pull(G)),Math.min(255,pull(B))];};
 
   // Ground: a deep saturated wash sampled from the whole piece, darkened.
@@ -1507,7 +1561,7 @@ function matissePhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   };
 
   // A few large shapes, well spaced (farthest-point placement like Miró B).
-  const shapeCount=Math.max(3,Math.min(9,3+Math.floor(cn/18)));
+  const shapeCount=Math.max(3,Math.min(14,3+Math.floor(cn/18)));
   const paintCount=Math.max(1,Math.min(shapeCount,Math.round(lim*(shapeCount/Math.max(1,cn)))));
   const placed=[];
   const pickPos=(rnd)=>{let best=null,bestD=-1;for(let t=0;t<6;t++){const x=CW*(0.13+rnd()*0.74),y=CH*(0.13+rnd()*0.74);let md=1e9;for(const p of placed){const d=Math.hypot(x-p.x,y-p.y);if(d<md)md=d;}if(!placed.length)md=1e9;if(md>bestD){bestD=md;best={x,y};}}return best;};
@@ -1621,15 +1675,12 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     return dripColors[0].col;
   };
 
-  // Pass count grows steeply with song length. Short songs are sparse (so the
-  // music structure shows), long songs build true Pollock density. Curve:
-  //   10 chords → 8 passes, 30 → 25, 60 → 55, 100 → 95, 150 → 135, 250+ → 200 (cap)
-  const passCount0 = Math.min(200,
-    N < 30 ? Math.ceil(N * 0.85)
-    : N < 80 ? 25 + Math.floor((N-30) * 0.85)
-    : N < 200 ? 68 + Math.floor((N-80) * 0.90)
-    : 176 + Math.floor((N-200) * 0.48)
-  );
+  // Pass count grows with song length, and every chord adds a drip until the
+  // last one. Curve is calibrated so short mood pieces stay airy (30 chords →
+  // 25 passes) while long songs build real Pollock density (400 chords → 260
+  // passes). No early ceiling — the painting completes on the final chord.
+  const passMaxFull = _adaptiveMax(chords.length, 'pollock');
+  const passCount0 = _progressive(N, chords.length, passMaxFull);
   // ── Variant chooser (stable per painting, re-rolls on Vary) ──
   //  A = dense all-over web (the classic Pollock).
   //  B = sparse, bolder strokes with more open canvas + thicker beads.
@@ -1888,7 +1939,18 @@ function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     else{c=pal[hint%pal.length];}
     return[Math.max(0,Math.min(255,c[0]+Math.round((rnd()-0.5)*28))),Math.max(0,Math.min(255,c[1]+Math.round((rnd()-0.5)*28))),Math.max(0,Math.min(255,c[2]+Math.round((rnd()-0.5)*28)))];
   };
-  const MAX_PLANES=Math.min(chords.length,Math.min(300,chords.length<=30?chords.length:chords.length<=80?30+Math.floor((chords.length-30)*0.60):chords.length<=200?60+Math.floor((chords.length-80)*0.50):120+Math.floor((chords.length-200)*0.60)));
+  // MAX_PLANES grows with chord count and is capped to prevent runaway subdivision
+  // (each plane = one subdivision step). Curve calibrated so short pieces stay
+  // legible (30 chords → 30 planes) and long pieces keep adding planes well
+  // past the 300-mark (was previous cap).
+  const MAX_PLANES=Math.min(chords.length,Math.min(500,
+    chords.length<=30  ? chords.length
+    :chords.length<=80 ? 30+Math.floor((chords.length-30)*0.60)
+    :chords.length<=200? 60+Math.floor((chords.length-80)*0.50)
+    :chords.length<=400? 120+Math.floor((chords.length-200)*0.60)
+    :chords.length<=700? 240+Math.floor((chords.length-400)*0.55)
+    :405+Math.floor((chords.length-700)*0.35)
+  ));
   const paintCount=Math.min(MAX_PLANES,Math.round(lim*(MAX_PLANES/chords.length)));
   let planes=[[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}]];
   for(let cut=0;cut<MAX_PLANES-1;cut++){
@@ -1949,7 +2011,7 @@ function picassoPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 
   // How many collage shapes — far fewer than phase A's planes; grows slowly.
   const cn=chords.length;
-  const shapeCount=Math.max(3,Math.min(11, 3+Math.floor(cn/14)));
+  const shapeCount=Math.max(3,Math.min(16, 3+Math.floor(cn/14)));
   const paintCount=Math.max(1,Math.min(shapeCount,Math.round(lim*(shapeCount/cn))));
 
   // Sample a chord's averaged color (same approach as phase A's fill).
@@ -2174,8 +2236,8 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     // Cream ground.
     ctx.fillStyle=cream; ctx.fillRect(0,0,CW,CH);
     // Number of lines scales gently with song length.
-    const nV = Math.max(3,Math.min(11, 3+Math.round(cn/120)));
-    const nH = Math.max(3,Math.min(11, 3+Math.round(cn/120)));
+    const nV = Math.max(3,Math.min(18, 3+Math.round(cn/80)));
+    const nH = Math.max(3,Math.min(18, 3+Math.round(cn/80)));
     const totalLines=nV+nH;
     const revealCount=Math.max(1,Math.min(totalLines,Math.ceil(lim*(totalLines/cn))));
     const lw=Math.max(4,Math.round(Math.min(CW,CH)*0.014));
@@ -2286,7 +2348,7 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const rnd = _seedRnd(53, ss, 0, 0);
 
   // ── Grid resolution: denser for longer pieces, capped for performance ──
-  const COLS = cn<=8 ? 10 : cn<=24 ? 14 : cn<=60 ? 18 : cn<=140 ? 24 : 30;
+  const COLS = cn<=8 ? 10 : cn<=24 ? 14 : cn<=60 ? 18 : cn<=140 ? 24 : cn<=300 ? 32 : cn<=600 ? 40 : 48;
   const ROWS = Math.max(6, Math.round(COLS * (CH / CW)));
   const cw = CW / COLS, ch = CH / ROWS;
 
@@ -2556,12 +2618,14 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   ctx.fillStyle = '#f7f5ef';
   ctx.fillRect(0, 0, CW, CH);
 
-  // Blot count auto-scales: short = airy, long = crowded.
-  const BLOTS = cn<=4 ? 4 : cn<=12 ? 8 : cn<=30 ? 16 : cn<=70 ? 28 : cn<=140 ? 44 : 64;
+  // Blot count auto-scales: short = airy, long = crowded. Curve grows past
+  // the 140-chord mark instead of capping there (was: max 64; now: ~140 at
+  // 800 chords).
+  const BLOTS = _adaptiveMax(cn, 'bloom');
   const visBlots = Math.max(1, Math.ceil((lim / cn) * BLOTS));
 
   // Coverage fraction grows with length — controls how much white is left.
-  const coverage = cn<=12 ? 0.42 : cn<=40 ? 0.55 : cn<=100 ? 0.68 : 0.8;
+  const coverage = cn<=12 ? 0.42 : cn<=40 ? 0.55 : cn<=100 ? 0.68 : cn<=300 ? 0.8 : 0.88;
 
   // ── Variant chooser (stable per painting, re-rolls on Vary) ──
   //  A = top-weighted field with drips falling down (classic Sam Francis).
@@ -2742,8 +2806,8 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     // ── Mandala: big segmented disc + ray crown + descending column ──────────
     const cx = CW*0.5, cy = CH*0.32;
     const R = Math.min(CW, CH) * 0.30;
-    // Ray crown
-    const rays = 36;
+    // Ray crown — count grows for very long pieces (was fixed at 36).
+    const rays = cn<=120 ? 36 : cn<=300 ? 48 : cn<=600 ? 60 : 72;
     const visRays = Math.ceil(revealFrac * rays);
     for(let i=0; i<visRays; i++){
       const ang = (i/rays)*Math.PI*2 - Math.PI/2;
@@ -2762,7 +2826,7 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     ctx.fillStyle = css([Math.min(255,disc[0]+40), Math.min(255,disc[1]+20), disc[2]], 1);
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
     // Descending column of small rings (chakra ladder)
-    const cols = cn<=8?6:cn<=24?10:cn<=60?16:22;
+    const cols = cn<=8?6:cn<=24?10:cn<=60?16:cn<=120?22:cn<=300?32:cn<=600?44:56;
     const visCols = Math.ceil(revealFrac*cols);
     const colTop = cy + R*1.0;
     const colBot = CH*0.98;
@@ -2780,7 +2844,7 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     }
   } else {
     // ── Floating forms: flowers, circles, spirals scattered on warm field ────
-    const FORMS = cn<=6?5:cn<=18?9:cn<=45?15:cn<=100?24:36;
+    const FORMS = _adaptiveMax(cn, 'spiral');
     const visForms = Math.ceil(revealFrac * FORMS);
     // stable positions
     const forms = [];
@@ -2859,8 +2923,12 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   gg.addColorStop(1, '#9c7822');
   ctx.fillStyle = gg;
   ctx.fillRect(0, 0, CW, CH);
-  // Leaf flecks — irregular lighter/darker patches for hammered-gold texture.
-  const flecks = 140;
+  // Leaf flecks — hammered-gold texture. Total density scales with song length
+  // (short mood pieces stay airy, long songs build rich texture), and they
+  // reveal progressively during playback so the back half of the track keeps
+  // adding visible flecks instead of just re-rendering the same set.
+  const flecksMaxFull = _adaptiveMax(cn, 'gold');
+  const flecks = _progressive(lim, cn, flecksMaxFull);
   for(let i=0;i<flecks;i++){
     const x = rnd()*CW, y = rnd()*CH, r = 4+rnd()*22;
     const light = rnd()>0.5;
@@ -3029,7 +3097,7 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
   const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
 
-  const COLS = cn<=6?3:cn<=18?4:cn<=45?5:cn<=100?6:7;
+  const COLS = cn<=6?3:cn<=18?4:cn<=45?5:cn<=100?6:cn<=200?7:cn<=350?9:12;
   const ROWS = Math.max(3, Math.round(COLS*(CH/CW)));
   const cw = CW/COLS, ch = CH/ROWS;
   const total = COLS*ROWS;
@@ -3200,7 +3268,7 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     // radiating from a centre, alternating two tones, with rotational wobble.
     const cx = CW*0.5, cy = CH*0.5;
     const maxR = Math.hypot(CW, CH)*0.55;
-    const RINGS = cn<=8?14:cn<=24?22:cn<=60?34:cn<=120?48:64;
+    const RINGS = cn<=8?14:cn<=24?22:cn<=60?34:cn<=120?48:cn<=240?68:cn<=400?92:120;
     const visRings = Math.max(1, Math.ceil((lim/cn)*RINGS));
     const ringStep = maxR / RINGS;
     // Draw outer→inner so inner rings sit on top.
@@ -3229,10 +3297,10 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 
   // ── Variant A — horizontal bands of vertical wavy stripes (default) ───────
   // Horizontal bands of vertical wavy stripes; each band reveals as lim grows.
-  const BANDS = cn<=8?6:cn<=24?10:cn<=60?16:cn<=120?22:28;
+  const BANDS = cn<=8?6:cn<=24?10:cn<=60?16:cn<=120?22:cn<=240?32:cn<=400?44:60;
   const visBands = Math.max(1, Math.ceil((lim/cn)*BANDS));
   const bandH = CH / BANDS;
-  const stripeW = CW / (cn<=20?14:cn<=60?22:32);
+  const stripeW = CW / (cn<=20?14:cn<=60?22:cn<=200?32:44);
 
   for(let b=0; b<visBands; b++){
     const y0 = b*bandH, y1 = y0+bandH;
@@ -3342,8 +3410,9 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     // central burst sized by reveal
     const r = Math.min(CW,CH)*0.18*(0.6+revealFrac*0.7);
     burst(CW*0.5, CH*0.42, r, chordCol(4, 1.1));
-    // a few satellite bursts revealed over time
-    const sats = Math.ceil(revealFrac * 6);
+    // a few satellite bursts revealed over time — count grows with song length.
+    const satMax = cn<=30?6:cn<=80?10:cn<=200?16:cn<=400?24:32;
+    const sats = Math.ceil(revealFrac * satMax);
     for(let i=0;i<sats;i++){
       const a = rnd()*Math.PI*2, d = Math.min(CW,CH)*(0.3+rnd()*0.25);
       burst(CW*0.5+Math.cos(a)*d, CH*0.42+Math.sin(a)*d, r*(0.3+rnd()*0.3), chordCol(i+5, 1.0));
@@ -3355,7 +3424,7 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 
   // Variant A — panel grid: each tile flat colour + halftone + black border.
-  const COLS = cn<=6?2:cn<=18?3:cn<=45?4:cn<=100?5:6;
+  const COLS = cn<=6?2:cn<=18?3:cn<=45?4:cn<=100?5:cn<=200?6:cn<=350?8:10;
   const ROWS = Math.max(2, Math.round(COLS*(CH/CW)));
   const cw = CW/COLS, ch = CH/ROWS;
   const total = COLS*ROWS;
@@ -3418,8 +3487,9 @@ function kusamaPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed){
     chords.length<=40  ? chords.length
     :chords.length<=120 ? 40+Math.floor((chords.length-40)*0.45)
     :chords.length<=300 ? 76+Math.floor((chords.length-120)*0.20)
-    :chords.length<=600 ? 112+Math.floor((chords.length-300)*0.08)
-    :136
+    :chords.length<=600 ? 112+Math.floor((chords.length-300)*0.12)
+    :chords.length<=1000? 148+Math.floor((chords.length-600)*0.08)
+    :180
   );
   const paintCount=Math.min(MAX_RECTS,Math.max(1,Math.round(lim*(MAX_RECTS/chords.length))));
   let rects=[{x:0,y:0,w:1,h:1}];
@@ -3534,7 +3604,7 @@ function kusamaPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed){
   // Candidate dots on a jittered fine grid; keep each with probability driven by
   // distance from the focus (denser far from focus). Total scales with canvas.
   const D=Math.min(CW,CH);
-  const baseStep=Math.max(5, D*(cn<30?0.045:cn<100?0.034:0.026)); // finer with more music
+  const baseStep=Math.max(5, D*(cn<30?0.045:cn<100?0.034:cn<250?0.026:cn<500?0.020:0.016)); // finer with more music
   const cols=Math.ceil(CW/baseStep)+1, rows=Math.ceil(CH/baseStep)+1;
   // Reveal proportionally to lim, so the field fills in as the piece plays.
   const revealFrac=Math.min(1, lim/Math.max(1,cn));
@@ -3646,12 +3716,13 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // Object density. Up to N=40 the original counts are kept verbatim (this
   // range looked fine); above 40 the slope is eased so larger pieces breathe
   // more — airier Constellations. Cap lowered 500→300.
-  const passCount=Math.min(N,Math.min(300,
+  const passCount=Math.min(N,Math.min(500,
     N<20  ? N
     :N<=40 ? 20+Math.floor((N-20)*1.2)
     :N<60  ? 44+Math.floor((N-40)*0.60)
     :N<150 ? 56+Math.floor((N-60)*0.55)
-    :        106+Math.floor((N-150)*0.30)
+    :N<400 ? 106+Math.floor((N-150)*0.30)
+    :        181+Math.floor((N-400)*0.40)
   ));
 
   // 2. SHAPES -- one constellation unit per pass
@@ -3817,7 +3888,7 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 
   // A FEW large shapes — count grows slowly and stays sparse.
   const cn=chords.length;
-  const shapeCount=Math.max(3, Math.min(8, 3+Math.floor(cn/22)));
+  const shapeCount=Math.max(3, Math.min(12, 3+Math.floor(cn/22)));
   const paintCount=Math.max(1, Math.min(shapeCount, Math.round(lim*(shapeCount/Math.max(1,cn)))));
 
   // Place shapes on a loose scatter, biased to keep them apart (sample a few
@@ -3941,11 +4012,11 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   const ss = sessionSeed|0;
   const isBW = mode==='bw';
 
-  const TH_TRI    = [2, 6, 12, 20, 32, 48];
-  const TH_RING   = [4, 11, 22, 38, 60];
-  const TH_LINE   = [1, 4, 8, 13, 19, 27, 38, 52, 70];
-  const TH_ARC    = [7, 18, 32, 50];
-  const TH_ZIG    = [10, 24, 42];
+  const TH_TRI    = [2, 6, 12, 20, 32, 48, 75, 120, 180, 260];
+  const TH_RING   = [4, 11, 22, 38, 60, 95, 140, 200, 280];
+  const TH_LINE   = [1, 4, 8, 13, 19, 27, 38, 52, 70, 100, 140, 190, 250];
+  const TH_ARC    = [7, 18, 32, 50, 80, 125, 180, 250];
+  const TH_ZIG    = [10, 24, 42, 70, 110, 160, 220];
 
   const countFor = (thresholds) => {
     let count = 0;
