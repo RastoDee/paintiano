@@ -1382,7 +1382,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         sub.builtTo=Math.max(sub.builtTo,lim);
         // Blit the cached substrate to the visible canvas in one operation.
         ctx.clearRect(0,0,CW,CH);
-        if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0);
+        if(style==='pollock'){
+          // Pollock: paint the full cream substrate in ONE fill — not the cached
+          // per-cell build-up. Otherwise you watch the background tile-in chord
+          // by chord, which reads as a rendering glitch (the substrate is meant
+          // to be a uniform raw canvas, present from frame one).
+          ctx.fillStyle = '#f2ede0';
+          ctx.fillRect(0,0,CW,CH);
+        } else if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0);
         // Run the canvas-wide overlay on top (this is the only per-frame cost
         // that legitimately scales with lim).
         if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
