@@ -6191,7 +6191,12 @@ Composition rules:
           <div className="pf-fade" onClick={e=>{ if(immersive) e.stopPropagation(); }} style={wrapStyle}>
             {playedComplete && <span style={{width:'100%',textAlign:'center',fontSize:(.52*effScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',marginBottom:2}}>{t('ctaTitle')}</span>}
             <button className="pf-lift" onClick={(e)=>{ e.stopPropagation(); if(canExport) setShowSizePicker(true); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 4px 18px rgba(240,192,64,.28)'}}>✦ {t('ctaKeep')}</button>
-            {playedComplete && <button className="pf-lift" onClick={(e)=>{ e.stopPropagation(); if(!recording) clearCanvas(); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {t('ctaAnother')}</button>}
+            {/* "New …" — context label, but always the SAME action as the bottom-bar
+                CLEAR (clearCanvas): in mic it stops capture + re-arms a blank slate,
+                in compose it fully clears, for a played piece it wipes for a fresh
+                start. Compose → "new composing", mic → "new recording", else
+                "new painting". */}
+            <button className="pf-lift" onClick={(e)=>{ e.stopPropagation(); if(!recording) clearCanvas(); }} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(207,197,168,.85)',background:'rgba(28,24,40,.5)',border:'1px solid rgba(207,197,168,.3)'}}>+ {composeMode ? t('ctaNewCompose') : (micActive||micArmed) ? t('ctaNewMic') : t('ctaAnother')}</button>
           </div>
         );
       })()}
