@@ -5159,6 +5159,21 @@ Composition rules:
   // mood/source clear it.
   const [forceSetup, setForceSetup] = useState(false);
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too)
+  // True when the viewport is wide enough for the desktop "phone shell" frame
+  // (matches the @media (min-width:769px) in PF_STYLE). Used to flip a few UI
+  // bits that need to behave differently between true mobile (canvas fills the
+  // screen, exit button can hang above) and PC (canvas is inset in the shell,
+  // exit button must stay inside the canvas so it's reachable).
+  const [isDesktopShell, setIsDesktopShell] = useState(()=> typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px)').matches);
+  useEffect(()=>{
+    if(typeof window==='undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(min-width: 769px)');
+    const upd = ()=> setIsDesktopShell(mq.matches);
+    upd();
+    if(mq.addEventListener) mq.addEventListener('change', upd);
+    else mq.addListener(upd);
+    return ()=>{ if(mq.removeEventListener) mq.removeEventListener('change', upd); else mq.removeListener(upd); };
+  },[]);
   // Anything the user can return to: a painting on the canvas, a live mode, or a
   // parked compose/mic draft. This drives the shared '← Canvas' (Resume) button so
   // the Setup⇄Canvas navigation is consistent across ALL modes.
@@ -6159,7 +6174,7 @@ Composition rules:
           }
         }}
       >
-        <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} style={{position:'absolute',top:immersive?-44:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:immersive||controlsAwake?1:0,pointerEvents:immersive||controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
+        <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} style={{position:'absolute',top:(immersive && !isDesktopShell)?-44:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:immersive||controlsAwake?1:0,pointerEvents:immersive||controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{immersive?<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>:<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>}</svg>
         </button>
         {/* Fullscreen CTA row — Next (shuffle: jump to a new variation, works

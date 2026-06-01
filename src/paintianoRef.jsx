@@ -69,6 +69,47 @@ const PF_STYLE = `
         .pf-artist, .pf-dice { outline:none!important; -webkit-tap-highlight-color:transparent; }
         .pf-artist:focus, .pf-artist:focus-visible, .pf-dice:focus, .pf-dice:focus-visible { outline:none!important; box-shadow:none; }
         .pf-artist-on:focus, .pf-artist-on:focus-visible { box-shadow:0 3px 10px rgba(240,192,64,.3)!important; }
+        /* ── Desktop mobile-shell ─────────────────────────────────────────────
+           Paintiano is designed mobile-first. On wider screens we frame the
+           whole app inside a phone-shaped column centered on a dark stage —
+           same pixel-perfect mobile UI, just inset with rounded corners and a
+           shadow. App layout/JSX is unchanged; this is purely a CSS frame.
+           Mobile (<769px): no changes, app fills the viewport edge-to-edge. */
+        @media (min-width: 769px) {
+          html, body {
+            background: #050507 !important;
+            min-height: 100vh;
+          }
+          body {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 28px 0;
+          }
+          #root {
+            width: min(440px, calc(100vw - 56px));
+            min-height: calc(100vh - 56px);
+            max-height: calc(100vh - 56px);
+            background: radial-gradient(ellipse at 50% -10%, #0e0b16, #06060c 55%);
+            border-radius: 32px;
+            box-shadow: 0 18px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(242,238,232,.06);
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(201,168,76,.35) transparent;
+          }
+          #root::-webkit-scrollbar { width: 6px; }
+          #root::-webkit-scrollbar-track { background: transparent; }
+          #root::-webkit-scrollbar-thumb { background: rgba(201,168,76,.3); border-radius: 3px; }
+          #root::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,.5); }
+          /* The Paintiano root div has min-height:100vh which would overflow
+             the shell on desktop. Override to fit the shell instead. */
+          #root > div[style*="minHeight:100vh"],
+          #root > div:first-child {
+            min-height: auto !important;
+          }
+        }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
 // "API in artifacts" feature; bump here when Anthropic publishes a newer one.

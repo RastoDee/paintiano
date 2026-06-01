@@ -79,19 +79,20 @@ const PF_STYLE = `
           html, body {
             background: #050507 !important;
             min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
           }
           body {
             display: flex;
             justify-content: center;
-            align-items: flex-start;
-            padding: 28px 0;
+            align-items: center;
+            padding: 0;
           }
           #root {
-            width: min(440px, calc(100vw - 56px));
-            min-height: calc(100vh - 56px);
-            max-height: calc(100vh - 56px);
+            width: min(480px, calc(100vw - 32px));
+            height: 100vh;
+            max-height: 100vh;
             background: radial-gradient(ellipse at 50% -10%, #0e0b16, #06060c 55%);
-            border-radius: 32px;
             box-shadow: 0 18px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(242,238,232,.06);
             overflow-y: auto;
             overflow-x: hidden;
