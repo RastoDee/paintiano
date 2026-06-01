@@ -69,6 +69,10 @@ const PF_STYLE = `
         .pf-artist, .pf-dice { outline:none!important; -webkit-tap-highlight-color:transparent; }
         .pf-artist:focus, .pf-artist:focus-visible, .pf-dice:focus, .pf-dice:focus-visible { outline:none!important; box-shadow:none; }
         .pf-artist-on:focus, .pf-artist-on:focus-visible { box-shadow:0 3px 10px rgba(240,192,64,.3)!important; }
+        /* Fullscreen exit button: on MOBILE only, hang above the canvas when
+           immersive (in the surrounding dark area). On desktop the shell media
+           query below keeps the button inside the canvas (default top:8). */
+        .pf-fs-btn-immersive { top: -44px !important; }
         /* ── Desktop mobile-shell ─────────────────────────────────────────────
            Paintiano is designed mobile-first. On wider screens we frame the
            whole app inside a phone-shaped column centered on a dark stage —
@@ -110,6 +114,9 @@ const PF_STYLE = `
           #root > div:first-child {
             min-height: auto !important;
           }
+          /* On desktop, keep the fullscreen exit button inside the canvas —
+             the mobile "hang above" position would land outside the shell. */
+          .pf-fs-btn-immersive { top: 8px !important; }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
