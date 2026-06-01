@@ -3,41 +3,11 @@ import ReactDOM from 'react-dom/client';
 import Paintiano from './paintiano.jsx';
 import { registerSW } from 'virtual:pwa-register';
 
-// ── Mobile error overlay (DEBUG) ─────────────────────────────────────────────
-// On mobile there's no console — when something throws, we get a white screen
-// with no clue why. This catches global JS errors + unhandled promise rejects
-// and renders them as a red banner over the app so we can read them in the
-// field. Remove once the bug is found.
-function showErrorOverlay(prefix, err){
-  try {
-    const msg = (err && (err.stack || err.message || String(err))) || 'unknown';
-    const id = '__pf_err_overlay__';
-    let box = document.getElementById(id);
-    if(!box){
-      box = document.createElement('div');
-      box.id = id;
-      box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#7a0000;color:#fff;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;padding:10px 14px 14px;max-height:60vh;overflow:auto;border-bottom:2px solid #ff4444;white-space:pre-wrap;word-break:break-word;';
-      document.body && document.body.appendChild(box);
-    }
-    const entry = document.createElement('div');
-    entry.style.cssText = 'margin-top:6px;border-top:1px solid rgba(255,255,255,.2);padding-top:6px;';
-    entry.textContent = '[' + prefix + '] ' + msg;
-    box.appendChild(entry);
-  } catch(_){}
-}
-window.addEventListener('error', (e)=> showErrorOverlay('error', e.error || e.message));
-window.addEventListener('unhandledrejection', (e)=> showErrorOverlay('promise', e.reason));
-
-try {
-  ReactDOM.createRoot(document.getElementById('root')).render(
-    <React.StrictMode>
-      <Paintiano />
-    </React.StrictMode>
-  );
-} catch(e){
-  showErrorOverlay('render', e);
-  throw e;
-}
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <Paintiano />
+  </React.StrictMode>
+);
 
 // ── PWA update handling ──────────────────────────────────────────────────────
 // Offline-first caching means the FIRST paint after a deploy is served from the
