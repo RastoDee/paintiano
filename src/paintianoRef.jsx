@@ -15453,7 +15453,7 @@ Composition rules:
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
-          const canRollNextFs = !anim && !busy && !demoReelOn && !recording;
+          const canRollNextFs = !anim && !working && !demoReelOn && !recording;
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
           if(!exportReadyFs && !showNextFs) return null;
           return (
@@ -15936,9 +15936,11 @@ Composition rules:
         )}
         {randomMode&&effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(()=>{
           // Next is available whenever there's a painting on the canvas — during
-          // play/pause AND after the track ends. Re-roll just changes the seed;
-          // a follow-up useEffect repaints the canvas with the new variation.
-          const canRoll = !anim && !busy && !demoReelOn && !recording;
+          // Play, during Pause, AND after the track ends. Re-roll just changes
+          // the seed; a follow-up useEffect repaints the canvas with the new
+          // variation. We deliberately do NOT gate on `busy` because `busy`
+          // includes `playing`, which would wrongly disable Next during Play.
+          const canRoll = !anim && !working && !demoReelOn && !recording;
           return (
             <button className="pf-lift" onClick={()=>{ if(canRoll) advanceVariation(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:canRoll?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+(canRoll?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
           );
