@@ -14678,16 +14678,18 @@ Composition rules:
           setTimeout(()=> playSample(), 100);
         };
         const commitAndExit = ()=>{
-          // User chose "Try your own" — stop any playback, wipe the canvas, then
-          // dismiss the onboarding so the standard setup screen takes over. Also
-          // clear style so the setup screen starts in its default state.
-          try { stopAll(); wipeCanvasNow(); setStyle(null); } catch(_){}
+          // User chose "Try your own" — stop playback, wipe canvas, clear all
+          // latches (style, stayActive, loadedSource) so the app cleanly returns
+          // to the setup screen.
+          try { stopAll(); wipeCanvasNow(); setStyle(null); setStayActive(false); setLoadedSource(null); } catch(_){}
           dismissOnboarding();
         };
         const skipOnboarding = ()=>{
-          // Skip from any phase — same as commit (clear + dismiss). Also reset
-          // style to null so the setup screen starts in its default state.
-          try { stopAll(); wipeCanvasNow(); setStyle(null); } catch(_){}
+          // Skip from any phase — same teardown as commit. The stayActive latch
+          // gets set whenever a sample is loaded; without clearing it here, the
+          // app would stay in the empty canvas view instead of jumping back to
+          // the setup screen.
+          try { stopAll(); wipeCanvasNow(); setStyle(null); setStayActive(false); setLoadedSource(null); } catch(_){}
           dismissOnboarding();
         };
         // Unified onboarding layout: dark full-screen background, title at

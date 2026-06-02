@@ -14699,7 +14699,7 @@ Composition rules:
         const isPlaying = onboardingPhase === 'playing';
         const isDone    = onboardingPhase === 'done';
         return (
-          <div style={{position:'fixed',inset:0,zIndex:99998,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',display:'flex',flexDirection:'column',alignItems:'center',padding:'40px 16px 22px',overflowY:'auto',animation:'pfDemoFade .5s ease-out'}}>
+          <div style={{position:'fixed',inset:0,zIndex:99998,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',display:'flex',flexDirection:'column',alignItems:'center',padding:'90px 16px 22px',overflowY:'auto',animation:'pfDemoFade .5s ease-out'}}>
             <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'2.2rem',color:PF.gold,letterSpacing:'-.01em',marginBottom:4,textAlign:'center'}}>Paintiano</h1>
             <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.95rem',color:'rgba(242,238,232,.7)',marginBottom:22,textAlign:'center'}}>music turns into paintings</div>
 
