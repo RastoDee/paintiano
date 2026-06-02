@@ -5322,7 +5322,7 @@ Composition rules:
         // overlay; the standard setup screen mounted underneath then takes over.
         const playSample = async ()=>{
           // Set visual prefs that pair with Liebestraum.
-          setStyle('miro');
+          setStyle('pollock');
           setMode('spectral');
           // Load events (fills chord state — viewMode becomes 'paint').
           loadSampleMidiTrimmed(30000);
@@ -5340,13 +5340,15 @@ Composition rules:
         };
         const commitAndExit = ()=>{
           // User chose "Try your own" — stop any playback, wipe the canvas, then
-          // dismiss the onboarding so the standard setup screen takes over.
-          try { stopAll(); wipeCanvasNow(); } catch(_){}
+          // dismiss the onboarding so the standard setup screen takes over. Also
+          // clear style so the setup screen starts in its default state.
+          try { stopAll(); wipeCanvasNow(); setStyle(null); } catch(_){}
           dismissOnboarding();
         };
         const skipOnboarding = ()=>{
-          // Skip from any phase — same as commit (clear + dismiss).
-          try { stopAll(); wipeCanvasNow(); } catch(_){}
+          // Skip from any phase — same as commit (clear + dismiss). Also reset
+          // style to null so the setup screen starts in its default state.
+          try { stopAll(); wipeCanvasNow(); setStyle(null); } catch(_){}
           dismissOnboarding();
         };
         // Unified onboarding layout: dark full-screen background, title at
@@ -5391,7 +5393,7 @@ Composition rules:
             </div>
 
             <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.9rem',color:'rgba(242,238,232,.7)',marginTop:18,textAlign:'center'}}>
-              <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted by Miró
+              <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted by Pollock
             </div>
 
             {/* Phase-specific bottom area */}

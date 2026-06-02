@@ -14523,14 +14523,11 @@ Composition rules:
   const [showOnboarding, setShowOnboarding] = useState(()=>{
     if(!ONBOARDING_V3) return false;
     try { return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_onboarded') !== '1'; }
-    catch(_) { return false; } // localStorage unavailable (private mode etc.) → skip onboarding
+    catch(_) { return false; }
   });
-  // Onboarding phases:
-  //   'preview' = the hero overlay is visible (fake painting + ▶ Play sample)
-  //   'playing' = the user tapped ▶; overlay fades to reveal the real Paintiano
-  //               canvas underneath while the sample plays
-  //   'done'    = sample finished; small CTA bar appears over the canvas with
-  //               "Try your own" (commit) and "Replay" (rewind) options
+  // Onboarding phase: 'preview' (idle hero with ▶), 'playing' (real-time mirror
+  // of the main canvas drawing the sample), 'done' (sample finished, CTA bar
+  // appears with "Try your own" + replay).
   const [onboardingPhase, setOnboardingPhase] = useState('preview');
   const dismissOnboarding = useCallback(()=>{
     setShowOnboarding(false);
@@ -14553,9 +14550,33 @@ Composition rules:
     return ()=>{ document.body.style.overflow=prevOverflow; window.removeEventListener('keydown',onKey); };
   },[immersive]);
   useEffect(()=>{ if(!isActiveView && immersive) setImmersive(false); },[isActiveView,immersive]);
-  // Watch for the onboarding sample finishing — once the user is in 'playing'
-  // phase and playback has stopped at the end, flip to 'done' so the CTA bar
-  // appears. Guarded by showOnboarding so it doesn't fire on normal use.
+  // ── Onboarding: mirror the main canvas into a mini canvas inside the
+  // onboarding box during the 'playing' phase. We just drawImage from the
+  // main <canvas> (which is doing the real painting) onto our mini one each
+  // animation frame. No drawing logic is duplicated — the demo is literally
+  // a real-time copy of the main canvas, scaled down.
+  const onboardingCanvasRef = useRef(null);
+  useEffect(()=>{
+    if(!showOnboarding || onboardingPhase==='preview') return;
+    const mini = onboardingCanvasRef.current;
+    const main = canvasRef.current;
+    if(!mini || !main) return;
+    const mctx = mini.getContext('2d');
+    if(!mctx) return;
+    let raf = 0;
+    const tick = ()=>{
+      try {
+        // Clear then draw scaled. Mini canvas is sized to its display size in
+        // its useEffect setup below; drawImage scales the main into the mini.
+        mctx.clearRect(0,0,mini.width,mini.height);
+        mctx.drawImage(main, 0, 0, mini.width, mini.height);
+      } catch(_){}
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return ()=> cancelAnimationFrame(raf);
+  },[showOnboarding, onboardingPhase]);
+  // Detect when the onboarding sample finishes — flip to 'done' phase.
   useEffect(()=>{
     if(!showOnboarding) return;
     if(onboardingPhase !== 'playing') return;
@@ -14639,109 +14660,100 @@ Composition rules:
         // their own. Both paths mark the localStorage flag and unmount this
         // overlay; the standard setup screen mounted underneath then takes over.
         const playSample = async ()=>{
-          // Visual prefs that pair well with the sample piece.
+          // Set visual prefs that pair with Liebestraum.
           setStyle('miro');
           setMode('spectral');
-          // Load events (fills chord state + grid + viewMode='paint').
+          // Load events (fills chord state — viewMode becomes 'paint').
           loadSampleMidiTrimmed(30000);
-          // Switch to 'playing' phase — overlay fades to reveal the real
-          // Paintiano canvas underneath. We do NOT dismiss the onboarding yet:
-          // the user sees the painting build chord-by-chord on the actual
-          // canvas (not a fake mockup), and when playback ends our completion
-          // useEffect flips the phase to 'done' for the CTA bar.
+          // Stay in the onboarding overlay — flip phase so the mini canvas
+          // starts mirroring. Auto-play after a short delay so React commits
+          // the chord state first.
           setOnboardingPhase('playing');
-          // Auto-play kicks in after a short delay so React commits the chord
-          // state first.
           setTimeout(()=>{ try { startPlay && startPlay(); } catch(_){} }, 280);
         };
         const replaySample = ()=>{
+          // Stop current playback, then re-run playSample from scratch.
+          try { stopAll(); } catch(_){}
           setOnboardingPhase('preview');
-          // Slight delay so the overlay re-opens cleanly before we start over.
-          setTimeout(()=> playSample(), 80);
+          setTimeout(()=> playSample(), 100);
         };
         const commitAndExit = ()=>{
-          // User chose "Try your own" — clear the sample painting so they land
-          // on a clean setup screen, then dismiss the onboarding.
+          // User chose "Try your own" — stop any playback, wipe the canvas, then
+          // dismiss the onboarding so the standard setup screen takes over.
           try { stopAll(); wipeCanvasNow(); } catch(_){}
           dismissOnboarding();
         };
-        // ── PHASE: 'playing' — render a full-bleed dark overlay with title at
-        //    top + caption beneath. The real Paintiano canvas gets CSS-fixed
-        //    into the center via the inline-style override on its <canvas>
-        //    element (see canvas JSX below — guarded by onboardingPhase). The
-        //    canvas STAYS in the React tree (no remount, no portal), it just
-        //    flies into the overlay visually. Tap on canvas is still active
-        //    (pause/resume) but app chrome around it is hidden behind us.
-        if(onboardingPhase === 'playing'){
-          return (
-            <div style={{position:'fixed',inset:0,zIndex:99998,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',display:'flex',flexDirection:'column',alignItems:'center',padding:'36px 16px 24px',animation:'pfDemoFade .4s ease-out'}}>
-              <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'2rem',color:PF.gold,letterSpacing:'-.01em',textAlign:'center'}}>Paintiano</div>
-              <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.9rem',color:'rgba(242,238,232,.7)',marginTop:6,marginBottom:24,textAlign:'center'}}>
-                <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted by Miró
-              </div>
-              {/* Canvas itself is positioned absolutely via its own inline style
-                  override (see <canvas> JSX) — we leave room here so the
-                  overlay layout matches. */}
-              <div style={{flex:'1 1 auto',width:'100%',maxWidth:560,position:'relative'}}/>
-              <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.78rem',color:'rgba(242,238,232,.5)',letterSpacing:'.04em',marginTop:16,textAlign:'center',paddingBottom:8}}>
-                watch as each chord becomes a brushstroke…
-              </div>
-            </div>
-          );
-        }
-        // ── PHASE: 'done' — sample finished. Render only a CTA bar pinned to
-        //    the bottom of the viewport, over the finished painting which sits
-        //    on the real canvas underneath. The painting is the hero now.
-        if(onboardingPhase === 'done'){
-          return (
-            <div style={{position:'fixed',inset:0,zIndex:99998,pointerEvents:'none',display:'flex',flexDirection:'column',justifyContent:'flex-end',padding:'0 16px 32px',animation:'pfDemoFade .6s ease-out'}}>
-              <div style={{pointerEvents:'auto',display:'flex',flexDirection:'column',alignItems:'center',gap:14,padding:'18px 16px 14px',background:'linear-gradient(to top, rgba(6,6,12,.95), rgba(6,6,12,.85) 65%, rgba(6,6,12,0))',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:'18px 18px 0 0',maxWidth:560,margin:'0 auto',width:'100%'}}>
-                <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.95rem',color:'rgba(242,238,232,.85)',textAlign:'center'}}>
-                  Your painting will be uniquely yours
-                </div>
-                <div style={{display:'flex',gap:10,alignItems:'center'}}>
-                  <button onClick={replaySample} style={{padding:'11px 18px',background:'rgba(28,24,40,.6)',color:'rgba(207,197,168,.9)',border:'1px solid rgba(207,197,168,.3)',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:'.7rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',WebkitTapHighlightColor:'transparent'}}>↻ Replay</button>
-                  <button onClick={commitAndExit} style={{padding:'13px 28px',display:'inline-flex',alignItems:'center',gap:6,color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:'.8rem',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent'}}>Try your own ›</button>
-                </div>
-              </div>
-            </div>
-          );
-        }
-        // ── PHASE: 'preview' — hero overlay (default)
+        const skipOnboarding = ()=>{
+          // Skip from any phase — same as commit (clear + dismiss).
+          try { stopAll(); wipeCanvasNow(); } catch(_){}
+          dismissOnboarding();
+        };
+        // Unified onboarding layout: dark full-screen background, title at
+        // top, demo box in the middle (fake painting in 'preview', live mirror
+        // of the main canvas in 'playing', last-frame snapshot in 'done'),
+        // caption beneath, phase-specific CTA, skip link at the very bottom.
+        const isPlaying = onboardingPhase === 'playing';
+        const isDone    = onboardingPhase === 'done';
         return (
-          <div style={{position:'fixed',inset:0,zIndex:99998,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',padding:'48px 16px 24px',overflowY:'auto',animation:'pfDemoFade .5s ease-out'}}>
-            <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'2.4rem',color:PF.gold,letterSpacing:'-.01em',marginBottom:6,textAlign:'center'}}>Paintiano</h1>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'1rem',color:'rgba(242,238,232,.7)',marginBottom:28,textAlign:'center'}}>music turns into paintings</div>
-            <div onClick={playSample} role="button" aria-label="play sample" style={{position:'relative',width:'min(440px, 92vw)',aspectRatio:'1.4 / 1',borderRadius:18,border:'1px solid rgba(201,168,76,.3)',overflow:'hidden',background:'radial-gradient(ellipse at 30% 20%, #2a1545 0%, #100620 30%, #06060c 70%)',cursor:'pointer',boxShadow:'0 18px 60px rgba(0,0,0,.5)',animation:'pfFloat 4s ease-in-out infinite'}}>
-              <div style={{position:'absolute',inset:0,backgroundImage:`
-                radial-gradient(circle 7px at 18% 24%, #ffd07a 0%, transparent 100%),
-                radial-gradient(circle 5px at 26% 32%, #5cc7ff 0%, transparent 100%),
-                radial-gradient(circle 6px at 64% 18%, #ff6b9d 0%, transparent 100%),
-                radial-gradient(circle 9px at 75% 38%, #ffd07a 0%, transparent 100%),
-                radial-gradient(circle 4px at 42% 52%, #b4f0c8 0%, transparent 100%),
-                radial-gradient(circle 8px at 32% 68%, #ff6b9d 0%, transparent 100%),
-                radial-gradient(circle 6px at 56% 74%, #5cc7ff 0%, transparent 100%),
-                radial-gradient(circle 5px at 78% 64%, #c9a84c 0%, transparent 100%),
-                radial-gradient(circle 7px at 22% 80%, #ffd07a 0%, transparent 100%),
-                radial-gradient(circle 4px at 88% 88%, #b4f0c8 0%, transparent 100%)
-              `,opacity:.85}}/>
-              <div style={{position:'absolute',inset:0,background:`
-                linear-gradient(45deg, transparent 49%, rgba(255,200,120,.45) 49%, rgba(255,200,120,.45) 51%, transparent 51%) 30% 40% / 36px 2px no-repeat,
-                linear-gradient(-45deg, transparent 49%, rgba(180,240,200,.55) 49%, rgba(180,240,200,.55) 51%, transparent 51%) 70% 50% / 28px 2px no-repeat
-              `,opacity:.6}}/>
-              <button onClick={(e)=>{e.stopPropagation(); playSample();}} style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',display:'inline-flex',alignItems:'center',gap:10,padding:'15px 28px',borderRadius:30,cursor:'pointer',fontFamily:'inherit',fontSize:'.95rem',fontWeight:700,letterSpacing:'.15em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.45)',animation:'pfPulse 2.2s ease-in-out infinite',WebkitTapHighlightColor:'transparent'}}>
-                <span style={{fontSize:'1.1rem',lineHeight:1}}>▶</span>
-                Play sample
-              </button>
+          <div style={{position:'fixed',inset:0,zIndex:99998,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',display:'flex',flexDirection:'column',alignItems:'center',padding:'40px 16px 22px',overflowY:'auto',animation:'pfDemoFade .5s ease-out'}}>
+            <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'2.2rem',color:PF.gold,letterSpacing:'-.01em',marginBottom:4,textAlign:'center'}}>Paintiano</h1>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.95rem',color:'rgba(242,238,232,.7)',marginBottom:22,textAlign:'center'}}>music turns into paintings</div>
+
+            {/* Demo box — same shape in all 3 phases */}
+            <div style={{position:'relative',width:'min(440px, 92vw)',aspectRatio:'1.4 / 1',borderRadius:18,border:'1px solid rgba(201,168,76,.3)',overflow:'hidden',background:'radial-gradient(ellipse at 30% 20%, #2a1545 0%, #100620 30%, #06060c 70%)',boxShadow:'0 18px 60px rgba(0,0,0,.5)'}}>
+              {/* Fake painting layer — visible in 'preview' only */}
+              {!isPlaying && !isDone && (
+                <>
+                  <div style={{position:'absolute',inset:0,backgroundImage:`
+                    radial-gradient(circle 7px at 18% 24%, #ffd07a 0%, transparent 100%),
+                    radial-gradient(circle 5px at 26% 32%, #5cc7ff 0%, transparent 100%),
+                    radial-gradient(circle 6px at 64% 18%, #ff6b9d 0%, transparent 100%),
+                    radial-gradient(circle 9px at 75% 38%, #ffd07a 0%, transparent 100%),
+                    radial-gradient(circle 4px at 42% 52%, #b4f0c8 0%, transparent 100%),
+                    radial-gradient(circle 8px at 32% 68%, #ff6b9d 0%, transparent 100%),
+                    radial-gradient(circle 6px at 56% 74%, #5cc7ff 0%, transparent 100%),
+                    radial-gradient(circle 5px at 78% 64%, #c9a84c 0%, transparent 100%),
+                    radial-gradient(circle 7px at 22% 80%, #ffd07a 0%, transparent 100%),
+                    radial-gradient(circle 4px at 88% 88%, #b4f0c8 0%, transparent 100%)
+                  `,opacity:.85}}/>
+                  <button onClick={playSample} aria-label="play sample" style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',display:'inline-flex',alignItems:'center',gap:10,padding:'15px 28px',borderRadius:30,cursor:'pointer',fontFamily:'inherit',fontSize:'.95rem',fontWeight:700,letterSpacing:'.15em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.45)',animation:'pfPulse 2.2s ease-in-out infinite',WebkitTapHighlightColor:'transparent'}}>
+                    <span style={{fontSize:'1.1rem',lineHeight:1}}>▶</span> Play sample
+                  </button>
+                </>
+              )}
+              {/* Mirror canvas — visible in 'playing' AND 'done' (keeps last
+                  frame after playback stops). It's drawn each frame from the
+                  real main canvas via the useEffect above. */}
+              {(isPlaying || isDone) && (
+                <canvas ref={onboardingCanvasRef} width={616} height={440} style={{width:'100%',height:'100%',display:'block'}}/>
+              )}
             </div>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.95rem',color:'rgba(242,238,232,.65)',marginTop:18,textAlign:'center'}}>
-              <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted in the style of Miró
+
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.9rem',color:'rgba(242,238,232,.7)',marginTop:18,textAlign:'center'}}>
+              <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted by Miró
             </div>
-            <div style={{marginTop:30,maxWidth:'min(420px, 90vw)',fontSize:'.78rem',lineHeight:1.6,color:'rgba(242,238,232,.5)',textAlign:'center'}}>
-              Paintiano listens to music — MIDI, your voice, audio, even an AI-composed mood — and turns each chord into a brushstroke. Every painting is unique.
-            </div>
-            <button onClick={dismissOnboarding} style={{marginTop:'auto',marginBottom:8,padding:'10px 24px',background:'transparent',border:'none',color:'rgba(242,238,232,.45)',fontFamily:'inherit',fontSize:'.7rem',fontWeight:500,letterSpacing:'.2em',textTransform:'uppercase',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
-              skip — let me explore
+
+            {/* Phase-specific bottom area */}
+            {!isPlaying && !isDone && (
+              <div style={{marginTop:24,maxWidth:'min(420px, 90vw)',fontSize:'.78rem',lineHeight:1.6,color:'rgba(242,238,232,.5)',textAlign:'center'}}>
+                Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.
+              </div>
+            )}
+            {isPlaying && (
+              <div style={{marginTop:22,fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.8rem',color:'rgba(242,238,232,.5)',letterSpacing:'.04em',textAlign:'center'}}>
+                each chord becomes a brushstroke…
+              </div>
+            )}
+            {isDone && (
+              <div style={{marginTop:22,display:'flex',gap:10,alignItems:'center'}}>
+                <button onClick={replaySample} style={{padding:'11px 18px',background:'rgba(28,24,40,.6)',color:'rgba(207,197,168,.9)',border:'1px solid rgba(207,197,168,.3)',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:'.7rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',WebkitTapHighlightColor:'transparent'}}>↻ Replay</button>
+                <button onClick={commitAndExit} style={{padding:'13px 28px',display:'inline-flex',alignItems:'center',gap:6,color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:'.8rem',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent'}}>Try your own ›</button>
+              </div>
+            )}
+
+            {/* Skip — always visible at the bottom */}
+            <button onClick={skipOnboarding} style={{marginTop:'auto',marginBottom:8,padding:'10px 24px',background:'transparent',border:'none',color:'rgba(242,238,232,.4)',fontFamily:'inherit',fontSize:'.7rem',fontWeight:500,letterSpacing:'.2em',textTransform:'uppercase',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
+              skip
             </button>
           </div>
         );
@@ -15703,7 +15715,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{}),...((showOnboarding && onboardingPhase==='playing')?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%, -50%)',width:'min(90vw, 480px)',maxWidth:'min(90vw, 480px)',height:'auto',aspectRatio:CW+' / '+CH,zIndex:99999,borderRadius:14,boxShadow:'0 18px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(201,168,76,.3)'}:{})}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
