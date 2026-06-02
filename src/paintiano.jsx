@@ -14525,8 +14525,16 @@ Composition rules:
     try { return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_onboarded') !== '1'; }
     catch(_) { return false; } // localStorage unavailable (private mode etc.) → skip onboarding
   });
+  // Onboarding phases:
+  //   'preview' = the hero overlay is visible (fake painting + ▶ Play sample)
+  //   'playing' = the user tapped ▶; overlay fades to reveal the real Paintiano
+  //               canvas underneath while the sample plays
+  //   'done'    = sample finished; small CTA bar appears over the canvas with
+  //               "Try your own" (commit) and "Replay" (rewind) options
+  const [onboardingPhase, setOnboardingPhase] = useState('preview');
   const dismissOnboarding = useCallback(()=>{
     setShowOnboarding(false);
+    setOnboardingPhase('preview');
     try { localStorage.setItem('paintiano_onboarded', '1'); } catch(_){}
   },[]);
   // Anything the user can return to: a painting on the canvas, a live mode, or a
@@ -14545,6 +14553,15 @@ Composition rules:
     return ()=>{ document.body.style.overflow=prevOverflow; window.removeEventListener('keydown',onKey); };
   },[immersive]);
   useEffect(()=>{ if(!isActiveView && immersive) setImmersive(false); },[isActiveView,immersive]);
+  // Watch for the onboarding sample finishing — once the user is in 'playing'
+  // phase and playback has stopped at the end, flip to 'done' so the CTA bar
+  // appears. Guarded by showOnboarding so it doesn't fire on normal use.
+  useEffect(()=>{
+    if(!showOnboarding) return;
+    if(onboardingPhase !== 'playing') return;
+    if(chords.length === 0) return;
+    if(!playing && disp >= chords.length) setOnboardingPhase('done');
+  },[showOnboarding, onboardingPhase, playing, disp, chords.length]);
   // ── Auto-hide the fullscreen control during playback (video-player pattern) ──
   // While a painting is actively playing, the corner fullscreen button fades out
   // after a short idle period so it stops covering the artwork. Any pointer move
@@ -14627,11 +14644,54 @@ Composition rules:
           setMode('spectral');
           // Load events (fills chord state + grid + viewMode='paint').
           loadSampleMidiTrimmed(30000);
-          // Mark seen + dismiss this overlay. Auto-play kicks in after a short
-          // delay so React has a chance to commit the chord state first.
-          dismissOnboarding();
+          // Switch to 'playing' phase — overlay fades to reveal the real
+          // Paintiano canvas underneath. We do NOT dismiss the onboarding yet:
+          // the user sees the painting build chord-by-chord on the actual
+          // canvas (not a fake mockup), and when playback ends our completion
+          // useEffect flips the phase to 'done' for the CTA bar.
+          setOnboardingPhase('playing');
+          // Auto-play kicks in after a short delay so React commits the chord
+          // state first.
           setTimeout(()=>{ try { startPlay && startPlay(); } catch(_){} }, 280);
         };
+        const replaySample = ()=>{
+          setOnboardingPhase('preview');
+          // Slight delay so the overlay re-opens cleanly before we start over.
+          setTimeout(()=> playSample(), 80);
+        };
+        const commitAndExit = ()=>{
+          // User chose "Try your own" — clear the sample painting so they land
+          // on a clean setup screen, then dismiss the onboarding.
+          try { stopAll(); wipeCanvasNow(); } catch(_){}
+          dismissOnboarding();
+        };
+        // ── PHASE: 'playing' — overlay fades out so the real Paintiano canvas
+        //    (mounted in the normal app tree underneath) is visible. The user
+        //    sees their actual painting build chord by chord. No buttons,
+        //    no chrome — just the work. We keep the overlay div mounted but
+        //    fully transparent so the completion effect can still update it.
+        if(onboardingPhase === 'playing'){
+          return <div style={{position:'fixed',inset:0,zIndex:99998,pointerEvents:'none',opacity:0,transition:'opacity .5s ease'}}/>;
+        }
+        // ── PHASE: 'done' — sample finished. Render only a CTA bar pinned to
+        //    the bottom of the viewport, over the finished painting which sits
+        //    on the real canvas underneath. The painting is the hero now.
+        if(onboardingPhase === 'done'){
+          return (
+            <div style={{position:'fixed',inset:0,zIndex:99998,pointerEvents:'none',display:'flex',flexDirection:'column',justifyContent:'flex-end',padding:'0 16px 32px',animation:'pfDemoFade .6s ease-out'}}>
+              <div style={{pointerEvents:'auto',display:'flex',flexDirection:'column',alignItems:'center',gap:14,padding:'18px 16px 14px',background:'linear-gradient(to top, rgba(6,6,12,.95), rgba(6,6,12,.85) 65%, rgba(6,6,12,0))',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:'18px 18px 0 0',maxWidth:560,margin:'0 auto',width:'100%'}}>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.95rem',color:'rgba(242,238,232,.85)',textAlign:'center'}}>
+                  Your painting will be uniquely yours
+                </div>
+                <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                  <button onClick={replaySample} style={{padding:'11px 18px',background:'rgba(28,24,40,.6)',color:'rgba(207,197,168,.9)',border:'1px solid rgba(207,197,168,.3)',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:'.7rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',WebkitTapHighlightColor:'transparent'}}>↻ Replay</button>
+                  <button onClick={commitAndExit} style={{padding:'13px 28px',display:'inline-flex',alignItems:'center',gap:6,color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:'.8rem',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent'}}>Try your own ›</button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        // ── PHASE: 'preview' — hero overlay (default)
         return (
           <div style={{position:'fixed',inset:0,zIndex:99998,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',padding:'48px 16px 24px',overflowY:'auto',animation:'pfDemoFade .5s ease-out'}}>
             <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'2.4rem',color:PF.gold,letterSpacing:'-.01em',marginBottom:6,textAlign:'center'}}>Paintiano</h1>
