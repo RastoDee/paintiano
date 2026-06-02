@@ -14665,33 +14665,26 @@ Composition rules:
           try { stopAll(); wipeCanvasNow(); } catch(_){}
           dismissOnboarding();
         };
-        // ── PHASE: 'playing' — the user tapped ▶. We render a full-bleed dark
-        //    overlay with the title + "Liszt × Miró" caption at the top and a
-        //    transparent "window" in the middle that reveals the real Paintiano
-        //    canvas drawing underneath. The rest of the app chrome (setup tiles,
-        //    header nav) is hidden behind the overlay, so visually the painting
-        //    appears to happen INSIDE the onboarding box — no jump-to-canvas
-        //    surprise. The window's position roughly matches where canvas sits
-        //    in the app layout; CSS-only solution, no DOM moves.
+        // ── PHASE: 'playing' — render a full-bleed dark overlay with title at
+        //    top + caption beneath. The real Paintiano canvas gets CSS-fixed
+        //    into the center via the inline-style override on its <canvas>
+        //    element (see canvas JSX below — guarded by onboardingPhase). The
+        //    canvas STAYS in the React tree (no remount, no portal), it just
+        //    flies into the overlay visually. Tap on canvas is still active
+        //    (pause/resume) but app chrome around it is hidden behind us.
         if(onboardingPhase === 'playing'){
           return (
-            <div style={{position:'fixed',inset:0,zIndex:99998,display:'flex',flexDirection:'column',pointerEvents:'auto',animation:'pfDemoFade .4s ease-out'}}>
-              {/* Top dark band — title + caption */}
-              <div style={{background:'radial-gradient(ellipse at 50% 120%, #0e0b16, #06060c 70%)',padding:'36px 16px 18px',textAlign:'center',flexShrink:0}}>
-                <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'1.8rem',color:PF.gold,letterSpacing:'-.01em'}}>Paintiano</div>
-                <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',color:'rgba(242,238,232,.65)',marginTop:4}}>
-                  <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted by Miró
-                </div>
+            <div style={{position:'fixed',inset:0,zIndex:99998,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',display:'flex',flexDirection:'column',alignItems:'center',padding:'36px 16px 24px',animation:'pfDemoFade .4s ease-out'}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'2rem',color:PF.gold,letterSpacing:'-.01em',textAlign:'center'}}>Paintiano</div>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.9rem',color:'rgba(242,238,232,.7)',marginTop:6,marginBottom:24,textAlign:'center'}}>
+                <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted by Miró
               </div>
-              {/* Transparent middle — canvas underneath shows through. We give
-                  it min-height to ensure the canvas region (under the overlay
-                  in the normal layout) is fully framed. */}
-              <div style={{flex:'1 1 auto',background:'transparent',minHeight:'min(70vh, 480px)'}}/>
-              {/* Bottom dark band — masks setup chrome below the canvas */}
-              <div style={{background:'radial-gradient(ellipse at 50% -20%, #0e0b16, #06060c 70%)',padding:'18px 16px 28px',textAlign:'center',flexShrink:0,minHeight:80}}>
-                <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.75rem',color:'rgba(242,238,232,.45)',letterSpacing:'.04em'}}>
-                  watch as each chord becomes a brushstroke…
-                </div>
+              {/* Canvas itself is positioned absolutely via its own inline style
+                  override (see <canvas> JSX) — we leave room here so the
+                  overlay layout matches. */}
+              <div style={{flex:'1 1 auto',width:'100%',maxWidth:560,position:'relative'}}/>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.78rem',color:'rgba(242,238,232,.5)',letterSpacing:'.04em',marginTop:16,textAlign:'center',paddingBottom:8}}>
+                watch as each chord becomes a brushstroke…
               </div>
             </div>
           );
@@ -15710,7 +15703,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{}),...((showOnboarding && onboardingPhase==='playing')?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%, -50%)',width:'min(90vw, 480px)',maxWidth:'min(90vw, 480px)',height:'auto',aspectRatio:CW+' / '+CH,zIndex:99999,borderRadius:14,boxShadow:'0 18px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(201,168,76,.3)'}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
