@@ -14506,9 +14506,6 @@ Composition rules:
     return ()=>{ document.body.style.overflow=prevOverflow; window.removeEventListener('keydown',onKey); };
   },[immersive]);
   useEffect(()=>{ if(!isActiveView && immersive) setImmersive(false); },[isActiveView,immersive]);
-  // When immersive mode exits, drop any open fullscreen picker so re-entering
-  // starts from a clean state.
-  useEffect(()=>{ if(!immersive && fsPicker) setFsPicker(null); },[immersive,fsPicker]);
   // ── Auto-hide the fullscreen control during playback (video-player pattern) ──
   // While a painting is actively playing, the corner fullscreen button fades out
   // after a short idle period so it stops covering the artwork. Any pointer move
@@ -14516,12 +14513,6 @@ Composition rules:
   // playing it stays visible (it's the way INTO immersive view). Driven by a ref
   // timer so per-pixel pointer moves don't thrash React state.
   const [controlsAwake, setControlsAwake] = useState(true);
-  // Fullscreen picker: 'style' shows the vertical 8+8 column picker, 'color'
-  // shows the 2×2 palette grid, null = closed. Opening one auto-closes the
-  // other. Tapping the canvas closes any open picker (handled in the tap
-  // handler below). When open, the picker keeps the dock visible (no auto-
-  // hide) so users can browse without the dock fading mid-tap.
-  const [fsPicker, setFsPicker] = useState(null);
   const controlsIdleRef = useRef(null);
   const wakeControls = useCallback(()=>{
     setControlsAwake(true);
@@ -15450,7 +15441,7 @@ Composition rules:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onClick={()=>{ wakeControls(); if(fsPicker) setFsPicker(null); }} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {immersive && <div onClick={wakeControls} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
       <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
@@ -15459,10 +15450,6 @@ Composition rules:
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
           if(playing||immersive) wakeControls();
-          // If a fullscreen picker is open, the user just tapped OUTSIDE its
-          // buttons (those stopPropagation) — treat as "dismiss" and bail out
-          // so we don't also try to select a chord on the painting.
-          if(immersive && fsPicker){ setFsPicker(null); return; }
           // During the demo reel a canvas tap is the "escape" gesture — kill
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
@@ -15506,80 +15493,6 @@ Composition rules:
         <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} className={'pf-fs-btn'+(immersive?' pf-fs-btn-immersive':'')} style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:immersive||controlsAwake?1:0,pointerEvents:immersive||controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{immersive?<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>:<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>}</svg>
         </button>
-        {/* Fullscreen style + color pickers — appear in-canvas when the user
-            taps the corresponding chip in the bottom dock. Style picker is
-            two vertical columns (8 left, 8 right) so all 16 options fit on
-            screen without scrolling. Color picker is a 2×2 grid (4 modes).
-            Tap outside (on the canvas) closes them — handled by the canvas
-            tap handler upstream. */}
-        {immersive && fsPicker==='style' && chords.length>0 && viewMode!=='image' && (()=>{
-          const ALL_STYLES = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
-          const STYLE_COLS = [
-            [null, 'pollock','kandinsky','miro','gold','kusama','rothko','mondrian'],
-            ['matisse','picasso','bloom','arcs','bulge','spiral','wave','pop'],
-          ];
-          const pickStyle = (key)=>{
-            // null = Mosaic; otherwise apply the artist style. If the user is
-            // toggling on the same style, close the picker; tapping a new one
-            // also closes (so the user immediately sees the painting morph).
-            if(key === effectiveStyle){ setFsPicker(null); return; }
-            setStyle(key); setFsPicker(null);
-          };
-          const currentKey = effectiveStyle && effectiveStyle!=='notes' ? effectiveStyle : null;
-          return (
-            <>
-              {/* "inspired by [Artist]" caption — only when an artist style is
-                  selected. Sits in the middle of the canvas, low opacity so it
-                  doesn't fight with the painting. */}
-              {currentKey && (
-                <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%, -50%)',zIndex:15,fontFamily:'Cormorant Garamond,serif',fontStyle:'italic',fontSize:'1rem',color:'rgba(255,210,140,.85)',letterSpacing:'.04em',textAlign:'center',pointerEvents:'none',textShadow:'0 0 24px rgba(0,0,0,.8)'}}>
-                  <span style={{display:'block',fontSize:'.55rem',color:'rgba(201,168,76,.55)',letterSpacing:'.25em',textTransform:'uppercase',marginBottom:4}}>{(t('inspiredBy')||'inspired by {artist}').replace(' {artist}','').replace('{artist}','')}</span>
-                  {STYLE_INSPIRED[currentKey]}
-                </div>
-              )}
-              <div style={{position:'absolute',inset:0,zIndex:14,pointerEvents:'none',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 10px'}}>
-                {STYLE_COLS.map((col, ci)=>(
-                  <div key={ci} style={{display:'flex',flexDirection:'column',gap:7,pointerEvents:'auto',background:'rgba(6,6,12,.78)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',border:'1px solid rgba(201,168,76,.3)',padding:'12px 10px',borderRadius:18}}>
-                    {col.map((key, ki)=>{
-                      const isActive = key === currentKey || (key===null && !currentKey);
-                      const label = key===null ? (t('mosaicStyle')||'Mosaic') : STYLE_INSPIRED[key];
-                      return (
-                        <button key={key||'mosaic'} onClick={(e)=>{ e.stopPropagation(); pickStyle(key); }}
-                          style={{padding:'8px 12px',borderRadius:13,background:isActive?'rgba(255,200,120,.18)':'transparent',border:'1px solid '+(isActive?'rgba(255,200,120,.55)':'rgba(242,238,232,.1)'),color:isActive?'#ffd07a':'rgba(242,238,232,.75)',fontFamily:'Cormorant Garamond,serif',fontStyle:'italic',fontSize:13,lineHeight:1,letterSpacing:'.01em',whiteSpace:'nowrap',minWidth:92,textAlign:'center',cursor:'pointer',fontWeight:isActive?600:400,WebkitTapHighlightColor:'transparent'}}>
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </>
-          );
-        })()}
-        {immersive && fsPicker==='color' && chords.length>0 && (()=>{
-          const pickMode = (m)=>{ setMode(m); setFsPicker(null); };
-          const COLOR_OPTIONS = [
-            ['harmony', 'Harmony'],
-            ['spectral','Spectral'],
-            ['bw',      'B/W'],
-            ['custom',  'Custom'],
-          ];
-          return (
-            <div style={{position:'absolute',inset:0,zIndex:14,pointerEvents:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(2, 1fr)',gap:10,pointerEvents:'auto',background:'rgba(6,6,12,.82)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',border:'1px solid rgba(201,168,76,.3)',padding:16,borderRadius:22}}>
-                {COLOR_OPTIONS.map(([key, label])=>{
-                  const isActive = mode===key;
-                  return (
-                    <button key={key} onClick={(e)=>{ e.stopPropagation(); pickMode(key); }}
-                      style={{padding:'14px 22px',borderRadius:14,background:isActive?'rgba(255,200,120,.18)':'transparent',border:'1px solid '+(isActive?'rgba(255,200,120,.55)':'rgba(242,238,232,.1)'),color:isActive?'#ffd07a':'rgba(242,238,232,.85)',fontFamily:'Cormorant Garamond,serif',fontStyle:'italic',fontSize:15,minWidth:110,textAlign:'center',cursor:'pointer',fontWeight:isActive?600:400,WebkitTapHighlightColor:'transparent'}}>
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
         {/* Fullscreen CTA row — Next (shuffle: jump to a new variation, works
             while playing too) and Save (when the piece is complete & still). Each
             appears by its own condition; they can show together. Fades with the
@@ -15591,46 +15504,9 @@ Composition rules:
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
           const canRollNextFs = !anim && !working && !demoReelOn && !recording;
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
-          // Style + Color chips are available whenever we have a painting and
-          // we're not in image mode (image mode uses a different rendering
-          // pipeline that doesn't take artist styles).
-          const showChipsFs = chords.length>0 && viewMode!=='image';
-          if(!exportReadyFs && !showNextFs && !showChipsFs) return null;
-          // While a picker is open we KEEP the dock visible (controlsAwake
-          // bypass) so users can browse without the dock fading mid-tap.
-          const dockVisible = controlsAwake || fsPicker;
-          // Current style key for the chip label. effectiveStyle covers
-          // shuffle pool too; STYLE_INSPIRED maps it to an artist name.
-          const currentStyleKey = effectiveStyle && effectiveStyle!=='notes' ? effectiveStyle : null;
-          const styleChipLabel = currentStyleKey ? STYLE_INSPIRED[currentStyleKey] : (t('mosaicStyle')||'Mosaic');
-          // Color mode → human label.
-          const colorChipLabel =
-            mode==='harmony'  ? 'Harmony'
-            : mode==='spectral'? 'Spectral'
-            : mode==='bw'      ? 'B/W'
-            : mode==='custom'  ? 'Custom'
-            : mode;
+          if(!exportReadyFs && !showNextFs) return null;
           return (
-            <div style={{position:'absolute',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:13,display:'flex',flexDirection:'column',alignItems:'center',gap:10,opacity:dockVisible?1:0,pointerEvents:dockVisible?'auto':'none',transition:'opacity .4s ease'}}>
-              {showChipsFs && (
-                <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                  <button onClick={(e)=>{ e.stopPropagation(); setFsPicker(p=>p==='color'?null:'color'); }}
-                    aria-label="color palette" title="Choose color palette"
-                    style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:22,cursor:'pointer',background:fsPicker==='color'?'rgba(201,168,76,.18)':'rgba(6,6,12,.5)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',border:'1px solid '+(fsPicker==='color'?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),color:'rgba(255,220,168,.9)',fontFamily:'inherit',fontSize:'11px',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',WebkitTapHighlightColor:'transparent'}}>
-                    <span style={{width:16,height:16,display:'inline-flex',alignItems:'center',justifyContent:'center',color:'#ffd07a'}}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>
-                    </span>
-                    <span style={{fontFamily:'Cormorant Garamond,serif',fontStyle:'italic',fontSize:13,fontWeight:400,color:fsPicker==='color'?'#ffd07a':'#f2eee8',letterSpacing:'.01em',textTransform:'none',opacity:.9}}>{colorChipLabel}</span>
-                  </button>
-                  <button onClick={(e)=>{ e.stopPropagation(); setFsPicker(p=>p==='style'?null:'style'); }}
-                    aria-label="artist style" title="Choose artist style"
-                    style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:22,cursor:'pointer',background:fsPicker==='style'?'rgba(201,168,76,.18)':'rgba(6,6,12,.5)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',border:'1px solid '+(fsPicker==='style'?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),color:'rgba(255,220,168,.9)',fontFamily:'inherit',fontSize:'11px',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',WebkitTapHighlightColor:'transparent'}}>
-                    <span style={{color:'#ffd07a',fontSize:14}}>✦</span>
-                    <span style={{fontFamily:'Cormorant Garamond,serif',fontStyle:'italic',fontSize:13,fontWeight:400,color:fsPicker==='style'?'#ffd07a':'#f2eee8',letterSpacing:'.01em',textTransform:'none',opacity:.9}}>{styleChipLabel}</span>
-                  </button>
-                </div>
-              )}
-              <div style={{display:'flex',gap:10,alignItems:'center'}}>
+            <div style={{position:'absolute',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:13,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); advanceVariation(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'11px 22px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#ffd07a',background:'rgba(255,200,120,.16)',border:'1px solid rgba(255,200,120,.55)',boxShadow:'0 0 0 1px rgba(255,200,120,.2)',WebkitTapHighlightColor:'transparent'}}>
@@ -15650,7 +15526,6 @@ Composition rules:
                   ↓ {t('save')}
                 </button>
               )}
-              </div>
             </div>
           );
         })()}

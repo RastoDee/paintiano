@@ -3426,6 +3426,24 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
   },[stopAll,applyEvents,wipeCanvasNow]);
 
+  // Trimmed sample loader (used by the v3 onboarding). Same pipeline as
+  // loadSampleMidi but slices the chord events to the first `maxMs` ms so the
+  // first-time user gets a digestible taste (~30 s) instead of the full 3:38
+  // piece. Returns nothing — apply Events sets all the relevant state.
+  const loadSampleMidiTrimmed=useCallback((maxMs)=>{
+    try{
+      const arrayBuffer=b64ToArrayBuffer(SAMPLE_MIDI_B64);
+      const{raw,div,temps,skipped}=parseMidi(arrayBuffer);
+      const allEvts=toChords(raw,div,temps);
+      if(!allEvts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
+      const evts = allEvts.filter(e => (e.startMs||0) < maxMs);
+      const finalEvts = evts.length > 0 ? evts : allEvts.slice(0, 32);
+      stopAll();wipeCanvasNow();applyEvents(finalEvts,SAMPLE_MIDI_NAME);
+      setLoadedSource('midi');
+      if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
+    }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
+  },[stopAll,applyEvents,wipeCanvasNow]);
+
   const loadSampleAudio=useCallback(async()=>{
     setWorking(true);setWLabel('decoding sample audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
@@ -5159,6 +5177,19 @@ Composition rules:
   // mood/source clear it.
   const [forceSetup, setForceSetup] = useState(false);
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too)
+  // First-visit onboarding (v3). Reads the localStorage flag synchronously
+  // during initial state setup so we don't briefly flash the setup screen.
+  // Feature-flagged via ONBOARDING_V3 — set it false in 01-core-head to disable
+  // the feature entirely for everyone.
+  const [showOnboarding, setShowOnboarding] = useState(()=>{
+    if(!ONBOARDING_V3) return false;
+    try { return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_onboarded') !== '1'; }
+    catch(_) { return false; } // localStorage unavailable (private mode etc.) → skip onboarding
+  });
+  const dismissOnboarding = useCallback(()=>{
+    setShowOnboarding(false);
+    try { localStorage.setItem('paintiano_onboarded', '1'); } catch(_){}
+  },[]);
   // Anything the user can return to: a painting on the canvas, a live mode, or a
   // parked compose/mic draft. This drives the shared '← Canvas' (Resume) button so
   // the Setup⇄Canvas navigation is consistent across ALL modes.
@@ -5243,8 +5274,63 @@ Composition rules:
 
   return (
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:isActiveView?((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'):'48px 16px',fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
+      {showOnboarding && !showIntro && (()=>{
+        // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
+        // a big play CTA that loads the trimmed Liszt sample (30 s) and starts
+        // playback, and a quiet "skip" link for users who'd rather explore on
+        // their own. Both paths mark the localStorage flag and unmount this
+        // overlay; the standard setup screen mounted underneath then takes over.
+        const playSample = async ()=>{
+          // Visual prefs that pair well with the sample piece.
+          setStyle('miro');
+          setMode('spectral');
+          // Load events (fills chord state + grid + viewMode='paint').
+          loadSampleMidiTrimmed(30000);
+          // Mark seen + dismiss this overlay. Auto-play kicks in after a short
+          // delay so React has a chance to commit the chord state first.
+          dismissOnboarding();
+          setTimeout(()=>{ try { startPlay && startPlay(); } catch(_){} }, 280);
+        };
+        return (
+          <div style={{position:'fixed',inset:0,zIndex:99998,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',padding:'48px 16px 24px',overflowY:'auto',animation:'pfDemoFade .5s ease-out'}}>
+            <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'2.4rem',color:PF.gold,letterSpacing:'-.01em',marginBottom:6,textAlign:'center'}}>Paintiano</h1>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'1rem',color:'rgba(242,238,232,.7)',marginBottom:28,textAlign:'center'}}>music turns into paintings</div>
+            <div onClick={playSample} role="button" aria-label="play sample" style={{position:'relative',width:'min(440px, 92vw)',aspectRatio:'1.4 / 1',borderRadius:18,border:'1px solid rgba(201,168,76,.3)',overflow:'hidden',background:'radial-gradient(ellipse at 30% 20%, #2a1545 0%, #100620 30%, #06060c 70%)',cursor:'pointer',boxShadow:'0 18px 60px rgba(0,0,0,.5)',animation:'pfFloat 4s ease-in-out infinite'}}>
+              <div style={{position:'absolute',inset:0,backgroundImage:`
+                radial-gradient(circle 7px at 18% 24%, #ffd07a 0%, transparent 100%),
+                radial-gradient(circle 5px at 26% 32%, #5cc7ff 0%, transparent 100%),
+                radial-gradient(circle 6px at 64% 18%, #ff6b9d 0%, transparent 100%),
+                radial-gradient(circle 9px at 75% 38%, #ffd07a 0%, transparent 100%),
+                radial-gradient(circle 4px at 42% 52%, #b4f0c8 0%, transparent 100%),
+                radial-gradient(circle 8px at 32% 68%, #ff6b9d 0%, transparent 100%),
+                radial-gradient(circle 6px at 56% 74%, #5cc7ff 0%, transparent 100%),
+                radial-gradient(circle 5px at 78% 64%, #c9a84c 0%, transparent 100%),
+                radial-gradient(circle 7px at 22% 80%, #ffd07a 0%, transparent 100%),
+                radial-gradient(circle 4px at 88% 88%, #b4f0c8 0%, transparent 100%)
+              `,opacity:.85}}/>
+              <div style={{position:'absolute',inset:0,background:`
+                linear-gradient(45deg, transparent 49%, rgba(255,200,120,.45) 49%, rgba(255,200,120,.45) 51%, transparent 51%) 30% 40% / 36px 2px no-repeat,
+                linear-gradient(-45deg, transparent 49%, rgba(180,240,200,.55) 49%, rgba(180,240,200,.55) 51%, transparent 51%) 70% 50% / 28px 2px no-repeat
+              `,opacity:.6}}/>
+              <button onClick={(e)=>{e.stopPropagation(); playSample();}} style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',display:'inline-flex',alignItems:'center',gap:10,padding:'15px 28px',borderRadius:30,cursor:'pointer',fontFamily:'inherit',fontSize:'.95rem',fontWeight:700,letterSpacing:'.15em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.45)',animation:'pfPulse 2.2s ease-in-out infinite',WebkitTapHighlightColor:'transparent'}}>
+                <span style={{fontSize:'1.1rem',lineHeight:1}}>▶</span>
+                Play sample
+              </button>
+            </div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.95rem',color:'rgba(242,238,232,.65)',marginTop:18,textAlign:'center'}}>
+              <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted in the style of Miró
+            </div>
+            <div style={{marginTop:30,maxWidth:'min(420px, 90vw)',fontSize:'.78rem',lineHeight:1.6,color:'rgba(242,238,232,.5)',textAlign:'center'}}>
+              Paintiano listens to music — MIDI, your voice, audio, even an AI-composed mood — and turns each chord into a brushstroke. Every painting is unique.
+            </div>
+            <button onClick={dismissOnboarding} style={{marginTop:'auto',marginBottom:8,padding:'10px 24px',background:'transparent',border:'none',color:'rgba(242,238,232,.45)',fontFamily:'inherit',fontSize:'.7rem',fontWeight:500,letterSpacing:'.2em',textTransform:'uppercase',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
+              skip — let me explore
+            </button>
+          </div>
+        );
+      })()}
       <div style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible'}}>
         <nav style={{display:'flex',gap:18,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('concept')}</span>
