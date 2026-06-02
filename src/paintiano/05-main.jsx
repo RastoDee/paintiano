@@ -5326,13 +5326,36 @@ Composition rules:
           try { stopAll(); wipeCanvasNow(); } catch(_){}
           dismissOnboarding();
         };
-        // ── PHASE: 'playing' — overlay fades out so the real Paintiano canvas
-        //    (mounted in the normal app tree underneath) is visible. The user
-        //    sees their actual painting build chord by chord. No buttons,
-        //    no chrome — just the work. We keep the overlay div mounted but
-        //    fully transparent so the completion effect can still update it.
+        // ── PHASE: 'playing' — the user tapped ▶. We render a full-bleed dark
+        //    overlay with the title + "Liszt × Miró" caption at the top and a
+        //    transparent "window" in the middle that reveals the real Paintiano
+        //    canvas drawing underneath. The rest of the app chrome (setup tiles,
+        //    header nav) is hidden behind the overlay, so visually the painting
+        //    appears to happen INSIDE the onboarding box — no jump-to-canvas
+        //    surprise. The window's position roughly matches where canvas sits
+        //    in the app layout; CSS-only solution, no DOM moves.
         if(onboardingPhase === 'playing'){
-          return <div style={{position:'fixed',inset:0,zIndex:99998,pointerEvents:'none',opacity:0,transition:'opacity .5s ease'}}/>;
+          return (
+            <div style={{position:'fixed',inset:0,zIndex:99998,display:'flex',flexDirection:'column',pointerEvents:'auto',animation:'pfDemoFade .4s ease-out'}}>
+              {/* Top dark band — title + caption */}
+              <div style={{background:'radial-gradient(ellipse at 50% 120%, #0e0b16, #06060c 70%)',padding:'36px 16px 18px',textAlign:'center',flexShrink:0}}>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'1.8rem',color:PF.gold,letterSpacing:'-.01em'}}>Paintiano</div>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',color:'rgba(242,238,232,.65)',marginTop:4}}>
+                  <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted by Miró
+                </div>
+              </div>
+              {/* Transparent middle — canvas underneath shows through. We give
+                  it min-height to ensure the canvas region (under the overlay
+                  in the normal layout) is fully framed. */}
+              <div style={{flex:'1 1 auto',background:'transparent',minHeight:'min(70vh, 480px)'}}/>
+              {/* Bottom dark band — masks setup chrome below the canvas */}
+              <div style={{background:'radial-gradient(ellipse at 50% -20%, #0e0b16, #06060c 70%)',padding:'18px 16px 28px',textAlign:'center',flexShrink:0,minHeight:80}}>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.75rem',color:'rgba(242,238,232,.45)',letterSpacing:'.04em'}}>
+                  watch as each chord becomes a brushstroke…
+                </div>
+              </div>
+            </div>
+          );
         }
         // ── PHASE: 'done' — sample finished. Render only a CTA bar pinned to
         //    the bottom of the viewport, over the finished painting which sits
