@@ -10,6 +10,14 @@ const CWIN = 55;
 const KB_WIN = 65;
 const DN = 25, DB = 16, DH = 26;
 const GOLD = '#c9a84c';
+// ── Feature flag: first-visit onboarding (v3 "show, don't tell") ─────────────
+// When true, first-time visitors see a hero canvas preview ("Liebestraum × Miró")
+// with a big play button instead of the standard setup tile grid. After the
+// sample plays — or the user taps "skip" — we set localStorage so they never
+// see it again. Setting this to `false` disables the entire onboarding flow
+// instantly: the app falls back to the current setup screen for everyone. No
+// other code paths change.
+const ONBOARDING_V3 = true;
 // ── Playful design tokens (added v2.6.0) ────────────────────────────────────
 // Layered dark surfaces + bright cream text + saturated accents. Used across
 // the redesigned control panel. Buttons lift + glow on interaction.
