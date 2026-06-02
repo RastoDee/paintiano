@@ -5361,8 +5361,8 @@ Composition rules:
         const isDone    = onboardingPhase === 'done';
         return (
           <div style={{position:'fixed',inset:0,zIndex:99998,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',display:'flex',flexDirection:'column',alignItems:'center',padding:'90px 16px 22px',overflowY:'auto',animation:'pfDemoFade .5s ease-out'}}>
-            <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'2.2rem',color:PF.gold,letterSpacing:'-.01em',marginBottom:4,textAlign:'center'}}>Paintiano</h1>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.95rem',color:'rgba(242,238,232,.7)',marginBottom:22,textAlign:'center'}}>music turns into paintings</div>
+            <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:'2.2rem',color:PF.gold,letterSpacing:'-.01em',marginBottom:4,textAlign:'center'}}>{t('onbTitle')||'Paintiano'}</h1>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.95rem',color:'rgba(242,238,232,.7)',marginBottom:22,textAlign:'center'}}>{t('onbSubtitle')||'music turns into paintings'}</div>
 
             {/* Demo box — same shape in all 3 phases */}
             <div style={{position:'relative',width:'min(440px, 92vw)',aspectRatio:'1.4 / 1',borderRadius:18,border:'1px solid rgba(201,168,76,.3)',overflow:'hidden',background:'radial-gradient(ellipse at 30% 20%, #2a1545 0%, #100620 30%, #06060c 70%)',boxShadow:'0 18px 60px rgba(0,0,0,.5)'}}>
@@ -5382,7 +5382,7 @@ Composition rules:
                     radial-gradient(circle 4px at 88% 88%, #b4f0c8 0%, transparent 100%)
                   `,opacity:.85}}/>
                   <button onClick={playSample} aria-label="play sample" style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',display:'inline-flex',alignItems:'center',gap:10,padding:'15px 28px',borderRadius:30,cursor:'pointer',fontFamily:'inherit',fontSize:'.95rem',fontWeight:700,letterSpacing:'.15em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.45)',animation:'pfPulse 2.2s ease-in-out infinite',WebkitTapHighlightColor:'transparent'}}>
-                    <span style={{fontSize:'1.1rem',lineHeight:1}}>▶</span> Play sample
+                    <span style={{fontSize:'1.1rem',lineHeight:1}}>▶</span> {t('onbPlayLabel')||'Play sample'}
                   </button>
                 </>
               )}
@@ -5395,30 +5395,30 @@ Composition rules:
             </div>
 
             <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.9rem',color:'rgba(242,238,232,.7)',marginTop:18,textAlign:'center'}}>
-              <span style={{color:PF.gold2}}>Liebestraum — Liszt</span> &nbsp;·&nbsp; painted by Pollock
+              {t('onbCaption')||'Liebestraum — Liszt · painted by Pollock'}
             </div>
 
             {/* Phase-specific bottom area */}
             {!isPlaying && !isDone && (
               <div style={{marginTop:24,maxWidth:'min(420px, 90vw)',fontSize:'.78rem',lineHeight:1.6,color:'rgba(242,238,232,.5)',textAlign:'center'}}>
-                Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.
+                {t('onbDescription')||'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.'}
               </div>
             )}
             {isPlaying && (
               <div style={{marginTop:22,fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.8rem',color:'rgba(242,238,232,.5)',letterSpacing:'.04em',textAlign:'center'}}>
-                each chord becomes a brushstroke…
+                {t('onbHint')||'each chord becomes a brushstroke…'}
               </div>
             )}
             {isDone && (
               <div style={{marginTop:22,display:'flex',gap:10,alignItems:'center'}}>
-                <button onClick={replaySample} style={{padding:'11px 18px',background:'rgba(28,24,40,.6)',color:'rgba(207,197,168,.9)',border:'1px solid rgba(207,197,168,.3)',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:'.7rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',WebkitTapHighlightColor:'transparent'}}>↻ Replay</button>
-                <button onClick={commitAndExit} style={{padding:'13px 28px',display:'inline-flex',alignItems:'center',gap:6,color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:'.8rem',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent'}}>Try your own ›</button>
+                <button onClick={replaySample} style={{padding:'11px 18px',background:'rgba(28,24,40,.6)',color:'rgba(207,197,168,.9)',border:'1px solid rgba(207,197,168,.3)',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:'.7rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',WebkitTapHighlightColor:'transparent'}}>↻ {t('onbReplay')||'Replay'}</button>
+                <button onClick={commitAndExit} style={{padding:'13px 28px',display:'inline-flex',alignItems:'center',gap:6,color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:'.8rem',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent'}}>{t('onbTryYourOwn')||'Try your own'} ›</button>
               </div>
             )}
 
             {/* Skip — always visible at the bottom */}
             <button onClick={skipOnboarding} style={{marginTop:'auto',marginBottom:8,padding:'10px 24px',background:'transparent',border:'none',color:'rgba(242,238,232,.4)',fontFamily:'inherit',fontSize:'.7rem',fontWeight:500,letterSpacing:'.2em',textTransform:'uppercase',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
-              skip
+              {t('onbSkip')||'skip'}
             </button>
           </div>
         );
