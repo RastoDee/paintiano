@@ -8854,16 +8854,30 @@ const DEMO_REEL_MFI_STAGE3_AT = 7000;  // 23s + 7s = 30s
 // ═════════════════════════════════════════════════════════════════════════════
 
 const PRO_CFG = {
-  // ── Feature flag: temporarily disable the Buy button ──────────────────────
-  // Lemon Squeezy declined the store application (Dec 2025 — see chat
-  // history). Until Paddle integration is live, Buy buttons should show
-  // "Coming soon" instead of opening a broken checkout. The license-activation
-  // path ("I already have a key") stays open for any existing Pro holders.
-  // Set this back to `false` once Paddle vendor credentials are wired in.
+  // ── Checkout provider: Paddle Billing (Merchant of Record) ────────────────
+  // We migrated from Lemon Squeezy → Paddle in early 2026 after LS declined
+  // the store application. Paddle is approved as of the verification email
+  // referenced in chat history. The flow is similar to LS: client-side token
+  // opens the overlay, our /api/paddle-webhook receives transaction.completed,
+  // we generate a license key into Supabase, the existing /api/validate
+  // endpoint then verifies activation requests from the app.
+  //
+  // Set checkoutDisabled=true to force "Coming soon" tile (kill switch).
+  // Currently TRUE because Paddle Overlay returns "Something went wrong"
+  // after opening — even though verification passed and payout method is
+  // saved. Likely Paddle backend still activating, or needs additional
+  // setup. Flip to false once a real test purchase works end-to-end.
   checkoutDisabled: true,
-  // Lemon Squeezy hosted checkout for "Paintiano Pro" (store slug: paintiano)
-  checkoutUrl: 'https://paintiano.lemonsqueezy.com/checkout/buy/8d42493f-bca9-44b2-a057-8d730a8b2616',
-  // Our own Vercel Edge validation endpoint (same origin as the app)
+  // Paddle's client-side token. PUBLIC — safe to ship in the bundle.
+  // Used by Paddle.js to open the overlay checkout. Production token.
+  paddleClientToken: 'live_3ab34fef52eea1baa3656517dec',
+  // Paddle environment: 'production' (live) or 'sandbox' (test).
+  paddleEnv: 'production',
+  // Price ID for "Paintiano Pro Lifetime — Early-bird €9.99".
+  // Created in Paddle catalog (Catalog → Products → Paintiano Pro Lifetime → Early-bird).
+  paddlePriceId: 'pri_01kt6s053namfk25tvvdw2eaey',
+  // Our own Vercel Edge validation endpoint (same origin as the app).
+  // Provider-agnostic — reads licenses table that Paddle webhook writes into.
   validateEndpoint: '/api/validate',
   // localStorage keys
   licenseStoreKey: 'paintiano_license_v1',
@@ -8872,7 +8886,7 @@ const PRO_CFG = {
   revalidateAfterMs: 30 * 24 * 60 * 60 * 1000, // 30 days
   // Free-tier heavy-AI allowance before the paywall
   trialMax: 5,
-  // Display price (informational; real price + VAT come from Lemon Squeezy)
+  // Display price (informational; real price + VAT come from Paddle checkout)
   displayPrice: '€9.99',
 };
 
@@ -8954,17 +8968,59 @@ function useProStatus() {
     _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
   }, []);
 
-  const openCheckout = useCallback(() => {
-    try {
-      if (typeof window !== 'undefined' && window.LemonSqueezy && window.LemonSqueezy.Url && window.LemonSqueezy.Url.Open) {
-        window.LemonSqueezy.Url.Open(PRO_CFG.checkoutUrl);
-      } else {
-        window.open(PRO_CFG.checkoutUrl, '_blank', 'noopener');
+  // ── Paddle checkout ────────────────────────────────────────────────────────
+  // Lazy-loads Paddle.js once, initializes it with our public client-side
+  // token, then opens the Paddle overlay for the configured price ID. The
+  // overlay handles the entire payment UX (card, PayPal, local methods,
+  // tax/VAT, billing address). On success Paddle sends transaction.completed
+  // to our /api/paddle-webhook, which provisions the license. The buyer
+  // receives an email from Paddle with their license key.
+  const loadPaddleScript = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      if (typeof window === 'undefined') return reject(new Error('no window'));
+      if (window.Paddle) return resolve(window.Paddle);
+      const existing = document.querySelector('script[data-paintiano-paddle]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve(window.Paddle));
+        existing.addEventListener('error', () => reject(new Error('paddle script load failed')));
+        return;
       }
-    } catch (_) {
-      window.open(PRO_CFG.checkoutUrl, '_blank', 'noopener');
-    }
+      const s = document.createElement('script');
+      s.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+      s.async = true;
+      s.setAttribute('data-paintiano-paddle', '1');
+      s.onload = () => resolve(window.Paddle);
+      s.onerror = () => reject(new Error('paddle script load failed'));
+      document.head.appendChild(s);
+    });
   }, []);
+
+  const openCheckout = useCallback(async () => {
+    try {
+      const Paddle = await loadPaddleScript();
+      if (!Paddle) throw new Error('Paddle not available');
+      // Initialize is idempotent — calling twice is safe.
+      Paddle.Environment.set(PRO_CFG.paddleEnv); // 'production' or 'sandbox'
+      Paddle.Initialize({ token: PRO_CFG.paddleClientToken });
+      Paddle.Checkout.open({
+        items: [{ priceId: PRO_CFG.paddlePriceId, quantity: 1 }],
+        settings: {
+          displayMode: 'overlay',
+          theme: 'dark',
+          locale: (typeof navigator !== 'undefined' && navigator.language) ? navigator.language.slice(0, 2) : 'en',
+          successUrl: typeof window !== 'undefined' ? window.location.origin + '/?paid=1' : undefined,
+        },
+      });
+    } catch (err) {
+      console.error('Paddle checkout failed', err);
+      // Soft fallback: open a mailto so users can still reach us if checkout breaks.
+      try {
+        if (typeof window !== 'undefined') {
+          window.location.href = 'mailto:hello@paintiano.app?subject=Paintiano Pro - checkout issue';
+        }
+      } catch (_) {}
+    }
+  }, [loadPaddleScript]);
 
   return { proStatus, isPro: proStatus === 'pro', licenseKey, maskedEmail,
            activateLicense, deactivateLicense, openCheckout };
