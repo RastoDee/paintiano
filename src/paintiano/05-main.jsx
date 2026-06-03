@@ -7063,7 +7063,13 @@ Composition rules:
           aria-label={t('helpFab')||'help'}
           title={t('helpFab')||'help'}
           style={{
-            position:'fixed', bottom:18, right:16,
+            position:'fixed',
+            bottom:'max(18px, env(safe-area-inset-bottom) + 12px)',
+            // On mobile (≤480px viewport) sit 16px from the right edge.
+            // On wider screens align with the right edge of the 480px-wide
+            // content column so the button doesn't fly off into the empty
+            // margin on PC. The max(...) guarantees a sane minimum gap.
+            right:'max(16px, calc(50vw - 240px + 16px))',
             width:44, height:44, borderRadius:'50%',
             background:'linear-gradient(135deg,#c9a84c,#ffd07a)',
             color:'#0a0a12',
@@ -7087,7 +7093,11 @@ Composition rules:
             backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
             zIndex:95,
             display:'flex', flexDirection:'column',
-            padding:'48px 16px 32px',
+            // Respect iOS notch / Android status bar via env() safe areas.
+            // 56px minimum to leave clearance for the close button.
+            paddingTop:'max(56px, calc(env(safe-area-inset-top) + 24px))',
+            paddingLeft:16, paddingRight:16,
+            paddingBottom:'max(32px, calc(env(safe-area-inset-bottom) + 16px))',
             overflowY:'auto',
           }}
         >
@@ -7095,7 +7105,11 @@ Composition rules:
             onClick={()=>setShowHelp(false)}
             aria-label={t('helpClose')||'close'}
             style={{
-              position:'absolute', top:14, right:16,
+              position:'absolute',
+              // Match the safe-area padding so the close button sits inside
+              // the notch-respecting safe zone on iPhone.
+              top:'max(14px, calc(env(safe-area-inset-top) + 8px))',
+              right:16,
               width:32, height:32, borderRadius:'50%',
               background:'rgba(255,255,255,.08)',
               color:'rgba(255,255,255,.7)',
