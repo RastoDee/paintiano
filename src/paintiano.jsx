@@ -16484,14 +16484,16 @@ Composition rules:
       </div>
 
       {/* ── HELP FAB (Variant A — floating "?" bottom-right) ───────────────
-          Always-visible affordance once the setup screen is shown. Hidden
-          during onboarding (the tutorial already explains everything) and
-          while the canvas view is full-screen-painting (avoid covering art).
+          Affordance for the setup screen only. Hidden during:
+            • onboarding (tutorial already explains everything)
+            • playback / paused playback (covers the CLEAR button in the
+              bottom controls bar; user is past the explore-features stage
+              anyway, they're now creating)
           The FAB is fixed-position so it follows the viewport regardless of
           scroll; the popup it opens is also fixed and covers the full
           viewport. zIndex high enough to sit above app chrome but below
           the paywall modal. ── */}
-      {!showOnboarding && (
+      {!showOnboarding && !playing && !holdPaused && (
         <button
           onClick={()=>setShowHelp(true)}
           aria-label={t('helpFab')||'help'}
