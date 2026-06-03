@@ -5193,6 +5193,9 @@ Composition rules:
     try { return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_onboarded') !== '1'; }
     catch(_) { return false; }
   });
+  // Help cheat-sheet popup — gold "?" FAB bottom-right opens this. Volatile
+  // boolean (no persistence) — every fresh visit defaults to closed.
+  const [showHelp, setShowHelp] = useState(false);
   // Onboarding phase: 'preview' (idle hero with ▶), 'playing' (real-time mirror
   // of the main canvas drawing the sample), 'done' (sample finished, CTA bar
   // appears with "Try your own" + replay).
@@ -5538,28 +5541,20 @@ Composition rules:
               is one canonical mood UX shared across the app. */}
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={t('moodHowFeel')} style={{width:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 13px 11px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.95)',fontFamily:'inherit',opacity:sourcePickerLocked?0.4:1}}>
-              <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>
-                <span style={{fontSize:'1.05rem'}}>✦</span>
-                {t('moodHowFeel')}
-              </span>
-              <span style={{fontSize:(.58*effScale)+'rem',color:'rgba(220,180,90,.7)',letterSpacing:'.02em',textTransform:'none',lineHeight:1.3,fontWeight:400,textAlign:'center'}}>
-                {t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints'}
-              </span>
+            <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
+              <span style={{fontSize:'1.05rem'}}>✦</span>
+              {t('moodHowFeel')}
+              <span aria-label="info" style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',width:16,height:16,borderRadius:'50%',border:'1px solid rgba(220,180,90,.45)',color:'rgba(220,180,90,.7)',fontSize:(.45*effScale)+'rem',fontWeight:700,letterSpacing:0,textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',lineHeight:1,fontStyle:'italic',fontFamily:'serif'}}>i</span>
             </button>
           </div>
 
           {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
           <div style={{marginBottom:14}}>
-            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgMood')||'mood from image')} style={{width:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 13px 11px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',opacity:!aiUsable?.5:1}}>
-              <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>
-                <span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
-                {imgAiBusy?'…':(t('imgMood')||'mood from image')}
-                {!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
-              </span>
-              <span style={{fontSize:(.58*effScale)+'rem',color:'rgba(228,178,255,.7)',letterSpacing:'.02em',textTransform:'none',lineHeight:1.3,fontWeight:400,textAlign:'center'}}>
-                {t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'}
-              </span>
+            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:!aiUsable?.5:1,position:'relative'}}>
+              <span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
+              {imgAiBusy?'…':(t('imgMood')||'mood from image')}
+              {!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
+              <span aria-label="info" style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',width:16,height:16,borderRadius:'50%',border:'1px solid rgba(228,178,255,.45)',color:'rgba(228,178,255,.7)',fontSize:(.45*effScale)+'rem',fontWeight:700,letterSpacing:0,textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',lineHeight:1,fontStyle:'italic',fontFamily:'serif'}}>i</span>
             </button>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
@@ -7053,6 +7048,118 @@ Composition rules:
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
         <a href="/refunds.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Refunds</a>
       </div>
+
+      {/* ── HELP FAB (Variant A — floating "?" bottom-right) ───────────────
+          Always-visible affordance once the setup screen is shown. Hidden
+          during onboarding (the tutorial already explains everything) and
+          while the canvas view is full-screen-painting (avoid covering art).
+          The FAB is fixed-position so it follows the viewport regardless of
+          scroll; the popup it opens is also fixed and covers the full
+          viewport. zIndex high enough to sit above app chrome but below
+          the paywall modal. ── */}
+      {!showOnboarding && (
+        <button
+          onClick={()=>setShowHelp(true)}
+          aria-label={t('helpFab')||'help'}
+          title={t('helpFab')||'help'}
+          style={{
+            position:'fixed', bottom:18, right:16,
+            width:44, height:44, borderRadius:'50%',
+            background:'linear-gradient(135deg,#c9a84c,#ffd07a)',
+            color:'#0a0a12',
+            fontSize:'22px', fontWeight:700,
+            fontFamily:"'Cormorant Garamond',serif", fontStyle:'italic',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            boxShadow:'0 4px 16px rgba(201,168,76,.45), 0 0 0 1px rgba(255,208,122,.25)',
+            cursor:'pointer', border:'none',
+            zIndex:90,
+            lineHeight:1,
+          }}
+        >?</button>
+      )}
+
+      {showHelp && (
+        <div
+          onClick={(e)=>{ if(e.target===e.currentTarget) setShowHelp(false); }}
+          style={{
+            position:'fixed', inset:0,
+            background:'rgba(6,6,12,.85)',
+            backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
+            zIndex:95,
+            display:'flex', flexDirection:'column',
+            padding:'48px 16px 32px',
+            overflowY:'auto',
+          }}
+        >
+          <button
+            onClick={()=>setShowHelp(false)}
+            aria-label={t('helpClose')||'close'}
+            style={{
+              position:'absolute', top:14, right:16,
+              width:32, height:32, borderRadius:'50%',
+              background:'rgba(255,255,255,.08)',
+              color:'rgba(255,255,255,.7)',
+              fontSize:'16px', fontWeight:400,
+              border:'none', cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+            }}
+          >✕</button>
+          <div style={{maxWidth:480, margin:'0 auto', width:'100%'}}>
+            <h2 style={{
+              fontFamily:"'Cormorant Garamond',serif", fontWeight:600,
+              fontSize:'1.6rem', color:'#c9a84c',
+              textAlign:'center', margin:'0 0 4px',
+            }}>{t('helpTitle')!=='helpTitle' ? t('helpTitle') : 'What does what'}</h2>
+            <p style={{
+              textAlign:'center',
+              color:'rgba(242,238,232,.6)',
+              fontStyle:'italic', fontFamily:"'Cormorant Garamond',serif",
+              fontSize:'.95rem', margin:'0 0 18px',
+            }}>{t('helpSub')!=='helpSub' ? t('helpSub') : 'tap any source on the setup screen to begin'}</p>
+
+            {[
+              { key:'mood',    icon:'✦', color:'#ffd07a', bg:'rgba(201,168,76,.12)',  name:t('moodHowFeel')||'How do you feel?' },
+              { key:'mfi',     icon:'✦', color:'#e4b2ff', bg:'rgba(220,150,255,.12)', name:t('imgMood')||'Mood from image' },
+              { key:'midi',    icon:'♩', color:'#5b9cf6', bg:'rgba(91,156,246,.12)',  name:t('midi')||'MIDI' },
+              { key:'audio',   icon:'♪', color:'#f47c3c', bg:'rgba(244,124,60,.12)',  name:t('audio')||'Audio' },
+              { key:'score',   icon:'𝄞', color:'#a97ff5', bg:'rgba(169,127,245,.12)', name:t('score')||'Score' },
+              { key:'image',   icon:'◫', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:t('image')||'Image' },
+              { key:'compose', icon:'♪', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:t('compose')||'Compose' },
+              { key:'mic',     icon:'🎙', color:'#ff6b9d', bg:'rgba(255,107,157,.12)', name:t('mic')||'Mic' },
+            ].map(it => {
+              const descKey='helpDesc_'+it.key;
+              const desc = t(descKey)!==descKey ? t(descKey) : '';
+              return (
+                <div key={it.key} style={{
+                  display:'flex', alignItems:'flex-start', gap:12,
+                  padding:'11px 4px',
+                  borderBottom:'1px solid rgba(255,255,255,.06)',
+                }}>
+                  <div style={{
+                    width:34, height:34, borderRadius:8,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    fontSize:'17px', color:it.color, background:it.bg,
+                    flexShrink:0,
+                  }}>{it.icon}</div>
+                  <div style={{flex:1, minWidth:0}}>
+                    <div style={{
+                      fontSize:'.72rem', fontWeight:700,
+                      letterSpacing:'.12em', textTransform:'uppercase',
+                      color:'#f2eee8', marginBottom:3,
+                    }}>{it.name}</div>
+                    <div style={{
+                      fontFamily:"'Cormorant Garamond',serif", fontStyle:'italic',
+                      fontSize:'.92rem', color:'rgba(242,238,232,.65)',
+                      lineHeight:1.4,
+                    }}>{desc}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {paywallReason && (
         <ProPaywall
           t={t}

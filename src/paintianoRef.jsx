@@ -16422,6 +16422,15 @@ Composition rules:
       </div>
       )}
       <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
+      <div style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
+        <a href="/pricing.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Pricing</a>
+        <span style={{margin:'0 10px',opacity:.5}}>·</span>
+        <a href="/terms.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Terms</a>
+        <span style={{margin:'0 10px',opacity:.5}}>·</span>
+        <a href="/privacy.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Privacy</a>
+        <span style={{margin:'0 10px',opacity:.5}}>·</span>
+        <a href="/refunds.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Refunds</a>
+      </div>
       {paywallReason && (
         <ProPaywall
           t={t}
