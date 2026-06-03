@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pricing · Paintiano</title>
+<meta name="description" content="Paintiano Pricing — Free tier and Paintiano Pro lifetime license.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #06060c;
+    --ink: #e8e2d4;
+    --muted: rgba(232, 226, 212, .65);
+    --gold: #c9a84c;
+    --gold-soft: #ffd07a;
+    --rule: rgba(232, 226, 212, .12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: radial-gradient(ellipse at 50% -10%, #0e0b16, #06060c 55%);
+    color: var(--ink);
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 60px 24px 80px; }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  header .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 2.2rem;
+    color: var(--gold);
+    letter-spacing: -.01em;
+    text-decoration: none;
+    display: inline-block;
+  }
+  header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.4rem;
+    color: var(--ink);
+    margin-top: 8px;
+    letter-spacing: .01em;
+  }
+  header .meta {
+    color: var(--muted);
+    font-size: .9rem;
+    margin-top: 12px;
+    letter-spacing: .02em;
+    max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    margin-bottom: 48px;
+  }
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .plan {
+    padding: 32px 28px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .02);
+    border: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+  }
+  .plan.pro {
+    background: linear-gradient(150deg, rgba(201, 168, 76, .12), rgba(255, 208, 122, .03));
+    border-color: rgba(255, 208, 122, .55);
+    box-shadow: 0 8px 32px rgba(201, 168, 76, .12);
+    position: relative;
+  }
+  .plan.pro::before {
+    content: 'EARLY-BIRD';
+    position: absolute;
+    top: -10px;
+    right: 22px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    color: #0a0a12;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .15em;
+    padding: 5px 12px;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(201, 168, 76, .35);
+  }
+  .plan-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 1.6rem;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .plan.pro .plan-name { color: var(--gold-soft); }
+  .plan-sub {
+    color: var(--muted);
+    font-size: .9rem;
+    margin-bottom: 20px;
+    font-style: italic;
+    font-family: 'Cormorant Garamond', serif;
+  }
+  .plan-price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .plan-price .amount {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: 2.6rem;
+    color: var(--ink);
+    letter-spacing: -.02em;
+  }
+  .plan.pro .plan-price .amount { color: var(--gold-soft); }
+  .plan-price .unit {
+    color: var(--muted);
+    font-size: .92rem;
+  }
+  .plan-price .strike {
+    color: var(--muted);
+    font-size: 1rem;
+    text-decoration: line-through;
+    opacity: .55;
+    margin-left: 4px;
+  }
+  .plan-tagline {
+    color: var(--muted);
+    font-size: .85rem;
+    margin-bottom: 22px;
+    letter-spacing: .02em;
+  }
+  .plan ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 24px;
+    flex-grow: 1;
+  }
+  .plan ul li {
+    padding: 7px 0;
+    font-size: .92rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .plan ul li::before {
+    content: '✓';
+    color: var(--gold);
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .plan.free ul li::before { color: rgba(232, 226, 212, .45); }
+
+  .plan .cta {
+    display: block;
+    padding: 12px 18px;
+    border-radius: 28px;
+    text-align: center;
+    font-weight: 600;
+    font-size: .82rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: transform .15s ease;
+  }
+  .plan.free .cta {
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid rgba(232, 226, 212, .3);
+    border-bottom: 1px solid rgba(232, 226, 212, .3);
+  }
+  .plan.free .cta:hover { background: rgba(232, 226, 212, .05); }
+
+  .plan.pro .cta {
+    color: #0a0a12;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    border: 1px solid var(--gold-soft);
+    box-shadow: 0 6px 22px rgba(201, 168, 76, .25);
+    opacity: .55;
+    cursor: default;
+    pointer-events: none;
+  }
+  .plan.pro .cta-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: .78rem;
+    margin-top: 10px;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    letter-spacing: .02em;
+  }
+
+  h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 1.4rem;
+    color: var(--gold);
+    margin: 32px 0 12px;
+    letter-spacing: -.01em;
+  }
+  p {
+    font-size: .95rem;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+  a {
+    color: var(--gold-soft);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255, 208, 122, .35);
+  }
+  a:hover { border-bottom-color: var(--gold-soft); }
+  strong { color: var(--gold-soft); font-weight: 600; }
+
+  .faq {
+    margin-top: 32px;
+    padding: 26px 28px;
+    background: rgba(255, 255, 255, .02);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+  }
+  .faq h3 {
+    font-family: 'Outfit', sans-serif;
+    color: var(--gold-soft);
+    font-size: .98rem;
+    font-weight: 600;
+    margin: 18px 0 6px;
+  }
+  .faq h3:first-child { margin-top: 0; }
+  .faq p {
+    color: var(--muted);
+    font-size: .9rem;
+    margin-bottom: 0;
+  }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    text-align: center;
+    color: var(--muted);
+    font-size: .8rem;
+    letter-spacing: .04em;
+  }
+  footer a { color: var(--muted); border-bottom-color: transparent; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <a href="https://paintiano.app" class="logo">Paintiano</a>
+    <h1>Pricing</h1>
+    <div class="meta">Music turns into paintings. Use Paintiano free, or unlock the full experience with a one-time lifetime license.</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="plan free">
+      <div class="plan-name">Free</div>
+      <div class="plan-sub">to try the magic</div>
+      <div class="plan-price">
+        <span class="amount">€0</span>
+        <span class="unit">forever</span>
+      </div>
+      <div class="plan-tagline">No account. No card. Just paint.</div>
+      <ul>
+        <li>All input sources — MIDI, audio, microphone, AI mood</li>
+        <li>Five core artist styles (Pollock, Miró &amp; more)</li>
+        <li>Standard-resolution exports</li>
+        <li>5 free AI mood compositions</li>
+        <li>Free for personal use</li>
+      </ul>
+      <a class="cta" href="https://paintiano.app">Open the app</a>
+    </div>
+
+    <div class="plan pro">
+      <div class="plan-name">Paintiano Pro</div>
+      <div class="plan-sub">lifetime license · one-time payment</div>
+      <div class="plan-price">
+        <span class="amount">€9.99</span>
+        <span class="strike">€14.99</span>
+      </div>
+      <div class="plan-tagline">Early-bird price for the first 50 supporters · then €14.99</div>
+      <ul>
+        <li><strong>Unlimited</strong> AI mood compositions</li>
+        <li><strong>Full</strong> artist style library — Kandinsky, Klimt, Rothko, Mondrian, Matisse, Picasso, Kusama and more</li>
+        <li><strong>High-resolution</strong> image exports (up to 4K)</li>
+        <li>Extended song length (no time cap)</li>
+        <li>Watermark removed</li>
+        <li>One-time payment — no subscription, ever</li>
+        <li>14-day money-back guarantee</li>
+        <li>Free updates for as long as Paintiano exists</li>
+      </ul>
+      <a class="cta">Coming soon</a>
+      <div class="cta-note">we're moving payment providers — back online in a few days</div>
+    </div>
+
+  </div>
+
+  <h2>How it works</h2>
+  <p>Paintiano runs entirely in your browser at <a href="https://paintiano.app">paintiano.app</a> — no install required (though you can add it to your home screen as a Progressive Web App).</p>
+  <p>When you buy Paintiano Pro, a license key arrives in your inbox within minutes. Paste it into the app once, and every device you use with that browser unlocks the full experience.</p>
+
+  <div class="faq">
+    <h3>Is it really one-time?</h3>
+    <p>Yes. No subscription, no auto-renewal, no hidden fees. Pay once, use forever.</p>
+
+    <h3>What happens after I buy?</h3>
+    <p>Our payment processor (Paddle) emails you a license key immediately. Paste it into Paintiano → "I already have a key" → done. Pro features unlock instantly.</p>
+
+    <h3>Will my price stay €9.99?</h3>
+    <p>The first 50 supporters lock in €9.99 forever. After that, the price moves to €14.99. Your license never expires.</p>
+
+    <h3>Can I get a refund?</h3>
+    <p>Yes, 14-day no-questions-asked. See our <a href="/refunds.html">Refund Policy</a>.</p>
+
+    <h3>Does Paintiano work on iPhone / iPad?</h3>
+    <p>Yes — it's a Progressive Web App that runs in mobile Safari and Chrome. Add it to your home screen for a full-screen experience.</p>
+
+    <h3>What about VAT?</h3>
+    <p>Prices include any taxes that our payment processor collects automatically based on your country.</p>
+  </div>
+
+  <footer>
+    <a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">Terms of Service</a> · <a href="/privacy.html">Privacy Policy</a> · <a href="/refunds.html">Refund Policy</a><br>
+    © 2026 Rastislav Ďurica · All rights reserved.
+  </footer>
+
+</div>
+</body>
+</html>
