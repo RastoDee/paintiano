@@ -5543,7 +5543,7 @@ Composition rules:
                 <span style={{fontSize:'1.05rem'}}>✦</span>
                 {t('moodHowFeel')}
               </span>
-              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:(.6*effScale)+'rem',color:'rgba(220,180,90,.65)',letterSpacing:0,textTransform:'none',lineHeight:1.2,fontWeight:400,textAlign:'center'}}>
+              <span style={{fontSize:(.58*effScale)+'rem',color:'rgba(220,180,90,.7)',letterSpacing:'.02em',textTransform:'none',lineHeight:1.3,fontWeight:400,textAlign:'center'}}>
                 {t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints'}
               </span>
             </button>
@@ -5557,7 +5557,7 @@ Composition rules:
                 {imgAiBusy?'…':(t('imgMood')||'mood from image')}
                 {!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
               </span>
-              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:(.6*effScale)+'rem',color:'rgba(228,178,255,.65)',letterSpacing:0,textTransform:'none',lineHeight:1.2,fontWeight:400,textAlign:'center'}}>
+              <span style={{fontSize:(.58*effScale)+'rem',color:'rgba(228,178,255,.7)',letterSpacing:'.02em',textTransform:'none',lineHeight:1.3,fontWeight:400,textAlign:'center'}}>
                 {t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'}
               </span>
             </button>
