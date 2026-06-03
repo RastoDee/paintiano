@@ -14870,15 +14870,29 @@ Composition rules:
               is one canonical mood UX shared across the app. */}
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={t('moodHowFeel')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1}}>
-              <span style={{fontSize:'1.05rem'}}>✦</span>
-              {t('moodHowFeel')}
+            <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={t('moodHowFeel')} style={{width:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 13px 11px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.95)',fontFamily:'inherit',opacity:sourcePickerLocked?0.4:1}}>
+              <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>
+                <span style={{fontSize:'1.05rem'}}>✦</span>
+                {t('moodHowFeel')}
+              </span>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:(.6*effScale)+'rem',color:'rgba(220,180,90,.65)',letterSpacing:0,textTransform:'none',lineHeight:1.2,fontWeight:400,textAlign:'center'}}>
+                {t('moodDesc')||'describe a feeling — AI composes & paints'}
+              </span>
             </button>
           </div>
 
           {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
           <div style={{marginBottom:14}}>
-            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgMood')||'mood from image')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}><span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>{imgAiBusy?'…':(t('imgMood')||'mood from image')}{!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}</button>
+            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgMood')||'mood from image')} style={{width:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 13px 11px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',opacity:!aiUsable?.5:1}}>
+              <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>
+                <span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
+                {imgAiBusy?'…':(t('imgMood')||'mood from image')}
+                {!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
+              </span>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:(.6*effScale)+'rem',color:'rgba(228,178,255,.65)',letterSpacing:0,textTransform:'none',lineHeight:1.2,fontWeight:400,textAlign:'center'}}>
+                {t('mfiDesc')||'pick a picture — AI captures its mood, then paints'}
+              </span>
+            </button>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
 
