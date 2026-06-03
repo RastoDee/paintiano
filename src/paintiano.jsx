@@ -8854,6 +8854,13 @@ const DEMO_REEL_MFI_STAGE3_AT = 7000;  // 23s + 7s = 30s
 // ═════════════════════════════════════════════════════════════════════════════
 
 const PRO_CFG = {
+  // ── Feature flag: temporarily disable the Buy button ──────────────────────
+  // Lemon Squeezy declined the store application (Dec 2025 — see chat
+  // history). Until Paddle integration is live, Buy buttons should show
+  // "Coming soon" instead of opening a broken checkout. The license-activation
+  // path ("I already have a key") stays open for any existing Pro holders.
+  // Set this back to `false` once Paddle vendor credentials are wired in.
+  checkoutDisabled: true,
   // Lemon Squeezy hosted checkout for "Paintiano Pro" (store slug: paintiano)
   checkoutUrl: 'https://paintiano.lemonsqueezy.com/checkout/buy/8d42493f-bca9-44b2-a057-8d730a8b2616',
   // Our own Vercel Edge validation endpoint (same origin as the app)
@@ -9158,12 +9165,28 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 </li>
               ))}
             </ul>
-            <button style={btnGold} onClick={openCheckout}>
-              {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
-            </button>
-            <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
-              {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
-            </p>
+            {PRO_CFG.checkoutDisabled ? (
+              <>
+                <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
+                  <span>{tr('proComingSoon', 'Checkout — coming soon')}</span>
+                  <span style={{fontSize:(.6*readScale)+'rem', fontWeight:400, opacity:.75, letterSpacing:'.02em'}}>
+                    {tr('proCheckoutMoving', 'we\u2019re moving payment providers')}
+                  </span>
+                </div>
+                <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
+                  {tr('proBackOnlineSoon', 'back online in a few days · early-bird price (€9.99) preserved')}
+                </p>
+              </>
+            ) : (
+              <>
+                <button style={btnGold} onClick={openCheckout}>
+                  {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
+                </button>
+                <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
+                  {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
+                </p>
+              </>
+            )}
             <button style={btnGhost} onClick={() => setView('key')}>
               {tr('proHaveKey', 'I already have a key')}
             </button>
@@ -9298,12 +9321,28 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               ))}
             </ul>
 
-            <button style={btnGold} onClick={openCheckout}>
-              {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
-            </button>
-            <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
-              {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
-            </p>
+            {PRO_CFG.checkoutDisabled ? (
+              <>
+                <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
+                  <span>{tr('proComingSoon', 'Checkout — coming soon')}</span>
+                  <span style={{fontSize:(.6*readScale)+'rem', fontWeight:400, opacity:.75, letterSpacing:'.02em'}}>
+                    {tr('proCheckoutMoving', 'we\u2019re moving payment providers')}
+                  </span>
+                </div>
+                <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
+                  {tr('proBackOnlineSoon', 'back online in a few days · early-bird price (€9.99) preserved')}
+                </p>
+              </>
+            ) : (
+              <>
+                <button style={btnGold} onClick={openCheckout}>
+                  {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
+                </button>
+                <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
+                  {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
+                </p>
+              </>
+            )}
             <button style={btnGhost} onClick={() => setView('key')}>
               {tr('proHaveKey', 'I already have a key')}
             </button>
