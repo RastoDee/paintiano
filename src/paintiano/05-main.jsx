@@ -7124,14 +7124,15 @@ Composition rules:
           <div style={{maxWidth:480, margin:'0 auto', width:'100%'}}>
             <h2 style={{
               fontFamily:"'Cormorant Garamond',serif", fontWeight:600,
-              fontSize:'1.6rem', color:'#c9a84c',
-              textAlign:'center', margin:'0 0 4px',
+              fontSize:(1.7*effScale)+'rem', color:'#c9a84c',
+              textAlign:'center', margin:'0 0 6px',
             }}>{t('helpTitle')!=='helpTitle' ? t('helpTitle') : 'What does what'}</h2>
             <p style={{
               textAlign:'center',
-              color:'rgba(242,238,232,.6)',
-              fontStyle:'italic', fontFamily:"'Cormorant Garamond',serif",
-              fontSize:'.95rem', margin:'0 0 18px',
+              color:'rgba(242,238,232,.7)',
+              fontFamily:'Arial, sans-serif',
+              fontSize:(1.0*effScale)+'rem', margin:'0 0 22px',
+              letterSpacing:'.01em', lineHeight:1.4,
             }}>{t('helpSub')!=='helpSub' ? t('helpSub') : 'tap any source on the setup screen to begin'}</p>
 
             {[
@@ -7160,14 +7161,17 @@ Composition rules:
                   }}>{it.icon}</div>
                   <div style={{flex:1, minWidth:0}}>
                     <div style={{
-                      fontSize:'.72rem', fontWeight:700,
+                      fontFamily:'Arial, sans-serif',
+                      fontSize:(.78*effScale)+'rem', fontWeight:700,
                       letterSpacing:'.12em', textTransform:'uppercase',
-                      color:'#f2eee8', marginBottom:3,
+                      color:'#f2eee8', marginBottom:4,
                     }}>{it.name}</div>
                     <div style={{
-                      fontFamily:"'Cormorant Garamond',serif", fontStyle:'italic',
-                      fontSize:'.92rem', color:'rgba(242,238,232,.65)',
-                      lineHeight:1.4,
+                      fontFamily:'Arial, sans-serif',
+                      fontSize:(.95*effScale)+'rem',
+                      color:'rgba(242,238,232,.78)',
+                      lineHeight:1.45,
+                      letterSpacing:'.01em',
                     }}>{desc}</div>
                   </div>
                 </div>
