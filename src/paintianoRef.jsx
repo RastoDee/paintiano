@@ -11217,22 +11217,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // app keeps running. Call this from every user-gesture audio entrypoint to
   // (a) kick Tone's promise, and (b) synchronously poke the rawContext awake.
   // Cheap to call repeatedly; no-op when context is already running.
-  const unlockAudio = useCallback(()=>{
-    try{Tone.start();}catch(_){}
+  const unlockAudio = useCallback(async ()=>{
+    try{ Tone.start(); }catch(_){}
     try{
       const ac=Tone.getContext().rawContext;
-      if(ac&&ac.state==='suspended'){
-        // The context was suspended. Any triggerAttackRelease() calls made
-        // before this moment got queued at Tone.now() (which was frozen),
-        // and would all fire at once when resume completes. Cancel those
-        // scheduled events on the sampler before resuming — otherwise the
-        // user's first audible event is a phantom replay of every silent
-        // keypress they made before the context unlocked.
-        try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
-        // Fire-and-forget: iOS sometimes resolves the resume promise late
-        // (or never) but the side effect of *calling* resume marks the
-        // context as user-activated, which is what we need.
-        ac.resume().catch(()=>{});
+      if(!ac) return;
+      if(ac.state==='running') return; // already unlocked, nothing to do
+      // Suspended — cancel pending sampler events, kick off resume.
+      try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+      try { ac.resume(); } catch(_){}
+      // Poll briefly for the context to actually transition to 'running' before
+      // returning. Without this, startPlay would schedule notes against a still-
+      // suspended Tone.now() and the first chord could land silent. Hard cap at
+      // 500ms so a misbehaving context never hangs Play.
+      const start = Date.now();
+      while(ac.state !== 'running' && Date.now() - start < 500){
+        await new Promise(r=>setTimeout(r, 20));
       }
     }catch(_){}
   },[]);
@@ -13267,7 +13267,7 @@ Composition rules:
   },[busy,chords,viewMode,grid,stopAll]);
 
   const lastStartPlayRef = useRef(0);
-  const startPlay=useCallback(()=>{
+  const startPlay=useCallback(async ()=>{
     const now=Date.now();
     if(now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
@@ -13275,7 +13275,14 @@ Composition rules:
     const grid=gridRef.current;
     const info=infoRef.current;
     const viewMode=viewModeRef.current;
-    if(busy||!chords.length)return;unlockAudio();
+    if(busy||!chords.length)return;
+    // Await unlock so the AudioContext is guaranteed 'running' before we
+    // schedule anything against Tone.now(). Without this, the first chord can
+    // land silent — Tone.now() is frozen while the context is suspended, so
+    // triggerAttackRelease() queues at a stale time and the event is lost when
+    // the context catches up. The 500ms safety cap in unlockAudio means this
+    // can never deadlock Play even if the context never resumes.
+    await unlockAudio();
     // MFI hand-off: if we're showing the full picked image (mood-from-image AI
     // ready but Play not pressed yet), swap to thumbnail + paint mode now so the
     // canvas can start drawing. This is what makes Play work for MFI new images.
