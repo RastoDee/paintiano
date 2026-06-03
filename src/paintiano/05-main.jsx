@@ -7089,9 +7089,12 @@ Composition rules:
           onClick={(e)=>{ if(e.target===e.currentTarget) setShowHelp(false); }}
           style={{
             position:'fixed', inset:0,
-            background:'rgba(6,6,12,.85)',
-            backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
-            zIndex:95,
+            background:'rgba(6,6,12,.94)',
+            backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
+            // Must sit ABOVE the app header (zIndex 99999) — without this the
+            // CONCEPT / DEMO / GUIDE / PRO row and language picker bleed
+            // through the blur overlay at the top of the popup.
+            zIndex:100000,
             display:'flex', flexDirection:'column',
             // Respect iOS notch / Android status bar via env() safe areas.
             // 56px minimum to leave clearance for the close button.
