@@ -9,219 +9,736 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #06060c;
-    --ink: #e8e2d4;
-    --muted: rgba(232, 226, 212, .65);
-    --gold: #c9a84c;
-    --gold-soft: #ffd07a;
-    --rule: rgba(232, 226, 212, .12);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    background: radial-gradient(ellipse at 50% -10%, #0e0b16, #06060c 55%);
-    color: var(--ink);
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    line-height: 1.65;
-    -webkit-font-smoothing: antialiased;
-    min-height: 100vh;
-  }
-  .wrap {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 60px 24px 80px;
-  }
-  header {
-    text-align: center;
-    margin-bottom: 48px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--rule);
-  }
-  header .logo {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 600;
-    font-size: 2.2rem;
-    color: var(--gold);
-    letter-spacing: -.01em;
-    text-decoration: none;
-    display: inline-block;
-  }
-  header h1 {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-weight: 400;
-    font-size: 1.4rem;
-    color: var(--ink);
-    margin-top: 8px;
-    letter-spacing: .01em;
-  }
-  header .meta {
-    color: var(--muted);
-    font-size: .82rem;
-    margin-top: 12px;
-    letter-spacing: .04em;
-  }
-
-  h2 {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 600;
-    font-size: 1.4rem;
-    color: var(--gold);
-    margin: 36px 0 12px;
-    letter-spacing: -.01em;
-  }
-  h2:first-of-type { margin-top: 8px; }
-  h3 {
-    font-family: 'Outfit', sans-serif;
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--gold-soft);
-    margin: 20px 0 8px;
-    letter-spacing: .02em;
-  }
-  p, li {
-    font-size: .95rem;
-    color: var(--ink);
-    margin-bottom: 12px;
-  }
-  ul {
-    padding-left: 22px;
-    margin-bottom: 16px;
-  }
-  li { margin-bottom: 6px; }
-  a {
-    color: var(--gold-soft);
-    text-decoration: none;
-    border-bottom: 1px solid rgba(255, 208, 122, .35);
-    padding-bottom: 1px;
-  }
-  a:hover { border-bottom-color: var(--gold-soft); }
-  strong { color: var(--gold-soft); font-weight: 600; }
-  .muted {
-    color: var(--muted);
-    font-size: .85rem;
-  }
-
-  .contact {
-    margin-top: 40px;
-    padding: 22px 24px;
-    background: rgba(201, 168, 76, .06);
-    border: 1px solid rgba(201, 168, 76, .25);
-    border-radius: 12px;
-  }
-  .contact h2 { margin-top: 0; }
-  .contact p { margin-bottom: 6px; }
-
-  footer {
-    margin-top: 56px;
-    padding-top: 24px;
-    border-top: 1px solid var(--rule);
-    text-align: center;
-    color: var(--muted);
-    font-size: .8rem;
-    letter-spacing: .04em;
-  }
-  footer a { color: var(--muted); border-bottom-color: transparent; }
+  :root { --bg:#06060c; --ink:#e8e2d4; --muted:rgba(232,226,212,.65); --gold:#c9a84c; --gold-soft:#ffd07a; --rule:rgba(232,226,212,.12); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { background:radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%); color:var(--ink); font-family:'Outfit',-apple-system,BlinkMacSystemFont,system-ui,sans-serif; line-height:1.65; -webkit-font-smoothing:antialiased; min-height:100vh; }
+  .wrap { max-width:720px; margin:0 auto; padding:60px 24px 80px; }
+  header { text-align:center; margin-bottom:48px; padding-bottom:24px; border-bottom:1px solid var(--rule); }
+  header .logo { font-family:'Cormorant Garamond',serif; font-weight:600; font-size:2.2rem; color:var(--gold); letter-spacing:-.01em; text-decoration:none; display:inline-block; }
+  header h1 { font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:400; font-size:1.4rem; color:var(--ink); margin-top:8px; letter-spacing:.01em; }
+  header .meta { color:var(--muted); font-size:.82rem; margin-top:12px; letter-spacing:.04em; }
+  h2 { font-family:'Cormorant Garamond',serif; font-weight:600; font-size:1.4rem; color:var(--gold); margin:36px 0 12px; letter-spacing:-.01em; }
+  h2:first-of-type { margin-top:8px; }
+  h3 { font-family:'Outfit',sans-serif; font-weight:600; font-size:1rem; color:var(--gold-soft); margin:20px 0 8px; letter-spacing:.02em; }
+  p, li { font-size:.95rem; color:var(--ink); margin-bottom:12px; }
+  ul, ol { padding-left:22px; margin-bottom:16px; }
+  li { margin-bottom:6px; }
+  a { color:var(--gold-soft); text-decoration:none; border-bottom:1px solid rgba(255,208,122,.35); padding-bottom:1px; }
+  a:hover { border-bottom-color:var(--gold-soft); }
+  strong { color:var(--gold-soft); font-weight:600; }
+  .muted { color:var(--muted); font-size:.85rem; }
+  .contact { margin-top:40px; padding:22px 24px; background:rgba(201,168,76,.06); border:1px solid rgba(201,168,76,.25); border-radius:12px; }
+  .contact h2 { margin-top:0; }
+  .contact p { margin-bottom:6px; }
+  .highlight { padding:18px 22px; background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.3); border-radius:12px; margin-bottom:32px; }
+  .highlight h3 { color:var(--gold); margin:0 0 6px; }
+  .highlight p { margin:0; color:var(--ink); }
+  table { width:100%; border-collapse:collapse; margin:16px 0 20px; font-size:.85rem; }
+  table th, table td { padding:9px 10px; border-bottom:1px solid var(--rule); text-align:left; vertical-align:top; }
+  table th { color:var(--gold); font-weight:600; }
+  footer { margin-top:56px; padding-top:24px; border-top:1px solid var(--rule); text-align:center; color:var(--muted); font-size:.8rem; letter-spacing:.04em; }
+  footer a { color:var(--muted); border-bottom-color:transparent; }
+  .langpick { position:fixed; top:14px; right:14px; z-index:50; background:rgba(20,16,30,.85); border:1px solid rgba(201,168,76,.25); border-radius:18px; padding:4px 8px 4px 12px; font-family:'Outfit',sans-serif; font-size:.78rem; color:var(--gold-soft); letter-spacing:.06em; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+  .langpick select { background:transparent; border:0; color:inherit; font:inherit; letter-spacing:inherit; padding:4px 18px 4px 2px; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%); background-position:calc(100% - 8px) 50%,calc(100% - 4px) 50%; background-size:4px 4px; background-repeat:no-repeat; }
+  .langpick select:focus { outline:none; }
+  .langpick option { background:#0e0b16; color:var(--ink); }
+  [data-lang]:not(.active) { display:none; }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="langpick"><select id="lang" aria-label="language"><option value="en">EN</option><option value="de">DE</option><option value="fr">FR</option><option value="es">ES</option><option value="sk">SK</option><option value="pt">PT</option><option value="zh">中文</option><option value="zhTW">繁體</option></select></div>
 
-  <header>
-    <a href="https://paintiano.app" class="logo">Paintiano</a>
-    <h1>Terms of Service</h1>
-    <div class="meta">Effective: 1 June 2026 · Version 1.0</div>
-  </header>
+<div class="wrap active" data-lang="en">
 
-  <h2>1. About these terms</h2>
-  <p>These Terms of Service ("<strong>Terms</strong>") govern your use of the Paintiano web application available at <a href="https://paintiano.app">paintiano.app</a> (the "<strong>Service</strong>") and any purchase of the Paintiano Pro license (the "<strong>License</strong>").</p>
-  <p>By using the Service or purchasing the License you confirm that you have read, understood, and agreed to these Terms. If you do not agree, please do not use the Service.</p>
-
-  <h2>2. Who provides the Service</h2>
-  <p>The Service is operated by:</p>
-  <ul>
-    <li><strong>Rastislav Ďurica</strong> (sole trader / živnosť), Slovak Republic</li>
-    <li>Business ID (IČO): <strong>34 594 671</strong></li>
-    <li>Tax ID (DIČ): <strong>1025916419</strong></li>
-    <li>Not registered for VAT.</li>
-    <li>Contact: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></li>
-  </ul>
-  <p class="muted">Registered with the Slovak Trade Licensing Register; supervising authority is the District Office in the place of business.</p>
-
-  <h2>3. What you get</h2>
-  <h3>3.1 Free tier</h3>
-  <p>The Service is freely accessible. Anyone may use Paintiano in their browser to convert musical input (MIDI files, audio, microphone input, or AI-generated mood prompts) into generative paintings, and to export those paintings as images. The free tier includes reasonable usage caps to manage server costs.</p>
-
-  <h3>3.2 Paintiano Pro (the License)</h3>
-  <p>The Paintiano Pro License is a one-time purchase that unlocks premium features in the Service for the lifetime of the product, including (but not limited to):</p>
-  <ul>
-    <li>High-resolution image exports</li>
-    <li>Unlimited AI mood compositions</li>
-    <li>Extended song length</li>
-    <li>Full artist style library</li>
-    <li>Removal of the free-tier watermark and usage caps</li>
-  </ul>
-  <p>The License is delivered electronically as a license key, sent by email immediately after payment is confirmed by our payment processor. You activate the License inside the Service by entering this key.</p>
-  <p class="muted">"Lifetime" means for as long as Paintiano remains operational as a service. We do not guarantee any minimum operational period, but we will give reasonable advance notice if we ever discontinue the Service.</p>
-
-  <h2>4. Pricing and payment</h2>
-  <p>Prices are shown in EUR and include any applicable taxes that our payment processor is obliged to collect.</p>
-  <p>Payments are processed by our payment provider, <strong>Paddle.com Market Limited</strong>, acting as Merchant of Record. By purchasing the License, you also agree to Paddle's <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener">Checkout Buyer Terms</a>.</p>
-  <p>Your purchase invoice is issued by Paddle and delivered by email together with your license key.</p>
-
-  <h2>5. Refund policy</h2>
-  <p>You may request a full refund within <strong>14 days</strong> of purchase, for any reason, in line with EU consumer law (Directive 2011/83/EU). To request a refund, email <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> from the address used to purchase, or contact Paddle support directly. Refunds are usually processed within 5 business days back to the original payment method.</p>
-  <p>After a refund the associated license key is deactivated and Pro features in the Service are turned off on the next online session.</p>
-
-  <h2>6. Acceptable use</h2>
-  <p>You agree not to:</p>
-  <ul>
-    <li>Upload content that infringes copyright, trademarks, or other rights of third parties;</li>
-    <li>Use the Service to harass, defame, or harm others;</li>
-    <li>Attempt to reverse-engineer, decompile, or bypass technical limitations of the Service or the License;</li>
-    <li>Resell, redistribute, or sublicense the License or your license key to third parties;</li>
-    <li>Use automated means to access the Service in a way that materially burdens our infrastructure.</li>
-  </ul>
-  <p>We may suspend or terminate your access if you materially breach these Terms.</p>
-
-  <h2>7. Your content and intellectual property</h2>
-  <p>You retain full ownership of any musical input you upload and of any painting Paintiano generates from your input. We claim no rights over your creations.</p>
-  <p>You are responsible for ensuring you have the right to use any input you upload (for example, you should not upload a MIDI file you do not own or have a license for).</p>
-  <p>The Paintiano name, logo, source code, and visual design remain the intellectual property of the operator.</p>
-
-  <h2>8. AI-generated content</h2>
-  <p>Some features (notably "Mood" and "Mood from image") use third-party AI models to compose music. The output is generated automatically and may occasionally be unexpected, imperfect, or inconsistent with the input. AI compositions are provided <strong>as-is</strong>. We do not warrant that any specific output will be created for a given prompt or image.</p>
-
-  <h2>9. Service availability</h2>
-  <p>We provide the Service on a best-effort basis. We may modify, suspend, or discontinue parts of the Service to fix bugs, add features, or for operational reasons. Brief planned or unplanned outages may occur. The Service is provided <strong>"as is"</strong>, without warranties of any kind beyond those required by mandatory consumer law.</p>
-
-  <h2>10. Limitation of liability</h2>
-  <p>To the maximum extent permitted by law, our total liability for any claim arising from your use of the Service or the License is limited to the amount you paid us for the License in the twelve (12) months preceding the claim. We are not liable for indirect, incidental, or consequential damages (such as lost profits or lost data).</p>
-  <p>Nothing in these Terms limits liability for fraud, gross negligence, or where liability cannot be limited by law (including statutory consumer rights).</p>
-
-  <h2>11. Privacy</h2>
-  <p>We collect minimal data: license keys we issue, your activation email (from Paddle), basic usage analytics (anonymous), and any support correspondence you send us. We do not sell your data. AI features send your prompt (or low-resolution image) to our AI provider for inference only and do not store identifying personal data on those endpoints.</p>
-  <p>For full details, see our <a href="/privacy.html">Privacy Policy</a>.</p>
-
-  <h2>12. Changes to these Terms</h2>
-  <p>We may update these Terms from time to time. The "Effective" date at the top will be updated. Material changes affecting your rights will be communicated by email (if we have your email) or via a banner inside the Service. Continued use after the effective date constitutes acceptance.</p>
-
-  <h2>13. Governing law and disputes</h2>
-  <p>These Terms are governed by the laws of the <strong>Slovak Republic</strong>. Where you act as a consumer, you also retain any rights that mandatory consumer protection law in your country of residence gives you.</p>
-  <p>Disputes will first be addressed through good-faith communication. If unresolved, disputes may be brought before the competent Slovak court, or — for consumer disputes — through the EU <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">Online Dispute Resolution platform</a>.</p>
-
-  <div class="contact">
-    <h2>Contact</h2>
-    <p><strong>Rastislav Ďurica</strong> — sole trader (živnosť)</p>
-    <p>IČO 34 594 671 · DIČ 1025916419</p>
-    <p>Email: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
-  </div>
-
-  <footer>
-    <a href="https://paintiano.app">paintiano.app</a> · <a href="/privacy.html">Privacy Policy</a><br>
-    © 2026 Rastislav Ďurica · All rights reserved.
-  </footer>
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Terms of Service</h1>
+  <div class="meta">Effective: 1 June 2026 · Version 1.0</div>
+</header>
+<h2>1. About these terms</h2>
+<p>These Terms of Service ("<strong>Terms</strong>") govern your use of the Paintiano web application available at <a href="https://paintiano.app">paintiano.app</a> (the "<strong>Service</strong>") and any purchase of the Paintiano Pro license (the "<strong>License</strong>").</p>
+<p>By using the Service or purchasing the License you confirm that you have read, understood, and agreed to these Terms. If you do not agree, please do not use the Service.</p>
+<h2>2. Who provides the Service</h2>
+<p>The Service is operated by:</p>
+<ul>
+  <li><strong>Rastislav Ďurica</strong> (sole trader / živnosť), Slovak Republic</li>
+  <li>Business ID (IČO): <strong>34 594 671</strong></li>
+  <li>Tax ID (DIČ): <strong>1025916419</strong></li>
+  <li>Not registered for VAT.</li>
+  <li>Contact: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></li>
+</ul>
+<p class="muted">Registered with the Slovak Trade Licensing Register; supervising authority is the District Office in the place of business.</p>
+<h2>3. What you get</h2>
+<h3>3.1 Free tier</h3>
+<p>The Service is freely accessible. Anyone may use Paintiano in their browser to convert musical input (MIDI files, audio, microphone input, or AI-generated mood prompts) into generative paintings, and to export those paintings as images. The free tier includes reasonable usage caps to manage server costs.</p>
+<h3>3.2 Paintiano Pro (the License)</h3>
+<p>The Paintiano Pro License is a one-time purchase that unlocks premium features in the Service for the lifetime of the product, including (but not limited to):</p>
+<ul>
+  <li>High-resolution image exports</li>
+  <li>Unlimited AI mood compositions</li>
+  <li>Extended song length</li>
+  <li>Full artist style library</li>
+  <li>Removal of the free-tier watermark and usage caps</li>
+</ul>
+<p>The License is delivered electronically as a license key, sent by email immediately after payment is confirmed by our payment processor. You activate the License inside the Service by entering this key.</p>
+<p class="muted">"Lifetime" means for as long as Paintiano remains operational as a service. We do not guarantee any minimum operational period, but we will give reasonable advance notice if we ever discontinue the Service.</p>
+<h2>4. Pricing and payment</h2>
+<p>Prices are shown in EUR and include any applicable taxes that our payment processor is obliged to collect.</p>
+<p>Payments are processed by our payment provider, <strong>Paddle.com Market Limited</strong>, acting as Merchant of Record. By purchasing the License, you also agree to Paddle's <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener">Checkout Buyer Terms</a>.</p>
+<p>Your purchase invoice is issued by Paddle and delivered by email together with your license key.</p>
+<h2>5. Refund policy</h2>
+<p>You may request a full refund within <strong>14 days</strong> of purchase, for any reason, in line with EU consumer law (Directive 2011/83/EU). To request a refund, email <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> from the address used to purchase, or contact Paddle support directly. Refunds are usually processed within 5 business days back to the original payment method.</p>
+<p>After a refund the associated license key is deactivated and Pro features in the Service are turned off on the next online session.</p>
+<h2>6. Acceptable use</h2>
+<p>You agree not to:</p>
+<ul>
+  <li>Upload content that infringes copyright, trademarks, or other rights of third parties;</li>
+  <li>Use the Service to harass, defame, or harm others;</li>
+  <li>Attempt to reverse-engineer, decompile, or bypass technical limitations of the Service or the License;</li>
+  <li>Resell, redistribute, or sublicense the License or your license key to third parties;</li>
+  <li>Use automated means to access the Service in a way that materially burdens our infrastructure.</li>
+</ul>
+<p>We may suspend or terminate your access if you materially breach these Terms.</p>
+<h2>7. Your content and intellectual property</h2>
+<p>You retain full ownership of any musical input you upload and of any painting Paintiano generates from your input. We claim no rights over your creations.</p>
+<p>You are responsible for ensuring you have the right to use any input you upload (for example, you should not upload a MIDI file you do not own or have a license for).</p>
+<p>The Paintiano name, logo, source code, and visual design remain the intellectual property of the operator.</p>
+<h2>8. AI-generated content</h2>
+<p>Some features (notably "Mood" and "Mood from image") use third-party AI models to compose music. The output is generated automatically and may occasionally be unexpected, imperfect, or inconsistent with the input. AI compositions are provided <strong>as-is</strong>. We do not warrant that any specific output will be created for a given prompt or image.</p>
+<h2>9. Service availability</h2>
+<p>We provide the Service on a best-effort basis. We may modify, suspend, or discontinue parts of the Service to fix bugs, add features, or for operational reasons. Brief planned or unplanned outages may occur. The Service is provided <strong>"as is"</strong>, without warranties of any kind beyond those required by mandatory consumer law.</p>
+<h2>10. Limitation of liability</h2>
+<p>To the maximum extent permitted by law, our total liability for any claim arising from your use of the Service or the License is limited to the amount you paid us for the License in the twelve (12) months preceding the claim. We are not liable for indirect, incidental, or consequential damages (such as lost profits or lost data).</p>
+<p>Nothing in these Terms limits liability for fraud, gross negligence, or where liability cannot be limited by law (including statutory consumer rights).</p>
+<h2>11. Privacy</h2>
+<p>We collect minimal data: license keys we issue, your activation email (from Paddle), basic usage analytics (anonymous), and any support correspondence you send us. We do not sell your data. AI features send your prompt (or low-resolution image) to our AI provider for inference only and do not store identifying personal data on those endpoints.</p>
+<p>For full details, see our <a href="/privacy.html">Privacy Policy</a>.</p>
+<h2>12. Changes to these Terms</h2>
+<p>We may update these Terms from time to time. The "Effective" date at the top will be updated. Material changes affecting your rights will be communicated by email (if we have your email) or via a banner inside the Service. Continued use after the effective date constitutes acceptance.</p>
+<h2>13. Governing law and disputes</h2>
+<p>These Terms are governed by the laws of the <strong>Slovak Republic</strong>. Where you act as a consumer, you also retain any rights that mandatory consumer protection law in your country of residence gives you.</p>
+<p>Disputes will first be addressed through good-faith communication. If unresolved, disputes may be brought before the competent Slovak court, or — for consumer disputes — through the EU <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">Online Dispute Resolution platform</a>.</p>
+<div class="contact">
+  <h2>Contact</h2>
+  <p><strong>Rastislav Ďurica</strong> — sole trader (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>Email: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/privacy.html">Privacy Policy</a><br>© 2026 Rastislav Ďurica · All rights reserved.</footer>
 
 </div>
+
+<div class="wrap" data-lang="de">
+
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Nutzungsbedingungen</h1>
+  <div class="meta">Gültig ab: 1. Juni 2026 · Version 1.0</div>
+</header>
+<h2>1. Über diese Bedingungen</h2>
+<p>Diese Nutzungsbedingungen („<strong>Bedingungen</strong>") regeln Ihre Nutzung der Paintiano-Webanwendung unter <a href="https://paintiano.app">paintiano.app</a> (der „<strong>Dienst</strong>") sowie jeden Kauf der Paintiano Pro Lizenz (die „<strong>Lizenz</strong>").</p>
+<p>Durch die Nutzung des Dienstes oder den Kauf der Lizenz bestätigen Sie, diese Bedingungen gelesen, verstanden und akzeptiert zu haben. Wenn Sie nicht zustimmen, nutzen Sie den Dienst bitte nicht.</p>
+<h2>2. Wer den Dienst anbietet</h2>
+<p>Der Dienst wird betrieben von:</p>
+<ul>
+  <li><strong>Rastislav Ďurica</strong> (Einzelunternehmer / živnosť), Slowakische Republik</li>
+  <li>Handelsregisternummer (IČO): <strong>34 594 671</strong></li>
+  <li>Steuernummer (DIČ): <strong>1025916419</strong></li>
+  <li>Nicht umsatzsteuerpflichtig.</li>
+  <li>Kontakt: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></li>
+</ul>
+<p class="muted">Eingetragen im slowakischen Gewerberegister; Aufsichtsbehörde ist das Bezirksamt am Geschäftssitz.</p>
+<h2>3. Was Sie erhalten</h2>
+<h3>3.1 Kostenlose Version</h3>
+<p>Der Dienst ist frei zugänglich. Jeder kann Paintiano im Browser nutzen, um musikalische Eingaben (MIDI-Dateien, Audio, Mikrofon oder KI-generierte Stimmungs-Prompts) in generative Gemälde zu verwandeln und diese als Bilder zu exportieren. Die kostenlose Version enthält angemessene Nutzungsgrenzen zur Verwaltung der Serverkosten.</p>
+<h3>3.2 Paintiano Pro (die Lizenz)</h3>
+<p>Die Paintiano Pro Lizenz ist ein Einmalkauf, der Premium-Funktionen für die Lebensdauer des Produkts freischaltet, darunter (aber nicht beschränkt auf):</p>
+<ul>
+  <li>Bildexporte in hoher Auflösung</li>
+  <li>Unbegrenzte KI-Stimmungskompositionen</li>
+  <li>Verlängerte Lieddauer</li>
+  <li>Vollständige Künstler-Stilbibliothek</li>
+  <li>Entfernung des Free-Tier-Wasserzeichens und der Nutzungsgrenzen</li>
+</ul>
+<p>Die Lizenz wird elektronisch als Lizenzschlüssel zugestellt, per E-Mail unmittelbar nach Zahlungsbestätigung. Sie aktivieren die Lizenz im Dienst durch Eingabe dieses Schlüssels.</p>
+<p class="muted">„Lebensdauer" bedeutet so lange Paintiano als Dienst betrieben wird. Wir garantieren keinen Mindestbetriebszeitraum, werden aber angemessen im Voraus informieren, falls wir den Dienst einstellen.</p>
+<h2>4. Preise und Zahlung</h2>
+<p>Preise werden in EUR angezeigt und enthalten alle anwendbaren Steuern, die unser Zahlungsabwickler einziehen muss.</p>
+<p>Zahlungen werden von unserem Zahlungsanbieter <strong>Paddle.com Market Limited</strong> als Merchant of Record verarbeitet. Mit dem Kauf der Lizenz stimmen Sie auch Paddles <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener">Checkout-Käuferbedingungen</a> zu.</p>
+<p>Ihre Kaufrechnung wird von Paddle ausgestellt und zusammen mit Ihrem Lizenzschlüssel per E-Mail zugestellt.</p>
+<h2>5. Widerrufsrecht</h2>
+<p>Sie können innerhalb von <strong>14 Tagen</strong> nach dem Kauf aus jedem Grund eine vollständige Rückerstattung beantragen, im Einklang mit dem EU-Verbraucherrecht (Richtlinie 2011/83/EU). Senden Sie dafür eine E-Mail an <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> von der zum Kauf verwendeten Adresse, oder kontaktieren Sie den Paddle-Support direkt. Rückerstattungen werden in der Regel innerhalb von 5 Werktagen auf die ursprüngliche Zahlungsmethode bearbeitet.</p>
+<p>Nach einer Rückerstattung wird der Lizenzschlüssel deaktiviert und Pro-Funktionen bei der nächsten Online-Sitzung abgeschaltet.</p>
+<h2>6. Zulässige Nutzung</h2>
+<p>Sie verpflichten sich, Folgendes zu unterlassen:</p>
+<ul>
+  <li>Inhalte hochzuladen, die Urheberrechte, Marken oder andere Rechte Dritter verletzen;</li>
+  <li>Den Dienst zur Belästigung, Verleumdung oder Schädigung anderer zu nutzen;</li>
+  <li>Reverse-Engineering, Dekompilierung oder Umgehung technischer Beschränkungen zu versuchen;</li>
+  <li>Die Lizenz an Dritte weiterzuverkaufen, weiterzugeben oder unterzulizenzieren;</li>
+  <li>Automatisierte Mittel zu verwenden, die unsere Infrastruktur erheblich belasten.</li>
+</ul>
+<p>Wir können Ihren Zugang aussetzen oder beenden, wenn Sie diese Bedingungen wesentlich verletzen.</p>
+<h2>7. Ihre Inhalte und geistiges Eigentum</h2>
+<p>Sie behalten das volle Eigentum an jeder musikalischen Eingabe und an jedem von Paintiano erzeugten Gemälde. Wir erheben keine Rechte an Ihren Schöpfungen.</p>
+<p>Sie sind verantwortlich dafür, dass Sie das Recht haben, jede hochgeladene Eingabe zu verwenden.</p>
+<p>Der Paintiano-Name, das Logo, der Quellcode und das visuelle Design bleiben geistiges Eigentum des Betreibers.</p>
+<h2>8. KI-generierte Inhalte</h2>
+<p>Einige Funktionen („Stimmung" und „Stimmung aus Bild") nutzen KI-Modelle Dritter zum Komponieren von Musik. Die Ausgabe wird automatisch erzeugt und kann gelegentlich unerwartet sein. KI-Kompositionen werden <strong>wie besehen</strong> bereitgestellt.</p>
+<h2>9. Verfügbarkeit des Dienstes</h2>
+<p>Wir stellen den Dienst nach bestem Bemühen bereit. Wir können Teile des Dienstes ändern, aussetzen oder einstellen. Der Dienst wird <strong>„wie besehen"</strong> bereitgestellt, ohne Gewährleistungen über das zwingende Verbraucherrecht hinaus.</p>
+<h2>10. Haftungsbeschränkung</h2>
+<p>Soweit gesetzlich zulässig ist unsere Gesamthaftung auf den Betrag begrenzt, den Sie uns in den letzten zwölf (12) Monaten gezahlt haben. Wir haften nicht für indirekte oder Folgeschäden.</p>
+<p>Nichts beschränkt die Haftung für Betrug, grobe Fahrlässigkeit oder gesetzliche Verbraucherrechte.</p>
+<h2>11. Datenschutz</h2>
+<p>Wir erheben minimale Daten: Lizenzschlüssel, Aktivierungs-E-Mail (von Paddle), anonyme Nutzungsanalysen und Support-Korrespondenz. Wir verkaufen Ihre Daten nicht.</p>
+<p>Volle Details siehe unsere <a href="/privacy.html">Datenschutzerklärung</a>.</p>
+<h2>12. Änderungen dieser Bedingungen</h2>
+<p>Wir können diese Bedingungen aktualisieren. Wesentliche Änderungen werden per E-Mail oder via Banner kommuniziert. Weitere Nutzung gilt als Zustimmung.</p>
+<h2>13. Anwendbares Recht und Streitigkeiten</h2>
+<p>Diese Bedingungen unterliegen dem Recht der <strong>Slowakischen Republik</strong>. Als Verbraucher behalten Sie zwingende Verbraucherschutzrechte Ihres Wohnsitzlandes.</p>
+<p>Streitigkeiten können vor dem zuständigen slowakischen Gericht oder über die EU-<a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">Online-Streitbeilegungsplattform</a> verfolgt werden.</p>
+<div class="contact">
+  <h2>Kontakt</h2>
+  <p><strong>Rastislav Ďurica</strong> — Einzelunternehmer (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>E-Mail: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/privacy.html">Datenschutz</a><br>© 2026 Rastislav Ďurica · Alle Rechte vorbehalten.</footer>
+
+</div>
+
+<div class="wrap" data-lang="fr">
+
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Conditions d'utilisation</h1>
+  <div class="meta">En vigueur : 1 juin 2026 · Version 1.0</div>
+</header>
+<h2>1. À propos de ces conditions</h2>
+<p>Ces Conditions d'utilisation (« <strong>Conditions</strong> ») régissent votre utilisation de l'application web Paintiano disponible sur <a href="https://paintiano.app">paintiano.app</a> (le « <strong>Service</strong> ») et tout achat de la licence Paintiano Pro (la « <strong>Licence</strong> »).</p>
+<p>En utilisant le Service ou en achetant la Licence, vous confirmez avoir lu, compris et accepté ces Conditions. Si vous n'êtes pas d'accord, veuillez ne pas utiliser le Service.</p>
+<h2>2. Qui fournit le Service</h2>
+<p>Le Service est exploité par :</p>
+<ul>
+  <li><strong>Rastislav Ďurica</strong> (travailleur indépendant / živnosť), République slovaque</li>
+  <li>Numéro d'entreprise (IČO) : <strong>34 594 671</strong></li>
+  <li>Numéro fiscal (DIČ) : <strong>1025916419</strong></li>
+  <li>Non assujetti à la TVA.</li>
+  <li>Contact : <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></li>
+</ul>
+<p class="muted">Enregistré au registre du commerce slovaque ; l'autorité de surveillance est le bureau de district du lieu d'activité.</p>
+<h2>3. Ce que vous obtenez</h2>
+<h3>3.1 Version gratuite</h3>
+<p>Le Service est librement accessible. Chacun peut utiliser Paintiano dans son navigateur pour convertir des entrées musicales (MIDI, audio, microphone ou prompts d'humeur IA) en peintures génératives et les exporter. La version gratuite inclut des plafonds d'utilisation raisonnables.</p>
+<h3>3.2 Paintiano Pro (la Licence)</h3>
+<p>La Licence Paintiano Pro est un achat unique qui débloque les fonctionnalités premium pour la durée de vie du produit, incluant :</p>
+<ul>
+  <li>Exports d'images en haute résolution</li>
+  <li>Compositions d'humeur IA illimitées</li>
+  <li>Durée de morceau étendue</li>
+  <li>Bibliothèque complète de styles d'artistes</li>
+  <li>Suppression du filigrane et des plafonds</li>
+</ul>
+<p>La Licence est délivrée électroniquement comme clé, envoyée par e-mail après confirmation du paiement. Vous l'activez dans le Service en saisissant cette clé.</p>
+<p class="muted">« Durée de vie » signifie tant que Paintiano reste opérationnel. Nous ne garantissons aucune période minimale, mais préaviserons en cas d'interruption.</p>
+<h2>4. Tarification et paiement</h2>
+<p>Les prix sont en EUR et incluent les taxes applicables.</p>
+<p>Les paiements sont traités par <strong>Paddle.com Market Limited</strong>, Merchant of Record. En achetant, vous acceptez les <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener">Conditions d'achat</a> de Paddle.</p>
+<p>Votre facture est émise par Paddle et envoyée par e-mail avec votre clé.</p>
+<h2>5. Politique de remboursement</h2>
+<p>Vous pouvez demander un remboursement intégral dans les <strong>14 jours</strong> de l'achat, pour toute raison (Directive 2011/83/UE). Envoyez un e-mail à <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> ou contactez Paddle. Traité sous 5 jours ouvrables vers le moyen de paiement original.</p>
+<p>Après remboursement, la clé est désactivée et les fonctionnalités Pro coupées à la prochaine session en ligne.</p>
+<h2>6. Utilisation acceptable</h2>
+<p>Vous vous engagez à ne pas :</p>
+<ul>
+  <li>Téléverser du contenu qui enfreint les droits de tiers ;</li>
+  <li>Utiliser le Service pour harceler ou nuire à autrui ;</li>
+  <li>Tenter d'ingénierie inverse ou de contournement technique ;</li>
+  <li>Revendre, redistribuer ou sous-licencier la Licence ;</li>
+  <li>Charger significativement notre infrastructure par moyens automatisés.</li>
+</ul>
+<p>Nous pouvons suspendre ou résilier votre accès en cas de violation matérielle.</p>
+<h2>7. Votre contenu et propriété intellectuelle</h2>
+<p>Vous conservez la pleine propriété de toute entrée et peinture générée. Nous ne revendiquons aucun droit sur vos créations.</p>
+<p>Vous êtes responsable d'avoir le droit d'utiliser toute entrée téléversée.</p>
+<p>Le nom Paintiano, logo, code source et design visuel restent la propriété intellectuelle de l'exploitant.</p>
+<h2>8. Contenu généré par IA</h2>
+<p>Certaines fonctionnalités (« Humeur », « Humeur depuis image ») utilisent des modèles IA tiers. La sortie est générée automatiquement et peut être inattendue. Les compositions IA sont fournies <strong>telles quelles</strong>.</p>
+<h2>9. Disponibilité du Service</h2>
+<p>Nous fournissons le Service au mieux. Nous pouvons modifier, suspendre ou interrompre des parties du Service. Le Service est fourni <strong>« en l'état »</strong>, sans garantie au-delà du droit impératif de la consommation.</p>
+<h2>10. Limitation de responsabilité</h2>
+<p>Notre responsabilité totale est limitée au montant payé pour la Licence dans les douze (12) mois précédents. Nous ne sommes pas responsables des dommages indirects ou consécutifs.</p>
+<p>Rien ne limite la responsabilité en cas de fraude, faute lourde, ou droits légaux des consommateurs.</p>
+<h2>11. Confidentialité</h2>
+<p>Nous collectons des données minimales : clés émises, e-mail d'activation (Paddle), analyses anonymes, et correspondance de support. Nous ne vendons pas vos données.</p>
+<p>Voir notre <a href="/privacy.html">Politique de confidentialité</a> pour les détails.</p>
+<h2>12. Modifications de ces Conditions</h2>
+<p>Nous pouvons mettre à jour ces Conditions. Les changements matériels seront communiqués par e-mail ou bannière. L'utilisation continue constitue acceptation.</p>
+<h2>13. Loi applicable et litiges</h2>
+<p>Ces Conditions sont régies par les lois de la <strong>République slovaque</strong>. En tant que consommateur, vous conservez les droits du droit impératif de votre pays de résidence.</p>
+<p>Les litiges peuvent être portés devant le tribunal slovaque ou la <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">plateforme ODR européenne</a>.</p>
+<div class="contact">
+  <h2>Contact</h2>
+  <p><strong>Rastislav Ďurica</strong> — travailleur indépendant (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>E-mail : <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/privacy.html">Confidentialité</a><br>© 2026 Rastislav Ďurica · Tous droits réservés.</footer>
+
+</div>
+
+<div class="wrap" data-lang="es">
+
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Términos de servicio</h1>
+  <div class="meta">Vigente desde: 1 de junio de 2026 · Versión 1.0</div>
+</header>
+<h2>1. Sobre estos términos</h2>
+<p>Estos Términos de servicio (los «<strong>Términos</strong>») rigen tu uso de la aplicación web Paintiano disponible en <a href="https://paintiano.app">paintiano.app</a> (el «<strong>Servicio</strong>») y cualquier compra de la licencia Paintiano Pro (la «<strong>Licencia</strong>»).</p>
+<p>Al usar el Servicio o comprar la Licencia confirmas haber leído, comprendido y aceptado estos Términos. Si no estás de acuerdo, no uses el Servicio.</p>
+<h2>2. Quién presta el Servicio</h2>
+<p>El Servicio lo opera:</p>
+<ul>
+  <li><strong>Rastislav Ďurica</strong> (autónomo / živnosť), República Eslovaca</li>
+  <li>Número de empresa (IČO): <strong>34 594 671</strong></li>
+  <li>Número fiscal (DIČ): <strong>1025916419</strong></li>
+  <li>No registrado para IVA.</li>
+  <li>Contacto: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></li>
+</ul>
+<p class="muted">Inscrito en el Registro Mercantil eslovaco; la autoridad supervisora es la Oficina de Distrito del lugar de actividad.</p>
+<h2>3. Qué obtienes</h2>
+<h3>3.1 Versión gratuita</h3>
+<p>El Servicio es de acceso libre. Cualquiera puede usar Paintiano en su navegador para convertir entradas musicales (MIDI, audio, micrófono o prompts IA) en pinturas generativas y exportarlas. Incluye límites razonables.</p>
+<h3>3.2 Paintiano Pro (la Licencia)</h3>
+<p>La Licencia Paintiano Pro es una compra única que desbloquea funciones premium durante la vida útil del producto:</p>
+<ul>
+  <li>Exportaciones en alta resolución</li>
+  <li>Composiciones IA ilimitadas</li>
+  <li>Duración extendida</li>
+  <li>Biblioteca completa de estilos</li>
+  <li>Sin marca de agua ni límites</li>
+</ul>
+<p>La Licencia se entrega electrónicamente como clave por correo tras confirmar el pago. La activas introduciendo esta clave en el Servicio.</p>
+<p class="muted">«Vida útil» significa mientras Paintiano siga operativo. No garantizamos periodo mínimo, pero avisaremos con antelación si discontinuamos.</p>
+<h2>4. Precios y pago</h2>
+<p>Los precios se muestran en EUR e incluyen los impuestos aplicables.</p>
+<p>Los pagos los procesa <strong>Paddle.com Market Limited</strong> como Merchant of Record. Al comprar también aceptas los <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener">Términos del Comprador</a> de Paddle.</p>
+<p>Tu factura la emite Paddle y se entrega por correo junto con tu clave.</p>
+<h2>5. Política de reembolso</h2>
+<p>Puedes solicitar un reembolso completo dentro de los <strong>14 días</strong>, por cualquier motivo (Directiva 2011/83/UE). Envía correo a <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> o contacta Paddle directamente. Procesado en 5 días hábiles al método de pago original.</p>
+<p>Tras el reembolso, la clave se desactiva y las funciones Pro se desactivan en la siguiente sesión online.</p>
+<h2>6. Uso aceptable</h2>
+<p>Te comprometes a no:</p>
+<ul>
+  <li>Subir contenido que infrinja derechos de terceros;</li>
+  <li>Usar el Servicio para acosar o dañar a otros;</li>
+  <li>Hacer ingeniería inversa o eludir limitaciones técnicas;</li>
+  <li>Revender o sublicenciar la Licencia;</li>
+  <li>Usar medios automatizados que sobrecarguen la infraestructura.</li>
+</ul>
+<p>Podemos suspender tu acceso si infringes materialmente.</p>
+<h2>7. Tu contenido y propiedad intelectual</h2>
+<p>Conservas la plena propiedad de tus entradas y pinturas generadas. No reclamamos derechos sobre tus creaciones.</p>
+<p>Eres responsable de tener derecho a usar cualquier entrada subida.</p>
+<p>El nombre Paintiano, logo, código fuente y diseño siguen siendo del operador.</p>
+<h2>8. Contenido generado por IA</h2>
+<p>Algunas funciones («Estado de ánimo», «Estado de ánimo desde imagen») usan modelos IA de terceros. La salida puede ser inesperada. Las composiciones IA se proporcionan <strong>tal cual</strong>.</p>
+<h2>9. Disponibilidad</h2>
+<p>Prestamos el Servicio según nuestro mejor esfuerzo. Podemos modificar o discontinuar partes. El Servicio se presta <strong>«tal cual»</strong>, sin garantías más allá del derecho del consumidor.</p>
+<h2>10. Limitación de responsabilidad</h2>
+<p>Nuestra responsabilidad total se limita al importe pagado en los últimos doce (12) meses. No somos responsables de daños indirectos ni consecuenciales.</p>
+<p>Nada limita la responsabilidad por fraude, negligencia grave o derechos legales del consumidor.</p>
+<h2>11. Privacidad</h2>
+<p>Recopilamos datos mínimos: claves emitidas, correo de activación (Paddle), analítica anónima, y correspondencia de soporte. No vendemos tus datos.</p>
+<p>Detalles en nuestra <a href="/privacy.html">Política de Privacidad</a>.</p>
+<h2>12. Cambios</h2>
+<p>Podemos actualizar estos Términos. Los cambios materiales se comunicarán por correo o banner. El uso continuado constituye aceptación.</p>
+<h2>13. Ley aplicable</h2>
+<p>Estos Términos se rigen por las leyes de la <strong>República Eslovaca</strong>. Como consumidor conservas los derechos del derecho imperativo de tu país.</p>
+<p>Las disputas pueden llevarse al tribunal eslovaco o a la <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">plataforma ODR de la UE</a>.</p>
+<div class="contact">
+  <h2>Contacto</h2>
+  <p><strong>Rastislav Ďurica</strong> — autónomo (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>Correo: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/privacy.html">Privacidad</a><br>© 2026 Rastislav Ďurica · Todos los derechos reservados.</footer>
+
+</div>
+
+<div class="wrap" data-lang="sk">
+
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Obchodné podmienky</h1>
+  <div class="meta">Účinné od: 1. júna 2026 · Verzia 1.0</div>
+</header>
+<h2>1. O týchto podmienkach</h2>
+<p>Tieto Obchodné podmienky („<strong>Podmienky</strong>") upravujú vaše používanie webovej aplikácie Paintiano dostupnej na <a href="https://paintiano.app">paintiano.app</a> („<strong>Služba</strong>") a akýkoľvek nákup licencie Paintiano Pro („<strong>Licencia</strong>").</p>
+<p>Používaním Služby alebo zakúpením Licencie potvrdzujete, že ste si Podmienky prečítali, porozumeli im a súhlasíte. Ak nesúhlasíte, Službu nepoužívajte.</p>
+<h2>2. Kto poskytuje Službu</h2>
+<p>Službu prevádzkuje:</p>
+<ul>
+  <li><strong>Rastislav Ďurica</strong> — živnostník, Slovenská republika</li>
+  <li>IČO: <strong>34 594 671</strong></li>
+  <li>DIČ: <strong>1025916419</strong></li>
+  <li>Nie je platcom DPH.</li>
+  <li>Kontakt: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></li>
+</ul>
+<p class="muted">Zapísaný v Živnostenskom registri SR; orgán dozoru je príslušný okresný úrad podľa miesta podnikania.</p>
+<h2>3. Čo získate</h2>
+<h3>3.1 Bezplatná verzia</h3>
+<p>Služba je voľne prístupná. Ktokoľvek môže používať Paintiano v prehliadači na premenu hudobného vstupu (MIDI, audio, mikrofón, AI prompty) na generatívne obrazy a tieto exportovať. Bezplatná verzia má primerané limity.</p>
+<h3>3.2 Paintiano Pro (Licencia)</h3>
+<p>Licencia Paintiano Pro je jednorazový nákup, ktorý odomyká prémiové funkcie počas životnosti produktu:</p>
+<ul>
+  <li>Export vo vysokom rozlíšení</li>
+  <li>Neobmedzené AI kompozície</li>
+  <li>Predĺžená dĺžka skladby</li>
+  <li>Plná knižnica štýlov maliarov</li>
+  <li>Odstránenie vodoznaku a limitov</li>
+</ul>
+<p>Licencia sa doručuje elektronicky vo forme kľúča e-mailom po potvrdení platby. Aktivujete ju zadaním kľúča v Službe.</p>
+<p class="muted">„Životnosť" znamená dokým Paintiano funguje ako služba. Negarantujeme minimálnu dobu, ale dáme primerané upozornenie pri ukončení.</p>
+<h2>4. Ceny a platba</h2>
+<p>Ceny sú v EUR vrátane aplikovateľných daní.</p>
+<p>Platby spracúva <strong>Paddle.com Market Limited</strong> ako Merchant of Record. Kúpou tiež súhlasíte s <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener">Podmienkami nákupcu</a> Paddle.</p>
+<p>Faktúru vystaví Paddle a doručí e-mailom spolu s kľúčom.</p>
+<h2>5. Vrátenie peňazí</h2>
+<p>Môžete požiadať o plné vrátenie do <strong>14 dní</strong> z akéhokoľvek dôvodu (Smernica 2011/83/EÚ). Pošlite e-mail na <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> alebo kontaktujte Paddle priamo. Spracované do 5 pracovných dní na pôvodný spôsob platby.</p>
+<p>Po vrátení sa kľúč deaktivuje a Pro funkcie vypnú pri ďalšom online spojení.</p>
+<h2>6. Prijateľné používanie</h2>
+<p>Súhlasíte, že nebudete:</p>
+<ul>
+  <li>Nahrávať obsah porušujúci práva tretích strán;</li>
+  <li>Používať Službu na obťažovanie alebo poškodenie iných;</li>
+  <li>Pokúšať sa o reverzné inžinierstvo alebo obchádzanie obmedzení;</li>
+  <li>Predávať, distribuovať alebo sublicencovať Licenciu;</li>
+  <li>Používať automatizáciu, ktorá zaťažuje infraštruktúru.</li>
+</ul>
+<p>Pri závažnom porušení môžeme pozastaviť alebo ukončiť prístup.</p>
+<h2>7. Váš obsah a duševné vlastníctvo</h2>
+<p>Zachovávate plné vlastníctvo vstupov a vygenerovaných obrazov. Nenárokujeme práva na vaše výtvory.</p>
+<p>Ste zodpovední za právo používať akýkoľvek nahraný vstup.</p>
+<p>Názov Paintiano, logo, zdrojový kód a vizuálny dizajn zostávajú vlastníctvom prevádzkovateľa.</p>
+<h2>8. Obsah generovaný AI</h2>
+<p>Niektoré funkcie („Nálada", „Nálada z obrazu") používajú AI modely tretích strán. Výstup je generovaný automaticky a môže byť nečakaný. AI kompozície sú poskytované <strong>tak ako sú</strong>.</p>
+<h2>9. Dostupnosť Služby</h2>
+<p>Poskytujeme Službu podľa najlepšieho úsilia. Môžeme upraviť alebo ukončiť časti Služby. Služba je poskytovaná <strong>„tak ako je"</strong>, bez záruk nad rámec spotrebiteľského práva.</p>
+<h2>10. Obmedzenie zodpovednosti</h2>
+<p>Naša celková zodpovednosť je obmedzená na sumu, ktorú ste nám zaplatili v posledných dvanástich (12) mesiacoch. Nezodpovedáme za nepriame ani následné škody.</p>
+<p>Nič neobmedzuje zodpovednosť za podvod, hrubú nedbanlivosť alebo zákonné práva spotrebiteľa.</p>
+<h2>11. Ochrana osobných údajov</h2>
+<p>Zbierame minimálne dáta: licenčné kľúče, aktivačný e-mail (Paddle), anonymnú analytiku a korešpondenciu. Vaše dáta nepredávame.</p>
+<p>Detaily v našich <a href="/privacy.html">Zásadách ochrany osobných údajov</a>.</p>
+<h2>12. Zmeny týchto Podmienok</h2>
+<p>Môžeme aktualizovať Podmienky. Podstatné zmeny oznámime e-mailom alebo bannerom. Pokračovanie v používaní znamená súhlas.</p>
+<h2>13. Rozhodné právo a spory</h2>
+<p>Tieto Podmienky sa riadia zákonmi <strong>Slovenskej republiky</strong>. Ako spotrebiteľ zachovávate práva podľa povinného spotrebiteľského práva svojej krajiny.</p>
+<p>Spory môžu byť predložené príslušnému slovenskému súdu alebo cez <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">platformu ODR EÚ</a>.</p>
+<div class="contact">
+  <h2>Kontakt</h2>
+  <p><strong>Rastislav Ďurica</strong> — živnostník</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>E-mail: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/privacy.html">Ochrana údajov</a><br>© 2026 Rastislav Ďurica · Všetky práva vyhradené.</footer>
+
+</div>
+
+<div class="wrap" data-lang="pt">
+
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Termos de Serviço</h1>
+  <div class="meta">Em vigor: 1 de junho de 2026 · Versão 1.0</div>
+</header>
+<h2>1. Sobre estes termos</h2>
+<p>Estes Termos de Serviço (os «<strong>Termos</strong>») regem o uso da aplicação Paintiano em <a href="https://paintiano.app">paintiano.app</a> (o «<strong>Serviço</strong>») e qualquer compra da licença Paintiano Pro (a «<strong>Licença</strong>»).</p>
+<p>Ao usar o Serviço ou comprar a Licença, você confirma ter lido, compreendido e aceitado estes Termos. Se não concordar, não use o Serviço.</p>
+<h2>2. Quem fornece o Serviço</h2>
+<p>O Serviço é operado por:</p>
+<ul>
+  <li><strong>Rastislav Ďurica</strong> (autônomo / živnosť), República Eslovaca</li>
+  <li>Número da empresa (IČO): <strong>34 594 671</strong></li>
+  <li>Número fiscal (DIČ): <strong>1025916419</strong></li>
+  <li>Não registrado para IVA.</li>
+  <li>Contato: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></li>
+</ul>
+<p class="muted">Registrado no Registro Comercial Eslovaco; a autoridade supervisora é o escritório distrital do local de atividade.</p>
+<h2>3. O que você obtém</h2>
+<h3>3.1 Versão gratuita</h3>
+<p>O Serviço é acessível livremente. Qualquer pessoa pode usar Paintiano no navegador para converter entradas musicais (MIDI, áudio, microfone ou prompts IA) em pinturas generativas e exportá-las. A versão gratuita inclui limites razoáveis.</p>
+<h3>3.2 Paintiano Pro (a Licença)</h3>
+<p>A Licença Paintiano Pro é uma compra única que desbloqueia recursos premium pela vida útil do produto:</p>
+<ul>
+  <li>Exportações em alta resolução</li>
+  <li>Composições IA ilimitadas</li>
+  <li>Duração estendida</li>
+  <li>Biblioteca completa de estilos</li>
+  <li>Sem marca d'água nem limites</li>
+</ul>
+<p>A Licença é entregue eletronicamente como chave por e-mail após confirmação do pagamento. Você ativa inserindo esta chave no Serviço.</p>
+<p class="muted">«Vida útil» significa enquanto Paintiano permanecer operacional. Não garantimos período mínimo, mas avisaremos com antecedência se descontinuarmos.</p>
+<h2>4. Preços e pagamento</h2>
+<p>Os preços são em EUR e incluem impostos aplicáveis.</p>
+<p>Os pagamentos são processados por <strong>Paddle.com Market Limited</strong>, Merchant of Record. Ao comprar, você também concorda com os <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener">Termos do Comprador</a> do Paddle.</p>
+<p>Sua fatura é emitida pelo Paddle e entregue por e-mail junto com sua chave.</p>
+<h2>5. Política de reembolso</h2>
+<p>Você pode solicitar reembolso completo dentro de <strong>14 dias</strong>, por qualquer motivo (Diretiva 2011/83/UE). Envie e-mail para <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> ou contate Paddle. Processado em 5 dias úteis para o método de pagamento original.</p>
+<p>Após reembolso, a chave é desativada e recursos Pro desligados na próxima sessão online.</p>
+<h2>6. Uso aceitável</h2>
+<p>Você concorda em não:</p>
+<ul>
+  <li>Enviar conteúdo que infrinja direitos de terceiros;</li>
+  <li>Usar o Serviço para assediar ou prejudicar outros;</li>
+  <li>Tentar engenharia reversa ou contornar limitações técnicas;</li>
+  <li>Revender ou sublicenciar a Licença;</li>
+  <li>Usar meios automatizados que sobrecarreguem a infraestrutura.</li>
+</ul>
+<p>Podemos suspender seu acesso em caso de violação material.</p>
+<h2>7. Seu conteúdo e propriedade intelectual</h2>
+<p>Você mantém plena propriedade de entradas e pinturas geradas. Não reivindicamos direitos sobre suas criações.</p>
+<p>Você é responsável por ter direito de usar qualquer entrada enviada.</p>
+<p>O nome Paintiano, logotipo, código-fonte e design permanecem propriedade do operador.</p>
+<h2>8. Conteúdo gerado por IA</h2>
+<p>Alguns recursos («Humor», «Humor a partir de imagem») usam modelos IA de terceiros. A saída pode ser inesperada. Composições IA são fornecidas <strong>como estão</strong>.</p>
+<h2>9. Disponibilidade</h2>
+<p>Fornecemos o Serviço da melhor forma. Podemos modificar ou descontinuar partes. O Serviço é fornecido <strong>«como está»</strong>, sem garantias além da lei do consumidor.</p>
+<h2>10. Limitação de responsabilidade</h2>
+<p>Nossa responsabilidade total é limitada ao valor pago nos últimos doze (12) meses. Não somos responsáveis por danos indiretos ou consequenciais.</p>
+<p>Nada limita responsabilidade por fraude, negligência grave ou direitos legais do consumidor.</p>
+<h2>11. Privacidade</h2>
+<p>Coletamos dados mínimos: chaves emitidas, e-mail de ativação (Paddle), análises anônimas, e correspondência de suporte. Não vendemos seus dados.</p>
+<p>Detalhes em nossa <a href="/privacy.html">Política de Privacidade</a>.</p>
+<h2>12. Mudanças</h2>
+<p>Podemos atualizar estes Termos. Mudanças materiais serão comunicadas por e-mail ou banner. Uso continuado constitui aceitação.</p>
+<h2>13. Lei aplicável</h2>
+<p>Estes Termos são regidos pelas leis da <strong>República Eslovaca</strong>. Como consumidor você mantém os direitos da lei imperativa do seu país.</p>
+<p>Disputas podem ser levadas ao tribunal eslovaco ou à <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">plataforma ODR da UE</a>.</p>
+<div class="contact">
+  <h2>Contato</h2>
+  <p><strong>Rastislav Ďurica</strong> — autônomo (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>E-mail: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/privacy.html">Privacidade</a><br>© 2026 Rastislav Ďurica · Todos os direitos reservados.</footer>
+
+</div>
+
+<div class="wrap" data-lang="zh">
+
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>服务条款</h1>
+  <div class="meta">生效日期：2026 年 6 月 1 日 · 版本 1.0</div>
+</header>
+<h2>1. 关于本条款</h2>
+<p>本服务条款（"<strong>条款</strong>"）规范您对位于 <a href="https://paintiano.app">paintiano.app</a> 的 Paintiano 网络应用（"<strong>服务</strong>"）的使用以及对 Paintiano Pro 许可证（"<strong>许可证</strong>"）的任何购买。</p>
+<p>使用本服务或购买许可证即表示您已阅读、理解并同意这些条款。如不同意，请勿使用本服务。</p>
+<h2>2. 谁提供服务</h2>
+<p>本服务由以下方运营：</p>
+<ul>
+  <li><strong>Rastislav Ďurica</strong>（个体经营者 / živnosť），斯洛伐克共和国</li>
+  <li>企业编号（IČO）：<strong>34 594 671</strong></li>
+  <li>税号（DIČ）：<strong>1025916419</strong></li>
+  <li>未注册增值税。</li>
+  <li>联系方式：<a href="mailto:hello@paintiano.app">hello@paintiano.app</a></li>
+</ul>
+<p class="muted">注册于斯洛伐克贸易许可登记处；监管机构为营业地的地区办事处。</p>
+<h2>3. 您将获得什么</h2>
+<h3>3.1 免费版</h3>
+<p>本服务可免费访问。任何人都可以在浏览器中使用 Paintiano 将音乐输入（MIDI 文件、音频、麦克风输入或 AI 生成的情绪提示）转化为生成性绘画并导出。免费版包含合理的使用上限。</p>
+<h3>3.2 Paintiano Pro（许可证）</h3>
+<p>Paintiano Pro 许可证是一次性购买，解锁产品生命周期内的高级功能：</p>
+<ul>
+  <li>高分辨率图像导出</li>
+  <li>无限 AI 情绪作曲</li>
+  <li>扩展乐曲长度</li>
+  <li>完整艺术家风格库</li>
+  <li>移除水印和使用上限</li>
+</ul>
+<p>许可证以许可证密钥的形式电子交付，付款经支付处理商确认后立即通过电子邮件发送。您通过在服务中输入此密钥来激活许可证。</p>
+<p class="muted">"生命周期"是指 Paintiano 作为服务保持运营期间。我们不保证任何最低运营期，但如果停止服务将提前合理通知。</p>
+<h2>4. 定价和付款</h2>
+<p>价格以欧元显示，并包含适用税款。</p>
+<p>付款由 <strong>Paddle.com Market Limited</strong> 处理，作为登记商户。购买即表示您也同意 Paddle 的 <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener">买家条款</a>。</p>
+<p>您的购买发票由 Paddle 开具，并通过电子邮件与您的许可证密钥一起发送。</p>
+<h2>5. 退款政策</h2>
+<p>您可以根据欧盟消费者法（指令 2011/83/EU）在购买后 <strong>14 天</strong> 内出于任何原因申请全额退款。请从购买时使用的地址发送电子邮件至 <a href="mailto:hello@paintiano.app">hello@paintiano.app</a>，或直接联系 Paddle 支持。退款通常在 5 个工作日内处理回原支付方式。</p>
+<p>退款后，相关许可证密钥将被停用，并在下次在线会话时关闭 Pro 功能。</p>
+<h2>6. 可接受使用</h2>
+<p>您同意不：</p>
+<ul>
+  <li>上传侵犯第三方权利的内容；</li>
+  <li>使用本服务骚扰或伤害他人；</li>
+  <li>尝试逆向工程或绕过技术限制；</li>
+  <li>向第三方转售或再许可本许可证；</li>
+  <li>使用对基础设施造成重大负担的自动化手段。</li>
+</ul>
+<p>如您严重违反本条款，我们可能暂停或终止您的访问。</p>
+<h2>7. 您的内容和知识产权</h2>
+<p>您保留对您上传的输入和生成的绘画的完整所有权。我们不主张对您创作的权利。</p>
+<p>您有责任确保您有权使用任何上传的输入。</p>
+<p>Paintiano 名称、徽标、源代码和视觉设计仍是运营者的知识产权。</p>
+<h2>8. AI 生成的内容</h2>
+<p>某些功能（"情绪"和"从图像取情绪"）使用第三方 AI 模型来作曲。输出是自动生成的，可能出乎意料。AI 作品按 <strong>原样</strong> 提供。</p>
+<h2>9. 服务可用性</h2>
+<p>我们以尽力而为的方式提供服务。我们可能修改或停止部分服务。本服务按 <strong>"原样"</strong> 提供，除强制性消费者法要求的保证外，不提供保证。</p>
+<h2>10. 责任限制</h2>
+<p>我们的总责任限于您在索赔前十二（12）个月内支付的金额。我们不对间接或后果性损害负责。</p>
+<p>对欺诈、重大过失或法定消费者权利的责任不受限制。</p>
+<h2>11. 隐私</h2>
+<p>我们收集最少的数据：许可证密钥、激活电子邮件（Paddle）、匿名使用分析和支持通信。我们不出售您的数据。</p>
+<p>详情请参阅我们的 <a href="/privacy.html">隐私政策</a>。</p>
+<h2>12. 本条款的变更</h2>
+<p>我们可能更新本条款。实质性变更将通过电子邮件或横幅传达。继续使用即构成接受。</p>
+<h2>13. 适用法律</h2>
+<p>本条款受 <strong>斯洛伐克共和国</strong> 法律管辖。作为消费者您保留您居住国强制性消费者保护法赋予的权利。</p>
+<p>争议可提交斯洛伐克管辖法院，或通过欧盟 <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">在线争议解决平台</a>。</p>
+<div class="contact">
+  <h2>联系方式</h2>
+  <p><strong>Rastislav Ďurica</strong> — 个体经营者（živnosť）</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>电子邮件：<a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/privacy.html">隐私政策</a><br>© 2026 Rastislav Ďurica · 版权所有。</footer>
+
+</div>
+
+<div class="wrap" data-lang="zhTW">
+
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>服務條款</h1>
+  <div class="meta">生效日期：2026 年 6 月 1 日 · 版本 1.0</div>
+</header>
+<h2>1. 關於本條款</h2>
+<p>本服務條款（「<strong>條款</strong>」）規範您對位於 <a href="https://paintiano.app">paintiano.app</a> 的 Paintiano 網路應用（「<strong>服務</strong>」）的使用以及對 Paintiano Pro 授權（「<strong>授權</strong>」）的任何購買。</p>
+<p>使用本服務或購買授權即表示您已閱讀、理解並同意這些條款。如不同意，請勿使用本服務。</p>
+<h2>2. 誰提供服務</h2>
+<p>本服務由以下方營運：</p>
+<ul>
+  <li><strong>Rastislav Ďurica</strong>（個人經營者 / živnosť），斯洛伐克共和國</li>
+  <li>企業編號（IČO）：<strong>34 594 671</strong></li>
+  <li>稅號（DIČ）：<strong>1025916419</strong></li>
+  <li>未註冊加值稅。</li>
+  <li>聯絡方式：<a href="mailto:hello@paintiano.app">hello@paintiano.app</a></li>
+</ul>
+<p class="muted">註冊於斯洛伐克貿易許可登記處；監管機構為營業地的地區辦事處。</p>
+<h2>3. 您將獲得什麼</h2>
+<h3>3.1 免費版</h3>
+<p>本服務可免費存取。任何人都可以在瀏覽器中使用 Paintiano 將音樂輸入（MIDI、音訊、麥克風或 AI 提示）轉化為生成性繪畫並匯出。免費版包含合理的使用上限。</p>
+<h3>3.2 Paintiano Pro（授權）</h3>
+<p>Paintiano Pro 授權是一次性購買，解鎖產品生命週期內的高級功能：</p>
+<ul>
+  <li>高解析度圖像匯出</li>
+  <li>無限 AI 情緒作曲</li>
+  <li>擴展樂曲長度</li>
+  <li>完整藝術家風格庫</li>
+  <li>移除浮水印和使用上限</li>
+</ul>
+<p>授權以授權金鑰的形式電子交付。您透過在服務中輸入此金鑰來啟用授權。</p>
+<p class="muted">「生命週期」是指 Paintiano 作為服務保持營運期間。如停止服務將提前合理通知。</p>
+<h2>4. 定價和付款</h2>
+<p>價格以歐元顯示，包含適用稅款。</p>
+<p>付款由 <strong>Paddle.com Market Limited</strong> 處理，作為登記商戶。購買即表示您同意 Paddle 的 <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener">買家條款</a>。</p>
+<p>您的發票由 Paddle 開具，透過電子郵件與授權金鑰一起發送。</p>
+<h2>5. 退款政策</h2>
+<p>您可以在購買後 <strong>14 天</strong> 內出於任何原因申請全額退款（指令 2011/83/EU）。請從購買時的地址發送電子郵件至 <a href="mailto:hello@paintiano.app">hello@paintiano.app</a>，或直接聯絡 Paddle 支援。退款在 5 個工作日內處理回原支付方式。</p>
+<p>退款後，授權金鑰將被停用，並在下次線上工作階段時關閉 Pro 功能。</p>
+<h2>6. 可接受使用</h2>
+<p>您同意不：</p>
+<ul>
+  <li>上傳侵犯第三方權利的內容；</li>
+  <li>使用本服務騷擾或傷害他人；</li>
+  <li>嘗試逆向工程或繞過技術限制；</li>
+  <li>向第三方轉售或再授權本授權；</li>
+  <li>使用對基礎設施造成重大負擔的自動化手段。</li>
+</ul>
+<p>如您嚴重違反本條款，我們可能暫停或終止您的存取。</p>
+<h2>7. 您的內容和智慧財產權</h2>
+<p>您保留對您上傳的輸入和生成的繪畫的完整所有權。我們不主張對您創作的權利。</p>
+<p>您有責任確保您有權使用任何上傳的輸入。</p>
+<p>Paintiano 名稱、標誌、原始碼和視覺設計仍是營運者的智慧財產權。</p>
+<h2>8. AI 生成的內容</h2>
+<p>某些功能（「情緒」和「從圖像取情緒」）使用第三方 AI 模型。輸出是自動生成的，可能出乎意料。AI 作品按 <strong>原樣</strong> 提供。</p>
+<h2>9. 服務可用性</h2>
+<p>我們以盡力而為的方式提供服務。本服務按 <strong>「原樣」</strong> 提供，除強制性消費者法要求的保證外，不提供保證。</p>
+<h2>10. 責任限制</h2>
+<p>我們的總責任限於您在索賠前十二（12）個月內支付的金額。我們不對間接或後果性損害負責。</p>
+<p>對詐欺、重大過失或法定消費者權利的責任不受限制。</p>
+<h2>11. 隱私</h2>
+<p>我們收集最少的資料：授權金鑰、啟用電子郵件（Paddle）、匿名使用分析和支援通訊。我們不出售您的資料。</p>
+<p>詳情請參閱我們的 <a href="/privacy.html">隱私政策</a>。</p>
+<h2>12. 本條款的變更</h2>
+<p>我們可能更新本條款。實質性變更將透過電子郵件或橫幅傳達。繼續使用即構成接受。</p>
+<h2>13. 適用法律</h2>
+<p>本條款受 <strong>斯洛伐克共和國</strong> 法律管轄。作為消費者您保留您居住國強制性消費者保護法賦予的權利。</p>
+<p>爭議可提交斯洛伐克管轄法院，或透過歐盟 <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">線上爭議解決平台</a>。</p>
+<div class="contact">
+  <h2>聯絡方式</h2>
+  <p><strong>Rastislav Ďurica</strong> — 個人經營者（živnosť）</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>電子郵件：<a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/privacy.html">隱私政策</a><br>© 2026 Rastislav Ďurica · 版權所有。</footer>
+
+</div>
+
+
+<script>
+(function(){
+  var KEY = 'paintiano_lang';
+  function pickInitial(){
+    try {
+      var url = new URLSearchParams(location.search).get('lang');
+      if (url) return url;
+      var ls = localStorage.getItem(KEY);
+      if (ls) return ls;
+      var nav = (navigator.language || 'en').toLowerCase();
+      if (nav.indexOf('zh-tw')===0 || nav.indexOf('zh-hk')===0) return 'zhTW';
+      if (nav.indexOf('zh')===0) return 'zh';
+      if (nav.indexOf('de')===0) return 'de';
+      if (nav.indexOf('fr')===0) return 'fr';
+      if (nav.indexOf('es')===0) return 'es';
+      if (nav.indexOf('sk')===0) return 'sk';
+      if (nav.indexOf('pt')===0) return 'pt';
+      return 'en';
+    } catch(_) { return 'en'; }
+  }
+  function show(code){
+    var found = false;
+    document.querySelectorAll('[data-lang]').forEach(function(el){
+      if (el.getAttribute('data-lang') === code) { el.classList.add('active'); found = true; }
+      else el.classList.remove('active');
+    });
+    if (!found) {
+      document.querySelectorAll('[data-lang="en"]').forEach(function(el){ el.classList.add('active'); });
+      code = 'en';
+    }
+    var sel = document.getElementById('lang');
+    if (sel) sel.value = code;
+    var htmlLang = ({zh:'zh-CN', zhTW:'zh-TW'})[code] || code;
+    document.documentElement.setAttribute('lang', htmlLang);
+  }
+  var initial = pickInitial();
+  show(initial);
+  var sel = document.getElementById('lang');
+  if (sel) {
+    sel.addEventListener('change', function(){
+      var v = sel.value;
+      show(v);
+      try { localStorage.setItem(KEY, v); } catch(_) {}
+    });
+  }
+  window.addEventListener('message', function(e){
+    if (e && e.data && e.data.type === 'paintiano_lang' && e.data.lang) show(String(e.data.lang));
+  });
+})();
+</script>
+
 </body>
 </html>

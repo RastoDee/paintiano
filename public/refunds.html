@@ -9,188 +9,506 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #06060c;
-    --ink: #e8e2d4;
-    --muted: rgba(232, 226, 212, .65);
-    --gold: #c9a84c;
-    --gold-soft: #ffd07a;
-    --rule: rgba(232, 226, 212, .12);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    background: radial-gradient(ellipse at 50% -10%, #0e0b16, #06060c 55%);
-    color: var(--ink);
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    line-height: 1.65;
-    -webkit-font-smoothing: antialiased;
-    min-height: 100vh;
-  }
-  .wrap { max-width: 720px; margin: 0 auto; padding: 60px 24px 80px; }
-  header {
-    text-align: center;
-    margin-bottom: 48px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--rule);
-  }
-  header .logo {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 600;
-    font-size: 2.2rem;
-    color: var(--gold);
-    letter-spacing: -.01em;
-    text-decoration: none;
-    display: inline-block;
-  }
-  header h1 {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-weight: 400;
-    font-size: 1.4rem;
-    color: var(--ink);
-    margin-top: 8px;
-    letter-spacing: .01em;
-  }
-  header .meta {
-    color: var(--muted);
-    font-size: .82rem;
-    margin-top: 12px;
-    letter-spacing: .04em;
-  }
-  h2 {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 600;
-    font-size: 1.4rem;
-    color: var(--gold);
-    margin: 36px 0 12px;
-    letter-spacing: -.01em;
-  }
-  h2:first-of-type { margin-top: 8px; }
-  h3 {
-    font-family: 'Outfit', sans-serif;
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--gold-soft);
-    margin: 20px 0 8px;
-    letter-spacing: .02em;
-  }
-  p, li {
-    font-size: .95rem;
-    color: var(--ink);
-    margin-bottom: 12px;
-  }
-  ul, ol { padding-left: 22px; margin-bottom: 16px; }
-  li { margin-bottom: 6px; }
-  a {
-    color: var(--gold-soft);
-    text-decoration: none;
-    border-bottom: 1px solid rgba(255, 208, 122, .35);
-    padding-bottom: 1px;
-  }
-  a:hover { border-bottom-color: var(--gold-soft); }
-  strong { color: var(--gold-soft); font-weight: 600; }
-  .muted { color: var(--muted); font-size: .85rem; }
-
-  .highlight {
-    margin: 24px 0 28px;
-    padding: 22px 24px;
-    background: linear-gradient(135deg, rgba(201, 168, 76, .12), rgba(255, 208, 122, .04));
-    border: 1px solid rgba(255, 208, 122, .45);
-    border-radius: 14px;
-  }
-  .highlight h3 { margin-top: 0; color: var(--gold-soft); font-size: 1.1rem; }
-  .highlight p:last-child { margin-bottom: 0; }
-
-  .contact {
-    margin-top: 40px;
-    padding: 22px 24px;
-    background: rgba(201, 168, 76, .06);
-    border: 1px solid rgba(201, 168, 76, .25);
-    border-radius: 12px;
-  }
-  .contact h2 { margin-top: 0; }
-  .contact p { margin-bottom: 6px; }
-
-  footer {
-    margin-top: 56px;
-    padding-top: 24px;
-    border-top: 1px solid var(--rule);
-    text-align: center;
-    color: var(--muted);
-    font-size: .8rem;
-    letter-spacing: .04em;
-  }
-  footer a { color: var(--muted); border-bottom-color: transparent; }
+  :root { --bg:#06060c; --ink:#e8e2d4; --muted:rgba(232,226,212,.65); --gold:#c9a84c; --gold-soft:#ffd07a; --rule:rgba(232,226,212,.12); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { background:radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%); color:var(--ink); font-family:'Outfit',-apple-system,BlinkMacSystemFont,system-ui,sans-serif; line-height:1.65; -webkit-font-smoothing:antialiased; min-height:100vh; }
+  .wrap { max-width:720px; margin:0 auto; padding:60px 24px 80px; }
+  header { text-align:center; margin-bottom:48px; padding-bottom:24px; border-bottom:1px solid var(--rule); }
+  header .logo { font-family:'Cormorant Garamond',serif; font-weight:600; font-size:2.2rem; color:var(--gold); letter-spacing:-.01em; text-decoration:none; display:inline-block; }
+  header h1 { font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:400; font-size:1.4rem; color:var(--ink); margin-top:8px; letter-spacing:.01em; }
+  header .meta { color:var(--muted); font-size:.82rem; margin-top:12px; letter-spacing:.04em; }
+  h2 { font-family:'Cormorant Garamond',serif; font-weight:600; font-size:1.4rem; color:var(--gold); margin:36px 0 12px; letter-spacing:-.01em; }
+  h2:first-of-type { margin-top:8px; }
+  h3 { font-family:'Outfit',sans-serif; font-weight:600; font-size:1rem; color:var(--gold-soft); margin:20px 0 8px; letter-spacing:.02em; }
+  p, li { font-size:.95rem; color:var(--ink); margin-bottom:12px; }
+  ul, ol { padding-left:22px; margin-bottom:16px; }
+  li { margin-bottom:6px; }
+  a { color:var(--gold-soft); text-decoration:none; border-bottom:1px solid rgba(255,208,122,.35); padding-bottom:1px; }
+  a:hover { border-bottom-color:var(--gold-soft); }
+  strong { color:var(--gold-soft); font-weight:600; }
+  .muted { color:var(--muted); font-size:.85rem; }
+  .highlight { margin:24px 0 28px; padding:22px 24px; background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(255,208,122,.04)); border:1px solid rgba(255,208,122,.45); border-radius:14px; }
+  .highlight h3 { margin-top:0; color:var(--gold-soft); font-size:1.1rem; }
+  .highlight p:last-child { margin-bottom:0; }
+  .contact { margin-top:40px; padding:22px 24px; background:rgba(201,168,76,.06); border:1px solid rgba(201,168,76,.25); border-radius:12px; }
+  .contact h2 { margin-top:0; }
+  .contact p { margin-bottom:6px; }
+  footer { margin-top:56px; padding-top:24px; border-top:1px solid var(--rule); text-align:center; color:var(--muted); font-size:.8rem; letter-spacing:.04em; }
+  footer a { color:var(--muted); border-bottom-color:transparent; }
+  .langpick { position:fixed; top:14px; right:14px; z-index:50; background:rgba(20,16,30,.85); border:1px solid rgba(201,168,76,.25); border-radius:18px; padding:4px 8px 4px 12px; font-family:'Outfit',sans-serif; font-size:.78rem; color:var(--gold-soft); letter-spacing:.06em; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+  .langpick select { background:transparent; border:0; color:inherit; font:inherit; letter-spacing:inherit; padding:4px 18px 4px 2px; cursor:pointer; appearance:none; -webkit-appearance:none; }
+  .langpick select:focus { outline:none; }
+  .langpick option { background:#0e0b16; color:var(--ink); }
+  [data-lang]:not(.active) { display:none; }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="langpick"><select id="lang" aria-label="language"><option value="en">EN</option><option value="de">DE</option><option value="fr">FR</option><option value="es">ES</option><option value="sk">SK</option><option value="pt">PT</option><option value="zh">中文</option><option value="zhTW">繁體</option></select></div>
 
-  <header>
-    <a href="https://paintiano.app" class="logo">Paintiano</a>
-    <h1>Refund Policy</h1>
-    <div class="meta">Effective: 1 June 2026 · Version 1.0</div>
-  </header>
-
-  <div class="highlight">
-    <h3>14-day no-questions-asked refund</h3>
-    <p>If you change your mind within 14 days of buying Paintiano Pro, we will refund you in full. No forms, no justifications — just email us.</p>
-  </div>
-
-  <h2>1. Your right to a refund</h2>
-  <p>Under EU Directive 2011/83/EU on consumer rights, you have a statutory right to cancel and obtain a full refund within <strong>14 calendar days</strong> of purchasing a digital product, even if the product has been delivered.</p>
-  <p>Paintiano voluntarily applies the same 14-day refund window to all customers worldwide, regardless of where you live.</p>
-
-  <h2>2. What's eligible</h2>
-  <ul>
-    <li><strong>Paintiano Pro Lifetime License</strong> — €14.99 (or €9.99 early-bird) — fully refundable within 14 days of purchase.</li>
-  </ul>
-  <p>This is currently the only product we sell, so the policy applies to every purchase.</p>
-
-  <h2>3. How to request a refund</h2>
-  <p>You have two ways to ask:</p>
-  <ol>
-    <li><strong>Email us</strong> at <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> from the address you used to purchase. Put "Refund" in the subject line. We will confirm and process the refund within 2 business days.</li>
-    <li><strong>Contact Paddle support</strong> directly — our payment processor handles refunds. They can be reached via the receipt email you received from Paddle, or at <a href="https://www.paddle.com/contact" target="_blank" rel="noopener">paddle.com/contact</a>.</li>
-  </ol>
-  <p>You do not need to give a reason. A simple "I'd like a refund" is enough.</p>
-
-  <h2>4. How long it takes</h2>
-  <ul>
-    <li><strong>Our confirmation:</strong> within 2 business days of your request</li>
-    <li><strong>Paddle processing:</strong> typically 1–3 business days after confirmation</li>
-    <li><strong>Funds back in your account:</strong> 3–10 business days, depending on your bank or card issuer</li>
-  </ul>
-  <p>The refund is issued to the <strong>same payment method</strong> you used to buy (card, PayPal, etc.). We cannot redirect to a different account.</p>
-
-  <h2>5. What happens to your license after a refund</h2>
-  <p>After a refund is processed, your Paintiano Pro license key is deactivated. The next time the app validates the key online (typically the next session), Pro features will be turned off and the app will return to the free tier. Your local paintings and creative work are <strong>not</strong> deleted — only the unlocked features are removed.</p>
-
-  <h2>6. After the 14 days</h2>
-  <p>Beyond the 14-day window, we are not legally obliged to refund. However, if you have a genuine reason — for example, the app does not work for you due to a bug we cannot fix, or you bought twice by mistake — please email us and we will look at your case individually. We aim to be reasonable.</p>
-
-  <h2>7. Disputes</h2>
-  <p>If you are not satisfied with how we handled your refund request, you may:</p>
-  <ul>
-    <li>Contact Paddle's dispute team directly through the receipt email</li>
-    <li>File a chargeback with your bank or card issuer</li>
-    <li>Bring the dispute to the EU <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">Online Dispute Resolution platform</a></li>
-    <li>Contact your national consumer protection authority</li>
-  </ul>
-  <p>We prefer to resolve issues directly and amicably — please give us a chance first.</p>
-
-  <div class="contact">
-    <h2>Contact</h2>
-    <p><strong>Rastislav Ďurica</strong> — sole trader (živnosť)</p>
-    <p>IČO 34 594 671 · DIČ 1025916419</p>
-    <p>Refund requests: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> (subject: "Refund")</p>
-  </div>
-
-  <footer>
-    <a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">Terms of Service</a> · <a href="/privacy.html">Privacy Policy</a><br>
-    © 2026 Rastislav Ďurica · All rights reserved.
-  </footer>
+<div class="wrap active" data-lang="en">
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Refund Policy</h1>
+  <div class="meta">Effective: 1 June 2026 · Version 1.0</div>
+</header>
+<div class="highlight">
+  <h3>14-day no-questions-asked refund</h3>
+  <p>If you change your mind within 14 days of buying Paintiano Pro, we will refund you in full. No forms, no justifications — just email us.</p>
+</div>
+<h2>1. Your right to a refund</h2>
+<p>Under EU Directive 2011/83/EU on consumer rights, you have a statutory right to cancel and obtain a full refund within <strong>14 calendar days</strong> of purchasing a digital product, even if the product has been delivered.</p>
+<p>Paintiano voluntarily applies the same 14-day refund window to all customers worldwide, regardless of where you live.</p>
+<h2>2. What's eligible</h2>
+<ul>
+  <li><strong>Paintiano Pro Lifetime License</strong> — €14.99 (or €9.99 early-bird) — fully refundable within 14 days of purchase.</li>
+</ul>
+<p>This is currently the only product we sell, so the policy applies to every purchase.</p>
+<h2>3. How to request a refund</h2>
+<p>You have two ways to ask:</p>
+<ol>
+  <li><strong>Email us</strong> at <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> from the address you used to purchase. Put "Refund" in the subject line. We will confirm and process the refund within 2 business days.</li>
+  <li><strong>Contact Paddle support</strong> directly — our payment processor handles refunds. They can be reached via the receipt email you received from Paddle, or at <a href="https://www.paddle.com/contact" target="_blank" rel="noopener">paddle.com/contact</a>.</li>
+</ol>
+<p>You do not need to give a reason. A simple "I'd like a refund" is enough.</p>
+<h2>4. How long it takes</h2>
+<ul>
+  <li><strong>Our confirmation:</strong> within 2 business days of your request</li>
+  <li><strong>Paddle processing:</strong> typically 1–3 business days after confirmation</li>
+  <li><strong>Funds back in your account:</strong> 3–10 business days, depending on your bank or card issuer</li>
+</ul>
+<p>The refund is issued to the <strong>same payment method</strong> you used to buy (card, PayPal, etc.). We cannot redirect to a different account.</p>
+<h2>5. What happens to your license after a refund</h2>
+<p>After a refund is processed, your Paintiano Pro license key is deactivated. The next time the app validates the key online (typically the next session), Pro features will be turned off and the app will return to the free tier. Your local paintings and creative work are <strong>not</strong> deleted — only the unlocked features are removed.</p>
+<h2>6. After the 14 days</h2>
+<p>Beyond the 14-day window, we are not legally obliged to refund. However, if you have a genuine reason — for example, the app does not work for you due to a bug we cannot fix, or you bought twice by mistake — please email us and we will look at your case individually. We aim to be reasonable.</p>
+<h2>7. Disputes</h2>
+<p>If you are not satisfied with how we handled your refund request, you may:</p>
+<ul>
+  <li>Contact Paddle's dispute team directly through the receipt email</li>
+  <li>File a chargeback with your bank or card issuer</li>
+  <li>Bring the dispute to the EU <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">Online Dispute Resolution platform</a></li>
+  <li>Contact your national consumer protection authority</li>
+</ul>
+<p>We prefer to resolve issues directly and amicably — please give us a chance first.</p>
+<div class="contact">
+  <h2>Contact</h2>
+  <p><strong>Rastislav Ďurica</strong> — sole trader (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>Refund requests: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> (subject: "Refund")</p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">Terms of Service</a> · <a href="/privacy.html">Privacy Policy</a><br>© 2026 Rastislav Ďurica · All rights reserved.</footer>
 
 </div>
+
+<div class="wrap" data-lang="de">
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Rückerstattungsrichtlinie</h1>
+  <div class="meta">Gültig ab: 1. Juni 2026 · Version 1.0</div>
+</header>
+<div class="highlight">
+  <h3>14 Tage Rückerstattung ohne Fragen</h3>
+  <p>Wenn Sie es sich innerhalb von 14 Tagen nach dem Kauf von Paintiano Pro anders überlegen, erstatten wir Ihnen den vollen Betrag. Keine Formulare, keine Begründungen — schreiben Sie uns einfach.</p>
+</div>
+<h2>1. Ihr Recht auf Rückerstattung</h2>
+<p>Nach EU-Richtlinie 2011/83/EU zu Verbraucherrechten haben Sie ein gesetzliches Recht, innerhalb von <strong>14 Kalendertagen</strong> nach Kauf eines digitalen Produkts zu widerrufen und eine vollständige Rückerstattung zu erhalten, auch wenn das Produkt geliefert wurde.</p>
+<p>Paintiano wendet diese 14-tägige Frist freiwillig auf alle Kunden weltweit an, unabhängig vom Wohnort.</p>
+<h2>2. Was berechtigt ist</h2>
+<ul>
+  <li><strong>Paintiano Pro Lifetime-Lizenz</strong> — €14.99 (oder €9.99 Early-Bird) — innerhalb von 14 Tagen nach Kauf voll erstattungsfähig.</li>
+</ul>
+<p>Dies ist derzeit das einzige Produkt, das wir verkaufen, daher gilt die Richtlinie für jeden Kauf.</p>
+<h2>3. Wie Sie eine Rückerstattung beantragen</h2>
+<p>Sie haben zwei Möglichkeiten:</p>
+<ol>
+  <li><strong>E-Mail an uns</strong> an <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> von der Adresse, die Sie zum Kauf verwendet haben. Schreiben Sie „Refund" in die Betreffzeile. Wir bestätigen und bearbeiten innerhalb von 2 Werktagen.</li>
+  <li><strong>Paddle-Support direkt kontaktieren</strong> — unser Zahlungsabwickler bearbeitet Rückerstattungen. Erreichbar über die Quittungs-E-Mail oder unter <a href="https://www.paddle.com/contact" target="_blank" rel="noopener">paddle.com/contact</a>.</li>
+</ol>
+<p>Sie müssen keinen Grund angeben. Ein einfaches „Ich möchte eine Rückerstattung" genügt.</p>
+<h2>4. Wie lange es dauert</h2>
+<ul>
+  <li><strong>Unsere Bestätigung:</strong> innerhalb von 2 Werktagen</li>
+  <li><strong>Paddle-Bearbeitung:</strong> typisch 1–3 Werktage nach Bestätigung</li>
+  <li><strong>Geld zurück auf Ihrem Konto:</strong> 3–10 Werktage, je nach Bank oder Kartenherausgeber</li>
+</ul>
+<p>Die Rückerstattung erfolgt auf <strong>dieselbe Zahlungsmethode</strong>, die Sie beim Kauf verwendet haben. Eine Weiterleitung auf ein anderes Konto ist nicht möglich.</p>
+<h2>5. Was nach der Rückerstattung mit Ihrer Lizenz geschieht</h2>
+<p>Nach einer Rückerstattung wird Ihr Paintiano Pro Lizenzschlüssel deaktiviert. Beim nächsten Online-Validieren (typisch die nächste Sitzung) werden Pro-Funktionen abgeschaltet und die App kehrt zur kostenlosen Version zurück. Ihre lokalen Gemälde und kreativen Arbeiten werden <strong>nicht</strong> gelöscht — nur die freigeschalteten Funktionen werden entfernt.</p>
+<h2>6. Nach den 14 Tagen</h2>
+<p>Nach Ablauf der 14-Tage-Frist sind wir gesetzlich nicht zur Rückerstattung verpflichtet. Wenn Sie jedoch einen echten Grund haben — z. B. die App funktioniert wegen eines nicht behebbaren Fehlers nicht, oder Sie haben versehentlich doppelt gekauft — schreiben Sie uns und wir prüfen Ihren Fall individuell. Wir sind bemüht, fair zu sein.</p>
+<h2>7. Streitigkeiten</h2>
+<p>Wenn Sie mit unserer Bearbeitung nicht zufrieden sind, können Sie:</p>
+<ul>
+  <li>Paddles Streitfall-Team direkt über die Quittungs-E-Mail kontaktieren</li>
+  <li>Eine Rückbuchung bei Ihrer Bank oder Ihrem Kartenherausgeber einleiten</li>
+  <li>Den Streit zur EU-<a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">Online-Streitbeilegungsplattform</a> bringen</li>
+  <li>Ihre nationale Verbraucherschutzbehörde kontaktieren</li>
+</ul>
+<p>Wir bevorzugen es, Probleme direkt und einvernehmlich zu lösen — geben Sie uns bitte zuerst eine Chance.</p>
+<div class="contact">
+  <h2>Kontakt</h2>
+  <p><strong>Rastislav Ďurica</strong> — Einzelunternehmer (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>Rückerstattungsanfragen: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> (Betreff: „Refund")</p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">Nutzungsbedingungen</a> · <a href="/privacy.html">Datenschutz</a><br>© 2026 Rastislav Ďurica · Alle Rechte vorbehalten.</footer>
+
+</div>
+
+<div class="wrap" data-lang="fr">
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Politique de remboursement</h1>
+  <div class="meta">En vigueur : 1 juin 2026 · Version 1.0</div>
+</header>
+<div class="highlight">
+  <h3>Remboursement sans question pendant 14 jours</h3>
+  <p>Si vous changez d'avis dans les 14 jours suivant l'achat de Paintiano Pro, nous vous remboursons intégralement. Pas de formulaire, pas de justification — il suffit de nous écrire.</p>
+</div>
+<h2>1. Votre droit au remboursement</h2>
+<p>Conformément à la Directive UE 2011/83/UE sur les droits des consommateurs, vous avez un droit légal d'annulation et de remboursement intégral dans les <strong>14 jours calendaires</strong> suivant l'achat d'un produit numérique, même s'il a été livré.</p>
+<p>Paintiano applique volontairement cette période de 14 jours à tous les clients du monde, peu importe où vous vivez.</p>
+<h2>2. Ce qui est éligible</h2>
+<ul>
+  <li><strong>Licence à vie Paintiano Pro</strong> — €14.99 (ou €9.99 early-bird) — entièrement remboursable dans les 14 jours.</li>
+</ul>
+<p>C'est actuellement le seul produit que nous vendons, donc la politique s'applique à chaque achat.</p>
+<h2>3. Comment demander un remboursement</h2>
+<p>Deux façons :</p>
+<ol>
+  <li><strong>Envoyez-nous un e-mail</strong> à <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> depuis l'adresse utilisée pour l'achat. Mettez « Refund » en objet. Nous confirmerons et traiterons dans les 2 jours ouvrables.</li>
+  <li><strong>Contactez le support Paddle</strong> directement — notre processeur traite les remboursements. Joignable via l'e-mail de reçu ou à <a href="https://www.paddle.com/contact" target="_blank" rel="noopener">paddle.com/contact</a>.</li>
+</ol>
+<p>Aucune raison n'est nécessaire. Un simple « Je voudrais un remboursement » suffit.</p>
+<h2>4. Combien de temps ça prend</h2>
+<ul>
+  <li><strong>Notre confirmation :</strong> dans les 2 jours ouvrables</li>
+  <li><strong>Traitement Paddle :</strong> typiquement 1–3 jours ouvrables après confirmation</li>
+  <li><strong>Fonds sur votre compte :</strong> 3–10 jours ouvrables, selon votre banque</li>
+</ul>
+<p>Le remboursement est effectué vers le <strong>même moyen de paiement</strong> que vous avez utilisé. Nous ne pouvons rediriger vers un autre compte.</p>
+<h2>5. Ce qui arrive à votre licence après remboursement</h2>
+<p>Après traitement, votre clé Paintiano Pro est désactivée. À la prochaine validation en ligne, les fonctions Pro seront désactivées et l'app reviendra au niveau gratuit. Vos peintures locales et créations <strong>ne</strong> sont pas supprimées — seules les fonctionnalités débloquées le sont.</p>
+<h2>6. Après les 14 jours</h2>
+<p>Au-delà des 14 jours, nous ne sommes pas légalement tenus de rembourser. Cependant, pour une raison légitime — par exemple un bug que nous ne pouvons corriger, ou un double achat par erreur — écrivez-nous et nous examinerons votre cas individuellement. Nous visons à être raisonnables.</p>
+<h2>7. Litiges</h2>
+<p>Si vous n'êtes pas satisfait de notre traitement, vous pouvez :</p>
+<ul>
+  <li>Contacter l'équipe litiges de Paddle via l'e-mail de reçu</li>
+  <li>Faire une opposition de paiement auprès de votre banque</li>
+  <li>Porter le litige à la <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">plateforme ODR de l'UE</a></li>
+  <li>Contacter l'autorité nationale de protection du consommateur</li>
+</ul>
+<p>Nous préférons résoudre les problèmes à l'amiable — donnez-nous une chance d'abord.</p>
+<div class="contact">
+  <h2>Contact</h2>
+  <p><strong>Rastislav Ďurica</strong> — travailleur indépendant (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>Demandes de remboursement : <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> (objet : « Refund »)</p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">Conditions</a> · <a href="/privacy.html">Confidentialité</a><br>© 2026 Rastislav Ďurica · Tous droits réservés.</footer>
+
+</div>
+
+<div class="wrap" data-lang="es">
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Política de reembolso</h1>
+  <div class="meta">Vigente desde: 1 de junio de 2026 · Versión 1.0</div>
+</header>
+<div class="highlight">
+  <h3>Reembolso sin preguntas durante 14 días</h3>
+  <p>Si cambias de opinión dentro de los 14 días tras comprar Paintiano Pro, te reembolsaremos íntegramente. Sin formularios, sin justificaciones — solo escríbenos.</p>
+</div>
+<h2>1. Tu derecho al reembolso</h2>
+<p>Conforme a la Directiva UE 2011/83/UE sobre derechos del consumidor, tienes un derecho legal a cancelar y obtener un reembolso completo dentro de <strong>14 días naturales</strong> tras comprar un producto digital, incluso si ya se ha entregado.</p>
+<p>Paintiano aplica voluntariamente esta ventana de 14 días a todos los clientes del mundo, independientemente de dónde vivas.</p>
+<h2>2. Qué es elegible</h2>
+<ul>
+  <li><strong>Licencia Paintiano Pro de por vida</strong> — €14.99 (o €9.99 early-bird) — totalmente reembolsable dentro de 14 días.</li>
+</ul>
+<p>Actualmente es el único producto que vendemos, así que la política aplica a cada compra.</p>
+<h2>3. Cómo solicitar un reembolso</h2>
+<p>Dos formas:</p>
+<ol>
+  <li><strong>Envíanos correo</strong> a <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> desde la dirección usada en la compra. Pon "Refund" en el asunto. Confirmaremos y procesaremos en 2 días hábiles.</li>
+  <li><strong>Contacta soporte Paddle</strong> directamente — nuestro procesador gestiona los reembolsos. Accesible vía el correo de recibo o en <a href="https://www.paddle.com/contact" target="_blank" rel="noopener">paddle.com/contact</a>.</li>
+</ol>
+<p>No necesitas dar un motivo. Un simple "Quisiera un reembolso" basta.</p>
+<h2>4. Cuánto tarda</h2>
+<ul>
+  <li><strong>Nuestra confirmación:</strong> dentro de 2 días hábiles</li>
+  <li><strong>Procesamiento Paddle:</strong> típicamente 1–3 días hábiles tras confirmación</li>
+  <li><strong>Fondos en tu cuenta:</strong> 3–10 días hábiles, según tu banco</li>
+</ul>
+<p>El reembolso va al <strong>mismo método de pago</strong> que usaste. No podemos redirigir a otra cuenta.</p>
+<h2>5. Qué pasa con tu licencia tras el reembolso</h2>
+<p>Tras procesarse el reembolso, tu clave Paintiano Pro se desactiva. La próxima vez que la app valide online, las funciones Pro se desactivarán y la app volverá al nivel gratuito. Tus pinturas locales <strong>no</strong> se eliminan — solo se quitan las funciones desbloqueadas.</p>
+<h2>6. Después de los 14 días</h2>
+<p>Más allá de los 14 días no estamos legalmente obligados a reembolsar. Sin embargo, por una razón genuina — por ejemplo un bug que no podemos arreglar o doble compra por error — escríbenos y revisaremos tu caso individualmente. Buscamos ser razonables.</p>
+<h2>7. Disputas</h2>
+<p>Si no estás satisfecho con cómo gestionamos tu solicitud, puedes:</p>
+<ul>
+  <li>Contactar al equipo de disputas de Paddle vía el correo de recibo</li>
+  <li>Presentar un chargeback con tu banco</li>
+  <li>Llevar la disputa a la <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">plataforma ODR de la UE</a></li>
+  <li>Contactar a la autoridad nacional de protección al consumidor</li>
+</ul>
+<p>Preferimos resolver problemas directamente y amistosamente — danos una oportunidad primero.</p>
+<div class="contact">
+  <h2>Contacto</h2>
+  <p><strong>Rastislav Ďurica</strong> — autónomo (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>Solicitudes de reembolso: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> (asunto: "Refund")</p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">Términos</a> · <a href="/privacy.html">Privacidad</a><br>© 2026 Rastislav Ďurica · Todos los derechos reservados.</footer>
+
+</div>
+
+<div class="wrap" data-lang="sk">
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Pravidlá vrátenia peňazí</h1>
+  <div class="meta">Účinné od: 1. júna 2026 · Verzia 1.0</div>
+</header>
+<div class="highlight">
+  <h3>14 dní bez otázok</h3>
+  <p>Ak si to do 14 dní po kúpe Paintiano Pro rozmyslíte, vrátime vám peniaze v plnej výške. Žiadne formuláre, žiadne odôvodnenia — stačí nám napísať.</p>
+</div>
+<h2>1. Vaše právo na vrátenie</h2>
+<p>Podľa Smernice EÚ 2011/83/EÚ o právach spotrebiteľov máte zákonné právo odstúpiť a získať plné vrátenie peňazí do <strong>14 kalendárnych dní</strong> od kúpy digitálneho produktu, aj keď bol produkt doručený.</p>
+<p>Paintiano dobrovoľne uplatňuje rovnakú 14-dňovú lehotu pre všetkých zákazníkov na celom svete, bez ohľadu na to, kde žijú.</p>
+<h2>2. Čo je oprávnené</h2>
+<ul>
+  <li><strong>Doživotná licencia Paintiano Pro</strong> — €14.99 (alebo €9.99 early-bird) — plne vratná do 14 dní od kúpy.</li>
+</ul>
+<p>Toto je momentálne jediný produkt, ktorý predávame, takže pravidlá platia pre každý nákup.</p>
+<h2>3. Ako požiadať o vrátenie</h2>
+<p>Máte dve možnosti:</p>
+<ol>
+  <li><strong>Napíšte nám</strong> na <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> z adresy, ktorú ste použili pri kúpe. Do predmetu uveďte „Refund". Potvrdíme a spracujeme do 2 pracovných dní.</li>
+  <li><strong>Kontaktujte Paddle podporu</strong> priamo — náš spracovateľ platieb vybavuje vrátenia. Dosiahnuteľný cez e-mail s potvrdením alebo na <a href="https://www.paddle.com/contact" target="_blank" rel="noopener">paddle.com/contact</a>.</li>
+</ol>
+<p>Nemusíte uvádzať dôvod. Stačí jednoduché „Chcem vrátenie peňazí".</p>
+<h2>4. Ako dlho to trvá</h2>
+<ul>
+  <li><strong>Naše potvrdenie:</strong> do 2 pracovných dní od vašej žiadosti</li>
+  <li><strong>Spracovanie Paddle:</strong> obvykle 1–3 pracovné dni po potvrdení</li>
+  <li><strong>Peniaze späť na účet:</strong> 3–10 pracovných dní, závisí od banky alebo vydavateľa karty</li>
+</ul>
+<p>Vrátenie sa pošle na <strong>rovnaký spôsob platby</strong>, ktorý ste použili (karta, PayPal, atď.). Nevieme presmerovať na iný účet.</p>
+<h2>5. Čo sa stane s licenciou po vrátení</h2>
+<p>Po spracovaní vrátenia sa váš licenčný kľúč Paintiano Pro deaktivuje. Pri ďalšom online overení (obvykle ďalšia relácia) sa Pro funkcie vypnú a aplikácia sa vráti na bezplatnú úroveň. Vaše lokálne obrazy a tvorivá práca <strong>nie</strong> sú zmazané — odstránia sa iba odomknuté funkcie.</p>
+<h2>6. Po 14 dňoch</h2>
+<p>Po uplynutí 14 dní nie sme zákonom povinní vrátiť peniaze. Ak však máte oprávnený dôvod — napríklad aplikácia vám nefunguje kvôli chybe, ktorú nedokážeme opraviť, alebo ste kúpili omylom dvakrát — napíšte nám a posúdime váš prípad individuálne. Snažíme sa byť rozumní.</p>
+<h2>7. Spory</h2>
+<p>Ak nie ste spokojní s tým, ako sme vašu žiadosť vybavili, môžete:</p>
+<ul>
+  <li>Kontaktovať tím sporov Paddle priamo cez e-mail s potvrdením</li>
+  <li>Podať chargeback u vašej banky alebo vydavateľa karty</li>
+  <li>Predložiť spor na <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">platformu Online riešenia sporov EÚ</a></li>
+  <li>Kontaktovať váš národný orgán ochrany spotrebiteľa</li>
+</ul>
+<p>Uprednostňujeme riešenie problémov priamo a priateľsky — najprv nám dajte šancu.</p>
+<div class="contact">
+  <h2>Kontakt</h2>
+  <p><strong>Rastislav Ďurica</strong> — živnostník</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>Žiadosti o vrátenie: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> (predmet: „Refund")</p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">Podmienky</a> · <a href="/privacy.html">Ochrana údajov</a><br>© 2026 Rastislav Ďurica · Všetky práva vyhradené.</footer>
+
+</div>
+
+<div class="wrap" data-lang="pt">
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>Política de Reembolso</h1>
+  <div class="meta">Em vigor: 1 de junho de 2026 · Versão 1.0</div>
+</header>
+<div class="highlight">
+  <h3>14 dias de reembolso sem perguntas</h3>
+  <p>Se mudar de ideia dentro de 14 dias após comprar Paintiano Pro, reembolsaremos integralmente. Sem formulários, sem justificações — basta enviar-nos um e-mail.</p>
+</div>
+<h2>1. Seu direito ao reembolso</h2>
+<p>Conforme a Diretiva UE 2011/83/UE sobre direitos do consumidor, você tem direito legal a cancelar e obter reembolso completo dentro de <strong>14 dias calendário</strong> após comprar um produto digital, mesmo se já tiver sido entregue.</p>
+<p>Paintiano aplica voluntariamente a mesma janela de 14 dias a todos os clientes do mundo, independentemente de onde vive.</p>
+<h2>2. O que é elegível</h2>
+<ul>
+  <li><strong>Licença Vitalícia Paintiano Pro</strong> — €14.99 (ou €9.99 early-bird) — totalmente reembolsável em 14 dias.</li>
+</ul>
+<p>Este é atualmente o único produto que vendemos, então a política aplica-se a cada compra.</p>
+<h2>3. Como solicitar reembolso</h2>
+<p>Duas formas:</p>
+<ol>
+  <li><strong>Envie-nos e-mail</strong> para <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> do endereço usado na compra. Coloque "Refund" no assunto. Confirmaremos e processaremos em 2 dias úteis.</li>
+  <li><strong>Contate o suporte Paddle</strong> diretamente — nosso processador gere reembolsos. Acessível via e-mail de recibo ou em <a href="https://www.paddle.com/contact" target="_blank" rel="noopener">paddle.com/contact</a>.</li>
+</ol>
+<p>Não precisa dar motivo. Um simples "Gostaria de reembolso" basta.</p>
+<h2>4. Quanto tempo demora</h2>
+<ul>
+  <li><strong>Nossa confirmação:</strong> em 2 dias úteis</li>
+  <li><strong>Processamento Paddle:</strong> tipicamente 1–3 dias úteis após confirmação</li>
+  <li><strong>Fundos na sua conta:</strong> 3–10 dias úteis, dependendo do banco</li>
+</ul>
+<p>O reembolso é emitido para o <strong>mesmo método de pagamento</strong> que usou. Não podemos redirecionar para outra conta.</p>
+<h2>5. O que acontece com a licença após reembolso</h2>
+<p>Após o reembolso ser processado, sua chave Paintiano Pro é desativada. Na próxima validação online, os recursos Pro serão desligados e o app voltará ao nível gratuito. Suas pinturas locais <strong>não</strong> são apagadas — apenas os recursos desbloqueados são removidos.</p>
+<h2>6. Após os 14 dias</h2>
+<p>Além dos 14 dias, não somos legalmente obrigados a reembolsar. Porém, se tiver razão genuína — por exemplo, o app não funciona por um bug que não conseguimos corrigir, ou comprou duas vezes por engano — escreva-nos e analisaremos seu caso individualmente. Buscamos ser razoáveis.</p>
+<h2>7. Disputas</h2>
+<p>Se não estiver satisfeito com nosso atendimento, pode:</p>
+<ul>
+  <li>Contatar a equipe de disputas do Paddle via e-mail de recibo</li>
+  <li>Abrir um chargeback no seu banco</li>
+  <li>Levar a disputa à <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">plataforma ODR da UE</a></li>
+  <li>Contatar a autoridade nacional de defesa do consumidor</li>
+</ul>
+<p>Preferimos resolver problemas diretamente e amigavelmente — dê-nos uma chance primeiro.</p>
+<div class="contact">
+  <h2>Contato</h2>
+  <p><strong>Rastislav Ďurica</strong> — autônomo (živnosť)</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>Solicitações de reembolso: <a href="mailto:hello@paintiano.app">hello@paintiano.app</a> (assunto: "Refund")</p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">Termos</a> · <a href="/privacy.html">Privacidade</a><br>© 2026 Rastislav Ďurica · Todos os direitos reservados.</footer>
+
+</div>
+
+<div class="wrap" data-lang="zh">
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>退款政策</h1>
+  <div class="meta">生效日期：2026 年 6 月 1 日 · 版本 1.0</div>
+</header>
+<div class="highlight">
+  <h3>14 天无条件退款</h3>
+  <p>如果您在购买 Paintiano Pro 后 14 天内改变主意，我们将全额退款。无需表格，无需理由——只需发邮件给我们。</p>
+</div>
+<h2>1. 您的退款权利</h2>
+<p>根据欧盟 2011/83/EU 消费者权利指令，您有权在购买数字产品后 <strong>14 个日历日</strong> 内取消并获得全额退款，即使产品已交付。</p>
+<p>Paintiano 自愿对全世界所有客户应用相同的 14 天退款期，无论您居住在何处。</p>
+<h2>2. 适用范围</h2>
+<ul>
+  <li><strong>Paintiano Pro 终身许可证</strong> — €14.99（或 €9.99 早鸟价）— 购买后 14 天内可全额退款。</li>
+</ul>
+<p>这是我们目前销售的唯一产品，因此该政策适用于每次购买。</p>
+<h2>3. 如何申请退款</h2>
+<p>两种方式：</p>
+<ol>
+  <li><strong>发送电子邮件</strong> 至 <a href="mailto:hello@paintiano.app">hello@paintiano.app</a>，使用购买时的地址。在主题中填写"Refund"。我们将在 2 个工作日内确认并处理。</li>
+  <li><strong>直接联系 Paddle 支持</strong> — 我们的支付处理商处理退款。可通过 Paddle 收据邮件或在 <a href="https://www.paddle.com/contact" target="_blank" rel="noopener">paddle.com/contact</a> 联系。</li>
+</ol>
+<p>无需提供理由。简单的"我想退款"即可。</p>
+<h2>4. 处理时长</h2>
+<ul>
+  <li><strong>我们的确认：</strong>请求后 2 个工作日内</li>
+  <li><strong>Paddle 处理：</strong>确认后通常 1–3 个工作日</li>
+  <li><strong>资金返回您的账户：</strong>3–10 个工作日，取决于您的银行或卡发行商</li>
+</ul>
+<p>退款会发送到您购买时使用的 <strong>相同支付方式</strong>。我们不能重定向到其他账户。</p>
+<h2>5. 退款后您的许可证会怎样</h2>
+<p>退款处理后，您的 Paintiano Pro 许可证密钥将被停用。下次应用在线验证密钥时（通常是下次会话），Pro 功能将关闭，应用将返回免费版。您的本地绘画和创意作品 <strong>不会</strong> 被删除——只有解锁的功能被移除。</p>
+<h2>6. 14 天之后</h2>
+<p>超过 14 天，我们没有法律义务退款。但是，如果您有真正的理由——例如应用因我们无法修复的错误而不能使用，或您误买两次——请发邮件给我们，我们将个别审查您的案例。我们力求合理。</p>
+<h2>7. 争议</h2>
+<p>如果您对我们处理退款请求的方式不满意，您可以：</p>
+<ul>
+  <li>通过收据邮件直接联系 Paddle 的争议团队</li>
+  <li>向您的银行或卡发行商提出拒付</li>
+  <li>将争议提交至 <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">欧盟在线争议解决平台</a></li>
+  <li>联系您的国家消费者保护机构</li>
+</ul>
+<p>我们更倾向直接友好地解决问题——请先给我们一个机会。</p>
+<div class="contact">
+  <h2>联系方式</h2>
+  <p><strong>Rastislav Ďurica</strong> — 个体经营者（živnosť）</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>退款请求：<a href="mailto:hello@paintiano.app">hello@paintiano.app</a>（主题："Refund"）</p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">服务条款</a> · <a href="/privacy.html">隐私政策</a><br>© 2026 Rastislav Ďurica · 版权所有。</footer>
+
+</div>
+
+<div class="wrap" data-lang="zhTW">
+<header>
+  <a href="https://paintiano.app" class="logo">Paintiano</a>
+  <h1>退款政策</h1>
+  <div class="meta">生效日期：2026 年 6 月 1 日 · 版本 1.0</div>
+</header>
+<div class="highlight">
+  <h3>14 天無條件退款</h3>
+  <p>如果您在購買 Paintiano Pro 後 14 天內改變主意，我們將全額退款。無需表格，無需理由——只需發郵件給我們。</p>
+</div>
+<h2>1. 您的退款權利</h2>
+<p>根據歐盟 2011/83/EU 消費者權利指令，您有權在購買數位產品後 <strong>14 個日曆日</strong> 內取消並獲得全額退款，即使產品已交付。</p>
+<p>Paintiano 自願對全世界所有客戶套用相同的 14 天退款期，無論您居住在何處。</p>
+<h2>2. 適用範圍</h2>
+<ul>
+  <li><strong>Paintiano Pro 終身授權</strong> — €14.99（或 €9.99 早鳥價）— 購買後 14 天內可全額退款。</li>
+</ul>
+<p>這是我們目前銷售的唯一產品，因此該政策適用於每次購買。</p>
+<h2>3. 如何申請退款</h2>
+<p>兩種方式：</p>
+<ol>
+  <li><strong>傳送電子郵件</strong> 至 <a href="mailto:hello@paintiano.app">hello@paintiano.app</a>，使用購買時的地址。在主題中填寫「Refund」。我們將在 2 個工作日內確認並處理。</li>
+  <li><strong>直接聯絡 Paddle 支援</strong> — 我們的支付處理商處理退款。可透過 Paddle 收據郵件或在 <a href="https://www.paddle.com/contact" target="_blank" rel="noopener">paddle.com/contact</a> 聯絡。</li>
+</ol>
+<p>無需提供理由。簡單的「我想退款」即可。</p>
+<h2>4. 處理時長</h2>
+<ul>
+  <li><strong>我們的確認：</strong>請求後 2 個工作日內</li>
+  <li><strong>Paddle 處理：</strong>確認後通常 1–3 個工作日</li>
+  <li><strong>資金返回您的帳戶：</strong>3–10 個工作日，取決於您的銀行或卡發行商</li>
+</ul>
+<p>退款會傳送到您購買時使用的 <strong>相同支付方式</strong>。我們無法重新導向到其他帳戶。</p>
+<h2>5. 退款後您的授權會如何</h2>
+<p>退款處理後，您的 Paintiano Pro 授權金鑰將被停用。下次應用線上驗證金鑰時（通常是下次工作階段），Pro 功能將關閉，應用將返回免費版。您的本地繪畫和創意作品 <strong>不會</strong> 被刪除——只有解鎖的功能被移除。</p>
+<h2>6. 14 天之後</h2>
+<p>超過 14 天，我們沒有法律義務退款。但是，如果您有真正的理由——例如應用因我們無法修復的錯誤而不能使用，或您誤買兩次——請發郵件給我們，我們將個別審查您的案例。我們力求合理。</p>
+<h2>7. 爭議</h2>
+<p>如果您對我們處理退款請求的方式不滿意，您可以：</p>
+<ul>
+  <li>透過收據郵件直接聯絡 Paddle 的爭議團隊</li>
+  <li>向您的銀行或卡發行商提出拒付</li>
+  <li>將爭議提交至 <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener">歐盟線上爭議解決平台</a></li>
+  <li>聯絡您的國家消費者保護機構</li>
+</ul>
+<p>我們更傾向直接友善地解決問題——請先給我們一個機會。</p>
+<div class="contact">
+  <h2>聯絡方式</h2>
+  <p><strong>Rastislav Ďurica</strong> — 個人經營者（živnosť）</p>
+  <p>IČO 34 594 671 · DIČ 1025916419</p>
+  <p>退款請求：<a href="mailto:hello@paintiano.app">hello@paintiano.app</a>（主題：「Refund」）</p>
+</div>
+<footer><a href="https://paintiano.app">paintiano.app</a> · <a href="/terms.html">服務條款</a> · <a href="/privacy.html">隱私政策</a><br>© 2026 Rastislav Ďurica · 版權所有。</footer>
+
+</div>
+
+
+<script>
+(function(){
+  var KEY='paintiano_lang';
+  function pickInitial(){ try {
+    var url=new URLSearchParams(location.search).get('lang'); if(url) return url;
+    var ls=localStorage.getItem(KEY); if(ls) return ls;
+    var n=(navigator.language||'en').toLowerCase();
+    if(n.indexOf('zh-tw')===0||n.indexOf('zh-hk')===0) return 'zhTW';
+    if(n.indexOf('zh')===0) return 'zh';
+    if(n.indexOf('de')===0) return 'de';
+    if(n.indexOf('fr')===0) return 'fr';
+    if(n.indexOf('es')===0) return 'es';
+    if(n.indexOf('sk')===0) return 'sk';
+    if(n.indexOf('pt')===0) return 'pt';
+    return 'en';
+  } catch(_){ return 'en'; } }
+  function show(c){ var f=false; document.querySelectorAll('[data-lang]').forEach(function(el){ if(el.getAttribute('data-lang')===c){el.classList.add('active'); f=true;} else el.classList.remove('active'); }); if(!f){ document.querySelectorAll('[data-lang="en"]').forEach(function(el){el.classList.add('active');}); c='en'; } var s=document.getElementById('lang'); if(s) s.value=c; var hl=({zh:'zh-CN',zhTW:'zh-TW'})[c]||c; document.documentElement.setAttribute('lang',hl); }
+  show(pickInitial());
+  var s=document.getElementById('lang');
+  if(s) s.addEventListener('change',function(){ var v=s.value; show(v); try{localStorage.setItem(KEY,v);}catch(_){}});
+  window.addEventListener('message',function(e){ if(e&&e.data&&e.data.type==='paintiano_lang'&&e.data.lang) show(String(e.data.lang)); });
+})();
+</script>
+
 </body>
 </html>
