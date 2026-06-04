@@ -7087,11 +7087,15 @@ Composition rules:
           compose mode, or mic mode — they all surface the bottom controls
           bar with PLAY/LOOP/SAVE/CLEAR that the FAB would otherwise overlap).
           Also hidden during onboarding (tutorial already explains everything).
+          Uses isActiveView (the same flag the app uses elsewhere to switch
+          between setup and canvas views), so the FAB correctly comes back
+          when the user clicks ← BACK to return to setup, even though source
+          state is still loaded under the hood.
           The FAB is fixed-position so it follows the viewport regardless of
           scroll; the popup it opens is also fixed and covers the full
           viewport. zIndex high enough to sit above app chrome but below
           the paywall modal. ── */}
-      {!showOnboarding && !loadedSource && !currentMood && !composeMode && !micActive && (
+      {!showOnboarding && !isActiveView && (
         <button
           onClick={()=>setShowHelp(true)}
           aria-label={t('helpFab')||'help'}
