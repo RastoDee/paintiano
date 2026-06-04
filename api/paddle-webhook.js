@@ -34,6 +34,8 @@ const EXPECTED_PRICE_ID = process.env.PADDLE_PRICE_ID; // optional guard
 const RESEND_API_KEY = process.env.RESEND_API_KEY;     // for emailing the license
 const EMAIL_FROM = 'Paintiano <hello@paintiano.app>';  // verified Resend sender
 const EMAIL_REPLY_TO = 'hello@paintiano.app';
+const PADDLE_API_KEY = process.env.PADDLE_API_KEY;     // server-side, for fetching customer email
+const PADDLE_API_BASE = 'https://api.paddle.com';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -42,6 +44,35 @@ function json(body, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+// Paddle's transaction.* webhooks include `customer_id` but NOT the customer's
+// email directly. We fetch it from /customers/{id} so we can store it in our
+// licenses table (email is NOT NULL) and email the license to the buyer.
+async function fetchPaddleCustomer(customerId) {
+  if (!customerId) return null;
+  if (!PADDLE_API_KEY) {
+    console.warn('paddle-webhook: PADDLE_API_KEY not set — cannot fetch customer');
+    return null;
+  }
+  try {
+    const r = await fetch(`${PADDLE_API_BASE}/customers/${customerId}`, {
+      headers: {
+        'Authorization': `Bearer ${PADDLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      console.warn('paddle-webhook: customer fetch failed', r.status, body.slice(0, 200));
+      return null;
+    }
+    const body = await r.json().catch(() => ({}));
+    return body?.data || null;
+  } catch (err) {
+    console.error('paddle-webhook: customer fetch threw', err);
+    return null;
+  }
 }
 
 // Hex-encode an ArrayBuffer
@@ -321,20 +352,52 @@ export default async function handler(req) {
         // We key on data.id (the transaction id) → if a license with this
         // order_id already exists, do nothing.
         const orderId = data.id;
-        const email =
+        const customerId = data?.customer_id || null;
+
+        // Resolve buyer email. Paddle's transaction.* webhooks include
+        // `customer_id` but the email is NOT included by default. Try the
+        // payload shapes first (some Paddle flows do embed it), then fall
+        // back to a server-side fetch of /customers/{id}.
+        let email =
           data?.customer?.email ||
           data?.billing_details?.email ||
           data?.payments?.[0]?.customer?.email ||
           null;
 
-        // Extract amount + currency for the receipt section in the email.
-        // Paddle wraps amounts as minor units in `details.totals.total` and
-        // `currency_code` on the data; fall back gracefully if shape changes.
+        if (!email && customerId) {
+          const customer = await fetchPaddleCustomer(customerId);
+          email = customer?.email || null;
+        }
+
+        if (!email) {
+          // Email is NOT NULL in the licenses table — and we can't deliver
+          // the license without it. Return 500 so Paddle retries; gives the
+          // operator time to check PADDLE_API_KEY in Vercel env vars.
+          console.error('paddle-webhook: could not resolve buyer email', { orderId, customerId });
+          return json({
+            ok: false,
+            reason: 'no_email',
+            detail: 'Could not resolve buyer email — check PADDLE_API_KEY env var.',
+          }, 500);
+        }
+
+        // Extract amount + currency for the receipt section in the email
+        // AND for the licenses row. Paddle wraps amounts as minor units in
+        // `details.totals.total` and `currency_code` on the data; fall back
+        // gracefully if shape changes.
         const totalMinor = data?.details?.totals?.total ?? data?.details?.totals?.grand_total ?? null;
         const currencyCode = data?.currency_code || data?.details?.totals?.currency_code || null;
-        const amountMajor = (totalMinor != null && currencyCode)
-          ? (parseInt(totalMinor, 10) / 100).toFixed(2)
+        const amountCents = totalMinor != null ? parseInt(totalMinor, 10) : null;
+        const amountMajor = (amountCents != null && currencyCode)
+          ? (amountCents / 100).toFixed(2)
           : null;
+
+        // Extract product / price ids from the first Paddle line item that
+        // matches our Pro price (if EXPECTED_PRICE_ID is set we already
+        // verified at least one matches above).
+        const firstItem = Array.isArray(data.items) ? data.items[0] : null;
+        const productId = firstItem?.price?.product_id || null;
+        const variantId = firstItem?.price?.id || null;
 
         const licenseKey = generateLicenseKey();
 
@@ -345,9 +408,16 @@ export default async function handler(req) {
           order_id: orderId,
           provider: 'paddle',
           activations: 0,
+          // Optional enrichment — useful for refunds, support, reporting.
+          customer_id: customerId,
+          product_id: productId,
+          variant_id: variantId,
+          amount_cents: amountCents,
+          currency: currencyCode,
+          raw_event: evt,
         });
 
-        console.info('paddle-webhook: issued license', { orderId, email: email ? email.replace(/(.).+(@.+)/, '$1***$2') : null });
+        console.info('paddle-webhook: issued license', { orderId, email: email.replace(/(.).+(@.+)/, '$1***$2') });
 
         // Fire the license email. Even if this fails we still return 200
         // — the license exists in Supabase and can be re-sent manually.
