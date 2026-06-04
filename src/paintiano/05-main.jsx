@@ -7104,13 +7104,13 @@ Composition rules:
       )}
       <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
       <div style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
-        <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Pricing</button>
+        <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
-        <button onClick={()=>setLegalDoc('terms')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Terms</button>
+        <button onClick={()=>setLegalDoc('terms')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalTerms')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
-        <button onClick={()=>setLegalDoc('privacy')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Privacy</button>
+        <button onClick={()=>setLegalDoc('privacy')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPrivacy')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
-        <button onClick={()=>setLegalDoc('refunds')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Refunds</button>
+        <button onClick={()=>setLegalDoc('refunds')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalRefunds')}</button>
       </div>
 
       {/* ── HELP FAB (Variant A — floating "?" bottom-right) ───────────────
