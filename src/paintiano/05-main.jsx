@@ -5196,6 +5196,38 @@ Composition rules:
   // Help cheat-sheet popup — gold "?" FAB bottom-right opens this. Volatile
   // boolean (no persistence) — every fresh visit defaults to closed.
   const [showHelp, setShowHelp] = useState(false);
+  // ── Legal modal: which legal doc is shown inside the in-app modal
+  // ('pricing' | 'terms' | 'privacy' | 'refunds' | null). null = closed.
+  // We fetch the matching public/*.html on demand and inline-render it so the
+  // user never leaves the Paintiano context (no new tab, no full-page nav).
+  const [legalDoc, setLegalDoc] = useState(null);
+  const [legalHtml, setLegalHtml] = useState('');
+  const [legalLoading, setLegalLoading] = useState(false);
+  useEffect(()=>{
+    if(!legalDoc){ setLegalHtml(''); return; }
+    let cancelled=false;
+    setLegalLoading(true);
+    fetch('/'+legalDoc+'.html').then(r=>r.text()).then(t=>{
+      if(cancelled) return;
+      // Strip everything before <body> and after </body> so we render
+      // only the page's content — outer <html>/<head> would clash with
+      // the app's own document and break styles.
+      const m = t.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+      setLegalHtml(m ? m[1] : t);
+      setLegalLoading(false);
+    }).catch(()=>{ if(!cancelled){ setLegalHtml('<p style="color:#c9a84c;text-align:center;padding:40px">Could not load. Please try again.</p>'); setLegalLoading(false); } });
+    return ()=>{ cancelled=true; };
+  },[legalDoc]);
+  // Intercept clicks on cross-doc anchors inside the modal — instead of
+  // following the href (which would navigate the whole page), open the
+  // matching doc inside the modal.
+  const onLegalClick = useCallback((e)=>{
+    const a = e.target.closest('a');
+    if(!a) return;
+    const href = a.getAttribute('href') || '';
+    const m = href.match(/^\/?(pricing|terms|privacy|refunds)\.html$/i);
+    if(m){ e.preventDefault(); setLegalDoc(m[1].toLowerCase()); }
+  },[]);
   // Onboarding phase: 'preview' (idle hero with ▶), 'playing' (real-time mirror
   // of the main canvas drawing the sample), 'done' (sample finished, CTA bar
   // appears with "Try your own" + replay).
@@ -7040,26 +7072,26 @@ Composition rules:
       )}
       <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
       <div style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
-        <a href="/pricing.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Pricing</a>
+        <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Pricing</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
-        <a href="/terms.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Terms</a>
+        <button onClick={()=>setLegalDoc('terms')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Terms</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
-        <a href="/privacy.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Privacy</a>
+        <button onClick={()=>setLegalDoc('privacy')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Privacy</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
-        <a href="/refunds.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Refunds</a>
+        <button onClick={()=>setLegalDoc('refunds')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Refunds</button>
       </div>
 
       {/* ── HELP FAB (Variant A — floating "?" bottom-right) ───────────────
-          Affordance for the setup screen only. Hidden during:
-            • onboarding (tutorial already explains everything)
-            • playback / paused playback (covers the CLEAR button in the
-              bottom controls bar; user is past the explore-features stage
-              anyway, they're now creating)
+          Affordance for the SETUP SCREEN only. Hidden as soon as the user
+          progresses to the pro/canvas view (any loaded source, picked mood,
+          compose mode, or mic mode — they all surface the bottom controls
+          bar with PLAY/LOOP/SAVE/CLEAR that the FAB would otherwise overlap).
+          Also hidden during onboarding (tutorial already explains everything).
           The FAB is fixed-position so it follows the viewport regardless of
           scroll; the popup it opens is also fixed and covers the full
           viewport. zIndex high enough to sit above app chrome but below
           the paywall modal. ── */}
-      {!showOnboarding && !playing && !holdPaused && (
+      {!showOnboarding && !loadedSource && !currentMood && !composeMode && !micActive && (
         <button
           onClick={()=>setShowHelp(true)}
           aria-label={t('helpFab')||'help'}
@@ -7249,6 +7281,35 @@ Composition rules:
           <div style={{position:'fixed',bottom:'7vh',left:'50%',transform:'translateX(-50%)',display:'inline-flex',alignItems:'center',gap:8,padding:'8px 18px',fontSize:`clamp(${.65*effScale}rem,${1.7*effScale}vw,${.95*effScale}rem)`,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(247,243,236,.78)',background:'rgba(16,12,24,.55)',borderRadius:20,pointerEvents:'none',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(247,243,236,.18)',whiteSpace:'nowrap'}}>
             <span style={{fontSize:'.9em',opacity:.7}}>✕</span>
             {t('demoSkip')||'tap canvas to skip'}
+          </div>
+        </div>
+      )}
+
+      {/* ── LEGAL MODAL (Pricing / Terms / Privacy / Refunds) ─────────────
+          Replaces opening these as separate browser tabs. Keeps the user
+          inside the Paintiano context: ✕ closes back into the app, taps
+          outside the panel also close, and links between docs are
+          intercepted (onLegalClick) so they re-route into the modal
+          rather than navigate the whole page. The HTML for each doc is
+          fetched on demand from /public and stripped down to <body>'s
+          contents to avoid clashing <html>/<head> styles. ── */}
+      {legalDoc && (
+        <div
+          onClick={(e)=>{ if(e.target===e.currentTarget) setLegalDoc(null); }}
+          style={{position:'fixed',inset:0,zIndex:100001,background:'rgba(6,6,12,.94)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',paddingTop:`calc(env(safe-area-inset-top,0px) + 12px)`,paddingBottom:`calc(env(safe-area-inset-bottom,0px) + 12px)`,paddingLeft:12,paddingRight:12,overflow:'hidden',display:'flex',justifyContent:'center'}}
+        >
+          <div style={{position:'relative',width:'100%',maxWidth:720,height:'100%',background:'rgba(14,11,22,.92)',border:'1px solid rgba(201,168,76,.18)',borderRadius:14,boxShadow:'0 18px 60px rgba(0,0,0,.55)',display:'flex',flexDirection:'column'}}>
+            <button
+              onClick={()=>setLegalDoc(null)}
+              aria-label="close"
+              style={{position:'absolute',top:10,right:10,width:36,height:36,borderRadius:18,background:'rgba(247,243,236,.08)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(247,243,236,.18)',cursor:'pointer',fontSize:'1.15rem',lineHeight:'1',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}
+            >✕</button>
+            <div
+              onClick={onLegalClick}
+              style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'24px 22px 28px',color:'rgba(247,243,236,.92)',fontFamily:'Arial, sans-serif',fontSize:(.85*effScale)+'rem',lineHeight:1.55}}
+              className="paintiano-legal-content"
+              dangerouslySetInnerHTML={{__html: legalLoading ? '<p style="opacity:.6;text-align:center;padding:40px;">Loading…</p>' : legalHtml}}
+            />
           </div>
         </div>
       )}
