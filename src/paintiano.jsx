@@ -8863,11 +8863,10 @@ const PRO_CFG = {
   // endpoint then verifies activation requests from the app.
   //
   // Set checkoutDisabled=true to force "Coming soon" tile (kill switch).
-  // Currently TRUE because Paddle Overlay returns "Something went wrong"
-  // after opening — even though verification passed and payout method is
-  // saved. Likely Paddle backend still activating, or needs additional
-  // setup. Flip to false once a real test purchase works end-to-end.
-  checkoutDisabled: true,
+  // Flipped to FALSE on 4 Jun 2026 after Paddle "you're live" email — they
+  // resolved the earlier 400 "Something went wrong" on transaction-checkout.
+  // Account is now activated and ready to take payments.
+  checkoutDisabled: false,
   // Paddle's client-side token. PUBLIC — safe to ship in the bundle.
   // Used by Paddle.js to open the overlay checkout. Production token.
   paddleClientToken: 'live_3ab34fef52eea1baa3656517dec',
