@@ -7162,15 +7162,15 @@ Composition rules:
           <div style={{maxWidth:480, margin:'0 auto', width:'100%'}}>
             <h2 style={{
               fontFamily:"'Cormorant Garamond',serif", fontWeight:600,
-              fontSize:(1.7*effScale)+'rem', color:'#c9a84c',
-              textAlign:'center', margin:'0 0 6px',
+              fontSize:(1.45*effScale)+'rem', color:'#c9a84c',
+              textAlign:'center', margin:'0 0 4px',
             }}>{t('helpTitle')!=='helpTitle' ? t('helpTitle') : 'What does what'}</h2>
             <p style={{
               textAlign:'center',
-              color:'rgba(242,238,232,.7)',
-              fontFamily:'Arial, sans-serif',
-              fontSize:(1.0*effScale)+'rem', margin:'0 0 22px',
-              letterSpacing:'.01em', lineHeight:1.4,
+              color:'rgba(242,238,232,.65)',
+              fontFamily:'inherit',
+              fontSize:(.78*effScale)+'rem', margin:'0 0 14px',
+              letterSpacing:'.02em', lineHeight:1.35,
             }}>{t('helpSub')!=='helpSub' ? t('helpSub') : 'tap any source on the setup screen to begin'}</p>
 
             {[
@@ -7187,29 +7187,29 @@ Composition rules:
               const desc = t(descKey)!==descKey ? t(descKey) : '';
               return (
                 <div key={it.key} style={{
-                  display:'flex', alignItems:'flex-start', gap:12,
-                  padding:'11px 4px',
+                  display:'flex', alignItems:'flex-start', gap:10,
+                  padding:'6px 2px',
                   borderBottom:'1px solid rgba(255,255,255,.06)',
                 }}>
                   <div style={{
-                    width:34, height:34, borderRadius:8,
+                    width:28, height:28, borderRadius:7,
                     display:'flex', alignItems:'center', justifyContent:'center',
-                    fontSize:'17px', color:it.color, background:it.bg,
+                    fontSize:'15px', color:it.color, background:it.bg,
                     flexShrink:0,
                   }}>{it.icon}</div>
                   <div style={{flex:1, minWidth:0}}>
                     <div style={{
-                      fontFamily:'Arial, sans-serif',
-                      fontSize:(.78*effScale)+'rem', fontWeight:700,
+                      fontFamily:'inherit',
+                      fontSize:(.7*effScale)+'rem', fontWeight:700,
                       letterSpacing:'.12em', textTransform:'uppercase',
-                      color:'#f2eee8', marginBottom:4,
+                      color:'#f2eee8', marginBottom:2, lineHeight:1.2,
                     }}>{it.name}</div>
                     <div style={{
-                      fontFamily:'Arial, sans-serif',
-                      fontSize:(.95*effScale)+'rem',
+                      fontFamily:'inherit',
+                      fontSize:(.82*effScale)+'rem',
                       color:'rgba(242,238,232,.78)',
-                      lineHeight:1.45,
-                      letterSpacing:'.01em',
+                      lineHeight:1.35,
+                      letterSpacing:'.005em',
                     }}>{desc}</div>
                   </div>
                 </div>
