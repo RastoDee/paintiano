@@ -5213,11 +5213,43 @@ Composition rules:
       // only the page's content — outer <html>/<head> would clash with
       // the app's own document and break styles.
       const m = t.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-      setLegalHtml(m ? m[1] : t);
+      let body = m ? m[1] : t;
+      // The HTML file contains all 8 language sections side-by-side plus a
+      // small standalone-mode <script> with localStorage-based language
+      // detection. Inside the modal we don't want either of those: the
+      // <script> would not execute through dangerouslySetInnerHTML anyway,
+      // and the default `wrap active` on the EN section would lock us to
+      // English. Strip the script and clear the default active so the
+      // memoized renderer below can activate the section matching `lang`.
+      body = body.replace(/<script[\s\S]*?<\/script>/gi, '');
+      body = body.replace(/class="wrap active"/g, 'class="wrap"');
+      setLegalHtml(body);
       setLegalLoading(false);
     }).catch(()=>{ if(!cancelled){ setLegalHtml('<p style="color:#c9a84c;text-align:center;padding:40px">Could not load. Please try again.</p>'); setLegalLoading(false); } });
     return ()=>{ cancelled=true; };
   },[legalDoc]);
+  // Switch the fetched HTML to the current app language. The standalone HTML
+  // file relies on a <style>[data-lang]:not(.active){display:none}</style>
+  // rule in its <head> to show only the active section — but stripping
+  // <body> drops that rule, so we re-inject it inline. We then promote the
+  // section whose data-lang matches the app's `lang` to `wrap active`.
+  // App codes are uppercase (EN/DE/FR/ES/SK/PT) plus the camelCase zh/zhTW;
+  // HTML attrs are lowercase except zhTW. Re-runs whenever lang changes
+  // mid-modal so switching language in the app live-updates the open doc.
+  const legalHtmlForLang = useMemo(()=>{
+    if(!legalHtml) return '';
+    const map = {EN:'en', DE:'de', FR:'fr', ES:'es', SK:'sk', PT:'pt', zh:'zh', zhTW:'zhTW'};
+    const code = map[lang] || 'en';
+    const target = 'class="wrap" data-lang="'+code+'"';
+    let h = legalHtml;
+    if (h.indexOf(target) >= 0) {
+      h = h.replace(target, 'class="wrap active" data-lang="'+code+'"');
+    } else {
+      // Fall back to EN if the requested language is missing in this doc.
+      h = h.replace('class="wrap" data-lang="en"', 'class="wrap active" data-lang="en"');
+    }
+    return '<style>[data-lang]:not(.active){display:none}</style>'+h;
+  },[legalHtml, lang]);
   // Intercept clicks on cross-doc anchors inside the modal — instead of
   // following the href (which would navigate the whole page), open the
   // matching doc inside the modal.
@@ -7312,7 +7344,7 @@ Composition rules:
               onClick={onLegalClick}
               style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'24px 22px 28px',color:'rgba(247,243,236,.92)',fontFamily:'Arial, sans-serif',fontSize:(.85*effScale)+'rem',lineHeight:1.55}}
               className="paintiano-legal-content"
-              dangerouslySetInnerHTML={{__html: legalLoading ? '<p style="opacity:.6;text-align:center;padding:40px;">Loading…</p>' : legalHtml}}
+              dangerouslySetInnerHTML={{__html: legalLoading ? '<p style="opacity:.6;text-align:center;padding:40px;">Loading…</p>' : legalHtmlForLang}}
             />
           </div>
         </div>
