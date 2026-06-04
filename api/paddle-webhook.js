@@ -11,11 +11,7 @@
 //   • transaction.completed / transaction.paid
 //       → generate a fresh license key (PAINT-XXXX-XXXX-XXXX)
 //       → INSERT into Supabase licenses table with status='active'
-//       → Paddle itself emails the buyer the receipt; the license key is in
-//         the receipt's "custom data" block we set when creating the
-//         transaction OR we surface it via a follow-up email. For now we
-//         expose it in the response and let Paddle's customer email show
-//         our delivery URL pointing back to paintiano.app with the key.
+//       → email the buyer their license key + activation steps via Resend
 //   • adjustment.created (action=refund)
 //       → SET status='refunded' on the license that matches transaction id
 //       → the /api/validate endpoint already returns reason='refunded' for
@@ -35,6 +31,9 @@ export const config = { runtime: 'edge' };
 
 const WEBHOOK_SECRET = process.env.PADDLE_WEBHOOK_SECRET;
 const EXPECTED_PRICE_ID = process.env.PADDLE_PRICE_ID; // optional guard
+const RESEND_API_KEY = process.env.RESEND_API_KEY;     // for emailing the license
+const EMAIL_FROM = 'Paintiano <hello@paintiano.app>';  // verified Resend sender
+const EMAIL_REPLY_TO = 'hello@paintiano.app';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -98,6 +97,185 @@ function generateLicenseKey() {
   return `PAINT-${chars.slice(0, 4).join('')}-${chars.slice(4, 8).join('')}-${chars.slice(8, 12).join('')}`;
 }
 
+// ─── email template ─────────────────────────────────────────────────────────
+//
+// Inline-styled HTML for max email-client compatibility (Gmail strips <style>
+// blocks, Outlook is finicky with web fonts). We use system serif/sans
+// fallbacks that approximate Cormorant Garamond / Outfit. Dark Paintiano
+// palette: bg #06060c, ink #e8e2d4, gold #c9a84c, gold-soft #ffd07a.
+
+function buildLicenseEmailHtml({ licenseKey, amount, currency, orderId }) {
+  const safeKey = String(licenseKey).replace(/[^A-Z0-9-]/g, '');
+  const priceLine = (amount != null && currency)
+    ? `${amount} ${currency}`
+    : '€9.99';
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your Paintiano Pro license</title>
+</head>
+<body style="margin:0;padding:0;background:#06060c;color:#e8e2d4;font-family:'Outfit',-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;">
+<div style="max-width:560px;margin:0 auto;padding:40px 24px 56px;">
+
+  <!-- Header -->
+  <div style="text-align:center;padding-bottom:32px;border-bottom:1px solid rgba(232,226,212,.12);">
+    <div style="font-family:'Cormorant Garamond',Georgia,'Palatino Linotype',serif;font-size:34px;font-weight:600;color:#c9a84c;letter-spacing:-0.5px;line-height:1;">Paintiano</div>
+    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:16px;color:#e8e2d4;margin-top:10px;letter-spacing:0.3px;">your Pro license is ready</div>
+  </div>
+
+  <!-- Greeting -->
+  <p style="font-size:15px;color:#e8e2d4;margin:32px 0 10px;">Hi,</p>
+  <p style="font-size:15px;color:#e8e2d4;margin:0 0 8px;">Thank you for supporting Paintiano. You're one of the first 50 founding supporters of this little solo art project — it genuinely means a lot.</p>
+  <p style="font-size:15px;color:#e8e2d4;margin:0 0 28px;">Your lifetime Pro license is below. Keep this email — it's the only place this key lives outside our database.</p>
+
+  <!-- License key box -->
+  <div style="margin:28px 0 32px;padding:26px 22px;background:linear-gradient(135deg,rgba(201,168,76,0.10),rgba(255,208,122,0.04));border:1px solid rgba(255,208,122,0.55);border-radius:14px;text-align:center;">
+    <div style="font-family:'Outfit',Arial,sans-serif;font-size:11px;font-weight:600;color:rgba(255,208,122,0.85);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:14px;">your license key</div>
+    <div style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:22px;font-weight:600;color:#ffd07a;letter-spacing:0.06em;word-break:break-all;line-height:1.4;">${safeKey}</div>
+  </div>
+
+  <!-- How to activate -->
+  <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:#c9a84c;margin:36px 0 16px;">How to activate</div>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <td style="vertical-align:top;width:36px;padding:4px 14px 0 0;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,0.18);color:#ffd07a;font-family:'Outfit',Arial,sans-serif;font-size:13px;font-weight:700;text-align:center;line-height:26px;">1</div>
+      </td>
+      <td style="vertical-align:top;padding:0 0 14px;">
+        <div style="font-size:14px;color:#e8e2d4;">Open <a href="https://paintiano.app" style="color:#ffd07a;text-decoration:none;border-bottom:1px solid rgba(255,208,122,0.4);">paintiano.app</a> in your browser.</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align:top;width:36px;padding:4px 14px 0 0;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,0.18);color:#ffd07a;font-family:'Outfit',Arial,sans-serif;font-size:13px;font-weight:700;text-align:center;line-height:26px;">2</div>
+      </td>
+      <td style="vertical-align:top;padding:0 0 14px;">
+        <div style="font-size:14px;color:#e8e2d4;">Open the Pro panel, then tap <strong style="color:#ffd07a;font-weight:600;">"I already have a key"</strong>.</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align:top;width:36px;padding:4px 14px 0 0;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,0.18);color:#ffd07a;font-family:'Outfit',Arial,sans-serif;font-size:13px;font-weight:700;text-align:center;line-height:26px;">3</div>
+      </td>
+      <td style="vertical-align:top;padding:0 0 14px;">
+        <div style="font-size:14px;color:#e8e2d4;">Paste the key above. Pro unlocks immediately — high-resolution exports, unlimited AI moods, full style library, no watermark.</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Tip -->
+  <div style="margin:28px 0 0;padding:18px 20px;background:rgba(255,255,255,0.025);border:1px solid rgba(232,226,212,0.08);border-radius:10px;">
+    <div style="font-size:13px;color:rgba(232,226,212,0.78);line-height:1.5;"><strong style="color:#ffd07a;font-weight:600;">Tip:</strong> Add Paintiano to your home screen — on iPhone tap the share icon → "Add to Home Screen". It runs full-screen like a native app.</div>
+  </div>
+
+  <!-- Receipt info -->
+  <div style="margin:36px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,0.10);font-size:12px;color:rgba(232,226,212,0.55);line-height:1.7;">
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Order:</strong> ${orderId || '—'}</div>
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Amount:</strong> ${priceLine} (one-time, lifetime)</div>
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Refunds:</strong> 14 days, no questions asked — reply to this email and we'll handle it.</div>
+  </div>
+
+  <!-- Support + footer -->
+  <div style="margin:32px 0 0;text-align:center;font-size:13px;color:rgba(232,226,212,0.6);">
+    Need help? Just reply to this email — it goes straight to <a href="mailto:hello@paintiano.app" style="color:#ffd07a;text-decoration:none;">hello@paintiano.app</a>.
+  </div>
+
+  <!-- Legal footer -->
+  <div style="margin:40px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,0.08);text-align:center;font-size:11px;color:rgba(232,226,212,0.4);letter-spacing:0.02em;line-height:1.7;">
+    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:15px;font-weight:600;color:rgba(201,168,76,0.7);letter-spacing:0;margin-bottom:8px;">Paintiano</div>
+    Rastislav Ďurica · sole trader · Slovakia · IČO 34 594 671<br>
+    Payments processed by Paddle.com Market Limited (Merchant of Record)<br>
+    <a href="https://paintiano.app/terms.html" style="color:rgba(232,226,212,0.5);text-decoration:none;">Terms</a> ·
+    <a href="https://paintiano.app/privacy.html" style="color:rgba(232,226,212,0.5);text-decoration:none;">Privacy</a> ·
+    <a href="https://paintiano.app/refunds.html" style="color:rgba(232,226,212,0.5);text-decoration:none;">Refunds</a>
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
+// Plain-text fallback for clients that prefer text (or that auto-generate
+// previews). Keep it short and friendly with the same key + steps.
+function buildLicenseEmailText({ licenseKey, amount, currency, orderId }) {
+  const priceLine = (amount != null && currency) ? `${amount} ${currency}` : '€9.99';
+  return [
+    'Hi,',
+    '',
+    "Thank you for supporting Paintiano. Your lifetime Pro license is below — keep this email safe.",
+    '',
+    `LICENSE KEY: ${licenseKey}`,
+    '',
+    'How to activate:',
+    '  1. Open https://paintiano.app',
+    '  2. Open the Pro panel and tap "I already have a key"',
+    '  3. Paste the key — Pro unlocks immediately',
+    '',
+    `Order: ${orderId || '—'}`,
+    `Amount: ${priceLine} (one-time, lifetime)`,
+    'Refunds: 14 days, no questions asked. Just reply to this email.',
+    '',
+    'Need help? hello@paintiano.app',
+    '',
+    '—',
+    'Paintiano · Rastislav Ďurica · Slovakia · IČO 34 594 671',
+    'Payments by Paddle.com Market Limited (Merchant of Record).',
+    'Terms: https://paintiano.app/terms.html',
+    'Privacy: https://paintiano.app/privacy.html',
+    'Refunds: https://paintiano.app/refunds.html',
+  ].join('\n');
+}
+
+// Send license email via Resend HTTPS API. Best-effort: never throws — if
+// Resend is down or the API key is missing we log and continue. The license
+// is already in Supabase so we can recover via a manual resend / lookup
+// endpoint.
+async function sendLicenseEmail({ to, licenseKey, amount, currency, orderId }) {
+  if (!RESEND_API_KEY) {
+    console.warn('paddle-webhook: RESEND_API_KEY not set — skipping email send');
+    return { ok: false, reason: 'no_api_key' };
+  }
+  if (!to) {
+    console.warn('paddle-webhook: no buyer email — skipping email send');
+    return { ok: false, reason: 'no_recipient' };
+  }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: EMAIL_FROM,
+        to: [to],
+        reply_to: EMAIL_REPLY_TO,
+        subject: 'Your Paintiano Pro license',
+        html: buildLicenseEmailHtml({ licenseKey, amount, currency, orderId }),
+        text: buildLicenseEmailText({ licenseKey, amount, currency, orderId }),
+        tags: [
+          { name: 'category', value: 'license_delivery' },
+          { name: 'provider', value: 'paddle' },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      console.error('paddle-webhook: Resend failed', res.status, errBody.slice(0, 500));
+      return { ok: false, reason: 'resend_http_' + res.status };
+    }
+    const body = await res.json().catch(() => ({}));
+    return { ok: true, messageId: body?.id };
+  } catch (err) {
+    console.error('paddle-webhook: Resend threw', err);
+    return { ok: false, reason: 'resend_exception', detail: String(err?.message || err) };
+  }
+}
+
 // ─── handler ────────────────────────────────────────────────────────────────
 
 export default async function handler(req) {
@@ -149,6 +327,15 @@ export default async function handler(req) {
           data?.payments?.[0]?.customer?.email ||
           null;
 
+        // Extract amount + currency for the receipt section in the email.
+        // Paddle wraps amounts as minor units in `details.totals.total` and
+        // `currency_code` on the data; fall back gracefully if shape changes.
+        const totalMinor = data?.details?.totals?.total ?? data?.details?.totals?.grand_total ?? null;
+        const currencyCode = data?.currency_code || data?.details?.totals?.currency_code || null;
+        const amountMajor = (totalMinor != null && currencyCode)
+          ? (parseInt(totalMinor, 10) / 100).toFixed(2)
+          : null;
+
         const licenseKey = generateLicenseKey();
 
         await insertLicense({
@@ -161,7 +348,23 @@ export default async function handler(req) {
         });
 
         console.info('paddle-webhook: issued license', { orderId, email: email ? email.replace(/(.).+(@.+)/, '$1***$2') : null });
-        return json({ ok: true, issued: true });
+
+        // Fire the license email. Even if this fails we still return 200
+        // — the license exists in Supabase and can be re-sent manually.
+        const mail = await sendLicenseEmail({
+          to: email,
+          licenseKey,
+          amount: amountMajor,
+          currency: currencyCode,
+          orderId,
+        });
+        if (mail.ok) {
+          console.info('paddle-webhook: email sent', { messageId: mail.messageId });
+        } else {
+          console.warn('paddle-webhook: email NOT sent', mail);
+        }
+
+        return json({ ok: true, issued: true, emailed: !!mail.ok });
       }
 
       case 'adjustment.created': {
