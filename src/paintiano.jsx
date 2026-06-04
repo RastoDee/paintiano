@@ -14656,6 +14656,12 @@ Composition rules:
       // English. Strip the script and clear the default active so the
       // memoized renderer below can activate the section matching `lang`.
       body = body.replace(/<script[\s\S]*?<\/script>/gi, '');
+      // Some older privacy.html / pricing.html builds still ship the
+      // <div class="langpick"><select id="lang">...</select></div> picker
+      // used in standalone-tab mode. Inside the modal it would render an
+      // unstyled, non-functional dropdown (the JS never executes through
+      // dangerouslySetInnerHTML), so strip it unconditionally.
+      body = body.replace(/<div class="langpick"[\s\S]*?<\/div>\s*/gi, '');
       body = body.replace(/class="wrap active"/g, 'class="wrap"');
       setLegalHtml(body);
       setLegalLoading(false);
