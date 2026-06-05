@@ -919,6 +919,13 @@ export default function Paintiano() {
   // function. Identity is stable since setShowAbout is a useState setter.
   const closeAbout = useCallback(()=>setShowAbout(false),[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
+  // Paint-mode Web/Print export toggle: when ON and a source image is on
+  // hand (originalImgUrl for regular image, imgMoodThumb for MFI), overlay
+  // a small thumbnail in the corner of the saved PNG so the viewer sees
+  // what the chord painting was generated from. Resets to off when the
+  // picker re-opens so the user explicitly opts in each time.
+  const [includeSourceThumb, setIncludeSourceThumb] = useState(false);
+  useEffect(()=>{ if(!showSizePicker) setIncludeSourceThumb(false); },[showSizePicker]);
   // Inline "guide" modal: searchable how-to entries covering every feature.
   const [showGuide, setShowGuide] = useState(false);
   // Reading-text size for the Concept & Guide panels (accessibility — larger
@@ -5042,7 +5049,7 @@ Composition rules:
   // Artifact iframes block <a download>, window.open, and rewrite blob: URLs to a
   // sandbox-internal scheme — the only thing that reliably works is rendering the PNG
   // inside the iframe as <img> and letting iOS native long-press → Save to Photos do the job.
-  const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null)=>{
+  const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false)=>{
     try{
       if(!chords.length){setErr(t('errs').nothingToPrint);setErrInfo(false);return;}
       // Export the style actually on screen — in shuffle mode that's the
@@ -5141,6 +5148,55 @@ Composition rules:
         }
       }
       applyWatermark(hi, proStatus!=='free');   // free tier → "paintiano.app" stamp; Pro → no-op
+      // Optional source-image thumbnail overlay. Drawn AFTER watermark so it
+      // sits on top of the painting (the user explicitly opted in via the
+      // picker toggle — they want this reference visible). Source picked
+      // from originalImgUrl (regular image mode) or imgMoodThumb (MFI hand-
+      // off, where the original was swapped to a thumb when MFI engaged).
+      const srcThumbUrl = withSource ? (originalImgUrl || imgMoodThumb) : null;
+      if(srcThumbUrl){
+        try{
+          const srcImg = await new Promise((res,rej)=>{
+            const im = new Image();
+            im.onload = ()=>res(im);
+            im.onerror = ()=>rej(new Error('thumb load'));
+            im.src = srcThumbUrl;
+          });
+          const iw=srcImg.naturalWidth||srcImg.width;
+          const ih=srcImg.naturalHeight||srcImg.height;
+          if(iw>0 && ih>0){
+            // Thumb sized to ~18% of the painting's shorter side. Mounted
+            // bottom-right with a small margin, framed with a thin gold
+            // border that matches the app's chrome.
+            const targetShort = Math.round(Math.min(hi.width, hi.height) * 0.18);
+            const aspect = iw/ih;
+            let tw, th;
+            if(aspect>=1){ th = targetShort; tw = Math.round(th*aspect); }
+            else        { tw = targetShort; th = Math.round(tw/aspect); }
+            const margin = Math.round(targetShort * 0.18);
+            const tx = hi.width - tw - margin;
+            const ty = hi.height - th - margin;
+            // Draw without the scale transform (which was set for chord-grid
+            // coords) — save/reset/restore.
+            const tctx = hi.getContext('2d');
+            tctx.save();
+            tctx.setTransform(1,0,0,1,0,0);
+            // subtle drop shadow behind the thumb
+            tctx.shadowColor = 'rgba(0,0,0,.55)';
+            tctx.shadowBlur = Math.round(targetShort*0.08);
+            tctx.shadowOffsetY = Math.round(targetShort*0.03);
+            tctx.drawImage(srcImg, tx, ty, tw, th);
+            tctx.restore();
+            // gold frame on top, no shadow
+            tctx.save();
+            tctx.setTransform(1,0,0,1,0,0);
+            tctx.strokeStyle = 'rgba(201,168,76,.85)';
+            tctx.lineWidth = Math.max(2, Math.round(targetShort*0.012));
+            tctx.strokeRect(tx, ty, tw, th);
+            tctx.restore();
+          }
+        }catch(_){/* thumb overlay best-effort — never block export */}
+      }
       // STORY (9:16) — compose the rendered painting onto a tall 1080×1920 dark
       // canvas, centered, with a small Paintiano wordmark below. Built for IG/
       // TikTok stories. Everything else ('web'/'print') downloads `hi` as-is.
@@ -5166,14 +5222,26 @@ Composition rules:
         sctx.restore();
         sctx.strokeStyle='rgba(201,168,76,.35)'; sctx.lineWidth=2;
         sctx.strokeRect(dx, dy, dw, dh);
-        // wordmark + tagline below the art
+        // mood label + wordmark + tagline below the art. Mood comes from
+        // currentMood when set (mood pick, MFI auto-detected mood, etc.);
+        // skipped when the composition has no mood association (pure MIDI /
+        // score / audio import). Italic serif to feel like a caption.
         sctx.textAlign='center';
+        const moodLabel = (currentMood||'').trim();
+        let cursorY = dy + dh + 110;
+        if(moodLabel){
+          sctx.fillStyle='rgba(255,220,140,.95)';
+          sctx.font='italic 500 44px "Cormorant Garamond", Georgia, serif';
+          sctx.fillText(moodLabel, SW/2, cursorY);
+          cursorY += 80;
+        }
         sctx.fillStyle='#f0c040';
         sctx.font='600 64px "Cormorant Garamond", Georgia, serif';
-        sctx.fillText('Paintiano', SW/2, dy+dh+120);
+        sctx.fillText('Paintiano', SW/2, cursorY);
+        cursorY += 48;
         sctx.fillStyle='rgba(201,168,76,.7)';
         sctx.font='500 28px "Outfit", Arial, sans-serif';
-        sctx.fillText('music → φ painting', SW/2, dy+dh+168);
+        sctx.fillText('music → φ painting', SW/2, cursorY);
         outCanvas=st;
       }
       const blob=await new Promise(res=>outCanvas.toBlob(res,'image/png'));
@@ -6529,7 +6597,7 @@ Composition rules:
                 </button>
               )}
               {exportReadyFs && typeof navigator!=='undefined' && navigator.share && (
-                <button onClick={(e)=>{ e.stopPropagation(); exportImage('story', true); }} className="pf-lift" aria-label="share to story"
+                <button onClick={(e)=>{ e.stopPropagation(); exportImage('story', true, null, null, true); }} className="pf-lift" aria-label="share to story"
                   style={{display:'inline-flex',alignItems:'center',gap:8,padding:'11px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent'}}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
                   {t('shareStory')||'Story'}
@@ -6710,6 +6778,12 @@ Composition rules:
                 </>
               ) : (
                 <>
+                  {(originalImgUrl || imgMoodThumb) && (
+                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'9px 12px',background:includeSourceThumb?'rgba(220,150,255,.16)':'transparent',color:includeSourceThumb?'rgba(225,175,255,.95)':'rgba(180,170,150,.65)',border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.55)':'rgba(180,170,150,.22)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.6*effScale)+'rem',display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:16,height:16,borderRadius:3,border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.85)':'rgba(180,170,150,.4)'),background:includeSourceThumb?'rgba(220,150,255,.4)':'transparent',color:'#0a0a14',fontSize:'.7rem',lineHeight:1,fontWeight:700,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
+                      <span style={{flex:1,textAlign:'left'}}>{t('includeSourceThumb')!=='includeSourceThumb' ? t('includeSourceThumb') : 'include source thumbnail'}</span>
+                    </button>
+                  )}
                   {!immersive && (
                     <button onClick={async ()=>{
                       setShowSizePicker(false);
@@ -6718,8 +6792,11 @@ Composition rules:
                       // need the audio FILE for the Story share, not a re-play.
                       // Offline render is silent (no UI lockup, no disabled
                       // controls) and faster than real-time recording.
+                      // Story always overlays source thumb + mood name when
+                      // available — no toggle (it's part of the "ready to
+                      // share" social aesthetic, not user choice).
                       const src = chordsRef.current && chordsRef.current.length ? chordsRef.current : chords;
-                      if(!src || !src.length){ exportImage('story', true); return; }
+                      if(!src || !src.length){ exportImage('story', true, null, null, true); return; }
                       const title = (compositionName||recordingName||'Paintiano').trim()||'Paintiano';
                       const audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
                       setScoreMsg({tone:'wait',text:t('rendering')||'rendering audio…'});
@@ -6727,17 +6804,17 @@ Composition rules:
                       try{ audioBlob = await renderAudioOffline(src,{speed:1}); }catch(_){}
                       try{ await unlockAudio(); }catch(_){}
                       setScoreMsg(null);
-                      await exportImage('story', true, audioBlob, audioName);
+                      await exportImage('story', true, audioBlob, audioName, true);
                     }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
                       ✦ {t('sizeStory')||'Story'}
                       <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
                     </button>
                   )}
-                  <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                  <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     🖥 {t('sizeWeb')}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
                   </button>
-                  <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                  <button onClick={()=>exportImage('print', false, null, null, includeSourceThumb)} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     🖨 {t('sizePrint')}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
                   </button>
