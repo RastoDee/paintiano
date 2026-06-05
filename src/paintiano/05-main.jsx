@@ -6711,9 +6711,18 @@ Composition rules:
               ) : (
                 <>
                   {!immersive && (
-                    <button onClick={()=>exportImage('story')} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
+                    <button onClick={()=>{
+                      setShowSizePicker(false);
+                      // Bundle audio with Story (image+audio for IG/TikTok).
+                      // recBlob may be set from a previous Play that captured
+                      // audio in the background; if not, fall back to the
+                      // picker-intent flow that records on demand and shares
+                      // the result via exportImage('story', true, blob, name).
+                      if(recBlob && recName) exportImage('story', true, recBlob, recName);
+                      else { setRecordIntent('story'); startRecord(); }
+                    }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
                       ✦ {t('sizeStory')||'Story'}
-                      <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('sizeStoryHint')||'9:16 · for IG / TikTok'}</div>
+                      <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
                     </button>
                   )}
                   <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
@@ -6723,6 +6732,22 @@ Composition rules:
                   <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     🖨 {t('sizePrint')}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
+                  </button>
+                  <button onClick={()=>{
+                    setShowSizePicker(false);
+                    // Audio uses offline renderAudioOffline — always works
+                    // regardless of recBlob presence (doesn't need live mic
+                    // routing). recBlob fast-path skips the offline render
+                    // when a fresh recording is already on hand.
+                    if(recBlob && recName) saveAudio();
+                    else { setRecordIntent('audio'); startRecord(); }
+                  }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    ⏺ {t('saveAudioLabel')||'Audio'}
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
+                  </button>
+                  <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    ♫ {t('scoreExport')}
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
                   </button>
                 </>
               )}
