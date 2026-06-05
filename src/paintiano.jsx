@@ -10573,6 +10573,21 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // against a torn-down state tree.
   useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);if(switchArmRef.current)clearTimeout(switchArmRef.current);try{const b=demoReelRef.current;if(b){b.active=false;b.timers.forEach(id=>clearTimeout(id));if(b.parade)clearInterval(b.parade);if(b.vary)clearInterval(b.vary);if(b.type)clearInterval(b.type);}}catch(_){}substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};},[]);
 
+  // iOS 17+: pin the audio session category to 'playback' on app mount.
+  // This makes audio output IGNORE the hardware silent switch (side mute
+  // toggle on iPhone). Without this, if the user had used MediaRecorder
+  // earlier (which switches the category to 'play-and-record' that DOES
+  // respect the silent switch) and refreshes/reopens with silent switch on,
+  // they hear nothing even though the in-app speaker shows 🔊 unmuted.
+  // Setting this on every mount keeps the category sticky to 'playback'.
+  useEffect(()=>{
+    try{
+      if(typeof navigator!=='undefined' && navigator.audioSession){
+        navigator.audioSession.type = 'playback';
+      }
+    }catch(_){}
+  },[]);
+
   useEffect(()=>{
     let dead=false;
     let s=null;
@@ -11324,6 +11339,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Cheap to call repeatedly; no-op when context is already running.
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
+    // iOS 17+ audio session API. After MediaRecorder runs, iOS WebKit
+    // pushes the audio session into the 'play-and-record' category which
+    // makes output respect the hardware silent switch — so even with
+    // 'unmuted' state inside the app, the iPhone produces no sound if the
+    // side mute switch is on. Pinning to 'playback' tells iOS to ignore
+    // the silent switch and always route audio to the speaker. Safe no-op
+    // on browsers that don't expose this API (older iOS, desktop).
+    try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type = 'playback'; } }catch(_){}
     try{
       const ac=Tone.getContext().rawContext;
       if(!ac) return;
@@ -11341,6 +11364,23 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }catch(_){}
   },[]);
+
+  // Whenever the SAVE picker closes (cancel button / backdrop / after Story-
+  // Audio-Score action that opened share sheet), give the AudioContext a kick
+  // so playback works again. iOS Safari can suspend the context while a share
+  // sheet is on screen, and Tone.Offline (used by saveAudio / Audio export) is
+  // known to leave the live context in an inconsistent state on some
+  // browsers. unlockAudio is cheap when the context is already 'running'.
+  const prevShowSizePickerRef = useRef(false);
+  useEffect(()=>{
+    if(prevShowSizePickerRef.current && !showSizePicker){
+      // small delay so any in-flight share sheet / file picker finishes
+      // dismissing before we resume; iOS audio is reliably unsuspendable
+      // only after the modal stack is fully gone.
+      setTimeout(()=>{ unlockAudio(); }, 300);
+    }
+    prevShowSizePickerRef.current = showSizePicker;
+  },[showSizePicker, unlockAudio]);
 
   const stopAll = useCallback(()=>{
     loadTokenRef.current++; // invalidate any in-flight async load
@@ -13819,13 +13859,14 @@ Composition rules:
   // Auto-stop the recorder once playback finishes (playing → false).
   // A 700 ms tail lets the last notes ring out before capture closes.
   //
-  // Guard: only fire AFTER playback actually started during this recording
-  // session. Without this guard, setRecording(true) re-renders BEFORE the
-  // async startPlay() flips setPlaying(true), so for one render cycle we have
-  // (playing=false, recording=true) which would trip this and stop the
-  // recorder ~700ms after REC was tapped — popping the SAVE picker open
-  // mid-recording. The ref latches true on the first (playing && recording)
-  // render and is cleared once we've consumed the natural end-of-playback.
+  // Guards: (1) only fire AFTER playback actually started during this
+  // recording session — without this, setRecording(true) re-renders BEFORE
+  // the async startPlay() flips setPlaying(true), so for one render cycle we
+  // have (playing=false, recording=true) which would trip this and stop the
+  // recorder ~700ms after REC was tapped, popping the SAVE picker open
+  // mid-recording. (2) only fire if the recorder is actually still in
+  // 'recording' state — if the user already tapped STOP, the recorder is
+  // already inactive and we'd schedule a redundant stop on a dead recorder.
   const playStartedDuringRecRef = useRef(false);
   useEffect(()=>{
     if(playing && recording){
@@ -13835,7 +13876,9 @@ Composition rules:
     if(!playing && recording && recorderRef.current && playStartedDuringRecRef.current){
       playStartedDuringRecRef.current = false;
       const r=recorderRef.current;
-      setTimeout(()=>{try{r.stop();}catch(_){}},700);
+      setTimeout(()=>{
+        try{ if(r && r.state==='recording') r.stop(); }catch(_){}
+      },700);
     }
     if(!recording) playStartedDuringRecRef.current = false;
   },[playing,recording]);
@@ -13888,6 +13931,12 @@ Composition rules:
     recorder.onstop=()=>{
       try{Tone.getDestination().disconnect(streamDest);}catch(_){}
       recStreamDestRef.current=null;
+      // Defensive: on iOS Safari, disconnect() on a node that branches into
+      // a MediaStreamAudioDestinationNode has been observed to occasionally
+      // wedge the AudioContext into a silent state. Resume the context to
+      // ensure subsequent playback (after picker close / share cancel) still
+      // produces audio. Cheap no-op if context is already 'running'.
+      unlockAudio();
       const mt=recorder.mimeType||'audio/mp4';
       const blob=new Blob(recChunksRef.current,{type:mt});
       const ext=mt.includes('ogg')?'ogg':mt.includes('mp4')?'m4a':'webm';
@@ -14303,6 +14352,9 @@ Composition rules:
     let blob;
     try{ blob=await renderAudioOffline(src,{speed:1}); }
     catch(e){ blob=null; }
+    // Tone.Offline temporarily replaces the global Tone context. Restore the
+    // live audio path so the next playback isn't silent.
+    try{ await unlockAudio(); }catch(_){}
     if(!blob){ setScoreMsg({tone:'err',text:t('renderFail')}); return; }
     const file=new File([blob],finalName,{type:blob.type});
     setScoreMsg({tone:'wait',text:t('saving')});
@@ -14326,7 +14378,7 @@ Composition rules:
       setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}},10000);
       setScoreMsg({tone:'ok',text:'download started ✓'});
     }catch(e){ setScoreMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')}); }
-  },[chords,loadedSource,compositionName,recordingName,t]);
+  },[chords,loadedSource,compositionName,recordingName,t,unlockAudio]);
   const shareRecording=async()=>{
     if(!recBlob)return;
     const ext=recName.split('.').pop()||'m4a';
@@ -14583,9 +14635,15 @@ Composition rules:
           const sharePayload = {files:shareFiles, title:'Paintiano'};
           if(sizeMode==='story') sharePayload.text = buildStoryCaption();
           await navigator.share(sharePayload);
+          // iOS suspends the AudioContext while the share sheet is on screen.
+          // After it dismisses, resume so subsequent Play / REC still has audio.
+          try{ await unlockAudio(); }catch(_){}
           URL.revokeObjectURL(url);
           return;
         }catch(e){
+          // Resume even on cancel/error — the share sheet was shown and the
+          // context may already be suspended.
+          try{ await unlockAudio(); }catch(_){}
           if(e&&e.name==='AbortError'){ URL.revokeObjectURL(url); return; }
           // fall through to preview so the user still gets the image
         }
