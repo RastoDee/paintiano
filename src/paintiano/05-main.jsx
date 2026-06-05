@@ -4385,11 +4385,26 @@ Composition rules:
 
   // Auto-stop the recorder once playback finishes (playing → false).
   // A 700 ms tail lets the last notes ring out before capture closes.
+  //
+  // Guard: only fire AFTER playback actually started during this recording
+  // session. Without this guard, setRecording(true) re-renders BEFORE the
+  // async startPlay() flips setPlaying(true), so for one render cycle we have
+  // (playing=false, recording=true) which would trip this and stop the
+  // recorder ~700ms after REC was tapped — popping the SAVE picker open
+  // mid-recording. The ref latches true on the first (playing && recording)
+  // render and is cleared once we've consumed the natural end-of-playback.
+  const playStartedDuringRecRef = useRef(false);
   useEffect(()=>{
-    if(!playing&&recording&&recorderRef.current){
+    if(playing && recording){
+      playStartedDuringRecRef.current = true;
+      return;
+    }
+    if(!playing && recording && recorderRef.current && playStartedDuringRecRef.current){
+      playStartedDuringRecRef.current = false;
       const r=recorderRef.current;
       setTimeout(()=>{try{r.stop();}catch(_){}},700);
     }
+    if(!recording) playStartedDuringRecRef.current = false;
   },[playing,recording]);
 
   // Image playback scroll: image now behaves like every other mode — no
