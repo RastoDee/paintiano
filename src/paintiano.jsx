@@ -15047,7 +15047,6 @@ Composition rules:
             <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
               <span style={{fontSize:'1.05rem'}}>✦</span>
               {t('moodHowFeel')}
-              <span aria-label="info" style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',width:16,height:16,borderRadius:'50%',border:'1px solid rgba(220,180,90,.45)',color:'rgba(220,180,90,.7)',fontSize:(.45*effScale)+'rem',fontWeight:700,letterSpacing:0,textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',lineHeight:1,fontStyle:'italic',fontFamily:'serif'}}>i</span>
             </button>
           </div>
 
@@ -15057,7 +15056,6 @@ Composition rules:
               <span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
               {imgAiBusy?'…':(t('imgMood')||'mood from image')}
               {!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
-              <span aria-label="info" style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',width:16,height:16,borderRadius:'50%',border:'1px solid rgba(228,178,255,.45)',color:'rgba(228,178,255,.7)',fontSize:(.45*effScale)+'rem',fontWeight:700,letterSpacing:0,textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',lineHeight:1,fontStyle:'italic',fontFamily:'serif'}}>i</span>
             </button>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
@@ -16647,12 +16645,12 @@ Composition rules:
             {[
               { key:'mood',    icon:'✦', color:'#ffd07a', bg:'rgba(201,168,76,.12)',  name:t('moodHowFeel')||'How do you feel?' },
               { key:'mfi',     icon:'✦', color:'#e4b2ff', bg:'rgba(220,150,255,.12)', name:t('imgMood')||'Mood from image' },
-              { key:'midi',    icon:'♩', color:'#5b9cf6', bg:'rgba(91,156,246,.12)',  name:t('midi')||'MIDI' },
-              { key:'audio',   icon:'♪', color:'#f47c3c', bg:'rgba(244,124,60,.12)',  name:t('audio')||'Audio' },
-              { key:'score',   icon:'𝄞', color:'#a97ff5', bg:'rgba(169,127,245,.12)', name:t('score')||'Score' },
-              { key:'image',   icon:'◫', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:t('image')||'Image' },
-              { key:'compose', icon:'♪', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:t('compose')||'Compose' },
-              { key:'mic',     icon:'🎙', color:'#ff6b9d', bg:'rgba(255,107,157,.12)', name:t('mic')||'Mic' },
+              { key:'midi',    icon:'♩', color:'#5b9cf6', bg:'rgba(91,156,246,.12)',  name:(t('midi')||'MIDI').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'audio',   icon:'♪', color:'#f47c3c', bg:'rgba(244,124,60,.12)',  name:(t('audio')||'Audio').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'score',   icon:'𝄞', color:'#a97ff5', bg:'rgba(169,127,245,.12)', name:(t('score')||'Score').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'image',   icon:'◫', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:(t('image')||'Image').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'compose', icon:'♪', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:(t('compose')||'Compose').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'mic',     icon:'🎙', color:'#ff6b9d', bg:'rgba(255,107,157,.12)', name:(t('mic')||'Mic').replace(/[^\p{L} ]/gu,'').trim() },
             ].map(it => {
               const descKey='helpDesc_'+it.key;
               const desc = t(descKey)!==descKey ? t(descKey) : '';
