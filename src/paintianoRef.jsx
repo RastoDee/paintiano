@@ -14581,13 +14581,14 @@ Composition rules:
         }
       }
       applyWatermark(hi, proStatus!=='free');   // free tier → "paintiano.app" stamp; Pro → no-op
-      // Optional source-image thumbnail overlay. Drawn AFTER watermark so it
-      // sits on top of the painting (the user explicitly opted in via the
-      // picker toggle — they want this reference visible). Source picked
-      // from originalImgUrl (regular image mode) or imgMoodThumb (MFI hand-
-      // off, where the original was swapped to a thumb when MFI engaged).
+      // Optional source-image thumbnail overlay (web/print only). Drawn AFTER
+      // watermark so it sits on top of the painting. Source picked from
+      // originalImgUrl (regular image mode) or imgMoodThumb (MFI hand-off).
+      // For Story, the source thumb is rendered SEPARATELY on the Story
+      // canvas above the painting (see Story compose block below) — corner
+      // overlay would look glued/cluttered against the social-format frame.
       const srcThumbUrl = withSource ? (originalImgUrl || imgMoodThumb) : null;
-      if(srcThumbUrl){
+      if(srcThumbUrl && sizeMode!=='story'){
         try{
           const srcImg = await new Promise((res,rej)=>{
             const im = new Image();
@@ -14642,13 +14643,64 @@ Composition rules:
         const g=sctx.createRadialGradient(SW*0.5,SH*0.34,0,SW*0.5,SH*0.34,SH*0.7);
         g.addColorStop(0,'#0e0b16'); g.addColorStop(1,'#06060c');
         sctx.fillStyle=g; sctx.fillRect(0,0,SW,SH);
-        // fit the painting into the width with margins, centered vertically-ish
+        // Source thumbnail (when withSource) — drawn ABOVE the painting as a
+        // small framed image, mirroring how it appears in the canvas screen.
+        // Pre-load before computing painting Y so the painting starts BELOW
+        // the thumb's footprint instead of overlapping.
+        let storyThumbImg = null;
+        const storySrcThumbUrl = withSource ? (originalImgUrl || imgMoodThumb) : null;
+        if(storySrcThumbUrl){
+          try{
+            storyThumbImg = await new Promise((res,rej)=>{
+              const im=new Image();
+              im.onload=()=>res(im);
+              im.onerror=()=>rej(new Error('story thumb load'));
+              im.src=storySrcThumbUrl;
+            });
+          }catch(_){ storyThumbImg=null; }
+        }
+        // Story vertical layout: optional thumb at top, painting in the
+        // middle band, mood + wordmark below. Calculate Y positions so
+        // everything stays inside the 1920-tall safe area.
         const margin=90;
         const availW=SW-margin*2;
         const scale=availW/hi.width;
         const dw=availW, dh=Math.round(hi.height*scale);
-        const dx=margin, dy=Math.round((SH-dh)/2 - 40);
-        // subtle frame
+        let thumbY = 0, thumbH = 0;
+        const THUMB_SHORT = 220;       // shorter-side target for the thumb
+        const THUMB_TOP_MARGIN = 130;  // breathing room from the top edge
+        const THUMB_BOTTOM_GAP = 60;   // gap between thumb and painting
+        if(storyThumbImg){
+          const iw=storyThumbImg.naturalWidth||storyThumbImg.width;
+          const ih=storyThumbImg.naturalHeight||storyThumbImg.height;
+          const aspect = iw && ih ? iw/ih : 1;
+          let tw, th;
+          if(aspect>=1){ th = THUMB_SHORT; tw = Math.round(th*aspect); }
+          else        { tw = THUMB_SHORT; th = Math.round(tw/aspect); }
+          // Cap width so wide thumbs don't bleed off the canvas
+          const maxTw = SW - margin*2;
+          if(tw > maxTw){ const k = maxTw/tw; tw = maxTw; th = Math.round(th*k); }
+          const tx = Math.round((SW - tw)/2);
+          thumbY = THUMB_TOP_MARGIN;
+          thumbH = th;
+          // drop shadow under thumb
+          sctx.save();
+          sctx.shadowColor='rgba(0,0,0,.55)'; sctx.shadowBlur=20; sctx.shadowOffsetY=6;
+          sctx.drawImage(storyThumbImg, tx, thumbY, tw, th);
+          sctx.restore();
+          // gold frame
+          sctx.strokeStyle='rgba(201,168,76,.55)'; sctx.lineWidth=2;
+          sctx.strokeRect(tx, thumbY, tw, th);
+        }
+        // Painting placement: below the thumb (if any), centered in the
+        // remaining vertical space. The wordmark + mood need ~260px below
+        // the painting; bias the painting upward toward the thumb so the
+        // composition reads top→down.
+        const paintingTopMin = thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160;
+        const paintingBottomReserve = 290; // mood + wordmark + tagline
+        const paintingAvailH = SH - paintingTopMin - paintingBottomReserve;
+        const dy = paintingTopMin + Math.max(0, Math.round((paintingAvailH - dh)/2));
+        const dx = margin;
         sctx.save();
         sctx.shadowColor='rgba(0,0,0,.55)'; sctx.shadowBlur=40; sctx.shadowOffsetY=12;
         sctx.drawImage(hi, dx, dy, dw, dh);
@@ -16182,15 +16234,14 @@ Composition rules:
               {viewMode==='image' ? (
                 <>
                   {/* Image mode: Story (PNG 9:16 + audio) / Audio (mp3 only) /
-                      Score (MusicXML). Audio + Story prefer the auto-recorded
-                      blob captured silently during the most recent Play — that
-                      makes them instant, no re-play needed. If for some reason
-                      no blob is on hand (e.g. recording stream failed in the
-                      background), fall back to the legacy picker-intent flow
-                      that records on demand. */}
+                      Score (MusicXML) / Web / Print. Audio + Story prefer the
+                      auto-recorded blob from the most recent Play. If for some
+                      reason no blob is on hand (recording stream failed), fall
+                      back to the legacy picker-intent flow that records on
+                      demand. */}
                   <button onClick={()=>{
                     setShowSizePicker(false);
-                    if(recBlob && recName) exportImage('story', true, recBlob, recName);
+                    if(recBlob && recName) exportImage('story', true, recBlob, recName, true);
                     else { setRecordIntent('story'); startRecord(); }
                   }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
                     ✦ {t('sizeStory')||'Story'}
@@ -16207,6 +16258,20 @@ Composition rules:
                   <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     ♫ {t('scoreExport')}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
+                  </button>
+                  {(originalImgUrl || imgMoodThumb) && (
+                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'9px 12px',background:includeSourceThumb?'rgba(220,150,255,.16)':'transparent',color:includeSourceThumb?'rgba(225,175,255,.95)':'rgba(180,170,150,.65)',border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.55)':'rgba(180,170,150,.22)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.6*effScale)+'rem',display:'flex',alignItems:'center',gap:8,marginTop:6,marginBottom:2}}>
+                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:16,height:16,borderRadius:3,border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.85)':'rgba(180,170,150,.4)'),background:includeSourceThumb?'rgba(220,150,255,.4)':'transparent',color:'#0a0a14',fontSize:'.7rem',lineHeight:1,fontWeight:700,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
+                      <span style={{flex:1,textAlign:'left'}}>{t('includeSourceThumb')!=='includeSourceThumb' ? t('includeSourceThumb') : 'include source thumbnail'}</span>
+                    </button>
+                  )}
+                  <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    🖥 {t('sizeWeb')}
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
+                  </button>
+                  <button onClick={()=>exportImage('print', false, null, null, includeSourceThumb)} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    🖨 {t('sizePrint')}
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
                   </button>
                 </>
               ) : (
