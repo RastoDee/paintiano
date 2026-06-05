@@ -10049,15 +10049,26 @@ export default function Paintiano() {
   // (Math.ceil to avoid showing "0.5" or "1.5"). Re-fires on EVERY trialLeft
   // change while in the danger zone — so the user can't miss it after a quick
   // consume. Suppressed for Pro users and when trial is fully exhausted (the
-  // paywall handles that case explicitly).
+  // paywall handles that case explicitly). Tracks whether WE set the current
+  // banner via a ref so that flipping to Pro can clear it immediately, not
+  // wait for the 6 s auto-dismiss (which leaves a "1 trial left" message
+  // visible on the freshly-Pro setup screen — confusing).
+  const trialBannerActiveRef = useRef(false);
   useEffect(()=>{
-    if(isPro||trialExhausted) return;
+    if(isPro||trialExhausted) {
+      if(trialBannerActiveRef.current){
+        setErr(''); setErrInfo(false);
+        trialBannerActiveRef.current = false;
+      }
+      return;
+    }
     const left=Math.ceil(trialLeft);
     if(left>2||left<=0) return;
     const msg = left===1
       ? (t('trialBanner1')||'Only 1 AI trial left · Get Pro for unlimited')
       : (t('trialBanner2')||'Only '+left+' AI trials left · Get Pro for unlimited');
     setErr(msg); setErrInfo(true);
+    trialBannerActiveRef.current = true;
   },[trialLeft,isPro,trialExhausted,t]);
 
   const [working,   setWorking]   = useState(false);
@@ -16266,7 +16277,7 @@ Composition rules:
           🔊 {t('listenHint')}
         </div>
       )}
-      {recBlob&&(
+      {recBlob&&viewMode!=='image'&&(
         <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {(()=>{ const m=recName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:recName; const ext=m?m[2]:''; return (
@@ -16329,7 +16340,7 @@ Composition rules:
           onClick={handlePauseClick}
           disabled={demoReelOn||recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
           title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
-          style={{padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'default':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.25)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.6:1,transition:'all .18s'}}>
+          style={{display:(viewMode==='image'&&recording)?'none':'inline-flex',padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.18)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.45:1,transition:'all .18s'}}>
           {holdPaused?t('resume'):playing?t('pause'):t('play')}
         </button>{/* MIC STOP / REC — in the transport row UNDER the canvas (not in
             the strip above it). Replaces the on-canvas STOP/REC buttons; the
@@ -16381,13 +16392,30 @@ Composition rules:
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
-          // REC button — runs play+record together; on completion the SAVE
-          // picker auto-opens so the user can immediately pick Story / Audio /
-          // Score for the fresh recording. No separate SAVE button needed: the
-          // picker IS the save flow, and it appears automatically after REC.
+          // REC button — single source of truth for image-mode recording:
+          //   tap once → starts a fresh recording AND playback from index 0
+          //              (clears any stale recBlob save bar, clears resume
+          //              cursor, hides PLAY/PAUSE so the user can't pause a
+          //              recording into a corrupted file)
+          //   tap again → stopRecord() → onstop opens the SAVE picker
+          //   playback finishes naturally → auto-stops the recorder → picker
+          //
+          // If the recording was interrupted (tap again to stop) and the user
+          // taps REC again, the same logic above restarts cleanly from 0.
           const canStart = !recording && !playing && !anim && !working && chords.length>0;
           return (
-            <button onClick={()=>{ if(recording){ stopRecord(); return; } if(!canStart) return; setRecordIntent('picker'); startRecord(); }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
+            <button onClick={()=>{
+              if(recording){ stopRecord(); return; }
+              if(!canStart) return;
+              // Fresh start: nuke stale recording artefacts so the UI is clean
+              // and the recorder definitely captures from chord index 0, not
+              // from wherever the previous playback paused.
+              setRecBlob(null); setRecName(''); setAudioShareMsg(null);
+              resumeFromRef.current = null;
+              setHoldPaused(false);
+              setDisp(0);
+              setRecordIntent('picker'); startRecord();
+            }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
               {recording?t('recStop'):t('recArm')}
             </button>
           );
