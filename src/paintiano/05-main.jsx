@@ -3598,7 +3598,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const evts=noteArr2events(song.notes,song.tempo);
     if(!evts.length){setErr(t('errs').noNotesGeneric);return;}
     const dispTitle=((t('moodNames')||{})[song.mood])||((t('moodNames')||{})[title])||song.title;
-    applyEvents(evts,dispTitle); setComposeSource('crafted');
+    applyEvents(evts,dispTitle); setComposeSource('crafted'); setMoodContext(true);
     // Set varySource so Vary works on crafted (library) moods too — without
     // this, the Vary button stays disabled because !varySource. AI and offline
     // mood paths already set this; the crafted-library branch was the gap.
@@ -3631,7 +3631,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setVarySource(song);
     const evts=noteArr2events(song.notes,song.tempo);
     if(!evts.length){ setErr(t('errs').noNotesGeneric); return; }
-    applyEvents(evts,song.title); setComposeSource('offline');
+    applyEvents(evts,song.title); setComposeSource('offline'); setMoodContext(true);
     const bytes=encodeMidi(evts,song.tempo||100);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -3655,7 +3655,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:{note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
           setVarySource({notes:_varyNotes,tempo:parsed.tempo||90,title:(parsed.title&&String(parsed.title).trim())||title});
           const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed);
-          applyEvents(evts,_dispT); setComposeSource('ai'); setErr(''); setErrInfo(false);
+          applyEvents(evts,_dispT); setComposeSource('ai'); setMoodContext(true); setErr(''); setErrInfo(false);
           // Remember in recent (cache hit also counts — moves entry to front).
           try{ _aiComposeRecentAdd(_dispT, parsed.notes||[], parsed.tempo||90); }catch(_){}
           try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
@@ -3736,7 +3736,7 @@ Composition rules:
       // locally — matches the mood-from-image path; the AI branch was missing it.
       { const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:{note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
         setVarySource({notes:_varyNotes,tempo:parsed.tempo||90,title:(parsed.title&&String(parsed.title).trim())||title}); }
-      const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed); applyEvents(evts,_dispT); setComposeSource('ai');
+      const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed); applyEvents(evts,_dispT); setComposeSource('ai'); setMoodContext(true);
       // Remember this AI-generated mood in the recent-3 list (text path only —
       // moodFromImg goes through composeFromImage which already adds to mfiRecent).
       try{ _aiComposeRecentAdd(_dispT, parsed.notes||[], parsed.tempo||90); }catch(_){}
@@ -3752,7 +3752,7 @@ Composition rules:
         const fevts=noteArr2events(fb.notes,fb.tempo);
         if(fevts.length){
           setVarySource(fb);
-          applyEvents(fevts,fb.title); setComposeSource('offline');
+          applyEvents(fevts,fb.title); setComposeSource('offline'); setMoodContext(true);
           const fbytes=encodeMidi(fevts,fb.tempo||100);
           setMidiBlob(new Blob([fbytes],{type:'audio/midi'}));
           setMidiName(fb.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -5859,7 +5859,7 @@ Composition rules:
               is one canonical mood UX shared across the app. */}
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
+            <button onClick={()=>{ if(sourcePickerLocked)return; if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
               <span style={{fontSize:'1.05rem'}}>✦</span>
               {t('moodHowFeel')}
             </button>
