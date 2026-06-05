@@ -6711,15 +6711,23 @@ Composition rules:
               ) : (
                 <>
                   {!immersive && (
-                    <button onClick={()=>{
+                    <button onClick={async ()=>{
                       setShowSizePicker(false);
-                      // Bundle audio with Story (image+audio for IG/TikTok).
-                      // recBlob may be set from a previous Play that captured
-                      // audio in the background; if not, fall back to the
-                      // picker-intent flow that records on demand and shares
-                      // the result via exportImage('story', true, blob, name).
-                      if(recBlob && recName) exportImage('story', true, recBlob, recName);
-                      else { setRecordIntent('story'); startRecord(); }
+                      // Paint mode: render audio offline and bundle with image.
+                      // The user has already heard the piece via PLAY — we just
+                      // need the audio FILE for the Story share, not a re-play.
+                      // Offline render is silent (no UI lockup, no disabled
+                      // controls) and faster than real-time recording.
+                      const src = chordsRef.current && chordsRef.current.length ? chordsRef.current : chords;
+                      if(!src || !src.length){ exportImage('story', true); return; }
+                      const title = (compositionName||recordingName||'Paintiano').trim()||'Paintiano';
+                      const audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+                      setScoreMsg({tone:'wait',text:t('rendering')||'rendering audio…'});
+                      let audioBlob = null;
+                      try{ audioBlob = await renderAudioOffline(src,{speed:1}); }catch(_){}
+                      try{ await unlockAudio(); }catch(_){}
+                      setScoreMsg(null);
+                      await exportImage('story', true, audioBlob, audioName);
                     }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
                       ✦ {t('sizeStory')||'Story'}
                       <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
@@ -6733,15 +6741,7 @@ Composition rules:
                     🖨 {t('sizePrint')}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
                   </button>
-                  <button onClick={()=>{
-                    setShowSizePicker(false);
-                    // Audio uses offline renderAudioOffline — always works
-                    // regardless of recBlob presence (doesn't need live mic
-                    // routing). recBlob fast-path skips the offline render
-                    // when a fresh recording is already on hand.
-                    if(recBlob && recName) saveAudio();
-                    else { setRecordIntent('audio'); startRecord(); }
-                  }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                  <button onClick={()=>{ setShowSizePicker(false); saveAudio(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     ⏺ {t('saveAudioLabel')||'Audio'}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
                   </button>
