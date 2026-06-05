@@ -2751,6 +2751,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const applyEvents = useCallback((events,title)=>{
     if(!events.length)return;
     setImgReturnUrl(null); setImgMoodThumb(null);
+    // Clear MFI flags — applyEvents is the chord-loader for ALL non-MFI
+    // sources (MIDI/audio/score files, song search, AI compose, recall,
+    // sample, morph, vary). Without this, moodFromImg can linger from a
+    // previous MFI piece and leave the MFI source tile glowing even
+    // though the new piece has nothing to do with image-mood composition.
+    // (Genuine MFI recall paths re-set moodContext/moodFromImg AFTER
+    // applyEvents, so this doesn't break the recall flow.)
+    setMoodFromImg(false); setMoodContext(false);
     // Stash any active creative draft before replacing the canvas with imported
     // content. The draft lives on in its mode's stash slot until the user
     // explicitly CLEARs it from inside that mode.
