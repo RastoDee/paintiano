@@ -5914,6 +5914,125 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     const durFloor = Math.round(140 - 70*rhythmDrive);  // 140ms calm … 70ms driving
     ev.n=ev.n.map(n=>({...n, durMs:Math.max(durFloor, Math.round((n.durMs||250)*artMul))}));
   }
+  // ─── COMPOSITION PASS (form & dramaturgy) ──────────────────────────────────
+  // Everything above shapes the piece LOCALLY (per cell / per bar). This final
+  // pass gives it a SHAPE AS A WHOLE — the things that separate a "composed"
+  // piece from a faithful scan: a recurring motif, a dynamic arc, a register
+  // that opens and closes, breathing phrases, and an intro/outro frame. All
+  // deterministic (same image → same form). Calmer pieces get a more pronounced
+  // arc/phrasing (ambient dramaturgy); driving pieces keep their momentum.
+  {
+    // Indices of events that actually sound (have a melody onset we can read).
+    const soundIdx=[];
+    for(let i=0;i<evts.length;i++){ if(evts[i].n.length && evts[i]._playable!==false && !evts[i]._melRest) soundIdx.push(i); }
+    if(soundIdx.length>=8){
+      const calm = 1 - rhythmDrive;             // 1 serene … 0 driving — depth of dramaturgy
+      // ── (1) MOTIF — theme & return ───────────────────────────────────────
+      // Capture the interval shape of the first phrase's top voice (a short 4-note
+      // melodic cell), then RE-STATE it — transposed into the current bar's chord
+      // — at the start of selected later bars. The line still follows the image,
+      // but a familiar shape returns, giving the piece a theme rather than a drift.
+      const MOTIF_LEN=4;
+      const motifSrc=soundIdx.slice(0,MOTIF_LEN).map(i=>evts[i].n[0].m);
+      // intervals between consecutive motif notes (semitones), snapped to scale later
+      const motifIv=[]; for(let k=1;k<motifSrc.length;k++) motifIv.push(motifSrc[k]-motifSrc[k-1]);
+      const totalBarsC=Math.max(1,Math.ceil(evts.length/BAR_EVENTS));
+      // Re-state the motif at the head of bars 2,4,6… (every 2nd bar), but not the
+      // first bar (that's where it's born) nor the last two (cadence is protected).
+      // Strength of the restatement fades with drive so a busy piece only hints it.
+      const restate=0.55 + 0.35*calm;           // how strongly we pull toward the motif shape
+      for(let bar=1; bar<totalBarsC-2; bar+=2){
+        const barHeadEvents=[];
+        for(const i of soundIdx){ if(Math.floor(i/BAR_EVENTS)===bar) barHeadEvents.push(i); if(barHeadEvents.length>=MOTIF_LEN) break; }
+        if(barHeadEvents.length<2) continue;
+        // anchor = the bar's first melody note (keeps it in the image's register)
+        let anchor=evts[barHeadEvents[0]].n[0].m, acc=anchor;
+        for(let k=0;k<barHeadEvents.length;k++){
+          const ei=barHeadEvents[k];
+          const mel=evts[ei].n[0];
+          // target pitch = motif shape applied from the anchor, snapped to scale
+          if(k>0 && motifIv[k-1]!=null){ acc=acc+motifIv[k-1]; }
+          let target=snapToScale(acc);
+          // blend image-following pitch with the motif target (restate weight)
+          const blended=Math.round(mel.m*(1-restate) + target*restate);
+          const snapped=snapToScale(blended);
+          // keep within the melody band
+          let mm=snapped; while(mm<MEL_MIN-12) mm+=12; while(mm>MEL_MAX+12) mm-=12;
+          evts[ei].n[0]={...mel, m:mm};
+          acc=mm;
+        }
+      }
+      // ── (2) DYNAMIC ARC — whole-piece swell ──────────────────────────────
+      // A gentle rise to a peak around 65% then a release, laid over the entire
+      // piece so it has a beginning, a climax and a wind-down instead of a flat
+      // loudness. Depth scales with calm (ambient pieces breathe more; driving
+      // pieces stay punchy with a shallower arc). cos-shaped, peak at 0.65.
+      const PEAK=0.65;
+      const arcDepth=0.18 + 0.22*calm;          // ±18%…40% of velocity
+      const arcAt=(p)=>{
+        // 0 at the very start, 1 at PEAK, easing back to ~0.35 at the end
+        const x = p<=PEAK ? p/PEAK : 1-(p-PEAK)/(1-PEAK)*0.65;
+        return 1 + arcDepth*(x-0.5)*2*0.5;      // centred so mid≈1, peak≈1+arcDepth/2
+      };
+      // ── (4)→ phrasing prep: 4-bar phrase, soft decрescendo + slight lengthen on
+      // each phrase's LAST bar (a musical "comma"). ──
+      const PHRASE_BARS=4;
+      const phraseEndDepth=0.10 + 0.14*calm;    // how much the phrase tail eases back
+      // ── (3) REGISTER / DENSITY as shape ──────────────────────────────────
+      // Near the arc edges (intro & outro thirds) thin the texture; near the peak
+      // allow the existing fuller voicing to stand. We only TRIM toward the edges
+      // (never add) so this never fights voiceCap: drop the quietest accompaniment
+      // voice when we're in the opening or closing 25% of the piece.
+      const N=evts.length;
+      for(let i=0;i<N;i++){
+        const ev=evts[i];
+        if(!ev.n.length||ev._playable===false) continue;
+        const p=i/Math.max(1,N-1);              // 0..1 position in piece
+        // arc gain
+        let g=arcAt(p);
+        // phrase comma: last bar of each 4-bar phrase eases back & rings a touch
+        const barNo=Math.floor(i/BAR_EVENTS);
+        const isPhraseTail=(barNo%PHRASE_BARS)===(PHRASE_BARS-1);
+        if(isPhraseTail) g*=1-phraseEndDepth;
+        // apply velocity arc
+        if(g!==1){ ev.n=ev.n.map(n=>({...n, v:Math.max(20,Math.min(120,Math.round((n.v||64)*g)))})); }
+        // phrase tail also lengthens slightly (the comma's little ritardando feel)
+        if(isPhraseTail){ ev.n=ev.n.map(n=>({...n, durMs:Math.round((n.durMs||250)*(1+0.18*calm))})); }
+        // register thinning toward the edges (intro/outro): drop quietest non-bass
+        // accompaniment voice so the frame is sparse and the middle is full.
+        const edge = p<0.25 ? (0.25-p)/0.25 : p>0.78 ? (p-0.78)/0.22 : 0; // 0 middle … 1 extreme edge
+        if(edge>0.5 && ev.n.length>2){
+          const nonBass=ev.n.filter(n=>!n.bass);
+          if(nonBass.length>2){
+            const quietest=nonBass.reduce((a,b)=>((b.v||0)<(a.v||0)?b:a));
+            ev.n=ev.n.filter(n=>n!==quietest);
+          }
+        }
+      }
+      // ── (5) INTRO / OUTRO FRAME ───────────────────────────────────────────
+      // INTRO: the first 1–2 sounding events become a soft chord/pedal WITHOUT the
+      // melody (a breath before the tune enters). Keep the lowest 2 voices, drop
+      // the melody so the theme arrives a beat later. OUTRO: extend the final
+      // sounding chord into a long ring (a decaying resolution, not a hard stop).
+      const introCount = calm>0.5 ? 2 : 1;
+      for(let c=0;c<introCount && c<soundIdx.length-4;c++){
+        const ei=soundIdx[c];
+        const ev=evts[ei];
+        if(ev.n.length>=2){
+          const low=[...ev.n].sort((a,b)=>a.m-b.m).slice(0,2)
+            .map(n=>({...n, v:Math.max(20,Math.round((n.v||50)*0.7)), durMs:Math.round((n.durMs||300)*1.4)}));
+          ev.n=low;
+        }
+      }
+      // OUTRO ring on the last sounding event.
+      for(let i=evts.length-1;i>=0;i--){
+        if(evts[i].n.length && evts[i]._playable!==false){
+          evts[i].n=evts[i].n.map(n=>({...n, durMs:Math.round((n.durMs||400)*(1.6+0.8*calm))}));
+          break;
+        }
+      }
+    }
+  }
   return evts;
 }
 

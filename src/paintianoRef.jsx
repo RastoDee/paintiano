@@ -4972,7 +4972,13 @@ function buildTraversal(nrBands, effCols, dir){
   return order;
 }
 
-function pixelsToImageEvents(px,nc,nr,table,colorMode,dir){
+function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
+  // atmoBias (optional): {v,e} from AI ATM. When present, the painting's own
+  // energy is BLENDED with the atmo mood's energy, and the mood's valence biases
+  // the rhythmic character (bright/playful vs heavy/legato). This is what makes
+  // turning AI ATM on actually reshape the tempo & rhythm, not just the colour.
+  const atmoV = atmoBias && typeof atmoBias.v==='number' ? Math.max(-1,Math.min(1,atmoBias.v)) : null;
+  const atmoE = atmoBias && typeof atmoBias.e==='number' ? Math.max(0,Math.min(1,atmoBias.e)) : null;
   const CHORD_SIZE=6;
   const COL_STEP=4;                              // merge 4 adjacent columns per time-event
   const _nrBands=Math.floor(nr/CHORD_SIZE);
@@ -5024,16 +5030,31 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir){
   const eChroma=Math.max(0,Math.min(1, avgChroma/55));
   const eContrast=Math.max(0,Math.min(1, contrast/42));
   const eBusy=Math.max(0,Math.min(1, busyness/22));
-  const energy=Math.max(0,Math.min(1, 0.45*eChroma + 0.35*eContrast + 0.20*eBusy));
+  let energy=Math.max(0,Math.min(1, 0.45*eChroma + 0.35*eContrast + 0.20*eBusy));
+  // ── ATMO ENERGY BLEND ──
+  // When AI ATM is on, the mood's own energy pulls the painting's energy toward
+  // it (60% image / 40% mood) so a "serene" tag calms a busy canvas and a
+  // "frantic" tag energises a calm one — the mood is heard in the rhythm, not
+  // just seen in the tint. valenceBias: +1 bright/playful … -1 heavy/dark, used
+  // to tip articulation & accent character (major-ish images already lean bright
+  // via warmth; this lets the atmo word push it further).
+  if(atmoE!=null) energy = Math.max(0,Math.min(1, 0.6*energy + 0.4*atmoE));
+  const valenceBias = atmoV!=null ? atmoV : 0;
+  // ── RHYTHM DRIVE ──
+  // A single 0..1 knob that turns "calm/legato/sparse" into "lively/articulated/
+  // dense" as it rises. Driven by energy, nudged up by positive valence (bright
+  // moods feel more rhythmically alive) and down by very negative valence (heavy,
+  // grief-like moods stay broad and slow even if the canvas is busy).
+  const rhythmDrive = Math.max(0, Math.min(1, energy + 0.15*valenceBias));
   // Duration: calm → longer & slower planes (up to ~2:40), energetic → tighter &
   // quicker (down to ~1:30). Bounded both ways so it's always a real, finite piece.
-  const DUR_MIN=90000, DUR_MAX=160000;   // 1:30 … 2:40
+  const DUR_MIN=75000, DUR_MAX=180000;   // 1:15 … 3:00 — wider spread so calm vs wild really differ
   // Inverse: more energy = shorter (faster feel). Calm spreads out.
   const targetMs=Math.round(DUR_MAX - (DUR_MAX-DUR_MIN)*energy);
   const msPerBlock=targetMs/(_nrBands*effCols);  // per-chord step now scales with energy
-  // Sustain: calm pieces ring longer (more legato/air), energetic ones shorter
-  // (more articulated). 5×–8× the block step.
-  const sustainMul=8 - 3*energy;
+  // Sustain: calm pieces ring long & legato; lively ones articulate shorter. Now
+  // a wider 4×–9× spread driven by rhythmDrive (was a narrow 5×–8× on energy).
+  const sustainMul=9 - 5*rhythmDrive;
   const noteDur=Math.round(msPerBlock*sustainMul);
   // octaveShift in semitones: light image → shift down, dark → shift up. 70% of
   // the deviation from 50% lightness is compensated; 30% of the brightness
@@ -5799,19 +5820,18 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir){
   const BEAT=4;                                  // 4 cells per "beat" → downbeat feel
   const sal=evts.map(ev=>ev.n.reduce((a,n)=>a+(n.v||0),0)); // saliency = summed velocity
   const onsetSal=sal.filter((_,i)=>evts[i].n.length && evts[i]._playable!==false).slice().sort((a,b)=>a-b);
-  // Rest density scales GENTLY with the painting's energy — but never toward a
-  // dense "morse / telegraph" patter, which would break the floating ambient
-  // (Sigur Rós) feel. Even an energetic canvas keeps real space between notes;
-  // it just rests a little less than a calm one. The window is deliberately
-  // narrow (0.40 → 0.22): calm breathes more, busy breathes a touch less, but
-  // BOTH always breathe. Energy is expressed through fullness, brightness and
-  // sustain elsewhere — not through machine-gun onsets.
-  const restPct = 0.40 - 0.18*energy;            // calm→0.40, wild→0.22 (still spacious)
+  // Rest density now spans a WIDE range so calm and lively paintings differ a
+  // lot: a serene canvas breathes heavily (rests ~0.50 — long open spaces), a
+  // driving one fills in (~0.14 — busy, propulsive) but still keeps a floor of
+  // space so it never becomes a machine-gun/morse patter. Driven by rhythmDrive
+  // (energy + valence) rather than raw energy alone.
+  const restPct = 0.50 - 0.36*rhythmDrive;       // calm→0.50, wild→0.14
   const lowSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length*Math.max(0.18,restPct))]:0;
   const medSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length/2)]:0;
-  // Allow up to two consecutive rests at any energy — long held silences are part
-  // of the ambient language and stop the line from ever turning into a steady tick.
-  const maxRestRun = 2;
+  // Calm paintings may hold up to THREE consecutive rests (long ambient
+  // silences); lively ones cap at one so the line keeps moving. Range of held
+  // silence is part of what separates serene from driving.
+  const maxRestRun = rhythmDrive>0.6 ? 1 : rhythmDrive>0.35 ? 2 : 3;
   let sinceSound=0;                              // consecutive-rest guard
   let lastSoundIdx=-99;                          // anti-telegraph: spacing of onsets
   for(let i=0;i<evts.length;i++){
@@ -5835,17 +5855,23 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir){
       if(run>=4){ ev._playable=false; ev._rest=true; sinceSound++; continue; }
     }
     sinceSound=0; lastSoundIdx=i;
-    // Dynamics: gentle, wave-like swells rather than hard metric accents. A bar
-    // start lifts a little (you sense the harmony turn over) and weak off-beats
-    // ease back, but the contrast is kept SOFT so nothing punches out as a beat.
-    // Accent strength barely tracks energy (≤ +20%) — a vivid canvas feels a hair
-    // more shaped, never percussive. This keeps the pulse implied, not hammered.
-    const accentGain = 1 + 0.2*energy;            // very restrained
+    // ── DYNAMICS / GROOVE ──────────────────────────────────────────────────
+    // Calm pieces keep the old wave-like, barely-there shaping (pulse implied).
+    // As rhythmDrive rises the metric grid becomes AUDIBLE: bar-starts and
+    // downbeats are accented hard, weak beats duck, and — at high drive — an
+    // OFF-BEAT SYNCOPATION accent lands on the cell just before a downbeat (the
+    // "and" of the beat), giving propulsion/groove. The accent depth scales with
+    // drive so a serene canvas stays smooth and a fierce one really moves.
+    const beatPos = i % BEAT;                     // 0 = downbeat … BEAT-1 = last weak cell
+    const isSyncope = beatPos === (BEAT-1);       // the "and" right before next downbeat
+    // Accent depth: 0.2 (calm) … 0.9 (driving). Far stronger than the old ≤0.2.
+    const accentDepth = 0.2 + 0.7*rhythmDrive;
     let mul=1;
-    if(isBarStart) mul*=1+0.08*accentGain;        // soft lift at the chord turn
-    else if(isDownbeat) mul*=1+0.03*accentGain;   // barely-there on-beat
-    else mul*=1-0.04*accentGain;                  // off-beats ease back gently
-    if(s>medSal) mul*=1.04; else mul*=0.97;       // salient cells a touch louder
+    if(isBarStart)      mul *= 1 + 0.18*accentDepth;   // chord turn — strongest
+    else if(isDownbeat) mul *= 1 + 0.12*accentDepth;   // on-beat pulse
+    else if(isSyncope && rhythmDrive>0.5) mul *= 1 + 0.14*accentDepth; // groove push (lively only)
+    else                mul *= 1 - 0.10*accentDepth;   // weak cells duck (deeper at high drive)
+    if(s>medSal) mul *= 1+0.06*rhythmDrive; else mul *= 1-0.05*rhythmDrive; // salient cells lift more when lively
     if(mul!==1){
       ev.n=ev.n.map(n=>({...n,v:Math.max(22,Math.min(120,Math.round((n.v||64)*mul)))}));
     }
@@ -5872,13 +5898,21 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir){
     const ev=evts[i];
     if(!ev.n.length||ev._playable===false) continue;
     const t=Math.max(0,Math.min(1,(texture[i]-texLo)/texRange)); // 0 smooth … 1 busy
-    // Articulation stays in the legato half throughout: smooth areas ring very
-    // long (1.5×), busy areas merely a little shorter (1.0×) — but NEVER short,
-    // detached staccato, which would clip notes into a dry tick/morse. Every note
-    // still overlaps its neighbour, so even detailed passages flow and shimmer
-    // rather than chatter — the connected, reverberant Sigur Rós surface.
-    const artMul=1.5 - 0.5*t;                     // 1.5× (smooth) … 1.0× (busy), always legato
-    ev.n=ev.n.map(n=>({...n, durMs:Math.max(140, Math.round((n.durMs||250)*artMul))}));
+    // Articulation = a COMPOSER'S mix, not a single global setting. Two axes:
+    //   • local texture t  — smooth patches sing long, busy patches clip short
+    //   • global rhythmDrive — a serene painting stays legato everywhere; a
+    //     driving one lets its busy patches become real STACCATO while its
+    //     smooth patches still ring. So one fierce canvas alternates long lyrical
+    //     notes and crisp detached ones (musical), instead of everything legato.
+    // legatoTop: longest ring on smooth cells (1.6× calm → 1.15× driving).
+    // stacMin: shortest on busy cells (1.1× calm = still legato → 0.45× driving = crisp).
+    const legatoTop = 1.6 - 0.45*rhythmDrive;
+    const stacMin   = 1.1 - 0.65*rhythmDrive;
+    const artMul = legatoTop - (legatoTop - stacMin)*t;
+    // Floor scales down with drive so staccato is actually short when lively, but
+    // never a click. Calm keeps the old generous 140ms minimum.
+    const durFloor = Math.round(140 - 70*rhythmDrive);  // 140ms calm … 70ms driving
+    ev.n=ev.n.map(n=>({...n, durMs:Math.max(durFloor, Math.round((n.durMs||250)*artMul))}));
   }
   return evts;
 }
@@ -8474,7 +8508,7 @@ function moodToSong(text){
 // detected mood (valence v / energy e). Snaps pitches to the mood scale (harmony),
 // scales velocity (dynamics) and time (tempo). Returns NEW events; pass the literal
 // events each time so toggling off restores the original.
-function _atmoTransform(evts, mood){
+function _atmoTransform(evts, mood, skipTiming){
   if(!evts||!evts.length||!mood) return evts;
   const v=Math.max(-1,Math.min(1,mood.v||0)), e=Math.max(0,Math.min(1,mood.e==null?0.5:mood.e));
   const sm=(v>=0.5&&e>0.7)?'lydian':(v>=0?'major':'minor');
@@ -8483,6 +8517,13 @@ function _atmoTransform(evts, mood){
   const tempoK=1.35-e*0.8;     // calm → slower, intense → faster
   const vScale=0.6+e*0.6;      // calm → softer, intense → louder
   const snap=(m)=>{ const pc=((m-root)%12+12)%12; let best=SC[0],bd=99; for(const d of SC){ const dd=Math.min(((pc-d)%12+12)%12,((d-pc)%12+12)%12); if(dd<bd){bd=dd;best=d;} } let delta=((best-pc)%12+12)%12; if(delta>6) delta-=12; return m+delta; };
+  // skipTiming: for IMAGE mode, pixelsToImageEvents already shaped tempo, rhythm,
+  // density and dynamics from the (atmo-blended) energy — so here we ONLY do the
+  // harmonic snap to the mood's scale, leaving timing & velocity untouched to
+  // avoid double-scaling the tempo/loudness.
+  if(skipTiming){
+    return evts.map(ev=>({ ...ev, n:(ev.n||[]).map(no=>({ ...no, m:snap(no.m) })) }));
+  }
   return evts.map(ev=>({ ...ev, startMs:Math.round((ev.startMs||0)*tempoK), n:(ev.n||[]).map(no=>({ ...no, m:snap(no.m), v:Math.max(20,Math.min(124,Math.round((no.v||80)*vScale))), durMs:Math.max(40,Math.round((no.durMs||300)*tempoK)) })) }));
 }
 
@@ -12111,8 +12152,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
                 {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
                  __hasNeutral:activePalette.some(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1]<12;})})
             : (mode==='spectral'?SPEC_HUE:COF);
-          const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current);
-          _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood):_lit;
+          const _atmoBias2=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
+          const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current,_atmoBias2);
+          _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
         }
         setChords(_evts);chordsRef.current=_evts;
         idxRef.current=_evts.length;setDisp(_evts.length);
@@ -13398,8 +13440,9 @@ Composition rules:
                       { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                         __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
       : (mode==='spectral'?SPEC_HUE:COF);
-    const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current);
-    const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood):_evtsLit;
+    const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
+    const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
+    const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
     // Changing the colour mode re-transcribes the SAME painting through a new
     // hue→pitch table, so the notes change but the structure/length do not. If a
     // playback is in progress we must NOT stop it — like MIDI and live drawing,
