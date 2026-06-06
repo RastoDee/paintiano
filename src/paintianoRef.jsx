@@ -14262,8 +14262,12 @@ Composition rules:
       else{setRecBlob(blob);setRecName(name);}
       setRecording(false);recorderRef.current=null;
       // Image-mode picker intents: react to what the user picked from SAVE,
-      // or from the REC button (which uses 'picker' = auto-open the SAVE picker
-      // after recording so the user can choose Story / Audio / Score next).
+      // or from the REC button. 'audio'/'story' come from inside the SAVE picker
+      // and still fire their action. 'picker' is the plain REC button: instead of
+      // auto-opening the SAVE picker (which felt like a jarring jump), we now do
+      // NOTHING here — the recorded blob stays on hand (recBlob, set above) and
+      // the REC button morphs into a SAVE button, so the user opens the picker
+      // themselves on tap, exactly like every other mode.
       const intent = recordIntentRef.current;
       if(intent && blob.size>=2000){
         setRecordIntent(null);
@@ -14273,7 +14277,7 @@ Composition rules:
         setTimeout(()=>{
           if(intent==='audio') saveAudio();
           else if(intent==='story') exportImage('story', true, blob, name);
-          else if(intent==='picker') setShowSizePicker(true);
+          // 'picker' intentionally does nothing — REC→SAVE button handles it.
         }, 60);
       }
     };
@@ -14660,7 +14664,7 @@ Composition rules:
     }catch(e){ setScoreMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')}); }
   },[scoreBlob,scoreFileName,t]);
   // Export audio via offline render — fast, silent, independent of playback.
-  const saveAudio=useCallback(async()=>{
+  const saveAudio=useCallback(async(prepareOnly)=>{
     const src=chordsRef.current&&chordsRef.current.length?chordsRef.current:chords;
     if(!src||!src.length){setScoreMsg({tone:'err',text:t('noNotesGeneric')});return;}
     const title=(compositionName||recordingName||'Paintiano').trim()||'Paintiano';
@@ -14673,6 +14677,16 @@ Composition rules:
     // live audio path so the next playback isn't silent.
     try{ await unlockAudio(); }catch(_){}
     if(!blob){ setScoreMsg({tone:'err',text:t('renderFail')}); return; }
+    // prepareOnly: don't fire the share sheet immediately. Instead hand the WAV
+    // to the in-app audio row (recBlob/recName) — same pattern as Score — so the
+    // user gets a named row with an explicit Share button and an ✕ to dismiss,
+    // rather than being thrown straight into the iOS share sheet.
+    if(prepareOnly){
+      setScoreMsg(null);
+      setRecName(finalName);
+      setRecBlob(blob);
+      return;
+    }
     const file=new File([blob],finalName,{type:blob.type});
     setScoreMsg({tone:'wait',text:t('saving')});
     if(navigator.share){
@@ -16667,7 +16681,7 @@ Composition rules:
                       (isImportedMedia) — exporting them back to the same file
                       format the user just imported is redundant. */}
                   {!isImportedMedia && (
-                    <button onClick={()=>{ setShowSizePicker(false); saveAudio(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    <button onClick={()=>{ setShowSizePicker(false); saveAudio(true); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                       ⏺ {t('saveAudioLabel')||'Audio'}
                       <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
                     </button>
@@ -16994,12 +17008,21 @@ Composition rules:
           //              (clears any stale recBlob save bar, clears resume
           //              cursor, hides PLAY/PAUSE so the user can't pause a
           //              recording into a corrupted file)
-          //   tap again → stopRecord() → onstop opens the SAVE picker
-          //   playback finishes naturally → auto-stops the recorder → picker
+          //   tap again → stopRecord() → recording finishes, blob is kept
+          //   playback finishes naturally → auto-stops the recorder, blob kept
           //
-          // If the recording was interrupted (tap again to stop) and the user
-          // taps REC again, the same logic above restarts cleanly from 0.
+          // Once a recording exists (recBlob) and we're idle, the button morphs
+          // into a SAVE button: tapping it opens the SAVE picker — the same
+          // explicit flow as every other mode (no auto-jump into the picker).
           const canStart = !recording && !playing && !anim && !working && chords.length>0;
+          const showSave = !recording && !playing && !anim && !working && !!recBlob;
+          if(showSave){
+            return (
+              <button onClick={()=>{ if(recBlob) setShowSizePicker(true); }} className="pf-lift" title={t('save')} style={{padding:'8px 14px',background:'rgba(140,180,255,.14)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.55)',borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
+                ↓ {t('save')}
+              </button>
+            );
+          }
           return (
             <button onClick={()=>{
               if(recording){ stopRecord(); return; }

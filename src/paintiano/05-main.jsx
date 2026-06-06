@@ -700,6 +700,7 @@ export default function Paintiano() {
   const [audioName, setAudioName] = useState('');
   const [recBlob, setRecBlob] = useState(null);   // recording output blob (share row)
   const [recName, setRecName] = useState('');      // recording output name
+  const [audioSideImage, setAudioSideImage] = useState(null); // optional original image to share alongside audio
   // After a record finishes, recordIntent tells the onstop handler what the
   // user actually wanted: 'story' = share PNG+audio together, 'audio' = trigger
   // saveAudio() immediately, null = manual record (show share row, default).
@@ -2617,7 +2618,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setCurrentMood(null);setVarySource(null);setSongQ('');
     setImgMoodThumb(null);setMoodFromImg(false);
     setDisp(0);setErr('');setStamp(s=>s+1);
-    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
+    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);
     // After clear in a creative mode, mark the canvas as draft-owned by that
     // mode again so subsequent presses commit to the right stash.
     if(composeMode) { composedModeRef.current=true; draftOwnerRef.current='compose'; }
@@ -2818,7 +2819,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setOriginalImgUrl(null);
     setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);setForceSetup(false);
     setComposeMode(false);setDemoMode(false);setLoopMode(false);loopModeRef.current=false;
-    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
+    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);
   },[stopAll]);
 
   // Guard switching away from a CREATION canvas (Compose/MIC) — content the user
@@ -3948,7 +3949,11 @@ Composition rules:
           // old fixed 2:00 constant.
           const lastEv=evts[evts.length-1];
           const realDurMs=lastEv ? (lastEv.startMs + (lastEv.n?.[0]?.durMs||0)) : IMG_TARGET_MS;
-          setInfo({title:file.name.replace(/\.[^.]+$/,''),count:evts.length,dur:Math.round(realDurMs/1000)});
+          const _imgTitle=file.name.replace(/\.[^.]+$/,'');
+          setInfo({title:_imgTitle,count:evts.length,dur:Math.round(realDurMs/1000)});
+          // New piece → reset the save name to THIS image's filename so the SAVE
+          // picker doesn't carry a stale name from a previous mood/piece.
+          setCompositionName(_imgTitle); setRecordingName('');
           idxRef.current=evts.length;setStamp(s=>s+1);
           setPlaybackSpeed(1);playbackSpeedRef.current=1;
           setAtmoOn(false);setAtmoMood(null);
@@ -5071,7 +5076,7 @@ Composition rules:
     }catch(e){ setScoreMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')}); }
   },[scoreBlob,scoreFileName,t]);
   // Export audio via offline render — fast, silent, independent of playback.
-  const saveAudio=useCallback(async(prepareOnly)=>{
+  const saveAudio=useCallback(async(prepareOnly,withImage)=>{
     const src=chordsRef.current&&chordsRef.current.length?chordsRef.current:chords;
     if(!src||!src.length){setScoreMsg({tone:'err',text:t('noNotesGeneric')});return;}
     const title=(compositionName||recordingName||'Paintiano').trim()||'Paintiano';
@@ -5088,10 +5093,13 @@ Composition rules:
     // to the in-app audio row (recBlob/recName) — same pattern as Score — so the
     // user gets a named row with an explicit Share button and an ✕ to dismiss,
     // rather than being thrown straight into the iOS share sheet.
+    // withImage: also stash the ORIGINAL source image so the Share button on the
+    // row sends two files (picture + audio).
     if(prepareOnly){
       setScoreMsg(null);
       setRecName(finalName);
       setRecBlob(blob);
+      setAudioSideImage(withImage ? (originalImgUrl||null) : null);
       return;
     }
     const file=new File([blob],finalName,{type:blob.type});
@@ -5124,12 +5132,24 @@ Composition rules:
     const finalName=baseName+'.'+ext;
     setAudioShareMsg({tone:'wait',text:t('saving')});
     const file=new File([recBlob],finalName,{type:recBlob.type||'audio/mp4'});
+    // When an original source image is stashed (image-mode Audio with the
+    // "include source original image" box ticked), share BOTH the picture and
+    // the audio so the user can save/post them together.
+    let shareFiles=[file];
+    if(audioSideImage){
+      try{
+        const resp=await fetch(audioSideImage); const imgBlob=await resp.blob();
+        const imgExt=(imgBlob.type&&imgBlob.type.includes('png'))?'png':(imgBlob.type&&imgBlob.type.includes('webp'))?'webp':'jpg';
+        const imgFile=new File([imgBlob],baseName+'.'+imgExt,{type:imgBlob.type||'image/jpeg'});
+        shareFiles=[imgFile,file];
+      }catch(_){ /* if the image can't be fetched, just share the audio */ }
+    }
     // 1. Share sheet — phones + macOS
     if(navigator.share){
       try{
-        const canTry=!navigator.canShare||navigator.canShare({files:[file]});
+        const canTry=!navigator.canShare||navigator.canShare({files:shareFiles});
         if(canTry){
-          await navigator.share({files:[file],title:'Paintiano recording'});
+          await navigator.share({files:shareFiles,title:'Paintiano recording'});
           setAudioShareMsg({tone:'ok',text:t('saved')});
           return;
         }
@@ -6990,15 +7010,24 @@ Composition rules:
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {viewMode==='image' ? (
                 <>
-                  {/* Image mode: Story (PNG 9:16 + audio) / Audio (mp3 only) /
-                      Score (MusicXML) / Web / Print. Audio + Story prefer the
-                      auto-recorded blob from the most recent Play. If for some
-                      reason no blob is on hand (recording stream failed), fall
-                      back to the legacy picker-intent flow that records on
-                      demand. */}
+                  {/* Image mode export set:
+                      • Story — 9:16 PNG (the ORIGINAL image, not the mosaic) + audio, for IG/TikTok
+                      • checkbox "include source original image" — gates whether the
+                        ORIGINAL picture rides along with Story and Audio
+                      • Audio — opens the in-app share row (like mood/score). With the
+                        checkbox on it offers the original image + the WAV (two files);
+                        off, just the WAV.
+                      • Score — MusicXML in-app row
+                      Web/Print removed: in image mode the source already IS a picture. */}
+                  {originalImgUrl && (
+                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'9px 12px',background:includeSourceThumb?'rgba(220,150,255,.16)':'transparent',color:includeSourceThumb?'rgba(225,175,255,.95)':'rgba(180,170,150,.65)',border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.55)':'rgba(180,170,150,.22)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.6*effScale)+'rem',display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:16,height:16,borderRadius:3,border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.85)':'rgba(180,170,150,.4)'),background:includeSourceThumb?'rgba(220,150,255,.4)':'transparent',color:'#0a0a14',fontSize:'.7rem',lineHeight:1,fontWeight:700,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
+                      <span style={{flex:1,textAlign:'left'}}>{t('includeSourceImage')!=='includeSourceImage' ? t('includeSourceImage') : 'include source original image'}</span>
+                    </button>
+                  )}
                   <button onClick={()=>{
                     setShowSizePicker(false);
-                    if(recBlob && recName) exportImage('story', true, recBlob, recName, true);
+                    if(recBlob && recName) exportImage('story', true, recBlob, recName, includeSourceThumb);
                     else { setRecordIntent('story'); startRecord(); }
                   }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
                     ✦ {t('sizeStory')||'Story'}
@@ -7006,29 +7035,15 @@ Composition rules:
                   </button>
                   <button onClick={()=>{
                     setShowSizePicker(false);
-                    if(recBlob && recName) saveAudio();
+                    if(recBlob && recName) saveAudio(true, includeSourceThumb);
                     else { setRecordIntent('audio'); startRecord(); }
                   }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     ⏺ {t('saveAudioLabel')||'Audio'}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{includeSourceThumb ? (t('saveAudioHintImg')!=='saveAudioHintImg'?t('saveAudioHintImg'):'image + audio · save to files') : (t('saveAudioHint')||'audio · save to files')}</div>
                   </button>
                   <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     ♫ {t('scoreExport')}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
-                  </button>
-                  {(originalImgUrl || imgMoodThumb) && (
-                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'9px 12px',background:includeSourceThumb?'rgba(220,150,255,.16)':'transparent',color:includeSourceThumb?'rgba(225,175,255,.95)':'rgba(180,170,150,.65)',border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.55)':'rgba(180,170,150,.22)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.6*effScale)+'rem',display:'flex',alignItems:'center',gap:8,marginTop:6,marginBottom:2}}>
-                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:16,height:16,borderRadius:3,border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.85)':'rgba(180,170,150,.4)'),background:includeSourceThumb?'rgba(220,150,255,.4)':'transparent',color:'#0a0a14',fontSize:'.7rem',lineHeight:1,fontWeight:700,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
-                      <span style={{flex:1,textAlign:'left'}}>{t('includeSourceThumb')!=='includeSourceThumb' ? t('includeSourceThumb') : 'include source thumbnail'}</span>
-                    </button>
-                  )}
-                  <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
-                    🖥 {t('sizeWeb')}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
-                  </button>
-                  <button onClick={()=>exportImage('print', false, null, null, includeSourceThumb)} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
-                    🖨 {t('sizePrint')}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
                   </button>
                 </>
               ) : (
@@ -7172,7 +7187,7 @@ Composition rules:
         <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'20px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase',flexShrink:0}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
-            {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null); setMoodFromImg(false); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
+            {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null); setMoodFromImg(false); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); setCompositionName(''); setRecordingName(''); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
               <div style={{display:'flex',gap:6,marginBottom:12,flexShrink:0}}>
                 <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder={t('moodPlaceholder')} autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{flex:1,minWidth:0,background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
                 <button onClick={()=>submit(moodEdit)} disabled={!moodEdit.trim()} aria-label={t('moodGo')} title={t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:moodEdit.trim()?'pointer':'default',background:moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)',color:moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
@@ -7306,7 +7321,7 @@ Composition rules:
             ); })()}
             {audioShareMsg&&<span style={{fontSize:(.5*effScale)+'rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
             <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
-            <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
+            <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);setAudioSideImage(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
           </div>
           {recBlob.type&&recBlob.type.includes('webm')&&(
             <div style={{fontSize:(.48*effScale)+'rem',color:'rgba(255,180,120,.55)',letterSpacing:'.04em'}}>webm/opus format · plays in most apps and browsers; some older Windows players may not open it</div>
@@ -7437,7 +7452,7 @@ Composition rules:
               // Fresh start: nuke stale recording artefacts so the UI is clean
               // and the recorder definitely captures from chord index 0, not
               // from wherever the previous playback paused.
-              setRecBlob(null); setRecName(''); setAudioShareMsg(null);
+              setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null);
               resumeFromRef.current = null;
               setHoldPaused(false);
               setDisp(0);
