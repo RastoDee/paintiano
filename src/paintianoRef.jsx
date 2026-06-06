@@ -11612,6 +11612,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // known to leave the live context in an inconsistent state on some
   // browsers. unlockAudio is cheap when the context is already 'running'.
   const prevShowSizePickerRef = useRef(false);
+  const compInputRef = useRef(null);
   useEffect(()=>{
     if(prevShowSizePickerRef.current && !showSizePicker){
       // small delay so any in-flight share sheet / file picker finishes
@@ -11619,8 +11620,18 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // only after the modal stack is fully gone.
       setTimeout(()=>{ unlockAudio(); }, 300);
     }
+    // On OPEN (false→true): pre-fill the name field with the piece's default
+    // title when the user hasn't named it yet, and select the text so a single
+    // tap + type replaces it (or one delete clears it). Keeps any name the user
+    // already typed. The default mirrors the export fallback (info.title).
+    if(!prevShowSizePickerRef.current && showSizePicker){
+      const _def=(compositionName||recordingName||(info&&info.title)||'').trim();
+      if(!compositionName.trim() && _def){ setCompositionName(_def); }
+      // focus + select after the dialog has mounted
+      setTimeout(()=>{ const el=compInputRef.current; if(el){ try{ el.focus(); el.select(); }catch(_){ } } }, 60);
+    }
     prevShowSizePickerRef.current = showSizePicker;
-  },[showSizePicker, unlockAudio]);
+  },[showSizePicker, unlockAudio, compositionName, recordingName, info]);
 
   const stopAll = useCallback(()=>{
     loadTokenRef.current++; // invalidate any in-flight async load
@@ -16544,6 +16555,7 @@ Composition rules:
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:pk.line,fontSize:(.65*effScale)+'rem'}}>
               ↓ {t('save')}</div>
             <input
+              ref={compInputRef}
               type="text"
               value={compositionName}
               onChange={e=>setCompositionName(e.target.value)}
