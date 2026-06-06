@@ -1661,7 +1661,7 @@ function moodToSong(text){
 // detected mood (valence v / energy e). Snaps pitches to the mood scale (harmony),
 // scales velocity (dynamics) and time (tempo). Returns NEW events; pass the literal
 // events each time so toggling off restores the original.
-function _atmoTransform(evts, mood){
+function _atmoTransform(evts, mood, skipTiming){
   if(!evts||!evts.length||!mood) return evts;
   const v=Math.max(-1,Math.min(1,mood.v||0)), e=Math.max(0,Math.min(1,mood.e==null?0.5:mood.e));
   const sm=(v>=0.5&&e>0.7)?'lydian':(v>=0?'major':'minor');
@@ -1670,6 +1670,13 @@ function _atmoTransform(evts, mood){
   const tempoK=1.35-e*0.8;     // calm → slower, intense → faster
   const vScale=0.6+e*0.6;      // calm → softer, intense → louder
   const snap=(m)=>{ const pc=((m-root)%12+12)%12; let best=SC[0],bd=99; for(const d of SC){ const dd=Math.min(((pc-d)%12+12)%12,((d-pc)%12+12)%12); if(dd<bd){bd=dd;best=d;} } let delta=((best-pc)%12+12)%12; if(delta>6) delta-=12; return m+delta; };
+  // skipTiming: for IMAGE mode, pixelsToImageEvents already shaped tempo, rhythm,
+  // density and dynamics from the (atmo-blended) energy — so here we ONLY do the
+  // harmonic snap to the mood's scale, leaving timing & velocity untouched to
+  // avoid double-scaling the tempo/loudness.
+  if(skipTiming){
+    return evts.map(ev=>({ ...ev, n:(ev.n||[]).map(no=>({ ...no, m:snap(no.m) })) }));
+  }
   return evts.map(ev=>({ ...ev, startMs:Math.round((ev.startMs||0)*tempoK), n:(ev.n||[]).map(no=>({ ...no, m:snap(no.m), v:Math.max(20,Math.min(124,Math.round((no.v||80)*vScale))), durMs:Math.max(40,Math.round((no.durMs||300)*tempoK)) })) }));
 }
 
