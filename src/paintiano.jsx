@@ -13598,6 +13598,24 @@ Composition rules:
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
+    // A/V sync compensation: audio you HEAR is delayed from the moment we
+    // schedule it by (1) Tone's scheduler look-ahead (~30ms after the fix in
+    // unlockAudio) plus (2) the hardware output latency (`outputLatency` on
+    // iOS built-in speakers is ~40-60ms, on Bluetooth headphones can reach
+    // 150-300ms). Canvas paints, by contrast, hit the screen in roughly one
+    // vsync (~16ms). To make the painting feel SYNCED with what the user
+    // hears, delay every visual update inside step() by that exact gap.
+    // Result: audio scheduled now → speakers in ~80ms; canvas painted now
+    // → screen in ~96ms → perceived simultaneity. Recomputed per Play in
+    // case the output device changes (e.g. user plugged in BT headphones
+    // mid-session).
+    let visualDelayMs = 0;
+    try{
+      const _ac = Tone.getContext().rawContext;
+      const outLat = (_ac && typeof _ac.outputLatency === 'number') ? _ac.outputLatency : 0.05;
+      const look   = (Tone.getContext().lookAhead || 0);
+      visualDelayMs = Math.max(0, Math.round((outLat + look) * 1000) - 16);
+    }catch(_){ visualDelayMs = 60; } // sane default if measurement fails
     // Play no longer auto-collapses the Color·Style strip or scrolls the page into a
     // framed position — the fullscreen button gives an immersive view on demand.
     // Score must not stay active during playback — close any open score-export
@@ -13642,17 +13660,9 @@ Composition rules:
         const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
         const cg=_ev.cg!=null?_ev.cg:i%effCols;
         const colStart=cg*colStep;
-        if(ctx){
-          for(let sk=0;sk<colStep;sk++){
-            const col=colStart+sk; if(col>=nc) break;
-            for(let j=0;j<CHORD_SIZE;j++){
-              const row=band*CHORD_SIZE+j; if(row>=nr) break;
-              const pidx=row*nc+col,p=px[pidx];
-              ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
-              ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
-            }
-          }
-        }
+        // Audio fires NOW; visual paint is deferred by `visualDelayMs` so the
+        // brushstroke appears on screen at the moment the corresponding chord
+        // actually reaches the user's ears.
         // Skip playback if this chord is a continuation of an identical run
         if(liveChords[i] && liveChords[i]._playable!==false){
           // Unmerged: 3× step interval → notes ring into next 2 chords for legato blend
@@ -13667,29 +13677,50 @@ Composition rules:
               playNote(m,Math.round(v*velScale),scaledDur);
               return{m,scaledDur};
             });
-            // Batch add all notes in this chord in one state update
-            setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
-            // Group removes by clamped duration to minimise state updates
-            const byDur={};
-            for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
-            for(const[t,ms]of Object.entries(byDur)){
-              pushTimer(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
-            }
-            // Scroll the keyboard to center on this chord's notes (same behavior
-            // as the chord-playback loop). Lets you see which keys correspond to
-            // the painting's colors as the image plays back.
-            const wrap=kbScrollRef.current;
-            if(wrap){
-              const xs=liveChords[i].n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
-              if(xs.length){
-                const cx=xs.reduce((a,b)=>a+b,0)/xs.length;
-                const target=Math.max(0,cx - wrap.clientWidth/2 + 13);
-                wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});
+            // Visual highlight on the keyboard is part of the same A/V event —
+            // delay it too so the gold key flash coincides with the heard note.
+            const _flashOn = ()=>{
+              setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
+              // Group removes by clamped duration to minimise state updates
+              const byDur={};
+              for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
+              for(const[t,ms]of Object.entries(byDur)){
+                pushTimer(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
               }
-            }
+              // Scroll the keyboard to center on this chord's notes (same behavior
+              // as the chord-playback loop). Lets you see which keys correspond to
+              // the painting's colors as the image plays back.
+              const wrap=kbScrollRef.current;
+              if(wrap){
+                const xs=liveChords[i].n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
+                if(xs.length){
+                  const cx=xs.reduce((a,b)=>a+b,0)/xs.length;
+                  const target=Math.max(0,cx - wrap.clientWidth/2 + 13);
+                  wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});
+                }
+              }
+            };
+            if(visualDelayMs>0) timers.current.push(setTimeout(_flashOn, visualDelayMs));
+            else _flashOn();
           }catch(_){}
         }
-        setDisp(i+1);
+        // Deferred canvas paint: same compensation window as the audio.
+        const _paintCells = ()=>{
+          if(ctx){
+            for(let sk=0;sk<colStep;sk++){
+              const col=colStart+sk; if(col>=nc) break;
+              for(let j=0;j<CHORD_SIZE;j++){
+                const row=band*CHORD_SIZE+j; if(row>=nr) break;
+                const pidx=row*nc+col,p=px[pidx];
+                ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+                ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
+              }
+            }
+          }
+          setDisp(i+1);
+        };
+        if(visualDelayMs>0){ const _ii=i; timers.current.push(setTimeout(_paintCells, visualDelayMs)); }
+        else _paintCells();
         i++;
         timers.current.push(setTimeout(step,Math.round(150/playbackSpeedRef.current)));
       };
@@ -13702,24 +13733,31 @@ Composition rules:
       const step=()=>{
         if(i>=chords.length){setPlaying(false);setDisp(chords.length);return;}
         const{n,startMs,recorded}=chords[i];
-        setDisp(i+1);
+        // Audio fires NOW; visual state updates (disp, key highlights, keyboard
+        // scroll) are deferred by visualDelayMs so the keyboard flash aligns
+        // with what the user hears, not when we scheduled it.
         try{
           const midis=n.map(({m,v,durMs})=>{
             const scaledDur=Math.round((durMs||300)/playbackSpeedRef.current);
             if(viewMode!=='audio') playNote(m,v,scaledDur);
             return{m,scaledDur};
           });
-          setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
-          const byDur={};
-          for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
-          for(const[t,ms]of Object.entries(byDur)){
-            pushTimer(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
-          }
-          const wrap=kbScrollRef.current;
-          if(wrap){
-            const xs=n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
-            if(xs.length){const cx=xs.reduce((a,b)=>a+b,0)/xs.length;const target=Math.max(0,cx-wrap.clientWidth/2+13);wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});}
-          }
+          const _visual = ()=>{
+            setDisp(i+1);
+            setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
+            const byDur={};
+            for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
+            for(const[t,ms]of Object.entries(byDur)){
+              pushTimer(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
+            }
+            const wrap=kbScrollRef.current;
+            if(wrap){
+              const xs=n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
+              if(xs.length){const cx=xs.reduce((a,b)=>a+b,0)/xs.length;const target=Math.max(0,cx-wrap.clientWidth/2+13);wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});}
+            }
+          };
+          if(visualDelayMs>0) timers.current.push(setTimeout(_visual, visualDelayMs));
+          else _visual();
         }catch(_){}
         i++;
         if(i>=chords.length){
