@@ -6255,12 +6255,17 @@ Composition rules:
               if(!evts.length){setErr(t('errs').varyFail);return;}
               // applyEvents clears imgMoodThumb; in mood-from-image mode we want the
               // small source picture to stay over the canvas, so capture + restore it.
+              const _wasMfi = moodFromImg;
               const _keepThumb = moodFromImg ? imgMoodThumb : null;
               applyEvents(evts,varied.title+' ·');
-              // applyEvents now clears moodContext; restore it because a Vary of
-              // a mood piece is still a mood piece. Without this, the Vary/Morph
-              // row vanishes after the first tap (it's wrapped in moodContext &&).
+              // applyEvents now clears moodContext AND moodFromImg; restore both
+              // because a Vary of a mood piece is still a mood piece — and an MFI
+              // Vary is still MFI. Without restoring moodFromImg the header reverts
+              // to mood mode (NEW MOOD + MORPH) instead of staying MFI (NEW IMAGE,
+              // no MORPH). Vary/Morph row is wrapped in moodContext && so that's
+              // restored too.
               setMoodContext(true);
+              if(_wasMfi){ setMoodFromImg(true); }
               if(_keepThumb){ setImgMoodThumb(_keepThumb); }
               const bytes=encodeMidi(evts,varied.tempo||100);
               setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
