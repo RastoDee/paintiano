@@ -13552,6 +13552,9 @@ Composition rules:
           // New piece → reset the save name to THIS image's filename so the SAVE
           // picker doesn't carry a stale name from a previous mood/piece.
           setCompositionName(_imgTitle); setRecordingName('');
+          // New image is a fresh piece → drop any prior recording so the
+          // transport shows REC (record this one), not a stale SAVE button.
+          setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
           idxRef.current=evts.length;setStamp(s=>s+1);
           setPlaybackSpeed(1);playbackSpeedRef.current=1;
           setAtmoOn(false);setAtmoMood(null);
@@ -16991,7 +16994,7 @@ Composition rules:
           onClick={handlePauseClick}
           disabled={demoReelOn||recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
           title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
-          style={{display:(viewMode==='image'&&recording)?'none':'inline-flex',padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.18)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.45:1,transition:'all .18s'}}>
+          style={{display:(viewMode==='image'&&(recording||!!recBlob))?'none':'inline-flex',padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.18)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.45:1,transition:'all .18s'}}>
           {holdPaused?t('resume'):playing?t('pause'):t('play')}
         </button>{/* MIC STOP / REC — in the transport row UNDER the canvas (not in
             the strip above it). Replaces the on-canvas STOP/REC buttons; the
@@ -17055,7 +17058,7 @@ Composition rules:
           // into a SAVE button: tapping it opens the SAVE picker — the same
           // explicit flow as every other mode (no auto-jump into the picker).
           const canStart = !recording && !playing && !anim && !working && chords.length>0;
-          const showSave = !recording && !playing && !anim && !working && !!recBlob;
+          const showSave = !recording && !!recBlob;
           if(showSave){
             return (
               <button onClick={()=>{ if(recBlob) setShowSizePicker(true); }} className="pf-lift" title={t('save')} style={{padding:'8px 14px',background:'rgba(140,180,255,.14)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.55)',borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
