@@ -12298,6 +12298,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
+      // Clear also discards any pending save artefacts (recording row, score row,
+      // the SAVE button state) so the transport returns to a clean PLAY + REC
+      // bar — not stuck showing SAVE / the audio+score rows from the prior take.
+      setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
+      setScoreBlob(null); setScoreFileName(''); setScoreMsg(null);
+      setClearArmed(false);
       // loadedSource stays 'image' and forceSetup stays false → image view persists.
       // Return the page to its default (top) position so the header + collapsed
       // strip are back in their resting place — same as the generic clear() path.
