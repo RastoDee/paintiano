@@ -384,14 +384,6 @@ export default function Paintiano() {
   const audioOffsetRef = useRef(0);    // offset into the audio buffer
   const samplerRef   = useRef(null);
   const samplerOk    = useRef(false);
-  // Harp: a second sampler, lazy-loaded the first time the user selects it
-  // (so we never pay its download on startup for piano-only users). Playback
-  // and export route through whichever instrument is active; live tapping
-  // always uses the piano sampler above.
-  const harpRef      = useRef(null);
-  const harpOk       = useRef(false);
-  const harpLoading  = useRef(false);
-  const instrumentRef= useRef('piano');
   // True once we've attached the AudioContext 'statechange' listener so we
   // don't register multiple handlers across repeated unlockAudio calls. The
   // listener detects iOS audio-session steals (another tab grabbed output,
@@ -607,8 +599,6 @@ export default function Paintiano() {
   const [viewMode,  setViewMode]  = useState('paint');
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
-  const [instrument, setInstrument] = useState('piano'); // 'piano' | 'harp' — playback/export voice
-  const [violinState, setViolinState] = useState('idle'); // (harp) 'idle'|'loading'|'ready'|'error'
   const [songQ,     setSongQ]     = useState('');
   const [moodFocused, setMoodFocused] = useState(false); // mood input focused → show autocomplete suggestions
   const [composeSource, setComposeSource] = useState(null); // 'ai' | 'offline' | 'crafted' — how the current mood piece was made
@@ -1212,24 +1202,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     return()=>{dead=true;try{if(typeof cancelIdleCallback!=='undefined'&&typeof idleId==='number')cancelIdleCallback(idleId);}catch(_){}try{clearTimeout(idleId);}catch(_){}try{s&&s.dispose();}catch(_){}samplerRef.current=null;samplerOk.current=false;};
   },[]);
 
-  // Lazy-build the harp sampler the first time the user switches to it. Keeps
-  // it out of the startup path for piano-only users. Disposed on unmount.
-  const ensureHarp = useCallback(()=>{
-    if(harpOk.current || harpLoading.current || harpRef.current) return;
-    harpLoading.current=true;
-    setViolinState('loading');
-    try{
-      const v=new Tone.Sampler({urls:V_URLS,baseUrl:V_BASE,
-        onload:()=>{ harpOk.current=true; harpLoading.current=false; setViolinState('ready'); },
-        onerror:()=>{ harpOk.current=false; harpLoading.current=false; setViolinState('error'); },
-      }).toDestination();
-      harpRef.current=v;
-    }catch(_){ harpLoading.current=false; setViolinState('error'); }
-  },[]);
-  useEffect(()=>()=>{ try{ harpRef.current&&harpRef.current.dispose(); }catch(_){} harpRef.current=null; harpOk.current=false; },[]);
-  // Keep the instrument ref in sync for use inside playback/render closures.
-  useEffect(()=>{ instrumentRef.current=instrument; },[instrument]);
-
 
 
   const gc = useCallback((m,v)=>{
@@ -1639,7 +1611,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     wrap.scrollLeft = Math.max(0, target);
   },[composeMode]);
 
-  const playNote = useCallback((midi,vel=88,durMs=500,usePlaybackInstrument=false)=>{
+  const playNote = useCallback((midi,vel=88,durMs=500)=>{
     // Spawn a visualizer ripple (skip in image mode — too busy with the photo)
     if (visualizerRef.current && viewModeRef.current !== 'image') {
       const c = visualizerRef.current;
@@ -1668,12 +1640,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // iOS — the symptom users see as "sound randomly disappears." Cheap to
       // call and a no-op when already running.
       try{const _ac=Tone.getContext().rawContext;if(_ac&&_ac.state==='suspended')_ac.resume().catch(()=>{});}catch(_){}
-      // Instrument routing: playback/export notes may use the harp when it's
-      // the active instrument and loaded; everything else (live tapping, mic
-      // echo, score preview) stays on the piano sampler.
-      if(usePlaybackInstrument && instrumentRef.current==='harp' && harpOk.current && harpRef.current){
-        harpRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;
-      }
       if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
       if(ac.state==='suspended')ac.resume();
@@ -4297,7 +4263,7 @@ Composition rules:
             const notes=liveChords[i].n;
             const midis=notes.map(({m,v,durMs})=>{
               const scaledDur=Math.round(durMs*durMul/playbackSpeedRef.current);
-              playNote(m,Math.round(v*velScale),scaledDur,true);
+              playNote(m,Math.round(v*velScale),scaledDur);
               return{m,scaledDur};
             });
             // Batch add all notes in this chord in one state update
@@ -4339,7 +4305,7 @@ Composition rules:
         try{
           const midis=n.map(({m,v,durMs})=>{
             const scaledDur=Math.round((durMs||300)/playbackSpeedRef.current);
-            if(viewMode!=='audio') playNote(m,v,scaledDur,true);
+            if(viewMode!=='audio') playNote(m,v,scaledDur);
             return{m,scaledDur};
           });
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
@@ -5132,7 +5098,7 @@ Composition rules:
     const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
     setScoreMsg({tone:'wait',text:t('rendering')});
     let blob;
-    try{ blob=await renderAudioOffline(src,{speed:1,instrument:instrumentRef.current}); }
+    try{ blob=await renderAudioOffline(src,{speed:1}); }
     catch(e){ blob=null; }
     // Tone.Offline temporarily replaces the global Tone context. Restore the
     // live audio path so the next playback isn't silent.
@@ -6035,23 +6001,7 @@ Composition rules:
       <header style={{textAlign:'center',marginBottom:isActiveView?8:18}}>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
         {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} /></div>}
-        {!isActiveView && (piano!=='ready'
-          ? <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>
-          : (()=>{
-              // Subtle instrument switch in place of the "grand piano" caption.
-              // Tapping a name selects it for PLAYBACK + EXPORT (live tapping
-              // always stays piano). Active = gold; violin lazy-loads on first pick.
-              const base={fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',cursor:'pointer',background:'none',border:'none',padding:0,fontWeight:400,transition:'color .18s ease'};
-              const gold='rgba(201,168,76,.95)', dim='rgba(242,238,232,.45)';
-              const vLabel=(t('instHarp')!=='instHarp'?t('instHarp'):'harp')+(violinState==='loading'?' …':violinState==='error'?' (offline)':'');
-              return (
-                <div style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}>
-                  <button onClick={()=>setInstrument('piano')} style={{...base,color:instrument==='piano'?gold:dim}}>{t('grandPiano')||' grand piano'}</button>
-                  <span style={{color:'rgba(242,238,232,.25)',fontSize:'.7rem'}}>·</span>
-                  <button onClick={()=>{ ensureHarp(); setInstrument('harp'); }} disabled={violinState==='error'} style={{...base,color:instrument==='harp'?gold:dim,opacity:violinState==='error'?.5:1}}>{vLabel}</button>
-                </div>
-              );
-            })())}
+        {!isActiveView && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
 
       {/* ─────────────────────────────────────────────────────────────
@@ -7174,7 +7124,7 @@ Composition rules:
                       const audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
                       setScoreMsg({tone:'wait',text:t('rendering')||'rendering audio…'});
                       let audioBlob = null;
-                      try{ audioBlob = await renderAudioOffline(src,{speed:1,instrument:instrumentRef.current}); }catch(_){}
+                      try{ audioBlob = await renderAudioOffline(src,{speed:1}); }catch(_){}
                       try{ await unlockAudio(); }catch(_){}
                       setScoreMsg(null);
                       await exportImage('story', true, audioBlob, audioName, true);

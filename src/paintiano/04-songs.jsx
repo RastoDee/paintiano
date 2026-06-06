@@ -239,10 +239,6 @@ function audioBufferToWav(abuf){
 async function renderAudioOffline(events,opts){
   if(!events||!events.length) return null;
   const speed=(opts&&opts.speed)||1;
-  // Instrument selection for export — mirrors live playback. Defaults to piano.
-  const _inst=(opts&&opts.instrument)||'piano';
-  const _base=_inst==='harp'?V_BASE:S_BASE;
-  const _urls=_inst==='harp'?V_URLS:S_URLS;
   // Total duration: last note end + tail, scaled by playback speed.
   let endMs=0;
   events.forEach(ev=>ev.n.forEach(n=>{ const e=(ev.startMs||0)+(n.durMs||500); if(e>endMs)endMs=e; }));
@@ -256,7 +252,7 @@ async function renderAudioOffline(events,opts){
       await new Promise((resolve)=>{
         let done=false; const finish=()=>{ if(!done){done=true;resolve();} };
         const sampler=new Tone.Sampler({
-          urls:_urls, baseUrl:_base,
+          urls:S_URLS, baseUrl:S_BASE,
           onload: finish, onerror: finish
         }).toDestination();
         // Safety timeout so a stuck load can't hang the render forever.

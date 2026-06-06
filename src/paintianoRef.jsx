@@ -182,12 +182,15 @@ const SAMPLE_IMGMOOD = { hash: 0, result: {"title":"A Dream In Crimson","tempo":
 const S_BASE = "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/salamander/";
 const S_URLS = {"A0":"A0.mp3","C1":"C1.mp3","D#1":"Ds1.mp3","F#1":"Fs1.mp3","A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3","A5":"A5.mp3","C6":"C6.mp3","D#6":"Ds6.mp3","F#6":"Fs6.mp3","A6":"A6.mp3","C7":"C7.mp3","D#7":"Ds7.mp3","F#7":"Fs7.mp3","A7":"A7.mp3","C8":"C8.mp3"};
 
-// Violin — alternative playback/export instrument (live tapping always stays
-// piano). Samples from nbrosowsky/tonejs-instruments; in that repo the violin
-// octave labels are correct (unlike piano/bass), so the note names map 1:1.
-// Tone.Sampler pitch-shifts to fill the gaps between these sampled pitches.
-const V_BASE = "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/violin/";
-const V_URLS = {"A3":"A3.mp3","A4":"A4.mp3","A5":"A5.mp3","A6":"A6.mp3","C4":"C4.mp3","C5":"C5.mp3","C6":"C6.mp3","C7":"C7.mp3","E4":"E4.mp3","E5":"E5.mp3","E6":"E6.mp3","G4":"G4.mp3","G5":"G5.mp3","G6":"G6.mp3"};
+// Harp — alternative playback/export instrument (live tapping always stays
+// piano). Samples: tonejs-instrument-harp-mp3 (VSO2 / Versilian Community),
+// served from the npm mirror on jsDelivr. Harp is plucked → percussive attack
+// with a natural decay, so a single sample per note repitches cleanly through
+// Tone.Sampler and stays realistic even on the generated image chords (unlike a
+// bowed instrument such as violin, which needs legato/vibrato to sound real).
+// Verified note list from the package: 23 samples spanning E1–D7.
+const V_BASE = "https://cdn.jsdelivr.net/npm/tonejs-instrument-harp-mp3@1.1.1/";
+const V_URLS = {"E1":"E1.mp3","G1":"G1.mp3","B1":"B1.mp3","D2":"D2.mp3","F2":"F2.mp3","A2":"A2.mp3","C3":"C3.mp3","E3":"E3.mp3","G3":"G3.mp3","B3":"B3.mp3","D4":"D4.mp3","F4":"F4.mp3","A4":"A4.mp3","C5":"C5.mp3","E5":"E5.mp3","G5":"G5.mp3","B5":"B5.mp3","D6":"D6.mp3","F6":"F6.mp3","A6":"A6.mp3","B6":"B6.mp3","D7":"D7.mp3","F7":"F7.mp3"};
 
 const m2f = m => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -6101,7 +6104,7 @@ const I18N = {
     saveRightClickHint:'right-click the image', saveRightClickTail:'and choose "Save image as…"',
     saveAlternative:'alternative:', saveAlternatives:'alternatives:',
     sLeft:'s left',
-    loadingPiano:' loading piano…', grandPiano:' grand piano', synthPiano:' synth piano', instViolin:'violin', instPiano:'piano',
+    loadingPiano:' loading piano…', grandPiano:' grand piano', synthPiano:' synth piano', instHarp:'harp', instPiano:'piano',
     listenHint:'point this device\'s mic at another playing music — same-phone audio is suppressed by iOS',
     micDenied:'Microphone access denied. To enable: iOS Settings → Safari → Microphone, or tap the lock icon in your browser\'s address bar. Reload after changing.', micUnavailable:'Microphone not available in this browser.',
     recUnsupported:'Recording not supported in this browser.',
@@ -6203,7 +6206,7 @@ const I18N = {
     saveRightClickHint:'rechtsklick aufs bild', saveRightClickTail:'und „bild speichern unter…" wählen',
     saveAlternative:'alternative:', saveAlternatives:'alternativen:',
     sLeft:'s übrig',
-    loadingPiano:' klavier lädt…', grandPiano:' flügel', synthPiano:' synth-klavier', instViolin:'violine', instPiano:'klavier',
+    loadingPiano:' klavier lädt…', grandPiano:' flügel', synthPiano:' synth-klavier', instHarp:'harfe', instPiano:'klavier',
     listenHint:'mikrofon dieses geräts auf ein anderes richten, das musik spielt — eigenes audio wird von iOS unterdrückt',
     micDenied:'Mikrofonzugriff verweigert. Aktivieren: iOS Einstellungen → Safari → Mikrofon, oder auf das Schloss-Symbol in der Adressleiste tippen. Danach Seite neu laden.', micUnavailable:'Mikrofon nicht verfügbar.',
     recUnsupported:'Aufnahme wird nicht unterstützt.',
@@ -6305,7 +6308,7 @@ const I18N = {
     saveRightClickHint:'clic droit sur l\'image', saveRightClickTail:'et choisir « enregistrer l\'image sous… »',
     saveAlternative:'alternative :', saveAlternatives:'alternatives :',
     sLeft:'s restant',
-    loadingPiano:' piano en chargement…', grandPiano:' piano à queue', synthPiano:' piano synthé', instViolin:'violon', instPiano:'piano',
+    loadingPiano:' piano en chargement…', grandPiano:' piano à queue', synthPiano:' piano synthé', instHarp:'harpe', instPiano:'piano',
     listenHint:'pointez le micro de cet appareil vers un autre qui joue de la musique — l\'audio interne est supprimé par iOS',
     micDenied:'Accès au microphone refusé. Pour activer : Réglages iOS → Safari → Microphone, ou toucher l\'icône cadenas dans la barre d\'adresse. Recharger ensuite.', micUnavailable:'Microphone non disponible.',
     recUnsupported:'Enregistrement non supporté.',
@@ -6407,7 +6410,7 @@ const I18N = {
     saveRightClickHint:'clic derecho en la imagen', saveRightClickTail:'y elige "guardar imagen como…"',
     saveAlternative:'alternativa:', saveAlternatives:'alternativas:',
     sLeft:'s restante',
-    loadingPiano:' cargando piano…', grandPiano:' piano de cola', synthPiano:' piano sintetizador', instViolin:'violín', instPiano:'piano',
+    loadingPiano:' cargando piano…', grandPiano:' piano de cola', synthPiano:' piano sintetizador', instHarp:'arpa', instPiano:'piano',
     listenHint:'apunta el micrófono de este dispositivo a otro que esté reproduciendo música — iOS suprime el audio del mismo teléfono',
     micDenied:'Acceso al micrófono denegado. Para activar: Ajustes iOS → Safari → Micrófono, o toca el icono de candado en la barra de direcciones. Recarga después.', micUnavailable:'Micrófono no disponible.',
     recUnsupported:'Grabación no compatible.',
@@ -6509,7 +6512,7 @@ const I18N = {
     saveRightClickHint:'pravým klikni na obrázok', saveRightClickTail:'a vyber „Uložiť obrázok ako…"',
     saveAlternative:'alternatíva:', saveAlternatives:'alternatívy:',
     sLeft:'s zostáva',
-    loadingPiano:' načítavam piano…', grandPiano:' grand piano', synthPiano:' synt. piano', instViolin:'husle', instPiano:'piano',
+    loadingPiano:' načítavam piano…', grandPiano:' grand piano', synthPiano:' synt. piano', instHarp:'harfa', instPiano:'piano',
     listenHint:'namier mikrofón tohto zariadenia na iné, ktoré hrá hudbu — zvuk z toho istého telefónu iOS potlačí',
     micDenied:'Prístup k mikrofónu bol zamietnutý. Aktivuj v: iOS Nastavenia → Safari → Mikrofón, alebo ťukni na ikonu zámku v adresnom riadku prehliadača. Po zmene obnov stránku.', micUnavailable:'Mikrofón nie je v tomto prehliadači dostupný.',
     recUnsupported:'Nahrávanie nie je v tomto prehliadači podporované.',
@@ -6611,7 +6614,7 @@ const I18N = {
     saveRightClickHint:'右键点击图像', saveRightClickTail:'选择"图像另存为…"',
     saveAlternative:'其他方式:', saveAlternatives:'其他方式:',
     sLeft:'秒剩余',
-    loadingPiano:' 加载钢琴中…', grandPiano:' 三角钢琴', synthPiano:' 合成钢琴', instViolin:'小提琴', instPiano:'钢琴',
+    loadingPiano:' 加载钢琴中…', grandPiano:' 三角钢琴', synthPiano:' 合成钢琴', instHarp:'竖琴', instPiano:'钢琴',
     listenHint:'将此设备的麦克风对准另一个播放音乐的设备 — 同手机的音频会被 iOS 抑制',
     micDenied:'麦克风访问被拒绝。要启用请前往:iOS 设置 → Safari → 麦克风,或点击浏览器地址栏中的锁形图标。修改后请刷新页面。', micUnavailable:'此浏览器不支持麦克风。',
     recUnsupported:'此浏览器不支持录音。',
@@ -6719,7 +6722,7 @@ const I18N = {
     saveRightClickHint:'右鍵點擊圖像', saveRightClickTail:'選擇「另存圖像為…」',
     saveAlternative:'其他方式：', saveAlternatives:'其他方式：',
     sLeft:'秒剩餘',
-    loadingPiano:' 載入鋼琴中…', grandPiano:' 三角鋼琴', synthPiano:' 合成鋼琴', instViolin:'小提琴', instPiano:'鋼琴',
+    loadingPiano:' 載入鋼琴中…', grandPiano:' 三角鋼琴', synthPiano:' 合成鋼琴', instHarp:'豎琴', instPiano:'鋼琴',
     listenHint:'將此裝置的麥克風對準另一個播放音樂的裝置 — 同手機的聲音會被 iOS 抑制',
     micDenied:'麥克風存取被拒絕。要啟用請前往：iOS 設定 → Safari → 麥克風，或點擊瀏覽器網址列中的鎖頭圖示。修改後請重新整理頁面。', micUnavailable:'此瀏覽器不支援麥克風。',
     recUnsupported:'此瀏覽器不支援錄音。',
@@ -6815,7 +6818,7 @@ const I18N = {
     saveRightClickHint:'clique com o botão direito na imagem', saveRightClickTail:'e escolha "Salvar imagem como…"',
     saveAlternative:'alternativa:', saveAlternatives:'alternativas:',
     sLeft:'s restantes',
-    loadingPiano:' carregando piano…', grandPiano:' piano de cauda', synthPiano:' piano sintetizado', instViolin:'violino', instPiano:'piano',
+    loadingPiano:' carregando piano…', grandPiano:' piano de cauda', synthPiano:' piano sintetizado', instHarp:'harpa', instPiano:'piano',
     listenHint:'aponte o microfone deste dispositivo para outro tocando música — o áudio do mesmo celular é suprimido pelo iOS',
     micDenied:'Acesso ao microfone negado. Para ativar: iOS Ajustes → Safari → Microfone, ou toque no ícone de cadeado na barra de endereço do navegador. Recarregue após alterar.', micUnavailable:'Microfone não disponível neste navegador.',
     recUnsupported:'Gravação não suportada neste navegador.',
@@ -7214,8 +7217,8 @@ async function renderAudioOffline(events,opts){
   const speed=(opts&&opts.speed)||1;
   // Instrument selection for export — mirrors live playback. Defaults to piano.
   const _inst=(opts&&opts.instrument)||'piano';
-  const _base=_inst==='violin'?V_BASE:S_BASE;
-  const _urls=_inst==='violin'?V_URLS:S_URLS;
+  const _base=_inst==='harp'?V_BASE:S_BASE;
+  const _urls=_inst==='harp'?V_URLS:S_URLS;
   // Total duration: last note end + tail, scaled by playback speed.
   let endMs=0;
   events.forEach(ev=>ev.n.forEach(n=>{ const e=(ev.startMs||0)+(n.durMs||500); if(e>endMs)endMs=e; }));
@@ -9988,13 +9991,13 @@ export default function Paintiano() {
   const audioOffsetRef = useRef(0);    // offset into the audio buffer
   const samplerRef   = useRef(null);
   const samplerOk    = useRef(false);
-  // Violin: a second sampler, lazy-loaded the first time the user selects it
+  // Harp: a second sampler, lazy-loaded the first time the user selects it
   // (so we never pay its download on startup for piano-only users). Playback
   // and export route through whichever instrument is active; live tapping
   // always uses the piano sampler above.
-  const violinRef    = useRef(null);
-  const violinOk     = useRef(false);
-  const violinLoading= useRef(false);
+  const harpRef      = useRef(null);
+  const harpOk       = useRef(false);
+  const harpLoading  = useRef(false);
   const instrumentRef= useRef('piano');
   // True once we've attached the AudioContext 'statechange' listener so we
   // don't register multiple handlers across repeated unlockAudio calls. The
@@ -10211,8 +10214,8 @@ export default function Paintiano() {
   const [viewMode,  setViewMode]  = useState('paint');
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
-  const [instrument, setInstrument] = useState('piano'); // 'piano' | 'violin' — playback/export voice
-  const [violinState, setViolinState] = useState('idle'); // 'idle' | 'loading' | 'ready' | 'error'
+  const [instrument, setInstrument] = useState('piano'); // 'piano' | 'harp' — playback/export voice
+  const [violinState, setViolinState] = useState('idle'); // (harp) 'idle'|'loading'|'ready'|'error'
   const [songQ,     setSongQ]     = useState('');
   const [moodFocused, setMoodFocused] = useState(false); // mood input focused → show autocomplete suggestions
   const [composeSource, setComposeSource] = useState(null); // 'ai' | 'offline' | 'crafted' — how the current mood piece was made
@@ -10816,21 +10819,21 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     return()=>{dead=true;try{if(typeof cancelIdleCallback!=='undefined'&&typeof idleId==='number')cancelIdleCallback(idleId);}catch(_){}try{clearTimeout(idleId);}catch(_){}try{s&&s.dispose();}catch(_){}samplerRef.current=null;samplerOk.current=false;};
   },[]);
 
-  // Lazy-build the violin sampler the first time the user switches to it. Keeps
+  // Lazy-build the harp sampler the first time the user switches to it. Keeps
   // it out of the startup path for piano-only users. Disposed on unmount.
-  const ensureViolin = useCallback(()=>{
-    if(violinOk.current || violinLoading.current || violinRef.current) return;
-    violinLoading.current=true;
+  const ensureHarp = useCallback(()=>{
+    if(harpOk.current || harpLoading.current || harpRef.current) return;
+    harpLoading.current=true;
     setViolinState('loading');
     try{
       const v=new Tone.Sampler({urls:V_URLS,baseUrl:V_BASE,
-        onload:()=>{ violinOk.current=true; violinLoading.current=false; setViolinState('ready'); },
-        onerror:()=>{ violinOk.current=false; violinLoading.current=false; setViolinState('error'); },
+        onload:()=>{ harpOk.current=true; harpLoading.current=false; setViolinState('ready'); },
+        onerror:()=>{ harpOk.current=false; harpLoading.current=false; setViolinState('error'); },
       }).toDestination();
-      violinRef.current=v;
-    }catch(_){ violinLoading.current=false; setViolinState('error'); }
+      harpRef.current=v;
+    }catch(_){ harpLoading.current=false; setViolinState('error'); }
   },[]);
-  useEffect(()=>()=>{ try{ violinRef.current&&violinRef.current.dispose(); }catch(_){} violinRef.current=null; violinOk.current=false; },[]);
+  useEffect(()=>()=>{ try{ harpRef.current&&harpRef.current.dispose(); }catch(_){} harpRef.current=null; harpOk.current=false; },[]);
   // Keep the instrument ref in sync for use inside playback/render closures.
   useEffect(()=>{ instrumentRef.current=instrument; },[instrument]);
 
@@ -11272,11 +11275,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // iOS — the symptom users see as "sound randomly disappears." Cheap to
       // call and a no-op when already running.
       try{const _ac=Tone.getContext().rawContext;if(_ac&&_ac.state==='suspended')_ac.resume().catch(()=>{});}catch(_){}
-      // Instrument routing: playback/export notes may use the violin when it's
+      // Instrument routing: playback/export notes may use the harp when it's
       // the active instrument and loaded; everything else (live tapping, mic
       // echo, score preview) stays on the piano sampler.
-      if(usePlaybackInstrument && instrumentRef.current==='violin' && violinOk.current && violinRef.current){
-        violinRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;
+      if(usePlaybackInstrument && instrumentRef.current==='harp' && harpOk.current && harpRef.current){
+        harpRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;
       }
       if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
@@ -15647,12 +15650,12 @@ Composition rules:
               // always stays piano). Active = gold; violin lazy-loads on first pick.
               const base={fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',cursor:'pointer',background:'none',border:'none',padding:0,fontWeight:400,transition:'color .18s ease'};
               const gold='rgba(201,168,76,.95)', dim='rgba(242,238,232,.45)';
-              const vLabel=(t('instViolin')!=='instViolin'?t('instViolin'):'violin')+(violinState==='loading'?' …':violinState==='error'?' (offline)':'');
+              const vLabel=(t('instHarp')!=='instHarp'?t('instHarp'):'harp')+(violinState==='loading'?' …':violinState==='error'?' (offline)':'');
               return (
                 <div style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}>
                   <button onClick={()=>setInstrument('piano')} style={{...base,color:instrument==='piano'?gold:dim}}>{t('grandPiano')||' grand piano'}</button>
                   <span style={{color:'rgba(242,238,232,.25)',fontSize:'.7rem'}}>·</span>
-                  <button onClick={()=>{ ensureViolin(); setInstrument('violin'); }} disabled={violinState==='error'} style={{...base,color:instrument==='violin'?gold:dim,opacity:violinState==='error'?.5:1}}>{vLabel}</button>
+                  <button onClick={()=>{ ensureHarp(); setInstrument('harp'); }} disabled={violinState==='error'} style={{...base,color:instrument==='harp'?gold:dim,opacity:violinState==='error'?.5:1}}>{vLabel}</button>
                 </div>
               );
             })())}
