@@ -1920,6 +1920,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Cheap to call repeatedly; no-op when context is already running.
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
+    // Shorten Tone's scheduler look-ahead from its default 100ms to 30ms.
+    // Default 100ms means triggerAttackRelease(..., Tone.now(), ...) schedules
+    // audio 100ms ahead of the real context clock, while canvas paints happen
+    // synchronously on the same animation frame — yielding a perceptible
+    // ~100ms audio-trails-canvas desync. 30ms is the sweet spot on iOS: tight
+    // enough to feel synchronised, far enough above zero to avoid scheduler
+    // underruns on slow devices. Idempotent — setter is cheap and safe to
+    // re-apply on every unlock.
+    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
     // iOS 17+ audio session API. After MediaRecorder runs, iOS WebKit
     // pushes the audio session into the 'play-and-record' category which
     // makes output respect the hardware silent switch — so even with
@@ -4117,6 +4126,19 @@ Composition rules:
     // the context catches up. The 500ms safety cap in unlockAudio means this
     // can never deadlock Play even if the context never resumes.
     await unlockAudio();
+    // Silent sampler warm-up: an idle Tone.Sampler on iOS exhibits ~30ms
+    // cold-start latency on the first triggerAttackRelease — the sample buffer
+    // gets touched and the gain envelope spun up before the note actually
+    // sounds. We fire one inaudible trigger (gain≈0, duration 1ms) right after
+    // unlock so the audio pipeline is hot by the time the first real note
+    // arrives ~tens of ms later in step(). Combined with the shorter lookAhead
+    // in unlockAudio, this brings audio onset within ~10ms of canvas paint —
+    // imperceptible to the ear.
+    try{
+      if(samplerOk.current && samplerRef.current){
+        samplerRef.current.triggerAttackRelease('C4', 0.001, Tone.now(), 0.0001);
+      }
+    }catch(_){}
     // MFI hand-off: if we're showing the full picked image (mood-from-image AI
     // ready but Play not pressed yet), swap to thumbnail + paint mode now so the
     // canvas can start drawing. This is what makes Play work for MFI new images.
