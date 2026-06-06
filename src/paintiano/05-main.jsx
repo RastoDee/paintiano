@@ -3763,6 +3763,123 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
   },[working,stopAll,applyEvents,aiMidi,t]);
 
+  // ── Image → Composition ────────────────────────────────────────────────
+  // Extract a compact "musical material" summary from the notes the current
+  // image produced (chordsRef): which pitches appear and how often, the range,
+  // density, the energy arc left→right, and (if AI atmosphere is on) the mood.
+  // This is handed to Claude so it can compose a NEW free-standing piece FROM
+  // that material — melody, rhythm, metre, emotion — related to the image's
+  // character, rather than the literal left-to-right pixel readout.
+  const extractImageMaterial = useCallback(()=>{
+    const src = (chordsRef.current && chordsRef.current.length) ? chordsRef.current : chords;
+    if(!src || !src.length) return null;
+    const pcCount = new Array(12).fill(0); // pitch-class histogram
+    let lo=128, hi=0, noteN=0, velSum=0;
+    const half = Math.floor(src.length/2) || 1;
+    let eEarly=0, nEarly=0, eLate=0, nLate=0; // energy arc (velocity) first vs second half
+    src.forEach((ev,i)=>{
+      (ev.n||[]).forEach(n=>{
+        const m=n.m; if(typeof m!=='number') return;
+        pcCount[((m%12)+12)%12]++; noteN++;
+        if(m<lo)lo=m; if(m>hi)hi=m;
+        const v=n.v||60; velSum+=v;
+        if(i<half){ eEarly+=v; nEarly++; } else { eLate+=v; nLate++; }
+      });
+    });
+    if(!noteN) return null;
+    const NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    // Top pitch classes by frequency → the image's "palette"
+    const ranked=pcCount.map((c,i)=>({pc:NOTE[i],c})).filter(x=>x.c>0).sort((a,b)=>b.c-a.c);
+    const palette=ranked.slice(0,7).map(x=>x.pc).join(' ');
+    const noteRange=`${NOTE[((lo%12)+12)%12]}${Math.floor(lo/12)-1}–${NOTE[((hi%12)+12)%12]}${Math.floor(hi/12)-1}`;
+    const avgVel=Math.round(velSum/noteN);
+    const density=(noteN/src.length); // avg notes per event ≈ chord thickness
+    const earlyV=nEarly?eEarly/nEarly:avgVel, lateV=nLate?eLate/nLate:avgVel;
+    const arc = lateV>earlyV+8 ? 'builds / brightens toward the end'
+              : earlyV>lateV+8 ? 'opens strong then settles' : 'fairly even throughout';
+    const energy = avgVel>=95?'high, forceful':avgVel>=70?'moderate':'soft, gentle';
+    const tex = density>=3.2?'dense, chordal':density>=1.8?'mixed chords and lines':'sparse, melodic';
+    const mood = (atmoOn && atmoMood) ? (currentMood||(atmoMood.v>0.2?'bright':atmoMood.v<-0.2?'dark':'neutral')) : null;
+    return { palette, noteRange, energy, tex, arc, mood, count:noteN };
+  },[chords,atmoOn,atmoMood,currentMood]);
+
+  // Compose a real piece FROM the image's note material (no painting — keeps the
+  // original image on the canvas while it plays). Reuses the same Claude endpoint
+  // + parse + apply path as aiCompose.
+  const aiComposeFromImage=useCallback(async()=>{
+    if(busy) return;
+    const mat=extractImageMaterial();
+    if(!mat){ setErr(t('noNotesGeneric')||'Load an image first'); setErrInfo(false); return; }
+    { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
+    setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
+    try{
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
+      const prompt=`A painting was scanned into raw musical material. Compose a beautiful, free-standing solo piano piece INSPIRED BY that material — do not replay it literally.
+Image material:
+- Pitch palette (most present pitch classes): ${mat.palette}
+- Range: ${mat.noteRange}
+- Energy: ${mat.energy}
+- Texture: ${mat.tex}
+- Energy arc: ${mat.arc}${mat.mood?`\n- Mood/atmosphere of the image: ${mat.mood}`:''}
+Use this as raw clay: let the pitch palette colour the harmony and key, let the energy and arc shape dynamics and tempo, let the texture guide density. Then compose with genuine craft — a real melody, recurring motif, clear metre and rhythm, harmonic movement, and an emotional shape that matches the image's character.
+Output ONLY a single valid JSON object — no markdown, no prose.
+Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
+Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
+Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) that fits the resulting music.
+Composition rules:
+- 56–84 notes total
+- Pick a key that fits the palette and mood; mostly diatonic, sparing chromatic colour
+- Structure: opening (motif, sparse) → development (richer, busiest) → close (motif returns, quieter)
+- Bass (octaves 2–3): harmonic grounding, ≥12 notes
+- Melody (octaves 4–6): singable, recurring motif
+- Dynamics via velocity: opening ~55–70, development ~80–110, close ~45–65
+- Vary durations (mix 0.25/0.5/1/2 beats) — clear rhythm, not uniform
+- Pitches like C4/F#3/Bb5 with octave number, sharps only (C#4 not Db4)`;
+      setWPct(40);
+      const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+      const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+      const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      let resp=null,respText='',lastErr=null;
+      for(const _ep of _endpoints){
+        try{
+          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+          const txt=await r.text();
+          if(r.ok&&txt){ resp=r; respText=txt; break; }
+          lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
+        }catch(err){ lastErr=err; }
+      }
+      setWPct(75);
+      if(!resp){ const _netErr=lastErr||new Error('compose endpoints unavailable'); _netErr._aiNet=true; throw _netErr; }
+      setAiDown(false);
+      let data; try{data=JSON.parse(respText);}catch(_){throw new Error('Response not JSON');}
+      const raw=(data.content||[]).map(b=>b.type==='text'?b.text:'').join('');
+      if(!raw)throw new Error('Empty content');
+      const parsed=extractAiJson(raw);
+      if(!parsed?.notes?.length)throw new Error('No notes');
+      gateAI(1,true);
+      const evts=noteArr2events(parsed.notes,parsed.tempo);
+      if(!evts.length)throw new Error('Could not parse composition');
+      const _dispT=(parsed.title&&String(parsed.title).trim())||(t('imgComposition')!=='imgComposition'?t('imgComposition'):'Composition');
+      // Keep the ORIGINAL image on the canvas while this plays: don't switch
+      // viewMode away from 'image', don't wipe originalImgUrl. We feed the notes
+      // straight into the playback chords and start playing.
+      setVarySource({notes:(parsed.notes||[]).map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:n),tempo:parsed.tempo||90,title:_dispT});
+      setChords(evts); chordsRef.current=evts; idxRef.current=0; setDisp(0);
+      setInfo({title:_dispT,count:evts.length,dur:Math.round((evts[evts.length-1]?.startMs||0)/1000)+2});
+      setComposeSource('ai'); setMoodContext(true);
+      try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(_dispT.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+      setWorking(false); setWLabel(''); setWPct(0);
+      // Play the composed piece (image stays on canvas — playback won't repaint
+      // because we're not in a paint path; ripples are suppressed in image mode).
+      setTimeout(()=>{ try{ startPlayRef.current?.(); }catch(_){} }, 60);
+      return;
+    }catch(e){
+      if(e&&e._aiNet) setAiDown(true);
+      setErr(e.message||'Compose failed'); setErrInfo(false);
+    }
+    finally{ setWorking(false); setWLabel(''); setWPct(0); }
+  },[busy,extractImageMaterial,stopAll,lang,gateAI,t]);
+
   const aiCompose=useCallback(async(overrideMood)=>{
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
     if(!title||busy||composedModeRef.current)return;
@@ -7487,6 +7604,9 @@ Composition rules:
         })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
+        )}
+        {viewMode==='image'&&originalImgUrl&&!moodFromImg&&chords.length>0&&(
+          <button onClick={()=>{ if(busy||working) return; if(aiUsable) aiComposeFromImage(); }} disabled={busy||working||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{padding:'8px 14px',background:'transparent',color:(busy||working||!aiUsable)?'rgba(201,168,76,.3)':'rgba(220,180,90,.9)',border:'1px solid rgba(201,168,76,'+((busy||working||!aiUsable)?'.15':'.45')+')',borderRadius:22,cursor:(busy||working||!aiUsable)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:!aiUsable?.5:1,transition:'all .18s'}}>{'✦ '+(t('imgComposition')!=='imgComposition'?t('imgComposition'):'compose')}</button>
         )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
           // REC button — single source of truth for image-mode recording:
