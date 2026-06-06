@@ -7022,6 +7022,17 @@ Composition rules:
                   {!immersive && (imgMoodThumb || originalImgUrl || loadedSource==='image' || moodFromImg || varySource || isImportedMedia) && (
                     <button onClick={async ()=>{
                       setShowSizePicker(false);
+                      // For MIDI/Audio/Score the user already has the original
+                      // audio file — re-bundling a fresh offline render with
+                      // the painting would just duplicate what they imported.
+                      // Story for these is painting-only (Web/Print quality
+                      // social asset). For Image/MFI/Mood/Compose/Mic we still
+                      // render audio offline and bundle both files into one
+                      // share-sheet drop.
+                      if(isImportedMedia){
+                        await exportImage('story', true, null, null, true);
+                        return;
+                      }
                       // Paint mode: render audio offline and bundle with image.
                       // The user has already heard the piece via PLAY — we just
                       // need the audio FILE for the Story share, not a re-play.
@@ -7042,7 +7053,7 @@ Composition rules:
                       await exportImage('story', true, audioBlob, audioName, true);
                     }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
                       ✦ {t('sizeStory')||'Story'}
-                      <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
+                      <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{isImportedMedia ? (t('storyImageHintNoAudio')||'painting · for IG / TikTok') : (t('storyImageHint')||'painting + audio · for IG / TikTok')}</div>
                     </button>
                   )}
                   <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
