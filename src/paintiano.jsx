@@ -11713,10 +11713,32 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       unlockAudio();
     };
     window.addEventListener('focus', onFocus);
+    // iOS idle suspension: after a stretch of inactivity the OS parks the audio
+    // session in 'suspended'/'interrupted' WITHOUT firing visibilitychange,
+    // focus, or pageshow (the tab stays visible — just silent). None of the
+    // listeners above catch it, so the page seemed to "lose sound until reload."
+    // The fix: the FIRST user gesture after that is the only moment iOS will
+    // honour a resume(). Listen for pointer/touch globally (capture + passive)
+    // and, only when the context is actually parked, run the full unlock cycle
+    // in-gesture. Cheap no-op when already running, so it won't interfere with
+    // normal taps.
+    const onGesture = ()=>{
+      try{
+        const ac = Tone.getContext().rawContext;
+        if(ac && ac.state !== 'running'){
+          try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
+          unlockAudio();
+        }
+      }catch(_){}
+    };
+    document.addEventListener('pointerdown', onGesture, {capture:true, passive:true});
+    document.addEventListener('touchstart', onGesture, {capture:true, passive:true});
     return ()=>{
       document.removeEventListener('visibilitychange',onHide);
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('focus', onFocus);
+      document.removeEventListener('pointerdown', onGesture, {capture:true});
+      document.removeEventListener('touchstart', onGesture, {capture:true});
     };
   },[unlockAudio]);
 
