@@ -15721,59 +15721,46 @@ Composition rules:
           )}
           {/* Color */}
           {loadedSource==='image' ? (() => {
-            // IMAGE mode: the APP picks the reading from the painting's colourfulness
-            // — colourful ⇒ Color (Harmony), near-monochrome ⇒ B/W. Only the chosen
-            // one is shown (not both), next to Custom. Tapping the app chip activates
-            // it and toggles a READ-ONLY preview of the 12 Harmony colours below
-            // (looks like the Custom palette but can't be edited). Custom enters the
-            // editable palette; tapping the app chip again returns to that reading.
-            const appKey = appModeRef.current==='bw' ? 'bw' : 'color';
-            const appLabel = appKey==='bw' ? t('bw') : t('colorLabel');
-            const appActive = mode!=='custom';
-            const customActive = mode==='custom';
+            // IMAGE mode: same four chips as every other mode (Harmony · Spectral ·
+            // B/W · Custom), but GATED by the app's auto-reading of the painting's
+            // colourfulness:
+            //   • colourful (vivid ≥5%) ⇒ Harmony + Spectral enabled, B/W disabled
+            //   • near-monochrome (<5%) ⇒ B/W enabled, Harmony + Spectral disabled
+            // Custom is always enabled. Default selection follows the app's pick
+            // (harmony for colour, bw for mono). Tapping the active chip toggles the
+            // read-only palette preview, exactly like the non-image modes.
+            const appColour = appModeRef.current!=='bw';   // app read the image as colourful
+            const isDisabled = (m)=> m==='bw' ? appColour : ((m==='harmony'||m==='spectral') ? !appColour : false);
             return (
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
-                <button onClick={()=>{
-                    if(mode==='custom'){
-                      // leave Custom → back to the app's reading (no preview)
-                      setCustomArmed(false); setShowColorPalette(false);
-                      if(canvasRef.current){canvasRef.current.style.opacity='0';}
-                      setTimeout(()=>{setMode(appModeRef.current||'harmony');if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-                    } else {
-                      // already on the app reading (Color or B/W) → toggle the read-only preview
-                      setShowColorPalette(v=>!v);
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+                {['harmony','spectral','bw','custom'].map(m=>{
+                  const isCustomTab = m==='custom';
+                  const armed = isCustomTab && mode==='custom' && customArmed;
+                  const dis = isDisabled(m);
+                  return (
+                  <button key={m} disabled={dis} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+                    if(dis) return;
+                    if(isCustomTab && mode==='custom'){
+                      if(!customArmed) setCustomArmed(true); else setShowPaletteEditor(true);
+                      return;
                     }
-                  }}
-                  title={t('appChoseColour')}
-                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(appActive)}}>{appLabel}</button>
-                <button onClick={()=>{
-                    // Custom chip cycle:
-                    //  1st tap (not custom yet) → activate Custom (label "Custom")
-                    //  2nd tap (custom, not armed) → arm it; label becomes "edit palette",
-                    //                                 editor stays CLOSED
-                    //  3rd tap (custom, armed) → open the palette editor
-                    // Closing the editor disarms (handled where the modal closes).
-                    // Leaving Custom entirely is done via the Color/B-W chip.
-                    if(!customActive){
-                      if(canvasRef.current){canvasRef.current.style.opacity='0';}
-                      setTimeout(()=>{setMode('custom');if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-                      setCustomArmed(false);
-                    } else if(!customArmed){
-                      setCustomArmed(true);
-                    } else {
-                      setShowPaletteEditor(true);
-                    }
-                  }}
-                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(customActive)}}>{customActive&&customArmed?('✎ '+t('editShort')):t('custom')}</button>
+                    if(m==='custom') setCustomArmed(false);
+                    else if(mode===m){ setShowColorPalette(v=>!v); return; }   // tap active chip → toggle preview
+                    else setShowColorPalette(false);
+                    if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                    setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:dis?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:dis?0.32:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(mode===m)}}>{armed?('✎ '+t('editShort')):t(m)}</button>
+                  );
+                })}
               </div>
-              {/* READ-ONLY preview of the 12 Harmony colours — shown when the Color
-                  reading is active and the user tapped to reveal it. Purely
-                  informational: the swatches can't be edited (Custom is for that). */}
-              {appActive && showColorPalette && (
+              {/* READ-ONLY palette preview of the active mode (harmony/spectral/bw) —
+                  shown when the user taps the active chip. Reflects the current mode
+                  so it doubles as visual feedback for the colour reading. */}
+              {showColorPalette && mode!=='custom' && (
                 <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:5,padding:'8px',borderRadius:10,background:'rgba(20,18,30,.4)',border:'1px solid rgba(242,238,232,.06)'}}>
                   {['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'].map((nm,pc)=>{
-                    const [r,g,b]=colorPreview(appKey==='bw'?'bw':'harmony',pc);
+                    const [r,g,b]=colorPreview(mode,pc);
                     return (
                       <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
                         <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />
