@@ -16656,7 +16656,15 @@ Composition rules:
                   <button onClick={()=>{
                     pendingWithSourceRef.current=includeSourceThumb;
                     setShowSizePicker(false);
-                    if(recBlob && recName) saveAudio(true, includeSourceThumb);
+                    if(recBlob && recName){
+                      // The live recording from Play/REC is already on hand — just
+                      // open the in-app audio row with it (optionally carrying the
+                      // original image). No offline re-render (that could hang or
+                      // fail silently in image mode).
+                      setAudioSideImage(includeSourceThumb ? (originalImgUrl||null) : null);
+                      setAudioRowOpen(true);
+                      setAudioShareMsg(null);
+                    }
                     else { setRecordIntent('audio'); startRecord(); }
                   }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     ⏺ {t('saveAudioLabel')||'Audio'}
