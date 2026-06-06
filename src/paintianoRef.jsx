@@ -10294,6 +10294,7 @@ export default function Paintiano() {
   const [recBlob, setRecBlob] = useState(null);   // recording output blob (share row)
   const [recName, setRecName] = useState('');      // recording output name
   const [audioSideImage, setAudioSideImage] = useState(null); // optional original image to share alongside audio
+  const [audioRowOpen, setAudioRowOpen] = useState(false); // explicitly show the audio share row (image mode: only after Audio pick, not after REC)
   // After a record finishes, recordIntent tells the onstop handler what the
   // user actually wanted: 'story' = share PNG+audio together, 'audio' = trigger
   // saveAudio() immediately, null = manual record (show share row, default).
@@ -10526,6 +10527,10 @@ export default function Paintiano() {
   // what the chord painting was generated from. Resets to off when the
   // picker re-opens so the user explicitly opts in each time.
   const [includeSourceThumb, setIncludeSourceThumb] = useState(false);
+  const includeSourceThumbRef = useRef(false);
+  useEffect(()=>{ includeSourceThumbRef.current=includeSourceThumb; },[includeSourceThumb]);
+  const pendingWithSourceRef = useRef(false);
+  const keepSetupDuringRecRef = useRef(false);
   useEffect(()=>{ if(!showSizePicker) setIncludeSourceThumb(false); },[showSizePicker]);
   // Inline "guide" modal: searchable how-to entries covering every feature.
   const [showGuide, setShowGuide] = useState(false);
@@ -12211,7 +12216,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setCurrentMood(null);setVarySource(null);setSongQ('');
     setImgMoodThumb(null);setMoodFromImg(false);
     setDisp(0);setErr('');setStamp(s=>s+1);
-    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);
+    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);setAudioRowOpen(false);
     // After clear in a creative mode, mark the canvas as draft-owned by that
     // mode again so subsequent presses commit to the right stash.
     if(composeMode) { composedModeRef.current=true; draftOwnerRef.current='compose'; }
@@ -12412,7 +12417,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setOriginalImgUrl(null);
     setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);setForceSetup(false);
     setComposeMode(false);setDemoMode(false);setLoopMode(false);loopModeRef.current=false;
-    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);
+    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);setAudioRowOpen(false);
   },[stopAll]);
 
   // Guard switching away from a CREATION canvas (Compose/MIC) — content the user
@@ -14266,6 +14271,7 @@ Composition rules:
       if(blob.size<2000){setErr(t('recTooShort'));setErrInfo(false);}
       else{setRecBlob(blob);setRecName(name);}
       setRecording(false);recorderRef.current=null;
+      keepSetupDuringRecRef.current=false;
       // Image-mode picker intents: react to what the user picked from SAVE,
       // or from the REC button. 'audio'/'story' come from inside the SAVE picker
       // and still fire their action. 'picker' is the plain REC button: instead of
@@ -14280,8 +14286,8 @@ Composition rules:
         // Defer so the recBlob/recName state writes settle before downstream
         // helpers (saveAudio reads them via closure).
         setTimeout(()=>{
-          if(intent==='audio') saveAudio();
-          else if(intent==='story') exportImage('story', true, blob, name);
+          if(intent==='audio') saveAudio(true, pendingWithSourceRef.current);
+          else if(intent==='story') exportImage('story', true, blob, name, pendingWithSourceRef.current);
           // 'picker' intentionally does nothing — REC→SAVE button handles it.
         }, 60);
       }
@@ -14693,6 +14699,7 @@ Composition rules:
       setRecName(finalName);
       setRecBlob(blob);
       setAudioSideImage(withImage ? (originalImgUrl||null) : null);
+      setAudioRowOpen(true);
       return;
     }
     const file=new File([blob],finalName,{type:blob.type});
@@ -14987,12 +14994,21 @@ Composition rules:
         const g=sctx.createRadialGradient(SW*0.5,SH*0.34,0,SW*0.5,SH*0.34,SH*0.7);
         g.addColorStop(0,'#0e0b16'); g.addColorStop(1,'#06060c');
         sctx.fillStyle=g; sctx.fillRect(0,0,SW,SH);
+        // In IMAGE mode the artwork to show IS the original picture, not the
+        // mosaic painting. Load the original and use it as the main image; skip
+        // the separate thumbnail (the original already fills the main slot).
+        const imageModeStory = (viewMode==='image' && originalImgUrl);
+        let mainImg = null;
+        if(imageModeStory){
+          try{
+            mainImg = await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('orig load')); im.src=originalImgUrl; });
+          }catch(_){ mainImg=null; }
+        }
         // Source thumbnail (when withSource) — drawn ABOVE the painting as a
-        // small framed image, mirroring how it appears in the canvas screen.
-        // Pre-load before computing painting Y so the painting starts BELOW
-        // the thumb's footprint instead of overlapping.
+        // small framed image. Suppressed in image-mode story (the original is
+        // already the main artwork there).
         let storyThumbImg = null;
-        const storySrcThumbUrl = withSource ? (originalImgUrl || imgMoodThumb) : null;
+        const storySrcThumbUrl = (!imageModeStory && withSource) ? (originalImgUrl || imgMoodThumb) : null;
         if(storySrcThumbUrl){
           try{
             storyThumbImg = await new Promise((res,rej)=>{
@@ -15008,8 +15024,11 @@ Composition rules:
         // everything stays inside the 1920-tall safe area.
         const margin=90;
         const availW=SW-margin*2;
-        const scale=availW/hi.width;
-        const dw=availW, dh=Math.round(hi.height*scale);
+        const _artImg = (imageModeStory && mainImg) ? mainImg : hi;
+        const _artW = _artImg.width || _artImg.naturalWidth;
+        const _artH = _artImg.height || _artImg.naturalHeight;
+        const scale=availW/_artW;
+        const dw=availW, dh=Math.round(_artH*scale);
         let thumbY = 0, thumbH = 0;
         const THUMB_SHORT = 220;       // shorter-side target for the thumb
         const THUMB_TOP_MARGIN = 130;  // breathing room from the top edge
@@ -15047,7 +15066,7 @@ Composition rules:
         const dx = margin;
         sctx.save();
         sctx.shadowColor='rgba(0,0,0,.55)'; sctx.shadowBlur=40; sctx.shadowOffsetY=12;
-        sctx.drawImage(hi, dx, dy, dw, dh);
+        sctx.drawImage(_artImg, dx, dy, dw, dh);
         sctx.restore();
         sctx.strokeStyle='rgba(201,168,76,.35)'; sctx.lineWidth=2;
         sctx.strokeRect(dx, dy, dw, dh);
@@ -15352,7 +15371,11 @@ Composition rules:
   // playback beginning) returns us to the canvas even if we were parked on the
   // setup panel via "← Setup".
   useEffect(()=>{
-    if(working||composeMode||micActive||playing){ setForceSetup(false); }
+    // Newly-started activity normally returns us to the canvas. EXCEPTION: an
+    // image-mode REC (started from the setup panel) should stay put — the user
+    // is recording in place and expects REC→SAVE without the view jumping to the
+    // default play screen. keepSetupDuringRecRef guards that case.
+    if((working||composeMode||micActive||playing) && !keepSetupDuringRecRef.current){ setForceSetup(false); }
   },[working,composeMode,micActive,playing]);
   // When we (re)enter the canvas view, the <canvas> element may have just
   // remounted blank (it's gated by isActiveView). Bump stamp so the paint
@@ -16619,6 +16642,7 @@ Composition rules:
                     </button>
                   )}
                   <button onClick={()=>{
+                    pendingWithSourceRef.current=includeSourceThumb;
                     setShowSizePicker(false);
                     if(recBlob && recName) exportImage('story', true, recBlob, recName, includeSourceThumb);
                     else { setRecordIntent('story'); startRecord(); }
@@ -16627,6 +16651,7 @@ Composition rules:
                     <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
                   </button>
                   <button onClick={()=>{
+                    pendingWithSourceRef.current=includeSourceThumb;
                     setShowSizePicker(false);
                     if(recBlob && recName) saveAudio(true, includeSourceThumb);
                     else { setRecordIntent('audio'); startRecord(); }
@@ -16903,7 +16928,7 @@ Composition rules:
           🔊 {t('listenHint')}
         </div>
       )}
-      {recBlob&&viewMode!=='image'&&(
+      {recBlob&&(viewMode!=='image'||audioRowOpen)&&(
         <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {(()=>{ const m=recName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:recName; const ext=m?m[2]:''; return (
@@ -16914,7 +16939,7 @@ Composition rules:
             ); })()}
             {audioShareMsg&&<span style={{fontSize:(.5*effScale)+'rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
             <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
-            <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);setAudioSideImage(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
+            <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);setAudioSideImage(null);setAudioRowOpen(false);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
           </div>
           {recBlob.type&&recBlob.type.includes('webm')&&(
             <div style={{fontSize:(.48*effScale)+'rem',color:'rgba(255,180,120,.55)',letterSpacing:'.04em'}}>webm/opus format · plays in most apps and browsers; some older Windows players may not open it</div>
@@ -17045,10 +17070,14 @@ Composition rules:
               // Fresh start: nuke stale recording artefacts so the UI is clean
               // and the recorder definitely captures from chord index 0, not
               // from wherever the previous playback paused.
-              setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null);
+              setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
               resumeFromRef.current = null;
               setHoldPaused(false);
               setDisp(0);
+              // Stay in the current view (e.g. the setup panel) while recording —
+              // don't let the "playback started → leave setup" effect yank us to
+              // the default play screen. Cleared when recording finishes.
+              keepSetupDuringRecRef.current = forceSetup;
               setRecordIntent('picker'); startRecord();
             }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
               {recording?t('recStop'):t('recArm')}
