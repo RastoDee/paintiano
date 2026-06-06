@@ -6915,13 +6915,42 @@ Composition rules:
 
 
       {showSizePicker && (()=>{
-        // Tint the export picker to match the active mode: compose = green,
-        // mic = pink, everything else (played pieces) keeps the default violet.
+        // Tint the export picker to match the active source/mode so the dialog
+        // visually reads as "this is the MIDI save / image save / etc". The
+        // colour family mirrors the source tile on the setup screen.
+        //   compose      → green
+        //   mic          → pink
+        //   loaded MIDI  → blue
+        //   loaded Audio → orange
+        //   loaded Score → purple
+        //   loaded Image → green (classic image source, not MFI)
+        //   MFI          → magenta
+        //   text Mood    → gold
+        //   fallback     → violet (covers compose-finished pieces with no
+        //                  loadedSource flag yet, etc.)
         const pk = composeMode
           ? { line:'rgba(78,203,141,.9)', dim:'rgba(120,200,160,.5)', border:'rgba(78,203,141,.45)', edge:'rgba(78,203,141,.35)' }
           : (micActive||micArmed)
           ? { line:'rgba(240,106,166,.9)', dim:'rgba(240,150,190,.5)', border:'rgba(240,106,166,.45)', edge:'rgba(240,106,166,.35)' }
+          : loadedSource==='midi'
+          ? { line:'rgba(91,156,246,.95)', dim:'rgba(140,180,255,.5)', border:'rgba(91,156,246,.5)', edge:'rgba(91,156,246,.4)' }
+          : loadedSource==='audio'
+          ? { line:'rgba(244,124,60,.95)', dim:'rgba(255,160,100,.5)', border:'rgba(244,124,60,.5)', edge:'rgba(244,124,60,.4)' }
+          : loadedSource==='score'
+          ? { line:'rgba(169,127,245,.95)', dim:'rgba(200,170,255,.5)', border:'rgba(169,127,245,.5)', edge:'rgba(169,127,245,.4)' }
+          : (loadedSource==='image' && !moodFromImg)
+          ? { line:'rgba(78,203,141,.95)', dim:'rgba(120,200,160,.5)', border:'rgba(78,203,141,.5)', edge:'rgba(78,203,141,.4)' }
+          : moodFromImg
+          ? { line:'rgba(228,178,255,.95)', dim:'rgba(225,175,255,.55)', border:'rgba(220,150,255,.55)', edge:'rgba(220,150,255,.4)' }
+          : currentMood
+          ? { line:'rgba(220,180,90,.95)', dim:'rgba(220,180,90,.55)', border:'rgba(201,168,76,.55)', edge:'rgba(201,168,76,.4)' }
           : { line:'rgba(200,160,255,.85)', dim:'rgba(180,160,255,.45)', border:'rgba(180,140,255,.4)', edge:'rgba(200,160,255,.35)' };
+        // Imported-media sources (MIDI / Audio / Score files) are themselves
+        // the canonical audio/score — exporting them back into the same format
+        // is redundant. For these, the picker shows ONLY visual exports
+        // (Story / Web / Print). Image/Mood/MFI/compose/mic keep the full
+        // option set because their pieces are newly composed.
+        const isImportedMedia = loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score';
         return (
         <div onClick={()=>setShowSizePicker(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export" style={{background:'#0a0a14',border:'1px solid '+pk.edge,borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
@@ -6990,7 +7019,7 @@ Composition rules:
                       <span style={{flex:1,textAlign:'left'}}>{t('includeSourceThumb')!=='includeSourceThumb' ? t('includeSourceThumb') : 'include source thumbnail'}</span>
                     </button>
                   )}
-                  {!immersive && (imgMoodThumb || originalImgUrl || loadedSource==='image' || moodFromImg || varySource) && (
+                  {!immersive && (imgMoodThumb || originalImgUrl || loadedSource==='image' || moodFromImg || varySource || isImportedMedia) && (
                     <button onClick={async ()=>{
                       setShowSizePicker(false);
                       // Paint mode: render audio offline and bundle with image.
@@ -7024,14 +7053,21 @@ Composition rules:
                     🖨 {t('sizePrint')}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
                   </button>
-                  <button onClick={()=>{ setShowSizePicker(false); saveAudio(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
-                    ⏺ {t('saveAudioLabel')||'Audio'}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
-                  </button>
-                  <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
-                    ♫ {t('scoreExport')}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
-                  </button>
+                  {/* Audio + Score export hidden for MIDI/Audio/Score sources
+                      (isImportedMedia) — exporting them back to the same file
+                      format the user just imported is redundant. */}
+                  {!isImportedMedia && (
+                    <button onClick={()=>{ setShowSizePicker(false); saveAudio(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                      ⏺ {t('saveAudioLabel')||'Audio'}
+                      <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
+                    </button>
+                  )}
+                  {!isImportedMedia && (
+                    <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                      ♫ {t('scoreExport')}
+                      <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
+                    </button>
+                  )}
                 </>
               )}
               <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*effScale)+'rem',marginTop:4}}>
