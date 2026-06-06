@@ -384,6 +384,13 @@ export default function Paintiano() {
   const audioOffsetRef = useRef(0);    // offset into the audio buffer
   const samplerRef   = useRef(null);
   const samplerOk    = useRef(false);
+  // True once we've attached the AudioContext 'statechange' listener so we
+  // don't register multiple handlers across repeated unlockAudio calls. The
+  // listener detects iOS audio-session steals (another tab grabbed output,
+  // typically a second Paintiano instance) and pre-emptively kills stuck
+  // oscillators so they don't burst out as a monotone piano blast when the
+  // session returns. See unlockAudio.
+  const audioStateListenerRef = useRef(false);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -1929,6 +1936,27 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{
       const ac=Tone.getContext().rawContext;
       if(!ac) return;
+      // Attach a one-time 'statechange' listener so we detect mid-session
+      // audio steals: on iOS, opening a second Paintiano tab/PWA grabs the
+      // global audio session and our AudioContext transitions to
+      // 'interrupted' WITHOUT firing visibilitychange (the tab stays visible,
+      // just silent). When that happens, any oscillators/buffers scheduled
+      // mid-flight get frozen — releasing them via sampler.releaseAll() now
+      // prevents the "monotone piano blast" that otherwise erupts when the
+      // session is returned to us. Idempotent: attached only on first
+      // unlockAudio call against a live context.
+      if(!audioStateListenerRef.current){
+        try{
+          ac.addEventListener('statechange', ()=>{
+            const s = ac.state;
+            if(s==='interrupted' || s==='suspended'){
+              try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
+              try{ if(audioElRef.current) audioElRef.current.pause(); }catch(_){}
+            }
+          });
+          audioStateListenerRef.current = true;
+        }catch(_){}
+      }
       if(ac.state==='running'){
         // Even when 'running', play a 1-sample silent buffer to nudge iOS's
         // audio session into the active output state. Cheap (one sample),
@@ -1944,7 +1972,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         }catch(_){}
         return;
       }
-      // Suspended — cancel pending sampler events, kick off resume.
+      // Non-running: state is 'suspended' (we went to background) OR
+      // 'interrupted' (iOS-only — another tab stole the audio session, most
+      // commonly a second Paintiano instance). Both paths share the same
+      // recovery: cancel any sampler events that got frozen mid-flight, then
+      // resume the context. Resume on 'interrupted' isn't always honoured by
+      // iOS without a fresh user gesture, but it's a no-op safe to attempt.
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       try { ac.resume(); } catch(_){}
       // Poll briefly for the context to actually transition to 'running' before
@@ -2023,12 +2056,50 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           setPlaying(false);setAnim(false);
         }
       }else{
-        try{Tone.start();}catch(_){}
+        // Visibility returned. While we were hidden — OR while another tab
+        // was foregrounded — the audio session may have been:
+        //   (a) suspended by iOS (normal background behaviour), OR
+        //   (b) stolen by another tab/PWA instance (most commonly a second
+        //       Paintiano tab) which puts our AudioContext into 'interrupted'
+        // Either way: oscillators/buffers that were sounding when the steal
+        // happened can stick around and burst out as a monotone piano blast
+        // the instant the context resumes. Kill them FIRST with releaseAll,
+        // then run the full unlock cycle (statechange listener, audioSession
+        // pin, ctx.resume, silent kick). Plain Tone.start() isn't enough on
+        // iOS — it doesn't clear stuck oscillators and may no-op without a
+        // user gesture, leaving the tab still silent until the next tap.
+        try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+        try{if(audioElRef.current && !audioElRef.current.paused) audioElRef.current.pause();}catch(_){}
+        unlockAudio();
       }
     };
     document.addEventListener('visibilitychange',onHide);
-    return()=>document.removeEventListener('visibilitychange',onHide);
-  },[]);
+    // pageshow fires on bfcache restores (iOS swipe-back from another page,
+    // tab switcher restoration) where visibilitychange may NOT fire. Same
+    // recovery path: kill anything stuck and re-unlock.
+    const onPageShow = (e)=>{
+      // persisted=true => restored from bfcache; persisted=false => normal
+      // load. We want recovery on both, since persisted bfcache returns are
+      // the exact case where Tone.context might still think it's running but
+      // the underlying iOS session has been re-routed away.
+      try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+      unlockAudio();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    // window focus is a third belt-and-braces signal: on iOS WKWebView
+    // (Chrome / standalone PWAs), switching between two Paintiano tabs can
+    // trigger focus/blur without a visibilitychange on the inactive tab.
+    const onFocus = ()=>{
+      try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+      unlockAudio();
+    };
+    window.addEventListener('focus', onFocus);
+    return ()=>{
+      document.removeEventListener('visibilitychange',onHide);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('focus', onFocus);
+    };
+  },[unlockAudio]);
 
   // Schedule a timeout and remember its id so stopAll can cancel it.
   // Uses a Set internally for O(1) delete on fire instead of O(n) filter.

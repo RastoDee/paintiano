@@ -15595,7 +15595,11 @@ Composition rules:
               // small source picture to stay over the canvas, so capture + restore it.
               const _keepThumb = moodFromImg ? imgMoodThumb : null;
               applyEvents(evts,varied.title+' ·');
-              if(_keepThumb){ setImgMoodThumb(_keepThumb); setMoodContext(true); }
+              // applyEvents now clears moodContext; restore it because a Vary of
+              // a mood piece is still a mood piece. Without this, the Vary/Morph
+              // row vanishes after the first tap (it's wrapped in moodContext &&).
+              setMoodContext(true);
+              if(_keepThumb){ setImgMoodThumb(_keepThumb); }
               const bytes=encodeMidi(evts,varied.tempo||100);
               setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
               setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
@@ -16540,6 +16544,9 @@ Composition rules:
                 const mn=t('moodNames')||{};
                 const morphTitleDisp=[(mn[currentMood]||currentMood), ...sel.map(m=>mn[m]||m)].join(' → ');
                 applyEvents(evts,morphTitleDisp);
+                // applyEvents now clears moodContext; restore it — morph blends
+                // mood pieces, so the result is still mood-sourced.
+                setMoodContext(true);
                 setMorphTargets(sel);
                 const bytes=encodeMidi(evts,morphed.tempo||100);
                 setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
