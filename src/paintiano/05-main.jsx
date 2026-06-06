@@ -4166,22 +4166,20 @@ Composition rules:
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
     // A/V sync compensation: audio you HEAR is delayed from the moment we
-    // schedule it by (1) Tone's scheduler look-ahead (~30ms after the fix in
-    // unlockAudio) plus (2) the hardware output latency (`outputLatency` on
-    // iOS built-in speakers is ~40-60ms, on Bluetooth headphones can reach
-    // 150-300ms). Canvas paints, by contrast, hit the screen in roughly one
-    // vsync (~16ms). To make the painting feel SYNCED with what the user
-    // hears, delay every visual update inside step() by that exact gap.
-    // Result: audio scheduled now → speakers in ~80ms; canvas painted now
-    // → screen in ~96ms → perceived simultaneity. Recomputed per Play in
-    // case the output device changes (e.g. user plugged in BT headphones
-    // mid-session).
-    let visualDelayMs = 0;
+    // schedule it by (1) Tone scheduler look-ahead (~30ms after unlockAudio's
+    // setter) plus (2) hardware output latency (`outputLatency` + `baseLatency`
+    // — typically 30-80ms on built-in speakers, 150-300ms on Bluetooth).
+    // Canvas paints, by contrast, hit the screen in roughly one vsync (~16ms).
+    // To make the painting feel SYNCED with what the user hears, delay every
+    // visual update inside step() by that exact gap. Recomputed per Play in
+    // case the user switched output devices mid-session.
+    let visualDelayMs;
     try{
       const _ac = Tone.getContext().rawContext;
-      const outLat = (_ac && typeof _ac.outputLatency === 'number') ? _ac.outputLatency : 0.05;
-      const look   = (Tone.getContext().lookAhead || 0);
-      visualDelayMs = Math.max(0, Math.round((outLat + look) * 1000) - 16);
+      const _outLat  = (_ac && typeof _ac.outputLatency === 'number') ? _ac.outputLatency : 0.03;
+      const _baseLat = (_ac && typeof _ac.baseLatency === 'number')   ? _ac.baseLatency   : 0;
+      const _look    = (Tone.getContext().lookAhead || 0);
+      visualDelayMs = Math.max(0, Math.round((_outLat + _baseLat + _look) * 1000) - 16);
     }catch(_){ visualDelayMs = 60; } // sane default if measurement fails
     // Play no longer auto-collapses the Color·Style strip or scrolls the page into a
     // framed position — the fullscreen button gives an immersive view on demand.
