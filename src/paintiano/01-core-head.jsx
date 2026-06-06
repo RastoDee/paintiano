@@ -182,12 +182,15 @@ const SAMPLE_IMGMOOD = { hash: 0, result: {"title":"A Dream In Crimson","tempo":
 const S_BASE = "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/salamander/";
 const S_URLS = {"A0":"A0.mp3","C1":"C1.mp3","D#1":"Ds1.mp3","F#1":"Fs1.mp3","A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3","A5":"A5.mp3","C6":"C6.mp3","D#6":"Ds6.mp3","F#6":"Fs6.mp3","A6":"A6.mp3","C7":"C7.mp3","D#7":"Ds7.mp3","F#7":"Fs7.mp3","A7":"A7.mp3","C8":"C8.mp3"};
 
-// Violin — alternative playback/export instrument (live tapping always stays
-// piano). Samples from nbrosowsky/tonejs-instruments; in that repo the violin
-// octave labels are correct (unlike piano/bass), so the note names map 1:1.
-// Tone.Sampler pitch-shifts to fill the gaps between these sampled pitches.
-const V_BASE = "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/violin/";
-const V_URLS = {"A3":"A3.mp3","A4":"A4.mp3","A5":"A5.mp3","A6":"A6.mp3","C4":"C4.mp3","C5":"C5.mp3","C6":"C6.mp3","C7":"C7.mp3","E4":"E4.mp3","E5":"E5.mp3","E6":"E6.mp3","G4":"G4.mp3","G5":"G5.mp3","G6":"G6.mp3"};
+// Harp — alternative playback/export instrument (live tapping always stays
+// piano). Samples: tonejs-instrument-harp-mp3 (VSO2 / Versilian Community),
+// served from the npm mirror on jsDelivr. Harp is plucked → percussive attack
+// with a natural decay, so a single sample per note repitches cleanly through
+// Tone.Sampler and stays realistic even on the generated image chords (unlike a
+// bowed instrument such as violin, which needs legato/vibrato to sound real).
+// Verified note list from the package: 23 samples spanning E1–D7.
+const V_BASE = "https://cdn.jsdelivr.net/npm/tonejs-instrument-harp-mp3@1.1.1/";
+const V_URLS = {"E1":"E1.mp3","G1":"G1.mp3","B1":"B1.mp3","D2":"D2.mp3","F2":"F2.mp3","A2":"A2.mp3","C3":"C3.mp3","E3":"E3.mp3","G3":"G3.mp3","B3":"B3.mp3","D4":"D4.mp3","F4":"F4.mp3","A4":"A4.mp3","C5":"C5.mp3","E5":"E5.mp3","G5":"G5.mp3","B5":"B5.mp3","D6":"D6.mp3","F6":"F6.mp3","A6":"A6.mp3","B6":"B6.mp3","D7":"D7.mp3","F7":"F7.mp3"};
 
 const m2f = m => 440 * Math.pow(2, (m - 69) / 12);
 

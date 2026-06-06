@@ -241,8 +241,8 @@ async function renderAudioOffline(events,opts){
   const speed=(opts&&opts.speed)||1;
   // Instrument selection for export — mirrors live playback. Defaults to piano.
   const _inst=(opts&&opts.instrument)||'piano';
-  const _base=_inst==='violin'?V_BASE:S_BASE;
-  const _urls=_inst==='violin'?V_URLS:S_URLS;
+  const _base=_inst==='harp'?V_BASE:S_BASE;
+  const _urls=_inst==='harp'?V_URLS:S_URLS;
   // Total duration: last note end + tail, scaled by playback speed.
   let endMs=0;
   events.forEach(ev=>ev.n.forEach(n=>{ const e=(ev.startMs||0)+(n.durMs||500); if(e>endMs)endMs=e; }));
