@@ -2222,6 +2222,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
         try{if(audioElRef.current && !audioElRef.current.paused) audioElRef.current.pause();}catch(_){}
         unlockAudio();
+        // Resuming the context is not enough on iOS: when you leave the tab/app
+        // while PAUSED and come back, the context returns to 'running' but the
+        // output route is dead (diagnostic showed running·SILENT). Rebuild the
+        // route so the next Resume is audible. Slight delay lets unlockAudio's
+        // resume settle first.
+        setTimeout(()=>{ try{ reviveAudioGraph(); }catch(_){} }, 120);
       }
     };
     document.addEventListener('visibilitychange',onHide);
@@ -2235,6 +2241,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // the underlying iOS session has been re-routed away.
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       unlockAudio();
+      setTimeout(()=>{ try{ reviveAudioGraph(); }catch(_){} }, 120);
     };
     window.addEventListener('pageshow', onPageShow);
     // window focus is a third belt-and-braces signal: on iOS WKWebView
@@ -2243,6 +2250,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const onFocus = ()=>{
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       unlockAudio();
+      setTimeout(()=>{ try{ reviveAudioGraph(); }catch(_){} }, 120);
     };
     window.addEventListener('focus', onFocus);
     // iOS idle suspension: after a stretch of inactivity the OS parks the audio
@@ -4467,6 +4475,11 @@ Composition rules:
     const now=Date.now();
     if(now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
+    // Preventive audio-route rebuild: if we've been idle/paused for a while (e.g.
+    // the user paused, switched apps, came back, and hit Resume), the context can
+    // be 'running' but the output route dead. Rebuilding here makes the very first
+    // note of the resumed playback audible. Throttled internally, so cheap.
+    try{ if(!lastAudioActivityRef.current || (Date.now()-lastAudioActivityRef.current)>3000) reviveAudioGraph(); }catch(_){}
     // Image AI-Compose mode: a FRESH Play (not a resume) that hasn't composed yet
     // hands off to aiComposeFromImage — it composes (or replays the cached piece)
     // and starts playback itself, with the original image kept on the canvas.
@@ -4688,7 +4701,7 @@ Composition rules:
       };
       step();
     }
-  },[busy,playNote,stopAll,advanceVariation,aiComposeFromImage]);
+  },[busy,playNote,stopAll,advanceVariation,aiComposeFromImage,reviveAudioGraph]);
 
 
   // Load the demo song (Für Elise) and start painting it live. Shared by the
