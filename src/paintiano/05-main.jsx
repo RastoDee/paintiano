@@ -6490,7 +6490,7 @@ Composition rules:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
         )}
         {!stripOpen && loadedSource==='image' && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {t('dir_'+imgDir)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):t('dir_'+imgDir)}</div>
         )}
         {stripOpen && (
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
@@ -6617,9 +6617,12 @@ Composition rules:
                 <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'none'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
                 <button onClick={()=>{ if(busy||working) return; if(!isPro){ setPaywallReason('settings'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('compose'); } }} disabled={busy||working} title={!isPro?(t('proBadge')||'Pro')+' · '+(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)',boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'none'}}>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')+(!isPro?' 🔒':'')}</button>
               </div>
-              {imgPlayMode==='compose' ? (
-                <div style={{padding:'10px 12px',borderRadius:10,background:'rgba(220,150,255,.06)',border:'1px solid rgba(220,150,255,.18)',fontSize:(.54*effScale)+'rem',lineHeight:1.5,color:'rgba(228,200,255,.8)',fontStyle:'italic'}}>{t('imgComposeBlurb')!=='imgComposeBlurb'?t('imgComposeBlurb'):'AI composes a full piece from this image — its colours, energy and mood. Press Play.'}</div>
-              ) : (<>
+              {/* Divider between the read-mode toggle and the colour/scan controls */}
+              <div style={{height:1,margin:'2px 2px 0',background:'linear-gradient(90deg,transparent,rgba(242,238,232,.12),transparent)'}} />
+              {/* COLOUR chips — shown in BOTH modes: in Scan they map colour→pitch
+                  for the readout; in AI Compose they still set the palette the AI
+                  draws the piece's harmony from. Only the SCAN DIRECTION below is
+                  scan-specific (compose ignores reading order), so that's gated. */}
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['harmony','spectral','bw','custom'].map(m=>{
                   const isCustomTab = m==='custom';
@@ -6657,7 +6660,9 @@ Composition rules:
                   })}
                 </div>
               )}
-              {/* SCAN direction — the order pixels are read into music (image only) */}
+              {/* SCAN direction — scan-only (compose ignores reading order). In
+                  AI Compose, show the short explainer here instead. */}
+              {imgPlayMode==='scan' ? (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('dirLabel')}</div>
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['lr','vert','spiralIn','spiralOut'].map(d=>{
@@ -6669,7 +6674,9 @@ Composition rules:
                   );
                 })}
               </div>
-              </>)}
+              </>) : (
+                <div style={{padding:'10px 12px',marginTop:2,borderRadius:10,background:'rgba(220,150,255,.06)',border:'1px solid rgba(220,150,255,.18)',fontSize:(.54*effScale)+'rem',lineHeight:1.5,color:'rgba(228,200,255,.8)',fontStyle:'italic'}}>{t('imgComposeBlurb')!=='imgComposeBlurb'?t('imgComposeBlurb'):'AI composes a full piece from this image — its colours, energy and mood. Press Play.'}</div>
+              )}
             </div>
             );
           })() : (<>

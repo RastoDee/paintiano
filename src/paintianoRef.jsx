@@ -6068,7 +6068,7 @@ const LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_image:'pick an image — its colors play as music; flip on atmosphere to match its mood', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_image:'pick an image — Scan plays its colours as music, or AI Compose (Pro) writes a full piece from it; flip on atmosphere to match its mood', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', imgScan:'scan', imgScanHint:'read the picture as a score', imgCompose:'AI compose', imgComposeBlurb:'AI composes a full piece from this image — its colours, energy and mood. Press Play.', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
     harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'type any mood — e.g. furious', moodHowFeel:'how do you feel?', storyCaption:{mood:'this is what {mood} sounds like ✦ paintiano.app',moodFromImg:'the mood of this image, painted ✦ paintiano.app',compose:'made this on the piano · turned it into a painting ✦ paintiano.app',micVoice:'sang into the mic, got back a painting ✦ paintiano.app',micMusic:'caught a song in the room, painted it ✦ paintiano.app',midi:'music turned into colour ✦ paintiano.app',audio:'heard it, painted it ✦ paintiano.app',score:'sheet music, turned into a painting ✦ paintiano.app',image:'what this image sounds like ✦ paintiano.app',default:'music turns into paintings ✦ paintiano.app'}, storyImageHint:'painting + audio · for IG / TikTok', storyImageHintNoAudio:'painting · for IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · save to files', scoreExportHint:'MusicXML · for MuseScore', includeSourceThumb:'include source thumbnail', includeSourceImage:'include source original image', saveAudioHintImg:'image + audio · save to files', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -6170,7 +6170,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_image:'wähle ein Bild — seine Farben spielen als Musik; mit Atmosphäre passt sich alles der Stimmung an', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_image:'wähle ein Bild — Scan spielt seine Farben als Musik, oder KI komponiert (Pro) ein ganzes Stück daraus; mit Atmosphäre trifft es die Stimmung', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', imgScan:'scan', imgScanHint:'das Bild als Partitur lesen', imgCompose:'KI komponieren', imgComposeBlurb:'Die KI komponiert ein ganzes Stück aus diesem Bild — Farben, Energie, Stimmung. Drück Play.', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
     harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'stimmung eingeben — z.B. wütend', moodHowFeel:'wie fühlst du dich?', storyCaption:{mood:'so klingt {mood} ✦ paintiano.app',moodFromImg:'die Stimmung dieses Bildes, gemalt ✦ paintiano.app',compose:'am Klavier gespielt · in ein Bild verwandelt ✦ paintiano.app',micVoice:'ins Mikro gesungen, ein Bild zurückbekommen ✦ paintiano.app',micMusic:'einen Song im Raum eingefangen, gemalt ✦ paintiano.app',midi:'Musik in Farbe verwandelt ✦ paintiano.app',audio:'gehört, gemalt ✦ paintiano.app',score:'Noten, in ein Bild verwandelt ✦ paintiano.app',image:'wie dieses Bild klingt ✦ paintiano.app',default:'Musik wird zu Bildern ✦ paintiano.app'}, storyImageHint:'Bild + Audio · für IG / TikTok', storyImageHintNoAudio:'Bild · für IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · in Dateien speichern', scoreExportHint:'MusicXML · für MuseScore', includeSourceThumb:'Quellminiatur einfügen', includeSourceImage:'Originalbild beifügen', saveAudioHintImg:'Bild + Audio · in Dateien speichern', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -6272,7 +6272,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_image:'choisis une image — ses couleurs jouent comme une mélodie ; active l’atmosphère pour son humeur', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_image:'choisis une image — Scan joue ses couleurs en musique, ou Composer IA (Pro) en écrit un morceau entier ; active l’atmosphère pour son ambiance', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', imgScan:'scan', imgScanHint:'lire l\'image comme une partition', imgCompose:'composer IA', imgComposeBlurb:'L\'IA compose un morceau entier à partir de cette image — couleurs, énergie, ambiance. Appuie sur Play.', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
     harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'tape une humeur — ex. furieux', moodHowFeel:'comment tu te sens ?', storyCaption:{mood:'voilà à quoi {mood} ressemble ✦ paintiano.app',moodFromImg:'l\'humeur de cette image, peinte ✦ paintiano.app',compose:'joué au piano · transformé en peinture ✦ paintiano.app',micVoice:'chanté au micro, récupéré une peinture ✦ paintiano.app',micMusic:'attrapé un son dans la pièce, peint ✦ paintiano.app',midi:'musique transformée en couleur ✦ paintiano.app',audio:'entendu, peint ✦ paintiano.app',score:'partition, devenue peinture ✦ paintiano.app',image:'à quoi cette image ressemble en son ✦ paintiano.app',default:'la musique devient peinture ✦ paintiano.app'}, storyImageHint:'image + audio · pour IG / TikTok', storyImageHintNoAudio:'image · pour IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · sauver dans fichiers', scoreExportHint:'MusicXML · pour MuseScore', includeSourceThumb:'inclure la miniature source', includeSourceImage:'inclure l\'image source', saveAudioHintImg:'image + audio · sauver dans fichiers', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -6374,7 +6374,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_image:'elige una imagen — sus colores suenan como música; activa atmósfera para captar su ánimo', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_image:'elige una imagen — Escanear suena sus colores como música, o Componer IA (Pro) escribe una pieza entera; activa atmósfera para su ánimo', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', imgScan:'escanear', imgScanHint:'leer la imagen como partitura', imgCompose:'componer IA', imgComposeBlurb:'La IA compone una pieza completa a partir de esta imagen — colores, energía y ánimo. Pulsa Play.', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
     harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'escribe un estado — p.ej. furioso', moodHowFeel:'¿cómo te sientes?', storyCaption:{mood:'así suena {mood} ✦ paintiano.app',moodFromImg:'el estado de esta imagen, pintado ✦ paintiano.app',compose:'tocado al piano · convertido en pintura ✦ paintiano.app',micVoice:'canté al micro, me devolvió una pintura ✦ paintiano.app',micMusic:'cogí un sonido en la sala, lo pinté ✦ paintiano.app',midi:'música convertida en color ✦ paintiano.app',audio:'lo escuché, lo pinté ✦ paintiano.app',score:'partitura, convertida en pintura ✦ paintiano.app',image:'cómo suena esta imagen ✦ paintiano.app',default:'la música se vuelve pintura ✦ paintiano.app'}, storyImageHint:'imagen + audio · para IG / TikTok', storyImageHintNoAudio:'imagen · para IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · guardar en archivos', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura origen', includeSourceImage:'incluir imagen original', saveAudioHintImg:'imagen + audio · guardar en archivos', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -6476,7 +6476,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_image:'vyber obrázok — jeho farby hrajú ako hudba; zapni atmosféru a vystihne aj náladu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, broz, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_image:'vyber obrázok — Sken zahrá jeho farby ako hudbu, alebo AI skladba (Pro) z neho zloží celú skladbu; zapni atmosféru a vystihne aj náladu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, broz, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', imgScan:'sken', imgScanHint:'čítať obraz ako partitúru', imgCompose:'AI skladba', imgComposeBlurb:'AI zloží celú skladbu z tohto obrazu — z jeho farieb, energie a nálady. Stlač Play.', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
     harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'napíš náladu — napr. zúrivá', moodHowFeel:'ako sa cítiš?', storyCaption:{mood:'takto znie {mood} ✦ paintiano.app',moodFromImg:'nálada tohto obrazu, namaľovaná ✦ paintiano.app',compose:'zahral som si · vznikol obraz ✦ paintiano.app',micVoice:'spieval do mikrofónu, vrátilo to obraz ✦ paintiano.app',micMusic:'zachytil zvuk v miestnosti, namaľoval ✦ paintiano.app',midi:'hudba premenená na farbu ✦ paintiano.app',audio:'vypočul, namaľoval ✦ paintiano.app',score:'noty premenené na obraz ✦ paintiano.app',image:'tak znie tento obraz ✦ paintiano.app',default:'hudba sa stáva maľbou ✦ paintiano.app'}, storyImageHint:'obraz + audio · pre IG / TikTok', storyImageHintNoAudio:'obraz · pre IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · uložiť do súborov', scoreExportHint:'MusicXML · pre MuseScore', includeSourceThumb:'pridať zdrojový náhľad', includeSourceImage:'pridať pôvodný obrázok', saveAudioHintImg:'obrázok + audio · uložiť do súborov', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -6578,7 +6578,7 @@ const I18N = {
   },
   zh:{
     concept:'理念', demo:'演示', guide:'指南',
-    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', notesStyle:'音符', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_image:'选一张图片 — 颜色当作音乐演奏；开启氛围模式还能捕捉它的情绪', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
+    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', notesStyle:'音符', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_image:'选一张图片 — 扫描把颜色当作音乐演奏，或 AI 作曲(Pro)从中谱写一首完整曲子；开启氛围模式还能捕捉它的情绪', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', imgScan:'扫描', imgScanHint:'把图像当作乐谱来读', imgCompose:'AI 作曲', imgComposeBlurb:'AI 从这幅图像谱写一首完整曲子 — 来自它的色彩、能量与情绪。按 Play。', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
     harmony:'和声', spectral:'光谱', custom:'自定义', bw:'黑白',
     editPalette:'编辑调色板', editShort:'编辑', paletteEditorTitle:'你的调色板', resetPalette:'全部清除', defaultPalette:'默认',
     selectMood:'✦ 选择情绪…', moodPlaceholder:'输入任意情绪 — 例如 愤怒', moodHowFeel:'你现在感觉如何?', storyCaption:{mood:'这就是 {mood} 的声音 ✦ paintiano.app',moodFromImg:'这幅图像的情绪,画了出来 ✦ paintiano.app',compose:'弹了钢琴 · 变成了一幅画 ✦ paintiano.app',micVoice:'对着麦克风唱,得到一幅画 ✦ paintiano.app',micMusic:'抓住了房间里的一段声音,画了下来 ✦ paintiano.app',midi:'音乐变成了颜色 ✦ paintiano.app',audio:'听见了,画了下来 ✦ paintiano.app',score:'乐谱,变成了画 ✦ paintiano.app',image:'这张图听起来是这样 ✦ paintiano.app',default:'音乐变成画 ✦ paintiano.app'}, storyImageHint:'图像 + 音频 · 给 IG / TikTok', storyImageHintNoAudio:'图像 · 给 IG / TikTok', saveAudioLabel:'音频', saveAudioHint:'mp3 · 保存到文件', scoreExportHint:'MusicXML · 给 MuseScore', includeSourceThumb:'附加来源缩略图', includeSourceImage:'附加原始图像', saveAudioHintImg:'图像 + 音频 · 保存到文件', moodGo:'开始', morph:'✦ 变形', vary:'✦ 变奏',
@@ -6686,7 +6686,7 @@ const I18N = {
   },
   zhTW:{
     concept:'理念', demo:'示範', guide:'指南',
-    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', notesStyle:'音符', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_image:'選一張圖片 — 顏色當作音樂演奏；開啟氛圍模式還能捕捉它的情緒', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
+    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', notesStyle:'音符', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_image:'選一張圖片 — 掃描把顏色當作音樂演奏，或 AI 作曲(Pro)從中譜寫一首完整曲子；開啟氛圍模式還能捕捉它的情緒', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', imgScan:'掃描', imgScanHint:'把圖像當作樂譜來讀', imgCompose:'AI 作曲', imgComposeBlurb:'AI 從這幅圖像譜寫一首完整曲子 — 來自它的色彩、能量與情緒。按 Play。', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
     harmony:'和聲', spectral:'光譜', custom:'自訂', bw:'黑白',
     editPalette:'編輯調色盤', editShort:'編輯', paletteEditorTitle:'你的調色盤', resetPalette:'全部清除', defaultPalette:'預設',
     selectMood:'✦ 選擇情緒…', moodPlaceholder:'輸入任意情緒 — 例如 憤怒', moodHowFeel:'你現在感覺如何?', storyCaption:{mood:'這就是 {mood} 的聲音 ✦ paintiano.app',moodFromImg:'這幅圖像的情緒,畫了出來 ✦ paintiano.app',compose:'彈了鋼琴 · 變成了一幅畫 ✦ paintiano.app',micVoice:'對著麥克風唱,得到一幅畫 ✦ paintiano.app',micMusic:'抓住了房間裡的一段聲音,畫了下來 ✦ paintiano.app',midi:'音樂變成了顏色 ✦ paintiano.app',audio:'聽見了,畫了下來 ✦ paintiano.app',score:'樂譜,變成了畫 ✦ paintiano.app',image:'這張圖聽起來是這樣 ✦ paintiano.app',default:'音樂變成畫 ✦ paintiano.app'}, storyImageHint:'圖像 + 音訊 · 給 IG / TikTok', storyImageHintNoAudio:'圖像 · 給 IG / TikTok', saveAudioLabel:'音訊', saveAudioHint:'mp3 · 儲存到檔案', scoreExportHint:'MusicXML · 給 MuseScore', includeSourceThumb:'附加來源縮圖', includeSourceImage:'附加原始圖像', saveAudioHintImg:'圖像 + 音訊 · 儲存到檔案', moodGo:'開始', morph:'✦ 變形', vary:'✦ 變奏',
@@ -6782,7 +6782,7 @@ const I18N = {
   },
   PT:{
     concept:'conceito', demo:'demo', guide:'guia',
-    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_image:'escolha uma imagem — suas cores soam como música; ative atmosfera para captar o humor', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atmosfera', atmoDetect:'detectar humor', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
+    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_image:'escolha uma imagem — Digitalizar toca as cores como música, ou Compor IA (Pro) escreve uma peça inteira; ative atmosfera para o humor', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atmosfera', atmoDetect:'detectar humor', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', imgScan:'digitalizar', imgScanHint:'ler a imagem como partitura', imgCompose:'compor IA', imgComposeBlurb:'A IA compõe uma peça inteira a partir desta imagem — cores, energia e humor. Carrega em Play.', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
     harmony:'harmonia', spectral:'espectral', custom:'personalizada', bw:'p&b',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'SUA PALETA', resetPalette:'limpar tudo', defaultPalette:'padrão',
     selectMood:'✦ escolha um humor…', moodPlaceholder:'digite qualquer humor — ex. furioso', moodHowFeel:'como te sentes?', storyCaption:{mood:'é assim que {mood} soa ✦ paintiano.app',moodFromImg:'o humor desta imagem, pintado ✦ paintiano.app',compose:'toquei piano · virou pintura ✦ paintiano.app',micVoice:'cantei para o microfone, voltou uma pintura ✦ paintiano.app',micMusic:'apanhei um som na sala, pintei ✦ paintiano.app',midi:'música transformada em cor ✦ paintiano.app',audio:'ouvi, pintei ✦ paintiano.app',score:'partitura, virou pintura ✦ paintiano.app',image:'como esta imagem soa ✦ paintiano.app',default:'a música torna-se pintura ✦ paintiano.app'}, storyImageHint:'imagem + áudio · para IG / TikTok', storyImageHintNoAudio:'imagem · para IG / TikTok', saveAudioLabel:'Áudio', saveAudioHint:'mp3 · guardar em ficheiros', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura de origem', includeSourceImage:'incluir imagem original', saveAudioHintImg:'imagem + áudio · guardar em ficheiros', moodGo:'iniciar', morph:'✦ morph', vary:'✦ variar',
@@ -7635,6 +7635,7 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Drop in a painting — hear what it sounds like</h3>
     <p style={{margin:'0 0 12px'}}>Upload any image — a Van Gogh, your grandmother's portrait, a screenshot of a sunset, an AI-generated thing. Paintiano reads it as a score, left-to-right, top-to-bottom. The piece's length scales with the image's energy (~1½–2¾ min).</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> mode is yours: only colours close to your 12-swatch palette make sound. Filter Guernica through tropical pinks, see what survives.</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Two ways to play.</strong> <strong>Scan</strong> reads the picture as a score, left-to-right. <strong style={{color:'rgba(228,178,255,.95)'}}>AI Compose</strong> (Pro) does something different: it takes the image\'s palette, energy and mood and writes a whole new piece inspired by it — the painting stays on screen while its music plays.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Save · Record — take it with you</h3>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> exports your painting as a high-resolution PNG. <strong>Story</strong> (9:16) for IG/TikTok, <strong>Web/Social</strong> for the feed, or <strong>A1 · 300 DPI</strong> — properly print-ready, gallery-grade. Frame it. Hang it. Share it. It's yours.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Record</strong> captures the music while a painting plays back, as a shareable audio file. Plus <strong>♫ Score</strong> turns the painting's notes into a MusicXML you can open in MuseScore or Sibelius — actual sheet music, from a picture.</p>
@@ -7662,6 +7663,7 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Lad ein Bild hoch — hör, wie es klingt</h3>
     <p style={{margin:'0 0 12px'}}>Jedes Bild — ein Van Gogh, das Porträt deiner Großmutter, ein Screenshot vom Sonnenuntergang, ein KI-Bild. Paintiano liest es als Partitur, links nach rechts, oben nach unten. Die Stücklänge skaliert mit der Bildenergie (~1½–2¾ Min.).</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> ist deins: nur Farben nahe deiner 12-Feld-Palette klingen. Filtere Guernica durch tropisches Pink — was überlebt?</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Zwei Spielarten.</strong> <strong>Scan</strong> liest das Bild als Partitur. <strong style={{color:'rgba(228,178,255,.95)'}}>KI Komponieren</strong> (Pro) macht etwas anderes: Es nimmt Palette, Energie und Stimmung des Bildes und schreibt ein ganz neues Stück — das Gemälde bleibt sichtbar, während seine Musik spielt.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Speichern · Aufnehmen — nimm es mit</h3>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Speichern</strong> exportiert dein Bild als hochauflösendes PNG. <strong>Story</strong> (9:16) für IG/TikTok, <strong>Web/Social</strong> für den Feed, oder <strong>A1 · 300 DPI</strong> — druckfertig, Galerie-Qualität. Rahmen. Aufhängen. Teilen. Es ist deins.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Aufnehmen</strong> fängt die Musik ein, während ein Bild abspielt — als teilbare Audio-Datei. Plus <strong>♫ Noten</strong> verwandelt die Noten des Bildes in MusicXML, das du in MuseScore oder Sibelius öffnen kannst — echte Notenblätter aus einem Bild.</p>
@@ -7689,6 +7691,7 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Charge une image — écoute à quoi elle ressemble</h3>
     <p style={{margin:'0 0 12px'}}>N'importe quelle image — un Van Gogh, le portrait de ta grand-mère, un screenshot de coucher de soleil, un truc généré par IA. Paintiano la lit en partition, de gauche à droite, de haut en bas. La durée scale avec l'énergie de l'image (~1½–2¾ min).</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong>, c'est toi : seules les couleurs proches de tes 12 cases sonnent. Filtre Guernica à travers du rose tropical — qu'est-ce qui survit ?</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Deux façons de jouer.</strong> <strong>Scan</strong> lit l'image comme une partition. <strong style={{color:'rgba(228,178,255,.95)'}}>Composer IA</strong> (Pro) fait autre chose : il prend la palette, l'énergie et l'ambiance de l'image et écrit un morceau entièrement nouveau — la peinture reste à l'écran pendant que sa musique joue.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Enregistrer · Capturer — prends-le avec toi</h3>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Enregistrer</strong> exporte ta peinture en PNG haute résolution. <strong>Story</strong> (9:16) pour IG/TikTok, <strong>Web/Social</strong> pour le feed, ou <strong>A1 · 300 DPI</strong> — prêt à imprimer, qualité galerie. Encadre. Accroche. Partage. C'est à toi.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Enregistrer</strong> capture la musique pendant qu'une peinture joue, en fichier audio partageable. Et <strong>♫ Partition</strong> convertit les notes de la peinture en MusicXML ouvrable dans MuseScore ou Sibelius — de vraies partitions, à partir d'une image.</p>
@@ -7716,6 +7719,7 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Carga una imagen — escucha cómo suena</h3>
     <p style={{margin:'0 0 12px'}}>Cualquier imagen — un Van Gogh, el retrato de tu abuela, un screenshot de un atardecer, algo generado con IA. Paintiano la lee como partitura, de izquierda a derecha, de arriba abajo. La duración escala con la energía de la imagen (~1½–2¾ min).</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> es tuyo: solo suenan los colores cerca de tus 12 casillas. Filtra Guernica por rosas tropicales — ¿qué sobrevive?</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Dos formas de tocar.</strong> <strong>Escanear</strong> lee la imagen como partitura. <strong style={{color:'rgba(228,178,255,.95)'}}>Componer IA</strong> (Pro) hace algo distinto: toma la paleta, la energía y el ánimo de la imagen y escribe una pieza nueva — la pintura permanece en pantalla mientras suena su música.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Guardar · Grabar — llévatelo contigo</h3>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta tu pintura como PNG de alta resolución. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para el feed, o <strong>A1 · 300 DPI</strong> — listo para imprimir, calidad galería. Enmarca. Cuelga. Comparte. Es tuyo.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Grabar</strong> captura la música mientras una pintura suena, como archivo audio compartible. Y <strong>♫ Partitura</strong> convierte las notas de la pintura en MusicXML abrible en MuseScore o Sibelius — partituras reales, desde una imagen.</p>
@@ -7743,6 +7747,7 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Hoď tam obraz — vypočuj, ako znie</h3>
     <p style={{margin:'0 0 12px'}}>Hocijaký obraz — Van Gogh, portrét tvojej babičky, screenshot západu slnka, niečo z AI. Paintiano ho prečíta ako partitúru, zľava doprava, zhora dolu. Dĺžka skladby škáluje s energiou obrazu (~1½–2¾ min).</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> je tvoja: znejú len farby blízke tvojim 12 políčkam. Prefiltruj Guernicu cez tropické ružové — čo prežije?</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Dva spôsoby prehrávania.</strong> <strong>Sken</strong> číta obraz ako partitúru. <strong style={{color:'rgba(228,178,255,.95)'}}>AI skladba</strong> (Pro) robí niečo iné: vezme paletu, energiu a náladu obrazu a zloží úplne novú skladbu — obraz ostáva na obrazovke, kým hrá jeho hudba.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Uložiť · Nahrať — zober si to so sebou</h3>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Uložiť</strong> exportuje tvoju maľbu ako PNG vo vysokom rozlíšení. <strong>Story</strong> (9:16) pre IG/TikTok, <strong>Web/Social</strong> pre feed, alebo <strong>A1 · 300 DPI</strong> — pripravené na tlač, galerijná kvalita. Zarámuj. Zaves. Zdieľaj. Je tvoja.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Nahrať</strong> zachytí hudbu počas prehrávania maľby ako zdieľateľný audio súbor. Plus <strong>♫ Noty</strong> premení noty maľby na MusicXML, otvoriteľné v MuseScore alebo Sibelius — naozajstné noty, z obrázka.</p>
@@ -7770,6 +7775,7 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>Solta uma pintura — ouve como soa</h3>
     <p style={{margin:'0 0 12px'}}>Carrega qualquer imagem — um Van Gogh, o retrato da tua avó, um screenshot de pôr-do-sol, uma coisa gerada por IA. Paintiano lê-a como partitura, da esquerda para a direita, de cima para baixo. A duração escala com a energia da imagem (~1½–2¾ min).</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> é teu: só as cores próximas da tua paleta de 12 amostras soam. Filtra Guernica por rosas tropicais, vê o que sobrevive.</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Duas formas de tocar.</strong> <strong>Digitalizar</strong> lê a imagem como partitura. <strong style={{color:'rgba(228,178,255,.95)'}}>Compor IA</strong> (Pro) faz algo diferente: pega na paleta, energia e humor da imagem e escreve uma peça nova — a pintura fica no ecrã enquanto a sua música toca.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Guardar · Gravar — leva-o contigo</h3>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta a tua pintura como PNG de alta resolução. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para o feed, ou <strong>A1 · 300 DPI</strong> — pronto para impressão, qualidade galeria. Emoldura. Pendura. Partilha. É teu.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Gravar</strong> captura a música enquanto uma pintura toca, num ficheiro áudio partilhável. E <strong>♫ Partitura</strong> transforma as notas da pintura em MusicXML que abres no MuseScore ou Sibelius — partituras reais, a partir de uma imagem.</p>
@@ -7797,6 +7803,7 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>丢入一幅画 — 听它的声音</h3>
     <p style={{margin:'0 0 12px'}}>上传任何图像 — 一幅梵高、你奶奶的肖像、一张日落截图、一个 AI 生成的东西。Paintiano 把它当作乐谱来读,从左到右、从上到下。乐曲长度随图像能量缩放(约 1½–2¾ 分钟)。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> 模式属于你:只有接近你 12 色调色板的颜色才会发声。把《格尔尼卡》过滤通过热带粉,看看什么留下来。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>两种播放方式。</strong><strong>扫描</strong>把图像当作乐谱来读。<strong style={{color:'rgba(228,178,255,.95)'}}>AI 作曲</strong>(Pro)则不同:它取图像的色板、能量与情绪,谱写一首全新的曲子 — 播放时画作留在屏幕上。</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ 保存 · 录音 — 带走它</h3>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 保存</strong> 把你的画导出为高分辨率 PNG。<strong>Story</strong>(9:16)给 IG/TikTok,<strong>Web/Social</strong> 给 Feed,或者 <strong>A1 · 300 DPI</strong> — 真正可印,画廊级。装裱。挂上。分享。是你的。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ 录音</strong> 在画回放时捕捉音乐,作为可分享的音频文件。再加 <strong>♫ 乐谱</strong> 把画的音符变成 MusicXML,你可以在 MuseScore 或 Sibelius 里打开 — 真正的乐谱,从一张图里。</p>
@@ -7824,6 +7831,7 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>丟入一幅畫 — 聽它的聲音</h3>
     <p style={{margin:'0 0 12px'}}>上傳任何圖像 — 一幅梵谷、你奶奶的肖像、一張日落截圖、一個 AI 生成的東西。Paintiano 把它當作樂譜來讀,從左到右、從上到下。樂曲長度隨圖像能量縮放(約 1½–2¾ 分鐘)。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> 模式屬於你:只有接近你 12 色調色盤的顏色才會發聲。把《格爾尼卡》過濾通過熱帶粉,看看什麼留下來。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>兩種播放方式。</strong><strong>掃描</strong>把圖像當作樂譜來讀。<strong style={{color:'rgba(228,178,255,.95)'}}>AI 作曲</strong>(Pro)則不同:它取圖像的色盤、能量與情緒,譜寫一首全新的曲子 — 播放時畫作留在螢幕上。</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ 儲存 · 錄音 — 帶走它</h3>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 儲存</strong> 把你的畫匯出為高解析度 PNG。<strong>Story</strong>(9:16)給 IG/TikTok,<strong>Web/Social</strong> 給 Feed,或者 <strong>A1 · 300 DPI</strong> — 真正可印,畫廊級。裝裱。掛上。分享。是你的。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ 錄音</strong> 在畫回放時擷取音樂,作為可分享的音訊檔。再加 <strong>♫ 樂譜</strong> 把畫的音符變成 MusicXML,你可以在 MuseScore 或 Sibelius 裡開啟 — 真正的樂譜,從一張圖裡。</p>
@@ -7894,7 +7902,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Score — MusicXML in, painting out`, keywords:`score musicxml mxl musescore finale dorico sheet music`,
    body:`Upload exact sheet music from MuseScore, Finale or Dorico (.musicxml / .xml / .mxl). Pitches, durations, dynamics, chords — all come through exact. Most accurate input there is.`},
   {id:'image', title:`◫ Image — drop in a painting, hear it`, keywords:`image painting picture transcribe paint photo colour color bw custom palette guernica chagall`,
-   body:`Upload any image. Paintiano reads it as a score — left to right, top to bottom. Length scales with the image\'s energy (~1½–2¾ min). ◆ The app picks the reading from how colourful the work is. Colourful → Harmony or Spectral (hue=pitch, lightness=octave, vividness=loudness). Near-monochrome (Guernica, ink, sepia) → B/W (lightness alone drives pitch). Tap the active chip to preview colours. ◆ Custom is yours: filters the image through your palette — only colours close to your 12 swatches sound, the rest fall silent. Default is the opposite of Harmony so something always plays. Tap Custom again (✎) to edit.`},
+   body:`Upload any image. Paintiano reads it as a score — left to right, top to bottom. Length scales with the image\'s energy (~1½–2¾ min). ◆ The app picks the reading from how colourful the work is. Colourful → Harmony or Spectral (hue=pitch, lightness=octave, vividness=loudness). Near-monochrome (Guernica, ink, sepia) → B/W (lightness alone drives pitch). Tap the active chip to preview colours. ◆ Custom is yours: filters the image through your palette — only colours close to your 12 swatches sound, the rest fall silent. Default is the opposite of Harmony so something always plays. Tap Custom again (✎) to edit. ◆ Two ways to play: SCAN reads the picture left-to-right as a score (choose the scan direction). AI COMPOSE (Pro) writes a whole new piece from the image — its palette, energy and mood — and keeps the picture on screen while it plays.`},
   {id:'morph', title:`✦ Morph — blend two moods`, keywords:`morph crossfade blend transition mood between`,
    body:`Available after a mood. ✦ MORPH crossfades one mood into another. First half is A, second half is B, with a velocity blend in the 40–60% zone. Progress bar shows "A → B". Two emotions fading into each other in one piece.`},
   {id:'vary', title:`✦ Vary — same vibe, fresh take`, keywords:`vary variation reroll randomize random fresh sparkle`,
@@ -7950,7 +7958,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Score — MusicXML rein, Bild raus`, keywords:`partitur musicxml mxl musescore finale dorico noten`,
    body:`Lad exakte Noten aus MuseScore, Finale oder Dorico (.musicxml / .xml / .mxl). Tonhöhen, Dauern, Dynamik, Akkorde — alles kommt exakt durch. Genaueste Eingabe überhaupt.`},
   {id:'image', title:`◫ Bild — lad eins, hör zu`, keywords:`bild gemälde foto transkribieren malen farbe color bw custom palette guernica chagall`,
-   body:`Lad irgendein Bild. Paintiano liest es als Partitur — von links nach rechts, oben nach unten. Länge skaliert mit der Bildenergie (~1½–2¾ Min.). ◆ Die App wählt die Lesart anhand der Farbigkeit. Bunt → Harmonie oder Spektral (Farbton=Tonhöhe, Helligkeit=Oktave, Sättigung=Lautstärke). Fast monochrom (Guernica, Tinte, Sepia) → B/W (nur Helligkeit treibt die Tonhöhe). Tipp den aktiven Chip für Farbvorschau. ◆ Custom ist deins: filtert das Bild durch deine Palette — nur Farben nahe deiner 12 Felder klingen, der Rest verstummt. Standard ist das Gegenteil von Harmonie, damit immer etwas spielt. Tipp Custom nochmal (✎) zum Bearbeiten.`},
+   body:`Lad irgendein Bild. Paintiano liest es als Partitur — von links nach rechts, oben nach unten. Länge skaliert mit der Bildenergie (~1½–2¾ Min.). ◆ Die App wählt die Lesart anhand der Farbigkeit. Bunt → Harmonie oder Spektral (Farbton=Tonhöhe, Helligkeit=Oktave, Sättigung=Lautstärke). Fast monochrom (Guernica, Tinte, Sepia) → B/W (nur Helligkeit treibt die Tonhöhe). Tipp den aktiven Chip für Farbvorschau. ◆ Custom ist deins: filtert das Bild durch deine Palette — nur Farben nahe deiner 12 Felder klingen, der Rest verstummt. Standard ist das Gegenteil von Harmonie, damit immer etwas spielt. Tipp Custom nochmal (✎) zum Bearbeiten. ◆ Zwei Spielarten: SCAN liest das Bild als Partitur (Scan-Richtung wählbar). KI KOMPONIEREN (Pro) schreibt ein ganz neues Stück aus dem Bild — Palette, Energie, Stimmung — und lässt das Bild beim Abspielen stehen.`},
   {id:'morph', title:`✦ Morph — zwei Stimmungen mischen`, keywords:`morph crossfade mischen übergang stimmung zwischen`,
    body:`Verfügbar nach einer Stimmung. ✦ MORPH blendet eine Stimmung in eine andere. Erste Hälfte ist A, zweite B, mit Velocity-Blend in der 40–60%-Zone. Fortschrittsbalken zeigt "A → B". Zwei Emotionen, die ineinander verblassen, in einem Stück.`},
   {id:'vary', title:`✦ Vary — gleicher Vibe, frische Fassung`, keywords:`variieren variation neu würfeln zufall frisch funkeln`,
@@ -8006,7 +8014,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Score — MusicXML in, peinture out`, keywords:`partition musicxml mxl musescore finale dorico notes`,
    body:`Téléverse des partitions exactes depuis MuseScore, Finale ou Dorico (.musicxml / .xml / .mxl). Hauteurs, durées, dynamiques, accords — tout passe exact. La plus précise des entrées.`},
   {id:'image', title:`◫ Image — dépose une peinture, écoute-la`, keywords:`image peinture photo transcrire peindre couleur color bw custom palette guernica chagall`,
-   body:`Téléverse n\'importe quelle image. Paintiano la lit en partition — de gauche à droite, haut en bas. La durée scale avec l\'énergie de l\'image (~1½–2¾ min). ◆ L\'app choisit la lecture selon la couleur. Coloré → Harmonie ou Spectral (teinte=hauteur, luminosité=octave, vivacité=force). Quasi-monochrome (Guernica, encre, sépia) → B/W (la luminosité seule pilote la hauteur). Tape la puce active pour prévisualiser. ◆ Custom est à toi : filtre l\'image par ta palette — seules les couleurs proches de tes 12 cases sonnent, le reste se tait. Le défaut est l\'opposé d\'Harmonie pour que quelque chose joue toujours. Retape Custom (✎) pour éditer.`},
+   body:`Téléverse n\'importe quelle image. Paintiano la lit en partition — de gauche à droite, haut en bas. La durée scale avec l\'énergie de l\'image (~1½–2¾ min). ◆ L\'app choisit la lecture selon la couleur. Coloré → Harmonie ou Spectral (teinte=hauteur, luminosité=octave, vivacité=force). Quasi-monochrome (Guernica, encre, sépia) → B/W (la luminosité seule pilote la hauteur). Tape la puce active pour prévisualiser. ◆ Custom est à toi : filtre l\'image par ta palette — seules les couleurs proches de tes 12 cases sonnent, le reste se tait. Le défaut est l\'opposé d\'Harmonie pour que quelque chose joue toujours. Retape Custom (✎) pour éditer. ◆ Deux façons de jouer : SCAN lit l\'image comme une partition (sens de lecture au choix). COMPOSER IA (Pro) écrit un morceau entièrement nouveau à partir de l\'image — palette, énergie, ambiance — et garde l\'image à l\'écran pendant la lecture.`},
   {id:'morph', title:`✦ Morph — fond deux ressentis`, keywords:`morph crossfade mélange transition humeur entre`,
    body:`Disponible après une humeur. ✦ MORPH fond une humeur dans une autre. Première moitié = A, deuxième = B, avec un blend de vélocité dans la zone 40–60%. La barre montre « A → B ». Deux émotions s\'évanouissant l\'une dans l\'autre, dans un seul morceau.`},
   {id:'vary', title:`✦ Vary — même vibe, version fraîche`, keywords:`varier variation relancer aléatoire frais étincelle`,
@@ -8062,7 +8070,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Score — MusicXML entra, pintura sale`, keywords:`partitura musicxml mxl musescore finale dorico notas`,
    body:`Sube partitura exacta de MuseScore, Finale o Dorico (.musicxml / .xml / .mxl). Alturas, duraciones, dinámicas, acordes — todo pasa exacto. La entrada más precisa que hay.`},
   {id:'image', title:`◫ Imagen — suelta una pintura, escúchala`, keywords:`imagen pintura foto transcribir pintar color color bw custom paleta guernica chagall`,
-   body:`Sube cualquier imagen. Paintiano la lee como partitura — de izquierda a derecha, arriba abajo. La duración escala con la energía de la imagen (~1½–2¾ min). ◆ La app elige la lectura por cuánto color tiene. Colorida → Armonía o Espectral (tono=altura, luminosidad=octava, vivacidad=fuerza). Casi monocroma (Guernica, tinta, sepia) → B/W (solo la luminosidad mueve la altura). Toca el chip activo para previsualizar. ◆ Custom es tuyo: filtra la imagen por tu paleta — solo los colores cerca de tus 12 casillas suenan, el resto se calla. El default es lo opuesto a Armonía para que siempre algo suene. Toca Custom otra vez (✎) para editar.`},
+   body:`Sube cualquier imagen. Paintiano la lee como partitura — de izquierda a derecha, arriba abajo. La duración escala con la energía de la imagen (~1½–2¾ min). ◆ La app elige la lectura por cuánto color tiene. Colorida → Armonía o Espectral (tono=altura, luminosidad=octava, vivacidad=fuerza). Casi monocroma (Guernica, tinta, sepia) → B/W (solo la luminosidad mueve la altura). Toca el chip activo para previsualizar. ◆ Custom es tuyo: filtra la imagen por tu paleta — solo los colores cerca de tus 12 casillas suenan, el resto se calla. El default es lo opuesto a Armonía para que siempre algo suene. Toca Custom otra vez (✎) para editar. ◆ Dos formas de tocar: ESCANEAR lee la imagen como partitura (elige la dirección). COMPONER IA (Pro) escribe una pieza nueva a partir de la imagen — paleta, energía y ánimo — y mantiene la imagen en pantalla mientras suena.`},
   {id:'morph', title:`✦ Morph — funde dos sentires`, keywords:`morph crossfade mezcla transición mood entre`,
    body:`Disponible tras un mood. ✦ MORPH funde un sentir en otro. Primera mitad es A, segunda B, con blend de velocidad en la zona 40–60%. La barra muestra «A → B». Dos emociones desvaneciéndose una en otra, en una sola pieza.`},
   {id:'vary', title:`✦ Vary — mismo vibe, versión fresca`, keywords:`variar variación relanzar aleatorio fresco chispa`,
@@ -8118,7 +8126,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Score — MusicXML dnu, maľba von`, keywords:`partitúra musicxml mxl musescore finale dorico noty`,
    body:`Nahraj presné noty z MuseScore, Finale alebo Dorico (.musicxml / .xml / .mxl). Výšky, trvania, dynamika, akordy — všetko prejde presne. Najpresnejší vstup, aký existuje.`},
   {id:'image', title:`◫ Obrázok — hoď tam maľbu, vypočuj si ju`, keywords:`obrázok maľba foto transkribovať maľovať farba color bw custom paleta guernica chagall`,
-   body:`Nahraj hocijaký obrázok. Paintiano ho prečíta ako partitúru — zľava doprava, zhora dolu. Dĺžka škáluje s energiou obrazu (~1½–2¾ min). ◆ Aplikácia vyberie čítanie podľa farebnosti. Farebný → Harmónia alebo Spektrum (odtieň=výška, jas=oktáva, sýtosť=hlasitosť). Takmer monochromatický (Guernica, atrament, sépia) → B/W (samotný jas riadi výšku). Klikni aktívny chip pre náhľad. ◆ Custom je tvoj: filtruje obraz cez tvoju paletu — znejú len farby blízke tvojim 12 políčkam, zvyšok zamlkne. Default je opak Harmónie, takže niečo vždy hrá. Klikni Custom znova (✎) pre úpravu.`},
+   body:`Nahraj hocijaký obrázok. Paintiano ho prečíta ako partitúru — zľava doprava, zhora dolu. Dĺžka škáluje s energiou obrazu (~1½–2¾ min). ◆ Aplikácia vyberie čítanie podľa farebnosti. Farebný → Harmónia alebo Spektrum (odtieň=výška, jas=oktáva, sýtosť=hlasitosť). Takmer monochromatický (Guernica, atrament, sépia) → B/W (samotný jas riadi výšku). Klikni aktívny chip pre náhľad. ◆ Custom je tvoj: filtruje obraz cez tvoju paletu — znejú len farby blízke tvojim 12 políčkam, zvyšok zamlkne. Default je opak Harmónie, takže niečo vždy hrá. Klikni Custom znova (✎) pre úpravu. ◆ Dva spôsoby prehrávania: SKEN číta obraz ako partitúru (vyber smer skenu). AI SKLADBA (Pro) zloží úplne novú skladbu z obrazu — z jeho palety, energie a nálady — a obraz necháva na obrazovke počas hrania.`},
   {id:'morph', title:`✦ Morph — zmiešaj dva pocity`, keywords:`morph crossfade miešanie prechod nálada medzi`,
    body:`Dostupné po nálade. ✦ MORPH prelína jednu náladu do druhej. Prvá polovica je A, druhá B, s velocity blendom v zóne 40–60%. Progress bar ukáže „A → B". Dve emócie miznúce jedna v druhej, v jednom kuse.`},
   {id:'vary', title:`✦ Vary — ten istý vibe, čerstvá verzia`, keywords:`variovať variácia prerolovať náhoda čerstvé iskra`,
@@ -8174,7 +8182,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Score — MusicXML in, pintura out`, keywords:`partitura musicxml mxl musescore finale dorico notas`,
    body:`Carrega partituras exatas do MuseScore, Finale ou Dorico (.musicxml / .xml / .mxl). Alturas, durações, dinâmicas, acordes — tudo passa exato. A entrada mais precisa que existe.`},
   {id:'image', title:`◫ Imagem — solta uma pintura, ouve`, keywords:`imagem pintura foto transcrever pintar cor color bw custom paleta guernica chagall`,
-   body:`Carrega qualquer imagem. Paintiano lê-a como partitura — da esquerda para a direita, de cima para baixo. A duração escala com a energia da imagem (~1½–2¾ min). ◆ A app escolhe a leitura pela cor. Colorida → Harmonia ou Espectral (matiz=altura, luminosidade=oitava, vivacidade=força). Quase monocromática (Guernica, tinta, sépia) → B/W (só a luminosidade conduz a altura). Toca o chip ativo para pré-visualizar. ◆ Custom é teu: filtra a imagem pela tua paleta — só as cores próximas das tuas 12 amostras soam, o resto cala-se. O default é o oposto da Harmonia para que algo soe sempre. Toca Custom outra vez (✎) para editar.`},
+   body:`Carrega qualquer imagem. Paintiano lê-a como partitura — da esquerda para a direita, de cima para baixo. A duração escala com a energia da imagem (~1½–2¾ min). ◆ A app escolhe a leitura pela cor. Colorida → Harmonia ou Espectral (matiz=altura, luminosidade=oitava, vivacidade=força). Quase monocromática (Guernica, tinta, sépia) → B/W (só a luminosidade conduz a altura). Toca o chip ativo para pré-visualizar. ◆ Custom é teu: filtra a imagem pela tua paleta — só as cores próximas das tuas 12 amostras soam, o resto cala-se. O default é o oposto da Harmonia para que algo soe sempre. Toca Custom outra vez (✎) para editar. ◆ Duas formas de tocar: DIGITALIZAR lê a imagem como partitura (escolhe a direção). COMPOR IA (Pro) escreve uma peça nova a partir da imagem — paleta, energia e humor — e mantém a imagem no ecrã enquanto toca.`},
   {id:'morph', title:`✦ Morph — funde dois sentires`, keywords:`morph crossfade mistura transição mood entre`,
    body:`Disponível depois de um mood. ✦ MORPH funde um sentir noutro. Primeira metade é A, segunda B, com blend de velocity na zona 40–60%. A barra mostra «A → B». Duas emoções a desvanecer uma na outra, numa peça só.`},
   {id:'vary', title:`✦ Vary — mesmo vibe, versão fresca`, keywords:`variar variação relançar aleatório fresco faísca`,
@@ -8230,7 +8238,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Score — MusicXML 进,画出`, keywords:`乐谱 musicxml mxl musescore finale dorico 乐谱`,
    body:`从 MuseScore、Finale 或 Dorico 上传精确的乐谱(.musicxml / .xml / .mxl)。音高、时值、力度、和弦 — 全部精确传递。最精确的输入方式。`},
   {id:'image', title:`◫ 图像 — 丢入一幅画,听它`, keywords:`图像 画 照片 转录 绘制 颜色 color bw custom 调色板 格尔尼卡 夏加尔`,
-   body:`上传任何图像。Paintiano 把它当作乐谱来读 — 从左到右、从上到下。乐曲长度随图像能量缩放(约 1½–2¾ 分钟)。◆ app 按色彩量选读法。彩色 → 和声 或 光谱(色相=音高,明度=八度,鲜艳度=力度)。近单色(格尔尼卡、墨水、棕褐色)→ B/W(只有明度驱动音高)。点活跃 chip 预览颜色。◆ Custom 属于你:把图像通过你的调色板过滤 — 只有接近你 12 色板的颜色才发声,其余沉默。默认是和声的反面,保证总有东西在响。再点 Custom(✎)编辑。`},
+   body:`上传任何图像。Paintiano 把它当作乐谱来读 — 从左到右、从上到下。乐曲长度随图像能量缩放(约 1½–2¾ 分钟)。◆ app 按色彩量选读法。彩色 → 和声 或 光谱(色相=音高,明度=八度,鲜艳度=力度)。近单色(格尔尼卡、墨水、棕褐色)→ B/W(只有明度驱动音高)。点活跃 chip 预览颜色。◆ Custom 属于你:把图像通过你的调色板过滤 — 只有接近你 12 色板的颜色才发声,其余沉默。默认是和声的反面,保证总有东西在响。再点 Custom(✎)编辑。 ◆ 两种播放方式:扫描把图像当作乐谱从左到右读(可选扫描方向)。AI 作曲(Pro)从图像谱写一首全新曲子 — 来自它的色板、能量与情绪 — 播放时图像留在屏幕上。`},
   {id:'morph', title:`✦ Morph — 融合两种感觉`, keywords:`morph 交叉淡化 混合 过渡 心情 之间`,
    body:`选了一种心情后可用。✦ MORPH 把一种感觉融入另一种。前半是 A,后半是 B,40–60% 区域有力度混合。进度条显示「A → B」。两种情绪在一首曲里彼此淡入淡出。`},
   {id:'vary', title:`✦ Vary — 同样的氛围,新的版本`, keywords:`变奏 变种 重摇 随机 新鲜 火花`,
@@ -8286,7 +8294,7 @@ const GUIDE_I18N = {
   {id:'score', title:`𝄞 Score — MusicXML 進,畫出`, keywords:`樂譜 musicxml mxl musescore finale dorico 樂譜`,
    body:`從 MuseScore、Finale 或 Dorico 上傳精確的樂譜(.musicxml / .xml / .mxl)。音高、時值、力度、和弦 — 全部精確傳遞。最精確的輸入方式。`},
   {id:'image', title:`◫ 圖像 — 丟入一幅畫,聽它`, keywords:`圖像 畫 照片 轉錄 繪製 顏色 color bw custom 調色盤 格爾尼卡 夏卡爾`,
-   body:`上傳任何圖像。Paintiano 把它當作樂譜來讀 — 從左到右、從上到下。樂曲長度隨圖像能量縮放(約 1½–2¾ 分鐘)。◆ app 按色彩量選讀法。彩色 → 和聲 或 光譜(色相=音高,明度=八度,鮮豔度=力度)。近單色(格爾尼卡、墨水、棕褐色)→ B/W(只有明度驅動音高)。點活躍 chip 預覽顏色。◆ Custom 屬於你:把圖像通過你的調色盤過濾 — 只有接近你 12 色盤的顏色才發聲,其餘沉默。預設是和聲的反面,保證總有東西在響。再點 Custom(✎)編輯。`},
+   body:`上傳任何圖像。Paintiano 把它當作樂譜來讀 — 從左到右、從上到下。樂曲長度隨圖像能量縮放(約 1½–2¾ 分鐘)。◆ app 按色彩量選讀法。彩色 → 和聲 或 光譜(色相=音高,明度=八度,鮮豔度=力度)。近單色(格爾尼卡、墨水、棕褐色)→ B/W(只有明度驅動音高)。點活躍 chip 預覽顏色。◆ Custom 屬於你:把圖像通過你的調色盤過濾 — 只有接近你 12 色盤的顏色才發聲,其餘沉默。預設是和聲的反面,保證總有東西在響。再點 Custom(✎)編輯。 ◆ 兩種播放方式:掃描把圖像當作樂譜從左到右讀(可選掃描方向)。AI 作曲(Pro)從圖像譜寫一首全新曲子 — 來自它的色盤、能量與情緒 — 播放時圖像留在螢幕上。`},
   {id:'morph', title:`✦ Morph — 融合兩種感覺`, keywords:`morph 交叉淡化 混合 過渡 心情 之間`,
    body:`選了一種心情後可用。✦ MORPH 把一種感覺融入另一種。前半是 A,後半是 B,40–60% 區域有力度混合。進度條顯示「A → B」。兩種情緒在一首曲裡彼此淡入淡出。`},
   {id:'vary', title:`✦ Vary — 同樣的氛圍,新的版本`, keywords:`變奏 變種 重搖 隨機 新鮮 火花`,
@@ -10681,6 +10689,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgDir, setImgDir] = useState('lr');
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
+  // Image playback mode: 'scan' = read the picture left→right as a score (paints
+  // a mosaic/style); 'compose' = AI writes a free-standing piece from the image
+  // material (Pro; canvas stays the original image). The transport Play/Pause/REC
+  // all follow this selection. Resets to 'scan' on every new image load.
+  const [imgPlayMode, setImgPlayMode] = useState('scan');
+  const imgPlayModeRef = useRef('scan');
+  useEffect(()=>{ imgPlayModeRef.current=imgPlayMode; },[imgPlayMode]);
   const blobUrl      = useMemo(()=>midiBlob?URL.createObjectURL(midiBlob):null,[midiBlob]);
   const audioBlobUrl = useMemo(()=>audioBlob?URL.createObjectURL(audioBlob):null,[audioBlob]);
   const busy = playing || anim || working;
@@ -10726,6 +10741,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     : (loadedSource==='image' && (!pixelRef.current || (disp===0 && !playedOnce))) ? null
     : loadedSource;
   const composedModeRef = useRef(false);
+  // True while an image-Composition piece is playing: the canvas must stay blank
+  // (the original <img> shows through) — NOT painted with the active artist style.
+  const imgComposeRef = useRef(false);
   const [selectedChordIdx, setSelectedChordIdx] = useState(null); // chord.idx selected by tapping a block (compose / compose-pause) for targeted Undo
   const selectedChordIdxRef = useRef(null);
   useEffect(()=>{ selectedChordIdxRef.current=selectedChordIdx; },[selectedChordIdx]);
@@ -10829,6 +10847,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // here means every downstream render decision (overlay dispatch, cache key,
     // canAppend) transparently uses the rendered style.
     const style = effectiveStyle;
+    // Image Composition playback: the canvas must stay fully transparent so the
+    // original <img> (behind it) shows through. Without this guard, when pixelRef
+    // is null (composition mode) the image branch below is skipped and execution
+    // falls through to the artist-style paint renderer — which would draw the
+    // composed notes in whatever style was last active (e.g. Kandinsky circles)
+    // ON TOP of the artwork. Clear and bail.
+    if(imgComposeRef.current){
+      try{ const _ctx=cv.getContext('2d'); _ctx.clearRect(0,0,CW,CH); }catch(_){}
+      return;
+    }
     // Image mode: keep the canvas transparent so the original painting shows through
     // unobstructed. The 96×60 pixel mosaic that used to render here was useful as
     // a "what the algorithm sees" preview, but it obscured the artwork on a phone-sized
@@ -12084,7 +12112,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const wipeCanvasNow = useCallback(()=>{
     setChords([]);chordsRef.current=[];idxRef.current=0;setPending([]);pendingRef.current=[];
     setDisp(0);setHoldPaused(false);resumeFromRef.current=null;
-    pixelRef.current=null;setViewMode('paint');setOriginalImgUrl(null);setInfo(null);
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);setInfo(null);
     substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
     lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
     try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
@@ -12229,7 +12257,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!composeMode&&!micPainting&&!micListening) draftOwnerRef.current=null;
     setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
-    pixelRef.current=null;setViewMode('paint');
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');
     // Invalidate the cached substrate canvas + last-paint signature. Without this,
     // Clear emptied the chords but left the built-up substrate cache intact, so
     // returning to the canvas (← Canvas) re-blitted the OLD painting even though
@@ -12447,7 +12475,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
     setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
-    pixelRef.current=null;setViewMode('paint');setStamp(s=>s+1);
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setStamp(s=>s+1);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
     setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);setForceSetup(false);
@@ -12497,7 +12525,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     });
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
-    pixelRef.current=null;setViewMode('paint');setOriginalImgUrl(null);
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
     setGrid(g);setChords(wi);setDisp(0);
     setInfo({title,count:wi.length,dur:Math.round(lastMs/1000)});
     idxRef.current=wi.length;
@@ -12596,6 +12624,32 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const keys=Object.keys(map);
       if(keys.length>40){ for(const k of keys.slice(0,keys.length-40)) delete map[k]; }
       localStorage.setItem(IMGMOOD_CACHE_KEY, JSON.stringify(map));
+    }catch(_){ /* quota or disabled storage — silently skip caching */ }
+  },[]);
+
+  // ── Image → Composition cache ──────────────────────────────────────────────
+  // Parallel to the mood cache above, keyed by the SAME image hash. Once an image
+  // has been "composed from", we keep the resulting piece so re-composing the
+  // same picture (a known/recognised image) replays instantly — no AI call, no
+  // credit spent. A small baked set (SAMPLE_IMGCOMPOSE) can ship known artworks.
+  const IMGCOMPOSE_CACHE_KEY='paintiano_imgcompose_cache_v1';
+  const _imgComposeCacheGet=useCallback((hash)=>{
+    try{
+      if(typeof SAMPLE_IMGCOMPOSE!=='undefined' && SAMPLE_IMGCOMPOSE && SAMPLE_IMGCOMPOSE.hash===hash) return SAMPLE_IMGCOMPOSE.result;
+    }catch(_){}
+    try{
+      const raw=localStorage.getItem(IMGCOMPOSE_CACHE_KEY); if(!raw) return null;
+      const map=JSON.parse(raw)||{}; return map[hash]||null;
+    }catch(_){ return null; }
+  },[]);
+  const _imgComposeCacheSet=useCallback((hash,result)=>{
+    try{
+      const raw=localStorage.getItem(IMGCOMPOSE_CACHE_KEY);
+      const map=raw?(JSON.parse(raw)||{}):{};
+      map[hash]=result;
+      const keys=Object.keys(map);
+      if(keys.length>20){ for(const k of keys.slice(0,keys.length-20)) delete map[k]; }
+      localStorage.setItem(IMGCOMPOSE_CACHE_KEY, JSON.stringify(map));
     }catch(_){ /* quota or disabled storage — silently skip caching */ }
   },[]);
 
@@ -13406,13 +13460,41 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Compose a real piece FROM the image's note material (no painting — keeps the
   // original image on the canvas while it plays). Reuses the same Claude endpoint
   // + parse + apply path as aiCompose.
-  const aiComposeFromImage=useCallback(async()=>{
+  const aiComposeFromImage=useCallback(async(afterReady)=>{
     if(busy) return;
     const mat=extractImageMaterial();
     if(!mat){ setErr(t('noNotesGeneric')||'Load an image first'); setErrInfo(false); return; }
     // Composition is a Pro-only feature: free users get the paywall immediately,
     // with no trial credit consumed. Pro users proceed straight through.
     if(!isPro){ setPaywallReason('settings'); return; }
+    // Shared apply for both a cache hit and a fresh AI result. Keeps the ORIGINAL
+    // image on the canvas and stays in IMAGE context (no MORPH/VARY) — see the
+    // long note further down for why pixelRef is nulled. When afterReady is given
+    // (REC path) we hand off to it instead of plain Play, so the recorder and the
+    // composed playback start together — no silent lead-in while AI was thinking.
+    const _applyComposition=(parsed)=>{
+      const evts=noteArr2events(parsed.notes,parsed.tempo,{keepLong:true});
+      if(!evts.length) throw new Error('Could not parse composition');
+      const _dispT=(parsed.title&&String(parsed.title).trim())||(t('imgComposition')!=='imgComposition'?t('imgComposition'):'Composition');
+      pixelRef.current=null;
+      imgComposeRef.current=true;
+      setChords(evts); chordsRef.current=evts; idxRef.current=0; setDisp(0);
+      setInfo({title:_dispT,count:evts.length,dur:Math.round((evts[evts.length-1]?.startMs||0)/1000)+2});
+      try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(_dispT.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+      setWorking(false); setWLabel(''); setWPct(0);
+      if(typeof afterReady==='function'){ setTimeout(()=>{ try{ afterReady(); }catch(_){} }, 80); }
+      else { setTimeout(()=>{ try{ startPlayRef.current?.(); }catch(_){} }, 60); }
+    };
+    // Known/recognised image: if we've composed from this exact picture before,
+    // replay the cached piece instantly — no AI call, no credit spent.
+    const _imgHash = originalImgUrl ? _imgMoodHash(originalImgUrl) : null;
+    if(_imgHash!=null){
+      const _cached=_imgComposeCacheGet(_imgHash);
+      if(_cached&&_cached.notes&&_cached.notes.length){
+        setErr(''); setErrInfo(false); stopAll();
+        try{ _applyComposition(_cached); return; }catch(_){ /* fall through to AI */ }
+      }
+    }
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
@@ -13461,37 +13543,17 @@ Composition rules:
       const parsed=extractAiJson(raw);
       if(!parsed?.notes?.length)throw new Error('No notes');
       gateAI(1,true);
-      const evts=noteArr2events(parsed.notes,parsed.tempo,{keepLong:true});
-      if(!evts.length)throw new Error('Could not parse composition');
-      const _dispT=(parsed.title&&String(parsed.title).trim())||(t('imgComposition')!=='imgComposition'?t('imgComposition'):'Composition');
-      // Keep the ORIGINAL image on the canvas while this plays, and stay fully in
-      // IMAGE context (so the source row still shows "+ new image" and the MORPH/
-      // VARY mood row never appears). Two deliberate choices make this work:
-      //   1) pixelRef.current = null  → startPlay's image branch (which needs a
-      //      pixel mosaic to scan-highlight) is skipped, so playback falls through
-      //      to the plain note loop: it sounds the notes but paints NOTHING on the
-      //      canvas. The original <img> (zIndex 0, behind the transparent canvas)
-      //      stays fully visible. The stopped/paused image repaint (guarded by
-      //      `viewMode==='image' && pixelRef.current`) is also skipped for the same
-      //      reason, so the artwork is never overwritten by a mosaic.
-      //   2) we do NOT set moodContext / composeSource / varySource — those drive
-      //      the mood UI (MORPH + VARY row, AI badge, mood "new" affordances) which
-      //      have no place over an image. loadedSource stays 'image', so the
-      //      transport keeps the image source identity and the "+ new image" button.
-      pixelRef.current=null;
-      setChords(evts); chordsRef.current=evts; idxRef.current=0; setDisp(0);
-      setInfo({title:_dispT,count:evts.length,dur:Math.round((evts[evts.length-1]?.startMs||0)/1000)+2});
-      try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(_dispT.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
-      setWorking(false); setWLabel(''); setWPct(0);
-      // Play the composed piece — image stays on canvas (see note above).
-      setTimeout(()=>{ try{ startPlayRef.current?.(); }catch(_){} }, 60);
+      // Cache the composition keyed by image hash so re-composing the same
+      // picture later is instant + free (see _imgComposeCacheGet).
+      if(_imgHash!=null){ try{ _imgComposeCacheSet(_imgHash,{notes:parsed.notes,tempo:parsed.tempo||90,title:parsed.title||''}); }catch(_){} }
+      _applyComposition(parsed);
       return;
     }catch(e){
       if(e&&e._aiNet) setAiDown(true);
       setErr(e.message||'Compose failed'); setErrInfo(false);
     }
     finally{ setWorking(false); setWLabel(''); setWPct(0); }
-  },[busy,extractImageMaterial,stopAll,lang,gateAI,t,isPro]);
+  },[busy,extractImageMaterial,stopAll,lang,gateAI,t,isPro,originalImgUrl,_imgMoodHash,_imgComposeCacheGet,_imgComposeCacheSet]);
 
   const aiCompose=useCallback(async(overrideMood)=>{
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
@@ -13680,6 +13742,7 @@ Composition rules:
           const startMode = mode==='custom' ? 'custom' : autoMode;
           if(startMode!==mode) setMode(startMode);
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
+          imgComposeRef.current=false;
           // Process pixels into events using the chosen mode's hue→pitch table.
           // B/W uses harmony's hue table — same music as harmony, but the canvas
           // renders monochrome because gc() returns greys in bw mode.
@@ -13704,6 +13767,7 @@ Composition rules:
           if(cv){try{cv.getContext('2d').clearRect(0,0,cv.width,cv.height);}catch(_){}}
           setComposeMode(false);
           setDemoMode(false);
+          setImgPlayMode('scan'); imgPlayModeRef.current='scan';
           setOriginalImgUrl(evt.target.result);
           setGrid({N:nc,BW,BH,CW:nc*BW,CH:nr*BH});setViewMode('image');
           setChords(evts);setDisp(evts.length);setPlayedOnce(false);
@@ -13898,6 +13962,17 @@ Composition rules:
     const now=Date.now();
     if(now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
+    // Image AI-Compose mode: a FRESH Play (not a resume) that hasn't composed yet
+    // hands off to aiComposeFromImage — it composes (or replays the cached piece)
+    // and starts playback itself, with the original image kept on the canvas.
+    // Once a composition is loaded (imgComposeRef true) we fall through to normal
+    // playback so Pause/Resume/replay just play the composed piece.
+    if(viewModeRef.current==='image' && imgPlayModeRef.current==='compose'
+       && !imgComposeRef.current
+       && (resumeFromRef.current==null || resumeFromRef.current===0)){
+      try{ aiComposeFromImage(); }catch(_){}
+      return;
+    }
     const chords=chordsRef.current;
     const grid=gridRef.current;
     const info=infoRef.current;
@@ -14108,7 +14183,7 @@ Composition rules:
       };
       step();
     }
-  },[busy,playNote,stopAll,advanceVariation]);
+  },[busy,playNote,stopAll,advanceVariation,aiComposeFromImage]);
 
 
   // Load the demo song (Für Elise) and start painting it live. Shared by the
@@ -14142,7 +14217,7 @@ Composition rules:
     setGrid(g);gridRef.current=g;
     setInfo(inf);infoRef.current=inf;
     setDisp(0);idxRef.current=wi.length;
-    setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;setStamp(s=>s+1);
+    setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;imgComposeRef.current=false;setStamp(s=>s+1);
     setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     setComposeMode(false);setPickMode(null);setSongQ('');
     setDemoMode(true);
@@ -16022,6 +16097,9 @@ Composition rules:
         {!stripOpen && loadedSource!=='image' && style && STYLE_INSPIRED[style] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
         )}
+        {!stripOpen && loadedSource==='image' && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {t('dir_'+imgDir)}</div>
+        )}
         {stripOpen && (
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
           {/* Morph / Vary — only for mood-based pieces (mood + mood-from-image),
@@ -16139,6 +16217,17 @@ Composition rules:
             const isDisabled = (m)=> m==='bw' ? appColour : ((m==='harmony'||m==='spectral') ? !appColour : false);
             return (
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {/* Read mode: SCAN (read the picture as a score) vs AI COMPOSE (Pro —
+                  write a piece from the image). Lives HERE, not in the transport,
+                  because it governs HOW the image is read; scan direction below is
+                  only meaningful for SCAN, so it's hidden in AI COMPOSE. */}
+              <div style={{display:'flex',gap:6}}>
+                <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'none'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
+                <button onClick={()=>{ if(busy||working) return; if(!isPro){ setPaywallReason('settings'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('compose'); } }} disabled={busy||working} title={!isPro?(t('proBadge')||'Pro')+' · '+(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)',boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'none'}}>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')+(!isPro?' 🔒':'')}</button>
+              </div>
+              {imgPlayMode==='compose' ? (
+                <div style={{padding:'10px 12px',borderRadius:10,background:'rgba(220,150,255,.06)',border:'1px solid rgba(220,150,255,.18)',fontSize:(.54*effScale)+'rem',lineHeight:1.5,color:'rgba(228,200,255,.8)',fontStyle:'italic'}}>{t('imgComposeBlurb')!=='imgComposeBlurb'?t('imgComposeBlurb'):'AI composes a full piece from this image — its colours, energy and mood. Press Play.'}</div>
+              ) : (<>
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['harmony','spectral','bw','custom'].map(m=>{
                   const isCustomTab = m==='custom';
@@ -16188,6 +16277,7 @@ Composition rules:
                   );
                 })}
               </div>
+              </>)}
             </div>
             );
           })() : (<>
@@ -17229,9 +17319,6 @@ Composition rules:
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
-        {viewMode==='image'&&originalImgUrl&&!moodFromImg&&chords.length>0&&(
-          <button onClick={()=>{ if(busy||working) return; if(!isPro){ setPaywallReason('settings'); return; } if(aiUsable) aiComposeFromImage(); }} disabled={busy||working||(isPro&&!aiUsable)} className="pf-lift" title={!isPro?(t('proBadge')||'Pro')+' · '+(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'))} style={{padding:'8px 14px',background:'transparent',color:(busy||working||(isPro&&!aiUsable))?'rgba(201,168,76,.3)':'rgba(220,180,90,.9)',border:'1px solid rgba(201,168,76,'+((busy||working||(isPro&&!aiUsable))?'.15':'.45')+')',borderRadius:22,cursor:(busy||working||(isPro&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(isPro&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('imgComposition')!=='imgComposition'?t('imgComposition'):'compose')+(!isPro?' 🔒':'')}</button>
-        )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
           // REC button — single source of truth for image-mode recording:
           //   tap once → starts a fresh recording AND playback from index 0
@@ -17268,7 +17355,15 @@ Composition rules:
               // don't let the "playback started → leave setup" effect yank us to
               // the default play screen. Cleared when recording finishes.
               keepSetupDuringRecRef.current = forceSetup;
-              setRecordIntent('picker'); startRecord();
+              setRecordIntent('picker');
+              // AI Compose mode, nothing composed yet: compose first, then start
+              // the recorder + playback together (no silent lead-in). Once composed
+              // (imgComposeRef true), REC records the existing piece directly.
+              if(imgPlayModeRef.current==='compose' && !imgComposeRef.current){
+                aiComposeFromImage(()=>{ try{ startRecord(); }catch(_){} });
+              } else {
+                startRecord();
+              }
             }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
               {recording?t('recStop'):t('recArm')}
             </button>
