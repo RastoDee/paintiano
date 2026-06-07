@@ -6107,7 +6107,7 @@ const I18N = {
     stopRecFirst:'stop recording to use playback controls',
     stopListenFirst:'stop listening first', stopSingFirst:'stop singing first',
     scaleBtn:'⚙ scale',
-    midiInput:'♬ MIDI INPUT', audioInput:'♫ AUDIO INPUT', scoreInput:'𝄞 SCORE INPUT', imageInput:'🖼 IMAGE INPUT', micInput:'🎙 MIC INPUT',
+    midiInput:'♬ MIDI INPUT', musicInput:'♪ ADD MUSIC', audioInput:'♫ AUDIO INPUT', scoreInput:'𝄞 SCORE INPUT', imageInput:'🖼 IMAGE INPUT', micInput:'🎙 MIC INPUT',
     micVoiceHint:'sing, hum or whistle · snaps to C major · monophonic',
     micMusicHint:'play music from a nearby speaker · paints on chord changes',
     micTapToSwitch:'tap to switch voice ⇄ music',
@@ -6209,7 +6209,7 @@ const I18N = {
     stopRecFirst:'aufnahme stoppen für wiedergabe',
     stopListenFirst:'erst lauschen stoppen', stopSingFirst:'erst singen stoppen',
     scaleBtn:'⚙ tonart',
-    midiInput:'♬ MIDI EINGABE', audioInput:'♫ AUDIO EINGABE', scoreInput:'𝄞 PARTITUR EINGABE', imageInput:'🖼 BILD EINGABE', micInput:'🎙 MIKRO EINGABE',
+    midiInput:'♬ MIDI EINGABE', musicInput:'♪ MUSIK HINZUFÜGEN', audioInput:'♫ AUDIO EINGABE', scoreInput:'𝄞 PARTITUR EINGABE', imageInput:'🖼 BILD EINGABE', micInput:'🎙 MIKRO EINGABE',
     micVoiceHint:'singen, summen oder pfeifen · auf C-Dur eingerastet · monophon',
     micMusicHint:'musik aus nahem lautsprecher · malt bei akkordwechsel',
     micTapToSwitch:'tippen für Stimme ⇄ Musik',
@@ -6311,7 +6311,7 @@ const I18N = {
     stopRecFirst:'arrêter l\'enregistrement pour contrôler',
     stopListenFirst:'arrêter l\'écoute d\'abord', stopSingFirst:'arrêter le chant d\'abord',
     scaleBtn:'⚙ gamme',
-    midiInput:'♬ ENTRÉE MIDI', audioInput:'♫ ENTRÉE AUDIO', scoreInput:'𝄞 ENTRÉE PARTITION', imageInput:'🖼 ENTRÉE IMAGE', micInput:'🎙 ENTRÉE MICRO',
+    midiInput:'♬ ENTRÉE MIDI', musicInput:'♪ AJOUTER MUSIQUE', audioInput:'♫ ENTRÉE AUDIO', scoreInput:'𝄞 ENTRÉE PARTITION', imageInput:'🖼 ENTRÉE IMAGE', micInput:'🎙 ENTRÉE MICRO',
     micVoiceHint:'chanter, fredonner ou siffler · ancré en do majeur · monophonique',
     micMusicHint:'musique d\'un haut-parleur proche · peint aux changements d\'accord',
     micTapToSwitch:'toucher pour voix ⇄ musique',
@@ -6413,7 +6413,7 @@ const I18N = {
     stopRecFirst:'detener grabación para controlar',
     stopListenFirst:'detener escucha primero', stopSingFirst:'detener canto primero',
     scaleBtn:'⚙ escala',
-    midiInput:'♬ ENTRADA MIDI', audioInput:'♫ ENTRADA AUDIO', scoreInput:'𝄞 ENTRADA PARTITURA', imageInput:'🖼 ENTRADA IMAGEN', micInput:'🎙 ENTRADA MICRO',
+    midiInput:'♬ ENTRADA MIDI', musicInput:'♪ AÑADIR MÚSICA', audioInput:'♫ ENTRADA AUDIO', scoreInput:'𝄞 ENTRADA PARTITURA', imageInput:'🖼 ENTRADA IMAGEN', micInput:'🎙 ENTRADA MICRO',
     micVoiceHint:'canta, tararea o silba · ajustado a do mayor · monofónico',
     micMusicHint:'música de un altavoz cercano · pinta en cambios de acorde',
     micTapToSwitch:'toca para voz ⇄ música',
@@ -6515,7 +6515,7 @@ const I18N = {
     stopRecFirst:'najprv zastav nahrávanie pre použitie ovládania',
     stopListenFirst:'najprv zastav počúvanie', stopSingFirst:'najprv zastav spievanie',
     scaleBtn:'⚙ stupnica',
-    midiInput:'♬ MIDI VSTUP', audioInput:'♫ AUDIO VSTUP', scoreInput:'𝄞 VSTUP PARTITÚRY', imageInput:'🖼 OBRAZOVÝ VSTUP', micInput:'🎙 VSTUP MIKROFÓNU',
+    midiInput:'♬ MIDI VSTUP', musicInput:'♪ PRIDAŤ HUDBU', audioInput:'♫ AUDIO VSTUP', scoreInput:'𝄞 VSTUP PARTITÚRY', imageInput:'🖼 OBRAZOVÝ VSTUP', micInput:'🎙 VSTUP MIKROFÓNU',
     micVoiceHint:'spievaj, hum alebo pískaj · prichytí na C dur · monofónne',
     micMusicHint:'pusti hudbu z blízkeho reproduktora · maľuje pri zmene akordu',
     micTapToSwitch:'ťukni pre prepnutie hlas ⇄ hudba',
@@ -6617,7 +6617,7 @@ const I18N = {
     stopRecFirst:'请先停止录音以使用播放控制',
     stopListenFirst:'请先停止聆听', stopSingFirst:'请先停止演唱',
     scaleBtn:'⚙ 音阶',
-    midiInput:'♬ MIDI 输入', audioInput:'♫ 音频输入', scoreInput:'𝄞 乐谱输入', imageInput:'🖼 图像输入', micInput:'🎙 麦克风输入',
+    midiInput:'♬ MIDI 输入', musicInput:'♪ 添加音乐', audioInput:'♫ 音频输入', scoreInput:'𝄞 乐谱输入', imageInput:'🖼 图像输入', micInput:'🎙 麦克风输入',
     micVoiceHint:'唱、哼或吹口哨 · 自动对齐到 C 大调 · 单音',
     micMusicHint:'从附近的扬声器播放音乐 · 在和弦变化时绘制',
     micTapToSwitch:'点击切换 人声 ⇄ 音乐',
@@ -6725,7 +6725,7 @@ const I18N = {
     stopRecFirst:'請先停止錄音以使用播放控制',
     stopListenFirst:'請先停止聆聽', stopSingFirst:'請先停止演唱',
     scaleBtn:'⚙ 音階',
-    midiInput:'♬ MIDI 輸入', audioInput:'♫ 音訊輸入', scoreInput:'𝄞 樂譜輸入', imageInput:'🖼 圖像輸入', micInput:'🎙 麥克風輸入',
+    midiInput:'♬ MIDI 輸入', musicInput:'♪ 添加音樂', audioInput:'♫ 音訊輸入', scoreInput:'𝄞 樂譜輸入', imageInput:'🖼 圖像輸入', micInput:'🎙 麥克風輸入',
     micVoiceHint:'唱、哼或吹口哨 · 自動對齊到 C 大調 · 單音',
     micMusicHint:'從附近的喇叭播放音樂 · 在和弦變化時繪製',
     micTapToSwitch:'點擊切換 人聲 ⇄ 音樂',
@@ -6821,7 +6821,7 @@ const I18N = {
     stopRecFirst:'pare a gravação para usar os controles de reprodução',
     stopListenFirst:'pare de ouvir primeiro', stopSingFirst:'pare de cantar primeiro',
     scaleBtn:'⚙ escala',
-    midiInput:'♬ ENTRADA MIDI', audioInput:'♫ ENTRADA DE ÁUDIO', scoreInput:'𝄞 ENTRADA DE PARTITURA', imageInput:'🖼 ENTRADA DE IMAGEM', micInput:'🎙 ENTRADA DE MIC',
+    midiInput:'♬ ENTRADA MIDI', musicInput:'♪ ADICIONAR MÚSICA', audioInput:'♫ ENTRADA DE ÁUDIO', scoreInput:'𝄞 ENTRADA DE PARTITURA', imageInput:'🖼 ENTRADA DE IMAGEM', micInput:'🎙 ENTRADA DE MIC',
     micVoiceHint:'cante, cantarole ou assobie · ajusta para dó maior · monofônico',
     micMusicHint:'toque música de um alto-falante próximo · pinta nas mudanças de acorde',
     micTapToSwitch:'toque para alternar voz ⇄ música',
@@ -15954,8 +15954,8 @@ Composition rules:
               {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
                   loadSound routes by file type. Active when any of the three
                   music sources is loaded. */}
-              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}refSound.current?.click();}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.orange:'rgba(244,124,60,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':(t('music')!=='music'?t('music'):'MUSIC')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode('sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':(t('music')!=='music'?t('music'):'MUSIC')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
             </div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',margin:'16px 0 10px',textTransform:'uppercase'}}>{t('createLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
@@ -16515,7 +16515,7 @@ Composition rules:
         <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:(.65*effScale)+'rem'}}>
-              {pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')}
+              {pickMode==='sound'?(t('musicInput')||'add music'):pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')}
             </div>
             {pickMode==='mic' ? (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -16550,21 +16550,23 @@ Composition rules:
               <button onClick={()=>{
                 if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
                 if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
-                if(pickMode==='midi') loadSampleMidi();
+                if(pickMode==='sound') loadSampleScore();
+                else if(pickMode==='midi') loadSampleMidi();
                 else if(pickMode==='audio') loadSampleAudio();
                 else if(pickMode==='score') loadSampleScore();
                 else if(pickMode==='imgmood') loadSampleImgMood();
                 else loadSampleImage();
                 setForceSetup(false);
                 setPickMode(null);
-              }} style={{padding:'12px',background:'transparent',color:pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':pickMode==='imgmood'?'rgba(228,178,255,.95)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':pickMode==='imgmood'?'rgba(220,150,255,.45)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*effScale)+'rem'}}>
+              }} style={{padding:'12px',background:'transparent',color:pickMode==='sound'?'rgba(140,180,255,.85)':pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':pickMode==='imgmood'?'rgba(228,178,255,.95)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='sound'?'rgba(120,160,255,.4)':pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':pickMode==='imgmood'?'rgba(220,150,255,.45)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*effScale)+'rem'}}>
                 {t('builtInSample')}
               </button>
               <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
-                {pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}
+                {pickMode==='sound'?SAMPLE_SCORE_NAME:pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}
               </div>
               <button onClick={()=>{
-                if(pickMode==='midi') refMidi.current?.click();
+                if(pickMode==='sound') refSound.current?.click();
+                else if(pickMode==='midi') refMidi.current?.click();
                 else if(pickMode==='audio') refAudio.current?.click();
                 else if(pickMode==='score') refScore.current?.click();
                 else if(pickMode==='imgmood') refImgMood.current?.click();
@@ -16578,7 +16580,7 @@ Composition rules:
                 {t('chooseFile')}
               </button>
               <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
-                {pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
+                {pickMode==='sound'?'MIDI · audio · score':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
               </div>
               {/* Recently AI generated — Pro feature. Free users see locked items;
                   tapping any opens the paywall via _mfiRecall. Only in MFI picker. */}

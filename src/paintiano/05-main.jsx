@@ -6521,7 +6521,7 @@ Composition rules:
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; return (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(srcBtn);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+t(srcBtn).replace(/[^\p{L}]/gu,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode((srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?'sound':srcBtn);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+((srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
           ); })()}
           {/* New MOOD — opens an inline mood picker right over the canvas (no
               jump back to setup); picking one loads it immediately. Shown for the
@@ -6972,7 +6972,7 @@ Composition rules:
                 {t('chooseFile')}
               </button>
               <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
-                {pickMode==='sound'?'MIDI · audio · score':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
+                {pickMode==='sound'?'.mid .midi · .mp3 .wav .m4a .ogg · .musicxml .xml .mxl':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
               </div>
               {/* Recently AI generated — Pro feature. Free users see locked items;
                   tapping any opens the paywall via _mfiRecall. Only in MFI picker. */}
