@@ -1258,12 +1258,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(viewMode==='image'&&pixelRef.current){
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
-      // Paused: detect via resumeFromRef (set synchronously the instant Pause is
-      // tapped) rather than the holdPaused state, which may not have flushed yet
-      // in the render that runs when playing flips false — that race is why the
-      // repaint below still fired on pause and wiped the freshly-painted blocks.
-      // When paused, leave the canvas exactly as the scan loop left it.
-      if(holdPaused || (resumeFromRef.current!=null && resumeFromRef.current>0)) return;
+      // Paused: detect via holdPausedRef, which is set synchronously the instant
+      // Pause is tapped (the state version hasn't flushed yet in the render that
+      // runs when playing flips false — that race is why the repaint still fired
+      // and wiped the freshly-painted blocks). When paused, leave the canvas
+      // exactly as the scan loop left it.
+      if(holdPaused || holdPausedRef.current) return;
       // Fully stopped (not paused): the canvas may have been blanked while we were
       // away in Setup (the element unmounts/clears). Repaint the already-played
       // mosaic 0..disp from pixel data so returning via "← Canvas" shows the
@@ -2140,7 +2140,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Without this they linger gold even though no note is sounding.
     setActive(new Set());
     setPlaying(false);setAnim(false);
-    setHoldPaused(false);resumeFromRef.current=null;
+    setHoldPaused(false);holdPausedRef.current=false;resumeFromRef.current=null;
   },[]);
 
   // Pause playback when the tab goes to background. The audio context suspends
@@ -4840,6 +4840,7 @@ Composition rules:
     }
     if(playing){
       resumeFromRef.current=disp;
+      holdPausedRef.current=true; // sync — render effect reads this before the state flush
       setHoldPaused(true);
       genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
@@ -4855,6 +4856,7 @@ Composition rules:
       // cycle that re-acquires a running-but-dead audio device (see its definition).
       // It must happen in this tap. We await it so the device is live before
       // startPlay schedules the first note.
+      holdPausedRef.current=false; // sync — clear before the scan loop repaints
       setHoldPaused(false);
       wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); });
     }else if(!busy){
@@ -7183,7 +7185,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
