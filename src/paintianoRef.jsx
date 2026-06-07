@@ -10585,18 +10585,6 @@ export default function Paintiano() {
   const morphSelRef = useRef([]);
   const [showMoodMenu, setShowMoodMenu] = useState(false);
   const [moodEdit, setMoodEdit] = useState(''); // text v edit políčku mood popupu (vlastná nálada + filter zoznamu)
-  // Rotating placeholder for the mood input. The static placeholder got clipped on
-  // narrow phones ("rainy day in Paris" → "...in") and the helper note below was
-  // too dim to read. Instead we cycle the full set of example lines + the "two
-  // ways" guidance through the placeholder itself, so every hint is shown in turn
-  // and nothing is truncated mid-phrase. Only runs while the menu is open and the
-  // field is empty.
-  const [moodPhIdx, setMoodPhIdx] = useState(0);
-  useEffect(()=>{
-    if(!showMoodMenu){ setMoodPhIdx(0); return; }
-    const id=setInterval(()=>{ setMoodPhIdx(i=>i+1); }, 2800);
-    return ()=>clearInterval(id);
-  },[showMoodMenu]);
   const [currentMood, setCurrentMood] = useState(null);
   // Morph picker shows a RANDOM subset of 18 moods (not all ~100), laid out 3 cols
   // × 6 rows. The pool is frozen while the dialog is open so selected chips don't
@@ -15706,7 +15694,7 @@ Composition rules:
 
   return (
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:(showOnboarding||!isActiveView)?'48px 16px':((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
@@ -17162,7 +17150,27 @@ Composition rules:
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase',flexShrink:0}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
             {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null); setMoodFromImg(false); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); setCompositionName(''); setRecordingName(''); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
               <div style={{display:'flex',gap:6,marginBottom:12,flexShrink:0}}>
-                <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder={(()=>{ const ex=t('moodExamples'); if(Array.isArray(ex)&&ex.length){ return ex[moodPhIdx%ex.length]; } return t('moodPlaceholder'); })()} autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{flex:1,minWidth:0,background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
+                <div style={{flex:1,minWidth:0,position:'relative'}}>
+                  <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder="" autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
+                  {/* Marquee placeholder: a native placeholder can't animate and got
+                      clipped on narrow phones, so when the field is empty we overlay
+                      a continuous right-to-left ribbon of every example + the "two
+                      ways" hint. The ribbon is duplicated so the -50% loop is seamless.
+                      pointerEvents:none keeps taps falling through to the input. */}
+                  {!moodEdit && (()=>{
+                    const ex=t('moodExamples');
+                    const items=Array.isArray(ex)&&ex.length?ex:[t('moodPlaceholder')];
+                    const ribbon=items.join('     ·     ');
+                    return (
+                      <div aria-hidden="true" style={{position:'absolute',inset:0,borderRadius:8,overflow:'hidden',pointerEvents:'none',display:'flex',alignItems:'center'}}>
+                        <div style={{display:'flex',whiteSpace:'nowrap',willChange:'transform',animation:'pfMarquee 22s linear infinite',paddingLeft:12}}>
+                          <span style={{color:'rgba(242,238,232,.4)',fontSize:'16px',fontStyle:'italic'}}>{ribbon}</span>
+                          <span style={{color:'rgba(242,238,232,.4)',fontSize:'16px',fontStyle:'italic',paddingLeft:'2.5em'}}>{ribbon}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
                 <button onClick={()=>submit(moodEdit)} disabled={!moodEdit.trim()} aria-label={t('moodGo')} title={t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:moodEdit.trim()?'pointer':'default',background:moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)',color:moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
               </div>
             ); })()}

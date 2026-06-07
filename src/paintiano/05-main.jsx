@@ -7556,8 +7556,8 @@ Composition rules:
                     return (
                       <div aria-hidden="true" style={{position:'absolute',inset:0,borderRadius:8,overflow:'hidden',pointerEvents:'none',display:'flex',alignItems:'center'}}>
                         <div style={{display:'flex',whiteSpace:'nowrap',willChange:'transform',animation:'pfMarquee 22s linear infinite',paddingLeft:12}}>
-                          <span style={{color:'rgba(242,238,232,.4)',fontSize:'16px',fontStyle:'italic'}}>{ribbon}</span>
-                          <span style={{color:'rgba(242,238,232,.4)',fontSize:'16px',fontStyle:'italic',paddingLeft:'2.5em'}}>{ribbon}</span>
+                          <span style={{color:'rgba(242,238,232,.4)',fontSize:(.62*effScale)+'rem',fontStyle:'italic'}}>{ribbon}</span>
+                          <span style={{color:'rgba(242,238,232,.4)',fontSize:(.62*effScale)+'rem',fontStyle:'italic',paddingLeft:'2.5em'}}>{ribbon}</span>
                         </div>
                       </div>
                     );
