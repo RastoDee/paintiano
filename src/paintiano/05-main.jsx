@@ -2042,6 +2042,41 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(_){}
   },[]);
 
+  // Last-resort recovery: replace the ENTIRE AudioContext. This is what a page
+  // reload does for audio. On iOS the context can end up 'running' yet wired to a
+  // dead output that neither reconnect nor a new sampler can revive; only a brand
+  // new context restores sound. We build a fresh Tone context, make it active,
+  // then build a fresh sampler on it. Heaviest hammer — used only after lighter
+  // steps fail, and throttled hard so it can't loop.
+  const ctxRestartedAtRef = useRef(0);
+  const restartAudioContext = useCallback(async ()=>{
+    const nowT=Date.now();
+    if(nowT - ctxRestartedAtRef.current < 8000) return; // hard throttle
+    ctxRestartedAtRef.current=nowT;
+    try{
+      const fresh = new Tone.Context();
+      try{ await fresh.resume(); }catch(_){}
+      try{ Tone.setContext(fresh); }catch(_){}
+      try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+      // Rebuild the sampler on the new context.
+      try{
+        const old=samplerRef.current;
+        const sfresh=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
+          onload:()=>{ try{ samplerOk.current=true; }catch(_){} },
+          onerror:()=>{},
+        }).toDestination();
+        samplerRef.current=sfresh;
+        setTimeout(()=>{ try{ old && old.dispose(); }catch(_){} }, 500);
+      }catch(_){}
+      try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
+      // Silent kick on the new context.
+      try{
+        const ac=Tone.getContext().rawContext;
+        if(ac){ const b=ac.createBuffer(1,1,22050); const sx=ac.createBufferSource(); sx.buffer=b; sx.connect(ac.destination); sx.start(0); sx.stop(ac.currentTime+0.005); }
+      }catch(_){}
+    }catch(_){}
+  },[]);
+
   // Playback watchdog: the diagnostic proved the failure mode is 'running but
   // SILENT' — the context keeps running but no signal reaches the output, and it
   // can happen DURING playback (so the gesture-based revive never fires because
@@ -2062,12 +2097,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const recentNote = (Date.now() - (lastAudioActivityRef.current||0)) < 2500;
         if(lvl<=1 && recentNote){
           silentStrikesRef.current++;
-          // 2 strikes → reconnect the route (cheap). If still flat after more
-          // strikes, the route itself is dead → rebuild the sampler (heavier).
+          // Escalating recovery while silent during playback:
+          //   2 strikes → reconnect the route (cheap)
+          //   4 strikes → rebuild the sampler (route may be dead)
+          //   6 strikes → replace the whole AudioContext (last resort = reload-grade)
           if(silentStrikesRef.current===2){
             reviveAudioGraph();
-          } else if(silentStrikesRef.current>=4){
+          } else if(silentStrikesRef.current===4){
             rebuildSampler();
+          } else if(silentStrikesRef.current>=6){
+            restartAudioContext();
             silentStrikesRef.current=0;
           }
         } else {
@@ -2076,7 +2115,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }catch(_){}
     }, 1200);
     return ()=>clearInterval(id);
-  },[reviveAudioGraph,rebuildSampler]);
+  },[reviveAudioGraph,rebuildSampler,restartAudioContext]);
 
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
