@@ -10866,9 +10866,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(viewMode==='image'&&pixelRef.current){
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
-      // Stopped/paused: the canvas may have been blanked while we were away in
-      // Setup (the element unmounts/clears). Repaint the already-played mosaic
-      // 0..disp from pixel data so returning via "← Canvas"/Resume shows the
+      // Paused (holdPaused): the scan loop already painted the mosaic up to the
+      // current position and then stopped. Leave the canvas exactly as it is — a
+      // repaint here races the just-stopped loop and can drop the most recent
+      // blocks (the bug where paused scan blocks vanished). Resume continues
+      // painting from where it left off, so nothing is lost.
+      if(holdPaused) return;
+      // Fully stopped (not paused): the canvas may have been blanked while we were
+      // away in Setup (the element unmounts/clears). Repaint the already-played
+      // mosaic 0..disp from pixel data so returning via "← Canvas" shows the
       // progress that was on screen before, instead of a blank image overlay.
       try{
         const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');

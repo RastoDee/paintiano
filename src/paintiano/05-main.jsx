@@ -1258,12 +1258,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(viewMode==='image'&&pixelRef.current){
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
-      // Paused (holdPaused): the scan loop already painted the mosaic up to the
-      // current position and then stopped. Leave the canvas exactly as it is — a
-      // repaint here races the just-stopped loop and can drop the most recent
-      // blocks (the bug where paused scan blocks vanished). Resume continues
-      // painting from where it left off, so nothing is lost.
-      if(holdPaused) return;
+      // Paused: detect via resumeFromRef (set synchronously the instant Pause is
+      // tapped) rather than the holdPaused state, which may not have flushed yet
+      // in the render that runs when playing flips false — that race is why the
+      // repaint below still fired on pause and wiped the freshly-painted blocks.
+      // When paused, leave the canvas exactly as the scan loop left it.
+      if(holdPaused || (resumeFromRef.current!=null && resumeFromRef.current>0)) return;
       // Fully stopped (not paused): the canvas may have been blanked while we were
       // away in Setup (the element unmounts/clears). Repaint the already-played
       // mosaic 0..disp from pixel data so returning via "← Canvas" shows the
