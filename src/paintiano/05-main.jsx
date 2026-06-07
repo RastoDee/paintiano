@@ -8124,10 +8124,8 @@ Composition rules:
             {[
               { key:'mood',    icon:'✦', color:'#ffd07a', bg:'rgba(201,168,76,.12)',  name:t('moodHowFeel')||'How do you feel?' },
               { key:'mfi',     icon:'✦', color:'#e4b2ff', bg:'rgba(220,150,255,.12)', name:t('imgMood')||'Mood from image' },
-              { key:'midi',    icon:'♩', color:'#5b9cf6', bg:'rgba(91,156,246,.12)',  name:(t('midi')||'MIDI').replace(/[^\p{L} ]/gu,'').trim() },
-              { key:'audio',   icon:'♪', color:'#f47c3c', bg:'rgba(244,124,60,.12)',  name:(t('audio')||'Audio').replace(/[^\p{L} ]/gu,'').trim() },
-              { key:'score',   icon:'𝄞', color:'#a97ff5', bg:'rgba(169,127,245,.12)', name:(t('score')||'Score').replace(/[^\p{L} ]/gu,'').trim() },
-              { key:'image',   icon:'◫', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:(t('image')||'Image').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'music',   icon:'♪', color:'#5b9cf6', bg:'rgba(91,156,246,.12)',  name:(t('music')||'Music').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'image',   icon:'◫', color:'#f47c3c', bg:'rgba(244,124,60,.12)',  name:(t('image')||'Image').replace(/[^\p{L} ]/gu,'').trim() },
               { key:'compose', icon:'♪', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:(t('compose')||'Compose').replace(/[^\p{L} ]/gu,'').trim() },
               { key:'mic',     icon:'🎙', color:'#ff6b9d', bg:'rgba(255,107,157,.12)', name:(t('mic')||'Mic').replace(/[^\p{L} ]/gu,'').trim() },
             ].map(it => {
