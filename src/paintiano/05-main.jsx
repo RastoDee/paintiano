@@ -5009,13 +5009,30 @@ Composition rules:
       // Next fresh Play will re-open it (same semantics as Add).
       if(aiRecordingRef.current){ setAiRecording(false); }
     }else if(holdPaused){
+      // In-gesture audio recovery: iOS only re-opens a dead/suspended audio
+      // session DURING a user gesture. This Resume tap IS that gesture, so do the
+      // recovery synchronously HERE — a setTimeout/visibility-handler revive
+      // happens outside the gesture and iOS ignores it (the cause of "sound gone
+      // after a longer absence, fine after a short one"). Escalate by how long we
+      // were away: short gap → resume/reconnect; long gap → rebuild sampler;
+      // very long → full context restart. All run in-gesture.
+      try{ Tone.start(); }catch(_){}
+      try{ const ac=Tone.getContext().rawContext; if(ac && ac.state!=='running') ac.resume(); }catch(_){}
+      const away = Date.now() - (lastAudioActivityRef.current||0);
+      try{
+        reviveAudioGraph();
+        if(away>6000) rebuildSampler();
+        if(away>20000) restartAudioContext();
+      }catch(_){}
       setHoldPaused(false);
       startPlay(); // startPlay reads and clears resumeFromRef itself
     }else if(!busy){
+      try{ Tone.start(); }catch(_){}
+      try{ const ac=Tone.getContext().rawContext; if(ac && ac.state!=='running') ac.resume(); }catch(_){}
       resumeFromRef.current=null;
       startPlay();
     }
-  },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening]);
+  },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening,reviveAudioGraph,rebuildSampler,restartAudioContext]);
   useEffect(()=>{handlePauseClickRef.current=handlePauseClick;},[handlePauseClick]);
   useEffect(()=>{startPlayRef.current=startPlay;},[startPlay]);
 
