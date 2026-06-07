@@ -13949,8 +13949,11 @@ Composition rules:
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
-    // Play no longer auto-collapses the Color·Style strip or scrolls the page into a
-    // framed position — the fullscreen button gives an immersive view on demand.
+    // Collapse the Color·Style strip when a FRESH Play starts, so the canvas gets
+    // full focus. Only on fresh Play (not resume): the user can re-open the strip
+    // during playback to change colour/style, and we must NOT yank it shut again —
+    // nothing here closes it mid-play, so it stays open until the next fresh Play.
+    if(!isResume) setStripOpen(false);
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -16222,6 +16225,9 @@ Composition rules:
           </>)}
           {/* Style — hidden in image mode: an artist re-paint makes no sense when
               the source already IS a painting; only the colour reading matters there. */}
+          {loadedSource!=='image' && (
+          <div style={{height:1,margin:'12px 8px 0',background:'linear-gradient(90deg,transparent,rgba(201,168,76,.28),transparent)'}} />
+          )}
           {loadedSource!=='image' && (
           <div style={{textAlign:'center',marginTop:6,marginBottom:2,fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
           )}

@@ -16020,7 +16020,7 @@ Composition rules:
           <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
         </button>
         {!stripOpen && loadedSource!=='image' && style && STYLE_INSPIRED[style] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none'}}>{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
         )}
         {stripOpen && (
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
@@ -16225,9 +16225,6 @@ Composition rules:
           </>)}
           {/* Style — hidden in image mode: an artist re-paint makes no sense when
               the source already IS a painting; only the colour reading matters there. */}
-          {loadedSource!=='image' && (
-          <div style={{height:1,margin:'12px 8px 0',background:'linear-gradient(90deg,transparent,rgba(201,168,76,.28),transparent)'}} />
-          )}
           {loadedSource!=='image' && (
           <div style={{textAlign:'center',marginTop:6,marginBottom:2,fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
           )}
