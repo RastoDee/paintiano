@@ -9999,6 +9999,11 @@ export default function Paintiano() {
   // oscillators so they don't burst out as a monotone piano blast when the
   // session returns. See unlockAudio.
   const audioStateListenerRef = useRef(false);
+  // Tracks the last time we actually triggered a note, and whether the audio
+  // graph may have gone "running-but-dead" after idle (iOS freezes the output
+  // route without suspending the context). Used to rebuild the route on gesture.
+  const lastAudioActivityRef = useRef(0);
+  const audioRevivedAtRef = useRef(0);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -11277,6 +11282,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // iOS — the symptom users see as "sound randomly disappears." Cheap to
       // call and a no-op when already running.
       try{const _ac=Tone.getContext().rawContext;if(_ac&&_ac.state==='suspended')_ac.resume().catch(()=>{});}catch(_){}
+      lastAudioActivityRef.current=Date.now();
       if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
       if(ac.state==='suspended')ac.resume();
@@ -11561,6 +11567,35 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // app keeps running. Call this from every user-gesture audio entrypoint to
   // (a) kick Tone's promise, and (b) synchronously poke the rawContext awake.
   // Cheap to call repeatedly; no-op when context is already running.
+  // iOS "running-but-dead" recovery: after the app sits idle, iOS WebKit can
+  // freeze the audio output route while leaving the AudioContext state as
+  // 'running' — so resume() is a no-op and sound stays gone until a reload. The
+  // cure is to rebuild the graph's output path: reconnect the sampler to the
+  // destination and fire a silent buffer to re-open the hardware route. Cheap and
+  // safe to call defensively; throttled so rapid taps don't thrash it.
+  const reviveAudioGraph = useCallback(()=>{
+    const nowT=Date.now();
+    if(nowT - audioRevivedAtRef.current < 1500) return; // throttle
+    audioRevivedAtRef.current=nowT;
+    try{
+      const ac=Tone.getContext().rawContext; if(!ac) return;
+      // Reconnect sampler → destination (the route iOS may have dropped).
+      try{
+        if(samplerOk.current && samplerRef.current){
+          try{ samplerRef.current.disconnect(); }catch(_){}
+          try{ samplerRef.current.toDestination(); }catch(_){}
+        }
+      }catch(_){}
+      // Silent 1-sample buffer to nudge iOS into re-opening the output route.
+      try{
+        const buf=ac.createBuffer(1,1,22050);
+        const src=ac.createBufferSource();
+        src.buffer=buf; src.connect(ac.destination); src.start(0); src.stop(ac.currentTime+0.005);
+      }catch(_){}
+      try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
+    }catch(_){}
+  },[]);
+
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
     // Shorten Tone's scheduler look-ahead from its default 100ms to 30ms.
@@ -11770,8 +11805,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       try{
         const ac = Tone.getContext().rawContext;
         if(ac && ac.state !== 'running'){
+          // Parked context: full unlock cycle resumes it in-gesture.
           try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
           unlockAudio();
+        } else if(ac && ac.state === 'running'){
+          // Running but possibly "dead" after idle: if it's been a while since we
+          // last made sound, rebuild the output route so the next note is audible.
+          const idleMs = Date.now() - (lastAudioActivityRef.current||0);
+          if(lastAudioActivityRef.current && idleMs > 15000){
+            reviveAudioGraph();
+          }
         }
       }catch(_){}
     };
@@ -11784,7 +11827,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       document.removeEventListener('pointerdown', onGesture, {capture:true});
       document.removeEventListener('touchstart', onGesture, {capture:true});
     };
-  },[unlockAudio]);
+  },[unlockAudio,reviveAudioGraph]);
 
   // Schedule a timeout and remember its id so stopAll can cancel it.
   // Uses a Set internally for O(1) delete on fire instead of O(n) filter.
