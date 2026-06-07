@@ -10135,7 +10135,16 @@ export default function Paintiano() {
   const paintDur = 500;
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
-  const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);
+  // Temporary audio diagnostic: surfaces the live AudioContext state on screen so
+  // we can see what it is when sound is lost after idle (e.g. 'suspended',
+  // 'interrupted', or 'running' but silent). Polled once a second.
+  const [audioDiag,setAudioDiag]=useState('');
+  useEffect(()=>{
+    const tick=()=>{ try{ const ac=Tone.getContext().rawContext; setAudioDiag(ac?ac.state:'no-ctx'); }catch(_){ setAudioDiag('err'); } };
+    tick(); const id=setInterval(tick,1000); return ()=>clearInterval(id);
+  },[]);
+  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
   // Variation history for Random mode prev/next navigation. saltHistory holds
   // the sequence of random salts that have been shown; saltIdxRef points at the
   // current one. Play-from-start and Loop append+advance (fresh variation);
@@ -17290,6 +17299,8 @@ Composition rules:
             <span style={{width:9,height:9,borderRadius:'50%',background:'#ff5a5a',boxShadow:'0 0 8px #ff5a5a',display:'inline-block'}}/>🎙 REC
           </button>
         )}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
+        {audioDiag && audioDiag!=='running' && (<span style={{fontSize:(.5*effScale)+'rem',color:'rgba(255,140,140,.9)',letterSpacing:'.05em',alignSelf:'center',fontFamily:'monospace'}} title="AudioContext state (diagnostic)">⚠ {audioDiag}</span>)}
+        {audioDiag==='running' && (<span style={{fontSize:(.46*effScale)+'rem',color:'rgba(120,200,150,.7)',letterSpacing:'.05em',alignSelf:'center',fontFamily:'monospace'}} title="AudioContext state (diagnostic)">{audioDiag}</span>)}
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
