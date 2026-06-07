@@ -13420,12 +13420,13 @@ Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeat
 Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
 Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) that fits the resulting music.
 Composition rules:
-- 56–84 notes total
+- LENGTH: the piece MUST last at least 60 seconds of music — aim for 70–95 seconds. With the tempo you choose, make sure the LAST note's (startBeat + duration) reaches at least tempo beats (i.e. ≥ 60 seconds worth of beats). Do not stop early.
+- 90–150 notes total (enough to fill a full minute or more)
 - Pick a key that fits the palette and mood; mostly diatonic, sparing chromatic colour
-- Structure: opening (motif, sparse) → development (richer, busiest) → close (motif returns, quieter)
-- Bass (octaves 2–3): harmonic grounding, ≥12 notes
-- Melody (octaves 4–6): singable, recurring motif
-- Dynamics via velocity: opening ~55–70, development ~80–110, close ~45–65
+- Structure: intro (motif, sparse) → development (richer, busiest) → a contrasting middle section → return of the motif → close (quieter). Use the length for a real arc, not a loop.
+- Bass (octaves 2–3): harmonic grounding throughout, ≥20 notes
+- Melody (octaves 4–6): singable, recurring motif that develops over the full length
+- Dynamics via velocity: intro ~55–70, development ~80–110, close ~45–65
 - Vary durations (mix 0.25/0.5/1/2 beats) — clear rhythm, not uniform
 - Pitches like C4/F#3/Bb5 with octave number, sharps only (C#4 not Db4)`;
       setWPct(40);
@@ -13435,7 +13436,7 @@ Composition rules:
       let resp=null,respText='',lastErr=null;
       for(const _ep of _endpoints){
         try{
-          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
           const txt=await r.text();
           if(r.ok&&txt){ resp=r; respText=txt; break; }
           lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);

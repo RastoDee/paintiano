@@ -139,19 +139,26 @@ function name2midi(note){if(note===null||note===undefined)return null;
   const trimmed=note.trim();
   if(/^-?\d+$/.test(trimmed)){ const _n=parseInt(trimmed,10); return _n>=21&&_n<=108?_n:null; }
   if(_nameToMidi[trimmed]!==undefined){const v=_nameToMidi[trimmed];return v>=21&&v<=108?v:null;}const m=trimmed.match(/^([A-G])(#{1,2}|bb?|x)?(-?\d)$/i);if(!m)return null;const PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11},pc=PC[m[1].toUpperCase()];if(pc===undefined)return null;const a=m[2]||'',acc=a.startsWith('##')||a==='x'?2:a.startsWith('#')?1:a.startsWith('bb')?-2:a.startsWith('b')?-1:0,midi=(parseInt(m[3])+1)*12+pc+acc;return midi>=21&&midi<=108?midi:null;}
-function noteArr2events(notes,tempo){
+function noteArr2events(notes,tempo,opts){
   let bpm=tempo||120;
   // Normalise: accept both object {note,dur,beat} and array [pitch,dur,beat,vel]
   const norm=notes.map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:n);
   const sorted=norm.slice().sort((a,b)=>a.beat-b.beat);
   if(!sorted.length)return[];
-  // Auto-scale tempo: target ~30s playback regardless of song's natural length
   const last=sorted[sorted.length-1],totalBeats=last.beat+(last.dur||1);
   const noteCount=sorted.length;
-  const TARGET=Math.max(25,Math.min(90,noteCount*0.25));
-  const naturalSec=totalBeats*60/bpm;
-  if(naturalSec>TARGET)bpm=bpm*naturalSec/TARGET;
-  bpm=Math.min(180,Math.max(95,bpm));
+  // Auto-scale tempo: target ~30s playback regardless of song's natural length.
+  // Skipped when opts.keepLong is set (e.g. image Composition), where we WANT the
+  // composer's real length — just clamp the tempo to the AI's chosen value within
+  // a musical range so a full ≥1-minute piece plays at its intended duration.
+  if(opts&&opts.keepLong){
+    bpm=Math.min(168,Math.max(60,bpm));
+  }else{
+    const TARGET=Math.max(25,Math.min(90,noteCount*0.25));
+    const naturalSec=totalBeats*60/bpm;
+    if(naturalSec>TARGET)bpm=bpm*naturalSec/TARGET;
+    bpm=Math.min(180,Math.max(95,bpm));
+  }
   const msb=60000/bpm;
   const flat=sorted.map(n=>{const midi=name2midi(n.note);if(!midi)return null;const v=n.vel?Math.max(20,Math.min(127,Math.round(n.vel))):Math.max(20,Math.round(80*(n._vScale||1)));return{m:midi,v,startMs:Math.round(n.beat*msb),durMs:Math.max(80,Math.round(n.dur*msb*0.92))};}).filter(Boolean);
   return groupToEvents(flat,msb);

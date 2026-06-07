@@ -3810,6 +3810,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(busy) return;
     const mat=extractImageMaterial();
     if(!mat){ setErr(t('noNotesGeneric')||'Load an image first'); setErrInfo(false); return; }
+    // Composition is a Pro-only feature: free users get the paywall immediately,
+    // with no trial credit consumed. Pro users proceed straight through.
+    if(!isPro){ setPaywallReason('settings'); return; }
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
@@ -3858,20 +3861,29 @@ Composition rules:
       const parsed=extractAiJson(raw);
       if(!parsed?.notes?.length)throw new Error('No notes');
       gateAI(1,true);
-      const evts=noteArr2events(parsed.notes,parsed.tempo);
+      const evts=noteArr2events(parsed.notes,parsed.tempo,{keepLong:true});
       if(!evts.length)throw new Error('Could not parse composition');
       const _dispT=(parsed.title&&String(parsed.title).trim())||(t('imgComposition')!=='imgComposition'?t('imgComposition'):'Composition');
-      // Keep the ORIGINAL image on the canvas while this plays: don't switch
-      // viewMode away from 'image', don't wipe originalImgUrl. We feed the notes
-      // straight into the playback chords and start playing.
-      setVarySource({notes:(parsed.notes||[]).map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:n),tempo:parsed.tempo||90,title:_dispT});
+      // Keep the ORIGINAL image on the canvas while this plays, and stay fully in
+      // IMAGE context (so the source row still shows "+ new image" and the MORPH/
+      // VARY mood row never appears). Two deliberate choices make this work:
+      //   1) pixelRef.current = null  → startPlay's image branch (which needs a
+      //      pixel mosaic to scan-highlight) is skipped, so playback falls through
+      //      to the plain note loop: it sounds the notes but paints NOTHING on the
+      //      canvas. The original <img> (zIndex 0, behind the transparent canvas)
+      //      stays fully visible. The stopped/paused image repaint (guarded by
+      //      `viewMode==='image' && pixelRef.current`) is also skipped for the same
+      //      reason, so the artwork is never overwritten by a mosaic.
+      //   2) we do NOT set moodContext / composeSource / varySource — those drive
+      //      the mood UI (MORPH + VARY row, AI badge, mood "new" affordances) which
+      //      have no place over an image. loadedSource stays 'image', so the
+      //      transport keeps the image source identity and the "+ new image" button.
+      pixelRef.current=null;
       setChords(evts); chordsRef.current=evts; idxRef.current=0; setDisp(0);
       setInfo({title:_dispT,count:evts.length,dur:Math.round((evts[evts.length-1]?.startMs||0)/1000)+2});
-      setComposeSource('ai'); setMoodContext(true);
       try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(_dispT.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
       setWorking(false); setWLabel(''); setWPct(0);
-      // Play the composed piece (image stays on canvas — playback won't repaint
-      // because we're not in a paint path; ripples are suppressed in image mode).
+      // Play the composed piece — image stays on canvas (see note above).
       setTimeout(()=>{ try{ startPlayRef.current?.(); }catch(_){} }, 60);
       return;
     }catch(e){
@@ -3879,7 +3891,7 @@ Composition rules:
       setErr(e.message||'Compose failed'); setErrInfo(false);
     }
     finally{ setWorking(false); setWLabel(''); setWPct(0); }
-  },[busy,extractImageMaterial,stopAll,lang,gateAI,t]);
+  },[busy,extractImageMaterial,stopAll,lang,gateAI,t,isPro]);
 
   const aiCompose=useCallback(async(overrideMood)=>{
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
@@ -6611,6 +6623,9 @@ Composition rules:
           {/* Style — hidden in image mode: an artist re-paint makes no sense when
               the source already IS a painting; only the colour reading matters there. */}
           {loadedSource!=='image' && (
+          <div style={{textAlign:'center',marginTop:6,marginBottom:2,fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+          )}
+          {loadedSource!=='image' && (
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
             {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
@@ -6625,7 +6640,12 @@ Composition rules:
               // label so the cycling reads on the buttons themselves.
               const shufKey = (shuffleStyle===a || shuffleStyle===b) ? shuffleStyle : null;
               const shufHit = shufKey!==null;
-              const label = STYLE_LABELS[activeKey || shufKey || a];
+              // Buttons show the ARTIST that inspired the style (Picasso, Klimt…)
+              // rather than the technique name. Long names are shortened to a
+              // single recognizable word so they fit the narrow 5-up grid cell.
+              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+              const _artFull = STYLE_INSPIRED[activeKey || shufKey || a];
+              const label = _artistShort[_artFull] || _artFull;
               // Cycle: nothing→A, A→B, B→mosaic (deselect), then A again.
               // The deselect step lets the user click back out to plain Mosaic
               // (and so re-enable 🎲 shuffle) without reaching for the Mosaic button.
@@ -7607,7 +7627,7 @@ Composition rules:
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&chords.length>0&&(
-          <button onClick={()=>{ if(busy||working) return; if(aiUsable) aiComposeFromImage(); }} disabled={busy||working||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{padding:'8px 14px',background:'transparent',color:(busy||working||!aiUsable)?'rgba(201,168,76,.3)':'rgba(220,180,90,.9)',border:'1px solid rgba(201,168,76,'+((busy||working||!aiUsable)?'.15':'.45')+')',borderRadius:22,cursor:(busy||working||!aiUsable)?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:!aiUsable?.5:1,transition:'all .18s'}}>{'✦ '+(t('imgComposition')!=='imgComposition'?t('imgComposition'):'compose')}</button>
+          <button onClick={()=>{ if(busy||working) return; if(!isPro){ setPaywallReason('settings'); return; } if(aiUsable) aiComposeFromImage(); }} disabled={busy||working||(isPro&&!aiUsable)} className="pf-lift" title={!isPro?(t('proBadge')||'Pro')+' · '+(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'))} style={{padding:'8px 14px',background:'transparent',color:(busy||working||(isPro&&!aiUsable))?'rgba(201,168,76,.3)':'rgba(220,180,90,.9)',border:'1px solid rgba(201,168,76,'+((busy||working||(isPro&&!aiUsable))?'.15':'.45')+')',borderRadius:22,cursor:(busy||working||(isPro&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(isPro&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('imgComposition')!=='imgComposition'?t('imgComposition'):'compose')+(!isPro?' 🔒':'')}</button>
         )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
           // REC button — single source of truth for image-mode recording:
