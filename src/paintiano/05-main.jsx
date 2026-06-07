@@ -1081,6 +1081,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgDir, setImgDir] = useState('lr');
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
+  // Image playback mode: 'scan' = read the picture left→right as a score (paints
+  // a mosaic/style); 'compose' = AI writes a free-standing piece from the image
+  // material (Pro; canvas stays the original image). The transport Play/Pause/REC
+  // all follow this selection. Resets to 'scan' on every new image load.
+  const [imgPlayMode, setImgPlayMode] = useState('scan');
+  const imgPlayModeRef = useRef('scan');
+  useEffect(()=>{ imgPlayModeRef.current=imgPlayMode; },[imgPlayMode]);
   const blobUrl      = useMemo(()=>midiBlob?URL.createObjectURL(midiBlob):null,[midiBlob]);
   const audioBlobUrl = useMemo(()=>audioBlob?URL.createObjectURL(audioBlob):null,[audioBlob]);
   const busy = playing || anim || working;
@@ -1126,6 +1133,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     : (loadedSource==='image' && (!pixelRef.current || (disp===0 && !playedOnce))) ? null
     : loadedSource;
   const composedModeRef = useRef(false);
+  // True while an image-Composition piece is playing: the canvas must stay blank
+  // (the original <img> shows through) — NOT painted with the active artist style.
+  const imgComposeRef = useRef(false);
   const [selectedChordIdx, setSelectedChordIdx] = useState(null); // chord.idx selected by tapping a block (compose / compose-pause) for targeted Undo
   const selectedChordIdxRef = useRef(null);
   useEffect(()=>{ selectedChordIdxRef.current=selectedChordIdx; },[selectedChordIdx]);
@@ -1229,6 +1239,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // here means every downstream render decision (overlay dispatch, cache key,
     // canAppend) transparently uses the rendered style.
     const style = effectiveStyle;
+    // Image Composition playback: the canvas must stay fully transparent so the
+    // original <img> (behind it) shows through. Without this guard, when pixelRef
+    // is null (composition mode) the image branch below is skipped and execution
+    // falls through to the artist-style paint renderer — which would draw the
+    // composed notes in whatever style was last active (e.g. Kandinsky circles)
+    // ON TOP of the artwork. Clear and bail.
+    if(imgComposeRef.current){
+      try{ const _ctx=cv.getContext('2d'); _ctx.clearRect(0,0,CW,CH); }catch(_){}
+      return;
+    }
     // Image mode: keep the canvas transparent so the original painting shows through
     // unobstructed. The 96×60 pixel mosaic that used to render here was useful as
     // a "what the algorithm sees" preview, but it obscured the artwork on a phone-sized
@@ -2484,7 +2504,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const wipeCanvasNow = useCallback(()=>{
     setChords([]);chordsRef.current=[];idxRef.current=0;setPending([]);pendingRef.current=[];
     setDisp(0);setHoldPaused(false);resumeFromRef.current=null;
-    pixelRef.current=null;setViewMode('paint');setOriginalImgUrl(null);setInfo(null);
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);setInfo(null);
     substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
     lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
     try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
@@ -2629,7 +2649,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!composeMode&&!micPainting&&!micListening) draftOwnerRef.current=null;
     setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
-    pixelRef.current=null;setViewMode('paint');
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');
     // Invalidate the cached substrate canvas + last-paint signature. Without this,
     // Clear emptied the chords but left the built-up substrate cache intact, so
     // returning to the canvas (← Canvas) re-blitted the OLD painting even though
@@ -2847,7 +2867,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
     setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
-    pixelRef.current=null;setViewMode('paint');setStamp(s=>s+1);
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setStamp(s=>s+1);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
     setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);setForceSetup(false);
@@ -2897,7 +2917,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     });
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
-    pixelRef.current=null;setViewMode('paint');setOriginalImgUrl(null);
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
     setGrid(g);setChords(wi);setDisp(0);
     setInfo({title,count:wi.length,dur:Math.round(lastMs/1000)});
     idxRef.current=wi.length;
@@ -2996,6 +3016,32 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const keys=Object.keys(map);
       if(keys.length>40){ for(const k of keys.slice(0,keys.length-40)) delete map[k]; }
       localStorage.setItem(IMGMOOD_CACHE_KEY, JSON.stringify(map));
+    }catch(_){ /* quota or disabled storage — silently skip caching */ }
+  },[]);
+
+  // ── Image → Composition cache ──────────────────────────────────────────────
+  // Parallel to the mood cache above, keyed by the SAME image hash. Once an image
+  // has been "composed from", we keep the resulting piece so re-composing the
+  // same picture (a known/recognised image) replays instantly — no AI call, no
+  // credit spent. A small baked set (SAMPLE_IMGCOMPOSE) can ship known artworks.
+  const IMGCOMPOSE_CACHE_KEY='paintiano_imgcompose_cache_v1';
+  const _imgComposeCacheGet=useCallback((hash)=>{
+    try{
+      if(typeof SAMPLE_IMGCOMPOSE!=='undefined' && SAMPLE_IMGCOMPOSE && SAMPLE_IMGCOMPOSE.hash===hash) return SAMPLE_IMGCOMPOSE.result;
+    }catch(_){}
+    try{
+      const raw=localStorage.getItem(IMGCOMPOSE_CACHE_KEY); if(!raw) return null;
+      const map=JSON.parse(raw)||{}; return map[hash]||null;
+    }catch(_){ return null; }
+  },[]);
+  const _imgComposeCacheSet=useCallback((hash,result)=>{
+    try{
+      const raw=localStorage.getItem(IMGCOMPOSE_CACHE_KEY);
+      const map=raw?(JSON.parse(raw)||{}):{};
+      map[hash]=result;
+      const keys=Object.keys(map);
+      if(keys.length>20){ for(const k of keys.slice(0,keys.length-20)) delete map[k]; }
+      localStorage.setItem(IMGCOMPOSE_CACHE_KEY, JSON.stringify(map));
     }catch(_){ /* quota or disabled storage — silently skip caching */ }
   },[]);
 
@@ -3806,13 +3852,41 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Compose a real piece FROM the image's note material (no painting — keeps the
   // original image on the canvas while it plays). Reuses the same Claude endpoint
   // + parse + apply path as aiCompose.
-  const aiComposeFromImage=useCallback(async()=>{
+  const aiComposeFromImage=useCallback(async(afterReady)=>{
     if(busy) return;
     const mat=extractImageMaterial();
     if(!mat){ setErr(t('noNotesGeneric')||'Load an image first'); setErrInfo(false); return; }
     // Composition is a Pro-only feature: free users get the paywall immediately,
     // with no trial credit consumed. Pro users proceed straight through.
     if(!isPro){ setPaywallReason('settings'); return; }
+    // Shared apply for both a cache hit and a fresh AI result. Keeps the ORIGINAL
+    // image on the canvas and stays in IMAGE context (no MORPH/VARY) — see the
+    // long note further down for why pixelRef is nulled. When afterReady is given
+    // (REC path) we hand off to it instead of plain Play, so the recorder and the
+    // composed playback start together — no silent lead-in while AI was thinking.
+    const _applyComposition=(parsed)=>{
+      const evts=noteArr2events(parsed.notes,parsed.tempo,{keepLong:true});
+      if(!evts.length) throw new Error('Could not parse composition');
+      const _dispT=(parsed.title&&String(parsed.title).trim())||(t('imgComposition')!=='imgComposition'?t('imgComposition'):'Composition');
+      pixelRef.current=null;
+      imgComposeRef.current=true;
+      setChords(evts); chordsRef.current=evts; idxRef.current=0; setDisp(0);
+      setInfo({title:_dispT,count:evts.length,dur:Math.round((evts[evts.length-1]?.startMs||0)/1000)+2});
+      try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(_dispT.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+      setWorking(false); setWLabel(''); setWPct(0);
+      if(typeof afterReady==='function'){ setTimeout(()=>{ try{ afterReady(); }catch(_){} }, 80); }
+      else { setTimeout(()=>{ try{ startPlayRef.current?.(); }catch(_){} }, 60); }
+    };
+    // Known/recognised image: if we've composed from this exact picture before,
+    // replay the cached piece instantly — no AI call, no credit spent.
+    const _imgHash = originalImgUrl ? _imgMoodHash(originalImgUrl) : null;
+    if(_imgHash!=null){
+      const _cached=_imgComposeCacheGet(_imgHash);
+      if(_cached&&_cached.notes&&_cached.notes.length){
+        setErr(''); setErrInfo(false); stopAll();
+        try{ _applyComposition(_cached); return; }catch(_){ /* fall through to AI */ }
+      }
+    }
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
@@ -3861,37 +3935,17 @@ Composition rules:
       const parsed=extractAiJson(raw);
       if(!parsed?.notes?.length)throw new Error('No notes');
       gateAI(1,true);
-      const evts=noteArr2events(parsed.notes,parsed.tempo,{keepLong:true});
-      if(!evts.length)throw new Error('Could not parse composition');
-      const _dispT=(parsed.title&&String(parsed.title).trim())||(t('imgComposition')!=='imgComposition'?t('imgComposition'):'Composition');
-      // Keep the ORIGINAL image on the canvas while this plays, and stay fully in
-      // IMAGE context (so the source row still shows "+ new image" and the MORPH/
-      // VARY mood row never appears). Two deliberate choices make this work:
-      //   1) pixelRef.current = null  → startPlay's image branch (which needs a
-      //      pixel mosaic to scan-highlight) is skipped, so playback falls through
-      //      to the plain note loop: it sounds the notes but paints NOTHING on the
-      //      canvas. The original <img> (zIndex 0, behind the transparent canvas)
-      //      stays fully visible. The stopped/paused image repaint (guarded by
-      //      `viewMode==='image' && pixelRef.current`) is also skipped for the same
-      //      reason, so the artwork is never overwritten by a mosaic.
-      //   2) we do NOT set moodContext / composeSource / varySource — those drive
-      //      the mood UI (MORPH + VARY row, AI badge, mood "new" affordances) which
-      //      have no place over an image. loadedSource stays 'image', so the
-      //      transport keeps the image source identity and the "+ new image" button.
-      pixelRef.current=null;
-      setChords(evts); chordsRef.current=evts; idxRef.current=0; setDisp(0);
-      setInfo({title:_dispT,count:evts.length,dur:Math.round((evts[evts.length-1]?.startMs||0)/1000)+2});
-      try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(_dispT.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
-      setWorking(false); setWLabel(''); setWPct(0);
-      // Play the composed piece — image stays on canvas (see note above).
-      setTimeout(()=>{ try{ startPlayRef.current?.(); }catch(_){} }, 60);
+      // Cache the composition keyed by image hash so re-composing the same
+      // picture later is instant + free (see _imgComposeCacheGet).
+      if(_imgHash!=null){ try{ _imgComposeCacheSet(_imgHash,{notes:parsed.notes,tempo:parsed.tempo||90,title:parsed.title||''}); }catch(_){} }
+      _applyComposition(parsed);
       return;
     }catch(e){
       if(e&&e._aiNet) setAiDown(true);
       setErr(e.message||'Compose failed'); setErrInfo(false);
     }
     finally{ setWorking(false); setWLabel(''); setWPct(0); }
-  },[busy,extractImageMaterial,stopAll,lang,gateAI,t,isPro]);
+  },[busy,extractImageMaterial,stopAll,lang,gateAI,t,isPro,originalImgUrl,_imgMoodHash,_imgComposeCacheGet,_imgComposeCacheSet]);
 
   const aiCompose=useCallback(async(overrideMood)=>{
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
@@ -4080,6 +4134,7 @@ Composition rules:
           const startMode = mode==='custom' ? 'custom' : autoMode;
           if(startMode!==mode) setMode(startMode);
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
+          imgComposeRef.current=false;
           // Process pixels into events using the chosen mode's hue→pitch table.
           // B/W uses harmony's hue table — same music as harmony, but the canvas
           // renders monochrome because gc() returns greys in bw mode.
@@ -4104,6 +4159,7 @@ Composition rules:
           if(cv){try{cv.getContext('2d').clearRect(0,0,cv.width,cv.height);}catch(_){}}
           setComposeMode(false);
           setDemoMode(false);
+          setImgPlayMode('scan'); imgPlayModeRef.current='scan';
           setOriginalImgUrl(evt.target.result);
           setGrid({N:nc,BW,BH,CW:nc*BW,CH:nr*BH});setViewMode('image');
           setChords(evts);setDisp(evts.length);setPlayedOnce(false);
@@ -4298,6 +4354,17 @@ Composition rules:
     const now=Date.now();
     if(now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
+    // Image AI-Compose mode: a FRESH Play (not a resume) that hasn't composed yet
+    // hands off to aiComposeFromImage — it composes (or replays the cached piece)
+    // and starts playback itself, with the original image kept on the canvas.
+    // Once a composition is loaded (imgComposeRef true) we fall through to normal
+    // playback so Pause/Resume/replay just play the composed piece.
+    if(viewModeRef.current==='image' && imgPlayModeRef.current==='compose'
+       && !imgComposeRef.current
+       && (resumeFromRef.current==null || resumeFromRef.current===0)){
+      try{ aiComposeFromImage(); }catch(_){}
+      return;
+    }
     const chords=chordsRef.current;
     const grid=gridRef.current;
     const info=infoRef.current;
@@ -4508,7 +4575,7 @@ Composition rules:
       };
       step();
     }
-  },[busy,playNote,stopAll,advanceVariation]);
+  },[busy,playNote,stopAll,advanceVariation,aiComposeFromImage]);
 
 
   // Load the demo song (Für Elise) and start painting it live. Shared by the
@@ -4542,7 +4609,7 @@ Composition rules:
     setGrid(g);gridRef.current=g;
     setInfo(inf);infoRef.current=inf;
     setDisp(0);idxRef.current=wi.length;
-    setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;setStamp(s=>s+1);
+    setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;imgComposeRef.current=false;setStamp(s=>s+1);
     setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     setComposeMode(false);setPickMode(null);setSongQ('');
     setDemoMode(true);
@@ -6422,6 +6489,9 @@ Composition rules:
         {!stripOpen && loadedSource!=='image' && style && STYLE_INSPIRED[style] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
         )}
+        {!stripOpen && loadedSource==='image' && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {t('dir_'+imgDir)}</div>
+        )}
         {stripOpen && (
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
           {/* Morph / Vary — only for mood-based pieces (mood + mood-from-image),
@@ -6539,6 +6609,17 @@ Composition rules:
             const isDisabled = (m)=> m==='bw' ? appColour : ((m==='harmony'||m==='spectral') ? !appColour : false);
             return (
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {/* Read mode: SCAN (read the picture as a score) vs AI COMPOSE (Pro —
+                  write a piece from the image). Lives HERE, not in the transport,
+                  because it governs HOW the image is read; scan direction below is
+                  only meaningful for SCAN, so it's hidden in AI COMPOSE. */}
+              <div style={{display:'flex',gap:6}}>
+                <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'none'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
+                <button onClick={()=>{ if(busy||working) return; if(!isPro){ setPaywallReason('settings'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('compose'); } }} disabled={busy||working} title={!isPro?(t('proBadge')||'Pro')+' · '+(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)',boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'none'}}>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')+(!isPro?' 🔒':'')}</button>
+              </div>
+              {imgPlayMode==='compose' ? (
+                <div style={{padding:'10px 12px',borderRadius:10,background:'rgba(220,150,255,.06)',border:'1px solid rgba(220,150,255,.18)',fontSize:(.54*effScale)+'rem',lineHeight:1.5,color:'rgba(228,200,255,.8)',fontStyle:'italic'}}>{t('imgComposeBlurb')!=='imgComposeBlurb'?t('imgComposeBlurb'):'AI composes a full piece from this image — its colours, energy and mood. Press Play.'}</div>
+              ) : (<>
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['harmony','spectral','bw','custom'].map(m=>{
                   const isCustomTab = m==='custom';
@@ -6588,6 +6669,7 @@ Composition rules:
                   );
                 })}
               </div>
+              </>)}
             </div>
             );
           })() : (<>
@@ -7629,9 +7711,6 @@ Composition rules:
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
           <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
         )}
-        {viewMode==='image'&&originalImgUrl&&!moodFromImg&&chords.length>0&&(
-          <button onClick={()=>{ if(busy||working) return; if(!isPro){ setPaywallReason('settings'); return; } if(aiUsable) aiComposeFromImage(); }} disabled={busy||working||(isPro&&!aiUsable)} className="pf-lift" title={!isPro?(t('proBadge')||'Pro')+' · '+(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'))} style={{padding:'8px 14px',background:'transparent',color:(busy||working||(isPro&&!aiUsable))?'rgba(201,168,76,.3)':'rgba(220,180,90,.9)',border:'1px solid rgba(201,168,76,'+((busy||working||(isPro&&!aiUsable))?'.15':'.45')+')',borderRadius:22,cursor:(busy||working||(isPro&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(isPro&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('imgComposition')!=='imgComposition'?t('imgComposition'):'compose')+(!isPro?' 🔒':'')}</button>
-        )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
           // REC button — single source of truth for image-mode recording:
           //   tap once → starts a fresh recording AND playback from index 0
@@ -7668,7 +7747,15 @@ Composition rules:
               // don't let the "playback started → leave setup" effect yank us to
               // the default play screen. Cleared when recording finishes.
               keepSetupDuringRecRef.current = forceSetup;
-              setRecordIntent('picker'); startRecord();
+              setRecordIntent('picker');
+              // AI Compose mode, nothing composed yet: compose first, then start
+              // the recorder + playback together (no silent lead-in). Once composed
+              // (imgComposeRef true), REC records the existing piece directly.
+              if(imgPlayModeRef.current==='compose' && !imgComposeRef.current){
+                aiComposeFromImage(()=>{ try{ startRecord(); }catch(_){} });
+              } else {
+                startRecord();
+              }
             }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
               {recording?t('recStop'):t('recArm')}
             </button>
