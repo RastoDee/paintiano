@@ -7546,6 +7546,12 @@ Composition rules:
                 <button onClick={()=>submit(moodEdit)} disabled={!moodEdit.trim()} aria-label={t('moodGo')} title={t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:moodEdit.trim()?'pointer':'default',background:moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)',color:moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
               </div>
             ); })()}
+            {/* Two-ways hint: makes the second path (pick a one-word mood) visible
+                even before the user types, since the suggestions grid only appears
+                once typing starts. Hidden once they start typing (grid takes over). */}
+            {!moodEdit.trim() && (
+              <div style={{textAlign:'center',marginBottom:14,fontSize:(.56*effScale)+'rem',lineHeight:1.5,color:'rgba(201,168,76,.55)',fontStyle:'italic',flexShrink:0}}>{t('moodTwoWays')!=='moodTwoWays'?t('moodTwoWays'):'Type anything above — or start typing to pick a one-word mood from the list.'}</div>
+            )}
             {/* Suggestions grid — filtered moods that match what you're typing.
                 Sits directly under the input so the autocomplete relationship is
                 obvious. Hidden when empty (no input or no matches). starts-with
