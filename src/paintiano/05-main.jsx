@@ -977,6 +977,18 @@ export default function Paintiano() {
   const morphSelRef = useRef([]);
   const [showMoodMenu, setShowMoodMenu] = useState(false);
   const [moodEdit, setMoodEdit] = useState(''); // text v edit políčku mood popupu (vlastná nálada + filter zoznamu)
+  // Rotating placeholder for the mood input. The static placeholder got clipped on
+  // narrow phones ("rainy day in Paris" → "...in") and the helper note below was
+  // too dim to read. Instead we cycle the full set of example lines + the "two
+  // ways" guidance through the placeholder itself, so every hint is shown in turn
+  // and nothing is truncated mid-phrase. Only runs while the menu is open and the
+  // field is empty.
+  const [moodPhIdx, setMoodPhIdx] = useState(0);
+  useEffect(()=>{
+    if(!showMoodMenu){ setMoodPhIdx(0); return; }
+    const id=setInterval(()=>{ setMoodPhIdx(i=>i+1); }, 2800);
+    return ()=>clearInterval(id);
+  },[showMoodMenu]);
   const [currentMood, setCurrentMood] = useState(null);
   // Morph picker shows a RANDOM subset of 18 moods (not all ~100), laid out 3 cols
   // × 6 rows. The pool is frozen while the dialog is open so selected chips don't
@@ -7542,16 +7554,10 @@ Composition rules:
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase',flexShrink:0}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
             {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null); setMoodFromImg(false); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); setCompositionName(''); setRecordingName(''); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
               <div style={{display:'flex',gap:6,marginBottom:12,flexShrink:0}}>
-                <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder={t('moodPlaceholder')} autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{flex:1,minWidth:0,background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
+                <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder={(()=>{ const ex=t('moodExamples'); if(Array.isArray(ex)&&ex.length){ return ex[moodPhIdx%ex.length]; } return t('moodPlaceholder'); })()} autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{flex:1,minWidth:0,background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
                 <button onClick={()=>submit(moodEdit)} disabled={!moodEdit.trim()} aria-label={t('moodGo')} title={t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:moodEdit.trim()?'pointer':'default',background:moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)',color:moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
               </div>
             ); })()}
-            {/* Two-ways hint: makes the second path (pick a one-word mood) visible
-                even before the user types, since the suggestions grid only appears
-                once typing starts. Hidden once they start typing (grid takes over). */}
-            {!moodEdit.trim() && (
-              <div style={{textAlign:'center',marginBottom:14,fontSize:(.56*effScale)+'rem',lineHeight:1.5,color:'rgba(201,168,76,.55)',fontStyle:'italic',flexShrink:0}}>{t('moodTwoWays')!=='moodTwoWays'?t('moodTwoWays'):'Type anything above — or start typing to pick a one-word mood from the list.'}</div>
-            )}
             {/* Suggestions grid — filtered moods that match what you're typing.
                 Sits directly under the input so the autocomplete relationship is
                 obvious. Hidden when empty (no input or no matches). starts-with
