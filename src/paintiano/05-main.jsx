@@ -391,11 +391,6 @@ export default function Paintiano() {
   // oscillators so they don't burst out as a monotone piano blast when the
   // session returns. See unlockAudio.
   const audioStateListenerRef = useRef(false);
-  // Tracks the last time we actually triggered a note, and whether the audio
-  // graph may have gone "running-but-dead" after idle (iOS freezes the output
-  // route without suspending the context). Used to rebuild the route on gesture.
-  const lastAudioActivityRef = useRef(0);
-  const audioRevivedAtRef = useRef(0);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -533,43 +528,6 @@ export default function Paintiano() {
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);
-  // Temporary audio diagnostic: surfaces the live AudioContext state on screen so
-  // we can see what it is when sound is lost after idle (e.g. 'suspended',
-  // 'interrupted', or 'running' but silent). Polled once a second.
-  const [audioDiag,setAudioDiag]=useState('');
-  const diagAnalyserRef=useRef(null);
-  const diagLevelRef=useRef(null);   // last measured output peak (null until analyser ready)
-  const diagStateRef=useRef('');     // last AudioContext state
-  useEffect(()=>{
-    let buf=null;
-    const ensureAnalyser=()=>{
-      if(diagAnalyserRef.current) return diagAnalyserRef.current;
-      try{
-        const ac=Tone.getContext().rawContext; if(!ac) return null;
-        const an=ac.createAnalyser(); an.fftSize=256;
-        // Tap the master output: Tone.Destination feeds ac.destination. We attach
-        // the analyser to Tone's destination node so it sees the post-mix signal.
-        try{ Tone.getDestination().connect(an); }catch(_){ try{ ac.destination.connect && ac.destination.connect(an); }catch(__){} }
-        diagAnalyserRef.current=an; buf=new Uint8Array(an.fftSize);
-        return an;
-      }catch(_){ return null; }
-    };
-    const tick=()=>{
-      try{
-        const ac=Tone.getContext().rawContext;
-        const st=ac?ac.state:'no-ctx';
-        let lvl=null;
-        const an=ensureAnalyser();
-        if(an){ if(!buf) buf=new Uint8Array(an.fftSize); an.getByteTimeDomainData(buf);
-          let peak=0; for(let i=0;i<buf.length;i++){ const d=Math.abs(buf[i]-128); if(d>peak) peak=d; }
-          lvl=peak; }
-        diagLevelRef.current=lvl; diagStateRef.current=st;
-        // Show state + whether signal is actually flowing (peak deviation from 128).
-        setAudioDiag(st + (lvl==null?'':(' '+(lvl>2?'▮sig':'·SILENT')+'('+lvl+')')));
-      }catch(_){ setAudioDiag('err'); }
-    };
-    tick(); const id=setInterval(tick,800); return ()=>clearInterval(id);
-  },[]);
   const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
   // Variation history for Random mode prev/next navigation. saltHistory holds
   // the sequence of random salts that have been shown; saltIdxRef points at the
@@ -1703,7 +1661,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // iOS — the symptom users see as "sound randomly disappears." Cheap to
       // call and a no-op when already running.
       try{const _ac=Tone.getContext().rawContext;if(_ac&&_ac.state==='suspended')_ac.resume().catch(()=>{});}catch(_){}
-      lastAudioActivityRef.current=Date.now();
       if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
       if(ac.state==='suspended')ac.resume();
@@ -1988,134 +1945,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // app keeps running. Call this from every user-gesture audio entrypoint to
   // (a) kick Tone's promise, and (b) synchronously poke the rawContext awake.
   // Cheap to call repeatedly; no-op when context is already running.
-  // iOS "running-but-dead" recovery: after the app sits idle, iOS WebKit can
-  // freeze the audio output route while leaving the AudioContext state as
-  // 'running' — so resume() is a no-op and sound stays gone until a reload. The
-  // cure is to rebuild the graph's output path: reconnect the sampler to the
-  // destination and fire a silent buffer to re-open the hardware route. Cheap and
-  // safe to call defensively; throttled so rapid taps don't thrash it.
-  const reviveAudioGraph = useCallback(()=>{
-    const nowT=Date.now();
-    if(nowT - audioRevivedAtRef.current < 1500) return; // throttle
-    audioRevivedAtRef.current=nowT;
-    try{
-      const ac=Tone.getContext().rawContext; if(!ac) return;
-      // Step 1 — reconnect the existing sampler to the destination (cheap; fixes
-      // the common case where only the sampler→destination edge was dropped).
-      try{
-        if(samplerOk.current && samplerRef.current){
-          try{ samplerRef.current.disconnect(); }catch(_){}
-          try{ samplerRef.current.toDestination(); }catch(_){}
-        }
-      }catch(_){}
-      // Step 2 — silent buffer nudge to re-open the hardware output route.
-      try{
-        const buf=ac.createBuffer(1,1,22050);
-        const src=ac.createBufferSource();
-        src.buffer=buf; src.connect(ac.destination); src.start(0); src.stop(ac.currentTime+0.005);
-      }catch(_){}
-      try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
-    }catch(_){}
-  },[]);
-
-  // Heavier recovery: when the output is 'running but SILENT' even after a
-  // reconnect (the route Tone.Destination→hardware itself died), the only cure
-  // short of a page reload is to BUILD A NEW SAMPLER on the current context and
-  // swap it in. Samples are already in the browser cache from the first load, so
-  // this is fast. Old sampler is disposed after the new one is wired.
-  const rebuildSampler = useCallback(()=>{
-    try{
-      const old=samplerRef.current;
-      const fresh=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
-        onload:()=>{ try{ samplerOk.current=true; }catch(_){} },
-        onerror:()=>{ /* keep old flag; nothing else to do */ },
-      }).toDestination();
-      samplerRef.current=fresh;
-      // Give the new sampler a beat to register, then dispose the old node.
-      setTimeout(()=>{ try{ old && old.dispose(); }catch(_){} }, 400);
-      // Silent kick to re-open the route for the freshly-wired sampler.
-      try{
-        const ac=Tone.getContext().rawContext;
-        if(ac){ const b=ac.createBuffer(1,1,22050); const sx=ac.createBufferSource(); sx.buffer=b; sx.connect(ac.destination); sx.start(0); sx.stop(ac.currentTime+0.005); }
-      }catch(_){}
-      try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
-    }catch(_){}
-  },[]);
-
-  // Last-resort recovery: replace the ENTIRE AudioContext. This is what a page
-  // reload does for audio. On iOS the context can end up 'running' yet wired to a
-  // dead output that neither reconnect nor a new sampler can revive; only a brand
-  // new context restores sound. We build a fresh Tone context, make it active,
-  // then build a fresh sampler on it. Heaviest hammer — used only after lighter
-  // steps fail, and throttled hard so it can't loop.
-  const ctxRestartedAtRef = useRef(0);
-  const restartAudioContext = useCallback(async ()=>{
-    const nowT=Date.now();
-    if(nowT - ctxRestartedAtRef.current < 8000) return; // hard throttle
-    ctxRestartedAtRef.current=nowT;
-    try{
-      const fresh = new Tone.Context();
-      try{ await fresh.resume(); }catch(_){}
-      try{ Tone.setContext(fresh); }catch(_){}
-      try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
-      // Rebuild the sampler on the new context.
-      try{
-        const old=samplerRef.current;
-        const sfresh=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
-          onload:()=>{ try{ samplerOk.current=true; }catch(_){} },
-          onerror:()=>{},
-        }).toDestination();
-        samplerRef.current=sfresh;
-        setTimeout(()=>{ try{ old && old.dispose(); }catch(_){} }, 500);
-      }catch(_){}
-      try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
-      // Silent kick on the new context.
-      try{
-        const ac=Tone.getContext().rawContext;
-        if(ac){ const b=ac.createBuffer(1,1,22050); const sx=ac.createBufferSource(); sx.buffer=b; sx.connect(ac.destination); sx.start(0); sx.stop(ac.currentTime+0.005); }
-      }catch(_){}
-    }catch(_){}
-  },[]);
-
-  // Playback watchdog: the diagnostic proved the failure mode is 'running but
-  // SILENT' — the context keeps running but no signal reaches the output, and it
-  // can happen DURING playback (so the gesture-based revive never fires because
-  // the user isn't tapping). This polls the measured output level while playing;
-  // if the graph is producing notes but the master output stays flat for two
-  // consecutive checks, it rebuilds the output route. Two-strike rule avoids
-  // false positives from genuine silent gaps between notes.
-  const silentStrikesRef = useRef(0);
-  useEffect(()=>{
-    const id=setInterval(()=>{
-      try{
-        if(!playingRef.current){ silentStrikesRef.current=0; return; }
-        if(diagStateRef.current!=='running') return;
-        const lvl=diagLevelRef.current;
-        if(lvl==null) return;
-        // Only count as "dead" if we recently tried to make sound (a note within
-        // the last ~2.5s) yet the output is flat.
-        const recentNote = (Date.now() - (lastAudioActivityRef.current||0)) < 2500;
-        if(lvl<=1 && recentNote){
-          silentStrikesRef.current++;
-          // Escalating recovery while silent during playback:
-          //   2 strikes → reconnect the route (cheap)
-          //   4 strikes → rebuild the sampler (route may be dead)
-          //   6 strikes → replace the whole AudioContext (last resort = reload-grade)
-          if(silentStrikesRef.current===2){
-            reviveAudioGraph();
-          } else if(silentStrikesRef.current===4){
-            rebuildSampler();
-          } else if(silentStrikesRef.current>=6){
-            restartAudioContext();
-            silentStrikesRef.current=0;
-          }
-        } else {
-          silentStrikesRef.current=0;
-        }
-      }catch(_){}
-    }, 1200);
-    return ()=>clearInterval(id);
-  },[reviveAudioGraph,rebuildSampler,restartAudioContext]);
 
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
@@ -2290,12 +2119,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
         try{if(audioElRef.current && !audioElRef.current.paused) audioElRef.current.pause();}catch(_){}
         unlockAudio();
-        // Resuming the context is not enough on iOS: when you leave the tab/app
-        // while PAUSED and come back, the context returns to 'running' but the
-        // output route is dead (diagnostic showed running·SILENT). Rebuild the
-        // route so the next Resume is audible. Slight delay lets unlockAudio's
-        // resume settle first.
-        setTimeout(()=>{ try{ reviveAudioGraph(); }catch(_){} }, 120);
       }
     };
     document.addEventListener('visibilitychange',onHide);
@@ -2309,7 +2132,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // the underlying iOS session has been re-routed away.
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       unlockAudio();
-      setTimeout(()=>{ try{ reviveAudioGraph(); }catch(_){} }, 120);
     };
     window.addEventListener('pageshow', onPageShow);
     // window focus is a third belt-and-braces signal: on iOS WKWebView
@@ -2318,45 +2140,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const onFocus = ()=>{
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       unlockAudio();
-      setTimeout(()=>{ try{ reviveAudioGraph(); }catch(_){} }, 120);
     };
     window.addEventListener('focus', onFocus);
-    // iOS idle suspension: after a stretch of inactivity the OS parks the audio
-    // session in 'suspended'/'interrupted' WITHOUT firing visibilitychange,
-    // focus, or pageshow (the tab stays visible — just silent). None of the
-    // listeners above catch it, so the page seemed to "lose sound until reload."
-    // The fix: the FIRST user gesture after that is the only moment iOS will
-    // honour a resume(). Listen for pointer/touch globally (capture + passive)
-    // and, only when the context is actually parked, run the full unlock cycle
-    // in-gesture. Cheap no-op when already running, so it won't interfere with
-    // normal taps.
-    const onGesture = ()=>{
-      try{
-        const ac = Tone.getContext().rawContext;
-        if(ac && ac.state !== 'running'){
-          // Parked context: full unlock cycle resumes it in-gesture.
-          try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
-          unlockAudio();
-        } else if(ac && ac.state === 'running'){
-          // Running but possibly "dead" after idle: if it's been a while since we
-          // last made sound, rebuild the output route so the next note is audible.
-          const idleMs = Date.now() - (lastAudioActivityRef.current||0);
-          if(lastAudioActivityRef.current && idleMs > 15000){
-            reviveAudioGraph();
-          }
-        }
-      }catch(_){}
-    };
-    document.addEventListener('pointerdown', onGesture, {capture:true, passive:true});
-    document.addEventListener('touchstart', onGesture, {capture:true, passive:true});
     return ()=>{
       document.removeEventListener('visibilitychange',onHide);
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('focus', onFocus);
-      document.removeEventListener('pointerdown', onGesture, {capture:true});
-      document.removeEventListener('touchstart', onGesture, {capture:true});
     };
-  },[unlockAudio,reviveAudioGraph]);
+  },[unlockAudio]);
 
   // Schedule a timeout and remember its id so stopAll can cancel it.
   // Uses a Set internally for O(1) delete on fire instead of O(n) filter.
@@ -4543,15 +4334,10 @@ Composition rules:
     const now=Date.now();
     if(now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
-    // Preventive audio-route recovery: if we've been idle/paused for a while (the
-    // user paused, switched apps, came back, hit Resume), the context can be
-    // 'running' but the output route dead. Reconnect first; if it was a long idle,
-    // rebuild the sampler outright (samples are cached, so it's fast) since a mere
-    // reconnect has proven not always enough on iOS.
-    try{
-      const idle = !lastAudioActivityRef.current || (Date.now()-lastAudioActivityRef.current)>3000;
-      if(idle){ reviveAudioGraph(); if((Date.now()-lastAudioActivityRef.current)>8000) rebuildSampler(); }
-    }catch(_){}
+    // Gentle in-gesture audio wake: just make sure the context is running. The
+    // heavier disconnect/rebuild/restart recovery was destabilising audio across
+    // all modes, so it's been removed from here.
+    try{ const ac=Tone.getContext().rawContext; if(ac && ac.state!=='running') ac.resume(); }catch(_){}
     // Image AI-Compose mode: a FRESH Play (not a resume) that hasn't composed yet
     // hands off to aiComposeFromImage — it composes (or replays the cached piece)
     // and starts playback itself, with the original image kept on the canvas.
@@ -4773,7 +4559,7 @@ Composition rules:
       };
       step();
     }
-  },[busy,playNote,stopAll,advanceVariation,aiComposeFromImage,reviveAudioGraph,rebuildSampler]);
+  },[busy,playNote,stopAll,advanceVariation,aiComposeFromImage]);
 
 
   // Load the demo song (Für Elise) and start painting it live. Shared by the
@@ -5009,21 +4795,13 @@ Composition rules:
       // Next fresh Play will re-open it (same semantics as Add).
       if(aiRecordingRef.current){ setAiRecording(false); }
     }else if(holdPaused){
-      // In-gesture audio recovery: iOS only re-opens a dead/suspended audio
-      // session DURING a user gesture. This Resume tap IS that gesture, so do the
-      // recovery synchronously HERE — a setTimeout/visibility-handler revive
-      // happens outside the gesture and iOS ignores it (the cause of "sound gone
-      // after a longer absence, fine after a short one"). Escalate by how long we
-      // were away: short gap → resume/reconnect; long gap → rebuild sampler;
-      // very long → full context restart. All run in-gesture.
+      // Gentle in-gesture wake on Resume: resume the context (the only thing iOS
+      // reliably honours in a gesture). The aggressive disconnect/rebuild/restart
+      // ladder was destabilising audio in every mode and surviving app restarts,
+      // so it's removed. If the iOS-after-idle silence returns, we'll revisit with
+      // a safer, narrower approach.
       try{ Tone.start(); }catch(_){}
       try{ const ac=Tone.getContext().rawContext; if(ac && ac.state!=='running') ac.resume(); }catch(_){}
-      const away = Date.now() - (lastAudioActivityRef.current||0);
-      try{
-        reviveAudioGraph();
-        if(away>6000) rebuildSampler();
-        if(away>20000) restartAudioContext();
-      }catch(_){}
       setHoldPaused(false);
       startPlay(); // startPlay reads and clears resumeFromRef itself
     }else if(!busy){
@@ -5032,7 +4810,7 @@ Composition rules:
       resumeFromRef.current=null;
       startPlay();
     }
-  },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening,reviveAudioGraph,rebuildSampler,restartAudioContext]);
+  },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening]);
   useEffect(()=>{handlePauseClickRef.current=handlePauseClick;},[handlePauseClick]);
   useEffect(()=>{startPlayRef.current=startPlay;},[startPlay]);
 
@@ -7897,7 +7675,6 @@ Composition rules:
             <span style={{width:9,height:9,borderRadius:'50%',background:'#ff5a5a',boxShadow:'0 0 8px #ff5a5a',display:'inline-block'}}/>🎙 REC
           </button>
         )}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
-        {audioDiag && (<span style={{fontSize:(.46*effScale)+'rem',color:(audioDiag.indexOf('running')===0 && audioDiag.indexOf('SILENT')<0)?'rgba(120,200,150,.8)':'rgba(255,140,140,.95)',letterSpacing:'.04em',alignSelf:'center',fontFamily:'monospace'}} title="AudioContext state + output signal (diagnostic)">{(audioDiag.indexOf('running')===0 && audioDiag.indexOf('SILENT')<0)?'':'⚠ '}{audioDiag}</span>)}
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
