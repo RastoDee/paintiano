@@ -16090,6 +16090,13 @@ Composition rules:
         {!stripOpen && loadedSource!=='image' && style && STYLE_INSPIRED[style] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
         )}
+        {/* Styles without an artist — mosaic (no style selected) and notes — get
+            no "inspired by". Show the active colour mode • the style name so the
+            collapsed caption isn't blank. mosaic = effectiveStyle null/none;
+            notes = effectiveStyle 'notes'. */}
+        {!stripOpen && loadedSource!=='image' && (!effectiveStyle || effectiveStyle==='notes') && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
+        )}
         {!stripOpen && loadedSource==='image' && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):t('dir_'+imgDir)}</div>
         )}
