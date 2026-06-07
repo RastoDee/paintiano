@@ -10145,9 +10145,35 @@ export default function Paintiano() {
   // we can see what it is when sound is lost after idle (e.g. 'suspended',
   // 'interrupted', or 'running' but silent). Polled once a second.
   const [audioDiag,setAudioDiag]=useState('');
+  const diagAnalyserRef=useRef(null);
   useEffect(()=>{
-    const tick=()=>{ try{ const ac=Tone.getContext().rawContext; setAudioDiag(ac?ac.state:'no-ctx'); }catch(_){ setAudioDiag('err'); } };
-    tick(); const id=setInterval(tick,1000); return ()=>clearInterval(id);
+    let buf=null;
+    const ensureAnalyser=()=>{
+      if(diagAnalyserRef.current) return diagAnalyserRef.current;
+      try{
+        const ac=Tone.getContext().rawContext; if(!ac) return null;
+        const an=ac.createAnalyser(); an.fftSize=256;
+        // Tap the master output: Tone.Destination feeds ac.destination. We attach
+        // the analyser to Tone's destination node so it sees the post-mix signal.
+        try{ Tone.getDestination().connect(an); }catch(_){ try{ ac.destination.connect && ac.destination.connect(an); }catch(__){} }
+        diagAnalyserRef.current=an; buf=new Uint8Array(an.fftSize);
+        return an;
+      }catch(_){ return null; }
+    };
+    const tick=()=>{
+      try{
+        const ac=Tone.getContext().rawContext;
+        const st=ac?ac.state:'no-ctx';
+        let lvl=null;
+        const an=ensureAnalyser();
+        if(an){ if(!buf) buf=new Uint8Array(an.fftSize); an.getByteTimeDomainData(buf);
+          let peak=0; for(let i=0;i<buf.length;i++){ const d=Math.abs(buf[i]-128); if(d>peak) peak=d; }
+          lvl=peak; }
+        // Show state + whether signal is actually flowing (peak deviation from 128).
+        setAudioDiag(st + (lvl==null?'':(' '+(lvl>2?'▮sig':'·SILENT')+'('+lvl+')')));
+      }catch(_){ setAudioDiag('err'); }
+    };
+    tick(); const id=setInterval(tick,800); return ()=>clearInterval(id);
   },[]);
   const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
   // Variation history for Random mode prev/next navigation. saltHistory holds
@@ -17342,8 +17368,7 @@ Composition rules:
             <span style={{width:9,height:9,borderRadius:'50%',background:'#ff5a5a',boxShadow:'0 0 8px #ff5a5a',display:'inline-block'}}/>🎙 REC
           </button>
         )}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
-        {audioDiag && audioDiag!=='running' && (<span style={{fontSize:(.5*effScale)+'rem',color:'rgba(255,140,140,.9)',letterSpacing:'.05em',alignSelf:'center',fontFamily:'monospace'}} title="AudioContext state (diagnostic)">⚠ {audioDiag}</span>)}
-        {audioDiag==='running' && (<span style={{fontSize:(.46*effScale)+'rem',color:'rgba(120,200,150,.7)',letterSpacing:'.05em',alignSelf:'center',fontFamily:'monospace'}} title="AudioContext state (diagnostic)">{audioDiag}</span>)}
+        {audioDiag && (<span style={{fontSize:(.46*effScale)+'rem',color:(audioDiag.indexOf('running')===0 && audioDiag.indexOf('SILENT')<0)?'rgba(120,200,150,.8)':'rgba(255,140,140,.95)',letterSpacing:'.04em',alignSelf:'center',fontFamily:'monospace'}} title="AudioContext state + output signal (diagnostic)">{(audioDiag.indexOf('running')===0 && audioDiag.indexOf('SILENT')<0)?'':'⚠ '}{audioDiag}</span>)}
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}

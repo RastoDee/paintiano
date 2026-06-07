@@ -10146,6 +10146,8 @@ export default function Paintiano() {
   // 'interrupted', or 'running' but silent). Polled once a second.
   const [audioDiag,setAudioDiag]=useState('');
   const diagAnalyserRef=useRef(null);
+  const diagLevelRef=useRef(null);   // last measured output peak (null until analyser ready)
+  const diagStateRef=useRef('');     // last AudioContext state
   useEffect(()=>{
     let buf=null;
     const ensureAnalyser=()=>{
@@ -10169,6 +10171,7 @@ export default function Paintiano() {
         if(an){ if(!buf) buf=new Uint8Array(an.fftSize); an.getByteTimeDomainData(buf);
           let peak=0; for(let i=0;i<buf.length;i++){ const d=Math.abs(buf[i]-128); if(d>peak) peak=d; }
           lvl=peak; }
+        diagLevelRef.current=lvl; diagStateRef.current=st;
         // Show state + whether signal is actually flowing (peak deviation from 128).
         setAudioDiag(st + (lvl==null?'':(' '+(lvl>2?'▮sig':'·SILENT')+'('+lvl+')')));
       }catch(_){ setAudioDiag('err'); }
@@ -11621,6 +11624,38 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
     }catch(_){}
   },[]);
+
+  // Playback watchdog: the diagnostic proved the failure mode is 'running but
+  // SILENT' — the context keeps running but no signal reaches the output, and it
+  // can happen DURING playback (so the gesture-based revive never fires because
+  // the user isn't tapping). This polls the measured output level while playing;
+  // if the graph is producing notes but the master output stays flat for two
+  // consecutive checks, it rebuilds the output route. Two-strike rule avoids
+  // false positives from genuine silent gaps between notes.
+  const silentStrikesRef = useRef(0);
+  useEffect(()=>{
+    const id=setInterval(()=>{
+      try{
+        if(!playingRef.current){ silentStrikesRef.current=0; return; }
+        if(diagStateRef.current!=='running') return;
+        const lvl=diagLevelRef.current;
+        if(lvl==null) return;
+        // Only count as "dead" if we recently tried to make sound (a note within
+        // the last ~2.5s) yet the output is flat.
+        const recentNote = (Date.now() - (lastAudioActivityRef.current||0)) < 2500;
+        if(lvl<=1 && recentNote){
+          silentStrikesRef.current++;
+          if(silentStrikesRef.current>=2){
+            reviveAudioGraph();
+            silentStrikesRef.current=0;
+          }
+        } else {
+          silentStrikesRef.current=0;
+        }
+      }catch(_){}
+    }, 1200);
+    return ()=>clearInterval(id);
+  },[reviveAudioGraph]);
 
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
