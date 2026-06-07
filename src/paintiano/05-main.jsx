@@ -2000,18 +2000,43 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     audioRevivedAtRef.current=nowT;
     try{
       const ac=Tone.getContext().rawContext; if(!ac) return;
-      // Reconnect sampler → destination (the route iOS may have dropped).
+      // Step 1 — reconnect the existing sampler to the destination (cheap; fixes
+      // the common case where only the sampler→destination edge was dropped).
       try{
         if(samplerOk.current && samplerRef.current){
           try{ samplerRef.current.disconnect(); }catch(_){}
           try{ samplerRef.current.toDestination(); }catch(_){}
         }
       }catch(_){}
-      // Silent 1-sample buffer to nudge iOS into re-opening the output route.
+      // Step 2 — silent buffer nudge to re-open the hardware output route.
       try{
         const buf=ac.createBuffer(1,1,22050);
         const src=ac.createBufferSource();
         src.buffer=buf; src.connect(ac.destination); src.start(0); src.stop(ac.currentTime+0.005);
+      }catch(_){}
+      try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
+    }catch(_){}
+  },[]);
+
+  // Heavier recovery: when the output is 'running but SILENT' even after a
+  // reconnect (the route Tone.Destination→hardware itself died), the only cure
+  // short of a page reload is to BUILD A NEW SAMPLER on the current context and
+  // swap it in. Samples are already in the browser cache from the first load, so
+  // this is fast. Old sampler is disposed after the new one is wired.
+  const rebuildSampler = useCallback(()=>{
+    try{
+      const old=samplerRef.current;
+      const fresh=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
+        onload:()=>{ try{ samplerOk.current=true; }catch(_){} },
+        onerror:()=>{ /* keep old flag; nothing else to do */ },
+      }).toDestination();
+      samplerRef.current=fresh;
+      // Give the new sampler a beat to register, then dispose the old node.
+      setTimeout(()=>{ try{ old && old.dispose(); }catch(_){} }, 400);
+      // Silent kick to re-open the route for the freshly-wired sampler.
+      try{
+        const ac=Tone.getContext().rawContext;
+        if(ac){ const b=ac.createBuffer(1,1,22050); const sx=ac.createBufferSource(); sx.buffer=b; sx.connect(ac.destination); sx.start(0); sx.stop(ac.currentTime+0.005); }
       }catch(_){}
       try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
     }catch(_){}
@@ -2037,8 +2062,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const recentNote = (Date.now() - (lastAudioActivityRef.current||0)) < 2500;
         if(lvl<=1 && recentNote){
           silentStrikesRef.current++;
-          if(silentStrikesRef.current>=2){
+          // 2 strikes → reconnect the route (cheap). If still flat after more
+          // strikes, the route itself is dead → rebuild the sampler (heavier).
+          if(silentStrikesRef.current===2){
             reviveAudioGraph();
+          } else if(silentStrikesRef.current>=4){
+            rebuildSampler();
             silentStrikesRef.current=0;
           }
         } else {
@@ -2047,7 +2076,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }catch(_){}
     }, 1200);
     return ()=>clearInterval(id);
-  },[reviveAudioGraph]);
+  },[reviveAudioGraph,rebuildSampler]);
 
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
@@ -4475,11 +4504,15 @@ Composition rules:
     const now=Date.now();
     if(now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
-    // Preventive audio-route rebuild: if we've been idle/paused for a while (e.g.
-    // the user paused, switched apps, came back, and hit Resume), the context can
-    // be 'running' but the output route dead. Rebuilding here makes the very first
-    // note of the resumed playback audible. Throttled internally, so cheap.
-    try{ if(!lastAudioActivityRef.current || (Date.now()-lastAudioActivityRef.current)>3000) reviveAudioGraph(); }catch(_){}
+    // Preventive audio-route recovery: if we've been idle/paused for a while (the
+    // user paused, switched apps, came back, hit Resume), the context can be
+    // 'running' but the output route dead. Reconnect first; if it was a long idle,
+    // rebuild the sampler outright (samples are cached, so it's fast) since a mere
+    // reconnect has proven not always enough on iOS.
+    try{
+      const idle = !lastAudioActivityRef.current || (Date.now()-lastAudioActivityRef.current)>3000;
+      if(idle){ reviveAudioGraph(); if((Date.now()-lastAudioActivityRef.current)>8000) rebuildSampler(); }
+    }catch(_){}
     // Image AI-Compose mode: a FRESH Play (not a resume) that hasn't composed yet
     // hands off to aiComposeFromImage — it composes (or replays the cached piece)
     // and starts playback itself, with the original image kept on the canvas.
@@ -4701,7 +4734,7 @@ Composition rules:
       };
       step();
     }
-  },[busy,playNote,stopAll,advanceVariation,aiComposeFromImage,reviveAudioGraph]);
+  },[busy,playNote,stopAll,advanceVariation,aiComposeFromImage,reviveAudioGraph,rebuildSampler]);
 
 
   // Load the demo song (Für Elise) and start painting it live. Shared by the
