@@ -1063,6 +1063,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
+  // When VARY restarts playback it wants the Color·Style strip to STAY open. But
+  // startPlay (async) closes the strip on a fresh (non-resume) start, and that
+  // close lands AFTER VARY's setStripOpen(true) because startPlay awaits unlock.
+  // This ref lets VARY tell startPlay "don't close the strip this once".
+  const keepStripOpenRef = useRef(false);
   // Mood-hint flash: when the user taps a disabled morph/vary, the mood
   // selector briefly pulses with a label above it pointing them there.
   const [moodHint, setMoodHint] = useState(false);
@@ -4460,7 +4465,8 @@ Composition rules:
     // full focus. Only on fresh Play (not resume): the user can re-open the strip
     // during playback to change colour/style, and we must NOT yank it shut again —
     // nothing here closes it mid-play, so it stays open until the next fresh Play.
-    if(!isResume) setStripOpen(false);
+    if(!isResume && !keepStripOpenRef.current) setStripOpen(false);
+    keepStripOpenRef.current=false;
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -6644,7 +6650,7 @@ Composition rules:
               // VARY just loads the new variation (canvas blank, ready to Play).
               // startPlay collapses the strip — re-open it just after so Vary's
               // "stay open" wins even when Vary restarts playback.
-              if(wasPlaying){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
+              if(wasPlaying){ resumeFromRef.current=0; keepStripOpenRef.current=true; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
             }} disabled={composeMode||micPainting||micListening||recording||working||!chords.length} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.64*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?1:.55,transition:'all .18s'}}>{t('vary')}</button>
           </div>
           )}
