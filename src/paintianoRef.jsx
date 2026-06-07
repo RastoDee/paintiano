@@ -11648,6 +11648,56 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(_){}
   },[]);
 
+  // iOS "running but silent after idle" recovery — the core of the lost-sound bug.
+  //
+  // Verified behaviour (WebKit + Tone.js + howler.js community, 2024-2026):
+  //   • When the page is backgrounded / the device sleeps, iOS parks the
+  //     AudioContext. Often it comes back as state==='running' yet produces NO
+  //     output — the underlying audio device was torn down. A plain resume() is a
+  //     no-op here (the context already thinks it's running), which is exactly why
+  //     every resume-only attempt failed and only a full page reload helped.
+  //   • The fix that DOES work without a reload is an explicit suspend()->resume()
+  //     cycle: forcing the context back to 'suspended' and then resuming makes iOS
+  //     re-acquire the audio device. (howler.js #1106/#928, PlayCanvas 2026.)
+  //   • This MUST run inside a user gesture — iOS only honours the re-acquire then.
+  //
+  // Called synchronously from the Resume/Play tap. No-op-cheap on desktop and when
+  // audio is healthy (the round-trip is a couple of ms and inaudible since we're
+  // not sounding anything at tap time).
+  const wakeAudioRef = useRef(0);
+  const wakeAudio = useCallback(async ()=>{
+    try{ Tone.start(); }catch(_){}
+    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type = 'playback'; } }catch(_){}
+    try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
+    let ac=null;
+    try{ ac = Tone.getContext().rawContext; }catch(_){}
+    if(!ac) return;
+    try{
+      if(ac.state === 'suspended' || ac.state === 'interrupted'){
+        try{ await ac.resume(); }catch(_){}
+      } else if(ac.state === 'running'){
+        const nowT=Date.now();
+        if(nowT - wakeAudioRef.current > 400){
+          wakeAudioRef.current=nowT;
+          try{
+            await ac.suspend();
+            await ac.resume();
+          }catch(_){
+            try{ await ac.resume(); }catch(__){}
+          }
+        }
+      }
+    }catch(_){}
+    try{
+      if(ac.state==='running'){
+        const buf=ac.createBuffer(1,1,22050);
+        const src=ac.createBufferSource();
+        src.buffer=buf; src.connect(ac.destination); src.start(0); src.stop(ac.currentTime+0.005);
+      }
+    }catch(_){}
+  },[]);
+
   // Whenever the SAVE picker closes (cancel button / backdrop / after Story-
   // Audio-Score action that opened share sheet), give the AudioContext a kick
   // so playback works again. iOS Safari can suspend the context while a share
@@ -14403,22 +14453,17 @@ Composition rules:
       // Next fresh Play will re-open it (same semantics as Add).
       if(aiRecordingRef.current){ setAiRecording(false); }
     }else if(holdPaused){
-      // Gentle in-gesture wake on Resume: resume the context (the only thing iOS
-      // reliably honours in a gesture). The aggressive disconnect/rebuild/restart
-      // ladder was destabilising audio in every mode and surviving app restarts,
-      // so it's removed. If the iOS-after-idle silence returns, we'll revisit with
-      // a safer, narrower approach.
-      try{ Tone.start(); }catch(_){}
-      try{ const ac=Tone.getContext().rawContext; if(ac && ac.state!=='running') ac.resume(); }catch(_){}
+      // In-gesture iOS audio revive: wakeAudio() runs the verified suspend->resume
+      // cycle that re-acquires a running-but-dead audio device (see its definition).
+      // It must happen in this tap. We await it so the device is live before
+      // startPlay schedules the first note.
       setHoldPaused(false);
-      startPlay(); // startPlay reads and clears resumeFromRef itself
+      wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); });
     }else if(!busy){
-      try{ Tone.start(); }catch(_){}
-      try{ const ac=Tone.getContext().rawContext; if(ac && ac.state!=='running') ac.resume(); }catch(_){}
       resumeFromRef.current=null;
-      startPlay();
+      wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); });
     }
-  },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening]);
+  },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening,wakeAudio]);
   useEffect(()=>{handlePauseClickRef.current=handlePauseClick;},[handlePauseClick]);
   useEffect(()=>{startPlayRef.current=startPlay;},[startPlay]);
 
