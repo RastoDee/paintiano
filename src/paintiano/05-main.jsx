@@ -483,7 +483,13 @@ export default function Paintiano() {
     const [r,g,b]=fromHsl(oppHue,80,55);
     return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
   }),[]);
-  const activePalette=customPalette||defaultCustomPalette;
+  // Pro tier uses the user's saved palette (or default if empty). Free tier
+  // is locked to the default palette — their saved colours from a previous
+  // Pro period (or before downgrade) remain in localStorage untouched, but
+  // are not applied at runtime. Upgrading restores their saved choices.
+  const activePalette=(proStatus==='free')
+    ? defaultCustomPalette
+    : (customPalette||defaultCustomPalette);
   useEffect(()=>{
     if(!customPalette)return;
     if(customPalette.every(h=>h==='#888888'))return;
@@ -6816,29 +6822,63 @@ Composition rules:
                   const isCustomTab = m==='custom';
                   const armed = isCustomTab && mode==='custom' && customArmed;
                   const dis = isDisabled(m);
+                  // Free tier: Custom uses the same cycle as Pro (Custom →
+                  // Edit → action), but the third tap opens a read-only
+                  // palette PREVIEW instead of the editor modal. The palette
+                  // applied is always the default (defaultCustomPalette) —
+                  // the user's saved palette stays locked until they upgrade.
+                  const isFree = proStatus==='free';
                   return (
                   <button key={m} disabled={dis} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
                     if(dis) return;
                     if(isCustomTab && mode==='custom'){
-                      if(!customArmed) setCustomArmed(true); else setShowPaletteEditor(true);
+                      if(!customArmed){
+                        // tap 1: arm → label "✎ EDIT" + PRO badge (Free)
+                        setCustomArmed(true);
+                      } else if(isFree && !showColorPalette){
+                        // tap 2 (Free): open read-only preview, keep "✎ EDIT" label
+                        setShowColorPalette(true);
+                      } else if(isFree && showColorPalette){
+                        // tap 3 (Free): close preview AND disarm → label back to "Custom"
+                        setShowColorPalette(false);
+                        setCustomArmed(false);
+                      } else {
+                        // Pro armed: open the editor modal
+                        setShowPaletteEditor(true);
+                      }
                       return;
                     }
-                    if(m==='custom') setCustomArmed(false);
+                    if(m==='custom'){ setCustomArmed(false); setShowColorPalette(false); }
                     else if(mode===m){ setShowColorPalette(v=>!v); return; }   // tap active chip → toggle preview
                     else setShowColorPalette(false);
                     if(canvasRef.current){canvasRef.current.style.opacity='0';}
                     setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:dis?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:dis?0.32:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(mode===m)}}>{armed?('✎ '+t('editShort')):t(m)}</button>
+                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:dis?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:dis?0.32:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(mode===m)}}>
+                    {armed?('✎ '+t('editShort')):t(m)}
+                    {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
+                  </button>
                   );
                 })}
               </div>
               {/* READ-ONLY palette preview of the active mode (harmony/spectral/bw) —
                   shown when the user taps the active chip. Reflects the current mode
-                  so it doubles as visual feedback for the colour reading. */}
-              {showColorPalette && mode!=='custom' && (
+                  so it doubles as visual feedback for the colour reading.
+                  Free + custom + armed: shows the default custom palette swatches
+                  (since Free can't edit; the swatches are the "preview" the user
+                  gets on the third Custom tap). */}
+              {showColorPalette && (mode!=='custom' || (proStatus==='free' && customArmed)) && (
                 <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:5,padding:'8px',borderRadius:10,background:'rgba(20,18,30,.4)',border:'1px solid rgba(242,238,232,.06)'}}>
                   {['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'].map((nm,pc)=>{
-                    const [r,g,b]=colorPreview(mode,pc);
+                    let r,g,b;
+                    if(mode==='custom'){
+                      // Free preview swatches read straight from defaultCustomPalette
+                      // (Pro never reaches this branch — it gets the editor modal).
+                      const hex = defaultCustomPalette[pc];
+                      const n = parseInt(hex.slice(1),16);
+                      r=(n>>16)&255; g=(n>>8)&255; b=n&255;
+                    } else {
+                      [r,g,b]=colorPreview(mode,pc);
+                    }
                     return (
                       <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
                         <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />
@@ -6990,12 +7030,10 @@ Composition rules:
             </div>
           </div>
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
-              member of the most recently tapped pair. Clickable: opens the
-              paywall with reason 'settings'. Sitting outside the palette
-              buttons it reads visually as its own affordance, so we honour
-              that and route the tap to the paywall (rather than treating it
-              as inert text, which the layout doesn't suggest). The lock is
-              also described in the Guide for users who don't tap. */}
+              member of the most recently tapped pair with a PRO badge.
+              Clickable: opens the paywall with reason 'settings'. Sitting
+              outside the palette buttons it reads visually as its own
+              affordance, so we honour that and route the tap to the paywall. */}
           {proStatus==='free' && expandedPair && (()=>{
             const [a,b] = expandedPair.split('|');
             const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
@@ -7009,7 +7047,7 @@ Composition rules:
                 title={`${lockedName} — Paintiano Pro`}
                 style={{textAlign:'center',marginTop:8,marginBottom:2,padding:'4px 8px',fontSize:(.58*effScale)+'rem',letterSpacing:'.06em',color:'rgba(201,168,76,.7)',fontStyle:'italic',cursor:'pointer',userSelect:'none',borderRadius:6,transition:'color .15s'}}
               >
-                {lockedName} <span style={{marginLeft:3,opacity:.85}}>🔒</span>
+                {lockedName}<ProBadge t={t} readScale={effScale} size="sm" />
               </div>
             );
           })()}

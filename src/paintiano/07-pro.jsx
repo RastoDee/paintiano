@@ -315,16 +315,23 @@ function applyWatermark(canvas, isPro) {
   return canvas;
 }
 
-// ─── ProBadge — small gold PRO pill for the header ─────────────────────────────
-function ProBadge({ t, readScale = 1 }) {
+// ─── ProBadge — small gold PRO pill ────────────────────────────────────────────
+// `size`: 'md' (default — header beside Paintiano title), 'sm' (inline beside
+// labels like the locked-partner name or inside small chip/tab buttons).
+function ProBadge({ t, readScale = 1, size = 'md' }) {
   const label = (t && t('proBadge')) || 'PRO';
+  const isSm = size === 'sm';
   return (
     <span style={{
-      display: 'inline-block', marginLeft: 8, padding: '2px 7px',
-      fontSize: (.5*readScale)+'rem', fontWeight: 600, letterSpacing: '.14em',
+      display: 'inline-block',
+      marginLeft: isSm ? 5 : 8,
+      padding: isSm ? '1px 5px' : '2px 7px',
+      fontSize: (isSm ? .42 : .5) * readScale + 'rem',
+      fontWeight: 600, letterSpacing: '.14em',
       color: GOLD, background: 'rgba(201,168,76,.15)',
       border: '1px solid rgba(201,168,76,.45)', borderRadius: 999,
       textTransform: 'uppercase', verticalAlign: 'middle',
+      lineHeight: 1.2,
     }}>{label}</span>
   );
 }
