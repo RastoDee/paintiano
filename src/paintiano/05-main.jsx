@@ -6990,17 +6990,25 @@ Composition rules:
             </div>
           </div>
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
-              member of the most recently tapped pair as a non-interactive
-              label, so the user can see who's behind the lock without the
-              palette buttons themselves carrying a confusing 🔒 icon. The
-              lock as a feature is described in the Guide; users go to PRO
-              menu item to upgrade — no paywall opens from this row. */}
+              member of the most recently tapped pair. Clickable: opens the
+              paywall with reason 'settings'. Sitting outside the palette
+              buttons it reads visually as its own affordance, so we honour
+              that and route the tap to the paywall (rather than treating it
+              as inert text, which the layout doesn't suggest). The lock is
+              also described in the Guide for users who don't tap. */}
           {proStatus==='free' && expandedPair && (()=>{
             const [a,b] = expandedPair.split('|');
             const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
             const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
             return (
-              <div style={{textAlign:'center',marginTop:8,marginBottom:2,fontSize:(.58*effScale)+'rem',letterSpacing:'.06em',color:'rgba(201,168,76,.55)',fontStyle:'italic',userSelect:'none'}}>
+              <div
+                onClick={()=>{ setPaywallReason('settings'); }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setPaywallReason('settings'); } }}
+                title={`${lockedName} — Paintiano Pro`}
+                style={{textAlign:'center',marginTop:8,marginBottom:2,padding:'4px 8px',fontSize:(.58*effScale)+'rem',letterSpacing:'.06em',color:'rgba(201,168,76,.7)',fontStyle:'italic',cursor:'pointer',userSelect:'none',borderRadius:6,transition:'color .15s'}}
+              >
                 {lockedName} <span style={{marginLeft:3,opacity:.85}}>🔒</span>
               </div>
             );
