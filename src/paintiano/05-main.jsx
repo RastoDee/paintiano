@@ -7202,6 +7202,13 @@ Composition rules:
             setSelectedChordIdx(prev=>{const v=prev===hit.idx?null:hit.idx;selectedChordIdxRef.current=v;return v;});  // tap again to deselect
           }
           unlockAudio();
+          // Note playback on canvas tap is only for the plain Mosaic and the
+          // Notes overlay (both are literal note grids you can "play"). For any
+          // artist style the cells are painted abstractly — tapping (or hitting
+          // the Next button that sits over the canvas) should NOT trigger the
+          // underlying notes, which was distracting in canvas / fullscreen mode.
+          const _artistStyleNow = effectiveStyle && effectiveStyle!=='notes';
+          if(_artistStyleNow) return;
           const midis=hit.n.map(({m,v,durMs})=>{playNote(m,v,durMs||300);return{m,dur:durMs||300};});
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
           const byDur={};
