@@ -76,6 +76,8 @@ function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;
 let _TRANS_FRAME = null;
 
 async function transcribeAudio(audioBuf, onP) {
+  const _t0 = performance.now();
+  console.log('[transcribe] start: duration='+audioBuf.duration.toFixed(2)+'s, sr='+audioBuf.sampleRate+', ch='+audioBuf.numberOfChannels);
   const sr = audioBuf.sampleRate;
   const ch0 = audioBuf.getChannelData(0);
   // Mix to mono if stereo. Float32Array.from is still allocated once per file
@@ -85,6 +87,7 @@ async function transcribeAudio(audioBuf, onP) {
     : ch0;
   const FRAME = 2048, HOP = 512;
   const total = Math.floor((data.length - FRAME) / HOP);
+  console.log('[transcribe] frames total='+total+' ('+((performance.now()-_t0)|0)+'ms after decode-mix)');
   const active = {}, notes = [];
   if (_TRANS_FRAME === null) _TRANS_FRAME = new Float32Array(FRAME);
   const frame = _TRANS_FRAME;
@@ -108,10 +111,14 @@ async function transcribeAudio(audioBuf, onP) {
       }
     }
     if (f % 80 === 0) {
+      if (f === 0 || f === 80 || f === 400 || f === total - (total % 80)) {
+        console.log('[transcribe] f='+f+'/'+total+' ('+((performance.now()-_t0)|0)+'ms)');
+      }
       onP(f / total);
       await new Promise(r => setTimeout(r, 0));
     }
   }
+  console.log('[transcribe] FFT loop done in '+((performance.now()-_t0)|0)+'ms, notes='+notes.length);
   for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
   const f2ms = f => f * HOP / sr * 1000;
   const raw = notes
