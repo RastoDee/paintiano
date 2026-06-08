@@ -5025,11 +5025,25 @@ Composition rules:
       const{raf,stream,ac}=micVolRef.current;
       cancelAnimationFrame(raf);
       stream.getTracks().forEach(t=>t.stop());
-      if(ac){try{ac.close();}catch(_){}}
+      // NOTE: ac is the shared Tone context now — must NOT close it (that would
+      // tear down all app audio). Stopping the mic stream tracks is enough; the
+      // MediaStreamSource is GC'd once the stream ends.
       micVolRef.current=null;
     }
     setMicVolActive(false);
     setMicVolLevel(0);
+  },[]);
+
+  // iOS allows essentially one live AudioContext. The mic code used to spin up a
+  // SECOND `new AudioContext()` next to Tone's, and calling createMediaStreamSource
+  // on it threw InvalidStateError (the "Could not start the microphone" failure).
+  // Reuse Tone's existing, already-running context instead — one context, no clash.
+  const getSharedAC=useCallback(async()=>{
+    let ac=null;
+    try{ ac=Tone.getContext().rawContext; }catch(_){}
+    if(!ac){ const AC=window.AudioContext||window.webkitAudioContext; ac=new AC(); }
+    try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){}
+    return ac;
   },[]);
 
   // Map a getUserMedia failure to the right message. Previously every failure was
@@ -5050,9 +5064,7 @@ Composition rules:
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
-      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
+      const ac=await getSharedAC();
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=256;
@@ -5071,7 +5083,7 @@ Composition rules:
     }catch(e){
       setErr(micErrMsg(e));setErrInfo(false);
     }
-  },[micVolActive,stopMicVol,micErrMsg]);
+  },[micVolActive,stopMicVol,micErrMsg,getSharedAC]);
 
   const stopMicPainting=useCallback(()=>{
     // Stash the captured draft so the MIC button shows a "draft saved" glow and
@@ -5080,19 +5092,19 @@ Composition rules:
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
-    if(micAcRef.current){try{micAcRef.current.close();}catch(_){}micAcRef.current=null;}
+    if(micAcRef.current){micAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicPainting(false);
     stopMicVol();
-  },[stopMicVol,stashDraft,micErrMsg]);
+  },[stopMicVol,stashDraft,micErrMsg,getSharedAC]);
 
   const stopMicListening=useCallback(()=>{
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
     if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
-    if(listenAcRef.current){try{listenAcRef.current.close();}catch(_){}listenAcRef.current=null;}
+    if(listenAcRef.current){listenAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicListening(false);
     stopMicVol();
-  },[stopMicVol,stashDraft,micErrMsg]);
+  },[stopMicVol,stashDraft,micErrMsg,getSharedAC]);
 
   // Refs so handlePauseClick (defined earlier in the file) can stop a live mic
   // mode before starting playback. The Play button now does mic-stop + play in
@@ -5127,16 +5139,8 @@ Composition rules:
         } else { throw ce; }
       }
       listenStreamRef.current=stream;
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
-      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
+      const ac=await getSharedAC();
       listenAcRef.current=ac;
-      // iOS: a fresh AudioContext starts suspended; an analyser on a suspended
-      // context reads silence — which is why the FIRST entry into Music painted
-      // nothing while later re-entries worked. Await the resume (we're already in
-      // an async fn, inside the button-tap gesture) so the tick loop below reads
-      // real audio from the very first frame.
-      try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){}
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=4096; // higher resolution for better pitch detection on complex music
@@ -5255,11 +5259,8 @@ Composition rules:
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       micStreamRef.current=stream;
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
-      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
+      const ac=await getSharedAC();
       micAcRef.current=ac;
-      try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){} // iOS: await resume so the analyser reads real audio on the first frame
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=2048;
