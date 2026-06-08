@@ -5030,6 +5030,19 @@ Composition rules:
     setMicVolLevel(0);
   },[]);
 
+  // Map a getUserMedia failure to the right message. Previously every failure was
+  // reported as "access denied", which sent users to permission settings even when
+  // permission was already granted and the real cause was different (mic busy in
+  // another tab/app, no device, hardware error). Distinguish by error name.
+  const micErrMsg=useCallback((e)=>{
+    const n=(e&&e.name)||'';
+    if(n==='NotAllowedError'||n==='SecurityError') return t('micDenied');
+    if(n==='NotReadableError'||n==='AbortError') return (t('micBusy')!=='micBusy'?t('micBusy'):'Microphone is busy — another app or browser tab may be using it. Close it (and any other tab using the mic), then reload.');
+    if(n==='NotFoundError'||n==='OverconstrainedError') return (t('micNotFound')!=='micNotFound'?t('micNotFound'):'No microphone found on this device.');
+    // Unknown failure — show the actual error so it's debuggable, not a misleading "denied".
+    return (t('micFail')!=='micFail'?t('micFail'):'Could not start the microphone')+(n?(' ('+n+')'):'');
+  },[t]);
+
   const startMicVol=useCallback(async()=>{
     if(micVolActive){stopMicVol();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
@@ -5053,9 +5066,9 @@ Composition rules:
       };
       micVolRef.current={raf:requestAnimationFrame(tick),stream,ac};
     }catch(e){
-      setErr(t('micDenied'));setErrInfo(false);
+      setErr(micErrMsg(e));setErrInfo(false);
     }
-  },[micVolActive,stopMicVol]);
+  },[micVolActive,stopMicVol,micErrMsg]);
 
   const stopMicPainting=useCallback(()=>{
     // Stash the captured draft so the MIC button shows a "draft saved" glow and
@@ -5067,7 +5080,7 @@ Composition rules:
     if(micAcRef.current){try{micAcRef.current.close();}catch(_){}micAcRef.current=null;}
     setMicPainting(false);
     stopMicVol();
-  },[stopMicVol,stashDraft]);
+  },[stopMicVol,stashDraft,micErrMsg]);
 
   const stopMicListening=useCallback(()=>{
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
@@ -5076,7 +5089,7 @@ Composition rules:
     if(listenAcRef.current){try{listenAcRef.current.close();}catch(_){}listenAcRef.current=null;}
     setMicListening(false);
     stopMicVol();
-  },[stopMicVol,stashDraft]);
+  },[stopMicVol,stashDraft,micErrMsg]);
 
   // Refs so handlePauseClick (defined earlier in the file) can stop a live mic
   // mode before starting playback. The Play button now does mic-stop + play in
@@ -5208,7 +5221,7 @@ Composition rules:
       };
       listenRafRef.current=requestAnimationFrame(tick);
     }catch(e){
-      setErr(t('micDenied'));setErrInfo(false);
+      setErr(micErrMsg(e));setErrInfo(false);
       setMicListening(false);
     }
   },[micListening,stopMicListening,stopAll]);
@@ -5323,7 +5336,7 @@ Composition rules:
       };
       micRafRef.current=requestAnimationFrame(tick);
     }catch(e){
-      setErr(t('micDenied'));setErrInfo(false);
+      setErr(micErrMsg(e));setErrInfo(false);
       setMicPainting(false);
     }
   },[micPainting,stopMicPainting,playNote,stopAll,randomMode,pollockSessionSeed]);
