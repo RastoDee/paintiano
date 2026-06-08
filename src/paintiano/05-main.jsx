@@ -7043,13 +7043,25 @@ Composition rules:
               //    tap same pair again → row hides; tap a different pair →
               //    row reveals the new partner.
               //  • Paid: standard cycle (face → other → mosaic/face).
+              //  • Shuffle ON + tapping the ACTIVE artist deselects it →
+              //    returns to full shuffle (random style per Play/Next). This
+              //    overrides the normal flip/cycle paths, since the user has
+              //    clearly already said "I want random" by enabling shuffle.
               const onClick = ()=>{
                 if(demoReelOn) return;
+                // Shuffle ON + active artist → deselect to null (full shuffle).
+                // Works for both Free (only 'a' can be active) and Paid.
+                if(randomMode && isOn){
+                  setStyleTo(null);
+                  // For Free, also close the locked-partner info row — the
+                  // active pair is no longer "the one in focus".
+                  if(pairLocked) setExpandedPair(null);
+                  return;
+                }
                 if(pairLocked){
-                  // Always paint 'a' for Free.
+                  // Free, no random: paint 'a' + toggle info row.
                   setPairLastPick(p=>({...p,[pairKey]:a}));
                   setStyleTo(a);
-                  // Toggle the info row: same pair → close; different → open.
                   setExpandedPair(prev => prev === pairKey ? null : pairKey);
                   return;
                 }
@@ -7062,16 +7074,17 @@ Composition rules:
                   setPairLastPick(p=>({...p,[pairKey]:b}));
                   setStyleTo(b);
                 } else {
-                  // Active on B. Third state depends on shuffle:
-                  //  • shuffle ON  → deselect to null = back to the shuffle draw
-                  //  • shuffle OFF → no "nothing" state; flip back to A (2-state)
-                  if(randomMode){ setStyleTo(null); }
-                  else { setPairLastPick(p=>({...p,[pairKey]:a})); setStyleTo(a); }
+                  // Active on B with shuffle OFF: flip back to A (2-state).
+                  // (shuffle-ON case is handled by the early-return above.)
+                  setPairLastPick(p=>({...p,[pairKey]:a}));
+                  setStyleTo(a);
                 }
               };
               const nextHint = pairLocked
-                ? `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`
-                : (!isOn ? '' : (style===a ? `tap for ${STYLE_LABELS[b]}` : (randomMode ? 'tap for Mosaic' : `tap for ${STYLE_LABELS[a]}`)));
+                ? (randomMode && isOn
+                    ? `tap to return to shuffle`
+                    : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`)
+                : (!isOn ? '' : (randomMode ? 'tap for shuffle' : (style===a ? `tap for ${STYLE_LABELS[b]}` : `tap for ${STYLE_LABELS[a]}`)));
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
