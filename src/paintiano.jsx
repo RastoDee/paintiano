@@ -18477,7 +18477,7 @@ Composition rules:
           inspiring artist for the active style (fixed pick OR shuffle draw),
           hidden for Mosaic and Notes. Fades with the other controls. */}
       {immersive && effectiveStyle && effectiveStyle!=='notes' && STYLE_INSPIRED[effectiveStyle] && (
-        <div style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.62*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.9)',fontStyle:'italic',textShadow:'0 2px 8px rgba(0,0,0,.8)',pointerEvents:'none',opacity:controlsAwake?1:0,transition:'opacity .4s ease',whiteSpace:'nowrap'}}>
+        <div style={{position:'fixed',top:'calc(max(12px, env(safe-area-inset-top)) + 30px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.62*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.95)',fontStyle:'italic',textShadow:'0 2px 10px rgba(0,0,0,.9)',pointerEvents:'none',whiteSpace:'nowrap'}}>
           <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
         </div>
       )}
@@ -18555,7 +18555,7 @@ Composition rules:
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); advanceVariation(); }} className="pf-lift" aria-label="next painting"
-                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'11px 22px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#ffd07a',background:'rgba(255,200,120,.16)',border:'1px solid rgba(255,200,120,.55)',boxShadow:'0 0 0 1px rgba(255,200,120,.2)',WebkitTapHighlightColor:'transparent'}}>
+                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   {t('nextPainting')||'next'} ›
                 </button>
               )}
