@@ -3176,6 +3176,7 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  0/1 = Concentric squares / Protractor arcs (original body below).
   //  2 = Black Paintings (colour nested frames, recoloured).
   //  3 = Mitered maze.  4 = Eccentric polygons.  5 = Interlocking arcs.
+  let _stellaConcentric = true;
   {
     const _scr=_seedRnd(671,ss,31,73); _scr();_scr();
     const _spick=(_scr()*6)|0;
@@ -3183,7 +3184,7 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     if(_spick===3){ stellaPhaseMaze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===4){ stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===5){ stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original concentric/protractor body
+    _stellaConcentric = (_spick===0); // 0 = concentric squares, 1 = protractor arcs
   }
 
   // Background — cream/light like Stella's grounds, tinted slightly by the piece.
@@ -3192,6 +3193,8 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   ctx.fillRect(0, 0, CW, CH);
 
   const revealFrac = Math.max(0, Math.min(1, lim / cn));
+  // pick 0 = concentric squares, pick 1 = protractor arcs (decided by chooser above)
+  const concentric = _stellaConcentric;
 
   if(concentric){
     // ── Concentric Squares ──────────────────────────────────────────────────
@@ -3486,6 +3489,7 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 // ── Sam Francis C: Clustered masses — tight cluster of colour blots centre. ──
 function francisPhaseCluster(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
   const blots=Math.max(6,Math.min(120,Math.round(cn*0.9)));
   const vis=Math.max(1,Math.ceil(N/cn*blots));
   const cx=CW/2,cy=CH/2;
@@ -3507,6 +3511,7 @@ function francisPhaseCluster(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Sam Francis D: Blue Balls — blue-dominant cellular blobs. ──
 function francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
   const balls=Math.max(5,Math.min(80,Math.round(cn*0.6)));
   const vis=Math.max(1,Math.ceil(N/cn*balls));
   for(let i=0;i<vis;i++){
@@ -3525,6 +3530,7 @@ function francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Sam Francis E: Grid/lattice — colour blots seated in an open white grid. ──
 function francisPhaseGrid(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
   const cells=Math.max(4,Math.min(36,Math.round(cn/4)));
   const cols=Math.ceil(Math.sqrt(cells)),rows=Math.ceil(cells/cols);
   const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
@@ -3546,6 +3552,7 @@ function francisPhaseGrid(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Sam Francis F: Big Red mural — a dominant red field with edge incursions. ──
 function francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
   const reveal=Math.max(0,Math.min(1,N/cn));
   // central red mass grows with reveal
   const base=_picChord(chords,0,gc,isBW).rgb;
@@ -4177,6 +4184,7 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     if(_hpick===5){ haringPhaseDance(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     // else fall through to original glyph-grid body
   }
+  const COLS = cn<=6?3:cn<=18?4:cn<=45?5:cn<=100?6:cn<=200?7:cn<=350?9:12;
   const ROWS = Math.max(3, Math.round(COLS*(CH/CW)));
   const cw = CW/COLS, ch = CH/ROWS;
   const total = COLS*ROWS;
@@ -5862,6 +5870,13 @@ function _kandPal(palette){
     'rgba(50,160,80,0.90)','rgba(240,130,40,0.92)'
   ];
 }
+// Robustly set the alpha of any colour string (rgb/rgba/hex) without throwing.
+function _kandAlpha(col,a){
+  if(typeof col!=='string') return `rgba(120,120,120,${a})`;
+  const m=col.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+  if(m) return `rgba(${m[1]},${m[2]},${m[3]},${a})`;
+  return col; // hex or unknown — leave as-is (still a valid fillStyle)
+}
 
 // ── Kandinsky C: Several Circles — concentric translucent discs on dark. ──
 function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
@@ -5875,7 +5890,7 @@ function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
     const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.05+rnd()*0.13);
     const rings=2+((rnd()*4)|0);
     for(let r=rings;r>=1;r--){
-      ctx.fillStyle=cols[(rnd()*cols.length)|0].replace(/[\d.]+\)$/,(0.45+rnd()*0.4).toFixed(2)+')');
+      ctx.fillStyle=_kandAlpha(cols[(rnd()*cols.length)|0],(0.45+rnd()*0.4).toFixed(2));
       ctx.beginPath();ctx.arc(cx,cy,R*(r/rings),0,Math.PI*2);ctx.fill();
     }
   }
@@ -5916,7 +5931,7 @@ function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   for(let i=0;i<n;i++){
     const rnd=_seedRnd(2400+i,ss,CW,CH);
     const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.08+rnd()*0.18);
-    ctx.fillStyle=cols[(rnd()*cols.length)|0].replace(/[\d.]+\)$/,'0.35)');
+    ctx.fillStyle=_kandAlpha(cols[(rnd()*cols.length)|0],'0.35');
     ctx.beginPath();
     const pts=7;for(let p=0;p<=pts;p++){const a=p/pts*Math.PI*2,rr=R*(0.6+rnd()*0.6);const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;p?ctx.lineTo(x,y):ctx.moveTo(x,y);}
     ctx.closePath();ctx.fill();
