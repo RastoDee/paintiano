@@ -13410,7 +13410,38 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(_){}
   },[]);
 
-  // Whenever the SAVE picker closes (cancel button / backdrop / after Story-
+  // Hard audio recovery + diagnosis — bound to a LONG-PRESS on the speaker
+  // button. For the rare case where sound dies and a page reload doesn't bring
+  // it back (iOS audio session stuck after an interruption). Reports the live
+  // state, force-resumes the context, and rebuilds the sampler if it's gone.
+  const audioHardRecover = useCallback(async ()=>{
+    let report = [];
+    let ac=null;
+    try{ ac = Tone.getContext().rawContext; }catch(_){}
+    report.push('ctx: ' + (ac ? ac.state : 'none'));
+    report.push('sampler: ' + (samplerOk.current ? 'ready' : (samplerRef.current ? 'building' : 'none')));
+    report.push('muted: ' + (mutedRef.current ? 'yes' : 'no'));
+    // Force-resume the context (covers suspended / interrupted).
+    try{ await Tone.start(); }catch(_){}
+    try{ if(ac && ac.state!=='running'){ await ac.resume(); } }catch(_){}
+    // If sampler died or never loaded, rebuild it.
+    try{
+      if(!samplerOk.current){
+        try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
+        const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+          onload:()=>{ samplerOk.current=true; setPiano('ready'); },
+          onerror:()=>{ samplerOk.current=false; setPiano('error'); },
+        }).toDestination();
+        samplerRef.current = s2;
+        report.push('→ rebuilding sampler');
+      }
+    }catch(e){ report.push('rebuild failed: '+(e&&e.message||e)); }
+    // Unmute defensively and give a silent kick.
+    try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
+    try{ const ac2=Tone.getContext().rawContext; if(ac2 && ac2.state==='running'){ const b=ac2.createBuffer(1,1,22050); const s=ac2.createBufferSource(); s.buffer=b; s.connect(ac2.destination); s.start(0); s.stop(ac2.currentTime+0.005); } }catch(_){}
+    try{ alert('Audio status\n' + report.join('\n') + '\n\nTried to recover. If still silent: fully close the browser app (swipe it away) and reopen.'); }catch(_){}
+  },[]);
+  const speakerHoldRef = useRef(null);
   // Audio-Score action that opened share sheet), give the AudioContext a kick
   // so playback works again. iOS Safari can suspend the context while a share
   // sheet is on screen, and Tone.Offline (used by saveAudio / Audio export) is
@@ -18471,13 +18502,12 @@ Composition rules:
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
       {immersive && <div onClick={wakeControls} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
-      {/* Fullscreen artist attribution — fixed to the viewport top so it sits in
-          the black letterbox ABOVE the canvas, legible over any painting (the
-          gold-on-cream problem when it was overlaid on the art). Shows the
-          inspiring artist for the active style (fixed pick OR shuffle draw),
-          hidden for Mosaic and Notes. Fades with the other controls. */}
+      {/* Fullscreen artist attribution — fixed near the viewport top so it sits
+          in the black letterbox ABOVE the canvas. The user prefers it high (even
+          close to the URL bar) over ever landing on the painting. Shows the
+          inspiring artist (fixed pick OR shuffle draw); hidden for Mosaic/Notes. */}
       {immersive && effectiveStyle && effectiveStyle!=='notes' && STYLE_INSPIRED[effectiveStyle] && (
-        <div style={{position:'fixed',top:'calc(max(14px, env(safe-area-inset-top)) + 56px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.62*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.95)',fontStyle:'italic',textShadow:'0 2px 10px rgba(0,0,0,.9)',pointerEvents:'none',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6}}>
+        <div style={{position:'fixed',top:'max(8px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.95)',fontStyle:'italic',textShadow:'0 2px 10px rgba(0,0,0,.95)',pointerEvents:'none',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6}}>
           {!style&&(<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.85}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}
           <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
         </div>
@@ -19149,7 +19179,7 @@ Composition rules:
           <button onClick={()=>{ setMicArmed(false); if(micPreset==='music') startMicListening(); else startMicPainting(); }} className="pf-lift" title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,40,40,.14)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
             <span style={{width:9,height:9,borderRadius:'50%',background:'#ff5a5a',boxShadow:'0 0 8px #ff5a5a',display:'inline-block'}}/>🎙 REC
           </button>
-        )}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
+        )}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
