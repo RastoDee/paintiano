@@ -11421,40 +11421,44 @@ function applyWatermark(canvas, isPro) {
     if (!ctx) return canvas;
     const w = canvas.width, h = canvas.height;
     // Diagonal repeating watermark — like stock-photo previews. The mark sits
-    // on top of the painting at low opacity and at a 30° angle, repeated in a
-    // grid so cropping any region still carries the brand. Font size scales
-    // with canvas height so it stays readable from a small Story (1080×1920)
-    // up to a huge A1 print (~7000+ px). Two ink passes: a soft dark stroke
-    // for legibility on light areas, then a brighter fill for dark areas.
+    // on top of the painting at moderate opacity and at a -30° angle, tiled
+    // densely so cropping any region still carries the brand and the pattern
+    // reads as a watermark (not a single label). Font scales with the
+    // SHORTER edge so vertical-format Story exports don't get an oversized
+    // font; values are tuned so a typical 1596×2604 export shows ~4 rows ×
+    // ~3 cols of marks across the painting.
     const text = 'paintiano.app';
-    const fontPx = Math.max(28, Math.round(h * 0.038));
-    const stepX = Math.round(fontPx * 12);   // horizontal spacing between marks
-    const stepY = Math.round(fontPx * 6);    // vertical spacing between rows
+    const minEdge = Math.min(w, h);
+    const fontPx = Math.max(20, Math.round(minEdge * 0.04));
+    const stepX = Math.round(fontPx * 7);    // ~3 columns per typical export
+    const stepY = Math.round(fontPx * 3.2);  // ~4 rows per typical export
     const angle = -Math.PI / 6;              // -30°
     ctx.save();
     ctx.translate(w / 2, h / 2);
     ctx.rotate(angle);
-    ctx.font = '600 ' + fontPx + 'px "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 ' + fontPx + 'px "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
     // Diagonal of rotated canvas needs to cover the original — use the
-    // diagonal length so the grid extends past every corner.
+    // diagonal length so the grid extends past every corner of the rotated
+    // viewport. A small safety margin (+3) keeps the corners filled.
     const diag = Math.ceil(Math.sqrt(w * w + h * h));
-    const cols = Math.ceil(diag / stepX) + 2;
-    const rows = Math.ceil(diag / stepY) + 2;
+    const cols = Math.ceil(diag / stepX) + 3;
+    const rows = Math.ceil(diag / stepY) + 3;
     for (let r = -Math.floor(rows / 2); r <= Math.ceil(rows / 2); r++) {
-      // Offset every other row by half a step so the grid feels organic.
+      // Offset every other row by half a step so the grid feels organic
+      // (avoids a regimented "matrix" look while still being clearly tiled).
       const offset = (r % 2 === 0) ? 0 : stepX / 2;
       for (let c = -Math.floor(cols / 2); c <= Math.ceil(cols / 2); c++) {
         const x = c * stepX + offset;
         const y = r * stepY;
         // Dark stroke first → readable on bright areas
-        ctx.globalAlpha = 0.22;
-        ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.08));
+        ctx.globalAlpha = 0.34;
+        ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.09));
         ctx.strokeStyle = 'rgba(0,0,0,1)';
         ctx.strokeText(text, x, y);
         // Light fill on top → readable on dark areas
-        ctx.globalAlpha = 0.32;
+        ctx.globalAlpha = 0.50;
         ctx.fillStyle = '#ffffff';
         ctx.fillText(text, x, y);
       }
