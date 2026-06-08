@@ -11903,6 +11903,11 @@ export default function Paintiano() {
   const [STYLE_PAIRS] = useState(() =>
     BASE_STYLE_PAIRS.map(([a,b]) => (Math.random() < 0.5 ? [a,b] : [b,a]))
   );
+  // Remembers, per pair, which member the user last selected. So when a pair's
+  // button is not currently active (you picked a DIFFERENT artist), tapping it
+  // returns to YOUR last choice from that pair — not always the default 'a'.
+  // Key = "a|b"; value = the style key last chosen from that pair.
+  const [pairLastPick, setPairLastPick] = useState({});
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -14571,22 +14576,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       return next;
     });
   },[]);
-  // Keep the active AI-compose recent entry's saved style in sync with the
-  // user's CURRENT pick. Without this, recalling (or jumping away and back to)
-  // an AI piece would snap the style back to whatever was generated, discarding
-  // a manual change (e.g. AI made Francis, user switched to Pollock → recall
-  // must restore Pollock, not Francis). Matches by the active mood title.
-  useEffect(()=>{
-    if(!currentMood || composeSource!=='ai') return;
-    setAiComposeRecent(prev=>{
-      const idx=prev.findIndex(p=>p.title===currentMood);
-      if(idx<0 || prev[idx].style===(style||null)) return prev;
-      const next=prev.slice();
-      next[idx]={ ...prev[idx], style: style||null };
-      try{ localStorage.setItem(AI_COMPOSE_RECENT_KEY, JSON.stringify(next)); }catch(_){}
-      return next;
-    });
-  },[style,currentMood,composeSource]);
   // Replay a recent AI compose — rebuild the painting, no AI call. Free for all
   // users (exhausted free trial doesn't block replay; only new generation does).
   const _aiComposeRecall=useCallback((entry)=>{
@@ -18199,6 +18188,13 @@ Composition rules:
               // Which of the pair is active? Determines label + next target.
               const activeKey = style===a ? a : (style===b ? b : null);
               const isOn = activeKey!==null;
+              const pairKey = a+'|'+b;
+              // The pair's "face" when not active: the member you last picked
+              // from this pair, falling back to the default 'a'. This is what a
+              // tap selects, and what the label shows when idle — so your last
+              // choice (e.g. Pollock) isn't forgotten when you pick another
+              // artist and come back.
+              const faceKey = (pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a;
               // Shuffle (Random + no manual pick): highlight whichever button
               // holds the style the shuffle landed on, and show THAT style's
               // label so the cycling reads on the buttons themselves.
@@ -18208,18 +18204,22 @@ Composition rules:
               // rather than the technique name. Long names are shortened to a
               // single recognizable word so they fit the narrow 5-up grid cell.
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
-              const _artFull = STYLE_INSPIRED[activeKey || shufKey || a];
+              const _artFull = STYLE_INSPIRED[activeKey || shufKey || faceKey];
               const label = _artistShort[_artFull] || _artFull;
-              // Cycle: nothing→A, A→B, B→mosaic (deselect), then A again.
-              // The deselect step lets the user click back out to plain Mosaic
-              // (and so re-enable 🎲 shuffle) without reaching for the Mosaic button.
+              // Tap behaviour:
+              //  • not active → select this pair's face (your last pick / default)
+              //  • active on the face → flip to the OTHER member
+              //  • active on the other member → deselect to Mosaic (or, in
+              //    shuffle, back to the face so the generated artist can't snap
+              //    back in and look like your pick was discarded)
+              const otherKey = faceKey===a ? b : a;
               const onClick = ()=>{
                 if(demoReelOn) return;
-                if(style===a) setStyleTo(b);
-                else if(style===b) setStyleTo(null);
-                else setStyleTo(a);
+                if(!isOn){ setPairLastPick(p=>({...p,[pairKey]:faceKey})); setStyleTo(faceKey); }
+                else if(style===faceKey){ setPairLastPick(p=>({...p,[pairKey]:otherKey})); setStyleTo(otherKey); }
+                else { setStyleTo(randomMode ? faceKey : null); }
               };
-              const nextHint = style===a ? `tap for ${STYLE_LABELS[b]}` : (style===b ? 'tap for Mosaic' : '');
+              const nextHint = !isOn ? '' : (style===faceKey ? `tap for ${STYLE_LABELS[otherKey]}` : 'tap for Mosaic');
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)}
