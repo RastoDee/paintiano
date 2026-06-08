@@ -12580,6 +12580,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const blob=new Blob([buf],{type:file.type||'audio/mpeg'});
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
       const audioBuf=await ac.decodeAudioData(buf.slice(0));
       ac.close();
       if(loadTokenRef.current!==myToken)return;
@@ -13356,6 +13357,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const blob=new Blob([arrayBuffer],{type:'audio/mpeg'});
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
       const audioBuf=await ac.decodeAudioData(arrayBuffer.slice(0));
       ac.close();
       if(loadTokenRef.current!==myToken)return;
@@ -14626,6 +14628,7 @@ Composition rules:
       const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=256;
@@ -14687,10 +14690,22 @@ Composition rules:
     setComposeMode(false);
     if(micPainting){stopMicPainting();}
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
+      // Some iOS builds reject specific audio constraints (autoGainControl:false
+      // etc.) with OverconstrainedError/NotReadableError even though the mic is
+      // available and permitted. Try the detailed request first, then fall back to
+      // a plain {audio:true} request which iOS always accepts.
+      let stream;
+      try{
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
+      }catch(ce){
+        if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
+          stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        } else { throw ce; }
+      }
       listenStreamRef.current=stream;
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
       listenAcRef.current=ac;
       // iOS: a fresh AudioContext starts suspended; an analyser on a suspended
       // context reads silence — which is why the FIRST entry into Music painted
@@ -14818,6 +14833,7 @@ Composition rules:
       micStreamRef.current=stream;
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
+      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
       micAcRef.current=ac;
       try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){} // iOS: await resume so the analyser reads real audio on the first frame
       const src=ac.createMediaStreamSource(stream);

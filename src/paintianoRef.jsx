@@ -6096,7 +6096,7 @@ const I18N = {
     sLeft:'s left',
     loadingPiano:' loading piano…', grandPiano:' grand piano', synthPiano:' synth piano',
     listenHint:'point this device\'s mic at another playing music — same-phone audio is suppressed by iOS',
-    micDenied:'Microphone access denied. To enable: iOS Settings → Safari → Microphone, or tap the lock icon in your browser\'s address bar. Reload after changing.', micUnavailable:'Microphone not available in this browser.',
+    micDenied:'Microphone access denied. To enable: iOS Settings → Safari or Chrome → Microphone, or tap the lock icon in your browser\'s address bar. Reload after changing.', micUnavailable:'Microphone not available in this browser.', micBusy:'Microphone is busy — another app or browser tab may be using it. Close it (and other tabs using the mic), then reload.', micNotFound:'No microphone found on this device.', micFail:'Could not start the microphone',
     recUnsupported:'Recording not supported in this browser.',
     recTooShort:'Recording was too short — hold rec for at least a second.',
     searchGuide:'search the guide…', noMatches:'No matches for',
@@ -6198,7 +6198,7 @@ const I18N = {
     sLeft:'s übrig',
     loadingPiano:' klavier lädt…', grandPiano:' flügel', synthPiano:' synth-klavier',
     listenHint:'mikrofon dieses geräts auf ein anderes richten, das musik spielt — eigenes audio wird von iOS unterdrückt',
-    micDenied:'Mikrofonzugriff verweigert. Aktivieren: iOS Einstellungen → Safari → Mikrofon, oder auf das Schloss-Symbol in der Adressleiste tippen. Danach Seite neu laden.', micUnavailable:'Mikrofon nicht verfügbar.',
+    micDenied:'Mikrofonzugriff verweigert. Aktivieren: iOS Einstellungen → Safari oder Chrome → Mikrofon, oder auf das Schloss-Symbol in der Adressleiste tippen. Danach Seite neu laden.', micUnavailable:'Mikrofon nicht verfügbar.', micBusy:'Mikrofon ist belegt — eine andere App oder ein anderer Tab nutzt es evtl. Schließe es (und andere Tabs mit Mikrofon) und lade neu.', micNotFound:'Kein Mikrofon auf diesem Gerät gefunden.', micFail:'Mikrofon konnte nicht gestartet werden',
     recUnsupported:'Aufnahme wird nicht unterstützt.',
     recTooShort:'Aufnahme zu kurz — mindestens eine Sekunde halten.',
     searchGuide:'anleitung durchsuchen…', noMatches:'Keine Treffer für',
@@ -6300,7 +6300,7 @@ const I18N = {
     sLeft:'s restant',
     loadingPiano:' piano en chargement…', grandPiano:' piano à queue', synthPiano:' piano synthé',
     listenHint:'pointez le micro de cet appareil vers un autre qui joue de la musique — l\'audio interne est supprimé par iOS',
-    micDenied:'Accès au microphone refusé. Pour activer : Réglages iOS → Safari → Microphone, ou toucher l\'icône cadenas dans la barre d\'adresse. Recharger ensuite.', micUnavailable:'Microphone non disponible.',
+    micDenied:'Accès au microphone refusé. Pour activer : Réglages iOS → Safari ou Chrome → Microphone, ou toucher l\'icône cadenas dans la barre d\'adresse. Recharger ensuite.', micUnavailable:'Microphone non disponible.', micBusy:'Le micro est occupé — une autre app ou un autre onglet l\'utilise peut-être. Ferme-le (et les autres onglets), puis recharge.', micNotFound:'Aucun microphone trouvé sur cet appareil.', micFail:'Impossible de démarrer le micro',
     recUnsupported:'Enregistrement non supporté.',
     recTooShort:'Enregistrement trop court — tenir au moins une seconde.',
     searchGuide:'rechercher dans le guide…', noMatches:'Aucun résultat pour',
@@ -6402,7 +6402,7 @@ const I18N = {
     sLeft:'s restante',
     loadingPiano:' cargando piano…', grandPiano:' piano de cola', synthPiano:' piano sintetizador',
     listenHint:'apunta el micrófono de este dispositivo a otro que esté reproduciendo música — iOS suprime el audio del mismo teléfono',
-    micDenied:'Acceso al micrófono denegado. Para activar: Ajustes iOS → Safari → Micrófono, o toca el icono de candado en la barra de direcciones. Recarga después.', micUnavailable:'Micrófono no disponible.',
+    micDenied:'Acceso al micrófono denegado. Para activar: Ajustes iOS → Safari o Chrome → Micrófono, o toca el icono de candado en la barra de direcciones. Recarga después.', micUnavailable:'Micrófono no disponible.', micBusy:'El micrófono está ocupado — otra app o pestaña puede estar usándolo. Ciérrala (y otras pestañas con micrófono) y recarga.', micNotFound:'No se encontró micrófono en este dispositivo.', micFail:'No se pudo iniciar el micrófono',
     recUnsupported:'Grabación no compatible.',
     recTooShort:'Grabación demasiado corta — mantener al menos un segundo.',
     searchGuide:'buscar en la guía…', noMatches:'Sin resultados para',
@@ -6504,7 +6504,7 @@ const I18N = {
     sLeft:'s zostáva',
     loadingPiano:' načítavam piano…', grandPiano:' grand piano', synthPiano:' synt. piano',
     listenHint:'namier mikrofón tohto zariadenia na iné, ktoré hrá hudbu — zvuk z toho istého telefónu iOS potlačí',
-    micDenied:'Prístup k mikrofónu bol zamietnutý. Aktivuj v: iOS Nastavenia → Safari → Mikrofón, alebo ťukni na ikonu zámku v adresnom riadku prehliadača. Po zmene obnov stránku.', micUnavailable:'Mikrofón nie je v tomto prehliadači dostupný.',
+    micDenied:'Prístup k mikrofónu bol zamietnutý. Aktivuj v: iOS Nastavenia → Safari alebo Chrome → Mikrofón, alebo ťukni na ikonu zámku v adresnom riadku prehliadača. Po zmene obnov stránku.', micUnavailable:'Mikrofón nie je v tomto prehliadači dostupný.', micBusy:'Mikrofón je obsadený — možno ho používa iná aplikácia alebo karta prehliadača. Zatvor ju (aj ostatné karty s mikrofónom) a načítaj znova.', micNotFound:'Na tomto zariadení sa nenašiel mikrofón.', micFail:'Mikrofón sa nepodarilo spustiť',
     recUnsupported:'Nahrávanie nie je v tomto prehliadači podporované.',
     recTooShort:'Nahrávka bola príliš krátka — podrž rec aspoň sekundu.',
     searchGuide:'hľadať v príručke…', noMatches:'Žiadne výsledky pre',
@@ -6606,7 +6606,7 @@ const I18N = {
     sLeft:'秒剩余',
     loadingPiano:' 加载钢琴中…', grandPiano:' 三角钢琴', synthPiano:' 合成钢琴',
     listenHint:'将此设备的麦克风对准另一个播放音乐的设备 — 同手机的音频会被 iOS 抑制',
-    micDenied:'麦克风访问被拒绝。要启用请前往:iOS 设置 → Safari → 麦克风,或点击浏览器地址栏中的锁形图标。修改后请刷新页面。', micUnavailable:'此浏览器不支持麦克风。',
+    micDenied:'麦克风访问被拒绝。要启用请前往:iOS 设置 → Safari 或 Chrome → 麦克风,或点击浏览器地址栏中的锁形图标。修改后请刷新页面。', micUnavailable:'此浏览器不支持麦克风。', micBusy:'麦克风被占用 — 可能有其他应用或标签页在使用。请关闭它(以及其他使用麦克风的标签页)后重新加载。', micNotFound:'此设备未找到麦克风。', micFail:'无法启动麦克风',
     recUnsupported:'此浏览器不支持录音。',
     recTooShort:'录音过短 — 请按住录制至少一秒。',
     searchGuide:'搜索指南…', noMatches:'未找到匹配项',
@@ -6714,7 +6714,7 @@ const I18N = {
     sLeft:'秒剩餘',
     loadingPiano:' 載入鋼琴中…', grandPiano:' 三角鋼琴', synthPiano:' 合成鋼琴',
     listenHint:'將此裝置的麥克風對準另一個播放音樂的裝置 — 同手機的聲音會被 iOS 抑制',
-    micDenied:'麥克風存取被拒絕。要啟用請前往：iOS 設定 → Safari → 麥克風，或點擊瀏覽器網址列中的鎖頭圖示。修改後請重新整理頁面。', micUnavailable:'此瀏覽器不支援麥克風。',
+    micDenied:'麥克風存取被拒絕。要啟用請前往：iOS 設定 → Safari 或 Chrome → 麥克風，或點擊瀏覽器網址列中的鎖頭圖示。修改後請重新整理頁面。', micUnavailable:'此瀏覽器不支援麥克風。', micBusy:'麥克風被佔用 — 可能有其他應用或分頁在使用。請關閉它(以及其他使用麥克風的分頁)後重新載入。', micNotFound:'此裝置未找到麥克風。', micFail:'無法啟動麥克風',
     recUnsupported:'此瀏覽器不支援錄音。',
     recTooShort:'錄音過短 — 請按住錄製至少一秒。',
     searchGuide:'搜尋指南…', noMatches:'未找到符合項目',
@@ -6810,7 +6810,7 @@ const I18N = {
     sLeft:'s restantes',
     loadingPiano:' carregando piano…', grandPiano:' piano de cauda', synthPiano:' piano sintetizado',
     listenHint:'aponte o microfone deste dispositivo para outro tocando música — o áudio do mesmo celular é suprimido pelo iOS',
-    micDenied:'Acesso ao microfone negado. Para ativar: iOS Ajustes → Safari → Microfone, ou toque no ícone de cadeado na barra de endereço do navegador. Recarregue após alterar.', micUnavailable:'Microfone não disponível neste navegador.',
+    micDenied:'Acesso ao microfone negado. Para ativar: iOS Ajustes → Safari ou Chrome → Microfone, ou toque no ícone de cadeado na barra de endereço do navegador. Recarregue após alterar.', micUnavailable:'Microfone não disponível neste navegador.', micBusy:'O microfone está ocupado — outra app ou separador pode estar a usá-lo. Fecha-o (e outros separadores com microfone) e recarrega.', micNotFound:'Nenhum microfone encontrado neste dispositivo.', micFail:'Não foi possível iniciar o microfone',
     recUnsupported:'Gravação não suportada neste navegador.',
     recTooShort:'Gravação muito curta — segure rec por pelo menos um segundo.',
     searchGuide:'buscar no guia…', noMatches:'Nenhum resultado para',
@@ -14606,6 +14606,19 @@ Composition rules:
     setMicVolLevel(0);
   },[]);
 
+  // Map a getUserMedia failure to the right message. Previously every failure was
+  // reported as "access denied", which sent users to permission settings even when
+  // permission was already granted and the real cause was different (mic busy in
+  // another tab/app, no device, hardware error). Distinguish by error name.
+  const micErrMsg=useCallback((e)=>{
+    const n=(e&&e.name)||'';
+    if(n==='NotAllowedError'||n==='SecurityError') return t('micDenied');
+    if(n==='NotReadableError'||n==='AbortError') return (t('micBusy')!=='micBusy'?t('micBusy'):'Microphone is busy — another app or browser tab may be using it. Close it (and any other tab using the mic), then reload.');
+    if(n==='NotFoundError'||n==='OverconstrainedError') return (t('micNotFound')!=='micNotFound'?t('micNotFound'):'No microphone found on this device.');
+    // Unknown failure — show the actual error so it's debuggable, not a misleading "denied".
+    return (t('micFail')!=='micFail'?t('micFail'):'Could not start the microphone')+(n?(' ('+n+')'):'');
+  },[t]);
+
   const startMicVol=useCallback(async()=>{
     if(micVolActive){stopMicVol();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
@@ -14629,9 +14642,9 @@ Composition rules:
       };
       micVolRef.current={raf:requestAnimationFrame(tick),stream,ac};
     }catch(e){
-      setErr(t('micDenied'));setErrInfo(false);
+      setErr(micErrMsg(e));setErrInfo(false);
     }
-  },[micVolActive,stopMicVol]);
+  },[micVolActive,stopMicVol,micErrMsg]);
 
   const stopMicPainting=useCallback(()=>{
     // Stash the captured draft so the MIC button shows a "draft saved" glow and
@@ -14643,7 +14656,7 @@ Composition rules:
     if(micAcRef.current){try{micAcRef.current.close();}catch(_){}micAcRef.current=null;}
     setMicPainting(false);
     stopMicVol();
-  },[stopMicVol,stashDraft]);
+  },[stopMicVol,stashDraft,micErrMsg]);
 
   const stopMicListening=useCallback(()=>{
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
@@ -14652,7 +14665,7 @@ Composition rules:
     if(listenAcRef.current){try{listenAcRef.current.close();}catch(_){}listenAcRef.current=null;}
     setMicListening(false);
     stopMicVol();
-  },[stopMicVol,stashDraft]);
+  },[stopMicVol,stashDraft,micErrMsg]);
 
   // Refs so handlePauseClick (defined earlier in the file) can stop a live mic
   // mode before starting playback. The Play button now does mic-stop + play in
@@ -14784,7 +14797,7 @@ Composition rules:
       };
       listenRafRef.current=requestAnimationFrame(tick);
     }catch(e){
-      setErr(t('micDenied'));setErrInfo(false);
+      setErr(micErrMsg(e));setErrInfo(false);
       setMicListening(false);
     }
   },[micListening,stopMicListening,stopAll]);
@@ -14899,7 +14912,7 @@ Composition rules:
       };
       micRafRef.current=requestAnimationFrame(tick);
     }catch(e){
-      setErr(t('micDenied'));setErrInfo(false);
+      setErr(micErrMsg(e));setErrInfo(false);
       setMicPainting(false);
     }
   },[micPainting,stopMicPainting,playNote,stopAll,randomMode,pollockSessionSeed]);
