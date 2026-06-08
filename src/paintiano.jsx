@@ -14615,6 +14615,12 @@ Composition rules:
   // on it threw InvalidStateError (the "Could not start the microphone" failure).
   // Reuse Tone's existing, already-running context instead — one context, no clash.
   const getSharedAC=useCallback(async()=>{
+    // CRITICAL: the audio session must allow INPUT for the mic. Elsewhere we set
+    // navigator.audioSession.type='playback' (output-only) for clean playback —
+    // but 'playback' DISABLES the microphone, which is why createMediaStreamSource
+    // started throwing InvalidStateError after the playback-session changes landed.
+    // Switch to 'play-and-record' here so capture is permitted.
+    try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){}
     let ac=null;
     try{ ac=Tone.getContext().rawContext; }catch(_){}
     if(!ac){ const AC=window.AudioContext||window.webkitAudioContext; ac=new AC(); }
@@ -14638,6 +14644,7 @@ Composition rules:
   const startMicVol=useCallback(async()=>{
     if(micVolActive){stopMicVol();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
+    try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       const ac=await getSharedAC();
@@ -14693,6 +14700,7 @@ Composition rules:
   const startMicListening=useCallback(async()=>{
     if(micListening){stopMicListening();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
+    try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
     const prevOwner = draftOwnerRef.current;
     // Continuation: re-entering listen, OR switching from sing (sibling preset
     // within the unified MIC mode). In both cases we preserve the canvas.
@@ -14824,6 +14832,7 @@ Composition rules:
   const startMicPainting=useCallback(async()=>{
     if(micPainting)return stopMicPainting();
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
+    try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
     const prevOwner = draftOwnerRef.current;
     // Continuation: re-entering sing, OR switching from listen (sibling preset
     // within the unified MIC mode). Preserve the canvas in both cases.
