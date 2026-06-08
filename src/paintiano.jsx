@@ -12125,6 +12125,11 @@ export default function Paintiano() {
   // returns to YOUR last choice from that pair — not always the default 'a'.
   // Key = "a|b"; value = the style key last chosen from that pair.
   const [pairLastPick, setPairLastPick] = useState({});
+  // D2 refactor (Free tier only): which pair is currently showing its "locked
+  // partner" info row beneath the artist palette. Holds the pair key "a|b" of
+  // the most recently tapped pair, or null. Tapping the same pair again toggles
+  // it off; tapping a different pair replaces it (only one info row at a time).
+  const [expandedPair, setExpandedPair] = useState(null);
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -18407,27 +18412,25 @@ Composition rules:
           <div style={{textAlign:'center',marginTop:6,marginBottom:2,fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
           )}
           {loadedSource!=='image' && (
+          <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
             {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
             <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
             ); })()}
             {effectivePairs.map(([a,b])=>{
-              // Free tier: only the 'a' side is reachable; the 'b' side is locked
-              // behind the paywall. We force the face to 'a' regardless of any
-              // pairLastPick history, so a returning Free user never sees a
-              // locked artist's name on the button. Paid tiers keep the normal
-              // "remember last pick" behavior.
+              // Free tier: only the 'a' side is reachable; the 'b' side is
+              // shown as a small "locked partner" info row beneath the palette
+              // when the pair is tapped. No paywall opens from artist taps —
+              // the lock is purely informational (Guide explains how to unlock).
               const pairLocked = (proStatus === 'free');
               // Which of the pair is active? Determines label + next target.
               const activeKey = style===a ? a : (style===b ? b : null);
               const isOn = activeKey!==null;
               const pairKey = a+'|'+b;
               // The pair's "face" when not active: the member you last picked
-              // from this pair, falling back to the default 'a'. This is what a
-              // tap selects, and what the label shows when idle — so your last
-              // choice (e.g. Pollock) isn't forgotten when you pick another
-              // artist and come back. For Free this is forced to 'a'.
+              // from this pair, falling back to the default 'a'. For Free this
+              // is forced to 'a' (the only reachable side).
               const faceKey = pairLocked
                 ? a
                 : ((pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a);
@@ -18440,36 +18443,24 @@ Composition rules:
               // rather than the technique name. Long names are shortened to a
               // single recognizable word so they fit the narrow 5-up grid cell.
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
-              // For Free, label always shows the unlocked 'a' artist (so the
-              // pair never advertises a locked name even if shuffle picks 'b').
+              // For Free, label always shows the unlocked 'a' artist.
               const _displayKey = pairLocked ? a : (activeKey || shufKey || faceKey);
               const _artFull = STYLE_INSPIRED[_displayKey];
               const label = _artistShort[_artFull] || _artFull;
               // Tap behaviour:
-              //  • not active → select this pair's face (your last pick / default)
-              //  • active on the face → flip to the OTHER member
-              //  • active on the other member → deselect to Mosaic (or, in
-              //    shuffle, back to the face so the generated artist can't snap
-              //    back in and look like your pick was discarded)
-              //  • Free tier: flip attempts open the paywall instead of swapping
-              //    to the locked side; first tap still works for 'a'.
+              //  • Free tier: always selects 'a' (the only reachable side).
+              //    Toggles the locked-partner info row beneath the palette:
+              //    tap same pair again → row hides; tap a different pair →
+              //    row reveals the new partner.
+              //  • Paid: standard cycle (face → other → mosaic/face).
               const onClick = ()=>{
                 if(demoReelOn) return;
                 if(pairLocked){
-                  // Free: first tap selects 'a' (the unlocked face); any tap
-                  // when already on 'a' would normally flip to 'b' — for Free
-                  // that's the paywall trigger.
-                  if(!isOn){
-                    setPairLastPick(p=>({...p,[pairKey]:a}));
-                    setStyleTo(a);
-                  } else if(style===a){
-                    setPaywallReason('settings');
-                  } else {
-                    // Defensive: shouldn't happen (Free can't land on 'b'),
-                    // but if it does, return to 'a' silently.
-                    setPairLastPick(p=>({...p,[pairKey]:a}));
-                    setStyleTo(a);
-                  }
+                  // Always paint 'a' for Free.
+                  setPairLastPick(p=>({...p,[pairKey]:a}));
+                  setStyleTo(a);
+                  // Toggle the info row: same pair → close; different → open.
+                  setExpandedPair(prev => prev === pairKey ? null : pairKey);
                   return;
                 }
                 if(!isOn){
@@ -18489,12 +18480,12 @@ Composition rules:
                 }
               };
               const nextHint = pairLocked
-                ? (isOn ? `tap to unlock ${STYLE_LABELS[b]}` : `${STYLE_LABELS[a]} — tap to paint · ${STYLE_LABELS[b]} is Pro`)
+                ? `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`
                 : (!isOn ? '' : (style===a ? `tap for ${STYLE_LABELS[b]}` : (randomMode ? 'tap for Mosaic' : `tap for ${STYLE_LABELS[a]}`)));
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}{pairLocked && <span style={{marginLeft:4,opacity:.7,fontSize:'.8em'}}>🔒</span>}</button>
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
               );
             })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
@@ -18504,6 +18495,23 @@ Composition rules:
               </button>
             </div>
           </div>
+          {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
+              member of the most recently tapped pair as a non-interactive
+              label, so the user can see who's behind the lock without the
+              palette buttons themselves carrying a confusing 🔒 icon. The
+              lock as a feature is described in the Guide; users go to PRO
+              menu item to upgrade — no paywall opens from this row. */}
+          {proStatus==='free' && expandedPair && (()=>{
+            const [a,b] = expandedPair.split('|');
+            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+            const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
+            return (
+              <div style={{textAlign:'center',marginTop:8,marginBottom:2,fontSize:(.58*effScale)+'rem',letterSpacing:'.06em',color:'rgba(201,168,76,.55)',fontStyle:'italic',userSelect:'none'}}>
+                {lockedName} <span style={{marginLeft:3,opacity:.85}}>🔒</span>
+              </div>
+            );
+          })()}
+          </>
           )}
         </div>
         )}

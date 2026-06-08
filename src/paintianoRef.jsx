@@ -7887,14 +7887,31 @@ const I18N = {
     trialBanner1:'Only 1 AI trial left · Get Pro for unlimited',
     trialBanner2:'Only 2 AI trials left · Get Pro for unlimited',
     morphAiUnavailable:'Morph for AI generated mood unavailable',
-    proPaywallTitle:'This is part of Paintiano Pro',
+    proPaywallTitle:'Unlock the full Paintiano',
     proPaywallTitleAi:'You’ve used your free AI compositions',
     proPaywallBody:'Unlock unlimited AI compositions, remove the watermark from exports, and support an independent art project.',
     proPaywallCta:'Get Paintiano Pro — €9.99 lifetime',
     proAiPaywallCta:'Get Paintiano Pro AI — €19.99 lifetime',
     proPaywallFooter:'One-time payment · No subscription · VAT included',
-    proEarlyBird:'Early-bird price · first 50 supporters · then €14.99',
-    proPaywallSubtitle:'Unlock everything. Pay once. Keep forever.',
+    proEarlyBird:'Early-bird prices · first 50 supporters',
+    proPaywallSubtitle:'Pay once. Keep forever.',
+    proSupportLine:'You’re also keeping a solo art project independent.',
+    // Tier card keys (two-tier paywall, Jun 2026)
+    proTierTitle:'Paintiano Pro',
+    proTierPrice:'€9.99 · early-bird (then €14.99)',
+    proValueArtists:'16 artists (free has 8)',
+    proValueTypes:'6 paint types per artist (free has 2)',
+    proValueDpi:'300 DPI exports, no watermark',
+    proValueLife:'Lifetime access',
+    proGetCta:'Get Pro',
+    proAiTierTitle:'Paintiano Pro AI',
+    proAiTierPrice:'€19.99 · early-bird (then €24.99)',
+    proAiValueAll:'Everything in Pro, plus:',
+    proAiValueText:'AI composition from text moods',
+    proAiValueImage:'AI composition from your images',
+    proAiValueAtmo:'AI atmospheric tinting',
+    proAiGetCta:'Get Pro AI',
+    proRecommended:'Recommended',
     proValue1:'Unlimited AI compositions',
     proValue1Sub:'Generate as many paintings as you wish',
     proValue2:'Export without watermark',
@@ -11125,6 +11142,96 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase',
   };
 
+  // ─── Tier card styles (paywall two-tier layout) ──────────────────────────
+  // Each tier renders as a card with title + price + value bullets + CTA.
+  // The "recommended" variant has a brighter gold border + RECOMMENDED ribbon,
+  // used for Pro AI when reason === 'ai_trial' (user just hit the AI wall).
+  const tierCard = {
+    position: 'relative',
+    border: '1px solid rgba(201,168,76,.25)',
+    borderRadius: 8, padding: '18px 16px 14px',
+    background: 'rgba(255,255,255,.02)',
+    marginBottom: 12,
+  };
+  const tierCardHighlight = Object.assign({}, tierCard, {
+    border: `1px solid ${GOLD}`,
+    background: 'rgba(201,168,76,.05)',
+    boxShadow: `0 0 0 1px rgba(201,168,76,.25), 0 6px 22px rgba(201,168,76,.10)`,
+  });
+  const tierTitle = {
+    fontSize: (.85*readScale)+'rem', fontWeight: 600, color: '#f5f5f5',
+    margin: '0 0 2px', letterSpacing: '.02em',
+  };
+  const tierPrice = {
+    fontSize: (.7*readScale)+'rem', color: GOLD, margin: '0 0 12px',
+    letterSpacing: '.04em', fontWeight: 500,
+  };
+  const tierValueRow = {
+    display: 'flex', alignItems: 'flex-start', gap: 8,
+    margin: '0 0 6px', fontSize: (.66*readScale)+'rem', lineHeight: 1.4,
+    color: '#e0e0e0',
+  };
+  const tierCheck = {
+    color: GOLD, fontSize: (.72*readScale)+'rem', flexShrink: 0, marginTop: 1,
+  };
+  const recommendedBadge = {
+    position: 'absolute', top: -10, right: 12,
+    background: GOLD, color: '#0a0a12',
+    fontSize: (.52*readScale)+'rem', fontWeight: 700,
+    letterSpacing: '.12em', padding: '3px 9px',
+    borderRadius: 3, textTransform: 'uppercase',
+  };
+
+  // Inline tier card renderer — used twice (intro view + about view).
+  // `tierKey` ∈ 'pro' | 'pro_ai'. `recommended` adds the gold ribbon + bright
+  // border. `cta` toggles between gold-filled and outlined button style so the
+  // visual hierarchy reflects which tier the paywall is pushing.
+  const renderTierCard = (tierKey, recommended) => {
+    const isAI = tierKey === 'pro_ai';
+    const cardStyle = recommended ? tierCardHighlight : tierCard;
+    const title = isAI
+      ? tr('proAiTierTitle', 'Paintiano Pro AI')
+      : tr('proTierTitle', 'Paintiano Pro');
+    const priceLine = isAI
+      ? tr('proAiTierPrice', '€19.99 · early-bird (then €24.99)')
+      : tr('proTierPrice',   '€9.99 · early-bird (then €14.99)');
+    const values = isAI ? [
+      ['proAiValueAll',   'Everything in Pro, plus:'],
+      ['proAiValueText',  'AI composition from text moods'],
+      ['proAiValueImage', 'AI composition from your images'],
+      ['proAiValueAtmo',  'AI atmospheric tinting'],
+    ] : [
+      ['proValueArtists', '16 artists (free has 8)'],
+      ['proValueTypes',   '6 paint types per artist (free has 2)'],
+      ['proValueDpi',     '300 DPI exports, no watermark'],
+      ['proValueLife',    'Lifetime access'],
+    ];
+    const btnStyle = recommended ? btnGold : btnGoldOutline;
+    return (
+      <div style={cardStyle}>
+        {recommended && (
+          <span style={recommendedBadge}>{tr('proRecommended', 'Recommended')}</span>
+        )}
+        <p style={tierTitle}>{title}</p>
+        <p style={tierPrice}>{priceLine}</p>
+        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px' }}>
+          {values.map(([k, fb], i) => (
+            <li key={i} style={tierValueRow}>
+              <span style={tierCheck}>✓</span>
+              <span>{tr(k, fb)}</span>
+            </li>
+          ))}
+        </ul>
+        <button style={Object.assign({}, btnStyle, { marginBottom: 0 })}
+                onClick={() => openCheckout(tierKey)}>
+          {isAI
+            ? tr('proAiGetCta', 'Get Pro AI')
+            : tr('proGetCta', 'Get Pro')}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
       {view !== 'success' && (
@@ -11151,27 +11258,11 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <p style={{ fontSize: (.95*readScale)+'rem', fontWeight: 600, textAlign: 'center', margin: '0 0 6px' }}>
               {reason === 'ai_trial'
                 ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
-                : tr('proPaywallTitle', 'This is part of Paintiano Pro')}
+                : tr('proPaywallTitle', 'Unlock the full Paintiano')}
             </p>
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, textAlign: 'center', margin: '0 0 16px', letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
-              {tr('proPaywallSubtitle', 'Unlock everything. Pay once. Keep forever.')}
+              {tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
             </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 18px' }}>
-              {[
-                ['proValue1', 'Unlimited AI compositions', 'proValue1Sub', 'Generate as many paintings as you wish'],
-                ['proValue2', 'Export without watermark', 'proValue2Sub', 'Clean images, ready to share or print'],
-                ['proValue3', 'Lifetime access', 'proValue3Sub', 'One payment, yours forever'],
-                ['proValue4', 'Support a solo art project', 'proValue4Sub', 'Keep Paintiano independent'],
-              ].map(([k1, fb1, k2, fb2], i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, margin: '0 0 9px', fontSize: (.7*readScale)+'rem', lineHeight: 1.4 }}>
-                  <span style={{ color: GOLD, fontSize: (.75*readScale)+'rem', flexShrink: 0, marginTop: 1 }}>✓</span>
-                  <span>
-                    <span style={{ color: '#f5f5f5', fontWeight: 500 }}>{tr(k1, fb1)}</span>
-                    <span style={{ color: '#8a8a8a', display: 'block', fontSize: (.62*readScale)+'rem', marginTop: 1 }}>{tr(k2, fb2)}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
             {PRO_CFG.checkoutDisabled ? (
               <>
                 <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
@@ -11181,32 +11272,30 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                   </span>
                 </div>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
-                  {tr('proBackOnlineSoon', 'back online in a few days · early-bird price (€9.99) preserved')}
+                  {tr('proBackOnlineSoon', 'back online in a few days · early-bird prices preserved')}
                 </p>
               </>
             ) : (
               <>
+                {/* Two tier cards, ordered by what brought the user here.
+                    ai_trial → Pro AI on top with "Recommended" ribbon, Pro below.
+                    settings → Pro on top (cheaper, sufficient for most non-AI needs), Pro AI below. */}
                 {reason === 'ai_trial' ? (
                   <>
-                    <button style={btnGold} onClick={() => openCheckout('pro_ai')}>
-                      {tr('proAiPaywallCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
-                    </button>
-                    <button style={btnGoldOutline} onClick={() => openCheckout('pro')}>
-                      {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                    </button>
+                    {renderTierCard('pro_ai', true)}
+                    {renderTierCard('pro', false)}
                   </>
                 ) : (
                   <>
-                    <button style={btnGold} onClick={() => openCheckout('pro')}>
-                      {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                    </button>
-                    <button style={btnGoldOutline} onClick={() => openCheckout('pro_ai')}>
-                      {tr('proAiPaywallCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
-                    </button>
+                    {renderTierCard('pro', false)}
+                    {renderTierCard('pro_ai', false)}
                   </>
                 )}
-                <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
+                <p style={{ color: GOLD, fontSize: (.56*readScale)+'rem', textAlign: 'center', margin: '4px 0 12px', letterSpacing: '.04em', opacity: .75 }}>
                   {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
+                </p>
+                <p style={{ color: '#8a8a8a', fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 14px', fontStyle: 'italic', opacity: .85 }}>
+                  {tr('proSupportLine', 'You\u2019re also keeping a solo art project independent.')}
                 </p>
               </>
             )}
@@ -12012,6 +12101,25 @@ export default function Paintiano() {
   const [STYLE_PAIRS] = useState(() =>
     BASE_STYLE_PAIRS.map(([a,b]) => (Math.random() < 0.5 ? [a,b] : [b,a]))
   );
+  // ─── Tier-aware artist pairs (D2, Jun 2026) ───────────────────────────────
+  // Free tier sees a FIXED set of 8 artists (the 'a' side of every BASE pair),
+  // identical for every Free user — so the "unlock 8 more" sales pitch is
+  // predictable and consistent. Paid tiers (Pro / Pro AI) get the session-
+  // shuffled STYLE_PAIRS where face position rotates randomly per app open.
+  // We also derive the locked set so the gate logic below knows which keys are
+  // behind the paywall.
+  const FREE_PAIRS = BASE_STYLE_PAIRS; // [a,b] kept in BASE order; only 'a' is reachable for free
+  const FREE_UNLOCKED_KEYS = useMemo(
+    () => new Set(BASE_STYLE_PAIRS.map(([a]) => a)),
+    []
+  );
+  const effectivePairs = (proStatus === 'free') ? FREE_PAIRS : STYLE_PAIRS;
+  // For Free: tapping a pair must NEVER select the b side. styleIsLocked tells
+  // the gate to open the paywall instead of swapping styles.
+  const styleIsLocked = useCallback((key) => {
+    if (proStatus !== 'free') return false;
+    return !FREE_UNLOCKED_KEYS.has(key);
+  }, [proStatus, FREE_UNLOCKED_KEYS]);
   // Remembers, per pair, which member the user last selected. So when a pair's
   // button is not currently active (you picked a DIFFERENT artist), tapping it
   // returns to YOUR last choice from that pair — not always the default 'a'.
@@ -12268,7 +12376,14 @@ export default function Paintiano() {
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
+  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
+  // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
+  // shuffle across all 16. Keeps the random feature usable for Free without ever
+  // accidentally landing on a locked artist (which would just paint a Pro-only
+  // style without a clear way to dismiss it).
+  const SHUFFLE_POOL = (proStatus === 'free')
+    ? SHUFFLE_POOL_ALL.filter(k => FREE_UNLOCKED_KEYS.has(k))
+    : SHUFFLE_POOL_ALL;
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
     // Mix the seed a little more so the style pick isn't correlated with the
@@ -12276,7 +12391,7 @@ export default function Paintiano() {
     let h = (pollockSessionSeed>>>0);
     h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
     return SHUFFLE_POOL[(h>>>0) % SHUFFLE_POOL.length];
-  }, [style, randomMode, pollockSessionSeed]);
+  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
   // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
   // it only needs note MIDI + the colour fn, which every source provides.
@@ -18297,7 +18412,13 @@ Composition rules:
             {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
             <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
             ); })()}
-            {STYLE_PAIRS.map(([a,b])=>{
+            {effectivePairs.map(([a,b])=>{
+              // Free tier: only the 'a' side is reachable; the 'b' side is locked
+              // behind the paywall. We force the face to 'a' regardless of any
+              // pairLastPick history, so a returning Free user never sees a
+              // locked artist's name on the button. Paid tiers keep the normal
+              // "remember last pick" behavior.
+              const pairLocked = (proStatus === 'free');
               // Which of the pair is active? Determines label + next target.
               const activeKey = style===a ? a : (style===b ? b : null);
               const isOn = activeKey!==null;
@@ -18306,8 +18427,10 @@ Composition rules:
               // from this pair, falling back to the default 'a'. This is what a
               // tap selects, and what the label shows when idle — so your last
               // choice (e.g. Pollock) isn't forgotten when you pick another
-              // artist and come back.
-              const faceKey = (pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a;
+              // artist and come back. For Free this is forced to 'a'.
+              const faceKey = pairLocked
+                ? a
+                : ((pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a);
               // Shuffle (Random + no manual pick): highlight whichever button
               // holds the style the shuffle landed on, and show THAT style's
               // label so the cycling reads on the buttons themselves.
@@ -18317,7 +18440,10 @@ Composition rules:
               // rather than the technique name. Long names are shortened to a
               // single recognizable word so they fit the narrow 5-up grid cell.
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
-              const _artFull = STYLE_INSPIRED[activeKey || shufKey || faceKey];
+              // For Free, label always shows the unlocked 'a' artist (so the
+              // pair never advertises a locked name even if shuffle picks 'b').
+              const _displayKey = pairLocked ? a : (activeKey || shufKey || faceKey);
+              const _artFull = STYLE_INSPIRED[_displayKey];
               const label = _artistShort[_artFull] || _artFull;
               // Tap behaviour:
               //  • not active → select this pair's face (your last pick / default)
@@ -18325,9 +18451,27 @@ Composition rules:
               //  • active on the other member → deselect to Mosaic (or, in
               //    shuffle, back to the face so the generated artist can't snap
               //    back in and look like your pick was discarded)
-              const otherKey = faceKey===a ? b : a;
+              //  • Free tier: flip attempts open the paywall instead of swapping
+              //    to the locked side; first tap still works for 'a'.
               const onClick = ()=>{
                 if(demoReelOn) return;
+                if(pairLocked){
+                  // Free: first tap selects 'a' (the unlocked face); any tap
+                  // when already on 'a' would normally flip to 'b' — for Free
+                  // that's the paywall trigger.
+                  if(!isOn){
+                    setPairLastPick(p=>({...p,[pairKey]:a}));
+                    setStyleTo(a);
+                  } else if(style===a){
+                    setPaywallReason('settings');
+                  } else {
+                    // Defensive: shouldn't happen (Free can't land on 'b'),
+                    // but if it does, return to 'a' silently.
+                    setPairLastPick(p=>({...p,[pairKey]:a}));
+                    setStyleTo(a);
+                  }
+                  return;
+                }
                 if(!isOn){
                   // Not active → select your last pick from this pair (face).
                   setPairLastPick(p=>({...p,[pairKey]:faceKey}));
@@ -18344,11 +18488,13 @@ Composition rules:
                   else { setPairLastPick(p=>({...p,[pairKey]:a})); setStyleTo(a); }
                 }
               };
-              const nextHint = !isOn ? '' : (style===a ? `tap for ${STYLE_LABELS[b]}` : (randomMode ? 'tap for Mosaic' : `tap for ${STYLE_LABELS[a]}`));
+              const nextHint = pairLocked
+                ? (isOn ? `tap to unlock ${STYLE_LABELS[b]}` : `${STYLE_LABELS[a]} — tap to paint · ${STYLE_LABELS[b]} is Pro`)
+                : (!isOn ? '' : (style===a ? `tap for ${STYLE_LABELS[b]}` : (randomMode ? 'tap for Mosaic' : `tap for ${STYLE_LABELS[a]}`)));
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
-                  title={isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
+                  title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}{pairLocked && <span style={{marginLeft:4,opacity:.7,fontSize:'.8em'}}>🔒</span>}</button>
               );
             })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
