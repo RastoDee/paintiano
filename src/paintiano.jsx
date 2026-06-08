@@ -7941,6 +7941,20 @@ const I18N = {
     tierRowAi:'AI features',
     tier3Credits:'3 credits',
     tierAiCreditsNote:'AI text & image compose = 1 credit · Atmosphere = 0.5 credit',
+    proAboutTitle3:'Paintiano Pro · Pro AI',
+    proAboutLead3:'Two ways to unlock — pick what fits how you create.',
+    proAboutCompareTitle3:'Free · Pro · Pro AI',
+    proAboutHowFreeTitle:'How Free tier behaves',
+    proAboutHowFree1:'Eight artists are unlocked from day one. Each unlocked artist has a Pro partner — tap them to see who it is, but only Pro paints with that partner.',
+    proAboutHowFree2:'Custom palette shows the default 12 colours; editing your own colours is Pro.',
+    proAboutHowFree3:'AI features (✦) work for 3 trial credits, then ask you to upgrade to Pro AI for unlimited use. Exports always carry a watermark on Free.',
+    proAboutHonestTitle3:'Honest about Pro and Pro AI',
+    proAboutHonest3_1:'Both tiers are one-time payments. No subscription, ever. The price you pay today stays valid forever.',
+    proAboutHonest3_2:'Plain Pro removes the watermark and unlocks all artists, paint types and the custom palette — but AI calls still come from the same 3-credit trial pool as Free.',
+    proAboutHonest3_3:'Pro AI is for people who actually use the ✦ AI features regularly. If you mostly play your own music or load files, plain Pro is the better fit.',
+    proAboutHonest3_4:'No cloud storage. Paintings save to your own device. Your license key works on up to 5 devices, one at a time.',
+    proTierPriceShort:'€9.99',
+    proAiTierPriceShort:'€19.99',
     tierFootnote:'One-time payment · Lifetime access',
     proValue1:'Unlimited AI compositions',
     proValue1Sub:'Generate as many paintings as you wish',
@@ -8090,6 +8104,20 @@ const I18N = {
     tierRowAi:'KI-Funktionen',
     tier3Credits:'3 Credits',
     tierAiCreditsNote:'KI Text & Bild = 1 Credit · Atmosphäre = 0,5 Credit',
+    proAboutTitle3:'Paintiano Pro · Pro KI',
+    proAboutLead3:'Zwei Wege zum Freischalten — wähle, was zu deiner Arbeitsweise passt.',
+    proAboutCompareTitle3:'Free · Pro · Pro KI',
+    proAboutHowFreeTitle:'So funktioniert Free',
+    proAboutHowFree1:'Acht Künstler sind von Anfang an freigeschaltet. Jeder hat einen Pro-Partner — tippe drauf, um zu sehen welcher, aber nur Pro malt mit diesem Partner.',
+    proAboutHowFree2:'Eigene Palette zeigt die Standard-12-Farben; eigene Farben festlegen ist Pro.',
+    proAboutHowFree3:'KI-Funktionen (✦) gehen für 3 Test-Credits, dann brauchst du Pro KI für unbegrenzt. Exporte tragen auf Free immer ein Wasserzeichen.',
+    proAboutHonestTitle3:'Ehrlich zu Pro und Pro KI',
+    proAboutHonest3_1:'Beide Tarife sind Einmalzahlungen. Kein Abo, nie. Der Preis heute gilt für immer.',
+    proAboutHonest3_2:'Normales Pro entfernt das Wasserzeichen und schaltet alle Künstler, Mal-Typen und die eigene Palette frei — KI-Aufrufe kommen aber aus dem gleichen 3-Credit-Test-Pool wie bei Free.',
+    proAboutHonest3_3:'Pro KI ist für Leute, die ✦ KI-Funktionen wirklich regelmäßig nutzen. Wer hauptsächlich eigene Musik spielt oder Dateien lädt, fährt mit Pro besser.',
+    proAboutHonest3_4:'Kein Cloud-Speicher. Bilder landen auf deinem Gerät. Dein Lizenzschlüssel funktioniert auf bis zu 5 Geräten, eines zur Zeit.',
+    proTierPriceShort:'9,99 €',
+    proAiTierPriceShort:'19,99 €',
     tierFootnote:'Einmalige Zahlung · Lebenslanger Zugang',
     proValue1:'Unbegrenzte KI-Kompositionen',
     proValue1Sub:'Erstelle so viele Bilder, wie du möchtest',
@@ -8238,6 +8266,20 @@ const I18N = {
     tierRowAi:'Fonctions IA',
     tier3Credits:'3 crédits',
     tierAiCreditsNote:'IA texte & image = 1 crédit · Atmosphère = 0,5 crédit',
+    proAboutTitle3:'Paintiano Pro · Pro IA',
+    proAboutLead3:'Deux façons de débloquer — choisissez selon votre usage.',
+    proAboutCompareTitle3:'Free · Pro · Pro IA',
+    proAboutHowFreeTitle:'Comment fonctionne Free',
+    proAboutHowFree1:'Huit artistes sont débloqués dès le départ. Chacun a un partenaire Pro — tapez pour voir qui, mais seul Pro peint avec ce partenaire.',
+    proAboutHowFree2:'La palette personnalisée affiche les 12 couleurs par défaut ; modifier vos couleurs est Pro.',
+    proAboutHowFree3:'Les fonctions IA (✦) marchent 3 crédits d\'essai, puis demandent Pro IA pour l\'illimité. Les exports portent toujours un filigrane sur Free.',
+    proAboutHonestTitle3:'Honnête sur Pro et Pro IA',
+    proAboutHonest3_1:'Les deux tarifs sont des paiements uniques. Aucun abonnement, jamais. Le prix d\'aujourd\'hui reste valable à vie.',
+    proAboutHonest3_2:'Pro retire le filigrane et débloque tous les artistes, types de peinture et la palette perso — mais les appels IA viennent du même pool de 3 crédits d\'essai que Free.',
+    proAboutHonest3_3:'Pro IA est pour ceux qui utilisent vraiment les fonctions ✦ IA régulièrement. Si vous jouez surtout votre musique ou chargez des fichiers, Pro suffit.',
+    proAboutHonest3_4:'Pas de stockage cloud. Les peintures restent sur votre appareil. Votre clé fonctionne sur 5 appareils maximum, un à la fois.',
+    proTierPriceShort:'9,99 €',
+    proAiTierPriceShort:'19,99 €',
     tierFootnote:'Paiement unique · Accès à vie',
     proValue1:'Compositions IA illimitées',
     proValue1Sub:'Génère autant de peintures que tu veux',
@@ -8386,6 +8428,20 @@ const I18N = {
     tierRowAi:'Funciones IA',
     tier3Credits:'3 créditos',
     tierAiCreditsNote:'IA texto e imagen = 1 crédito · Atmósfera = 0,5 crédito',
+    proAboutTitle3:'Paintiano Pro · Pro IA',
+    proAboutLead3:'Dos formas de desbloquear — elige según cómo creas.',
+    proAboutCompareTitle3:'Free · Pro · Pro IA',
+    proAboutHowFreeTitle:'Cómo funciona Free',
+    proAboutHowFree1:'Ocho artistas están desbloqueados desde el primer día. Cada uno tiene un compañero Pro — pulsa para ver cuál, pero solo Pro pinta con ese compañero.',
+    proAboutHowFree2:'La paleta personalizada muestra los 12 colores por defecto; editar tus colores es Pro.',
+    proAboutHowFree3:'Las funciones IA (✦) duran 3 créditos de prueba, luego piden Pro IA para ilimitado. Las exportaciones siempre llevan marca de agua en Free.',
+    proAboutHonestTitle3:'Honesto sobre Pro y Pro IA',
+    proAboutHonest3_1:'Ambos planes son pagos únicos. Sin suscripción, nunca. El precio de hoy se mantiene de por vida.',
+    proAboutHonest3_2:'Pro normal quita la marca de agua y desbloquea todos los artistas, tipos de pintura y paleta personalizada — pero las llamadas IA vienen del mismo pool de 3 créditos que Free.',
+    proAboutHonest3_3:'Pro IA es para quien usa las funciones ✦ IA con frecuencia. Si tocas tu música o cargas archivos, Pro es mejor opción.',
+    proAboutHonest3_4:'Sin almacenamiento en la nube. Las pinturas se guardan en tu dispositivo. Tu clave funciona en hasta 5 dispositivos, uno a la vez.',
+    proTierPriceShort:'9,99 €',
+    proAiTierPriceShort:'19,99 €',
     tierFootnote:'Pago único · Acceso de por vida',
     proValue1:'Composiciones de IA ilimitadas',
     proValue1Sub:'Genera tantas pinturas como quieras',
@@ -8534,6 +8590,20 @@ const I18N = {
     tierRowAi:'AI funkcie',
     tier3Credits:'3 kredity',
     tierAiCreditsNote:'AI text a obrázok = 1 kredit · Atmosféra = 0,5 kreditu',
+    proAboutTitle3:'Paintiano Pro · Pro AI',
+    proAboutLead3:'Dva spôsoby ako odomknúť — vyber, ktorý ti sedí.',
+    proAboutCompareTitle3:'Free · Pro · Pro AI',
+    proAboutHowFreeTitle:'Ako funguje Free',
+    proAboutHowFree1:'Osem umelcov je odomknutých od začiatku. Každý má Pro partnera — kliknutím zistíš ktorého, ale len Pro maľuje s tým partnerom.',
+    proAboutHowFree2:'Vlastná paleta ukazuje predvolených 12 farieb; editácia vlastných farieb je Pro.',
+    proAboutHowFree3:'AI funkcie (✦) fungujú za 3 trialové kredity, potom potrebujú Pro AI pre neobmedzené použitie. Exporty na Free vždy nesú vodoznak.',
+    proAboutHonestTitle3:'Úprimne o Pro a Pro AI',
+    proAboutHonest3_1:'Oba tiery sú jednorázové platby. Žiadne predplatné, nikdy. Cena ktorú platíš dnes platí navždy.',
+    proAboutHonest3_2:'Obyčajné Pro odstráni vodoznak a odomkne všetkých umelcov, typy maľby a vlastnú paletu — ale AI volania ide stále zo spoločného 3-kreditového triala ako pri Free.',
+    proAboutHonest3_3:'Pro AI je pre ľudí, ktorí naozaj pravidelne používajú ✦ AI funkcie. Ak väčšinou hráš svoju hudbu alebo nahrávaš súbory, obyčajné Pro je lepšia voľba.',
+    proAboutHonest3_4:'Žiadne cloud úložisko. Maľby sa ukladajú na tvoje zariadenie. Tvoj licenčný kľúč funguje na max 5 zariadeniach, jedno naraz.',
+    proTierPriceShort:'9,99 €',
+    proAiTierPriceShort:'19,99 €',
     tierFootnote:'Jednorazová platba · Doživotný prístup',
     proValue1:'Neobmedzené AI kompozície',
     proValue1Sub:'Vytváraj toľko malieb, koľko chceš',
@@ -8688,6 +8758,20 @@ const I18N = {
     tierRowAi:'AI 功能',
     tier3Credits:'3 个额度',
     tierAiCreditsNote:'AI 文字与图片 = 1 个额度 · 氛围 = 0.5 个额度',
+    proAboutTitle3:'Paintiano Pro · Pro AI',
+    proAboutLead3:'两种解锁方式 — 选择适合您创作方式的。',
+    proAboutCompareTitle3:'Free · Pro · Pro AI',
+    proAboutHowFreeTitle:'Free 如何运作',
+    proAboutHowFree1:'八位艺术家从第一天起已解锁。每位都有一位 Pro 伙伴 — 点击查看是谁,但只有 Pro 与该伙伴一起作画。',
+    proAboutHowFree2:'自定义调色板显示默认 12 种颜色;编辑您自己的颜色属于 Pro。',
+    proAboutHowFree3:'AI 功能 (✦) 提供 3 次试用额度,之后需要升级 Pro AI 享无限。Free 导出始终带有水印。',
+    proAboutHonestTitle3:'关于 Pro 和 Pro AI 的实话',
+    proAboutHonest3_1:'两个级别都是一次性付款。永无订阅。今天的价格永久有效。',
+    proAboutHonest3_2:'普通 Pro 移除水印并解锁所有艺术家、画法和自定义调色板 — 但 AI 调用仍来自与 Free 相同的 3 个试用额度池。',
+    proAboutHonest3_3:'Pro AI 适合真正经常使用 ✦ AI 功能的人。如果您主要演奏自己的音乐或加载文件,普通 Pro 是更好的选择。',
+    proAboutHonest3_4:'无云存储。绘画保存到您自己的设备。许可证密钥最多可在 5 台设备上使用,一次一台。',
+    proTierPriceShort:'€9.99',
+    proAiTierPriceShort:'€19.99',
     tierFootnote:'一次性付款 · 终身访问',
     proValue1:'无限 AI 作曲',
     proValue1Sub:'想画多少幅画都可以',
@@ -8830,6 +8914,20 @@ const I18N = {
     tierRowAi:'AI 功能',
     tier3Credits:'3 個額度',
     tierAiCreditsNote:'AI 文字與圖片 = 1 個額度 · 氛圍 = 0.5 個額度',
+    proAboutTitle3:'Paintiano Pro · Pro AI',
+    proAboutLead3:'兩種解鎖方式 — 選擇適合您創作方式的。',
+    proAboutCompareTitle3:'Free · Pro · Pro AI',
+    proAboutHowFreeTitle:'Free 如何運作',
+    proAboutHowFree1:'八位藝術家從第一天起已解鎖。每位都有一位 Pro 夥伴 — 點擊查看是誰，但只有 Pro 與該夥伴一起作畫。',
+    proAboutHowFree2:'自訂調色盤顯示預設 12 種顏色；編輯您自己的顏色屬於 Pro。',
+    proAboutHowFree3:'AI 功能 (✦) 提供 3 次試用額度，之後需要升級 Pro AI 享無限。Free 匯出始終帶有浮水印。',
+    proAboutHonestTitle3:'關於 Pro 和 Pro AI 的實話',
+    proAboutHonest3_1:'兩個級別都是一次性付款。永無訂閱。今天的價格永久有效。',
+    proAboutHonest3_2:'普通 Pro 移除浮水印並解鎖所有藝術家、畫法和自訂調色盤 — 但 AI 呼叫仍來自與 Free 相同的 3 個試用額度池。',
+    proAboutHonest3_3:'Pro AI 適合真正經常使用 ✦ AI 功能的人。如果您主要演奏自己的音樂或載入檔案，普通 Pro 是更好的選擇。',
+    proAboutHonest3_4:'無雲端儲存。繪畫儲存到您自己的裝置。授權金鑰最多可在 5 台裝置上使用，一次一台。',
+    proTierPriceShort:'€9.99',
+    proAiTierPriceShort:'€19.99',
     tierFootnote:'一次性付款 · 終身存取',
     proValue1:'無限 AI 作曲',
     proValue1Sub:'想畫多少幅畫都可以',
@@ -8978,6 +9076,20 @@ const I18N = {
     tierRowAi:'Recursos de IA',
     tier3Credits:'3 créditos',
     tierAiCreditsNote:'IA texto e imagem = 1 crédito · Atmosfera = 0,5 crédito',
+    proAboutTitle3:'Paintiano Pro · Pro IA',
+    proAboutLead3:'Dois caminhos para desbloquear — escolha o que combina com você.',
+    proAboutCompareTitle3:'Free · Pro · Pro IA',
+    proAboutHowFreeTitle:'Como funciona Free',
+    proAboutHowFree1:'Oito artistas estão desbloqueados desde o primeiro dia. Cada um tem um parceiro Pro — toque para ver qual, mas só Pro pinta com esse parceiro.',
+    proAboutHowFree2:'Paleta personalizada mostra as 12 cores padrão; editar suas próprias cores é Pro.',
+    proAboutHowFree3:'Recursos IA (✦) duram 3 créditos de teste, depois pedem Pro IA para uso ilimitado. Exportações sempre levam marca d\'água no Free.',
+    proAboutHonestTitle3:'Honesto sobre Pro e Pro IA',
+    proAboutHonest3_1:'Ambos os planos são pagamentos únicos. Sem assinatura, nunca. O preço de hoje permanece válido para sempre.',
+    proAboutHonest3_2:'Pro normal remove a marca d\'água e desbloqueia todos os artistas, tipos de pintura e paleta personalizada — mas chamadas IA vêm do mesmo pool de 3 créditos do Free.',
+    proAboutHonest3_3:'Pro IA é para quem realmente usa os recursos ✦ IA regularmente. Se você toca sua própria música ou carrega arquivos, Pro é a melhor escolha.',
+    proAboutHonest3_4:'Sem armazenamento na nuvem. Pinturas são salvas no seu dispositivo. Sua chave funciona em até 5 dispositivos, um por vez.',
+    proTierPriceShort:'€9.99',
+    proAiTierPriceShort:'€19.99',
     tierFootnote:'Pagamento único · Acesso vitalício',
     proValue1:'Composições de IA ilimitadas',
     proValue1Sub:'Gere quantas pinturas desejar',
@@ -10009,6 +10121,8 @@ function scaleFontTree(node, scale){
 
 const GUIDE_I18N = {
   EN: [
+  {id:'tiers', title:`Free, Pro, Pro AI — what changes`, keywords:`pricing tiers free pro pro ai upgrade unlock locked watermark partner credit credits trial limit feature subscription one time payment purchase`,
+   body:`Three tiers, all one-time payments. ◆ Free — 8 artists unlocked (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring) plus 2 paint types per artist. Each unlocked artist has a Pro partner — tap an active artist a second time to see who their partner is. Custom palette shows the default 12 colours, read-only. Exports carry a watermark. AI features (✦) work for 3 trial credits, then ask to upgrade. ◆ Pro €9.99 — all 16 artists, all paint types per artist, custom palette is editable (set your own 12 colours), 300 DPI exports without watermark, lifetime access. AI calls still come from the shared 3-credit trial pool. ◆ Pro AI €19.99 — everything in Pro, plus unlimited AI: "How do you feel?" text moods, Mood from image, AI Compose inside Image, AI Atmosphere. ◆ AI credit costs: AI text & image compose = 1 credit each; Atmosphere = 0.5 credit. So Free has 3 full AI calls OR 6 atmosphere reads OR any mix. ◆ Pay once, keep forever. No subscriptions. License works on up to 5 devices, one at a time.`},
   {id:'overview', title:`Overview — two-way translator`, keywords:`start begin intro what is paintiano how overview`,
    body:`Music and painting, both directions. Same colour wheel, same pitch wheel. Pick a source — Compose, MIC, Music, Image, or a mood — and the canvas fills as the music plays. Hit Save to take the painting. Hit Record to take the music. Whichever way you came in, you leave with both.`},
   {id:'start-here', title:`Where to begin`, keywords:`onboarding start here begin first time new user how to use guide orient direction`,
@@ -10061,6 +10175,8 @@ const GUIDE_I18N = {
    body:`If status says "loading piano…", wait a few seconds (~5 MB sample download). Falls back to a synth piano if the sample fails — app still works. Mic and share are blocked inside Claude\'s sandbox — both work normally as a standalone page. MIC Music can\'t capture same-device audio on iOS — use an external speaker or a second device.`},
   ],
   DE: [
+  {id:'tiers', title:`Free, Pro, Pro KI — was sich ändert`, keywords:`preise tarif tarife free pro pro ki upgrade freischalten gesperrt wasserzeichen partner credit credits test versuch limit funktion abo einmalig kauf`,
+   body:`Drei Tarife, alle Einmalzahlung. ◆ Free — 8 Künstler freigeschaltet (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring) plus 2 Mal-Typen pro Künstler. Jeder hat einen Pro-Partner — tippe einen aktiven Künstler ein zweites Mal, um seinen Partner zu sehen. Eigene Palette zeigt die Standard-12-Farben, schreibgeschützt. Exporte tragen ein Wasserzeichen. KI-Funktionen (✦) gehen für 3 Test-Credits, dann fragt der App nach Upgrade. ◆ Pro 9,99 € — alle 16 Künstler, alle Mal-Typen pro Künstler, eigene Palette ist editierbar (deine 12 Farben), 300-DPI-Export ohne Wasserzeichen, lebenslanger Zugang. KI-Aufrufe kommen weiterhin aus dem gemeinsamen 3-Credit-Test-Pool. ◆ Pro KI 19,99 € — alles aus Pro, plus unbegrenzte KI: "Wie fühlst du dich?" Textstimmungen, Stimmung aus Bild, KI-Komposition in Bild, KI-Atmosphäre. ◆ KI-Kosten: KI Text & Bild-Komposition = je 1 Credit; Atmosphäre = 0,5 Credit. Free hat 3 volle KI-Aufrufe ODER 6 Atmosphäre-Lesungen ODER Mischung. ◆ Einmal zahlen, für immer behalten. Keine Abos. Lizenz funktioniert auf bis zu 5 Geräten, eines zur Zeit.`},
   {id:'overview', title:`Übersicht — Übersetzer in beide Richtungen`, keywords:`start beginn intro was ist paintiano wie übersicht`,
    body:`Musik und Bild, beide Richtungen. Gleiches Farbrad, gleiches Tonrad. Wähl eine Quelle — Compose, MIC, Music, Bild oder eine Stimmung — und die Leinwand füllt sich, während die Musik läuft. Drück Speichern, nimm das Bild. Drück Aufnehmen, nimm die Musik. Egal wie du reinkommst, du gehst mit beidem raus.`},
   {id:'start-here', title:`Wo anfangen`, keywords:`onboarding start hier beginn erste mal neuer benutzer wie verwenden anleitung orientierung richtung`,
@@ -10113,6 +10229,8 @@ const GUIDE_I18N = {
    body:`Wenn der Status "Klavier wird geladen…" zeigt, warte ein paar Sekunden (~5 MB Sample-Download). Fällt auf einen Synth-Piano zurück, wenn das Sample scheitert — die App läuft weiter. Mic und Teilen sind in Claudes Sandbox blockiert — beides geht normal auf der eigenständigen Seite. MIC Musik kann auf iOS keinen Audio derselben Gerätequelle erfassen — nutz einen externen Lautsprecher oder ein zweites Gerät.`},
   ],
   FR: [
+  {id:'tiers', title:`Free, Pro, Pro IA — ce qui change`, keywords:`tarif tarifs free pro pro ia upgrade débloquer verrouillé filigrane partenaire crédit crédits essai limite fonction abonnement paiement unique achat`,
+   body:`Trois niveaux, tous en paiement unique. ◆ Free — 8 artistes débloqués (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring) plus 2 types de peinture par artiste. Chacun a un partenaire Pro — tapez un artiste actif une seconde fois pour voir son partenaire. La palette personnalisée affiche les 12 couleurs par défaut, en lecture seule. Les exports portent un filigrane. Les fonctions IA (✦) marchent 3 crédits d'essai, puis demandent une mise à niveau. ◆ Pro 9,99 € — les 16 artistes, tous les types de peinture par artiste, palette modifiable (vos 12 couleurs), exports 300 DPI sans filigrane, accès à vie. Les appels IA viennent toujours du pool de 3 crédits d'essai partagé. ◆ Pro IA 19,99 € — tout dans Pro, plus IA illimitée : "Comment vous sentez-vous ?" ambiances texte, ambiance d'image, Compose IA dans Image, Atmosphère IA. ◆ Coûts crédits IA : IA texte & image = 1 crédit chacun ; Atmosphère = 0,5 crédit. Free a 3 appels IA complets OU 6 lectures d'atmosphère OU mélange. ◆ Payer une fois, garder à vie. Aucun abonnement. La licence marche sur 5 appareils max, un à la fois.`},
   {id:'overview', title:`Vue d\'ensemble — traducteur deux sens`, keywords:`commencer début intro qu est-ce que paintiano comment vue ensemble`,
    body:`Musique et peinture, dans les deux sens. Même roue de couleurs, même roue de notes. Choisis une source — Compose, MIC, Music, Image, ou une humeur — et la toile se remplit pendant que la musique joue. Appuie sur Enregistrer, prends la peinture. Appuie sur Enregistrement, prends la musique. Peu importe par où tu rentres, tu ressors avec les deux.`},
   {id:'start-here', title:`Par où commencer`, keywords:`onboarding début ici commencer première fois nouvel utilisateur comment utiliser guide orienter direction`,
@@ -10165,6 +10283,8 @@ const GUIDE_I18N = {
    body:`Si le statut dit « chargement piano… », attends quelques secondes (~5 Mo de sample). Bascule vers un piano synth si le sample échoue — l\'app marche encore. Micro et partage sont bloqués dans le sandbox de Claude — les deux marchent normalement sur la page autonome. MIC Musique ne peut pas capturer l\'audio du même appareil sur iOS — utilise un haut-parleur externe ou un second appareil.`},
   ],
   ES: [
+  {id:'tiers', title:`Free, Pro, Pro IA — qué cambia`, keywords:`precios tarifa tarifas free pro pro ia actualizar desbloquear bloqueado marca agua compañero crédito créditos prueba límite función suscripción pago único compra`,
+   body:`Tres niveles, todos pago único. ◆ Free — 8 artistas desbloqueados (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring) más 2 tipos de pintura por artista. Cada uno tiene compañero Pro — pulsa un artista activo otra vez para ver el compañero. Paleta personalizada muestra los 12 colores por defecto, solo lectura. Las exportaciones llevan marca de agua. Las funciones IA (✦) duran 3 créditos de prueba, luego piden actualizar. ◆ Pro 9,99 € — los 16 artistas, todos los tipos de pintura, paleta editable (tus 12 colores), exportaciones 300 DPI sin marca, acceso de por vida. Las llamadas IA siguen viniendo del pool compartido de 3 créditos. ◆ Pro IA 19,99 € — todo en Pro, más IA ilimitada: "¿Cómo te sientes?" moods de texto, mood desde imagen, IA Compose dentro de Imagen, Atmósfera IA. ◆ Coste créditos IA: IA texto e imagen = 1 crédito cada uno; Atmósfera = 0,5 crédito. Free tiene 3 llamadas IA completas O 6 lecturas de atmósfera O mezcla. ◆ Paga una vez, guarda para siempre. Sin suscripciones. Licencia funciona en hasta 5 dispositivos, uno a la vez.`},
   {id:'overview', title:`Resumen — traductor de dos vías`, keywords:`comenzar inicio intro qué es paintiano cómo resumen`,
    body:`Música y pintura, las dos direcciones. Mismo círculo de colores, mismo círculo de notas. Elige una fuente — Compose, MIC, Music, Imagen, o un mood — y el lienzo se llena mientras suena la música. Toca Guardar, llévate la pintura. Toca Grabar, llévate la música. Por donde entres, sales con las dos.`},
   {id:'start-here', title:`Por dónde empezar`, keywords:`onboarding empezar aquí inicio primera vez nuevo usuario cómo usar guía orientar dirección`,
@@ -10217,6 +10337,8 @@ const GUIDE_I18N = {
    body:`Si el estado dice «cargando piano…», espera unos segundos (~5 MB de muestra). Cae a un piano sintetizado si la muestra falla — la app sigue funcionando. Mic y compartir están bloqueados dentro del sandbox de Claude — los dos funcionan normales en la página standalone. MIC Música no puede capturar audio del mismo dispositivo en iOS — usa un altavoz externo o un segundo dispositivo.`},
   ],
   SK: [
+  {id:'tiers', title:`Free, Pro, Pro AI — čo sa mení`, keywords:`ceny tier tiery free pro pro ai upgrade odomknúť zamknuté vodoznak partner kredit kredity skúška trial limit funkcia predplatné jednorazová platba kúpa`,
+   body:`Tri tiery, všetky jednorazové platby. ◆ Free — 8 umelcov odomknutých (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring) plus 2 typy maľby na umelca. Každý má Pro partnera — klikni aktívneho umelca druhýkrát a uvidíš jeho partnera. Vlastná paleta ukazuje predvolených 12 farieb, iba na čítanie. Exporty nesú vodoznak. AI funkcie (✦) fungujú za 3 trialové kredity, potom pýtajú upgrade. ◆ Pro 9,99 € — všetkých 16 umelcov, všetky typy maľby na umelca, vlastná paleta je editovateľná (tvojich 12 farieb), 300 DPI exporty bez vodoznaku, doživotný prístup. AI volania stále idú zo spoločného 3-kreditového trial poolu. ◆ Pro AI 19,99 € — všetko z Pro, plus neobmedzené AI: "Ako sa cítiš?" textové moody, Mood z obrázku, AI Compose v Image, AI Atmosféra. ◆ Cena kreditov AI: AI text a obrázok = 1 kredit každý; Atmosféra = 0,5 kreditu. Free má 3 plné AI volania ALEBO 6 atmosfér ALEBO miešanie. ◆ Zaplať raz, maj navždy. Žiadne predplatné. Licencia funguje na max 5 zariadeniach, jedno naraz.`},
   {id:'overview', title:`Prehľad — obojsmerný prekladač`, keywords:`začať začiatok intro čo je paintiano ako prehľad`,
    body:`Hudba a maľba, oba smery. To isté koleso farieb, to isté koleso tónov. Vyber zdroj — Compose, MIC, Music, Obrázok, alebo náladu — a plátno sa plní, kým hudba beží. Klikni Uložiť, zober si maľbu. Klikni Nahrať, zober si hudbu. Kadiaľ vstúpiš, s oboma odídeš.`},
   {id:'start-here', title:`Odkiaľ začať`, keywords:`onboarding začať tu prvýkrát nový užívateľ ako používať návod orientovať smer`,
@@ -10269,6 +10391,8 @@ const GUIDE_I18N = {
    body:`Ak status hovorí „loading piano…", počkaj pár sekúnd (~5 MB sample). Padne na syntetický klavír, ak sample zlyhá — appka stále funguje. Mic a zdieľanie sú zablokované v Claudovom sandboxe — oba fungujú normálne na samostatnej stránke. MIC Hudba nedokáže zachytiť audio z toho istého zariadenia na iOS — použi externý reproduktor alebo druhé zariadenie.`},
   ],
   PT: [
+  {id:'tiers', title:`Free, Pro, Pro IA — o que muda`, keywords:`preços tarifa free pro pro ia upgrade desbloquear bloqueado marca água parceiro crédito créditos teste limite recurso assinatura pagamento único compra`,
+   body:`Três níveis, todos pagamento único. ◆ Free — 8 artistas desbloqueados (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring) mais 2 tipos de pintura por artista. Cada um tem parceiro Pro — toque um artista ativo segunda vez para ver o parceiro. Paleta personalizada mostra as 12 cores padrão, somente leitura. Exportações levam marca d'água. Recursos IA (✦) duram 3 créditos de teste, depois pedem upgrade. ◆ Pro €9.99 — todos os 16 artistas, todos os tipos de pintura, paleta editável (suas 12 cores), exportações 300 DPI sem marca, acesso vitalício. Chamadas IA ainda vêm do pool compartilhado de 3 créditos. ◆ Pro IA €19.99 — tudo do Pro, mais IA ilimitada: "Como você se sente?" moods texto, mood da imagem, IA Compose em Imagem, Atmosfera IA. ◆ Custo créditos IA: IA texto e imagem = 1 crédito cada; Atmosfera = 0,5 crédito. Free tem 3 chamadas IA completas OU 6 leituras de atmosfera OU mistura. ◆ Pague uma vez, mantenha para sempre. Sem assinaturas. Licença funciona em até 5 dispositivos, um por vez.`},
   {id:'overview', title:`Visão geral — tradutor de duas vias`, keywords:`começar início intro o que é paintiano como visão geral`,
    body:`Música e pintura, ambas as direções. Mesma roda de cores, mesma roda de notas. Escolhe uma fonte — Compose, MIC, Music, Imagem, ou um mood — e a tela enche-se enquanto a música toca. Toca Guardar, leva a pintura. Toca Gravar, leva a música. Por onde entras, sais com as duas.`},
   {id:'start-here', title:`Por onde começar`, keywords:`onboarding começar aqui início primeira vez novo utilizador como usar guia orientar direção`,
@@ -10321,6 +10445,8 @@ const GUIDE_I18N = {
    body:`Se o estado disser «a carregar piano…», espera uns segundos (~5 MB de amostra). Cai para um piano sintetizado se a amostra falhar — a app continua a funcionar. Mic e partilha estão bloqueados no sandbox do Claude — os dois funcionam normalmente na página standalone. MIC Música não consegue capturar áudio do mesmo dispositivo no iOS — usa uma coluna externa ou um segundo dispositivo.`},
   ],
   zh: [
+  {id:'tiers', title:`Free、Pro、Pro AI — 有什么变化`, keywords:`价格 等级 free pro pro ai 升级 解锁 锁定 水印 伙伴 额度 credits 试用 限制 功能 订阅 一次性付款 购买`,
+   body:`三个级别,都是一次性付款。◆ Free — 解锁 8 位艺术家(Picasso、Pollock、Kusama、Mondrian、Klimt、Vasarely、af Klint、Haring),每位 2 种画法。每位有 Pro 伙伴 — 再次点击活动艺术家查看其伙伴。自定义调色板显示默认 12 色,只读。导出带有水印。AI 功能 (✦) 提供 3 次试用额度,之后要求升级。◆ Pro €9.99 — 全部 16 位艺术家、每位所有画法、自定义调色板可编辑(您的 12 色)、300 DPI 导出无水印、终身访问。AI 调用仍来自共享的 3 次试用额度池。◆ Pro AI €19.99 — Pro 中的一切,外加无限 AI:"您感觉如何?" 文字情绪、从图片识情绪、Image 中的 AI Compose、AI 氛围。◆ AI 额度成本:AI 文字和图片各 1 个额度;氛围 0.5 个额度。Free 有 3 次完整 AI 调用或 6 次氛围读取或混合。◆ 一次付款,永久保留。无订阅。许可证最多可在 5 台设备上使用,一次一台。`},
   {id:'overview', title:`概述 — 双向翻译器`, keywords:`开始 入门 简介 paintiano是什么 怎么 概述`,
    body:`音乐和绘画,双向通行。同一个色轮,同一个音高轮。选个来源 — Compose、MIC、MIDI、Audio、Score、图像,或一个心情 — 画布在音乐响起时填满。点保存,带走画。点录音,带走音乐。无论从哪进来,都能两样带走。`},
   {id:'start-here', title:`从哪开始`, keywords:`入门 从这里开始 第一次 新用户 怎么使用 指南 方向`,
@@ -10373,6 +10499,8 @@ const GUIDE_I18N = {
    body:`如果状态显示「加载钢琴中…」,等几秒(~5 MB 样本下载)。如果样本失败会回退到合成钢琴 — app 还能工作。麦克风和分享在 Claude 沙盒里被屏蔽 — 两者在独立页面上正常工作。MIC 音乐在 iOS 上无法捕捉同一设备的音频 — 用外置扬声器或第二个设备。`},
   ],
   zhTW: [
+  {id:'tiers', title:`Free、Pro、Pro AI — 有什麼變化`, keywords:`價格 等級 free pro pro ai 升級 解鎖 鎖定 浮水印 夥伴 額度 credits 試用 限制 功能 訂閱 一次性付款 購買`,
+   body:`三個級別，都是一次性付款。◆ Free — 解鎖 8 位藝術家（Picasso、Pollock、Kusama、Mondrian、Klimt、Vasarely、af Klint、Haring），每位 2 種畫法。每位有 Pro 夥伴 — 再次點擊活動藝術家查看其夥伴。自訂調色盤顯示預設 12 色，唯讀。匯出帶有浮水印。AI 功能 (✦) 提供 3 次試用額度，之後要求升級。◆ Pro €9.99 — 全部 16 位藝術家、每位所有畫法、自訂調色盤可編輯（您的 12 色）、300 DPI 匯出無浮水印、終身存取。AI 呼叫仍來自共享的 3 次試用額度池。◆ Pro AI €19.99 — Pro 中的一切，外加無限 AI：「您感覺如何？」文字情緒、從圖片識情緒、Image 中的 AI Compose、AI 氛圍。◆ AI 額度成本：AI 文字和圖片各 1 個額度；氛圍 0.5 個額度。Free 有 3 次完整 AI 呼叫或 6 次氛圍讀取或混合。◆ 一次付款，永久保留。無訂閱。授權金鑰最多可在 5 台裝置上使用，一次一台。`},
   {id:'overview', title:`概覽 — 雙向翻譯器`, keywords:`開始 入門 簡介 paintiano是什麼 怎麼 概覽`,
    body:`音樂和繪畫,雙向通行。同一個色輪,同一個音高輪。選個來源 — Compose、MIC、MIDI、Audio、Score、圖像,或一個心情 — 畫布在音樂響起時填滿。點儲存,帶走畫。點錄音,帶走音樂。無論從哪進來,都能兩樣帶走。`},
   {id:'start-here', title:`從哪開始`, keywords:`入門 從這裡開始 第一次 新用戶 怎麼使用 指南 方向`,
@@ -10438,7 +10566,7 @@ const guideMatch = (e,q) => {
 // group when not searching. org = display order; sec = section key.
 const GUIDE_ORDER = [
   // Getting started
-  ['overview','start'],['start-here',null],['modes',null],['style',null],['random',null],
+  ['tiers','start'],['overview',null],['start-here',null],['modes',null],['style',null],['random',null],
   // Sources
   ['moods','sources'],['compose',null],['mobile-keys',null],['scale-snap',null],['mic',null],['midi',null],['audio',null],['score',null],['image',null],
   // While playing
@@ -11795,73 +11923,128 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 background: 'rgba(201,168,76,.12)', color: GOLD, fontSize: 22, marginBottom: 10,
               }}>✦</div>
               <p style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px', fontFamily: "'Cormorant Garamond',serif" }}>
-                {tr('proAboutTitle', 'Paintiano Pro')}
+                {tr('proAboutTitle3', 'Paintiano Pro · Pro AI')}
               </p>
               <p style={{ fontSize: (.72*readScale)+'rem', color: GOLD, margin: 0, letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
-                {tr('proAboutLead', 'Everything in Free, without limits.')}
+                {tr('proAboutLead3', 'Two ways to unlock — pick what fits how you create.')}
               </p>
             </div>
 
+            {/* ─── 3-column comparison table (Free · Pro · Pro AI) ─────────
+                Mirrors the one in the ? help popup so the user sees the same
+                tier hierarchy in both places. Pro column tinted gold, Pro AI
+                column tinted purple. AI features collapsed to one row with a
+                credits-note footnote. */}
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
-              {tr('proAboutWhatYouGet', 'What you get with Pro')}
+              {tr('proAboutCompareTitle3', 'Free · Pro · Pro AI')}
+            </p>
+            {(() => {
+              const GOLD_BG = 'rgba(201,168,76,.08)';
+              const GOLD_BG_HDR = 'rgba(201,168,76,.16)';
+              const PURPLE_BG = 'rgba(220,150,255,.07)';
+              const PURPLE_BG_HDR = 'rgba(220,150,255,.14)';
+              const FREE_FG = 'rgba(242,238,232,.6)';
+              const CELL_TXT = 'rgba(242,238,232,.85)';
+              const cellSty = {
+                padding: '7px 4px', textAlign: 'center',
+                fontSize: (.62*readScale)+'rem',
+                borderBottom: '1px solid rgba(255,255,255,.06)', lineHeight: 1.25,
+              };
+              const labelSty = Object.assign({}, cellSty, {
+                textAlign: 'left', color: 'rgba(242,238,232,.78)',
+                fontSize: (.62*readScale)+'rem', paddingLeft: 2,
+              });
+              const hdrBase = {
+                padding: '8px 4px', textAlign: 'center',
+                fontSize: (.58*readScale)+'rem', fontWeight: 700,
+                letterSpacing: '.1em', textTransform: 'uppercase',
+                borderBottom: '1px solid rgba(255,255,255,.12)', lineHeight: 1.2,
+              };
+              const yes = '✓';
+              const no = '—';
+              const allWord = tr('tierAll', 'all');
+              const inf = tr('tierUnlimited', '∞');
+              const ronly = tr('tierReadOnly', 'preview only');
+              const credits3 = tr('tier3Credits', '3 credits');
+              const rows = [
+                [tr('tierRowArtists', 'Artists'),       '8',     '16',     '16',  null],
+                [tr('tierRowTypes', 'Paint types'),     '2',     allWord,  allWord, null],
+                [tr('tierRowPalette', 'Custom palette'),ronly,   yes,      yes,   null],
+                [tr('tierRowDpi', '300 DPI export'),    no,      yes,      yes,   null],
+                [tr('tierRowWmark', 'Watermark'),       yes,     no,       no,    null],
+                [tr('tierRowAi', 'AI features'),        credits3, credits3, inf,  '✦'],
+                [tr('proValueLife', 'Lifetime access'), no,      yes,      yes,   null],
+              ];
+              return (
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
+                  <thead>
+                    <tr>
+                      <th style={Object.assign({}, hdrBase, { textAlign: 'left', color: 'rgba(242,238,232,.6)', paddingLeft: 2 })}></th>
+                      <th style={Object.assign({}, hdrBase, { color: FREE_FG })}>{tr('tierFreeName', 'Free')}</th>
+                      <th style={Object.assign({}, hdrBase, { color: GOLD, background: GOLD_BG_HDR })}>{tr('tierProName', 'Pro')}</th>
+                      <th style={Object.assign({}, hdrBase, { color: AI_PURPLE, background: PURPLE_BG_HDR })}>{tr('tierProAiName', 'Pro AI')}</th>
+                    </tr>
+                    <tr>
+                      <th style={Object.assign({}, cellSty, { textAlign: 'left' })}></th>
+                      <th style={Object.assign({}, cellSty, { color: FREE_FG, fontWeight: 500 })}>€0</th>
+                      <th style={Object.assign({}, cellSty, { color: GOLD, fontWeight: 600, background: GOLD_BG })}>€9.99</th>
+                      <th style={Object.assign({}, cellSty, { color: AI_PURPLE, fontWeight: 600, background: PURPLE_BG })}>€19.99</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(([label, f, p, a, icon], i) => (
+                      <tr key={i}>
+                        <td style={labelSty}>
+                          {icon && <span style={{ color: AI_PURPLE, marginRight: 5 }}>{icon}</span>}
+                          {label}
+                        </td>
+                        <td style={Object.assign({}, cellSty, { color: FREE_FG })}>{f}</td>
+                        <td style={Object.assign({}, cellSty, { color: CELL_TXT, background: GOLD_BG })}>{p}</td>
+                        <td style={Object.assign({}, cellSty, { color: CELL_TXT, background: PURPLE_BG })}>{a}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              );
+            })()}
+            <p style={{ fontSize: (.58*readScale)+'rem', color: 'rgba(242,238,232,.45)', fontStyle: 'italic', letterSpacing: '.04em', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.45 }}>
+              {tr('tierAiCreditsNote', 'AI text & image compose = 1 credit · Atmosphere = 0.5 credit')}
+            </p>
+
+            {/* ─── How Free tier actually behaves ─────────────────────────
+                Three short explainer paragraphs that map to the things the
+                user will hit immediately on the canvas. Helps clarify why
+                certain buttons show a PRO badge or a small "preview only"
+                state before the upgrade. */}
+            <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
+              {tr('proAboutHowFreeTitle', 'How Free tier behaves')}
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
               {[
-                ['proValue1', 'Unlimited AI compositions', 'proValue1Sub', 'Generate as many paintings as you wish'],
-                ['proValue2', 'Export without watermark', 'proValue2Sub', 'Clean images, ready to share or print'],
-                ['proValue3', 'Lifetime access', 'proValue3Sub', 'One payment, yours forever'],
-                ['proValue4', 'Support a solo art project', 'proValue4Sub', 'Keep Paintiano independent'],
-              ].map(([k1, fb1, k2, fb2], i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 11px', fontSize: (.72*readScale)+'rem', lineHeight: 1.45 }}>
-                  <span style={{ color: GOLD, fontSize: (.8*readScale)+'rem', flexShrink: 0, marginTop: 1 }}>✓</span>
-                  <span>
-                    <span style={{ color: '#f5f5f5', fontWeight: 500 }}>{tr(k1, fb1)}</span>
-                    <span style={{ color: '#8a8a8a', display: 'block', fontSize: (.64*readScale)+'rem', marginTop: 1 }}>{tr(k2, fb2)}</span>
-                  </span>
+                ['proAboutHowFree1', 'Eight artists are unlocked from day one. Each unlocked artist has a Pro partner — tap them to see who it is, but only Pro paints with that partner.'],
+                ['proAboutHowFree2', 'Custom palette shows the default 12 colours; editing your own colours is Pro.'],
+                ['proAboutHowFree3', 'AI features (✦) work for 3 trial credits, then ask you to upgrade to Pro AI for unlimited use. Exports always carry a watermark on Free.'],
+              ].map(([k, fb], i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 11px', fontSize: (.68*readScale)+'rem', lineHeight: 1.5, color: '#cccccc' }}>
+                  <span style={{ color: GOLD, flexShrink: 0, marginTop: 1, fontSize: (.7*readScale)+'rem' }}>·</span>
+                  <span>{tr(k, fb)}</span>
                 </li>
               ))}
             </ul>
 
+            {/* ─── Honest about the tiers ────────────────────────────────
+                The original "Honest about what Pro isn't" updated for the
+                two-tier upgrade path. Sets expectations: no subscriptions,
+                no cloud, license is one-device-at-a-time. */}
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
-              {tr('proAboutCompareTitle', 'Free vs Pro')}
-            </p>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: (.66*readScale)+'rem', marginBottom: 22 }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: '#9a9a9a', fontWeight: 500 }}>{tr('proAboutCompareFeature', 'Feature')}</th>
-                  <th style={{ textAlign: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: '#9a9a9a', fontWeight: 500, width: '22%' }}>{tr('proAboutCompareFree', 'Free')}</th>
-                  <th style={{ textAlign: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: GOLD, fontWeight: 600, width: '22%' }}>{tr('proAboutComparePro', 'Pro')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['proAboutCmp1', 'All manual modes (keyboard, mic, audio)', '✓', '✓'],
-                  ['proAboutCmp2', 'All visual styles & moods', '✓', '✓'],
-                  ['proAboutCmp3', 'AI compositions',
-                    tr('proAboutCmp3Free', '5 trial'),
-                    tr('proAboutCmp3Pro', 'Unlimited')],
-                  ['proAboutCmp4', 'Watermark on exports',
-                    tr('proAboutCmp4Free', 'Yes'),
-                    tr('proAboutCmp4Pro', 'None')],
-                  ['proAboutCmp5', 'Lifetime access', '—', '✓'],
-                ].map(([k, fb, freeVal, proVal], i) => (
-                  <tr key={i}>
-                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', color: '#d8d8d8' }}>{tr(k, fb)}</td>
-                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'center', color: '#9a9a9a' }}>{freeVal}</td>
-                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'center', color: GOLD, fontWeight: 500 }}>{proVal}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
-              {tr('proAboutHonestTitle', 'Honest about what Pro isn’t')}
+              {tr('proAboutHonestTitle3', 'Honest about Pro and Pro AI')}
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
               {[
-                ['proAboutHonest1', 'Pro keeps the same Paintiano you already use — it just removes the limits. No hidden new features behind a wall.'],
-                ['proAboutHonest2', 'Pro doesn’t sync between devices automatically. Your license key works on up to 5 devices.'],
-                ['proAboutHonest3', 'Pro doesn’t include cloud storage. You save your paintings to your own files.'],
+                ['proAboutHonest3_1', 'Both tiers are one-time payments. No subscription, ever. The price you pay today stays valid forever.'],
+                ['proAboutHonest3_2', 'Plain Pro removes the watermark and unlocks all artists, paint types and the custom palette — but AI calls still come from the same 3-credit trial pool as Free.'],
+                ['proAboutHonest3_3', 'Pro AI is for people who actually use the ✦ AI features regularly. If you mostly play your own music or load files, plain Pro is the better fit.'],
+                ['proAboutHonest3_4', 'No cloud storage. Paintings save to your own device. Your license key works on up to 5 devices, one at a time.'],
               ].map(([k, fb], i) => (
                 <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 9px', fontSize: (.66*readScale)+'rem', lineHeight: 1.5, color: '#a8a8a8' }}>
                   <span style={{ color: '#666', flexShrink: 0, marginTop: 1 }}>·</span>
@@ -11870,6 +12053,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               ))}
             </ul>
 
+            {/* ─── Dual CTAs (Pro gold, Pro AI purple) ──────────────────── */}
             {PRO_CFG.checkoutDisabled ? (
               <>
                 <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
@@ -11879,30 +12063,26 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                   </span>
                 </div>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
-                  {tr('proBackOnlineSoon', 'back online in a few days · early-bird price (€9.99) preserved')}
+                  {tr('proCheckoutETA', 'expected back in a few days')}
                 </p>
               </>
             ) : (
               <>
-                {reason === 'ai_trial' ? (
-                  <>
-                    <button style={btnGold} onClick={() => openCheckout('pro_ai')}>
-                      {tr('proAiAboutFinalCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
-                    </button>
-                    <button style={btnGoldOutline} onClick={() => openCheckout('pro')}>
-                      {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button style={btnGold} onClick={() => openCheckout('pro')}>
-                      {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                    </button>
-                    <button style={btnGoldOutline} onClick={() => openCheckout('pro_ai')}>
-                      {tr('proAiAboutFinalCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
-                    </button>
-                  </>
-                )}
+                {/* Get Pro — gold outline (secondary in the about view) */}
+                <button style={Object.assign({}, btnGoldOutline, { marginBottom: 10 })}
+                        onClick={() => openCheckout('pro')}>
+                  {tr('proGetCta', 'Get Pro')} — {tr('proTierPriceShort', '€9.99')}
+                </button>
+                {/* Get Pro AI — purple filled (primary, recommended upgrade) */}
+                <button onClick={() => openCheckout('pro_ai')}
+                  style={{
+                    width: '100%', background: AI_PURPLE, color: '#0a0a12', border: 'none',
+                    padding: '14px 18px', borderRadius: 5, fontSize: (.78*readScale)+'rem',
+                    fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase',
+                    cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10,
+                  }}>
+                  {tr('proAiGetCta', 'Get Pro AI')} — {tr('proAiTierPriceShort', '€19.99')}
+                </button>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
                   {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
                 </p>
@@ -18414,16 +18594,16 @@ Composition rules:
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
           <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
           {/* Tier-adaptive PRO tab — Free sees gold "PRO" (upgrade to Pro);
-              plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI sees
-              ✓ manage label in purple (already at top tier, account access). */}
+              plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI users
+              see nothing — they're already at the top tier and the badge
+              under the Paintiano title is enough. Keeps the nav row compact
+              at higher A/A zoom levels where the language picker would
+              otherwise get pushed off-screen. */}
           {!isPro && (
             <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.5)',color:'rgba(201,168,76,.9)',fontWeight:600}}>{t('proBadge')}</span>
           )}
           {isPro && !isProAI && (
             <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} title={maskedEmail||''} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(220,150,255,.55)',color:'#dcb4ff',fontWeight:600}}>{t('proAiBadge')||'PRO AI'}</span>
-          )}
-          {isProAI && (
-            <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} title={maskedEmail||''} style={{cursor:'pointer',paddingBottom:2,color:'rgba(220,150,255,.75)',whiteSpace:'nowrap'}}>✓ {t('proAiBadge')||'PRO AI'}</span>
           )}
         </nav>
         <div style={{display:'flex',alignItems:'center',gap:8}}>

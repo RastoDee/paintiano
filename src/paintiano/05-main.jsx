@@ -6471,16 +6471,16 @@ Composition rules:
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
           <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
           {/* Tier-adaptive PRO tab — Free sees gold "PRO" (upgrade to Pro);
-              plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI sees
-              ✓ manage label in purple (already at top tier, account access). */}
+              plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI users
+              see nothing — they're already at the top tier and the badge
+              under the Paintiano title is enough. Keeps the nav row compact
+              at higher A/A zoom levels where the language picker would
+              otherwise get pushed off-screen. */}
           {!isPro && (
             <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.5)',color:'rgba(201,168,76,.9)',fontWeight:600}}>{t('proBadge')}</span>
           )}
           {isPro && !isProAI && (
             <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} title={maskedEmail||''} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(220,150,255,.55)',color:'#dcb4ff',fontWeight:600}}>{t('proAiBadge')||'PRO AI'}</span>
-          )}
-          {isProAI && (
-            <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} title={maskedEmail||''} style={{cursor:'pointer',paddingBottom:2,color:'rgba(220,150,255,.75)',whiteSpace:'nowrap'}}>✓ {t('proAiBadge')||'PRO AI'}</span>
           )}
         </nav>
         <div style={{display:'flex',alignItems:'center',gap:8}}>

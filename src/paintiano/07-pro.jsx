@@ -684,73 +684,128 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 background: 'rgba(201,168,76,.12)', color: GOLD, fontSize: 22, marginBottom: 10,
               }}>✦</div>
               <p style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px', fontFamily: "'Cormorant Garamond',serif" }}>
-                {tr('proAboutTitle', 'Paintiano Pro')}
+                {tr('proAboutTitle3', 'Paintiano Pro · Pro AI')}
               </p>
               <p style={{ fontSize: (.72*readScale)+'rem', color: GOLD, margin: 0, letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
-                {tr('proAboutLead', 'Everything in Free, without limits.')}
+                {tr('proAboutLead3', 'Two ways to unlock — pick what fits how you create.')}
               </p>
             </div>
 
+            {/* ─── 3-column comparison table (Free · Pro · Pro AI) ─────────
+                Mirrors the one in the ? help popup so the user sees the same
+                tier hierarchy in both places. Pro column tinted gold, Pro AI
+                column tinted purple. AI features collapsed to one row with a
+                credits-note footnote. */}
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
-              {tr('proAboutWhatYouGet', 'What you get with Pro')}
+              {tr('proAboutCompareTitle3', 'Free · Pro · Pro AI')}
+            </p>
+            {(() => {
+              const GOLD_BG = 'rgba(201,168,76,.08)';
+              const GOLD_BG_HDR = 'rgba(201,168,76,.16)';
+              const PURPLE_BG = 'rgba(220,150,255,.07)';
+              const PURPLE_BG_HDR = 'rgba(220,150,255,.14)';
+              const FREE_FG = 'rgba(242,238,232,.6)';
+              const CELL_TXT = 'rgba(242,238,232,.85)';
+              const cellSty = {
+                padding: '7px 4px', textAlign: 'center',
+                fontSize: (.62*readScale)+'rem',
+                borderBottom: '1px solid rgba(255,255,255,.06)', lineHeight: 1.25,
+              };
+              const labelSty = Object.assign({}, cellSty, {
+                textAlign: 'left', color: 'rgba(242,238,232,.78)',
+                fontSize: (.62*readScale)+'rem', paddingLeft: 2,
+              });
+              const hdrBase = {
+                padding: '8px 4px', textAlign: 'center',
+                fontSize: (.58*readScale)+'rem', fontWeight: 700,
+                letterSpacing: '.1em', textTransform: 'uppercase',
+                borderBottom: '1px solid rgba(255,255,255,.12)', lineHeight: 1.2,
+              };
+              const yes = '✓';
+              const no = '—';
+              const allWord = tr('tierAll', 'all');
+              const inf = tr('tierUnlimited', '∞');
+              const ronly = tr('tierReadOnly', 'preview only');
+              const credits3 = tr('tier3Credits', '3 credits');
+              const rows = [
+                [tr('tierRowArtists', 'Artists'),       '8',     '16',     '16',  null],
+                [tr('tierRowTypes', 'Paint types'),     '2',     allWord,  allWord, null],
+                [tr('tierRowPalette', 'Custom palette'),ronly,   yes,      yes,   null],
+                [tr('tierRowDpi', '300 DPI export'),    no,      yes,      yes,   null],
+                [tr('tierRowWmark', 'Watermark'),       yes,     no,       no,    null],
+                [tr('tierRowAi', 'AI features'),        credits3, credits3, inf,  '✦'],
+                [tr('proValueLife', 'Lifetime access'), no,      yes,      yes,   null],
+              ];
+              return (
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
+                  <thead>
+                    <tr>
+                      <th style={Object.assign({}, hdrBase, { textAlign: 'left', color: 'rgba(242,238,232,.6)', paddingLeft: 2 })}></th>
+                      <th style={Object.assign({}, hdrBase, { color: FREE_FG })}>{tr('tierFreeName', 'Free')}</th>
+                      <th style={Object.assign({}, hdrBase, { color: GOLD, background: GOLD_BG_HDR })}>{tr('tierProName', 'Pro')}</th>
+                      <th style={Object.assign({}, hdrBase, { color: AI_PURPLE, background: PURPLE_BG_HDR })}>{tr('tierProAiName', 'Pro AI')}</th>
+                    </tr>
+                    <tr>
+                      <th style={Object.assign({}, cellSty, { textAlign: 'left' })}></th>
+                      <th style={Object.assign({}, cellSty, { color: FREE_FG, fontWeight: 500 })}>€0</th>
+                      <th style={Object.assign({}, cellSty, { color: GOLD, fontWeight: 600, background: GOLD_BG })}>€9.99</th>
+                      <th style={Object.assign({}, cellSty, { color: AI_PURPLE, fontWeight: 600, background: PURPLE_BG })}>€19.99</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(([label, f, p, a, icon], i) => (
+                      <tr key={i}>
+                        <td style={labelSty}>
+                          {icon && <span style={{ color: AI_PURPLE, marginRight: 5 }}>{icon}</span>}
+                          {label}
+                        </td>
+                        <td style={Object.assign({}, cellSty, { color: FREE_FG })}>{f}</td>
+                        <td style={Object.assign({}, cellSty, { color: CELL_TXT, background: GOLD_BG })}>{p}</td>
+                        <td style={Object.assign({}, cellSty, { color: CELL_TXT, background: PURPLE_BG })}>{a}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              );
+            })()}
+            <p style={{ fontSize: (.58*readScale)+'rem', color: 'rgba(242,238,232,.45)', fontStyle: 'italic', letterSpacing: '.04em', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.45 }}>
+              {tr('tierAiCreditsNote', 'AI text & image compose = 1 credit · Atmosphere = 0.5 credit')}
+            </p>
+
+            {/* ─── How Free tier actually behaves ─────────────────────────
+                Three short explainer paragraphs that map to the things the
+                user will hit immediately on the canvas. Helps clarify why
+                certain buttons show a PRO badge or a small "preview only"
+                state before the upgrade. */}
+            <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
+              {tr('proAboutHowFreeTitle', 'How Free tier behaves')}
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
               {[
-                ['proValue1', 'Unlimited AI compositions', 'proValue1Sub', 'Generate as many paintings as you wish'],
-                ['proValue2', 'Export without watermark', 'proValue2Sub', 'Clean images, ready to share or print'],
-                ['proValue3', 'Lifetime access', 'proValue3Sub', 'One payment, yours forever'],
-                ['proValue4', 'Support a solo art project', 'proValue4Sub', 'Keep Paintiano independent'],
-              ].map(([k1, fb1, k2, fb2], i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 11px', fontSize: (.72*readScale)+'rem', lineHeight: 1.45 }}>
-                  <span style={{ color: GOLD, fontSize: (.8*readScale)+'rem', flexShrink: 0, marginTop: 1 }}>✓</span>
-                  <span>
-                    <span style={{ color: '#f5f5f5', fontWeight: 500 }}>{tr(k1, fb1)}</span>
-                    <span style={{ color: '#8a8a8a', display: 'block', fontSize: (.64*readScale)+'rem', marginTop: 1 }}>{tr(k2, fb2)}</span>
-                  </span>
+                ['proAboutHowFree1', 'Eight artists are unlocked from day one. Each unlocked artist has a Pro partner — tap them to see who it is, but only Pro paints with that partner.'],
+                ['proAboutHowFree2', 'Custom palette shows the default 12 colours; editing your own colours is Pro.'],
+                ['proAboutHowFree3', 'AI features (✦) work for 3 trial credits, then ask you to upgrade to Pro AI for unlimited use. Exports always carry a watermark on Free.'],
+              ].map(([k, fb], i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 11px', fontSize: (.68*readScale)+'rem', lineHeight: 1.5, color: '#cccccc' }}>
+                  <span style={{ color: GOLD, flexShrink: 0, marginTop: 1, fontSize: (.7*readScale)+'rem' }}>·</span>
+                  <span>{tr(k, fb)}</span>
                 </li>
               ))}
             </ul>
 
+            {/* ─── Honest about the tiers ────────────────────────────────
+                The original "Honest about what Pro isn't" updated for the
+                two-tier upgrade path. Sets expectations: no subscriptions,
+                no cloud, license is one-device-at-a-time. */}
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
-              {tr('proAboutCompareTitle', 'Free vs Pro')}
-            </p>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: (.66*readScale)+'rem', marginBottom: 22 }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: '#9a9a9a', fontWeight: 500 }}>{tr('proAboutCompareFeature', 'Feature')}</th>
-                  <th style={{ textAlign: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: '#9a9a9a', fontWeight: 500, width: '22%' }}>{tr('proAboutCompareFree', 'Free')}</th>
-                  <th style={{ textAlign: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(201,168,76,.25)', color: GOLD, fontWeight: 600, width: '22%' }}>{tr('proAboutComparePro', 'Pro')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['proAboutCmp1', 'All manual modes (keyboard, mic, audio)', '✓', '✓'],
-                  ['proAboutCmp2', 'All visual styles & moods', '✓', '✓'],
-                  ['proAboutCmp3', 'AI compositions',
-                    tr('proAboutCmp3Free', '5 trial'),
-                    tr('proAboutCmp3Pro', 'Unlimited')],
-                  ['proAboutCmp4', 'Watermark on exports',
-                    tr('proAboutCmp4Free', 'Yes'),
-                    tr('proAboutCmp4Pro', 'None')],
-                  ['proAboutCmp5', 'Lifetime access', '—', '✓'],
-                ].map(([k, fb, freeVal, proVal], i) => (
-                  <tr key={i}>
-                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', color: '#d8d8d8' }}>{tr(k, fb)}</td>
-                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'center', color: '#9a9a9a' }}>{freeVal}</td>
-                    <td style={{ padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'center', color: GOLD, fontWeight: 500 }}>{proVal}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, letterSpacing: '.18em', textTransform: 'uppercase', margin: '0 0 10px', opacity: .8 }}>
-              {tr('proAboutHonestTitle', 'Honest about what Pro isn’t')}
+              {tr('proAboutHonestTitle3', 'Honest about Pro and Pro AI')}
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
               {[
-                ['proAboutHonest1', 'Pro keeps the same Paintiano you already use — it just removes the limits. No hidden new features behind a wall.'],
-                ['proAboutHonest2', 'Pro doesn’t sync between devices automatically. Your license key works on up to 5 devices.'],
-                ['proAboutHonest3', 'Pro doesn’t include cloud storage. You save your paintings to your own files.'],
+                ['proAboutHonest3_1', 'Both tiers are one-time payments. No subscription, ever. The price you pay today stays valid forever.'],
+                ['proAboutHonest3_2', 'Plain Pro removes the watermark and unlocks all artists, paint types and the custom palette — but AI calls still come from the same 3-credit trial pool as Free.'],
+                ['proAboutHonest3_3', 'Pro AI is for people who actually use the ✦ AI features regularly. If you mostly play your own music or load files, plain Pro is the better fit.'],
+                ['proAboutHonest3_4', 'No cloud storage. Paintings save to your own device. Your license key works on up to 5 devices, one at a time.'],
               ].map(([k, fb], i) => (
                 <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 9px', fontSize: (.66*readScale)+'rem', lineHeight: 1.5, color: '#a8a8a8' }}>
                   <span style={{ color: '#666', flexShrink: 0, marginTop: 1 }}>·</span>
@@ -759,6 +814,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               ))}
             </ul>
 
+            {/* ─── Dual CTAs (Pro gold, Pro AI purple) ──────────────────── */}
             {PRO_CFG.checkoutDisabled ? (
               <>
                 <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
@@ -768,30 +824,26 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                   </span>
                 </div>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
-                  {tr('proBackOnlineSoon', 'back online in a few days · early-bird price (€9.99) preserved')}
+                  {tr('proCheckoutETA', 'expected back in a few days')}
                 </p>
               </>
             ) : (
               <>
-                {reason === 'ai_trial' ? (
-                  <>
-                    <button style={btnGold} onClick={() => openCheckout('pro_ai')}>
-                      {tr('proAiAboutFinalCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
-                    </button>
-                    <button style={btnGoldOutline} onClick={() => openCheckout('pro')}>
-                      {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button style={btnGold} onClick={() => openCheckout('pro')}>
-                      {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                    </button>
-                    <button style={btnGoldOutline} onClick={() => openCheckout('pro_ai')}>
-                      {tr('proAiAboutFinalCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
-                    </button>
-                  </>
-                )}
+                {/* Get Pro — gold outline (secondary in the about view) */}
+                <button style={Object.assign({}, btnGoldOutline, { marginBottom: 10 })}
+                        onClick={() => openCheckout('pro')}>
+                  {tr('proGetCta', 'Get Pro')} — {tr('proTierPriceShort', '€9.99')}
+                </button>
+                {/* Get Pro AI — purple filled (primary, recommended upgrade) */}
+                <button onClick={() => openCheckout('pro_ai')}
+                  style={{
+                    width: '100%', background: AI_PURPLE, color: '#0a0a12', border: 'none',
+                    padding: '14px 18px', borderRadius: 5, fontSize: (.78*readScale)+'rem',
+                    fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase',
+                    cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10,
+                  }}>
+                  {tr('proAiGetCta', 'Get Pro AI')} — {tr('proAiTierPriceShort', '€19.99')}
+                </button>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
                   {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
                 </p>
