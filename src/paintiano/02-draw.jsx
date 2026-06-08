@@ -2920,12 +2920,13 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const rnd = _seedRnd(53, ss, 0, 0);
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
   //  0/1 = Sphere swell / Cube grid (original body below, via useCubes).
-  //  2 = Zebra (colour wavy stripes).  3 = Vega (colour deformed checkerboard).
+  //  2 = Plastic-unit cells (square cells each holding a sized circle, op-art bulge).
+  //  3 = Vega (colour deformed checkerboard).
   //  4 = Hexagon cubes (isometric).    5 = Colour interval grid.
   {
     const _vcr=_seedRnd(531,ss,23,67); _vcr();_vcr();
     const _vpick=(_vcr()*6)|0;
-    if(_vpick===2){ vasarelyPhaseZebra(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===2){ vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===3){ vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===4){ vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===5){ vasarelyPhaseInterval(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3059,25 +3060,42 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 }
 
-// ── Vasarely C: Zebra — colour wavy stripes (recoloured from B/W). ──
-function vasarelyPhaseZebra(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+// ── Vasarely C: Plastic-unit cells — a grid of square cells, each holding a
+// circle whose size + colour read the music, with a central bulge that swells
+// the cells (Vasarely's "plastic unit" / Vega-Nor language). Distinct from the
+// wavy-stripe styles: this is a hard square grid with inscribed discs. ──
+function vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#e8e8e2':'#f0e8d8';ctx.fillRect(0,0,CW,CH);
-  const bands=Math.max(6,Math.min(48,Math.round(cn/2)));
-  const vis=Math.max(1,Math.ceil(N/cn*bands));
-  const bh=CH/bands;
-  for(let i=0;i<vis;i++){
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/bands)),gc,isBW);
-    const y=i*bh;
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    ctx.beginPath();
-    const amp=bh*0.5, freq=2+(i%3);
-    ctx.moveTo(0,y);
-    for(let x=0;x<=CW;x+=8){ctx.lineTo(x,y+Math.sin(x/CW*Math.PI*2*freq+i)*amp*0.5+amp*0.5);}
-    for(let x=CW;x>=0;x-=8){ctx.lineTo(x,y+bh+Math.sin(x/CW*Math.PI*2*freq+i)*amp*0.5+amp*0.5);}
-    ctx.closePath();ctx.fill();
+  ctx.fillStyle=isBW?'#1a1a1a':'#14121c';ctx.fillRect(0,0,CW,CH);
+  const cols=Math.max(6,Math.min(28,Math.round(Math.sqrt(cn)*1.8))),rows=Math.max(4,Math.round(cols*CH/CW));
+  const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
+  const cw=CW/cols,chh=CH/rows;
+  // central bulge: cells near centre get a bigger disc + brighter contrast
+  const bcx=CW/2,bcy=CH/2,bR=Math.min(CW,CH)*0.5;
+  let k=0;
+  for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
+    const {rgb}=_picChord(chords,Math.floor(k*(cn/total)),gc,isBW);
+    const x=c*cw,y=r*chh,ccx=x+cw/2,ccy=y+chh/2;
+    const d=Math.hypot(ccx-bcx,ccy-bcy);
+    const swell=Math.max(0,1-d/bR); // 1 at centre → 0 at rim
+    // alternating cell ground: dark / light checker so discs pop (op-art read)
+    const checker=((r+c)&1);
+    const groundCol=isBW
+      ? (checker?'#2a2a2a':'#0e0e0e')
+      : `rgb(${Math.round(rgb[0]*0.25)},${Math.round(rgb[1]*0.25)},${Math.round(rgb[2]*0.3)})`;
+    ctx.fillStyle=groundCol;ctx.fillRect(x,y,cw+0.5,chh+0.5);
+    // inscribed circle — radius grows toward the centre bulge
+    const baseR=Math.min(cw,chh)*0.5;
+    const rad=baseR*(0.35+0.6*swell);
+    // disc colour: bright complement of the ground (the music colour, lifted)
+    const dr=isBW?(checker?40:210):Math.min(255,rgb[0]+60),
+          dg=isBW?(checker?40:210):Math.min(255,rgb[1]+60),
+          db=isBW?(checker?40:210):Math.min(255,rgb[2]+60);
+    ctx.fillStyle=`rgb(${dr},${dg},${db})`;
+    ctx.beginPath();ctx.arc(ccx,ccy,rad,0,Math.PI*2);ctx.fill();
   }
 }
+
 
 // ── Vasarely D: Vega — colour deformed checkerboard with central bulge. ──
 function vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
