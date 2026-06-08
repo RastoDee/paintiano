@@ -4877,14 +4877,14 @@ function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
   // ── PHASE CHOOSER: commit to ONE of Kusama's signature modes per painting ──
   // Stable from the session seed, re-rolls on Vary/Random. Weighted ~60/40 to A.
   //  A = Polka dots on color blocks — original.  B = Dot field — original.
-  //  C = Infinity Nets (looping mesh).  D = Pumpkin (dotted gourd).
+  //  C = Infinity Nets (looping mesh).  D = Dotted Spheres (floating dot orbs).
   //  E = Accumulation (layered dot masses).  F = Tendril nets (light on colour).
   const cr=_seedRnd(808,ss,37,71);
   cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
   const pick=(cr()*6)|0;
   if(pick===1){ kusamaPhaseB(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===2){ kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,ss); return; }
-  if(pick===3){ kusamaPhasePumpkin(ctx,CW,CH,chords,lim,gc,ss); return; }
+  if(pick===3){ kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===4){ kusamaPhaseAccum(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===5){ kusamaPhaseTendril(ctx,CW,CH,chords,lim,gc,ss); return; }
   kusamaPhaseA(ctx,CW,CH,chords,lim,gc,ss);
@@ -5089,31 +5089,42 @@ function kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,sessionSeed){
   }
 }
 
-// ── Kusama D: Pumpkin — a dotted gourd centred on the canvas. ──
-function kusamaPhasePumpkin(ctx,CW,CH,chords,lim,gc,sessionSeed){
+// ── Kusama D: Dotted Spheres — floating polka-dot orbs (Dots Obsession). ──
+// Kusama's mirror-room spheres: saturated balls scattered in deep space, each
+// with a soft radial shade and a skin of contrasting dots. Spheres reveal
+// progressively with the music; each takes its colour from a chord.
+function kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,sessionSeed){
   const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle='#1a1428';ctx.fillRect(0,0,CW,CH);
-  const body=_kusChord(chords,0,gc).rgb;
-  // bias to Kusama's yellow/orange gourd if music isn't already warm
-  const gr=Math.max(body[0],200), gg=Math.max(body[1]*0.8,150), gb=Math.min(body[2],60);
-  const cx=CW/2, cy=CH*0.55, rx=Math.min(CW,CH)*0.36, ry=rx*0.8;
-  const lobes=7;
-  for(let l=0;l<lobes;l++){
-    const t=l/lobes, lx=cx+(t-0.5)*rx*1.9;
-    ctx.fillStyle=`rgb(${Math.round(gr*(0.82+0.18*Math.cos((t-0.5)*3)))},${Math.round(gg*(0.82+0.18*Math.cos((t-0.5)*3)))},${Math.round(gb)})`;
-    ctx.beginPath();ctx.ellipse(lx,cy,rx/lobes*1.4,ry,0,0,Math.PI*2);ctx.fill();
-  }
-  // stem
-  ctx.fillStyle='#3a5a2a';ctx.fillRect(cx-rx*0.06,cy-ry-rx*0.14,rx*0.12,rx*0.16);
-  // dots revealed progressively
-  const dots=Math.max(8,Math.min(160,cn));
-  const visDots=Math.max(1,Math.ceil(N/cn*dots));
-  for(let i=0;i<visDots;i++){
+  const base=_kusChord(chords,0,gc).rgb;
+  // deep, slightly tinted void
+  ctx.fillStyle=`rgb(${Math.round(base[0]*0.16)},${Math.round(base[1]*0.16)},${Math.round(base[2]*0.2)})`;
+  ctx.fillRect(0,0,CW,CH);
+  const orbs=Math.max(5,Math.min(48,Math.round(cn/3)));
+  const vis=Math.max(1,Math.ceil(N/cn*orbs));
+  const minD=Math.min(CW,CH);
+  for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+401,ss,0,0);
-    const a=rnd()*Math.PI*2, rr=Math.sqrt(rnd())*0.92;
-    const x=cx+Math.cos(a)*rx*rr, y=cy+Math.sin(a)*ry*rr;
-    const dr=Math.max(1.5,rx*(0.018+rnd()*0.02));
-    ctx.fillStyle='#1a1008';ctx.beginPath();ctx.arc(x,y,dr,0,Math.PI*2);ctx.fill();
+    const {rgb,energy}=_kusChord(chords,Math.floor(i*(cn/orbs)),gc);
+    const cx=rnd()*CW, cy=rnd()*CH;
+    const R=minD*(0.07+energy*0.14+rnd()*0.05);
+    // sphere body with radial shade for volume
+    const lx=cx-R*0.3, ly=cy-R*0.3;
+    const g=ctx.createRadialGradient(lx,ly,R*0.1,cx,cy,R);
+    g.addColorStop(0,`rgb(${Math.min(255,rgb[0]+70)},${Math.min(255,rgb[1]+70)},${Math.min(255,rgb[2]+70)})`);
+    g.addColorStop(1,`rgb(${Math.round(rgb[0]*0.45)},${Math.round(rgb[1]*0.45)},${Math.round(rgb[2]*0.45)})`);
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+    // contrasting polka-dot skin, clipped to the sphere
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.clip();
+    const lum=(rgb[0]+rgb[1]+rgb[2])/3;
+    const dot=lum>128?'rgba(20,16,30,0.92)':'rgba(245,245,250,0.92)';
+    const dn=Math.max(10,Math.floor(R*0.9));
+    for(let d=0;d<dn;d++){
+      const a=rnd()*Math.PI*2, rr=Math.sqrt(rnd())*0.95;
+      const dx=cx+Math.cos(a)*R*rr, dy=cy+Math.sin(a)*R*rr;
+      const dr=Math.max(1.2,R*(0.04+rnd()*0.04));
+      ctx.fillStyle=dot;ctx.beginPath();ctx.arc(dx,dy,dr,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
   }
 }
 

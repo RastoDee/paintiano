@@ -6907,14 +6907,23 @@ Composition rules:
               const otherKey = faceKey===a ? b : a;
               const onClick = ()=>{
                 if(demoReelOn) return;
-                if(!isOn){ setPairLastPick(p=>({...p,[pairKey]:faceKey})); setStyleTo(faceKey); }
-                else if(style===faceKey){ setPairLastPick(p=>({...p,[pairKey]:otherKey})); setStyleTo(otherKey); }
-                // Third tap → deselect to Mosaic/null. In shuffle this hands the
-                // painting back to the generated artist (the intended "back to
-                // shuffle" step); outside shuffle it's plain Mosaic.
-                else { setStyleTo(null); }
+                if(!isOn){
+                  // Not active → select your last pick from this pair (face).
+                  setPairLastPick(p=>({...p,[pairKey]:faceKey}));
+                  setStyleTo(faceKey);
+                } else if(style===a){
+                  // Active on A → flip to B (remember B as the new face).
+                  setPairLastPick(p=>({...p,[pairKey]:b}));
+                  setStyleTo(b);
+                } else {
+                  // Active on B. Third state depends on shuffle:
+                  //  • shuffle ON  → deselect to null = back to the shuffle draw
+                  //  • shuffle OFF → no "nothing" state; flip back to A (2-state)
+                  if(randomMode){ setStyleTo(null); }
+                  else { setPairLastPick(p=>({...p,[pairKey]:a})); setStyleTo(a); }
+                }
               };
-              const nextHint = !isOn ? '' : (style===faceKey ? `tap for ${STYLE_LABELS[otherKey]}` : 'tap for Mosaic');
+              const nextHint = !isOn ? '' : (style===a ? `tap for ${STYLE_LABELS[b]}` : (randomMode ? 'tap for Mosaic' : `tap for ${STYLE_LABELS[a]}`));
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)}
