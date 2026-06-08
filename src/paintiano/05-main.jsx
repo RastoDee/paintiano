@@ -548,7 +548,7 @@ export default function Paintiano() {
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
 
   // ─── Paintiano Pro state (from 07-pro.jsx) ───
-  const { proStatus, isPro, maskedEmail, activateLicense, deactivateLicense, openCheckout,
+  const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
           trialUsed, trialLeft, trialExhausted, consumeTrial, gateAI } = useEntitlements();
   const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
   // Descriptive style labels shown on the chips (the internal keys —
@@ -1311,6 +1311,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
     // Per-painting seed for renderers needing a stable whole-painting choice.
     _setArtistSeed(pollockSessionSeed);
+    // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
+    // paint so a tier change while the app is open takes effect immediately.
+    _setVariantCap(proStatus==='free' ? 2 : null);
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
@@ -1458,6 +1461,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // alone owns the canvas.
         const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic';
         _setArtistSeed(pollockSessionSeed);
+        _setVariantCap(proStatus==='free' ? 2 : null);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
             const chord=chords[i];const{n:notes,idx}=chord;
@@ -3953,9 +3957,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(busy) return;
     const mat=extractImageMaterial();
     if(!mat){ setErr(t('noNotesGeneric')||'Load an image first'); setErrInfo(false); return; }
-    // Composition is a Pro-only feature: free users get the paywall immediately,
-    // with no trial credit consumed. Pro users proceed straight through.
-    if(!isPro){ setPaywallReason('settings'); return; }
+    // AI composition flows through gateAI below (Pro AI = unlimited, Free/Pro
+    // = trial then paywall). No tier check here — the gate decides.
     // Shared apply for both a cache hit and a fresh AI result. Keeps the ORIGINAL
     // image on the canvas and stays in IMAGE context (no MORPH/VARY) — see the
     // long note further down for why pixelRef is nulled. When afterReady is given
@@ -5655,6 +5658,7 @@ Composition rules:
         }
       }else{
         _setArtistSeed(pollockSessionSeed);
+        _setVariantCap(proStatus==='free' ? 2 : null);
         chords.forEach(({n:notes,idx})=>{
           const cell=grid.cells&&grid.cells[idx];
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
@@ -6768,7 +6772,7 @@ Composition rules:
                   only meaningful for SCAN, so it's hidden in AI COMPOSE. */}
               <div style={{display:'flex',gap:6}}>
                 <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'none'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
-                <button onClick={()=>{ if(busy||working) return; if(!isPro){ setPaywallReason('settings'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('compose'); } }} disabled={busy||working} title={!isPro?(t('proBadge')||'Pro')+' · '+(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)',boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'none'}}>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')+(!isPro?' 🔒':'')}</button>
+                <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('compose'); } }} disabled={busy||working} title={t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image'} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)',boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'none'}}>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')}</button>
               </div>
               {/* Divider between the read-mode toggle and the colour/scan controls */}
               <div style={{height:1,margin:'2px 2px 0',background:'linear-gradient(90deg,transparent,rgba(242,238,232,.12),transparent)'}} />

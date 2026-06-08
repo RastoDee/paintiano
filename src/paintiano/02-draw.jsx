@@ -34,6 +34,18 @@ function _seedRnd(bx,by,BW,BH){
 let _artistSeed = 0;
 function _setArtistSeed(s){ _artistSeed = s>>>0; }
 
+// ─── Variant cap (free-tier gating, set by 05-main before each paint) ───────
+// When non-null, every artist's TOP-LEVEL variant chooser is capped to that
+// many variants. Free tier: cap=2 (user sees first 2 of N). Paid tier: null
+// (no cap, full N variants). The cap doesn't change the seed — it just narrows
+// the set the chooser picks from, so Free's painting is stable across Vary
+// within those 2 variants, and Pro sees the full library on the same key.
+let _variantCap = null;
+function _setVariantCap(n){ _variantCap = (n != null && n > 0) ? (n|0) : null; }
+// Apply the cap to a raw N (per-artist variant count). Returns the effective
+// variant count to feed into (rnd()*N)|0 chooser logic.
+function _capN(N){ return (_variantCap != null && _variantCap < N) ? _variantCap : N; }
+
 // ── Adaptive density helpers (shared by overlay styles) ─────────────────────
 // Problem this solves: overlay styles used to hit a hard ceiling mid-track, so
 // the back half of a long song would just re-render the same objects (visual
@@ -1261,7 +1273,7 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  5 = Black on Grey (recoloured: blue over ochre).  6 = Incandescent (glowing warm fields).
   {
     const _rocr=_seedRnd(991,ss,3,17); _rocr();_rocr();
-    const _ropick=(_rocr()*7)|0;
+    const _ropick=(_rocr()*_capN(7))|0;
     if(_ropick===3){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ropick===4){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ropick===5){ rothkoPhaseBlackGrey(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -1544,7 +1556,7 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  F = Jazz organic (bold black-outlined organic cut shapes on white).
   const cr=_seedRnd(202,ss,59,79);
   cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick=(cr()*6)|0;
+  const pick=(cr()*_capN(6))|0;
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ matissePhaseNice(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -1812,7 +1824,7 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  2 = Black pourings.  3 = Totemic figuration.  4 = Handprints+drip.  5 = Blue Poles.
   {
     const _pcr=_seedRnd(909,ss,29,61); _pcr();_pcr();
-    const _ppick=(_pcr()*6)|0;
+    const _ppick=(_pcr()*_capN(6))|0;
     if(_ppick===2){ pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ppick===3){ pollockPhaseTotem(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ppick===4){ pollockPhaseHands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -2236,7 +2248,7 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  F = Cubist stained glass (bold leaded facets, each shard a saturated hue).
   const cr=_seedRnd(404,ss,53,89);
   cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick=(cr()*6)|0;
+  const pick=(cr()*_capN(6))|0;
   if(pick===1){ picassoPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ picassoPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ picassoPhaseRose(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -2625,9 +2637,19 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   sr();sr(); // warm up — first xorshift output after reseed is poorly distributed
   const styleRoll=sr();
   // 8 phases, roughly equal weight (A a touch heavier as the canonical look).
-  const phase = styleRoll<0.18 ? 'A' : styleRoll<0.30 ? 'B' : styleRoll<0.42 ? 'C'
-              : styleRoll<0.54 ? 'D' : styleRoll<0.66 ? 'E' : styleRoll<0.78 ? 'F'
-              : styleRoll<0.89 ? 'G' : 'H';
+  // If a variant cap is active (free tier: 2), collapse to A/B only — preserves
+  // the canonical Mondrian look but locks the other 6 phases behind the paywall.
+  let phase;
+  if(_variantCap != null && _variantCap < 8){
+    // Map roll into the first _variantCap phases by equal slicing.
+    const PHASES = ['A','B','C','D','E','F','G','H'];
+    const idx = Math.min(_variantCap - 1, (styleRoll * _variantCap) | 0);
+    phase = PHASES[idx];
+  } else {
+    phase = styleRoll<0.18 ? 'A' : styleRoll<0.30 ? 'B' : styleRoll<0.42 ? 'C'
+          : styleRoll<0.54 ? 'D' : styleRoll<0.66 ? 'E' : styleRoll<0.78 ? 'F'
+          : styleRoll<0.89 ? 'G' : 'H';
+  }
   if(phase==='E'){ mondrianPhaseBroadway(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='F'){ mondrianPhaseLozenge(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='G'){ mondrianPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -2925,7 +2947,7 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  4 = Hexagon cubes (isometric).    5 = Colour interval grid.
   {
     const _vcr=_seedRnd(531,ss,23,67); _vcr();_vcr();
-    const _vpick=(_vcr()*6)|0;
+    const _vpick=(_vcr()*_capN(6))|0;
     if(_vpick===2){ vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===3){ vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===4){ vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3197,7 +3219,7 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   let _stellaConcentric = true;
   {
     const _scr=_seedRnd(671,ss,31,73); _scr();_scr();
-    const _spick=(_scr()*6)|0;
+    const _spick=(_scr()*_capN(6))|0;
     if(_spick===2){ stellaPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===3){ stellaPhaseMaze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===4){ stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3392,7 +3414,7 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  2 = Clustered masses.  3 = Blue Balls.  4 = Grid/lattice.  5 = Big Red mural.
   {
     const _fcr=_seedRnd(841,ss,17,53); _fcr();_fcr();
-    const _fpick=(_fcr()*6)|0;
+    const _fpick=(_fcr()*_capN(6))|0;
     if(_fpick===2){ francisPhaseCluster(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===3){ francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===4){ francisPhaseGrid(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3636,7 +3658,7 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  4 = Altarpiece pyramid (triangle + disc).  5 = Botanical (symmetric plant chart).
   {
     const _kcr=_seedRnd(913,ss,19,59); _kcr();_kcr();
-    const _kpick=(_kcr()*6)|0;
+    const _kpick=(_kcr()*_capN(6))|0;
     if(_kpick===2){ klintPhaseTen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_kpick===3){ klintPhaseSwan(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_kpick===4){ klintPhaseAltar(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3906,7 +3928,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  4 = Floral meadow.  5 = Water Serpents (flowing scales).
   {
     const _gcr=_seedRnd(971,ss,13,47); _gcr();_gcr();
-    const _gpick=(_gcr()*6)|0;
+    const _gpick=(_gcr()*_capN(6))|0;
     if(_gpick===2){ klimtPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===3){ klimtPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===4){ klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -4194,7 +4216,7 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  3 = Radiant baby.  4 = Barking dog row.  5 = Dancing figures crowd.
   {
     const _hcr=_seedRnd(1011,ss,11,43); _hcr();_hcr();
-    const _hpick=(_hcr()*6)|0;
+    const _hpick=(_hcr()*_capN(6))|0;
     if(_hpick===1){ haringPhaseMural(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===2){ haringPhaseSubway(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===3){ haringPhaseBaby(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -4477,7 +4499,7 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  5 = Triangle grid recoloured.
   {
     const _rcr=_seedRnd(1031,ss,7,37); _rcr();_rcr();
-    const _rpick=(_rcr()*6)|0;
+    const _rpick=(_rcr()*_capN(6))|0;
     if(_rpick===2){ rileyPhaseBWWaves(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===3){ rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===4){ rileyPhaseLozenge(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -4683,7 +4705,7 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  2 = Ben-Day full field.  3 = Brushstrokes.  4 = Dot landscape.  5 = Speech bubble.
   {
     const _ccr=_seedRnd(1071,ss,5,29); _ccr();_ccr();
-    const _cpick=(_ccr()*6)|0;
+    const _cpick=(_ccr()*_capN(6))|0;
     if(_cpick===2){ comicPhaseBenDay(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===3){ comicPhaseBrush(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===4){ comicPhaseLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -4881,7 +4903,7 @@ function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
   //  E = Accumulation (layered dot masses).  F = Tendril nets (light on colour).
   const cr=_seedRnd(808,ss,37,71);
   cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick=(cr()*6)|0;
+  const pick=(cr()*_capN(6))|0;
   if(pick===1){ kusamaPhaseB(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===2){ kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===3){ kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,ss); return; }
@@ -5180,7 +5202,7 @@ function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  F = Primary signs on white (clean white ground, bold red/blue/black signs).
   const cr=_seedRnd(303,ss,47,83);
   cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick=(cr()*6)|0;
+  const pick=(cr()*_capN(6))|0;
   if(pick===1){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -5634,7 +5656,7 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc){
   // Weighted ~60/40 toward A so the original stays the common case.
   const cr = _seedRnd(606, ss, 41, 97);
   cr(); cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick = (cr()*6)|0;
+  const pick = (cr()*_capN(6))|0;
   if(pick===1){ kandinskyPhaseB(ctx, CW, CH, chordCount, ss, mode, palette); return; }
   if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, chordCount, ss, mode, palette); return; }
   if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, chordCount, ss, mode, palette); return; }

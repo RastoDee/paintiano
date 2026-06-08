@@ -40,9 +40,16 @@ const PRO_CFG = {
   paddleClientToken: 'live_3ab34fef52eea1baa3656517dec',
   // Paddle environment: 'production' (live) or 'sandbox' (test).
   paddleEnv: 'production',
-  // Price ID for "Paintiano Pro Lifetime — Early-bird €9.99".
-  // Created in Paddle catalog (Catalog → Products → Paintiano Pro Lifetime → Early-bird).
-  paddlePriceId: 'pri_01kt6s053namfk25tvvdw2eaey',
+  // Price IDs — TWO paid tiers since the 3-tier model (Jun 2026):
+  //   Pro    = full deterministic tool, NO AI (lifetime). Early-bird €9.99 → €14.99.
+  //   Pro AI = Pro + unlimited AI composition (lifetime). Early-bird €19.99 → €24.99.
+  // The legacy single price ID below is the original "Paintiano Pro Lifetime"
+  // (€9.99). It is REUSED as the Pro tier price for now; the Pro AI price must
+  // be created in the Paddle catalog and its ID pasted into paddlePriceIdProAI.
+  // NOTE: until the Pro AI price exists in Paddle (step C), paddlePriceIdProAI
+  // is null and openCheckout('pro_ai') will fall back to the Pro price.
+  paddlePriceIdPro:   'pri_01kt6s053namfk25tvvdw2eaey',
+  paddlePriceIdProAI: 'pri_01ktkmf6ghq0kk3vkg2dtnjd7q',
   // Our own Vercel Edge validation endpoint (same origin as the app).
   // Provider-agnostic — reads licenses table that Paddle webhook writes into.
   validateEndpoint: '/api/validate',
@@ -51,10 +58,14 @@ const PRO_CFG = {
   trialStoreKey: 'paintiano_ai_trial_v1',
   // Trust a cached "valid" verdict this long before re-validating online
   revalidateAfterMs: 30 * 24 * 60 * 60 * 1000, // 30 days
-  // Free-tier heavy-AI allowance before the paywall
-  trialMax: 5,
-  // Display price (informational; real price + VAT come from Paddle checkout)
-  displayPrice: '€9.99',
+  // Free-tier heavy-AI allowance before the paywall. Small + non-renewing:
+  // the trial exists to let Free AND Pro users taste AI a few times, then
+  // funnels them to Pro AI. Lowered 5→3 with the 3-tier model (Jun 2026).
+  trialMax: 3,
+  // Display prices (informational; real price + VAT come from Paddle checkout).
+  // Early-bird values shown until the first-50 window closes (then 14.99/24.99).
+  displayPricePro:   '€9.99',
+  displayPriceProAI: '€19.99',
 };
 
 // ─── license storage helpers ────────────────────────────────────────────────
@@ -93,25 +104,35 @@ async function _proValidate(key) {
 
 // ─── Pro status hook ──────────────────────────────────────────────────────────
 function useProStatus() {
-  const [proStatus, setProStatus] = useState('loading'); // 'loading'|'free'|'pro'
+  // proStatus: 'loading' | 'free' | 'pro' | 'pro_ai'
+  //   'pro'    = paid, full tool, NO unlimited AI (AI runs on trial like free)
+  //   'pro_ai' = paid, full tool + unlimited AI
+  // isPro stays true for BOTH paid tiers (watermark/DPI300 gating unchanged);
+  // isProAI is the new flag that unlocks unlimited AI.
+  const [proStatus, setProStatus] = useState('loading');
   const [licenseKey, setLicenseKey] = useState(null);
   const [maskedEmail, setMaskedEmail] = useState(null);
+
+  // Map a validated tier string to a proStatus value. Defaults to 'pro' for
+  // any unknown/missing tier so a valid-but-untagged key still unlocks the
+  // paid tool (safe: AI stays gated behind pro_ai).
+  const _tierToStatus = (tier) => (tier === 'pro_ai' ? 'pro_ai' : 'pro');
 
   useEffect(() => {
     const cached = _proReadCache();
     if (!cached) { setProStatus('free'); return; }
     const stale = Date.now() - (cached.validatedAt || 0) > PRO_CFG.revalidateAfterMs;
     if (!stale) {
-      setProStatus('pro'); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+      setProStatus(_tierToStatus(cached.tier)); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
       return;
     }
     _proValidate(cached.key).then((res) => {
       if (res.valid) {
-        _proWriteCache(cached.key, { email: res.email });
-        setProStatus('pro'); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
+        _proWriteCache(cached.key, { email: res.email, tier: res.tier });
+        setProStatus(_tierToStatus(res.tier)); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
       } else if (res.offline) {
-        // Network down during re-check → trust the cache (stay Pro) until online.
-        setProStatus('pro'); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+        // Network down during re-check → trust the cache (stay paid) until online.
+        setProStatus(_tierToStatus(cached.tier)); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
       } else {
         // Authoritative revoke (refunded/disabled/not_found)
         _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
@@ -124,9 +145,9 @@ function useProStatus() {
     if (!key) return { ok: false, reason: 'empty' };
     const res = await _proValidate(key);
     if (res.valid) {
-      _proWriteCache(key, { email: res.email });
-      setProStatus('pro'); setLicenseKey(key); setMaskedEmail(res.email || null);
-      return { ok: true };
+      _proWriteCache(key, { email: res.email, tier: res.tier });
+      setProStatus(_tierToStatus(res.tier)); setLicenseKey(key); setMaskedEmail(res.email || null);
+      return { ok: true, tier: _tierToStatus(res.tier) };
     }
     return { ok: false, reason: res.reason || 'unknown' };
   }, []);
@@ -162,15 +183,21 @@ function useProStatus() {
     });
   }, []);
 
-  const openCheckout = useCallback(async () => {
+  const openCheckout = useCallback(async (tier = 'pro') => {
     try {
       const Paddle = await loadPaddleScript();
       if (!Paddle) throw new Error('Paddle not available');
+      // Pick the price for the requested tier. Pro AI falls back to the Pro
+      // price until its Paddle price ID exists (step C) — so the button never
+      // dead-ends; worst case it sells Pro instead of Pro AI.
+      const priceId = (tier === 'pro_ai' && PRO_CFG.paddlePriceIdProAI)
+        ? PRO_CFG.paddlePriceIdProAI
+        : PRO_CFG.paddlePriceIdPro;
       // Initialize is idempotent — calling twice is safe.
       Paddle.Environment.set(PRO_CFG.paddleEnv); // 'production' or 'sandbox'
       Paddle.Initialize({ token: PRO_CFG.paddleClientToken });
       Paddle.Checkout.open({
-        items: [{ priceId: PRO_CFG.paddlePriceId, quantity: 1 }],
+        items: [{ priceId, quantity: 1 }],
         settings: {
           displayMode: 'overlay',
           theme: 'dark',
@@ -189,7 +216,10 @@ function useProStatus() {
     }
   }, [loadPaddleScript]);
 
-  return { proStatus, isPro: proStatus === 'pro', licenseKey, maskedEmail,
+  return { proStatus,
+           isPro: proStatus === 'pro' || proStatus === 'pro_ai',
+           isProAI: proStatus === 'pro_ai',
+           licenseKey, maskedEmail,
            activateLicense, deactivateLicense, openCheckout };
 }
 
@@ -245,8 +275,11 @@ function useEntitlements() {
   const trial = useAiTrial();
   const gateAI = useCallback((amount = 1, consume = true) => {
     if (pro.proStatus === 'loading') return { allow: false, reason: 'loading' };
-    if (pro.proStatus === 'pro')     return { allow: true };
-    // free tier
+    // Unlimited AI is a Pro AI privilege only. Plain Pro is the full
+    // deterministic tool but NOT unlimited AI — so Pro falls through to the
+    // same trial path as Free, which funnels it toward a Pro AI upgrade.
+    if (pro.proStatus === 'pro_ai')  return { allow: true };
+    // free OR pro tier → trial credits
     if (trial.trialExhausted)        return { allow: false, reason: 'ai_trial' };
     if (consume) trial.consumeTrial(amount);
     return { allow: true };
@@ -334,6 +367,15 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     letterSpacing: '.08em', textTransform: 'uppercase', cursor: 'pointer',
     fontFamily: 'inherit', marginBottom: 8,
   };
+  // Secondary CTA — same shape as btnGold but outlined (gold border, transparent
+  // bg). Used to offer the OTHER tier alongside the primary CTA.
+  const btnGoldOutline = {
+    width: '100%', background: 'transparent', color: GOLD,
+    border: `1px solid ${GOLD}`, padding: '10px 12px', borderRadius: 5,
+    fontSize: (.66*readScale)+'rem', fontWeight: 600, letterSpacing: '.08em',
+    textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'inherit',
+    marginBottom: 8,
+  };
   const btnGhost = {
     width: '100%', background: 'transparent', color: '#999',
     border: '1px solid rgba(255,255,255,.18)', padding: '9px 12px',
@@ -402,11 +444,27 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               </>
             ) : (
               <>
-                <button style={btnGold} onClick={openCheckout}>
-                  {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                </button>
+                {reason === 'ai_trial' ? (
+                  <>
+                    <button style={btnGold} onClick={() => openCheckout('pro_ai')}>
+                      {tr('proAiPaywallCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
+                    </button>
+                    <button style={btnGoldOutline} onClick={() => openCheckout('pro')}>
+                      {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button style={btnGold} onClick={() => openCheckout('pro')}>
+                      {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
+                    </button>
+                    <button style={btnGoldOutline} onClick={() => openCheckout('pro_ai')}>
+                      {tr('proAiPaywallCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
+                    </button>
+                  </>
+                )}
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
-                  {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
+                  {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
                 </p>
               </>
             )}
@@ -558,11 +616,27 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               </>
             ) : (
               <>
-                <button style={btnGold} onClick={openCheckout}>
-                  {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                </button>
+                {reason === 'ai_trial' ? (
+                  <>
+                    <button style={btnGold} onClick={() => openCheckout('pro_ai')}>
+                      {tr('proAiAboutFinalCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
+                    </button>
+                    <button style={btnGoldOutline} onClick={() => openCheckout('pro')}>
+                      {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button style={btnGold} onClick={() => openCheckout('pro')}>
+                      {tr('proAboutFinalCta', 'Get Paintiano Pro — €9.99 lifetime')}
+                    </button>
+                    <button style={btnGoldOutline} onClick={() => openCheckout('pro_ai')}>
+                      {tr('proAiAboutFinalCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
+                    </button>
+                  </>
+                )}
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
-                  {tr('proEarlyBird', 'Early-bird price · first 50 supporters · then €14.99')}
+                  {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
                 </p>
               </>
             )}
