@@ -9178,8 +9178,6 @@ function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;
 let _TRANS_FRAME = null;
 
 async function transcribeAudio(audioBuf, onP) {
-  const _t0 = performance.now();
-  console.log('[transcribe] start: duration='+audioBuf.duration.toFixed(2)+'s, sr='+audioBuf.sampleRate+', ch='+audioBuf.numberOfChannels);
   const sr = audioBuf.sampleRate;
   const ch0 = audioBuf.getChannelData(0);
   // Mix to mono if stereo. Float32Array.from is still allocated once per file
@@ -9189,7 +9187,6 @@ async function transcribeAudio(audioBuf, onP) {
     : ch0;
   const FRAME = 2048, HOP = 512;
   const total = Math.floor((data.length - FRAME) / HOP);
-  console.log('[transcribe] frames total='+total+' ('+((performance.now()-_t0)|0)+'ms after decode-mix)');
   const active = {}, notes = [];
   if (_TRANS_FRAME === null) _TRANS_FRAME = new Float32Array(FRAME);
   const frame = _TRANS_FRAME;
@@ -9213,14 +9210,10 @@ async function transcribeAudio(audioBuf, onP) {
       }
     }
     if (f % 80 === 0) {
-      if (f === 0 || f === 80 || f === 400 || f === total - (total % 80)) {
-        console.log('[transcribe] f='+f+'/'+total+' ('+((performance.now()-_t0)|0)+'ms)');
-      }
       onP(f / total);
       await new Promise(r => setTimeout(r, 0));
     }
   }
-  console.log('[transcribe] FFT loop done in '+((performance.now()-_t0)|0)+'ms, notes='+notes.length);
   for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
   const f2ms = f => f * HOP / sr * 1000;
   const raw = notes
@@ -15029,38 +15022,28 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const loadAudio=useCallback(async e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
-    // DIAGNOSTIC: each stage updates the visible label so a stuck flow can be
-    // identified without DevTools. The flow goes:
-    //   "[1] reading file…" → arrayBuffer
-    //   "[2] decoding audio…" → decodeAudioData
-    //   "[3] transcribing audio…" → FFT loop (this is what shows 0%)
-    //   "[4] applying notes…" → applyEvents
-    // If the label stays on "[2]" forever, decode is stuck (codec / Web Audio).
-    // If it shows "[3] · 0%" forever, the FFT yield (setTimeout 0) isn't firing.
-    setWorking(true);setWLabel('[1] reading file…');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
+    // The flow:
+    //   1. reading file → arrayBuffer
+    //   2. decoding audio → decodeAudioData via OfflineAudioContext (iOS-safe)
+    //   3. transcribing audio → FFT loop with 0–100% progress
+    //   4. applying notes → applyEvents
+    // OfflineAudioContext bypasses an iOS Chrome/Safari bug where `new
+    // AudioContext()` or `resume()` hangs forever when the existing live
+    // context is in `interrupted` state (e.g. after Tone.js piano sampler
+    // use). OfflineAudioContext has no lifecycle — it's pure arithmetic on
+    // the PCM bytes — so it's immune to that bug.
+    setWorking(true);setWLabel(t('transcribingAudio')||'transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const buf=await file.arrayBuffer();
-      setWLabel('[2] decoding audio…');
       const blob=new Blob([buf],{type:file.type||'audio/mpeg'});
-      // iOS 18 Chrome/Safari bug: a live AudioContext that has been used by
-      // Tone.js (piano sampler) lands in 'interrupted' state after a pause +
-      // backgrounding. Both `new AudioContext()` and `ac.resume()` then never
-      // return — they hang forever, blocking the main thread BEFORE we even
-      // reach decodeAudioData, so neither the promise NOR the 15-second timer
-      // ever fires. The fix is to use OfflineAudioContext for decoding: it has
-      // no interruption lifecycle, no resume semantics, and is purely
-      // arithmetic on the PCM bytes.
       const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
       const AC = window.AudioContext || window.webkitAudioContext;
       let audioBuf = null;
       // Try OfflineAudioContext first (interruption-immune on iOS).
       try {
-        // Dummy 1-frame offline context just to get a working decodeAudioData.
-        // The sample rate here doesn't affect decode (decode uses the file's
-        // native rate) — it's only the rate of the dummy buffer we'd render.
         const offline = new OfflineAC(1, 1, 44100);
-        const decodeWithTimeout = (arrBuf, ctx) => new Promise((resolve, reject) => {
+        const decodeOff = (arrBuf, ctx) => new Promise((resolve, reject) => {
           let settled = false;
           const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
           const timer = setTimeout(() => finish(reject, new Error('offline decode timeout (15s)')), 15000);
@@ -15076,11 +15059,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             );
           }
         });
-        audioBuf = await decodeWithTimeout(buf.slice(0), offline);
+        audioBuf = await decodeOff(buf.slice(0), offline);
       } catch (offErr) {
-        // Fallback: try live AudioContext with same timeout safety. This is
-        // the path that was failing before — keep it as a last resort.
-        setWLabel('[2] decoding audio (fallback)…');
+        // Fallback: live AudioContext with timeout-safe resume + decode.
         try {
           const ac = new AC();
           try{ if(ac.state!=='running') await Promise.race([ac.resume(), new Promise((_,rj)=>setTimeout(()=>rj(new Error('resume timeout')),3000))]); }catch(_){}
@@ -15108,10 +15089,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       if(loadTokenRef.current!==myToken)return;
       audioPCMRef.current=audioBuf;
-      setWLabel('[3] transcribing audio · '+audioBuf.duration.toFixed(1)+'s');
+      // For long files the FFT pass can take a meaningful chunk of time. Let
+      // the user know so the progress bar doesn't look like a stuck app.
+      if(audioBuf.duration>90){
+        setWLabel(t('transcribingAudioLong')||'transcribing audio · this may take a minute');
+      }
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(loadTokenRef.current!==myToken)return;
-      setWLabel('[4] applying notes…');
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
       const aName=file.name.replace(/\.[^.]+$/,'');
       setCompositionName(aName);
@@ -15119,7 +15103,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       applyEvents(evts,aName);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
-    }catch(e){if(loadTokenRef.current===myToken){setErr('Audio ERR: '+e.message);setErrInfo(false);}}
+    }catch(e){if(loadTokenRef.current===myToken){setErr('Audio: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
@@ -15870,14 +15854,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stopAll,applyEvents,wipeCanvasNow]);
 
   const loadSampleAudio=useCallback(async()=>{
-    setWorking(true);setWLabel('[1] preparing sample…');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
+    setWorking(true);setWLabel(t('transcribingSample')||'transcribing sample');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_AUDIO_B64);
-      setWLabel('[2] decoding audio…');
       const blob=new Blob([arrayBuffer],{type:'audio/mpeg'});
-      // See loadAudio: OfflineAudioContext bypasses the iOS interruption bug
-      // entirely. We try it first; the live AudioContext is a fallback only.
+      // OfflineAudioContext-first decode (see loadAudio for the iOS bug).
       const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
       const AC = window.AudioContext || window.webkitAudioContext;
       let audioBuf = null;
@@ -15901,7 +15883,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         });
         audioBuf = await decodeOff(arrayBuffer.slice(0), offline);
       } catch (offErr) {
-        setWLabel('[2] decoding audio (fallback)…');
         try {
           const ac = new AC();
           try{ if(ac.state!=='running') await Promise.race([ac.resume(), new Promise((_,rj)=>setTimeout(()=>rj(new Error('resume timeout')),3000))]); }catch(_){}
@@ -15929,16 +15910,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       if(loadTokenRef.current!==myToken)return;
       audioPCMRef.current=audioBuf;
-      setWLabel('[3] transcribing sample · '+audioBuf.duration.toFixed(1)+'s');
+      if(audioBuf.duration>90){
+        setWLabel(t('transcribingSampleLong')||'transcribing sample · this may take a minute');
+      }
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(loadTokenRef.current!==myToken)return;
-      setWLabel('[4] applying notes…');
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
       setAudioBlobAndRef(blob);setAudioName('Liebestraum No.3 — Liszt.mp3');
       applyEvents(evts,SAMPLE_AUDIO_NAME);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
-    }catch(e){if(loadTokenRef.current===myToken){setErr('Sample ERR: '+e.message);setErrInfo(false);}}
+    }catch(e){if(loadTokenRef.current===myToken){setErr('Sample audio: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 

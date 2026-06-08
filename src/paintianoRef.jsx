@@ -15043,43 +15043,69 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const buf=await file.arrayBuffer();
       setWLabel('[2] decoding audio…');
       const blob=new Blob([buf],{type:file.type||'audio/mpeg'});
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
-      // Wake the context BEFORE decoding. iOS Safari can have ac in 'suspended'
-      // or 'interrupted' state after audio was used elsewhere in the page (e.g.
-      // Tone.js piano samples), and decodeAudioData on a non-running context
-      // never resolves — it just hangs forever. resume() is a no-op outside a
-      // user gesture, but this is reached via a file-picker tap which counts.
-      try{ if(ac.state!=='running') await ac.resume(); }catch(_){}
-      // Decode with a hard timeout. iOS sometimes drops the promise into a
-      // black hole (no resolve, no reject, no error). Also fall back to the
-      // older callback form, which on iOS occasionally succeeds where the
-      // promise form fails for the same buffer.
-      const decodeWithTimeout = (arrBuf) => new Promise((resolve, reject) => {
-        let settled = false;
-        const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
-        const timer = setTimeout(() => finish(reject, new Error('decode timeout (15s) — iOS may have dropped the decode promise; try a different MP3 or convert to .m4a')), 15000);
+      // iOS 18 Chrome/Safari bug: a live AudioContext that has been used by
+      // Tone.js (piano sampler) lands in 'interrupted' state after a pause +
+      // backgrounding. Both `new AudioContext()` and `ac.resume()` then never
+      // return — they hang forever, blocking the main thread BEFORE we even
+      // reach decodeAudioData, so neither the promise NOR the 15-second timer
+      // ever fires. The fix is to use OfflineAudioContext for decoding: it has
+      // no interruption lifecycle, no resume semantics, and is purely
+      // arithmetic on the PCM bytes.
+      const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      let audioBuf = null;
+      // Try OfflineAudioContext first (interruption-immune on iOS).
+      try {
+        // Dummy 1-frame offline context just to get a working decodeAudioData.
+        // The sample rate here doesn't affect decode (decode uses the file's
+        // native rate) — it's only the rate of the dummy buffer we'd render.
+        const offline = new OfflineAC(1, 1, 44100);
+        const decodeWithTimeout = (arrBuf, ctx) => new Promise((resolve, reject) => {
+          let settled = false;
+          const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+          const timer = setTimeout(() => finish(reject, new Error('offline decode timeout (15s)')), 15000);
+          try {
+            ctx.decodeAudioData(arrBuf,
+              (ab) => { clearTimeout(timer); finish(resolve, ab); },
+              (err) => { clearTimeout(timer); finish(reject, err || new Error('offline decode failed')); }
+            );
+          } catch(e) {
+            ctx.decodeAudioData(arrBuf).then(
+              (ab) => { clearTimeout(timer); finish(resolve, ab); },
+              (err) => { clearTimeout(timer); finish(reject, err || new Error('offline decode failed')); }
+            );
+          }
+        });
+        audioBuf = await decodeWithTimeout(buf.slice(0), offline);
+      } catch (offErr) {
+        // Fallback: try live AudioContext with same timeout safety. This is
+        // the path that was failing before — keep it as a last resort.
+        setWLabel('[2] decoding audio (fallback)…');
         try {
-          // Use callback form (older signature) — iOS Safari honours it and
-          // resolves more reliably than the promise form. This signature
-          // returns undefined on modern browsers (which also call the
-          // success callback), so we don't need to branch.
-          ac.decodeAudioData(arrBuf,
-            (audioBuf) => { clearTimeout(timer); finish(resolve, audioBuf); },
-            (err) => { clearTimeout(timer); finish(reject, err || new Error('decode failed')); }
-          );
-        } catch(e) {
-          // Promise form on browsers that don't accept callbacks
-          ac.decodeAudioData(arrBuf).then(
-            (audioBuf) => { clearTimeout(timer); finish(resolve, audioBuf); },
-            (err)      => { clearTimeout(timer); finish(reject, err || new Error('decode failed')); }
-          );
+          const ac = new AC();
+          try{ if(ac.state!=='running') await Promise.race([ac.resume(), new Promise((_,rj)=>setTimeout(()=>rj(new Error('resume timeout')),3000))]); }catch(_){}
+          const decodeLive = (arrBuf, ctx) => new Promise((resolve, reject) => {
+            let settled = false;
+            const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+            const timer = setTimeout(() => finish(reject, new Error('live decode timeout (15s)')), 15000);
+            try {
+              ctx.decodeAudioData(arrBuf,
+                (ab) => { clearTimeout(timer); finish(resolve, ab); },
+                (err) => { clearTimeout(timer); finish(reject, err || new Error('live decode failed')); }
+              );
+            } catch(e) {
+              ctx.decodeAudioData(arrBuf).then(
+                (ab) => { clearTimeout(timer); finish(resolve, ab); },
+                (err) => { clearTimeout(timer); finish(reject, err || new Error('live decode failed')); }
+              );
+            }
+          });
+          audioBuf = await decodeLive(buf.slice(0), ac);
+          try{ ac.close(); }catch(_){}
+        } catch (liveErr) {
+          throw new Error('decode failed (offline+live): ' + (offErr?.message||offErr) + ' / ' + (liveErr?.message||liveErr));
         }
-      });
-      const audioBuf = await decodeWithTimeout(buf.slice(0));
-      // Closing the context BEFORE decode completes can race on iOS. Move
-      // close AFTER we have the result.
-      try{ ac.close(); }catch(_){}
+      }
       if(loadTokenRef.current!==myToken)return;
       audioPCMRef.current=audioBuf;
       setWLabel('[3] transcribing audio · '+audioBuf.duration.toFixed(1)+'s');
@@ -15850,30 +15876,57 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_AUDIO_B64);
       setWLabel('[2] decoding audio…');
       const blob=new Blob([arrayBuffer],{type:'audio/mpeg'});
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
-      // See loadAudio for the iOS rationale: wake the context before decode,
-      // wrap decode with timeout + callback fallback, close after we have the
-      // result (early close races on iOS).
-      try{ if(ac.state!=='running') await ac.resume(); }catch(_){}
-      const decodeWithTimeout = (arrBuf) => new Promise((resolve, reject) => {
-        let settled = false;
-        const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
-        const timer = setTimeout(() => finish(reject, new Error('decode timeout (15s) — iOS audio context may be in interrupted state; try reloading the app')), 15000);
+      // See loadAudio: OfflineAudioContext bypasses the iOS interruption bug
+      // entirely. We try it first; the live AudioContext is a fallback only.
+      const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      let audioBuf = null;
+      try {
+        const offline = new OfflineAC(1, 1, 44100);
+        const decodeOff = (arrBuf, ctx) => new Promise((resolve, reject) => {
+          let settled = false;
+          const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+          const timer = setTimeout(() => finish(reject, new Error('offline decode timeout (15s)')), 15000);
+          try {
+            ctx.decodeAudioData(arrBuf,
+              (ab) => { clearTimeout(timer); finish(resolve, ab); },
+              (err) => { clearTimeout(timer); finish(reject, err || new Error('offline decode failed')); }
+            );
+          } catch(e) {
+            ctx.decodeAudioData(arrBuf).then(
+              (ab) => { clearTimeout(timer); finish(resolve, ab); },
+              (err) => { clearTimeout(timer); finish(reject, err || new Error('offline decode failed')); }
+            );
+          }
+        });
+        audioBuf = await decodeOff(arrayBuffer.slice(0), offline);
+      } catch (offErr) {
+        setWLabel('[2] decoding audio (fallback)…');
         try {
-          ac.decodeAudioData(arrBuf,
-            (audioBuf) => { clearTimeout(timer); finish(resolve, audioBuf); },
-            (err) => { clearTimeout(timer); finish(reject, err || new Error('decode failed')); }
-          );
-        } catch(e) {
-          ac.decodeAudioData(arrBuf).then(
-            (audioBuf) => { clearTimeout(timer); finish(resolve, audioBuf); },
-            (err)      => { clearTimeout(timer); finish(reject, err || new Error('decode failed')); }
-          );
+          const ac = new AC();
+          try{ if(ac.state!=='running') await Promise.race([ac.resume(), new Promise((_,rj)=>setTimeout(()=>rj(new Error('resume timeout')),3000))]); }catch(_){}
+          const decodeLive = (arrBuf, ctx) => new Promise((resolve, reject) => {
+            let settled = false;
+            const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+            const timer = setTimeout(() => finish(reject, new Error('live decode timeout (15s)')), 15000);
+            try {
+              ctx.decodeAudioData(arrBuf,
+                (ab) => { clearTimeout(timer); finish(resolve, ab); },
+                (err) => { clearTimeout(timer); finish(reject, err || new Error('live decode failed')); }
+              );
+            } catch(e) {
+              ctx.decodeAudioData(arrBuf).then(
+                (ab) => { clearTimeout(timer); finish(resolve, ab); },
+                (err) => { clearTimeout(timer); finish(reject, err || new Error('live decode failed')); }
+              );
+            }
+          });
+          audioBuf = await decodeLive(arrayBuffer.slice(0), ac);
+          try{ ac.close(); }catch(_){}
+        } catch (liveErr) {
+          throw new Error('decode failed (offline+live): ' + (offErr?.message||offErr) + ' / ' + (liveErr?.message||liveErr));
         }
-      });
-      const audioBuf = await decodeWithTimeout(arrayBuffer.slice(0));
-      try{ ac.close(); }catch(_){}
+      }
       if(loadTokenRef.current!==myToken)return;
       audioPCMRef.current=audioBuf;
       setWLabel('[3] transcribing sample · '+audioBuf.duration.toFixed(1)+'s');
