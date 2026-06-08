@@ -7885,8 +7885,8 @@ const I18N = {
     recentAiGenerated:'Recently AI generated',
     recentPlayed:'Recently played',
     today:'Today',
-    trialBanner1:'Only 1 AI trial left · Get Pro for unlimited',
-    trialBanner2:'Only 2 AI trials left · Get Pro for unlimited',
+    trialBanner1:'Only 1 AI trial left · Get Pro AI for unlimited',
+    trialBanner2:'Only 2 AI trials left · Get Pro AI for unlimited',
     morphAiUnavailable:'Morph for AI generated mood unavailable',
     proPaywallTitle:'Unlock the full Paintiano',
     proPaywallTitleAi:'You’ve used your free AI compositions',
@@ -8036,8 +8036,8 @@ const I18N = {
     recentAiGenerated:'Zuletzt KI-generiert',
     recentPlayed:'Zuletzt gespielt',
     today:'Heute',
-    trialBanner1:'Nur noch 1 KI-Versuch · Hol dir Pro für unbegrenzt',
-    trialBanner2:'Nur noch 2 KI-Versuche · Hol dir Pro für unbegrenzt',
+    trialBanner1:'Nur noch 1 KI-Versuch · Hol dir Pro KI für unbegrenzt',
+    trialBanner2:'Nur noch 2 KI-Versuche · Hol dir Pro KI für unbegrenzt',
     morphAiUnavailable:'Morph für KI-generierte Stimmung nicht verfügbar',
     proPaywallTitle:'Schalte das ganze Paintiano frei',
     proPaywallTitleAi:'Du hast deine kostenlosen KI-Kompositionen aufgebraucht',
@@ -8184,8 +8184,8 @@ const I18N = {
     recentAiGenerated:'Générés par IA récemment',
     recentPlayed:'Joués récemment',
     today:"Aujourd'hui",
-    trialBanner1:"Plus qu'1 essai IA · Passez à Pro pour l'illimité",
-    trialBanner2:"Plus que 2 essais IA · Passez à Pro pour l'illimité",
+    trialBanner1:"Plus qu'1 essai IA · Passez à Pro IA pour l'illimité",
+    trialBanner2:"Plus que 2 essais IA · Passez à Pro IA pour l'illimité",
     morphAiUnavailable:'Morph indisponible pour les ambiances IA',
     proPaywallTitle:'Débloquez tout Paintiano',
     proPaywallTitleAi:'Vous avez utilisé vos compositions IA gratuites',
@@ -8332,8 +8332,8 @@ const I18N = {
     recentAiGenerated:'Generados por IA recientemente',
     recentPlayed:'Reproducidos recientemente',
     today:'Hoy',
-    trialBanner1:'Solo 1 prueba IA restante · Pro para ilimitado',
-    trialBanner2:'Solo 2 pruebas IA restantes · Pro para ilimitado',
+    trialBanner1:'Solo 1 prueba IA restante · Pro IA para ilimitado',
+    trialBanner2:'Solo 2 pruebas IA restantes · Pro IA para ilimitado',
     morphAiUnavailable:'Morph no disponible para mood generado por IA',
     proPaywallTitle:'Desbloquea todo Paintiano',
     proPaywallTitleAi:'Has usado tus composiciones de IA gratuitas',
@@ -8480,8 +8480,8 @@ const I18N = {
     recentAiGenerated:'Nedávno AI vygenerované',
     recentPlayed:'Nedávno prehraté',
     today:'Dnes',
-    trialBanner1:'Zostáva už len 1 AI skúška · Pro pre neobmedzené',
-    trialBanner2:'Zostávajú už len 2 AI skúšky · Pro pre neobmedzené',
+    trialBanner1:'Zostáva už len 1 AI skúška · Pro AI pre neobmedzené',
+    trialBanner2:'Zostávajú už len 2 AI skúšky · Pro AI pre neobmedzené',
     morphAiUnavailable:'Morph nedostupný pre AI generovaný mood',
     proPaywallTitle:'Odomkni celé Paintiano',
     proPaywallTitleAi:'Využil si svoje bezplatné AI kompozície',
@@ -8628,14 +8628,14 @@ const I18N = {
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
     today:'今天',
-    trialBanner1:'仅剩 1 次 AI 试用 · 升级 Pro 享无限',
-    trialBanner2:'仅剩 2 次 AI 试用 · 升级 Pro 享无限',
+    trialBanner1:'仅剩 1 次 AI 试用 · 升级 Pro AI 享无限',
+    trialBanner2:'仅剩 2 次 AI 试用 · 升级 Pro AI 享无限',
     morphAiUnavailable:'AI 生成的情绪不支持 Morph',
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
     today:'今天',
-    trialBanner1:'僅剩 1 次 AI 試用 · 升級 Pro 享無限',
-    trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro 享無限',
+    trialBanner1:'僅剩 1 次 AI 試用 · 升級 Pro AI 享無限',
+    trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro AI 享無限',
     morphAiUnavailable:'AI 生成的情緒不支援 Morph',
     proPaywallTitle:'解锁完整的 Paintiano',
     proPaywallTitleAi:'您已用完免费的 AI 作曲次数',
@@ -8924,8 +8924,8 @@ const I18N = {
     recentAiGenerated:'Gerados por IA recentemente',
     recentPlayed:'Reproduzidos recentemente',
     today:'Hoje',
-    trialBanner1:'Resta apenas 1 teste IA · Pro para ilimitado',
-    trialBanner2:'Restam apenas 2 testes IA · Pro para ilimitado',
+    trialBanner1:'Resta apenas 1 teste IA · Pro IA para ilimitado',
+    trialBanner2:'Restam apenas 2 testes IA · Pro IA para ilimitado',
     morphAiUnavailable:'Morph indisponível para mood gerado por IA',
     proPaywallTitle:'Desbloqueie todo o Paintiano',
     proPaywallTitleAi:'Você usou suas composições de IA gratuitas',
@@ -12629,8 +12629,8 @@ export default function Paintiano() {
     const left=Math.ceil(trialLeft);
     if(left>2||left<=0) return;
     const msg = left===1
-      ? (t('trialBanner1')||'Only 1 AI trial left · Get Pro for unlimited')
-      : (t('trialBanner2')||'Only '+left+' AI trials left · Get Pro for unlimited');
+      ? (t('trialBanner1')||'Only 1 AI trial left · Get Pro AI for unlimited')
+      : (t('trialBanner2')||'Only '+left+' AI trials left · Get Pro AI for unlimited');
     setErr(msg); setErrInfo(true);
     trialBannerActiveRef.current = true;
   },[trialLeft,isPro,trialExhausted,t]);
@@ -18413,8 +18413,18 @@ Composition rules:
             }
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
           <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
-          {!isPro && <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.5)',color:'rgba(201,168,76,.9)',fontWeight:600}}>{t('proBadge')}</span>}
-          {isPro && <span title={maskedEmail||''} style={{paddingBottom:2,color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>✓ {t('proManageActive')}</span>}
+          {/* Tier-adaptive PRO tab — Free sees gold "PRO" (upgrade to Pro);
+              plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI sees
+              ✓ manage label in purple (already at top tier, account access). */}
+          {!isPro && (
+            <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.5)',color:'rgba(201,168,76,.9)',fontWeight:600}}>{t('proBadge')}</span>
+          )}
+          {isPro && !isProAI && (
+            <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} title={maskedEmail||''} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(220,150,255,.55)',color:'#dcb4ff',fontWeight:600}}>{t('proAiBadge')||'PRO AI'}</span>
+          )}
+          {isProAI && (
+            <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} title={maskedEmail||''} style={{cursor:'pointer',paddingBottom:2,color:'rgba(220,150,255,.75)',whiteSpace:'nowrap'}}>✓ {t('proAiBadge')||'PRO AI'}</span>
+          )}
         </nav>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{padding:'4px 10px',background:readScale>1?'rgba(201,168,76,.12)':PF.faint,color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'1px solid '+(readScale>1?'rgba(201,168,76,.4)':'rgba(242,238,232,.15)'),borderRadius:20,cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:5,fontWeight:600}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>
