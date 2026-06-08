@@ -18370,9 +18370,11 @@ Composition rules:
                     else setShowColorPalette(false);
                     if(canvasRef.current){canvasRef.current.style.opacity='0';}
                     setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:dis?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:dis?0.32:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(mode===m)}}>
-                    {armed?('✎ '+t('editShort')):t(m)}
-                    {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
+                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:dis?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:dis?0.32:1,whiteSpace:'nowrap',overflow:'visible',...chipStyle(mode===m)}}>
+                    <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
+                      <span>{armed?('✎ '+t('editShort')):t(m)}</span>
+                      {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
+                    </span>
                   </button>
                   );
                 })}
@@ -18429,24 +18431,54 @@ Composition rules:
               {['harmony','spectral','bw','custom'].map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
+              // Free tier: Custom uses the same cycle as Pro (Custom → Edit → action),
+              // but the third tap opens a read-only palette PREVIEW instead of the
+              // editor modal. The palette applied is always the default — the user's
+              // saved palette stays locked until they upgrade.
+              const isFree = proStatus==='free';
               return (
               <button key={m} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
                 if(isCustomTab && mode==='custom'){
-                  if(!customArmed) setCustomArmed(true); else setShowPaletteEditor(true);
+                  if(!customArmed){
+                    // tap 1: arm → label "✎ EDIT" + PRO badge (Free)
+                    setCustomArmed(true);
+                  } else if(isFree && !showColorPalette){
+                    // tap 2 (Free): open read-only preview, keep "✎ EDIT" label
+                    setShowColorPalette(true);
+                  } else if(isFree && showColorPalette){
+                    // tap 3 (Free): close preview AND disarm → label back to "Custom"
+                    setShowColorPalette(false);
+                    setCustomArmed(false);
+                  } else {
+                    // Pro armed: open the editor modal
+                    setShowPaletteEditor(true);
+                  }
                   return;
                 }
-                if(m==='custom') setCustomArmed(false);
+                if(m==='custom'){ setCustomArmed(false); setShowColorPalette(false); }
                 else if(mode===m){ setShowColorPalette(v=>!v); return; }   // tap active H/S/BW tab → toggle preview
                 else setShowColorPalette(false);
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(mode===m)}}>{armed?('✎ '+t('editShort')):t(m)}</button>
+              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...chipStyle(mode===m)}}>
+                <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
+                  <span>{armed?('✎ '+t('editShort')):t(m)}</span>
+                  {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
+                </span>
+              </button>
               );})}
             </div>
-            {showColorPalette && mode!=='custom' && (
+            {showColorPalette && (mode!=='custom' || (proStatus==='free' && customArmed)) && (
               <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:5,padding:'8px',borderRadius:10,background:'rgba(20,18,30,.4)',border:'1px solid rgba(242,238,232,.06)',marginTop:8}}>
                 {['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'].map((nm,pc)=>{
-                  const [r,g,b]=colorPreview(mode,pc);
+                  let r,g,b;
+                  if(mode==='custom'){
+                    const hex = defaultCustomPalette[pc];
+                    const n = parseInt(hex.slice(1),16);
+                    r=(n>>16)&255; g=(n>>8)&255; b=n&255;
+                  } else {
+                    [r,g,b]=colorPreview(mode,pc);
+                  }
                   return (
                     <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
                       <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />

@@ -83,6 +83,8 @@ const I18N = {
     proAiValueAtmo:'AI atmospheric tinting',
     proAiGetCta:'Get Pro AI',
     proRecommended:'Recommended',
+    aiLockedHint:'AI is part of Paintiano Pro AI',
+    moodChooseBelow:'Choose a mood from the list below',
     proValue1:'Unlimited AI compositions',
     proValue1Sub:'Generate as many paintings as you wish',
     proValue2:'Export without watermark',
