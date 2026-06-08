@@ -3084,10 +3084,19 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const loadAudio=useCallback(async e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
-    setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
+    // DIAGNOSTIC: each stage updates the visible label so a stuck flow can be
+    // identified without DevTools. The flow goes:
+    //   "[1] reading file…" → arrayBuffer
+    //   "[2] decoding audio…" → decodeAudioData
+    //   "[3] transcribing audio…" → FFT loop (this is what shows 0%)
+    //   "[4] applying notes…" → applyEvents
+    // If the label stays on "[2]" forever, decode is stuck (codec / Web Audio).
+    // If it shows "[3] · 0%" forever, the FFT yield (setTimeout 0) isn't firing.
+    setWorking(true);setWLabel('[1] reading file…');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const buf=await file.arrayBuffer();
+      setWLabel('[2] decoding audio…');
       const blob=new Blob([buf],{type:file.type||'audio/mpeg'});
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
@@ -3096,13 +3105,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       ac.close();
       if(loadTokenRef.current!==myToken)return;
       audioPCMRef.current=audioBuf;
-      // For long files the FFT pass can take a meaningful chunk of time. Let
-      // the user know so the progress bar doesn't look like a stuck app.
-      if(audioBuf.duration>90){
-        setWLabel('transcribing audio · this may take a minute');
-      }
+      setWLabel('[3] transcribing audio · '+audioBuf.duration.toFixed(1)+'s');
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(loadTokenRef.current!==myToken)return;
+      setWLabel('[4] applying notes…');
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
       const aName=file.name.replace(/\.[^.]+$/,'');
       setCompositionName(aName);
@@ -3110,7 +3116,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       applyEvents(evts,aName);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
-    }catch(e){if(loadTokenRef.current===myToken){setErr('Audio: '+e.message);setErrInfo(false);}}
+    }catch(e){if(loadTokenRef.current===myToken){setErr('Audio ERR: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
