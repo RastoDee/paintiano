@@ -11120,9 +11120,9 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
     ? ((t && t('proAiBadge')) || 'PRO AI')
     : ((t && t('proBadge')) || 'PRO');
   const isSm = size === 'sm';
-  const color = isAI ? '#dcb4ff' : GOLD;
-  const bg = isAI ? 'rgba(220,150,255,.16)' : 'rgba(201,168,76,.15)';
-  const border = isAI ? 'rgba(220,150,255,.5)' : 'rgba(201,168,76,.45)';
+  const fg = isAI ? '#dcb4ff' : GOLD;
+  const bgCol = isAI ? 'rgba(220,150,255,.16)' : 'rgba(201,168,76,.15)';
+  const borderCol = isAI ? 'rgba(220,150,255,.5)' : 'rgba(201,168,76,.45)';
   return (
     <span style={{
       display: 'inline-block',
@@ -11130,8 +11130,8 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
       padding: isSm ? '1px 5px' : '2px 7px',
       fontSize: (isSm ? .42 : .5) * readScale + 'rem',
       fontWeight: 600, letterSpacing: '.14em',
-      color, background: bg,
-      border: `1px solid ${border}`, borderRadius: 999,
+      color: fg, background: bgCol,
+      border: '1px solid ' + borderCol, borderRadius: 999,
       textTransform: 'uppercase', verticalAlign: 'middle',
       lineHeight: 1.2,
     }}>{label}</span>
