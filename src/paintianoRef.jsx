@@ -15045,9 +15045,41 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const blob=new Blob([buf],{type:file.type||'audio/mpeg'});
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
-      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
-      const audioBuf=await ac.decodeAudioData(buf.slice(0));
-      ac.close();
+      // Wake the context BEFORE decoding. iOS Safari can have ac in 'suspended'
+      // or 'interrupted' state after audio was used elsewhere in the page (e.g.
+      // Tone.js piano samples), and decodeAudioData on a non-running context
+      // never resolves — it just hangs forever. resume() is a no-op outside a
+      // user gesture, but this is reached via a file-picker tap which counts.
+      try{ if(ac.state!=='running') await ac.resume(); }catch(_){}
+      // Decode with a hard timeout. iOS sometimes drops the promise into a
+      // black hole (no resolve, no reject, no error). Also fall back to the
+      // older callback form, which on iOS occasionally succeeds where the
+      // promise form fails for the same buffer.
+      const decodeWithTimeout = (arrBuf) => new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+        const timer = setTimeout(() => finish(reject, new Error('decode timeout (15s) — iOS may have dropped the decode promise; try a different MP3 or convert to .m4a')), 15000);
+        try {
+          // Use callback form (older signature) — iOS Safari honours it and
+          // resolves more reliably than the promise form. This signature
+          // returns undefined on modern browsers (which also call the
+          // success callback), so we don't need to branch.
+          ac.decodeAudioData(arrBuf,
+            (audioBuf) => { clearTimeout(timer); finish(resolve, audioBuf); },
+            (err) => { clearTimeout(timer); finish(reject, err || new Error('decode failed')); }
+          );
+        } catch(e) {
+          // Promise form on browsers that don't accept callbacks
+          ac.decodeAudioData(arrBuf).then(
+            (audioBuf) => { clearTimeout(timer); finish(resolve, audioBuf); },
+            (err)      => { clearTimeout(timer); finish(reject, err || new Error('decode failed')); }
+          );
+        }
+      });
+      const audioBuf = await decodeWithTimeout(buf.slice(0));
+      // Closing the context BEFORE decode completes can race on iOS. Move
+      // close AFTER we have the result.
+      try{ ac.close(); }catch(_){}
       if(loadTokenRef.current!==myToken)return;
       audioPCMRef.current=audioBuf;
       setWLabel('[3] transcribing audio · '+audioBuf.duration.toFixed(1)+'s');
@@ -15812,27 +15844,48 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stopAll,applyEvents,wipeCanvasNow]);
 
   const loadSampleAudio=useCallback(async()=>{
-    setWorking(true);setWLabel('decoding sample audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
+    setWorking(true);setWLabel('[1] preparing sample…');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_AUDIO_B64);
+      setWLabel('[2] decoding audio…');
       const blob=new Blob([arrayBuffer],{type:'audio/mpeg'});
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
-      try{ if(ac.state!=="running") await ac.resume(); }catch(_){}
-      const audioBuf=await ac.decodeAudioData(arrayBuffer.slice(0));
-      ac.close();
+      // See loadAudio for the iOS rationale: wake the context before decode,
+      // wrap decode with timeout + callback fallback, close after we have the
+      // result (early close races on iOS).
+      try{ if(ac.state!=='running') await ac.resume(); }catch(_){}
+      const decodeWithTimeout = (arrBuf) => new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+        const timer = setTimeout(() => finish(reject, new Error('decode timeout (15s) — iOS audio context may be in interrupted state; try reloading the app')), 15000);
+        try {
+          ac.decodeAudioData(arrBuf,
+            (audioBuf) => { clearTimeout(timer); finish(resolve, audioBuf); },
+            (err) => { clearTimeout(timer); finish(reject, err || new Error('decode failed')); }
+          );
+        } catch(e) {
+          ac.decodeAudioData(arrBuf).then(
+            (audioBuf) => { clearTimeout(timer); finish(resolve, audioBuf); },
+            (err)      => { clearTimeout(timer); finish(reject, err || new Error('decode failed')); }
+          );
+        }
+      });
+      const audioBuf = await decodeWithTimeout(arrayBuffer.slice(0));
+      try{ ac.close(); }catch(_){}
       if(loadTokenRef.current!==myToken)return;
       audioPCMRef.current=audioBuf;
-      setWLabel(audioBuf.duration>90?'transcribing sample · this may take a minute':'transcribing sample');
+      setWLabel('[3] transcribing sample · '+audioBuf.duration.toFixed(1)+'s');
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(loadTokenRef.current!==myToken)return;
+      setWLabel('[4] applying notes…');
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
       setAudioBlobAndRef(blob);setAudioName('Liebestraum No.3 — Liszt.mp3');
       applyEvents(evts,SAMPLE_AUDIO_NAME);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
-    }catch(e){if(loadTokenRef.current===myToken){setErr('Sample audio: '+e.message);setErrInfo(false);}}
+    }catch(e){if(loadTokenRef.current===myToken){setErr('Sample ERR: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
