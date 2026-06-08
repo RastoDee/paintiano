@@ -6086,7 +6086,7 @@ Composition rules:
     // applies everywhere; in fullscreen (immersive) it also applies once the
     // piece has FINISHED and is sitting still — so the canvas can be admired as
     // a clean artwork. A tap / pointer move calls wakeControls again to reveal.
-    if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 2500); }
+    if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 4000); }
   },[playing,immersive]);
   // When playback stops, reveal controls. Outside fullscreen they then stay put;
   // in fullscreen we re-arm the idle countdown so a finished, still piece also
@@ -6596,8 +6596,8 @@ Composition rules:
           <span>{loadedSource==='image' ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : (t('colorLabel') + ' · ' + t('styleLabel'))}</span>
           <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
         </button>
-        {!stripOpen && loadedSource!=='image' && style && STYLE_INSPIRED[style] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
+        {!stripOpen && loadedSource!=='image' && effectiveStyle && effectiveStyle!=='notes' && STYLE_INSPIRED[effectiveStyle] && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style?'🎲 ':''}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
         )}
         {/* Styles without an artist — mosaic (no style selected) and notes — get
             no "inspired by". Show the active colour mode • the style name so the
@@ -7246,7 +7246,7 @@ Composition rules:
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
-                <button onClick={(e)=>{ e.stopPropagation(); advanceVariation(); }} className="pf-lift" aria-label="next painting"
+                <button onClick={(e)=>{ e.stopPropagation(); advanceVariation(); wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   {t('nextPainting')||'next'} ›
                 </button>
@@ -7852,7 +7852,7 @@ Composition rules:
           // includes `playing`, which would wrongly disable Next during Play.
           const canRoll = !anim && !working && !demoReelOn && !recording;
           return (
-            <button className="pf-lift" onClick={()=>{ if(canRoll) advanceVariation(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:canRoll?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+(canRoll?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
+            <button className="pf-lift" onClick={()=>{ if(canRoll) advanceVariation(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
@@ -7869,7 +7869,7 @@ Composition rules:
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
               title={exportReady?t('save'):t('exportNeedsPlay')}
-              style={{padding:'8px 14px',background:'transparent',color:exportReady?'rgba(201,168,76,.85)':'rgba(201,168,76,.28)',border:'1px solid '+(exportReady?'rgba(201,168,76,.4)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
+              style={{padding:'8px 14px',background:exportReady?'rgba(255,200,120,.18)':'transparent',color:exportReady?'#ffd07a':'rgba(201,168,76,.28)',border:'1px solid '+(exportReady?'rgba(255,200,120,.55)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',transition:'all .18s'}}>
               ↓ {t('save')}
             </button>
           );
