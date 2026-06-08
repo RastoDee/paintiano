@@ -299,17 +299,45 @@ function applyWatermark(canvas, isPro) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return canvas;
     const w = canvas.width, h = canvas.height;
-    const fontPx = Math.max(12, Math.round(h * 0.018));
-    const pad = Math.round(h * 0.025);
+    // Diagonal repeating watermark — like stock-photo previews. The mark sits
+    // on top of the painting at low opacity and at a 30° angle, repeated in a
+    // grid so cropping any region still carries the brand. Font size scales
+    // with canvas height so it stays readable from a small Story (1080×1920)
+    // up to a huge A1 print (~7000+ px). Two ink passes: a soft dark stroke
+    // for legibility on light areas, then a brighter fill for dark areas.
+    const text = 'paintiano.app';
+    const fontPx = Math.max(28, Math.round(h * 0.038));
+    const stepX = Math.round(fontPx * 12);   // horizontal spacing between marks
+    const stepY = Math.round(fontPx * 6);    // vertical spacing between rows
+    const angle = -Math.PI / 6;              // -30°
     ctx.save();
-    ctx.globalAlpha = 0.42;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '500 ' + fontPx + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
-    ctx.textBaseline = 'bottom';
-    ctx.textAlign = 'right';
-    ctx.shadowColor = 'rgba(0,0,0,0.45)';
-    ctx.shadowBlur = 2;
-    ctx.fillText('paintiano.app', w - pad, h - pad);
+    ctx.translate(w / 2, h / 2);
+    ctx.rotate(angle);
+    ctx.font = '600 ' + fontPx + 'px "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    // Diagonal of rotated canvas needs to cover the original — use the
+    // diagonal length so the grid extends past every corner.
+    const diag = Math.ceil(Math.sqrt(w * w + h * h));
+    const cols = Math.ceil(diag / stepX) + 2;
+    const rows = Math.ceil(diag / stepY) + 2;
+    for (let r = -Math.floor(rows / 2); r <= Math.ceil(rows / 2); r++) {
+      // Offset every other row by half a step so the grid feels organic.
+      const offset = (r % 2 === 0) ? 0 : stepX / 2;
+      for (let c = -Math.floor(cols / 2); c <= Math.ceil(cols / 2); c++) {
+        const x = c * stepX + offset;
+        const y = r * stepY;
+        // Dark stroke first → readable on bright areas
+        ctx.globalAlpha = 0.22;
+        ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.08));
+        ctx.strokeStyle = 'rgba(0,0,0,1)';
+        ctx.strokeText(text, x, y);
+        // Light fill on top → readable on dark areas
+        ctx.globalAlpha = 0.32;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(text, x, y);
+      }
+    }
     ctx.restore();
   } catch (_) {}
   return canvas;

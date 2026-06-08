@@ -7916,6 +7916,7 @@ const I18N = {
     proRecommended:'Recommended',
     aiLockedHint:'AI is part of Paintiano Pro AI',
     moodChooseBelow:'Choose a mood from the list below',
+    moodPickFromList:'Pick a mood from the list — custom moods are Pro AI',
     proValue1:'Unlimited AI compositions',
     proValue1Sub:'Generate as many paintings as you wish',
     proValue2:'Export without watermark',
@@ -11062,17 +11063,45 @@ function applyWatermark(canvas, isPro) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return canvas;
     const w = canvas.width, h = canvas.height;
-    const fontPx = Math.max(12, Math.round(h * 0.018));
-    const pad = Math.round(h * 0.025);
+    // Diagonal repeating watermark — like stock-photo previews. The mark sits
+    // on top of the painting at low opacity and at a 30° angle, repeated in a
+    // grid so cropping any region still carries the brand. Font size scales
+    // with canvas height so it stays readable from a small Story (1080×1920)
+    // up to a huge A1 print (~7000+ px). Two ink passes: a soft dark stroke
+    // for legibility on light areas, then a brighter fill for dark areas.
+    const text = 'paintiano.app';
+    const fontPx = Math.max(28, Math.round(h * 0.038));
+    const stepX = Math.round(fontPx * 12);   // horizontal spacing between marks
+    const stepY = Math.round(fontPx * 6);    // vertical spacing between rows
+    const angle = -Math.PI / 6;              // -30°
     ctx.save();
-    ctx.globalAlpha = 0.42;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '500 ' + fontPx + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
-    ctx.textBaseline = 'bottom';
-    ctx.textAlign = 'right';
-    ctx.shadowColor = 'rgba(0,0,0,0.45)';
-    ctx.shadowBlur = 2;
-    ctx.fillText('paintiano.app', w - pad, h - pad);
+    ctx.translate(w / 2, h / 2);
+    ctx.rotate(angle);
+    ctx.font = '600 ' + fontPx + 'px "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    // Diagonal of rotated canvas needs to cover the original — use the
+    // diagonal length so the grid extends past every corner.
+    const diag = Math.ceil(Math.sqrt(w * w + h * h));
+    const cols = Math.ceil(diag / stepX) + 2;
+    const rows = Math.ceil(diag / stepY) + 2;
+    for (let r = -Math.floor(rows / 2); r <= Math.ceil(rows / 2); r++) {
+      // Offset every other row by half a step so the grid feels organic.
+      const offset = (r % 2 === 0) ? 0 : stepX / 2;
+      for (let c = -Math.floor(cols / 2); c <= Math.ceil(cols / 2); c++) {
+        const x = c * stepX + offset;
+        const y = r * stepY;
+        // Dark stroke first → readable on bright areas
+        ctx.globalAlpha = 0.22;
+        ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.08));
+        ctx.strokeStyle = 'rgba(0,0,0,1)';
+        ctx.strokeText(text, x, y);
+        // Light fill on top → readable on dark areas
+        ctx.globalAlpha = 0.32;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(text, x, y);
+      }
+    }
     ctx.restore();
   } catch (_) {}
   return canvas;
@@ -19381,13 +19410,57 @@ Composition rules:
         <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'20px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase',flexShrink:0}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
-            {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null); setMoodFromImg(false); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); setCompositionName(''); setRecordingName(''); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
+            {(()=>{
+              // For Free + aiLocked the input stays fully editable (so the
+              // autocomplete is useful) but the submit path is restricted to
+              // EXACT preset matches — the AI fallback (aiMoodFromText) is
+              // gated. If what the user typed doesn't resolve to a preset
+              // mood, the → button is disabled and Enter is a no-op.
+              const _normMood=(s)=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+              const _resolveMood=(txt)=>{
+                const q=_normMood(txt); if(!q) return null;
+                // Match either the internal key or the localized display name.
+                const names=t('moodNames')||{};
+                for(const m of MOODS){
+                  if(_normMood(m)===q) return m;
+                  if(_normMood(names[m]||'')===q) return m;
+                }
+                return null;
+              };
+              const submitFree=(txt)=>{
+                const m=_resolveMood(txt); if(!m) return;
+                setShowMoodMenu(false);
+                const s=findSong(m);
+                setStructureSeedLock(null); setForceSetup(false); setCurrentMood(m);
+                setVarySource(s); setImgMoodThumb(null); setMoodFromImg(false);
+                setLoadedSource(null); setMoodContext(true); setSongQ(m);
+                stopAll(); aiMidi(m);
+                if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
+                setMoodHint(false); setMoodEdit('');
+              };
+              const submit=(txt)=>{
+                if(aiLocked){ submitFree(txt); return; }
+                const v=(txt||'').trim(); if(!v)return;
+                setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null);
+                setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null);
+                setMoodFromImg(false); setVarySource(null); setLoadedSource(null);
+                setMoodContext(true); setSongQ(v); setCompositionName('');
+                setRecordingName(''); stopAll(); aiMoodFromText(v);
+                if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
+                setMoodHint(false);
+              };
+              // Submit-eligible? For Pro/Pro AI: any non-empty text. For Free
+              // aiLocked: only if the text resolves to a preset mood.
+              const canSubmit = aiLocked
+                ? (_resolveMood(moodEdit) !== null)
+                : !!moodEdit.trim();
+              return (
               <div style={{display:'flex',gap:6,marginBottom:12,flexShrink:0}}>
                 <div style={{flex:1,minWidth:0,position:'relative'}}>
-                  <input value={moodEdit} onChange={e=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } setMoodEdit(e.target.value); }} placeholder="" autoFocus={!aiLocked} readOnly={aiLocked} onFocus={aiLocked?(e)=>{ e.target.blur(); setPaywallReason('ai_trial'); }:undefined} onKeyDown={e=>{ if(aiLocked){ e.preventDefault(); setPaywallReason('ai_trial'); return; } if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:aiLocked?'rgba(0,0,0,.15)':'rgba(0,0,0,.25)',border:'1px solid '+(aiLocked?'rgba(201,168,76,.18)':'rgba(201,168,76,.3)'),borderRadius:8,padding:'11px 12px',color:aiLocked?'rgba(242,238,232,.5)':PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none',cursor:aiLocked?'pointer':'text'}} />
-                  {/* Marquee placeholder for trial-active users; for aiLocked,
-                      replaced by a fixed instruction text + PRO badge inside the
-                      input area (no marquee, no autocomplete). */}
+                  <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder="" autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); if(canSubmit) submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
+                  {/* Empty-state placeholder: for trial-active users a marquee
+                      of examples; for aiLocked an instruction + PRO AI badge
+                      since free-typing won't reach the AI. */}
                   {!moodEdit && !aiLocked && (()=>{
                     const ex=t('moodExamples');
                     const items=Array.isArray(ex)&&ex.length?ex:[t('moodPlaceholder')];
@@ -19408,25 +19481,31 @@ Composition rules:
                     </div>
                   )}
                 </div>
-                <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } submit(moodEdit); }} disabled={!aiLocked && !moodEdit.trim()} aria-label={t('moodGo')} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:(aiLocked||moodEdit.trim())?'pointer':'default',background:aiLocked?'rgba(201,168,76,.12)':(moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)'),color:aiLocked?'rgba(201,168,76,.5)':(moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)'),fontSize:'1rem',fontWeight:700}}>→</button>
+                <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={aiLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
               </div>
             ); })()}
-            {/* Suggestions grid — autocomplete-filtered moods while typing. For
-                Free+aiLocked, the input is read-only so we show the full MOODS
-                list directly (alphabetical), giving the user something concrete
-                to choose without an AI call. Clicking a preset is free (no AI). */}
+            {/* Suggestions grid — autocomplete-filtered moods while typing.
+                For Free+aiLocked, when the input is empty we show the full
+                MOODS list alphabetically (so the user has something to pick
+                without typing); once they start typing, normal autocomplete
+                behaviour applies. Clicking any preset is free (no AI). */}
             <div style={{flex:'0 1 auto',minHeight:0,overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
               {(()=>{
-                if(aiLocked){
-                  // Whole list, alphabetised by the localised display name.
-                  return [...MOODS].sort((x,y)=>{
-                    const nx=((t('moodNames')||{})[x]||x).toLowerCase();
-                    const ny=((t('moodNames')||{})[y]||y).toLowerCase();
-                    return nx<ny?-1:nx>ny?1:0;
-                  });
-                }
                 const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-                const q=_n(moodEdit.trim()); if(!q)return [];
+                const q=_n(moodEdit.trim());
+                if(!q){
+                  // Empty input: Free+aiLocked sees the full alphabetised list;
+                  // others see nothing (their marquee placeholder cues "type").
+                  if(aiLocked){
+                    return [...MOODS].sort((x,y)=>{
+                      const nx=((t('moodNames')||{})[x]||x).toLowerCase();
+                      const ny=((t('moodNames')||{})[y]||y).toLowerCase();
+                      return nx<ny?-1:nx>ny?1:0;
+                    });
+                  }
+                  return [];
+                }
+                // Non-empty: starts-with autocomplete for everyone.
                 return MOODS.filter(m=>_n((t('moodNames')||{})[m]||m).startsWith(q));
               })().map(m=>(
                 <button key={m} onClick={()=>{
