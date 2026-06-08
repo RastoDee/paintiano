@@ -7042,29 +7042,58 @@ Composition rules:
               //    Toggles the locked-partner info row beneath the palette:
               //    tap same pair again → row hides; tap a different pair →
               //    row reveals the new partner.
-              //  • Paid: standard cycle (face → other → mosaic/face).
-              //  • Shuffle ON + tapping the ACTIVE artist deselects it →
-              //    returns to full shuffle (random style per Play/Next). This
-              //    overrides the normal flip/cycle paths, since the user has
-              //    clearly already said "I want random" by enabling shuffle.
+              // Tap behaviour:
+              //
+              // FREE (only 'a' side is reachable):
+              //   shuffle OFF:
+              //     tap 1 (not active)   → paint 'a', NO info row
+              //     tap 2 (active)       → open info row "Matisse 🔒"
+              //     tap 3 (info open)    → close info row, 'a' stays active
+              //     tap 4 (info closed)  → reopen info row (cycle 2↔3)
+              //   shuffle ON:
+              //     tap 1 (not active)   → paint 'a' as shuffle-override
+              //     tap 2 (active)       → deselect → full shuffle
+              //     (no info row in shuffle mode)
+              //
+              // PAID (both sides reachable):
+              //   shuffle OFF:
+              //     tap 1 (not active)   → paint face (last pick / 'a')
+              //     tap 2 (active on a)  → flip to b
+              //     tap 3 (active on b)  → flip back to a (2-state)
+              //   shuffle ON:
+              //     tap 1 (not active)   → paint face as shuffle-override
+              //     tap 2 (active on a)  → flip to b (still override)
+              //     tap 3 (active on b)  → deselect → full shuffle
               const onClick = ()=>{
                 if(demoReelOn) return;
-                // Shuffle ON + active artist → deselect to null (full shuffle).
-                // Works for both Free (only 'a' can be active) and Paid.
-                if(randomMode && isOn){
-                  setStyleTo(null);
-                  // For Free, also close the locked-partner info row — the
-                  // active pair is no longer "the one in focus".
-                  if(pairLocked) setExpandedPair(null);
-                  return;
-                }
                 if(pairLocked){
-                  // Free, no random: paint 'a' + toggle info row.
-                  setPairLastPick(p=>({...p,[pairKey]:a}));
-                  setStyleTo(a);
-                  setExpandedPair(prev => prev === pairKey ? null : pairKey);
+                  // ── FREE ──
+                  if(randomMode){
+                    // Shuffle ON: paint↔deselect, no info row.
+                    setExpandedPair(null);
+                    if(!isOn){
+                      setPairLastPick(p=>({...p,[pairKey]:a}));
+                      setStyleTo(a);
+                    } else {
+                      setStyleTo(null);
+                    }
+                    return;
+                  }
+                  // Shuffle OFF: paint → info → close (cycle on the same pair).
+                  if(!isOn){
+                    // Tap 1: just paint 'a', no info row.
+                    setPairLastPick(p=>({...p,[pairKey]:a}));
+                    setStyleTo(a);
+                    setExpandedPair(null);
+                  } else {
+                    // Already active: toggle the info row. Tapping a DIFFERENT
+                    // pair while one is expanded is handled by the !isOn branch
+                    // above (it closes the old row); same-pair taps cycle here.
+                    setExpandedPair(prev => prev === pairKey ? null : pairKey);
+                  }
                   return;
                 }
+                // ── PAID ──
                 if(!isOn){
                   // Not active → select your last pick from this pair (face).
                   setPairLastPick(p=>({...p,[pairKey]:faceKey}));
@@ -7074,17 +7103,24 @@ Composition rules:
                   setPairLastPick(p=>({...p,[pairKey]:b}));
                   setStyleTo(b);
                 } else {
-                  // Active on B with shuffle OFF: flip back to A (2-state).
-                  // (shuffle-ON case is handled by the early-return above.)
-                  setPairLastPick(p=>({...p,[pairKey]:a}));
-                  setStyleTo(a);
+                  // Active on B. Third state depends on shuffle:
+                  //  • shuffle ON  → deselect → full shuffle
+                  //  • shuffle OFF → flip back to A (2-state cycle)
+                  if(randomMode){ setStyleTo(null); }
+                  else { setPairLastPick(p=>({...p,[pairKey]:a})); setStyleTo(a); }
                 }
               };
               const nextHint = pairLocked
-                ? (randomMode && isOn
-                    ? `tap to return to shuffle`
-                    : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`)
-                : (!isOn ? '' : (randomMode ? 'tap for shuffle' : (style===a ? `tap for ${STYLE_LABELS[b]}` : `tap for ${STYLE_LABELS[a]}`)));
+                ? (randomMode
+                    ? (isOn ? 'tap to return to shuffle' : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`)
+                    : (isOn
+                        ? (expandedPair===pairKey ? 'tap to hide info' : 'tap to see partner')
+                        : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`))
+                : (!isOn
+                    ? ''
+                    : (style===a
+                        ? `tap for ${STYLE_LABELS[b]}`
+                        : (randomMode ? 'tap for shuffle' : `tap for ${STYLE_LABELS[a]}`)));
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
