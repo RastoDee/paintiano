@@ -8590,6 +8590,96 @@ Composition rules:
                 </div>
               );
             })}
+            {/* ─── Tier comparison table ────────────────────────────────────
+                Compact 3-column overview (Free / Pro / Pro AI) so the user
+                sees the tier hierarchy at a glance, without opening the
+                paywall. Pro column tinted gold, Pro AI column tinted purple
+                — same accents as the in-app feature badges and paywall, so
+                it reads as the same family. */}
+            <div style={{marginTop:22,paddingTop:18,borderTop:'1px solid rgba(255,255,255,.08)'}}>
+              <div style={{
+                fontFamily:"'Cormorant Garamond',serif",fontWeight:600,
+                fontSize:(1.05*effScale)+'rem',color:'#c9a84c',
+                textAlign:'center',marginBottom:14,letterSpacing:'.02em',
+              }}>{t('tierOverviewTitle')||'Free · Pro · Pro AI'}</div>
+              {(()=>{
+                const GOLD_BG='rgba(201,168,76,.08)';
+                const GOLD_BG_HDR='rgba(201,168,76,.16)';
+                const GOLD_FG='#c9a84c';
+                const PURPLE_BG='rgba(220,150,255,.07)';
+                const PURPLE_BG_HDR='rgba(220,150,255,.14)';
+                const PURPLE_FG='#dcb4ff';
+                const FREE_FG='rgba(242,238,232,.55)';
+                const CELL_TXT='rgba(242,238,232,.85)';
+                const cellSty={
+                  padding:'7px 6px',textAlign:'center',
+                  fontSize:(.7*effScale)+'rem',
+                  borderBottom:'1px solid rgba(255,255,255,.06)',
+                  lineHeight:1.25,
+                };
+                const labelSty=Object.assign({},cellSty,{
+                  textAlign:'left',color:'rgba(242,238,232,.7)',
+                  fontSize:(.68*effScale)+'rem',paddingLeft:2,
+                });
+                const hdrBase={
+                  padding:'8px 4px',textAlign:'center',
+                  fontSize:(.62*effScale)+'rem',fontWeight:700,
+                  letterSpacing:'.1em',textTransform:'uppercase',
+                  borderBottom:'1px solid rgba(255,255,255,.12)',
+                  lineHeight:1.2,
+                };
+                const free=t('tierFreeName')||'Free';
+                const pro=t('tierProName')||'Pro';
+                const proAi=t('tierProAiName')||'Pro AI';
+                const yes=t('tierYes')||'✓';
+                const no=t('tierNo')||'—';
+                const allWord=t('tierAll')||'all';
+                const trial3=t('tier3Trial')||'3× trial';
+                const inf=t('tierUnlimited')||'∞';
+                const ronly=t('tierReadOnly')||'preview only';
+                const rows=[
+                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16'],
+                  [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord],
+                  [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes],
+                  [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes],
+                  [t('tierRowWmark')  ||'Watermark',       yes,     no,         no],
+                  [t('tierRowAiText') ||'AI text moods',   trial3,  trial3,     inf],
+                  [t('tierRowAiImg')  ||'AI image compose',trial3,  trial3,     inf],
+                  [t('tierRowAiAtmo') ||'AI atmosphere',   trial3,  trial3,     inf],
+                ];
+                return (
+                  <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'inherit'}}>
+                    <thead>
+                      <tr>
+                        <th style={Object.assign({},hdrBase,{textAlign:'left',color:'rgba(242,238,232,.6)',paddingLeft:2})}></th>
+                        <th style={Object.assign({},hdrBase,{color:FREE_FG})}>{free}</th>
+                        <th style={Object.assign({},hdrBase,{color:GOLD_FG,background:GOLD_BG_HDR})}>{pro}</th>
+                        <th style={Object.assign({},hdrBase,{color:PURPLE_FG,background:PURPLE_BG_HDR})}>{proAi}</th>
+                      </tr>
+                      <tr>
+                        <th style={Object.assign({},cellSty,{textAlign:'left',color:'rgba(242,238,232,.4)',fontSize:(.6*effScale)+'rem',paddingLeft:2,fontWeight:400,letterSpacing:'.04em'})}></th>
+                        <th style={Object.assign({},cellSty,{color:FREE_FG,fontSize:(.62*effScale)+'rem',fontWeight:500})}>€0</th>
+                        <th style={Object.assign({},cellSty,{color:GOLD_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:GOLD_BG})}>€9.99</th>
+                        <th style={Object.assign({},cellSty,{color:PURPLE_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:PURPLE_BG})}>€19.99</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(([label,f,p,a],i)=>(
+                        <tr key={i}>
+                          <td style={labelSty}>{label}</td>
+                          <td style={Object.assign({},cellSty,{color:FREE_FG})}>{f}</td>
+                          <td style={Object.assign({},cellSty,{color:CELL_TXT,background:GOLD_BG})}>{p}</td>
+                          <td style={Object.assign({},cellSty,{color:CELL_TXT,background:PURPLE_BG})}>{a}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
+              <div style={{textAlign:'center',marginTop:10,fontSize:(.58*effScale)+'rem',color:'rgba(242,238,232,.4)',fontStyle:'italic',letterSpacing:'.04em'}}>
+                {t('tierFootnote')||'One-time payment · Lifetime access'}
+              </div>
+            </div>
           </div>
         </div>
       )}
