@@ -68,6 +68,16 @@ const PRO_CFG = {
   displayPriceProAI: '€19.99',
 };
 
+// Accent colour used to brand AI features across the paywall (Pro AI tier card,
+// PRO AI badge, ✓ checks, price line, CTA). Same hex as the in-app AI accent
+// (AI Compose chip, MFI button, mood-AI text) so the paywall reads as a clear
+// continuation of those features — gold = Pro tier, purple = Pro AI tier.
+const AI_PURPLE = '#dcb4ff';
+const AI_PURPLE_DEEP = 'rgba(220,150,255,1)';
+const AI_PURPLE_BORDER = 'rgba(220,150,255,.5)';
+const AI_PURPLE_GLOW = 'rgba(220,150,255,.25)';
+const AI_PURPLE_BG = 'rgba(220,150,255,.06)';
+
 // ─── license storage helpers ────────────────────────────────────────────────
 function _proReadCache() {
   try {
@@ -469,12 +479,26 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
   };
 
   // Inline tier card renderer — used twice (intro view + about view).
-  // `tierKey` ∈ 'pro' | 'pro_ai'. `recommended` adds the gold ribbon + bright
-  // border. `cta` toggles between gold-filled and outlined button style so the
-  // visual hierarchy reflects which tier the paywall is pushing.
+  // `tierKey` ∈ 'pro' | 'pro_ai'. `recommended` adds the highlight ribbon +
+  // bright border. Pro AI tier uses the purple AI accent throughout (matches
+  // the in-app AI feature colour); Pro stays in the gold brand colour.
   const renderTierCard = (tierKey, recommended) => {
     const isAI = tierKey === 'pro_ai';
-    const cardStyle = recommended ? tierCardHighlight : tierCard;
+    // Per-tier accent palette — applied to border highlight, glow, check
+    // marks, price line, RECOMMENDED ribbon, and the CTA button. Pro = gold;
+    // Pro AI = purple (in-app AI accent).
+    const accent       = isAI ? AI_PURPLE        : GOLD;
+    const accentBorder = isAI ? AI_PURPLE_BORDER : 'rgba(201,168,76,.45)';
+    const accentGlow   = isAI ? AI_PURPLE_GLOW   : 'rgba(201,168,76,.25)';
+    const accentBg     = isAI ? AI_PURPLE_BG     : 'rgba(201,168,76,.05)';
+    const accentDim    = isAI ? 'rgba(220,150,255,.25)' : 'rgba(201,168,76,.25)';
+    const cardStyle = recommended
+      ? Object.assign({}, tierCard, {
+          border: `1px solid ${accent}`,
+          background: accentBg,
+          boxShadow: `0 0 0 1px ${accentGlow}, 0 6px 22px ${accentGlow}`,
+        })
+      : Object.assign({}, tierCard, { border: `1px solid ${accentDim}` });
     const title = isAI
       ? tr('proAiTierTitle', 'Paintiano Pro AI')
       : tr('proTierTitle', 'Paintiano Pro');
@@ -493,24 +517,34 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
       ['proValueDpi',     '300 DPI exports, no watermark'],
       ['proValueLife',    'Lifetime access'],
     ];
-    const btnStyle = recommended ? btnGold : btnGoldOutline;
+    // Tier-coloured button styles. Recommended = filled (primary CTA);
+    // non-recommended = outline (secondary).
+    const ctaBtn = recommended
+      ? { width: '100%', background: accent, color: '#0a0a12', border: 'none',
+          padding: '11px 12px', borderRadius: 5, fontSize: (.7*readScale)+'rem',
+          fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase',
+          cursor: 'pointer', fontFamily: 'inherit', marginBottom: 0 }
+      : { width: '100%', background: 'transparent', color: accent,
+          border: `1px solid ${accent}`, padding: '10px 12px', borderRadius: 5,
+          fontSize: (.66*readScale)+'rem', fontWeight: 600, letterSpacing: '.08em',
+          textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'inherit',
+          marginBottom: 0 };
     return (
       <div style={cardStyle}>
         {recommended && (
-          <span style={recommendedBadge}>{tr('proRecommended', 'Recommended')}</span>
+          <span style={Object.assign({}, recommendedBadge, { background: accent })}>{tr('proRecommended', 'Recommended')}</span>
         )}
         <p style={tierTitle}>{title}</p>
-        <p style={tierPrice}>{priceLine}</p>
+        <p style={Object.assign({}, tierPrice, { color: accent })}>{priceLine}</p>
         <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px' }}>
           {values.map(([k, fb], i) => (
             <li key={i} style={tierValueRow}>
-              <span style={tierCheck}>✓</span>
+              <span style={Object.assign({}, tierCheck, { color: accent })}>✓</span>
               <span>{tr(k, fb)}</span>
             </li>
           ))}
         </ul>
-        <button style={Object.assign({}, btnStyle, { marginBottom: 0 })}
-                onClick={() => openCheckout(tierKey)}>
+        <button style={ctaBtn} onClick={() => openCheckout(tierKey)}>
           {isAI
             ? tr('proAiGetCta', 'Get Pro AI')
             : tr('proGetCta', 'Get Pro')}

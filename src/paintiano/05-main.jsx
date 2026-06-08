@@ -6467,7 +6467,7 @@ Composition rules:
 
           {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
           <div style={{marginBottom:14}}>
-            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.55)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:aiLocked?.7:(!aiUsable?.5:1),position:'relative'}}>
+            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
               <span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
               {imgAiBusy?'…':(t('imgMood')||'mood from image')}
               {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
@@ -6830,7 +6830,7 @@ Composition rules:
                   only meaningful for SCAN, so it's hidden in AI COMPOSE. */}
               <div style={{display:'flex',gap:6}}>
                 <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'none'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
-                <button onClick={()=>{ if(busy||working) return; if(aiLocked){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('compose'); } }} disabled={busy||working} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:aiLocked?'rgba(225,175,255,.4)':(imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)'),boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'none',opacity:aiLocked?.7:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4}}>
+                <button onClick={()=>{ if(busy||working) return; if(aiLocked){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('compose'); } }} disabled={busy||working} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:aiLocked?'rgba(225,175,255,.7)':(imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)'),boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'none',opacity:aiLocked?.85:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4}}>
                   <span>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')}</span>
                   {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
                 </button>
@@ -7937,18 +7937,20 @@ Composition rules:
                 const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
                 const q=_n(moodEdit.trim());
                 if(!q){
-                  // Empty input: Free+aiLocked sees the full alphabetised list;
-                  // others see nothing (their marquee placeholder cues "type").
+                  // Empty input: Free+aiLocked sees a short SAMPLE of moods
+                  // (6 popular ones) so the cancel button stays in the viewport
+                  // on small screens. Typing reveals normal autocomplete over
+                  // the full MOODS list. Others see nothing (their marquee
+                  // placeholder cues "type").
                   if(aiLocked){
-                    return [...MOODS].sort((x,y)=>{
-                      const nx=((t('moodNames')||{})[x]||x).toLowerCase();
-                      const ny=((t('moodNames')||{})[y]||y).toLowerCase();
-                      return nx<ny?-1:nx>ny?1:0;
-                    });
+                    const SAMPLE=['joyful','calm','melancholic','mysterious','romantic','epic'];
+                    return SAMPLE.filter(m=>MOODS.includes(m));
                   }
                   return [];
                 }
-                // Non-empty: starts-with autocomplete for everyone.
+                // Non-empty: starts-with autocomplete for everyone (works
+                // across the full MOODS list, including for aiLocked users —
+                // they can type to find any mood, then tap to play the preset).
                 return MOODS.filter(m=>_n((t('moodNames')||{})[m]||m).startsWith(q));
               })().map(m=>(
                 <button key={m} onClick={()=>{
@@ -7973,6 +7975,11 @@ Composition rules:
                 </button>
               ))}
             </div>
+            {aiLocked && !moodEdit.trim() && (
+              <div style={{textAlign:'center',marginTop:6,marginBottom:8,fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',color:'rgba(207,197,168,.45)',fontStyle:'italic',flexShrink:0}}>
+                {t('moodTypeToSearch')||'Type to search any of 95 moods…'}
+              </div>
+            )}
             {/* Recently AI generated — separate "what you made before" section,
                 always at the bottom regardless of typing state. Click replays the
                 piece for free, no AI call. */}
@@ -8174,7 +8181,7 @@ Composition rules:
           );
         })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
-          <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(aiLocked&&!atmoMood)||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:(aiLocked&&!atmoMood)?'rgba(180,205,245,.75)':(atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)'),border:'1px solid rgba(120,180,255,'+((aiLocked&&!atmoMood)?'.4':(atmoOn?'.55':'.3'))+')',borderRadius:22,cursor:(atmoBusy||(aiLocked&&!atmoMood)||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(aiLocked&&!atmoMood)?.95:((!atmoMood&&!aiUsable)?.5:1),transition:'all .18s',display:'inline-flex',alignItems:'center',gap:4}}>
+          <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:(aiLocked&&!atmoMood)?'rgba(180,205,245,.75)':(atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)'),border:'1px solid rgba(120,180,255,'+((aiLocked&&!atmoMood)?'.4':(atmoOn?'.55':'.3'))+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(aiLocked&&!atmoMood)?.95:((!atmoMood&&!aiUsable)?.5:1),transition:'all .18s',display:'inline-flex',alignItems:'center',gap:4}}>
             <span>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(aiLocked&&!atmoMood)?'—':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</span>
             {aiLocked && !atmoMood && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>

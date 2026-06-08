@@ -88,6 +88,7 @@ const I18N = {
     aiLockedHint:'AI is part of Paintiano Pro AI',
     moodChooseBelow:'Choose a mood from the list below',
     moodPickFromList:'Pick a mood from the list — custom moods are Pro AI',
+    moodTypeToSearch:'Type to search any of 95 moods…',
     proValue1:'Unlimited AI compositions',
     proValue1Sub:'Generate as many paintings as you wish',
     proValue2:'Export without watermark',
