@@ -3263,6 +3263,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       return next;
     });
   },[]);
+  // Keep the active AI-compose recent entry's saved style in sync with the
+  // user's CURRENT pick. Without this, recalling (or jumping away and back to)
+  // an AI piece would snap the style back to whatever was generated, discarding
+  // a manual change (e.g. AI made Francis, user switched to Pollock → recall
+  // must restore Pollock, not Francis). Matches by the active mood title.
+  useEffect(()=>{
+    if(!currentMood || composeSource!=='ai') return;
+    setAiComposeRecent(prev=>{
+      const idx=prev.findIndex(p=>p.title===currentMood);
+      if(idx<0 || prev[idx].style===(style||null)) return prev;
+      const next=prev.slice();
+      next[idx]={ ...prev[idx], style: style||null };
+      try{ localStorage.setItem(AI_COMPOSE_RECENT_KEY, JSON.stringify(next)); }catch(_){}
+      return next;
+    });
+  },[style,currentMood,composeSource]);
   // Replay a recent AI compose — rebuild the painting, no AI call. Free for all
   // users (exhausted free trial doesn't block replay; only new generation does).
   const _aiComposeRecall=useCallback((entry)=>{
