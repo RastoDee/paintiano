@@ -11452,13 +11452,14 @@ function applyWatermark(canvas, isPro) {
       for (let c = -Math.floor(cols / 2); c <= Math.ceil(cols / 2); c++) {
         const x = c * stepX + offset;
         const y = r * stepY;
-        // Dark stroke first → readable on bright areas
-        ctx.globalAlpha = 0.34;
-        ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.09));
+        // Dark stroke first → readable on bright areas. Subtle: visible if
+        // you look for it, but doesn't dominate the artwork.
+        ctx.globalAlpha = 0.14;
+        ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.07));
         ctx.strokeStyle = 'rgba(0,0,0,1)';
         ctx.strokeText(text, x, y);
         // Light fill on top → readable on dark areas
-        ctx.globalAlpha = 0.50;
+        ctx.globalAlpha = 0.22;
         ctx.fillStyle = '#ffffff';
         ctx.fillText(text, x, y);
       }
