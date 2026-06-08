@@ -18217,7 +18217,10 @@ Composition rules:
                 if(demoReelOn) return;
                 if(!isOn){ setPairLastPick(p=>({...p,[pairKey]:faceKey})); setStyleTo(faceKey); }
                 else if(style===faceKey){ setPairLastPick(p=>({...p,[pairKey]:otherKey})); setStyleTo(otherKey); }
-                else { setStyleTo(randomMode ? faceKey : null); }
+                // Third tap → deselect to Mosaic/null. In shuffle this hands the
+                // painting back to the generated artist (the intended "back to
+                // shuffle" step); outside shuffle it's plain Mosaic.
+                else { setStyleTo(null); }
               };
               const nextHint = !isOn ? '' : (style===faceKey ? `tap for ${STYLE_LABELS[otherKey]}` : 'tap for Mosaic');
               return (
