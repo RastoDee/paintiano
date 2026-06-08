@@ -7094,22 +7094,37 @@ Composition rules:
                   return;
                 }
                 // ── PAID ──
+                // ── PAID ──
+                // Three-state cycle, anchored on faceKey (= the side the user
+                // most recently SETTLED on for this pair, captured at the
+                // moment they deselect):
+                //   tap 1 — not active            → paint faceKey
+                //   tap 2 — active on faceKey     → flip to the other side
+                //                                   (faceKey unchanged so we
+                //                                   can still detect tap 3)
+                //   tap 3 — active on the other   → shuffle ON: capture
+                //                                   `other` as the new face,
+                //                                   then deselect → shuffle
+                //                                   shuffle OFF: flip back
+                // After a deselect, the NEXT tap 1 re-enters at the captured
+                // side, so Picasso→Matisse→deselect→tap = Matisse.
                 if(!isOn){
-                  // Not active → select your last pick from this pair (face).
-                  setPairLastPick(p=>({...p,[pairKey]:faceKey}));
                   setStyleTo(faceKey);
-                } else if(style===a){
-                  // Active on A → flip to B (remember B as the new face).
-                  setPairLastPick(p=>({...p,[pairKey]:b}));
-                  setStyleTo(b);
+                } else if(style===faceKey){
+                  const other = (faceKey===a) ? b : a;
+                  setStyleTo(other);
                 } else {
-                  // Active on B. Third state depends on shuffle:
-                  //  • shuffle ON  → deselect → full shuffle
-                  //  • shuffle OFF → flip back to A (2-state cycle)
-                  if(randomMode){ setStyleTo(null); }
-                  else { setPairLastPick(p=>({...p,[pairKey]:a})); setStyleTo(a); }
+                  // style is the OTHER side (tap 3).
+                  if(randomMode){
+                    // Remember the side we just left as the new face.
+                    setPairLastPick(p=>({...p,[pairKey]:style}));
+                    setStyleTo(null);
+                  } else {
+                    setStyleTo(faceKey);
+                  }
                 }
               };
+              const _otherKey = (faceKey===a) ? b : a;
               const nextHint = pairLocked
                 ? (randomMode
                     ? (isOn ? 'tap to return to shuffle' : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`)
@@ -7118,9 +7133,9 @@ Composition rules:
                         : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`))
                 : (!isOn
                     ? ''
-                    : (style===a
-                        ? `tap for ${STYLE_LABELS[b]}`
-                        : (randomMode ? 'tap for shuffle' : `tap for ${STYLE_LABELS[a]}`)));
+                    : (style===faceKey
+                        ? `tap for ${STYLE_LABELS[_otherKey]}`
+                        : (randomMode ? 'tap for shuffle' : `tap for ${STYLE_LABELS[faceKey]}`)));
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
