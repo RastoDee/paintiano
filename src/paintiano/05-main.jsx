@@ -595,6 +595,25 @@ export default function Paintiano() {
   const [STYLE_PAIRS] = useState(() =>
     BASE_STYLE_PAIRS.map(([a,b]) => (Math.random() < 0.5 ? [a,b] : [b,a]))
   );
+  // ─── Tier-aware artist pairs (D2, Jun 2026) ───────────────────────────────
+  // Free tier sees a FIXED set of 8 artists (the 'a' side of every BASE pair),
+  // identical for every Free user — so the "unlock 8 more" sales pitch is
+  // predictable and consistent. Paid tiers (Pro / Pro AI) get the session-
+  // shuffled STYLE_PAIRS where face position rotates randomly per app open.
+  // We also derive the locked set so the gate logic below knows which keys are
+  // behind the paywall.
+  const FREE_PAIRS = BASE_STYLE_PAIRS; // [a,b] kept in BASE order; only 'a' is reachable for free
+  const FREE_UNLOCKED_KEYS = useMemo(
+    () => new Set(BASE_STYLE_PAIRS.map(([a]) => a)),
+    []
+  );
+  const effectivePairs = (proStatus === 'free') ? FREE_PAIRS : STYLE_PAIRS;
+  // For Free: tapping a pair must NEVER select the b side. styleIsLocked tells
+  // the gate to open the paywall instead of swapping styles.
+  const styleIsLocked = useCallback((key) => {
+    if (proStatus !== 'free') return false;
+    return !FREE_UNLOCKED_KEYS.has(key);
+  }, [proStatus, FREE_UNLOCKED_KEYS]);
   // Remembers, per pair, which member the user last selected. So when a pair's
   // button is not currently active (you picked a DIFFERENT artist), tapping it
   // returns to YOUR last choice from that pair — not always the default 'a'.
@@ -851,7 +870,14 @@ export default function Paintiano() {
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
+  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
+  // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
+  // shuffle across all 16. Keeps the random feature usable for Free without ever
+  // accidentally landing on a locked artist (which would just paint a Pro-only
+  // style without a clear way to dismiss it).
+  const SHUFFLE_POOL = (proStatus === 'free')
+    ? SHUFFLE_POOL_ALL.filter(k => FREE_UNLOCKED_KEYS.has(k))
+    : SHUFFLE_POOL_ALL;
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
     // Mix the seed a little more so the style pick isn't correlated with the
@@ -859,7 +885,7 @@ export default function Paintiano() {
     let h = (pollockSessionSeed>>>0);
     h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
     return SHUFFLE_POOL[(h>>>0) % SHUFFLE_POOL.length];
-  }, [style, randomMode, pollockSessionSeed]);
+  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
   // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
   // it only needs note MIDI + the colour fn, which every source provides.
@@ -6880,7 +6906,13 @@ Composition rules:
             {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
             <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
             ); })()}
-            {STYLE_PAIRS.map(([a,b])=>{
+            {effectivePairs.map(([a,b])=>{
+              // Free tier: only the 'a' side is reachable; the 'b' side is locked
+              // behind the paywall. We force the face to 'a' regardless of any
+              // pairLastPick history, so a returning Free user never sees a
+              // locked artist's name on the button. Paid tiers keep the normal
+              // "remember last pick" behavior.
+              const pairLocked = (proStatus === 'free');
               // Which of the pair is active? Determines label + next target.
               const activeKey = style===a ? a : (style===b ? b : null);
               const isOn = activeKey!==null;
@@ -6889,8 +6921,10 @@ Composition rules:
               // from this pair, falling back to the default 'a'. This is what a
               // tap selects, and what the label shows when idle — so your last
               // choice (e.g. Pollock) isn't forgotten when you pick another
-              // artist and come back.
-              const faceKey = (pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a;
+              // artist and come back. For Free this is forced to 'a'.
+              const faceKey = pairLocked
+                ? a
+                : ((pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a);
               // Shuffle (Random + no manual pick): highlight whichever button
               // holds the style the shuffle landed on, and show THAT style's
               // label so the cycling reads on the buttons themselves.
@@ -6900,7 +6934,10 @@ Composition rules:
               // rather than the technique name. Long names are shortened to a
               // single recognizable word so they fit the narrow 5-up grid cell.
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
-              const _artFull = STYLE_INSPIRED[activeKey || shufKey || faceKey];
+              // For Free, label always shows the unlocked 'a' artist (so the
+              // pair never advertises a locked name even if shuffle picks 'b').
+              const _displayKey = pairLocked ? a : (activeKey || shufKey || faceKey);
+              const _artFull = STYLE_INSPIRED[_displayKey];
               const label = _artistShort[_artFull] || _artFull;
               // Tap behaviour:
               //  • not active → select this pair's face (your last pick / default)
@@ -6908,9 +6945,27 @@ Composition rules:
               //  • active on the other member → deselect to Mosaic (or, in
               //    shuffle, back to the face so the generated artist can't snap
               //    back in and look like your pick was discarded)
-              const otherKey = faceKey===a ? b : a;
+              //  • Free tier: flip attempts open the paywall instead of swapping
+              //    to the locked side; first tap still works for 'a'.
               const onClick = ()=>{
                 if(demoReelOn) return;
+                if(pairLocked){
+                  // Free: first tap selects 'a' (the unlocked face); any tap
+                  // when already on 'a' would normally flip to 'b' — for Free
+                  // that's the paywall trigger.
+                  if(!isOn){
+                    setPairLastPick(p=>({...p,[pairKey]:a}));
+                    setStyleTo(a);
+                  } else if(style===a){
+                    setPaywallReason('settings');
+                  } else {
+                    // Defensive: shouldn't happen (Free can't land on 'b'),
+                    // but if it does, return to 'a' silently.
+                    setPairLastPick(p=>({...p,[pairKey]:a}));
+                    setStyleTo(a);
+                  }
+                  return;
+                }
                 if(!isOn){
                   // Not active → select your last pick from this pair (face).
                   setPairLastPick(p=>({...p,[pairKey]:faceKey}));
@@ -6927,11 +6982,13 @@ Composition rules:
                   else { setPairLastPick(p=>({...p,[pairKey]:a})); setStyleTo(a); }
                 }
               };
-              const nextHint = !isOn ? '' : (style===a ? `tap for ${STYLE_LABELS[b]}` : (randomMode ? 'tap for Mosaic' : `tap for ${STYLE_LABELS[a]}`));
+              const nextHint = pairLocked
+                ? (isOn ? `tap to unlock ${STYLE_LABELS[b]}` : `${STYLE_LABELS[a]} — tap to paint · ${STYLE_LABELS[b]} is Pro`)
+                : (!isOn ? '' : (style===a ? `tap for ${STYLE_LABELS[b]}` : (randomMode ? 'tap for Mosaic' : `tap for ${STYLE_LABELS[a]}`)));
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
-                  title={isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
+                  title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}{pairLocked && <span style={{marginLeft:4,opacity:.7,fontSize:'.8em'}}>🔒</span>}</button>
               );
             })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}

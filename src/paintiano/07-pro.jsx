@@ -383,6 +383,96 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase',
   };
 
+  // ─── Tier card styles (paywall two-tier layout) ──────────────────────────
+  // Each tier renders as a card with title + price + value bullets + CTA.
+  // The "recommended" variant has a brighter gold border + RECOMMENDED ribbon,
+  // used for Pro AI when reason === 'ai_trial' (user just hit the AI wall).
+  const tierCard = {
+    position: 'relative',
+    border: '1px solid rgba(201,168,76,.25)',
+    borderRadius: 8, padding: '18px 16px 14px',
+    background: 'rgba(255,255,255,.02)',
+    marginBottom: 12,
+  };
+  const tierCardHighlight = Object.assign({}, tierCard, {
+    border: `1px solid ${GOLD}`,
+    background: 'rgba(201,168,76,.05)',
+    boxShadow: `0 0 0 1px rgba(201,168,76,.25), 0 6px 22px rgba(201,168,76,.10)`,
+  });
+  const tierTitle = {
+    fontSize: (.85*readScale)+'rem', fontWeight: 600, color: '#f5f5f5',
+    margin: '0 0 2px', letterSpacing: '.02em',
+  };
+  const tierPrice = {
+    fontSize: (.7*readScale)+'rem', color: GOLD, margin: '0 0 12px',
+    letterSpacing: '.04em', fontWeight: 500,
+  };
+  const tierValueRow = {
+    display: 'flex', alignItems: 'flex-start', gap: 8,
+    margin: '0 0 6px', fontSize: (.66*readScale)+'rem', lineHeight: 1.4,
+    color: '#e0e0e0',
+  };
+  const tierCheck = {
+    color: GOLD, fontSize: (.72*readScale)+'rem', flexShrink: 0, marginTop: 1,
+  };
+  const recommendedBadge = {
+    position: 'absolute', top: -10, right: 12,
+    background: GOLD, color: '#0a0a12',
+    fontSize: (.52*readScale)+'rem', fontWeight: 700,
+    letterSpacing: '.12em', padding: '3px 9px',
+    borderRadius: 3, textTransform: 'uppercase',
+  };
+
+  // Inline tier card renderer — used twice (intro view + about view).
+  // `tierKey` ∈ 'pro' | 'pro_ai'. `recommended` adds the gold ribbon + bright
+  // border. `cta` toggles between gold-filled and outlined button style so the
+  // visual hierarchy reflects which tier the paywall is pushing.
+  const renderTierCard = (tierKey, recommended) => {
+    const isAI = tierKey === 'pro_ai';
+    const cardStyle = recommended ? tierCardHighlight : tierCard;
+    const title = isAI
+      ? tr('proAiTierTitle', 'Paintiano Pro AI')
+      : tr('proTierTitle', 'Paintiano Pro');
+    const priceLine = isAI
+      ? tr('proAiTierPrice', '€19.99 · early-bird (then €24.99)')
+      : tr('proTierPrice',   '€9.99 · early-bird (then €14.99)');
+    const values = isAI ? [
+      ['proAiValueAll',   'Everything in Pro, plus:'],
+      ['proAiValueText',  'AI composition from text moods'],
+      ['proAiValueImage', 'AI composition from your images'],
+      ['proAiValueAtmo',  'AI atmospheric tinting'],
+    ] : [
+      ['proValueArtists', '16 artists (free has 8)'],
+      ['proValueTypes',   '6 paint types per artist (free has 2)'],
+      ['proValueDpi',     '300 DPI exports, no watermark'],
+      ['proValueLife',    'Lifetime access'],
+    ];
+    const btnStyle = recommended ? btnGold : btnGoldOutline;
+    return (
+      <div style={cardStyle}>
+        {recommended && (
+          <span style={recommendedBadge}>{tr('proRecommended', 'Recommended')}</span>
+        )}
+        <p style={tierTitle}>{title}</p>
+        <p style={tierPrice}>{priceLine}</p>
+        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px' }}>
+          {values.map(([k, fb], i) => (
+            <li key={i} style={tierValueRow}>
+              <span style={tierCheck}>✓</span>
+              <span>{tr(k, fb)}</span>
+            </li>
+          ))}
+        </ul>
+        <button style={Object.assign({}, btnStyle, { marginBottom: 0 })}
+                onClick={() => openCheckout(tierKey)}>
+          {isAI
+            ? tr('proAiGetCta', 'Get Pro AI')
+            : tr('proGetCta', 'Get Pro')}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
       {view !== 'success' && (
@@ -409,27 +499,11 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <p style={{ fontSize: (.95*readScale)+'rem', fontWeight: 600, textAlign: 'center', margin: '0 0 6px' }}>
               {reason === 'ai_trial'
                 ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
-                : tr('proPaywallTitle', 'This is part of Paintiano Pro')}
+                : tr('proPaywallTitle', 'Unlock the full Paintiano')}
             </p>
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, textAlign: 'center', margin: '0 0 16px', letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
-              {tr('proPaywallSubtitle', 'Unlock everything. Pay once. Keep forever.')}
+              {tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
             </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 18px' }}>
-              {[
-                ['proValue1', 'Unlimited AI compositions', 'proValue1Sub', 'Generate as many paintings as you wish'],
-                ['proValue2', 'Export without watermark', 'proValue2Sub', 'Clean images, ready to share or print'],
-                ['proValue3', 'Lifetime access', 'proValue3Sub', 'One payment, yours forever'],
-                ['proValue4', 'Support a solo art project', 'proValue4Sub', 'Keep Paintiano independent'],
-              ].map(([k1, fb1, k2, fb2], i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, margin: '0 0 9px', fontSize: (.7*readScale)+'rem', lineHeight: 1.4 }}>
-                  <span style={{ color: GOLD, fontSize: (.75*readScale)+'rem', flexShrink: 0, marginTop: 1 }}>✓</span>
-                  <span>
-                    <span style={{ color: '#f5f5f5', fontWeight: 500 }}>{tr(k1, fb1)}</span>
-                    <span style={{ color: '#8a8a8a', display: 'block', fontSize: (.62*readScale)+'rem', marginTop: 1 }}>{tr(k2, fb2)}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
             {PRO_CFG.checkoutDisabled ? (
               <>
                 <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
@@ -439,32 +513,30 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                   </span>
                 </div>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
-                  {tr('proBackOnlineSoon', 'back online in a few days · early-bird price (€9.99) preserved')}
+                  {tr('proBackOnlineSoon', 'back online in a few days · early-bird prices preserved')}
                 </p>
               </>
             ) : (
               <>
+                {/* Two tier cards, ordered by what brought the user here.
+                    ai_trial → Pro AI on top with "Recommended" ribbon, Pro below.
+                    settings → Pro on top (cheaper, sufficient for most non-AI needs), Pro AI below. */}
                 {reason === 'ai_trial' ? (
                   <>
-                    <button style={btnGold} onClick={() => openCheckout('pro_ai')}>
-                      {tr('proAiPaywallCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
-                    </button>
-                    <button style={btnGoldOutline} onClick={() => openCheckout('pro')}>
-                      {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                    </button>
+                    {renderTierCard('pro_ai', true)}
+                    {renderTierCard('pro', false)}
                   </>
                 ) : (
                   <>
-                    <button style={btnGold} onClick={() => openCheckout('pro')}>
-                      {tr('proPaywallCta', 'Get Paintiano Pro — €9.99 lifetime')}
-                    </button>
-                    <button style={btnGoldOutline} onClick={() => openCheckout('pro_ai')}>
-                      {tr('proAiPaywallCta', 'Get Paintiano Pro AI — €19.99 lifetime')}
-                    </button>
+                    {renderTierCard('pro', false)}
+                    {renderTierCard('pro_ai', false)}
                   </>
                 )}
-                <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
+                <p style={{ color: GOLD, fontSize: (.56*readScale)+'rem', textAlign: 'center', margin: '4px 0 12px', letterSpacing: '.04em', opacity: .75 }}>
                   {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
+                </p>
+                <p style={{ color: '#8a8a8a', fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 14px', fontStyle: 'italic', opacity: .85 }}>
+                  {tr('proSupportLine', 'You\u2019re also keeping a solo art project independent.')}
                 </p>
               </>
             )}
