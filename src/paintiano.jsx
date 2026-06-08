@@ -7920,6 +7920,7 @@ const I18N = {
     moodTypeToSearch:'Type to search any of 95 moods…',
     // Tier comparison table in the ? help popup
     tierOverviewTitle:'Free · Pro · Pro AI',
+    tierIntro:'AI features (the ✦ items above + AI Compose & Atmosphere inside Image) use credits on Free.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -7937,6 +7938,9 @@ const I18N = {
     tierRowAiText:'AI text moods',
     tierRowAiImg:'AI image compose',
     tierRowAiAtmo:'AI atmosphere',
+    tierRowAi:'AI features',
+    tier3Credits:'3 credits',
+    tierAiCreditsNote:'AI text & image compose = 1 credit · Atmosphere = 0.5 credit',
     tierFootnote:'One-time payment · Lifetime access',
     proValue1:'Unlimited AI compositions',
     proValue1Sub:'Generate as many paintings as you wish',
@@ -8065,6 +8069,7 @@ const I18N = {
     moodPickFromList:'Wähle eine Stimmung aus der Liste — eigene Stimmungen sind Pro KI',
     moodTypeToSearch:'Tippe, um aus 95 Stimmungen zu suchen…',
     tierOverviewTitle:'Free · Pro · Pro KI',
+    tierIntro:'KI-Funktionen (die ✦ Elemente oben + KI-Komposition & Atmosphäre in Bild) verbrauchen auf Free Credits.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro KI',
@@ -8082,6 +8087,9 @@ const I18N = {
     tierRowAiText:'KI Text-Stimmungen',
     tierRowAiImg:'KI Bild-Komposition',
     tierRowAiAtmo:'KI Atmosphäre',
+    tierRowAi:'KI-Funktionen',
+    tier3Credits:'3 Credits',
+    tierAiCreditsNote:'KI Text & Bild = 1 Credit · Atmosphäre = 0,5 Credit',
     tierFootnote:'Einmalige Zahlung · Lebenslanger Zugang',
     proValue1:'Unbegrenzte KI-Kompositionen',
     proValue1Sub:'Erstelle so viele Bilder, wie du möchtest',
@@ -8209,6 +8217,7 @@ const I18N = {
     moodPickFromList:'Choisissez dans la liste — les ambiances personnalisées sont Pro IA',
     moodTypeToSearch:'Tapez pour chercher parmi 95 ambiances…',
     tierOverviewTitle:'Free · Pro · Pro IA',
+    tierIntro:'Las funciones IA (los elementos ✦ arriba + IA Compose y Atmósfera en Imagen) usan créditos en Free.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro IA',
@@ -8226,6 +8235,9 @@ const I18N = {
     tierRowAiText:'IA ambiances texte',
     tierRowAiImg:'IA compose image',
     tierRowAiAtmo:'IA atmosphère',
+    tierRowAi:'Fonctions IA',
+    tier3Credits:'3 crédits',
+    tierAiCreditsNote:'IA texte & image = 1 crédit · Atmosphère = 0,5 crédit',
     tierFootnote:'Paiement unique · Accès à vie',
     proValue1:'Compositions IA illimitées',
     proValue1Sub:'Génère autant de peintures que tu veux',
@@ -8353,6 +8365,7 @@ const I18N = {
     moodPickFromList:'Elige de la lista — los moods personalizados son Pro IA',
     moodTypeToSearch:'Escribe para buscar entre 95 moods…',
     tierOverviewTitle:'Free · Pro · Pro IA',
+    tierIntro:'AI funkcie (✦ položky vyššie + AI Compose a Atmosféra v Image) používajú kredity na Free.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro IA',
@@ -8370,6 +8383,9 @@ const I18N = {
     tierRowAiText:'IA mood texto',
     tierRowAiImg:'IA compone imagen',
     tierRowAiAtmo:'IA atmósfera',
+    tierRowAi:'Funciones IA',
+    tier3Credits:'3 créditos',
+    tierAiCreditsNote:'IA texto e imagen = 1 crédito · Atmósfera = 0,5 crédito',
     tierFootnote:'Pago único · Acceso de por vida',
     proValue1:'Composiciones de IA ilimitadas',
     proValue1Sub:'Genera tantas pinturas como quieras',
@@ -8497,6 +8513,7 @@ const I18N = {
     moodPickFromList:'Vyber zo zoznamu — vlastné moody sú Pro AI',
     moodTypeToSearch:'Napíš a vyhľadaj z 95 moodov…',
     tierOverviewTitle:'Free · Pro · Pro AI',
+    tierIntro:'AI 功能（上方 ✦ 项目 + Image 中的 AI Compose 与氛围）在 Free 中使用额度。',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -8514,6 +8531,9 @@ const I18N = {
     tierRowAiText:'AI textový mood',
     tierRowAiImg:'AI obrázok',
     tierRowAiAtmo:'AI atmosféra',
+    tierRowAi:'AI funkcie',
+    tier3Credits:'3 kredity',
+    tierAiCreditsNote:'AI text a obrázok = 1 kredit · Atmosféra = 0,5 kreditu',
     tierFootnote:'Jednorazová platba · Doživotný prístup',
     proValue1:'Neobmedzené AI kompozície',
     proValue1Sub:'Vytváraj toľko malieb, koľko chceš',
@@ -8647,6 +8667,7 @@ const I18N = {
     moodPickFromList:'从列表中选择 — 自定义情绪属于 Pro AI',
     moodTypeToSearch:'输入以搜索 95 种情绪…',
     tierOverviewTitle:'Free · Pro · Pro AI',
+    tierIntro:'AI 功能（上方 ✦ 項目 + Image 中的 AI Compose 與氛圍）在 Free 中使用額度。',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -8664,6 +8685,9 @@ const I18N = {
     tierRowAiText:'AI 文字情绪',
     tierRowAiImg:'AI 图片作曲',
     tierRowAiAtmo:'AI 氛围',
+    tierRowAi:'AI 功能',
+    tier3Credits:'3 个额度',
+    tierAiCreditsNote:'AI 文字与图片 = 1 个额度 · 氛围 = 0.5 个额度',
     tierFootnote:'一次性付款 · 终身访问',
     proValue1:'无限 AI 作曲',
     proValue1Sub:'想画多少幅画都可以',
@@ -8785,6 +8809,7 @@ const I18N = {
     moodPickFromList:'從列表中選擇 — 自訂情緒屬於 Pro AI',
     moodTypeToSearch:'輸入以搜尋 95 種情緒…',
     tierOverviewTitle:'Free · Pro · Pro AI',
+    tierIntro:'Recursos de IA (os ✦ acima + IA Compose e Atmosfera em Imagem) usam créditos no Free.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -8802,6 +8827,9 @@ const I18N = {
     tierRowAiText:'AI 文字情緒',
     tierRowAiImg:'AI 圖片作曲',
     tierRowAiAtmo:'AI 氛圍',
+    tierRowAi:'AI 功能',
+    tier3Credits:'3 個額度',
+    tierAiCreditsNote:'AI 文字與圖片 = 1 個額度 · 氛圍 = 0.5 個額度',
     tierFootnote:'一次性付款 · 終身存取',
     proValue1:'無限 AI 作曲',
     proValue1Sub:'想畫多少幅畫都可以',
@@ -8929,6 +8957,7 @@ const I18N = {
     moodPickFromList:'Escolha da lista — moods personalizados são Pro IA',
     moodTypeToSearch:'Digite para buscar entre 95 moods…',
     tierOverviewTitle:'Free · Pro · Pro IA',
+    tierIntro:'Recursos de IA (os ✦ acima + IA Compose e Atmosfera em Imagem) usam créditos no Free.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro IA',
@@ -8946,6 +8975,9 @@ const I18N = {
     tierRowAiText:'IA mood texto',
     tierRowAiImg:'IA compõe imagem',
     tierRowAiAtmo:'IA atmosfera',
+    tierRowAi:'Recursos de IA',
+    tier3Credits:'3 créditos',
+    tierAiCreditsNote:'IA texto e imagem = 1 crédito · Atmosfera = 0,5 crédito',
     tierFootnote:'Pagamento único · Acesso vitalício',
     proValue1:'Composições de IA ilimitadas',
     proValue1Sub:'Gere quantas pinturas desejar',
@@ -20506,8 +20538,21 @@ Composition rules:
               <div style={{
                 fontFamily:"'Cormorant Garamond',serif",fontWeight:600,
                 fontSize:(1.05*effScale)+'rem',color:'#c9a84c',
-                textAlign:'center',marginBottom:14,letterSpacing:'.02em',
+                textAlign:'center',marginBottom:8,letterSpacing:'.02em',
               }}>{t('tierOverviewTitle')||'Free · Pro · Pro AI'}</div>
+              {/* Intro line ties the abstract "AI features" row in the table
+                  to the concrete help items above (How do you feel?, Mood from
+                  image, AI Compose inside Image, Atmosphere) so the user
+                  understands what "credits" apply to. */}
+              <div style={{
+                textAlign:'center',marginBottom:14,
+                fontSize:(.66*effScale)+'rem',color:'rgba(242,238,232,.6)',
+                lineHeight:1.45,letterSpacing:'.01em',
+                padding:'0 4px',
+              }}>
+                <span style={{color:'#dcb4ff',fontSize:(.72*effScale)+'rem',marginRight:4}}>✦</span>
+                {t('tierIntro')||'AI features (the ✦ items above + AI Compose & Atmosphere inside Image) use credits on Free.'}
+              </div>
               {(()=>{
                 const GOLD_BG='rgba(201,168,76,.08)';
                 const GOLD_BG_HDR='rgba(201,168,76,.16)';
@@ -20544,14 +20589,12 @@ Composition rules:
                 const inf=t('tierUnlimited')||'∞';
                 const ronly=t('tierReadOnly')||'preview only';
                 const rows=[
-                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16'],
-                  [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord],
-                  [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes],
-                  [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes],
-                  [t('tierRowWmark')  ||'Watermark',       yes,     no,         no],
-                  [t('tierRowAiText') ||'AI text moods',   trial3,  trial3,     inf],
-                  [t('tierRowAiImg')  ||'AI image compose',trial3,  trial3,     inf],
-                  [t('tierRowAiAtmo') ||'AI atmosphere',   trial3,  trial3,     inf],
+                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16',  null],
+                  [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord, null],
+                  [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
+                  [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],
+                  [t('tierRowWmark')  ||'Watermark',       yes,     no,         no,    null],
+                  [t('tierRowAi')     ||'AI features',     (t('tier3Credits')||'3 credits'),  (t('tier3Credits')||'3 credits'),  inf, '✦'],
                 ];
                 return (
                   <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'inherit'}}>
@@ -20570,9 +20613,12 @@ Composition rules:
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map(([label,f,p,a],i)=>(
+                      {rows.map(([label,f,p,a,icon],i)=>(
                         <tr key={i}>
-                          <td style={labelSty}>{label}</td>
+                          <td style={labelSty}>
+                            {icon && <span style={{color:'#dcb4ff',marginRight:5}}>{icon}</span>}
+                            {label}
+                          </td>
                           <td style={Object.assign({},cellSty,{color:FREE_FG})}>{f}</td>
                           <td style={Object.assign({},cellSty,{color:CELL_TXT,background:GOLD_BG})}>{p}</td>
                           <td style={Object.assign({},cellSty,{color:CELL_TXT,background:PURPLE_BG})}>{a}</td>
@@ -20582,7 +20628,9 @@ Composition rules:
                   </table>
                 );
               })()}
-              <div style={{textAlign:'center',marginTop:10,fontSize:(.58*effScale)+'rem',color:'rgba(242,238,232,.4)',fontStyle:'italic',letterSpacing:'.04em'}}>
+              <div style={{textAlign:'center',marginTop:10,fontSize:(.58*effScale)+'rem',color:'rgba(242,238,232,.4)',fontStyle:'italic',letterSpacing:'.04em',lineHeight:1.45}}>
+                {t('tierAiCreditsNote')||'AI text & image compose = 1 credit · Atmosphere = 0.5 credit'}
+                <br/>
                 {t('tierFootnote')||'One-time payment · Lifetime access'}
               </div>
             </div>

@@ -8600,8 +8600,21 @@ Composition rules:
               <div style={{
                 fontFamily:"'Cormorant Garamond',serif",fontWeight:600,
                 fontSize:(1.05*effScale)+'rem',color:'#c9a84c',
-                textAlign:'center',marginBottom:14,letterSpacing:'.02em',
+                textAlign:'center',marginBottom:8,letterSpacing:'.02em',
               }}>{t('tierOverviewTitle')||'Free · Pro · Pro AI'}</div>
+              {/* Intro line ties the abstract "AI features" row in the table
+                  to the concrete help items above (How do you feel?, Mood from
+                  image, AI Compose inside Image, Atmosphere) so the user
+                  understands what "credits" apply to. */}
+              <div style={{
+                textAlign:'center',marginBottom:14,
+                fontSize:(.66*effScale)+'rem',color:'rgba(242,238,232,.6)',
+                lineHeight:1.45,letterSpacing:'.01em',
+                padding:'0 4px',
+              }}>
+                <span style={{color:'#dcb4ff',fontSize:(.72*effScale)+'rem',marginRight:4}}>✦</span>
+                {t('tierIntro')||'AI features (the ✦ items above + AI Compose & Atmosphere inside Image) use credits on Free.'}
+              </div>
               {(()=>{
                 const GOLD_BG='rgba(201,168,76,.08)';
                 const GOLD_BG_HDR='rgba(201,168,76,.16)';
@@ -8638,14 +8651,12 @@ Composition rules:
                 const inf=t('tierUnlimited')||'∞';
                 const ronly=t('tierReadOnly')||'preview only';
                 const rows=[
-                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16'],
-                  [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord],
-                  [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes],
-                  [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes],
-                  [t('tierRowWmark')  ||'Watermark',       yes,     no,         no],
-                  [t('tierRowAiText') ||'AI text moods',   trial3,  trial3,     inf],
-                  [t('tierRowAiImg')  ||'AI image compose',trial3,  trial3,     inf],
-                  [t('tierRowAiAtmo') ||'AI atmosphere',   trial3,  trial3,     inf],
+                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16',  null],
+                  [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord, null],
+                  [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
+                  [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],
+                  [t('tierRowWmark')  ||'Watermark',       yes,     no,         no,    null],
+                  [t('tierRowAi')     ||'AI features',     (t('tier3Credits')||'3 credits'),  (t('tier3Credits')||'3 credits'),  inf, '✦'],
                 ];
                 return (
                   <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'inherit'}}>
@@ -8664,9 +8675,12 @@ Composition rules:
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map(([label,f,p,a],i)=>(
+                      {rows.map(([label,f,p,a,icon],i)=>(
                         <tr key={i}>
-                          <td style={labelSty}>{label}</td>
+                          <td style={labelSty}>
+                            {icon && <span style={{color:'#dcb4ff',marginRight:5}}>{icon}</span>}
+                            {label}
+                          </td>
                           <td style={Object.assign({},cellSty,{color:FREE_FG})}>{f}</td>
                           <td style={Object.assign({},cellSty,{color:CELL_TXT,background:GOLD_BG})}>{p}</td>
                           <td style={Object.assign({},cellSty,{color:CELL_TXT,background:PURPLE_BG})}>{a}</td>
@@ -8676,7 +8690,9 @@ Composition rules:
                   </table>
                 );
               })()}
-              <div style={{textAlign:'center',marginTop:10,fontSize:(.58*effScale)+'rem',color:'rgba(242,238,232,.4)',fontStyle:'italic',letterSpacing:'.04em'}}>
+              <div style={{textAlign:'center',marginTop:10,fontSize:(.58*effScale)+'rem',color:'rgba(242,238,232,.4)',fontStyle:'italic',letterSpacing:'.04em',lineHeight:1.45}}>
+                {t('tierAiCreditsNote')||'AI text & image compose = 1 credit · Atmosphere = 0.5 credit'}
+                <br/>
                 {t('tierFootnote')||'One-time payment · Lifetime access'}
               </div>
             </div>

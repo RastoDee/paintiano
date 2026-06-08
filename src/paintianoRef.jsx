@@ -7918,6 +7918,26 @@ const I18N = {
     moodChooseBelow:'Choose a mood from the list below',
     moodPickFromList:'Pick a mood from the list — custom moods are Pro AI',
     moodTypeToSearch:'Type to search any of 95 moods…',
+    // Tier comparison table in the ? help popup
+    tierOverviewTitle:'Free · Pro · Pro AI',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro AI',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'all',
+    tier3Trial:'3× trial',
+    tierUnlimited:'∞',
+    tierReadOnly:'preview only',
+    tierRowArtists:'Artists',
+    tierRowTypes:'Paint types',
+    tierRowPalette:'Custom palette',
+    tierRowDpi:'300 DPI export',
+    tierRowWmark:'Watermark',
+    tierRowAiText:'AI text moods',
+    tierRowAiImg:'AI image compose',
+    tierRowAiAtmo:'AI atmosphere',
+    tierFootnote:'One-time payment · Lifetime access',
     proValue1:'Unlimited AI compositions',
     proValue1Sub:'Generate as many paintings as you wish',
     proValue2:'Export without watermark',
@@ -8044,6 +8064,25 @@ const I18N = {
     moodChooseBelow:'Wähle eine Stimmung aus der Liste unten',
     moodPickFromList:'Wähle eine Stimmung aus der Liste — eigene Stimmungen sind Pro KI',
     moodTypeToSearch:'Tippe, um aus 95 Stimmungen zu suchen…',
+    tierOverviewTitle:'Free · Pro · Pro KI',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro KI',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'alle',
+    tier3Trial:'3× Test',
+    tierUnlimited:'∞',
+    tierReadOnly:'nur Vorschau',
+    tierRowArtists:'Künstler',
+    tierRowTypes:'Mal-Typen',
+    tierRowPalette:'Eigene Palette',
+    tierRowDpi:'300-DPI-Export',
+    tierRowWmark:'Wasserzeichen',
+    tierRowAiText:'KI Text-Stimmungen',
+    tierRowAiImg:'KI Bild-Komposition',
+    tierRowAiAtmo:'KI Atmosphäre',
+    tierFootnote:'Einmalige Zahlung · Lebenslanger Zugang',
     proValue1:'Unbegrenzte KI-Kompositionen',
     proValue1Sub:'Erstelle so viele Bilder, wie du möchtest',
     proValue2:'Export ohne Wasserzeichen',
@@ -8169,6 +8208,25 @@ const I18N = {
     moodChooseBelow:'Choisissez une ambiance dans la liste ci-dessous',
     moodPickFromList:'Choisissez dans la liste — les ambiances personnalisées sont Pro IA',
     moodTypeToSearch:'Tapez pour chercher parmi 95 ambiances…',
+    tierOverviewTitle:'Free · Pro · Pro IA',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro IA',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'tous',
+    tier3Trial:'3 essais',
+    tierUnlimited:'∞',
+    tierReadOnly:'aperçu',
+    tierRowArtists:'Artistes',
+    tierRowTypes:'Types de peinture',
+    tierRowPalette:'Palette perso.',
+    tierRowDpi:'Export 300 DPI',
+    tierRowWmark:'Filigrane',
+    tierRowAiText:'IA ambiances texte',
+    tierRowAiImg:'IA compose image',
+    tierRowAiAtmo:'IA atmosphère',
+    tierFootnote:'Paiement unique · Accès à vie',
     proValue1:'Compositions IA illimitées',
     proValue1Sub:'Génère autant de peintures que tu veux',
     proValue2:'Export sans filigrane',
@@ -8294,6 +8352,25 @@ const I18N = {
     moodChooseBelow:'Elige un mood de la lista de abajo',
     moodPickFromList:'Elige de la lista — los moods personalizados son Pro IA',
     moodTypeToSearch:'Escribe para buscar entre 95 moods…',
+    tierOverviewTitle:'Free · Pro · Pro IA',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro IA',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'todos',
+    tier3Trial:'3 pruebas',
+    tierUnlimited:'∞',
+    tierReadOnly:'solo vista',
+    tierRowArtists:'Artistas',
+    tierRowTypes:'Tipos de pintura',
+    tierRowPalette:'Paleta person.',
+    tierRowDpi:'Export 300 DPI',
+    tierRowWmark:'Marca de agua',
+    tierRowAiText:'IA mood texto',
+    tierRowAiImg:'IA compone imagen',
+    tierRowAiAtmo:'IA atmósfera',
+    tierFootnote:'Pago único · Acceso de por vida',
     proValue1:'Composiciones de IA ilimitadas',
     proValue1Sub:'Genera tantas pinturas como quieras',
     proValue2:'Exporta sin marca de agua',
@@ -8419,6 +8496,25 @@ const I18N = {
     moodChooseBelow:'Vyber mood zo zoznamu nižšie',
     moodPickFromList:'Vyber zo zoznamu — vlastné moody sú Pro AI',
     moodTypeToSearch:'Napíš a vyhľadaj z 95 moodov…',
+    tierOverviewTitle:'Free · Pro · Pro AI',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro AI',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'všetky',
+    tier3Trial:'3× skúška',
+    tierUnlimited:'∞',
+    tierReadOnly:'len náhľad',
+    tierRowArtists:'Umelci',
+    tierRowTypes:'Typy maľby',
+    tierRowPalette:'Vlastná paleta',
+    tierRowDpi:'300 DPI export',
+    tierRowWmark:'Vodoznak',
+    tierRowAiText:'AI textový mood',
+    tierRowAiImg:'AI obrázok',
+    tierRowAiAtmo:'AI atmosféra',
+    tierFootnote:'Jednorazová platba · Doživotný prístup',
     proValue1:'Neobmedzené AI kompozície',
     proValue1Sub:'Vytváraj toľko malieb, koľko chceš',
     proValue2:'Export bez vodoznaku',
@@ -8550,6 +8646,25 @@ const I18N = {
     moodChooseBelow:'从下方列表中选择情绪',
     moodPickFromList:'从列表中选择 — 自定义情绪属于 Pro AI',
     moodTypeToSearch:'输入以搜索 95 种情绪…',
+    tierOverviewTitle:'Free · Pro · Pro AI',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro AI',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'全部',
+    tier3Trial:'3 次试用',
+    tierUnlimited:'∞',
+    tierReadOnly:'仅预览',
+    tierRowArtists:'艺术家',
+    tierRowTypes:'画法类型',
+    tierRowPalette:'自定义调色板',
+    tierRowDpi:'300 DPI 导出',
+    tierRowWmark:'水印',
+    tierRowAiText:'AI 文字情绪',
+    tierRowAiImg:'AI 图片作曲',
+    tierRowAiAtmo:'AI 氛围',
+    tierFootnote:'一次性付款 · 终身访问',
     proValue1:'无限 AI 作曲',
     proValue1Sub:'想画多少幅画都可以',
     proValue2:'导出无水印',
@@ -8669,6 +8784,25 @@ const I18N = {
     moodChooseBelow:'從下方列表中選擇情緒',
     moodPickFromList:'從列表中選擇 — 自訂情緒屬於 Pro AI',
     moodTypeToSearch:'輸入以搜尋 95 種情緒…',
+    tierOverviewTitle:'Free · Pro · Pro AI',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro AI',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'全部',
+    tier3Trial:'3 次試用',
+    tierUnlimited:'∞',
+    tierReadOnly:'僅預覽',
+    tierRowArtists:'藝術家',
+    tierRowTypes:'畫法類型',
+    tierRowPalette:'自訂調色盤',
+    tierRowDpi:'300 DPI 匯出',
+    tierRowWmark:'浮水印',
+    tierRowAiText:'AI 文字情緒',
+    tierRowAiImg:'AI 圖片作曲',
+    tierRowAiAtmo:'AI 氛圍',
+    tierFootnote:'一次性付款 · 終身存取',
     proValue1:'無限 AI 作曲',
     proValue1Sub:'想畫多少幅畫都可以',
     proValue2:'匯出無浮水印',
@@ -8794,6 +8928,25 @@ const I18N = {
     moodChooseBelow:'Escolha um mood da lista abaixo',
     moodPickFromList:'Escolha da lista — moods personalizados são Pro IA',
     moodTypeToSearch:'Digite para buscar entre 95 moods…',
+    tierOverviewTitle:'Free · Pro · Pro IA',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro IA',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'todos',
+    tier3Trial:'3 testes',
+    tierUnlimited:'∞',
+    tierReadOnly:'só prévia',
+    tierRowArtists:'Artistas',
+    tierRowTypes:'Tipos de pintura',
+    tierRowPalette:'Paleta person.',
+    tierRowDpi:'Export 300 DPI',
+    tierRowWmark:'Marca d\'água',
+    tierRowAiText:'IA mood texto',
+    tierRowAiImg:'IA compõe imagem',
+    tierRowAiAtmo:'IA atmosfera',
+    tierFootnote:'Pagamento único · Acesso vitalício',
     proValue1:'Composições de IA ilimitadas',
     proValue1Sub:'Gere quantas pinturas desejar',
     proValue2:'Exportar sem marca d\'água',
@@ -20343,6 +20496,96 @@ Composition rules:
                 </div>
               );
             })}
+            {/* ─── Tier comparison table ────────────────────────────────────
+                Compact 3-column overview (Free / Pro / Pro AI) so the user
+                sees the tier hierarchy at a glance, without opening the
+                paywall. Pro column tinted gold, Pro AI column tinted purple
+                — same accents as the in-app feature badges and paywall, so
+                it reads as the same family. */}
+            <div style={{marginTop:22,paddingTop:18,borderTop:'1px solid rgba(255,255,255,.08)'}}>
+              <div style={{
+                fontFamily:"'Cormorant Garamond',serif",fontWeight:600,
+                fontSize:(1.05*effScale)+'rem',color:'#c9a84c',
+                textAlign:'center',marginBottom:14,letterSpacing:'.02em',
+              }}>{t('tierOverviewTitle')||'Free · Pro · Pro AI'}</div>
+              {(()=>{
+                const GOLD_BG='rgba(201,168,76,.08)';
+                const GOLD_BG_HDR='rgba(201,168,76,.16)';
+                const GOLD_FG='#c9a84c';
+                const PURPLE_BG='rgba(220,150,255,.07)';
+                const PURPLE_BG_HDR='rgba(220,150,255,.14)';
+                const PURPLE_FG='#dcb4ff';
+                const FREE_FG='rgba(242,238,232,.55)';
+                const CELL_TXT='rgba(242,238,232,.85)';
+                const cellSty={
+                  padding:'7px 6px',textAlign:'center',
+                  fontSize:(.7*effScale)+'rem',
+                  borderBottom:'1px solid rgba(255,255,255,.06)',
+                  lineHeight:1.25,
+                };
+                const labelSty=Object.assign({},cellSty,{
+                  textAlign:'left',color:'rgba(242,238,232,.7)',
+                  fontSize:(.68*effScale)+'rem',paddingLeft:2,
+                });
+                const hdrBase={
+                  padding:'8px 4px',textAlign:'center',
+                  fontSize:(.62*effScale)+'rem',fontWeight:700,
+                  letterSpacing:'.1em',textTransform:'uppercase',
+                  borderBottom:'1px solid rgba(255,255,255,.12)',
+                  lineHeight:1.2,
+                };
+                const free=t('tierFreeName')||'Free';
+                const pro=t('tierProName')||'Pro';
+                const proAi=t('tierProAiName')||'Pro AI';
+                const yes=t('tierYes')||'✓';
+                const no=t('tierNo')||'—';
+                const allWord=t('tierAll')||'all';
+                const trial3=t('tier3Trial')||'3× trial';
+                const inf=t('tierUnlimited')||'∞';
+                const ronly=t('tierReadOnly')||'preview only';
+                const rows=[
+                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16'],
+                  [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord],
+                  [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes],
+                  [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes],
+                  [t('tierRowWmark')  ||'Watermark',       yes,     no,         no],
+                  [t('tierRowAiText') ||'AI text moods',   trial3,  trial3,     inf],
+                  [t('tierRowAiImg')  ||'AI image compose',trial3,  trial3,     inf],
+                  [t('tierRowAiAtmo') ||'AI atmosphere',   trial3,  trial3,     inf],
+                ];
+                return (
+                  <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'inherit'}}>
+                    <thead>
+                      <tr>
+                        <th style={Object.assign({},hdrBase,{textAlign:'left',color:'rgba(242,238,232,.6)',paddingLeft:2})}></th>
+                        <th style={Object.assign({},hdrBase,{color:FREE_FG})}>{free}</th>
+                        <th style={Object.assign({},hdrBase,{color:GOLD_FG,background:GOLD_BG_HDR})}>{pro}</th>
+                        <th style={Object.assign({},hdrBase,{color:PURPLE_FG,background:PURPLE_BG_HDR})}>{proAi}</th>
+                      </tr>
+                      <tr>
+                        <th style={Object.assign({},cellSty,{textAlign:'left',color:'rgba(242,238,232,.4)',fontSize:(.6*effScale)+'rem',paddingLeft:2,fontWeight:400,letterSpacing:'.04em'})}></th>
+                        <th style={Object.assign({},cellSty,{color:FREE_FG,fontSize:(.62*effScale)+'rem',fontWeight:500})}>€0</th>
+                        <th style={Object.assign({},cellSty,{color:GOLD_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:GOLD_BG})}>€9.99</th>
+                        <th style={Object.assign({},cellSty,{color:PURPLE_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:PURPLE_BG})}>€19.99</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(([label,f,p,a],i)=>(
+                        <tr key={i}>
+                          <td style={labelSty}>{label}</td>
+                          <td style={Object.assign({},cellSty,{color:FREE_FG})}>{f}</td>
+                          <td style={Object.assign({},cellSty,{color:CELL_TXT,background:GOLD_BG})}>{p}</td>
+                          <td style={Object.assign({},cellSty,{color:CELL_TXT,background:PURPLE_BG})}>{a}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
+              <div style={{textAlign:'center',marginTop:10,fontSize:(.58*effScale)+'rem',color:'rgba(242,238,232,.4)',fontStyle:'italic',letterSpacing:'.04em'}}>
+                {t('tierFootnote')||'One-time payment · Lifetime access'}
+              </div>
+            </div>
           </div>
         </div>
       )}
