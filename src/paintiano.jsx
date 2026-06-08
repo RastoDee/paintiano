@@ -11969,6 +11969,13 @@ export default function Paintiano() {
   // The colour reading the app chose for the current image (harmony or bw), so
   // leaving Custom returns to it rather than always to harmony.
   const appModeRef = useRef('harmony');
+  // ─── Paintiano Pro state (from 07-pro.jsx) ───
+  // Hoisted up here so `proStatus` is in scope for activePalette / shuffle pool /
+  // effectivePairs / etc. below. The hook has no parameter dependencies — order
+  // among hooks doesn't matter for correctness as long as it stays consistent.
+  const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
+          trialUsed, trialLeft, trialExhausted, consumeTrial, gateAI } = useEntitlements();
+  const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
   // Custom palette = 12 hex colors, one per pitch class (index 0 = C, 11 = B).
   // null = uninitialized. Seeded on first switch to 'custom' mode from whichever
   // mode was active. Persisted across sessions in localStorage.
@@ -12066,10 +12073,7 @@ export default function Paintiano() {
   const [langOpen, setLangOpen] = useState(false);
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
 
-  // ─── Paintiano Pro state (from 07-pro.jsx) ───
-  const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
-          trialUsed, trialLeft, trialExhausted, consumeTrial, gateAI } = useEntitlements();
-  const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
+  // ─── (Pro state hoisted earlier in the component — see useEntitlements above) ───
   // Descriptive style labels shown on the chips (the internal keys —
   // picasso/kusama/… — stay unchanged everywhere in the logic). This keeps the
   // feature branded by what it DOES, while STYLE_INSPIRED supplies a small
