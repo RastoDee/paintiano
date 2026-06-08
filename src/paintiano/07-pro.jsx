@@ -318,9 +318,19 @@ function applyWatermark(canvas, isPro) {
 // ─── ProBadge — small gold PRO pill ────────────────────────────────────────────
 // `size`: 'md' (default — header beside Paintiano title), 'sm' (inline beside
 // labels like the locked-partner name or inside small chip/tab buttons).
-function ProBadge({ t, readScale = 1, size = 'md' }) {
-  const label = (t && t('proBadge')) || 'PRO';
+// `tier`: 'pro' (default — gold, used for non-AI Pro features like 16 artists,
+// 300 DPI, Custom palette) or 'ai' (purple, "PRO AI" label — used for AI
+// features locked to the Pro AI tier: How do you feel? mood input, MFI,
+// AI Compose, Atmosphere).
+function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
+  const isAI = tier === 'ai';
+  const label = isAI
+    ? ((t && t('proAiBadge')) || 'PRO AI')
+    : ((t && t('proBadge')) || 'PRO');
   const isSm = size === 'sm';
+  const color = isAI ? '#dcb4ff' : GOLD;
+  const bg = isAI ? 'rgba(220,150,255,.16)' : 'rgba(201,168,76,.15)';
+  const border = isAI ? 'rgba(220,150,255,.5)' : 'rgba(201,168,76,.45)';
   return (
     <span style={{
       display: 'inline-block',
@@ -328,8 +338,8 @@ function ProBadge({ t, readScale = 1, size = 'md' }) {
       padding: isSm ? '1px 5px' : '2px 7px',
       fontSize: (isSm ? .42 : .5) * readScale + 'rem',
       fontWeight: 600, letterSpacing: '.14em',
-      color: GOLD, background: 'rgba(201,168,76,.15)',
-      border: '1px solid rgba(201,168,76,.45)', borderRadius: 999,
+      color, background: bg,
+      border: `1px solid ${border}`, borderRadius: 999,
       textTransform: 'uppercase', verticalAlign: 'middle',
       lineHeight: 1.2,
     }}>{label}</span>
@@ -451,6 +461,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     ] : [
       ['proValueArtists', '16 artists (free has 8)'],
       ['proValueTypes',   '6 paint types per artist (free has 2)'],
+      ['proValuePalette', 'Custom palette — set your own 12 colours'],
       ['proValueDpi',     '300 DPI exports, no watermark'],
       ['proValueLife',    'Lifetime access'],
     ];
