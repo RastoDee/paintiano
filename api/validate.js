@@ -77,7 +77,12 @@ export default async function handler(req) {
     // Mask the email for privacy (return only domain part)
     const masked = row.email ? maskEmail(row.email) : null;
 
-    return json({ valid: true, status: 'active', email: masked });
+    // Tier drives entitlements in the app: 'pro' (full tool, no unlimited AI)
+    // or 'pro_ai' (full tool + unlimited AI). Default to 'pro' for any
+    // legacy/untagged row so a valid key still unlocks the paid tool.
+    const tier = (row.tier === 'pro_ai') ? 'pro_ai' : 'pro';
+
+    return json({ valid: true, status: 'active', email: masked, tier });
   } catch (err) {
     console.error('validate error', err);
     return json({ valid: false, reason: 'server_error' }, 500);

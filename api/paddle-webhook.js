@@ -30,7 +30,14 @@ import { insertLicense, setLicenseStatus } from './_lib/supabase.js';
 export const config = { runtime: 'edge' };
 
 const WEBHOOK_SECRET = process.env.PADDLE_WEBHOOK_SECRET;
-const EXPECTED_PRICE_ID = process.env.PADDLE_PRICE_ID; // optional guard
+// Two paid tiers (3-tier model, Jun 2026). Each maps a Paddle price ID → tier.
+// Set both in Vercel env. If a tier's env is unset, that tier simply won't be
+// recognized (purchases of it fall back to 'pro' with a logged warning).
+//   PADDLE_PRICE_ID_PRO    → 'pro'    (full tool, no unlimited AI)
+//   PADDLE_PRICE_ID_PRO_AI → 'pro_ai' (full tool + unlimited AI)
+// Back-compat: the legacy single PADDLE_PRICE_ID, if present, is treated as Pro.
+const PRICE_ID_PRO    = process.env.PADDLE_PRICE_ID_PRO    || process.env.PADDLE_PRICE_ID || null;
+const PRICE_ID_PRO_AI = process.env.PADDLE_PRICE_ID_PRO_AI || null;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;     // for emailing the license
 const EMAIL_FROM = 'Paintiano <hello@paintiano.app>';  // verified Resend sender
 const EMAIL_REPLY_TO = 'hello@paintiano.app';
@@ -128,6 +135,15 @@ function generateLicenseKey() {
   return `PAINT-${chars.slice(0, 4).join('')}-${chars.slice(4, 8).join('')}-${chars.slice(8, 12).join('')}`;
 }
 
+// Map a Paddle price ID to our entitlement tier. Returns 'pro' | 'pro_ai' | null.
+// null means the price isn't one of ours (caller treats as price_mismatch).
+function priceIdToTier(priceId) {
+  if (!priceId) return null;
+  if (PRICE_ID_PRO_AI && priceId === PRICE_ID_PRO_AI) return 'pro_ai';
+  if (PRICE_ID_PRO    && priceId === PRICE_ID_PRO)    return 'pro';
+  return null;
+}
+
 // ─── email template ─────────────────────────────────────────────────────────
 //
 // Inline-styled HTML for max email-client compatibility (Gmail strips <style>
@@ -135,18 +151,26 @@ function generateLicenseKey() {
 // fallbacks that approximate Cormorant Garamond / Outfit. Dark Paintiano
 // palette: bg #06060c, ink #e8e2d4, gold #c9a84c, gold-soft #ffd07a.
 
-function buildLicenseEmailHtml({ licenseKey, amount, currency, orderId }) {
+function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }) {
   const safeKey = String(licenseKey).replace(/[^A-Z0-9-]/g, '');
+  const isAI = tier === 'pro_ai';
+  const tierName = isAI ? 'Pro AI' : 'Pro';
+  // What unlocks — Pro is the full deterministic tool WITHOUT unlimited AI;
+  // Pro AI adds AI composition. We deliberately say "AI composition included"
+  // (not "unlimited forever") so we keep room for a fair-use cap later.
+  const unlockLine = isAI
+    ? 'high-resolution exports, the full style library, no watermark, plus AI composition from text and images.'
+    : 'high-resolution exports, the full style library, and no watermark.';
   const priceLine = (amount != null && currency)
     ? `${amount} ${currency}`
-    : '€9.99';
+    : (isAI ? '€19.99' : '€9.99');
 
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Your Paintiano Pro license</title>
+<title>Your Paintiano ${tierName} license</title>
 </head>
 <body style="margin:0;padding:0;background:#06060c;color:#e8e2d4;font-family:'Outfit',-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;">
 <div style="max-width:560px;margin:0 auto;padding:40px 24px 56px;">
@@ -154,13 +178,13 @@ function buildLicenseEmailHtml({ licenseKey, amount, currency, orderId }) {
   <!-- Header -->
   <div style="text-align:center;padding-bottom:32px;border-bottom:1px solid rgba(232,226,212,.12);">
     <div style="font-family:'Cormorant Garamond',Georgia,'Palatino Linotype',serif;font-size:34px;font-weight:600;color:#c9a84c;letter-spacing:-0.5px;line-height:1;">Paintiano</div>
-    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:16px;color:#e8e2d4;margin-top:10px;letter-spacing:0.3px;">your Pro license is ready</div>
+    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:16px;color:#e8e2d4;margin-top:10px;letter-spacing:0.3px;">your ${tierName} license is ready</div>
   </div>
 
   <!-- Greeting -->
   <p style="font-size:15px;color:#e8e2d4;margin:32px 0 10px;">Hi,</p>
   <p style="font-size:15px;color:#e8e2d4;margin:0 0 8px;">Thank you for supporting Paintiano. You're one of the first 50 founding supporters of this little solo art project — it genuinely means a lot.</p>
-  <p style="font-size:15px;color:#e8e2d4;margin:0 0 28px;">Your lifetime Pro license is below. Keep this email — it's the only place this key lives outside our database.</p>
+  <p style="font-size:15px;color:#e8e2d4;margin:0 0 28px;">Your lifetime ${tierName} license is below. Keep this email — it's the only place this key lives outside our database.</p>
 
   <!-- License key box -->
   <div style="margin:28px 0 32px;padding:26px 22px;background:linear-gradient(135deg,rgba(201,168,76,0.10),rgba(255,208,122,0.04));border:1px solid rgba(255,208,122,0.55);border-radius:14px;text-align:center;">
@@ -193,7 +217,7 @@ function buildLicenseEmailHtml({ licenseKey, amount, currency, orderId }) {
         <div style="width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,0.18);color:#ffd07a;font-family:'Outfit',Arial,sans-serif;font-size:13px;font-weight:700;text-align:center;line-height:26px;">3</div>
       </td>
       <td style="vertical-align:top;padding:0 0 14px;">
-        <div style="font-size:14px;color:#e8e2d4;">Paste the key above. Pro unlocks immediately — high-resolution exports, unlimited AI moods, full style library, no watermark.</div>
+        <div style="font-size:14px;color:#e8e2d4;">Paste the key above. ${tierName} unlocks immediately — ${unlockLine}</div>
       </td>
     </tr>
   </table>
@@ -232,19 +256,24 @@ function buildLicenseEmailHtml({ licenseKey, amount, currency, orderId }) {
 
 // Plain-text fallback for clients that prefer text (or that auto-generate
 // previews). Keep it short and friendly with the same key + steps.
-function buildLicenseEmailText({ licenseKey, amount, currency, orderId }) {
-  const priceLine = (amount != null && currency) ? `${amount} ${currency}` : '€9.99';
+function buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }) {
+  const isAI = tier === 'pro_ai';
+  const tierName = isAI ? 'Pro AI' : 'Pro';
+  const unlockLine = isAI
+    ? 'high-res exports, full style library, no watermark, plus AI composition from text and images'
+    : 'high-res exports, full style library, and no watermark';
+  const priceLine = (amount != null && currency) ? `${amount} ${currency}` : (isAI ? '€19.99' : '€9.99');
   return [
     'Hi,',
     '',
-    "Thank you for supporting Paintiano. Your lifetime Pro license is below — keep this email safe.",
+    `Thank you for supporting Paintiano. Your lifetime ${tierName} license is below — keep this email safe.`,
     '',
     `LICENSE KEY: ${licenseKey}`,
     '',
     'How to activate:',
     '  1. Open https://paintiano.app',
     '  2. Open the Pro panel and tap "I already have a key"',
-    '  3. Paste the key — Pro unlocks immediately',
+    `  3. Paste the key — ${tierName} unlocks immediately (${unlockLine})`,
     '',
     `Order: ${orderId || '—'}`,
     `Amount: ${priceLine} (one-time, lifetime)`,
@@ -265,7 +294,7 @@ function buildLicenseEmailText({ licenseKey, amount, currency, orderId }) {
 // Resend is down or the API key is missing we log and continue. The license
 // is already in Supabase so we can recover via a manual resend / lookup
 // endpoint.
-async function sendLicenseEmail({ to, licenseKey, amount, currency, orderId }) {
+async function sendLicenseEmail({ to, licenseKey, tier, amount, currency, orderId }) {
   if (!RESEND_API_KEY) {
     console.warn('paddle-webhook: RESEND_API_KEY not set — skipping email send');
     return { ok: false, reason: 'no_api_key' };
@@ -274,6 +303,7 @@ async function sendLicenseEmail({ to, licenseKey, amount, currency, orderId }) {
     console.warn('paddle-webhook: no buyer email — skipping email send');
     return { ok: false, reason: 'no_recipient' };
   }
+  const tierName = tier === 'pro_ai' ? 'Pro AI' : 'Pro';
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -285,9 +315,9 @@ async function sendLicenseEmail({ to, licenseKey, amount, currency, orderId }) {
         from: EMAIL_FROM,
         to: [to],
         reply_to: EMAIL_REPLY_TO,
-        subject: 'Your Paintiano Pro license',
-        html: buildLicenseEmailHtml({ licenseKey, amount, currency, orderId }),
-        text: buildLicenseEmailText({ licenseKey, amount, currency, orderId }),
+        subject: `Your Paintiano ${tierName} license`,
+        html: buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }),
+        text: buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }),
         tags: [
           { name: 'category', value: 'license_delivery' },
           { name: 'provider', value: 'paddle' },
@@ -337,15 +367,20 @@ export default async function handler(req) {
     switch (type) {
       case 'transaction.completed':
       case 'transaction.paid': {
-        // Sanity check: only honor purchases of OUR price (not random subscriptions
-        // on the same Paddle account, if any are ever added).
-        if (EXPECTED_PRICE_ID) {
-          const items = Array.isArray(data.items) ? data.items : [];
-          const matches = items.some((it) => it?.price?.id === EXPECTED_PRICE_ID);
-          if (!matches) {
-            console.info('paddle-webhook: ignoring transaction with non-Pro price', data.id);
-            return json({ ok: true, ignored: 'price_mismatch' });
-          }
+        // Sanity check + tier resolution: find the FIRST line item whose price
+        // maps to one of our tiers. If none match, this isn't a Paintiano
+        // purchase (or env price IDs aren't set) → acknowledge & ignore so
+        // Paddle doesn't retry.
+        const items = Array.isArray(data.items) ? data.items : [];
+        let tier = null;
+        let matchedItem = null;
+        for (const it of items) {
+          const t = priceIdToTier(it?.price?.id);
+          if (t) { tier = t; matchedItem = it; break; }
+        }
+        if (!tier) {
+          console.info('paddle-webhook: ignoring transaction with non-Paintiano price', data.id);
+          return json({ ok: true, ignored: 'price_mismatch' });
         }
 
         // Avoid duplicate issuance if Paddle re-delivers the same event.
@@ -393,11 +428,10 @@ export default async function handler(req) {
           : null;
 
         // Extract product / price ids from the first Paddle line item that
-        // matches our Pro price (if EXPECTED_PRICE_ID is set we already
-        // verified at least one matches above).
-        const firstItem = Array.isArray(data.items) ? data.items[0] : null;
-        const productId = firstItem?.price?.product_id || null;
-        const variantId = firstItem?.price?.id || null;
+        // Use the line item we matched to a tier above (not blindly items[0],
+        // which could be a different product if a cart ever bundles things).
+        const productId = matchedItem?.price?.product_id || null;
+        const variantId = matchedItem?.price?.id || null;
 
         const licenseKey = generateLicenseKey();
 
@@ -405,6 +439,7 @@ export default async function handler(req) {
           key: licenseKey,
           email,
           status: 'active',
+          tier, // 'pro' | 'pro_ai' — drives entitlements in the app
           order_id: orderId,
           provider: 'paddle',
           activations: 0,
@@ -417,13 +452,14 @@ export default async function handler(req) {
           raw_event: evt,
         });
 
-        console.info('paddle-webhook: issued license', { orderId, email: email.replace(/(.).+(@.+)/, '$1***$2') });
+        console.info('paddle-webhook: issued license', { orderId, tier, email: email.replace(/(.).+(@.+)/, '$1***$2') });
 
         // Fire the license email. Even if this fails we still return 200
         // — the license exists in Supabase and can be re-sent manually.
         const mail = await sendLicenseEmail({
           to: email,
           licenseKey,
+          tier,
           amount: amountMajor,
           currency: currencyCode,
           orderId,
@@ -434,7 +470,7 @@ export default async function handler(req) {
           console.warn('paddle-webhook: email NOT sent', mail);
         }
 
-        return json({ ok: true, issued: true, emailed: !!mail.ok });
+        return json({ ok: true, issued: true, tier, emailed: !!mail.ok });
       }
 
       case 'adjustment.created': {

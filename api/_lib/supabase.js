@@ -51,7 +51,7 @@ export async function upsertLicense(row) {
 }
 
 export async function getLicenseByKey(key) {
-  const url = `${SUPABASE_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&select=key,email,status,activations,created_at`;
+  const url = `${SUPABASE_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&select=key,email,status,tier,activations,created_at`;
   const res = await fetch(url, { headers: headers() });
   if (!res.ok) {
     const text = await res.text();

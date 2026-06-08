@@ -5554,14 +5554,14 @@ function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
   // ── PHASE CHOOSER: commit to ONE of Kusama's signature modes per painting ──
   // Stable from the session seed, re-rolls on Vary/Random. Weighted ~60/40 to A.
   //  A = Polka dots on color blocks — original.  B = Dot field — original.
-  //  C = Infinity Nets (looping mesh).  D = Pumpkin (dotted gourd).
+  //  C = Infinity Nets (looping mesh).  D = Dotted Spheres (floating dot orbs).
   //  E = Accumulation (layered dot masses).  F = Tendril nets (light on colour).
   const cr=_seedRnd(808,ss,37,71);
   cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
   const pick=(cr()*6)|0;
   if(pick===1){ kusamaPhaseB(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===2){ kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,ss); return; }
-  if(pick===3){ kusamaPhasePumpkin(ctx,CW,CH,chords,lim,gc,ss); return; }
+  if(pick===3){ kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===4){ kusamaPhaseAccum(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===5){ kusamaPhaseTendril(ctx,CW,CH,chords,lim,gc,ss); return; }
   kusamaPhaseA(ctx,CW,CH,chords,lim,gc,ss);
@@ -5766,31 +5766,42 @@ function kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,sessionSeed){
   }
 }
 
-// ── Kusama D: Pumpkin — a dotted gourd centred on the canvas. ──
-function kusamaPhasePumpkin(ctx,CW,CH,chords,lim,gc,sessionSeed){
+// ── Kusama D: Dotted Spheres — floating polka-dot orbs (Dots Obsession). ──
+// Kusama's mirror-room spheres: saturated balls scattered in deep space, each
+// with a soft radial shade and a skin of contrasting dots. Spheres reveal
+// progressively with the music; each takes its colour from a chord.
+function kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,sessionSeed){
   const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle='#1a1428';ctx.fillRect(0,0,CW,CH);
-  const body=_kusChord(chords,0,gc).rgb;
-  // bias to Kusama's yellow/orange gourd if music isn't already warm
-  const gr=Math.max(body[0],200), gg=Math.max(body[1]*0.8,150), gb=Math.min(body[2],60);
-  const cx=CW/2, cy=CH*0.55, rx=Math.min(CW,CH)*0.36, ry=rx*0.8;
-  const lobes=7;
-  for(let l=0;l<lobes;l++){
-    const t=l/lobes, lx=cx+(t-0.5)*rx*1.9;
-    ctx.fillStyle=`rgb(${Math.round(gr*(0.82+0.18*Math.cos((t-0.5)*3)))},${Math.round(gg*(0.82+0.18*Math.cos((t-0.5)*3)))},${Math.round(gb)})`;
-    ctx.beginPath();ctx.ellipse(lx,cy,rx/lobes*1.4,ry,0,0,Math.PI*2);ctx.fill();
-  }
-  // stem
-  ctx.fillStyle='#3a5a2a';ctx.fillRect(cx-rx*0.06,cy-ry-rx*0.14,rx*0.12,rx*0.16);
-  // dots revealed progressively
-  const dots=Math.max(8,Math.min(160,cn));
-  const visDots=Math.max(1,Math.ceil(N/cn*dots));
-  for(let i=0;i<visDots;i++){
+  const base=_kusChord(chords,0,gc).rgb;
+  // deep, slightly tinted void
+  ctx.fillStyle=`rgb(${Math.round(base[0]*0.16)},${Math.round(base[1]*0.16)},${Math.round(base[2]*0.2)})`;
+  ctx.fillRect(0,0,CW,CH);
+  const orbs=Math.max(5,Math.min(48,Math.round(cn/3)));
+  const vis=Math.max(1,Math.ceil(N/cn*orbs));
+  const minD=Math.min(CW,CH);
+  for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+401,ss,0,0);
-    const a=rnd()*Math.PI*2, rr=Math.sqrt(rnd())*0.92;
-    const x=cx+Math.cos(a)*rx*rr, y=cy+Math.sin(a)*ry*rr;
-    const dr=Math.max(1.5,rx*(0.018+rnd()*0.02));
-    ctx.fillStyle='#1a1008';ctx.beginPath();ctx.arc(x,y,dr,0,Math.PI*2);ctx.fill();
+    const {rgb,energy}=_kusChord(chords,Math.floor(i*(cn/orbs)),gc);
+    const cx=rnd()*CW, cy=rnd()*CH;
+    const R=minD*(0.07+energy*0.14+rnd()*0.05);
+    // sphere body with radial shade for volume
+    const lx=cx-R*0.3, ly=cy-R*0.3;
+    const g=ctx.createRadialGradient(lx,ly,R*0.1,cx,cy,R);
+    g.addColorStop(0,`rgb(${Math.min(255,rgb[0]+70)},${Math.min(255,rgb[1]+70)},${Math.min(255,rgb[2]+70)})`);
+    g.addColorStop(1,`rgb(${Math.round(rgb[0]*0.45)},${Math.round(rgb[1]*0.45)},${Math.round(rgb[2]*0.45)})`);
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+    // contrasting polka-dot skin, clipped to the sphere
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.clip();
+    const lum=(rgb[0]+rgb[1]+rgb[2])/3;
+    const dot=lum>128?'rgba(20,16,30,0.92)':'rgba(245,245,250,0.92)';
+    const dn=Math.max(10,Math.floor(R*0.9));
+    for(let d=0;d<dn;d++){
+      const a=rnd()*Math.PI*2, rr=Math.sqrt(rnd())*0.95;
+      const dx=cx+Math.cos(a)*R*rr, dy=cy+Math.sin(a)*R*rr;
+      const dr=Math.max(1.2,R*(0.04+rnd()*0.04));
+      ctx.fillStyle=dot;ctx.beginPath();ctx.arc(dx,dy,dr,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
   }
 }
 
@@ -9612,7 +9623,7 @@ const GUIDE_I18N = {
   {id:'modes', title:`Harmony vs Spectral vs B/W vs Custom`, keywords:`colour color mode hue palette circle fifths chromatic custom bw black white modes`,
    body:`Four colour grammars for the same music. Harmony — circle-of-fifths order, related keys cluster. Spectral — even 30° steps, one colour per semitone. B/W — lightness tracks pitch, hue ignored. Custom — only colours in your palette make sound. Switch anytime. Same notes, instant repaint. Tap an active tab to preview its colours. In image mode the app picks Color or B/W for you; only Custom is yours to set.`},
   {id:'style', title:`Painting styles (16 artists)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubist polka dots drip splatter constellation collage cut-out grid colour field fields artist abstract geometric phase variation inspired by sixteen`,
-   body:`Overlays. Same notes, different reading. Mosaic is the plain default (φ-rectangles). Then sixteen artists rewrite it their way: ◆ Cubist (Picasso) ◆ Dots (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constellation (Miró) ◆ Grid (Mondrian) ◆ Fields (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Styles are paired on each button — tap to paint, tap again to flip to the partner. Most styles hold several compositions; with ↻ Shuffle on, Vary/Next rerolls between them. Tap the active style to deselect. Each one, a fresh visual answer to the same piece.`},
+   body:`Overlays. Same notes, different reading. Mosaic is the plain default (φ-rectangles). Then sixteen artists rewrite it their way: ◆ Cubist (Picasso) ◆ Dots (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constellation (Miró) ◆ Grid (Mondrian) ◆ Fields (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Styles are paired on each button — tap to paint, tap again to flip to the partner. Each button remembers which of its two you last used. With ↻ Shuffle off, the button just toggles between its two artists. With Shuffle on, a third tap drops back to Shuffle. Most styles hold several compositions; with Shuffle on, Vary/Next rerolls between them. Each one, a fresh visual answer to the same piece.`},
   {id:'random', title:`↻ Shuffle — same song, infinite paintings`, keywords:`random shuffle determinism seed reroll variation same music different painting fresh dice unique play next style cycle`,
    body:`Same music = same painting, every time. Shuffle breaks that. ◆ With an artist picked: every Play rerolls that artist into a new variation. Structure can shift too. ◆ With no artist: Shuffle paints a random style each Play (mosaic skipped). The drawn style shows a light outline — tap to keep it. ◆ Switching style or colour never rerolls. Only Play / next does. State persists across sessions.`},
   {id:'demo', title:`Demo — Für Elise in 30 seconds`, keywords:`demo für elise beethoven test example sample replace confirm`,
@@ -9664,7 +9675,7 @@ const GUIDE_I18N = {
   {id:'modes', title:`Harmonie vs Spektral vs B/W vs Custom`, keywords:`farbe color modus farbton palette quintenzirkel chromatisch custom bw schwarz weiß modi`,
    body:`Vier Farbgrammatiken für dieselbe Musik. Harmonie — Quintenzirkel-Reihenfolge, verwandte Tonarten clustern. Spektral — 30°-Schritte gleichmäßig, eine Farbe pro Halbton. B/W — Helligkeit folgt der Tonhöhe, Farbton ignoriert. Custom — nur Farben aus deiner Palette klingen. Jederzeit wechseln. Gleiche Noten, sofort neu gemalt. Tipp einen aktiven Tab an für Farbvorschau. Im Bildmodus wählt die App Color oder B/W; nur Custom bleibt dir überlassen.`},
   {id:'style', title:`Malstile (16 Künstler)`, keywords:`stil picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubismus punkte drip splatter konstellation collage cut-out raster farbfeld farbfelder künstler abstrakt geometrisch phase variation inspiriert von sechzehn`,
-   body:`Overlays. Gleiche Noten, andere Lesart. Mosaik ist die schlichte Voreinstellung (φ-Rechtecke). Dann sechzehn Künstler, die es neu schreiben: ◆ Kubismus (Picasso) ◆ Punkte (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Konstellation (Miró) ◆ Raster (Mondrian) ◆ Farbfelder (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Stile sind je Button gepaart — tippen zum Malen, nochmal tippen zum Partner. Die meisten Stile halten mehrere Kompositionen; mit ↻ Shuffle würfelt Vary/Next zwischen ihnen. Aktiven Stil antippen zum Abwählen. Jeder Stil eine frische visuelle Antwort auf dasselbe Stück.`},
+   body:`Overlays. Gleiche Noten, andere Lesart. Mosaik ist die schlichte Voreinstellung (φ-Rechtecke). Dann sechzehn Künstler, die es neu schreiben: ◆ Kubismus (Picasso) ◆ Punkte (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Konstellation (Miró) ◆ Raster (Mondrian) ◆ Farbfelder (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Stile sind je Button gepaart — tippen zum Malen, nochmal tippen zum Partner. Jeder Button merkt sich, welchen der zwei du zuletzt genutzt hast. Mit ↻ Shuffle aus wechselt der Button nur zwischen seinen zwei Künstlern. Mit Shuffle an springt ein dritter Tipp zurück zu Shuffle. Die meisten Stile halten mehrere Kompositionen; mit Shuffle an würfelt Vary/Weiter zwischen ihnen. Jeder Stil eine frische visuelle Antwort auf dasselbe Stück.`},
   {id:'random', title:`↻ Shuffle — gleicher Song, unendliche Bilder`, keywords:`zufall shuffle determinismus seed neu würfeln variation gleiche musik anderes bild frisch würfel einzigartig play next stil zyklus`,
    body:`Gleiche Musik = gleiches Bild, jedes Mal. Shuffle bricht das. ◆ Mit gewähltem Künstler: jedes Play würfelt eine neue Variante dieses Künstlers. Struktur kann sich auch ändern. ◆ Ohne Künstler: Shuffle malt jedes Play einen zufälligen Stil (Mosaik ausgeschlossen). Der gezogene Stil zeigt eine helle Umrandung — antippen zum Behalten. ◆ Stil- oder Farbwechsel würfeln nie neu. Nur Play / next. Zustand bleibt über Sessions erhalten.`},
   {id:'demo', title:`Demo — Für Elise in 30 Sekunden`, keywords:`demo für elise beethoven test beispiel sample ersetzen bestätigen`,
@@ -9716,7 +9727,7 @@ const GUIDE_I18N = {
   {id:'modes', title:`Harmonie vs Spectral vs B/W vs Custom`, keywords:`couleur color mode teinte palette cercle quintes chromatique custom bw noir blanc modes`,
    body:`Quatre grammaires de couleur pour la même musique. Harmonie — ordre du cercle des quintes, les tonalités voisines clustèrent. Spectral — pas de 30° égaux, une couleur par demi-ton. B/W — luminosité suit la hauteur, teinte ignorée. Custom — seules les couleurs de ta palette sonnent. Change à tout moment. Mêmes notes, repeint instantané. Tape un onglet actif pour prévisualiser ses couleurs. En mode image, l\'app choisit Color ou B/W ; seul Custom est à toi.`},
   {id:'style', title:`Styles picturaux (16 artistes)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubiste pois drip splatter constellation collage cut-out grille champ champs artiste abstrait géométrique phase variation inspiré par seize`,
-   body:`Calques. Mêmes notes, lecture différente. Mosaïque est le défaut brut (rectangles φ). Puis seize artistes réécrivent à leur façon : ◆ Cubiste (Picasso) ◆ Pois (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constellation (Miró) ◆ Grille (Mondrian) ◆ Champs (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Les styles vont par paires sur chaque bouton — tape pour peindre, retape pour basculer au partenaire. La plupart contiennent plusieurs compositions ; avec ↻ Shuffle actif, Vary/Suivant relance entre elles. Tape le style actif pour le désélectionner. Chacun, une réponse visuelle fraîche au même morceau.`},
+   body:`Calques. Mêmes notes, lecture différente. Mosaïque est le défaut brut (rectangles φ). Puis seize artistes réécrivent à leur façon : ◆ Cubiste (Picasso) ◆ Pois (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constellation (Miró) ◆ Grille (Mondrian) ◆ Champs (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Les styles vont par paires sur chaque bouton — tape pour peindre, retape pour basculer au partenaire. Chaque bouton retient lequel des deux tu as utilisé en dernier. Avec ↻ Shuffle off, le bouton bascule juste entre ses deux artistes. Avec Shuffle on, une troisième tape revient à Shuffle. La plupart contiennent plusieurs compositions ; avec Shuffle actif, Vary/Suivant relance entre elles. Chacun, une réponse visuelle fraîche au même morceau.`},
   {id:'random', title:`↻ Shuffle — même morceau, peintures infinies`, keywords:`aléatoire shuffle déterminisme seed relancer variation même musique peinture différente fraîche dés unique lecture suivant style cycle`,
    body:`Même musique = même peinture, à chaque fois. Shuffle casse ça. ◆ Avec un artiste choisi : chaque Lecture relance cet artiste en une nouvelle variante. La structure peut aussi changer. ◆ Sans artiste : Shuffle peint un style aléatoire à chaque Lecture (mosaïque exclue). Le style tiré montre un contour léger — tape pour le garder. ◆ Changer de style ou de couleur ne relance jamais. Seuls Lecture / suivant le font. L\'état persiste entre sessions.`},
   {id:'demo', title:`Demo — Für Elise en 30 secondes`, keywords:`demo für elise beethoven test exemple échantillon remplacer confirmer`,
@@ -9768,7 +9779,7 @@ const GUIDE_I18N = {
   {id:'modes', title:`Armonía vs Espectral vs B/W vs Custom`, keywords:`color modo tono paleta círculo quintas cromático custom bw negro blanco modos`,
    body:`Cuatro gramáticas de color para la misma música. Armonía — orden del círculo de quintas, tonalidades emparentadas se agrupan. Espectral — pasos de 30° iguales, un color por semitono. B/W — luminosidad sigue la altura, tono ignorado. Custom — solo suenan los colores de tu paleta. Cambia en cualquier momento. Mismas notas, repintado instantáneo. Toca una pestaña activa para previsualizar sus colores. En modo imagen la app elige Color o B/W; solo Custom es tuyo.`},
   {id:'style', title:`Estilos pictóricos (16 artistas)`, keywords:`estilo picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubista lunares drip splatter constelación collage cut-out cuadrícula campo campos artista abstracto geométrico fase variación inspirado por dieciséis`,
-   body:`Capas. Mismas notas, lectura distinta. Mosaico es el default plano (rectángulos φ). Luego dieciséis artistas reescriben a su manera: ◆ Cubista (Picasso) ◆ Lunares (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constelación (Miró) ◆ Cuadrícula (Mondrian) ◆ Campos (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Los estilos van en pareja en cada botón — toca para pintar, toca otra vez para cambiar al compañero. La mayoría tienen varias composiciones; con ↻ Shuffle activo, Vary/Siguiente relanza entre ellas. Toca el estilo activo para deseleccionar. Cada uno, una respuesta visual fresca a la misma pieza.`},
+   body:`Capas. Mismas notas, lectura distinta. Mosaico es el default plano (rectángulos φ). Luego dieciséis artistas reescriben a su manera: ◆ Cubista (Picasso) ◆ Lunares (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constelación (Miró) ◆ Cuadrícula (Mondrian) ◆ Campos (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Los estilos van en pareja en cada botón — toca para pintar, toca otra vez para cambiar al compañero. Cada botón recuerda cuál de los dos usaste por última vez. Con ↻ Shuffle apagado, el botón solo alterna entre sus dos artistas. Con Shuffle activo, un tercer toque vuelve a Shuffle. La mayoría tienen varias composiciones; con Shuffle activo, Vary/Siguiente relanza entre ellas. Cada uno, una respuesta visual fresca a la misma pieza.`},
   {id:'random', title:`↻ Shuffle — misma canción, pinturas infinitas`, keywords:`aleatorio shuffle determinismo seed relanzar variación misma música pintura distinta fresco dados único play siguiente estilo ciclo`,
    body:`Misma música = misma pintura, cada vez. Shuffle rompe eso. ◆ Con artista elegido: cada Reproducir relanza ese artista en una nueva variante. La estructura también puede cambiar. ◆ Sin artista: Shuffle pinta un estilo aleatorio cada Reproducir (mosaico excluido). El estilo sorteado muestra un contorno suave — toca para quedártelo. ◆ Cambiar de estilo o color nunca relanza. Solo Reproducir / siguiente lo hacen. Estado persistente entre sesiones.`},
   {id:'demo', title:`Demo — Für Elise en 30 segundos`, keywords:`demo für elise beethoven test ejemplo muestra reemplazar confirmar`,
@@ -9820,7 +9831,7 @@ const GUIDE_I18N = {
   {id:'modes', title:`Harmónia vs Spektrum vs B/W vs Custom`, keywords:`farba color mód odtieň paleta kvintový kruh chromatický custom bw čierny biely módy`,
    body:`Štyri gramatiky farby pre tú istú hudbu. Harmónia — kvintový kruh, príbuzné tóniny sa zhlukujú. Spektrum — rovnomerné 30° kroky, jedna farba na poltón. B/W — jas sleduje výšku tónu, odtieň ignorovaný. Custom — znejú len farby z tvojej palety. Prepni hocikedy. Tie isté noty, okamžitá premaľba. Klikni aktívnu záložku pre náhľad farieb. V móde obrázka aplikácia vyberie Color alebo B/W; len Custom je tvoj.`},
   {id:'style', title:`Štýly maľby (16 umelcov)`, keywords:`štýl picasso kusama pollock kandinsky miró miro mondrian rothko matisse kubizmus bodky drip splatter konštelácia koláž cut-out mriežka pole polia umelec abstraktný geometrický fáza variácia inšpirované šestnásť`,
-   body:`Vrstvy. Tie isté noty, iné čítanie. Mozaika je čisté default (φ-obdĺžniky). Potom šestnásť umelcov to prepíše po svojom: ◆ Kubizmus (Picasso) ◆ Bodky (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Konštelácia (Miró) ◆ Mriežka (Mondrian) ◆ Polia (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Štýly sú párované na každom tlačidle — klikni maľovať, klikni znova pre partnera. Väčšina drží viac kompozícií; s ↻ Shuffle zapnutým Vary/Ďalej preroluje medzi nimi. Klikni aktívny štýl pre odznačenie. Každý — čerstvá vizuálna odpoveď na ten istý kus.`},
+   body:`Vrstvy. Tie isté noty, iné čítanie. Mozaika je čisté default (φ-obdĺžniky). Potom šestnásť umelcov to prepíše po svojom: ◆ Kubizmus (Picasso) ◆ Bodky (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Konštelácia (Miró) ◆ Mriežka (Mondrian) ◆ Polia (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Štýly sú párované na každom tlačidle — klikni maľovať, klikni znova pre partnera. Každé tlačidlo si pamätá, ktorého z dvojice si použil naposledy. S ↻ Shuffle vypnutým tlačidlo len strieda svojich dvoch umelcov. So Shuffle zapnutým tretí klik vráti do Shuffle. Väčšina štýlov drží viac kompozícií; so Shuffle zapnutým Vary/Ďalej preroluje medzi nimi. Každý — čerstvá vizuálna odpoveď na ten istý kus.`},
   {id:'random', title:`↻ Shuffle — tá istá pieseň, nekonečné maľby`, keywords:`náhoda shuffle determinizmus seed prerolovať variácia tá istá hudba iná maľba čerstvé kocky unikátne prehrať ďalej štýl cyklus`,
    body:`Tá istá hudba = tá istá maľba, zakaždým. Shuffle to láme. ◆ S vybraným umelcom: každé Prehrať preroluje toho umelca do novej variácie. Štruktúra sa môže meniť tiež. ◆ Bez umelca: Shuffle maľuje náhodný štýl pri každom Prehrať (mozaika vylúčená). Vybraný štýl ukáže ľahký obrys — klikni, ak ho chceš nechať. ◆ Prepnutie štýlu alebo farby nikdy nerolu. Len Prehrať / ďalej. Stav sa pamätá medzi sedeniami.`},
   {id:'demo', title:`Demo — Für Elise za 30 sekúnd`, keywords:`demo für elise beethoven test ukážka sample nahradiť potvrdiť`,
@@ -9872,7 +9883,7 @@ const GUIDE_I18N = {
   {id:'modes', title:`Harmonia vs Espectral vs B/W vs Custom`, keywords:`cor color modo matiz paleta círculo quintas cromático custom bw preto branco modos`,
    body:`Quatro gramáticas de cor para a mesma música. Harmonia — ordem do círculo de quintas, tonalidades aparentadas agrupam-se. Espectral — passos de 30° iguais, uma cor por semitom. B/W — luminosidade segue a altura, matiz ignorado. Custom — só as cores da tua paleta soam. Muda a qualquer hora. Mesmas notas, repintura instantânea. Toca uma aba ativa para pré-visualizar as cores. Em modo imagem a app escolhe Color ou B/W; só Custom é teu.`},
   {id:'style', title:`Estilos de pintura (16 artistas)`, keywords:`estilo picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubista pontos drip splatter constelação colagem cut-out grelha campo campos artista abstrato geométrico fase variação inspirado por dezasseis`,
-   body:`Camadas. Mesmas notas, leitura diferente. Mosaico é o default simples (retângulos φ). Depois dezasseis artistas reescrevem à sua maneira: ◆ Cubista (Picasso) ◆ Pontos (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constelação (Miró) ◆ Grelha (Mondrian) ◆ Campos (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Os estilos vêm em par em cada botão — toca para pintar, toca outra vez para o parceiro. A maioria tem várias composições; com ↻ Shuffle ligado, Vary/Seguinte lança entre elas. Toca o estilo ativo para desselecionar. Cada um, uma resposta visual fresca à mesma peça.`},
+   body:`Camadas. Mesmas notas, leitura diferente. Mosaico é o default simples (retângulos φ). Depois dezasseis artistas reescrevem à sua maneira: ◆ Cubista (Picasso) ◆ Pontos (Kusama) ◆ Drip (Pollock) ◆ Bauhaus (Kandinsky) ◆ Constelação (Miró) ◆ Grelha (Mondrian) ◆ Campos (Rothko) ◆ Cut-out (Matisse) ◆ Bulge (Vasarely) ◆ Arcs (Frank Stella) ◆ Bloom (Sam Francis) ◆ Spiral (Hilma af Klint) ◆ Gold (Klimt) ◆ Pop (Keith Haring) ◆ Wave (Bridget Riley) ◆ Comic (Lichtenstein). Os estilos vêm em par em cada botão — toca para pintar, toca outra vez para o parceiro. Cada botão lembra qual dos dois usaste por último. Com ↻ Shuffle desligado, o botão só alterna entre os seus dois artistas. Com Shuffle ligado, um terceiro toque volta ao Shuffle. A maioria tem várias composições; com Shuffle ligado, Vary/Seguinte lança entre elas. Cada um, uma resposta visual fresca à mesma peça.`},
   {id:'random', title:`↻ Shuffle — mesma canção, pinturas infinitas`, keywords:`aleatório shuffle determinismo seed relançar variação mesma música pintura diferente fresca dados único play seguinte estilo ciclo`,
    body:`Mesma música = mesma pintura, sempre. Shuffle quebra isso. ◆ Com artista escolhido: cada Play relança esse artista numa nova variante. A estrutura também pode mudar. ◆ Sem artista: Shuffle pinta um estilo aleatório a cada Play (mosaico excluído). O estilo sorteado mostra um contorno suave — toca para ficar com ele. ◆ Mudar de estilo ou cor nunca relança. Só Play / seguinte o fazem. Estado persiste entre sessões.`},
   {id:'demo', title:`Demo — Für Elise em 30 segundos`, keywords:`demo für elise beethoven teste exemplo amostra substituir confirmar`,
@@ -9924,7 +9935,7 @@ const GUIDE_I18N = {
   {id:'modes', title:`和声 vs 光谱 vs B/W vs Custom`, keywords:`颜色 color 模式 色相 调色板 五度圈 半音 custom bw 黑白 模式`,
    body:`同一段音乐,四种颜色语法。和声 — 五度圈顺序,相关调聚集。光谱 — 30° 均匀分步,每个半音一种颜色。B/W — 明度跟音高,色相忽略。Custom — 只有你调色板里的颜色发声。随时切换。同样的音符,瞬间重绘。点击活跃标签预览颜色。图像模式下 app 替你选 Color 或 B/W;只有 Custom 由你决定。`},
   {id:'style', title:`绘画风格(16 位艺术家)`, keywords:`风格 picasso kusama pollock kandinsky miró miro mondrian rothko matisse 立体主义 圆点 drip splatter 星座 拼贴 cut-out 网格 色块 艺术家 抽象 几何 阶段 变奏 灵感 十六`,
-   body:`图层。同样的音符,不同的读法。马赛克是朴素默认(φ 矩形)。然后十六位艺术家以自己的方式重写它:◆ 立体主义(毕加索)◆ 圆点(草间弥生)◆ Drip(波洛克)◆ Bauhaus(康定斯基)◆ 星座(米罗)◆ 网格(蒙德里安)◆ 色块(罗斯科)◆ Cut-out(马蒂斯)◆ Bulge(瓦萨雷利)◆ Arcs(弗兰克·斯特拉)◆ Bloom(山姆·弗朗西斯)◆ Spiral(希尔玛·阿夫·克林特)◆ Gold(克林姆特)◆ Pop(凯斯·哈林)◆ Wave(布丽姬·赖利)◆ Comic(利希滕斯坦)。每个按钮上风格配对 — 点画,再点切到伙伴。大多数风格有多个构图;打开 ↻ Shuffle,Vary/下一个 会在它们之间摇。点活跃风格取消选择。每个,都是对同一段乐曲的新视觉答案。`},
+   body:`图层。同样的音符,不同的读法。马赛克是朴素默认(φ 矩形)。然后十六位艺术家以自己的方式重写它:◆ 立体主义(毕加索)◆ 圆点(草间弥生)◆ Drip(波洛克)◆ Bauhaus(康定斯基)◆ 星座(米罗)◆ 网格(蒙德里安)◆ 色块(罗斯科)◆ Cut-out(马蒂斯)◆ Bulge(瓦萨雷利)◆ Arcs(弗兰克·斯特拉)◆ Bloom(山姆·弗朗西斯)◆ Spiral(希尔玛·阿夫·克林特)◆ Gold(克林姆特)◆ Pop(凯斯·哈林)◆ Wave(布丽姬·赖利)◆ Comic(利希滕斯坦)。每个按钮上风格配对 — 点画,再点切到伙伴。每个按钮记住你上次用的是两者中哪一个。↻ Shuffle 关闭时,按钮只在两位艺术家间切换;Shuffle 开启时,第三次点击回到 Shuffle。大多数风格有多个构图;Shuffle 开启时,Vary/下一个 会在它们之间摇。每个,都是对同一段乐曲的新视觉答案。`},
   {id:'random', title:`↻ Shuffle — 同一首歌,无限画`, keywords:`随机 shuffle 决定论 种子 重摇 变奏 同样的音乐 不同的画 新鲜 骰子 独特 播放 下一个 风格 循环`,
    body:`同样的音乐 = 同样的画,每一次。Shuffle 打破这点。◆ 选了艺术家:每次播放都把那个艺术家摇成新的变奏。结构也可能变。◆ 没选艺术家:Shuffle 每次播放画一个随机风格(排除马赛克)。抽中的风格显示淡轮廓 — 点击保留。◆ 换风格或颜色从不重摇。只有播放 / 下一个会。状态跨会话保留。`},
   {id:'demo', title:`Demo — 30 秒的 Für Elise`, keywords:`demo für elise 贝多芬 测试 示例 样本 替换 确认`,
@@ -9976,7 +9987,7 @@ const GUIDE_I18N = {
   {id:'modes', title:`和聲 vs 光譜 vs B/W vs Custom`, keywords:`顏色 color 模式 色相 調色盤 五度圈 半音 custom bw 黑白 模式`,
    body:`同一段音樂,四種顏色文法。和聲 — 五度圈順序,相關調聚集。光譜 — 30° 均勻分步,每個半音一種顏色。B/W — 明度跟音高,色相忽略。Custom — 只有你調色盤裡的顏色發聲。隨時切換。同樣的音符,瞬間重繪。點擊活躍標籤預覽顏色。圖像模式下 app 替你選 Color 或 B/W;只有 Custom 由你決定。`},
   {id:'style', title:`繪畫風格(16 位藝術家)`, keywords:`風格 picasso kusama pollock kandinsky miró miro mondrian rothko matisse 立體主義 圓點 drip splatter 星座 拼貼 cut-out 網格 色塊 藝術家 抽象 幾何 階段 變奏 靈感 十六`,
-   body:`圖層。同樣的音符,不同的讀法。馬賽克是樸素預設(φ 矩形)。然後十六位藝術家以自己的方式重寫它:◆ 立體主義(畢卡索)◆ 圓點(草間彌生)◆ Drip(波洛克)◆ Bauhaus(康定斯基)◆ 星座(米羅)◆ 網格(蒙德里安)◆ 色塊(羅斯科)◆ Cut-out(馬蒂斯)◆ Bulge(瓦薩雷利)◆ Arcs(法蘭克·史帖拉)◆ Bloom(山姆·法蘭西斯)◆ Spiral(希爾瑪·阿芙·克林特)◆ Gold(克林姆)◆ Pop(凱斯·哈林)◆ Wave(布麗姬·萊利)◆ Comic(李奇登斯坦)。每個按鈕上風格配對 — 點畫,再點切到夥伴。大多數風格有多個構圖;打開 ↻ Shuffle,Vary/下一個 會在它們之間搖。點活躍風格取消選擇。每個,都是對同一段樂曲的新視覺答案。`},
+   body:`圖層。同樣的音符,不同的讀法。馬賽克是樸素預設(φ 矩形)。然後十六位藝術家以自己的方式重寫它:◆ 立體主義(畢卡索)◆ 圓點(草間彌生)◆ Drip(波洛克)◆ Bauhaus(康定斯基)◆ 星座(米羅)◆ 網格(蒙德里安)◆ 色塊(羅斯科)◆ Cut-out(馬蒂斯)◆ Bulge(瓦薩雷利)◆ Arcs(法蘭克·史帖拉)◆ Bloom(山姆·法蘭西斯)◆ Spiral(希爾瑪·阿芙·克林特)◆ Gold(克林姆)◆ Pop(凱斯·哈林)◆ Wave(布麗姬·萊利)◆ Comic(李奇登斯坦)。每個按鈕上風格配對 — 點畫,再點切到夥伴。每個按鈕記住你上次用的是兩者中哪一個。↻ Shuffle 關閉時,按鈕只在兩位藝術家間切換;Shuffle 開啟時,第三次點擊回到 Shuffle。大多數風格有多個構圖;Shuffle 開啟時,Vary/下一個 會在它們之間搖。每個,都是對同一段樂曲的新視覺答案。`},
   {id:'random', title:`↻ Shuffle — 同一首歌,無限畫`, keywords:`隨機 shuffle 決定論 種子 重搖 變奏 同樣的音樂 不同的畫 新鮮 骰子 獨特 播放 下一個 風格 循環`,
    body:`同樣的音樂 = 同樣的畫,每一次。Shuffle 打破這點。◆ 選了藝術家:每次播放都把那個藝術家搖成新的變奏。結構也可能變。◆ 沒選藝術家:Shuffle 每次播放畫一個隨機風格(排除馬賽克)。抽中的風格顯示淡輪廓 — 點擊保留。◆ 換風格或顏色從不重搖。只有播放 / 下一個會。狀態跨會話保留。`},
   {id:'demo', title:`Demo — 30 秒的 Für Elise`, keywords:`demo für elise 貝多芬 測試 示例 樣本 替換 確認`,
@@ -18215,14 +18226,23 @@ Composition rules:
               const otherKey = faceKey===a ? b : a;
               const onClick = ()=>{
                 if(demoReelOn) return;
-                if(!isOn){ setPairLastPick(p=>({...p,[pairKey]:faceKey})); setStyleTo(faceKey); }
-                else if(style===faceKey){ setPairLastPick(p=>({...p,[pairKey]:otherKey})); setStyleTo(otherKey); }
-                // Third tap → deselect to Mosaic/null. In shuffle this hands the
-                // painting back to the generated artist (the intended "back to
-                // shuffle" step); outside shuffle it's plain Mosaic.
-                else { setStyleTo(null); }
+                if(!isOn){
+                  // Not active → select your last pick from this pair (face).
+                  setPairLastPick(p=>({...p,[pairKey]:faceKey}));
+                  setStyleTo(faceKey);
+                } else if(style===a){
+                  // Active on A → flip to B (remember B as the new face).
+                  setPairLastPick(p=>({...p,[pairKey]:b}));
+                  setStyleTo(b);
+                } else {
+                  // Active on B. Third state depends on shuffle:
+                  //  • shuffle ON  → deselect to null = back to the shuffle draw
+                  //  • shuffle OFF → no "nothing" state; flip back to A (2-state)
+                  if(randomMode){ setStyleTo(null); }
+                  else { setPairLastPick(p=>({...p,[pairKey]:a})); setStyleTo(a); }
+                }
               };
-              const nextHint = !isOn ? '' : (style===faceKey ? `tap for ${STYLE_LABELS[otherKey]}` : 'tap for Mosaic');
+              const nextHint = !isOn ? '' : (style===a ? `tap for ${STYLE_LABELS[b]}` : (randomMode ? 'tap for Mosaic' : `tap for ${STYLE_LABELS[a]}`));
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)}
