@@ -14276,10 +14276,10 @@ export default function Paintiano() {
   useEffect(()=>{
     const prev = prevPickModeRef.current;
     prevPickModeRef.current = logicalPickMode;
-    // Only fire on a real transition between two non-null modes — initial
-    // mount (null → something) and Clear (something → null) are handled
-    // by their own flows and shouldn't double-reset.
-    if(prev && logicalPickMode && prev !== logicalPickMode){
+    // Fire on ANY real transition. Mood→Music goes through two edges
+    // (mood→null when import clears, null→music when MIDI loads); both
+    // need to reset, so we don't require prev/current to be non-null.
+    if(prev !== logicalPickMode){
       setStyle(null);
       setRandomMode(false);
       setShuffleArtistIndex(0);
