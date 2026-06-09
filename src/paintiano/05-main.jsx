@@ -757,22 +757,12 @@ export default function Paintiano() {
   const [colorToast, setColorToast] = useState(null);
   const colorToastTimerRef = useRef(null);
   const cycleColorFs = useCallback(()=>{
-    const cycle = viewModeRef.current==='image' ? ['harmony','spectral','bw','custom'] : ['harmony','spectral','gold','custom'];
+    const cycle = viewModeRef.current==='image' ? ['harmony','spectral','bw','custom'] : ['harmony','spectral','phi','custom'];
     const cur = modeRef.current;
     const idx = cycle.indexOf(cur);
     const next = cycle[((idx<0?0:idx)+1) % cycle.length];
     setMode(next);
-    if(canvasRef.current){
-      canvasRef.current.style.opacity='0';
-      setTimeout(()=>{ if(canvasRef.current) canvasRef.current.style.opacity='1'; },200);
-    }
-    try{
-      const label = (typeof t === 'function') ? t(next) : next;
-      setColorToast(label);
-      if(colorToastTimerRef.current) clearTimeout(colorToastTimerRef.current);
-      colorToastTimerRef.current = setTimeout(()=>setColorToast(null), 1500);
-    }catch(_){}
-  },[t]);
+  },[]);
   // Reactive flag — true once listenBlobRef has a finalised recording. Refs
   // alone don't trigger re-renders, so the toggle UI needs this companion.
   const [hasMicBlob, setHasMicBlob] = useState(false);
@@ -7905,12 +7895,7 @@ Composition rules:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onClick={()=>{ wakeControls(); cycleColorFs(); }} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c',cursor:'pointer'}}/>}
-      {immersive && colorToast && (
-        <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%, -50%)',zIndex:10005,padding:'14px 28px',borderRadius:30,background:'rgba(8,6,14,.72)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',color:'rgba(245,235,210,.95)',fontFamily:"'Outfit',sans-serif",fontSize:(.85*effScale)+'rem',fontWeight:600,letterSpacing:'.16em',textTransform:'uppercase',pointerEvents:'none',boxShadow:'0 8px 30px rgba(0,0,0,.55)',border:'1px solid rgba(201,168,76,.35)',animation:'pfDemoFade .18s ease-out'}}>
-          {colorToast}
-        </div>
-      )}
+      {immersive && <div onClick={wakeControls} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
       {/* Fullscreen artist attribution — fixed near the viewport top so it sits
           in the black letterbox ABOVE the canvas. The user prefers it high (even
           close to the URL bar) over ever landing on the painting. Shows the
@@ -7921,19 +7906,14 @@ Composition rules:
           <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
         </div>
       )}
-      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',cursor:immersive?'pointer':'default',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
+      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onClick={e=>{
-          // FULLSCREEN: tap anywhere on the canvas cycles the colour mode.
-          // Done first and exclusively — no chord-select / wake / demo-stop
-          // logic runs while in immersive view. stopPropagation so the
-          // background div's onClick doesn't ALSO fire (double label bug).
-          if(immersive){ e.stopPropagation(); cycleColorFs(); wakeControls(); return; }
           // Any tap on the canvas reveals the fullscreen control and re-arms its
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
-          if(playing) wakeControls();
+          if(playing||immersive) wakeControls();
           // During the demo reel a canvas tap is the "escape" gesture — kill
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
@@ -7995,13 +7975,23 @@ Composition rules:
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
           const canRollNextFs = !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
-          if(!exportReadyFs && !showNextFs) return null;
+          // Palette button is the always-on companion — it joins Next/Story/Save
+          // if those are showing, sits alone (centred by the flex layout) when
+          // they're not. Hidden only if the painting has no content yet.
+          const showPaletteFs = chords.length>0;
+          if(!exportReadyFs && !showNextFs && !showPaletteFs) return null;
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   {t('nextPainting')||'next'} ›
+                </button>
+              )}
+              {showPaletteFs && (
+                <button onClick={(e)=>{ e.stopPropagation(); cycleColorFs(); wakeControls(); }} className="pf-lift" aria-label="cycle palette"
+                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 22px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#5b8bf0,#3361d9)',border:'1px solid #5b8bf0',boxShadow:'0 6px 22px rgba(51,97,217,.45)',WebkitTapHighlightColor:'transparent'}}>
+                  {t(mode)||mode} ›
                 </button>
               )}
               {exportReadyFs && typeof navigator!=='undefined' && navigator.share && (
