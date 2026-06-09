@@ -13801,6 +13801,16 @@ export default function Paintiano() {
   const listenStreamRef  = useRef(null);
   const listenRafRef     = useRef(null);
   const listenAcRef      = useRef(null); // AudioContext for mic-listen, closed on stop
+  // Raw audio capture during Mic/Music: MediaRecorder + collected chunks +
+  // finalised Blob. When present at playback, the user can choose to play
+  // back the original source audio instead of the synthesised piano cover.
+  const listenRecorderRef = useRef(null);
+  const listenChunksRef   = useRef([]);
+  const listenBlobRef     = useRef(null); // {blob, url, durationMs} once finalised
+  const listenPCMRef      = useRef(null); // decoded AudioBuffer of the blob
+  const originalSourceRef = useRef(null); // active BufferSourceNode during playback
+  const originalRafRef    = useRef(null); // RAF id for paint-time-sync loop
+  const originalPlaybackRef = useRef(false); // true while audio buffer drives playback (no sampler)
   // Press-tracking: per-midi {pressTime,chordIdx}. On release we compute
   // the actual hold duration and patch it into the chord that captured this
   // press, so each block's width reflects how long the key was held.
@@ -14107,6 +14117,14 @@ export default function Paintiano() {
   useEffect(()=>{
     try{ localStorage.setItem('paintiano_mic_preset', micPreset); }catch(_){}
   },[micPreset]);
+  // Playback source for Mic/Music drafts: 'original' = play the recorded raw
+  // audio blob; 'piano' = synthesised cover from painted chords. Default
+  // 'original' when a blob is available — the cleanest sound the user could
+  // get. Falls back to piano automatically if no blob.
+  const [playSourceMic, setPlaySourceMic] = useState('original');
+  // Reactive flag — true once listenBlobRef has a finalised recording. Refs
+  // alone don't trigger re-renders, so the toggle UI needs this companion.
+  const [hasMicBlob, setHasMicBlob] = useState(false);
   // Derived: any mic mode active?
   const micActive = micPainting || micListening;
   const [micVolActive, setMicVolActive] = useState(false);
@@ -15661,6 +15679,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
     try{if(audioElRef.current){audioElRef.current.pause();}}catch(_){}
     try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
+    try{if(originalSourceRef.current){originalSourceRef.current.stop();originalSourceRef.current.disconnect();originalSourceRef.current=null;}}catch(_){}
+    if(originalRafRef.current){cancelAnimationFrame(originalRafRef.current);originalRafRef.current=null;}
     // Release any keys highlighted by the just-cancelled release timers.
     // Without this they linger gold even though no note is sounding.
     setActive(new Set());
@@ -18135,6 +18155,28 @@ Composition rules:
       }catch(_){}
     }
 
+    // Mic/Music with Original source selected: route the recorded blob to the
+    // speakers, mute the sampler for this playthrough, paint visually as
+    // usual. Falls back to piano if anything in the decode/source path failed.
+    const useOriginalListen = draftOwnerRef.current==='listen' && playSourceMic==='original' && listenPCMRef.current;
+    if(useOriginalListen){
+      try{
+        const ac=Tone.getContext().rawContext;
+        if(originalSourceRef.current){try{originalSourceRef.current.stop();}catch(_){}originalSourceRef.current=null;}
+        const src=ac.createBufferSource();
+        src.buffer=listenPCMRef.current;
+        src.playbackRate.value=playbackSpeedRef.current;
+        const g=ac.createGain();g.gain.value=mutedRef.current?0:1;src.connect(g);g.connect(ac.destination);src._muteGain=g;
+        const offsetSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
+        src.start(0,offsetSec);
+        originalSourceRef.current=src;
+        originalPlaybackRef.current=true;
+        src.onended=()=>{originalSourceRef.current=null;originalPlaybackRef.current=false;};
+      }catch(_){ originalPlaybackRef.current=false; }
+    } else {
+      originalPlaybackRef.current=false;
+    }
+
     if(viewMode==='image'&&pixelRef.current){
       const{nc,nr,px}=pixelRef.current,{BW,BH,CW,CH}=grid,cv=canvasRef.current,ctx=cv?.getContext('2d'),gen=genRef.current;
       if(ctx&&fromIdx===0){ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);}
@@ -18219,7 +18261,7 @@ Composition rules:
         try{
           const midis=n.map(({m,v,durMs})=>{
             const scaledDur=Math.round((durMs||300)/playbackSpeedRef.current);
-            if(viewMode!=='audio') playNote(m,v,scaledDur);
+            if(viewMode!=='audio' && !originalPlaybackRef.current) playNote(m,v,scaledDur);
             return{m,scaledDur};
           });
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
@@ -18733,6 +18775,12 @@ Composition rules:
   const stopMicListening=useCallback(()=>{
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
+    // Finalise the parallel raw-audio recorder. It owns its own onstop handler
+    // that builds the Blob; we just request stop. Tracks are closed below.
+    if(listenRecorderRef.current){
+      try{ if(listenRecorderRef.current.state!=='inactive') listenRecorderRef.current.stop(); }catch(_){}
+      listenRecorderRef.current = null;
+    }
     if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
     if(listenAcRef.current){listenAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicListening(false);
@@ -18781,6 +18829,62 @@ Composition rules:
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
+      // Start raw audio capture in parallel — keeps the user's exact source
+      // recording so they can play it back instead of the synthesised cover.
+      // Pick the best supported mime in order of preference. Some browsers
+      // (Safari) accept only audio/mp4; Chrome/Firefox prefer webm/opus.
+      try{
+        const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
+        if(MR){
+          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          let mime = '';
+          for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
+          const opts = mime ? { mimeType: mime } : undefined;
+          const rec = new MR(stream, opts);
+          listenChunksRef.current = [];
+          // Clear any previous draft's blob — fresh listen session.
+          if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
+          listenBlobRef.current = null;
+          rec.ondataavailable = (e)=>{ if(e.data && e.data.size>0) listenChunksRef.current.push(e.data); };
+          rec.onstop = ()=>{
+            const chunks = listenChunksRef.current;
+            if(!chunks || chunks.length===0){ listenChunksRef.current=[]; return; }
+            const type = rec.mimeType || mime || 'audio/webm';
+            const blob = new Blob(chunks, { type });
+            const url = URL.createObjectURL(blob);
+            listenBlobRef.current = { blob, url, type };
+            listenChunksRef.current = [];
+            setHasMicBlob(true);
+            // Decode blob → AudioBuffer in background so Play can start the
+            // original recording instantly. Tone shares its rawContext so the
+            // decoded buffer is compatible with our playback path.
+            (async()=>{
+              try{
+                const arrBuf = await blob.arrayBuffer();
+                const ac = Tone.getContext().rawContext;
+                const decode = (ab,ctx)=>new Promise((res,rej)=>{
+                  let done=false; const t=setTimeout(()=>{ if(!done){done=true;rej(new Error('decode timeout'));} },10000);
+                  try{
+                    ctx.decodeAudioData(ab, b=>{ if(!done){done=true;clearTimeout(t);res(b);} }, e=>{ if(!done){done=true;clearTimeout(t);rej(e||new Error('decode failed'));} });
+                  }catch(_){
+                    ctx.decodeAudioData(ab).then(b=>{ if(!done){done=true;clearTimeout(t);res(b);} }, e=>{ if(!done){done=true;clearTimeout(t);rej(e||new Error('decode failed'));} });
+                  }
+                });
+                const buf = await decode(arrBuf, ac);
+                listenPCMRef.current = buf;
+              }catch(_){
+                // Decode failed (unsupported codec etc.) — silently fall back to
+                // piano playback; the toggle will still be there but Original
+                // tap won't have a buffer to play. Set buffer null.
+                listenPCMRef.current = null;
+              }
+            })();
+          };
+          rec.start(1000); // emit chunks every 1s for incremental delivery
+          listenRecorderRef.current = rec;
+          setHasMicBlob(false); // fresh session — old blob is gone, new one not ready yet
+        }
+      }catch(_){ /* recording optional — pitch-track still works without it */ }
       setMicListening(true);setMicArmed(false);setMicContext(true);
       startMicVol();
       stopAll();
@@ -21369,12 +21473,22 @@ Composition rules:
                       const src = chordsRef.current && chordsRef.current.length ? chordsRef.current : chords;
                       if(!src || !src.length){ exportImage('story', true, null, null, true); return; }
                       const title = (compositionName||recordingName||'Paintiano').trim()||'Paintiano';
-                      const audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
-                      setScoreMsg({tone:'wait',text:t('rendering')||'rendering audio…'});
+                      // Mic/Music with Original selected: use the recorded blob
+                      // directly — no re-render needed, original quality kept.
+                      const useOriginalBlob = draftOwnerRef.current==='listen' && playSourceMic==='original' && listenBlobRef.current?.blob;
                       let audioBlob = null;
-                      try{ audioBlob = await renderAudioOffline(src,{speed:1}); }catch(_){}
+                      let audioName;
+                      if(useOriginalBlob){
+                        audioBlob = listenBlobRef.current.blob;
+                        const ext = (listenBlobRef.current.type||'').includes('mp4') ? '.m4a' : (listenBlobRef.current.type||'').includes('ogg') ? '.ogg' : '.webm';
+                        audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+ext;
+                      } else {
+                        audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+                        setScoreMsg({tone:'wait',text:t('rendering')||'rendering audio…'});
+                        try{ audioBlob = await renderAudioOffline(src,{speed:1}); }catch(_){}
+                        setScoreMsg(null);
+                      }
                       try{ await unlockAudio(); }catch(_){}
-                      setScoreMsg(null);
                       await exportImage('story', true, audioBlob, audioName, true);
                     }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
                       ✦ {t('sizeStory')||'Story'}
@@ -21776,6 +21890,17 @@ Composition rules:
         )}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
+        )}
+        {/* Mic/Music source toggle — appears once the listen session has a
+            finalised audio blob and the mic is no longer live. One tap flips
+            between playing back the original recording and the synthesised
+            piano cover. Hidden during active capture and during recording. */}
+        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+          <button className="pf-lift" onClick={()=>setPlaySourceMic(p=>p==='original'?'piano':'original')}
+            title={playSourceMic==='original'?'playback: original recording — tap to switch to piano cover':'playback: piano cover — tap to switch to original recording'}
+            style={{padding:'8px 14px',background:playSourceMic==='original'?'rgba(140,200,255,.16)':'rgba(201,168,76,.16)',color:playSourceMic==='original'?'#8accff':GOLD,border:'1px solid '+(playSourceMic==='original'?'rgba(100,180,255,.55)':'rgba(201,168,76,.55)'),borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:'0 3px 10px '+(playSourceMic==='original'?'rgba(100,180,255,.25)':'rgba(201,168,76,.25)')}}>
+            {playSourceMic==='original'?'🎵 orig':'🎹 piano'}
+          </button>
         )}
         {effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(()=>{
           // Next is available whenever there's a painting on the canvas — during
