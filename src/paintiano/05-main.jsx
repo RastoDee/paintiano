@@ -5410,7 +5410,7 @@ Composition rules:
       }
       let lastCommit=performance.now();
       const COMMIT_INTERVAL=150; // detection runs at ~6.6 Hz
-      const MIN_HOLD_MS=120;     // shorter than this isn't committed
+      const MIN_HOLD_MS=180;     // shorter than this isn't committed
       // Adaptive noise gate is the ONLY filter — distinguishes silence/room
       // noise from any audio. Everything that gets past it gets painted, even
       // distorted or rough detections. The point is "I hear something" → paint,
@@ -5421,7 +5421,7 @@ Composition rules:
       // Smoothing window: majority vote over last HIST_LEN samples.
       // 5 × 150 ms = 750 ms — responsive enough for 1–2 chord/sec progressions.
       const HIST_LEN=5;
-      const STABLE_COUNT=2;       // event must hit ≥2/5 of the window
+      const STABLE_COUNT=3;       // event must hit ≥3/5 of the window
       const chordHist=[];         // signatures of recent events
       const eventByKey={};        // signature → notes[] (most recent occurrence)
       let pendingSig='';
@@ -5454,7 +5454,7 @@ Composition rules:
         const chroma=computeChroma(mag,liveSr);
         const det=detectChord(chroma); // may be null
         const peaks=pickPitches(mag,liveSr,0.10); // top peaks, decent prominence
-        if(det && det.conf>=0.55){
+        if(det){
           const notes=generateVoicing(det.root,det.quality);
           return { sig:'C:'+det.root+':'+det.quality, notes };
         }
