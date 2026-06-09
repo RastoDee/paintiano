@@ -478,9 +478,25 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
-      const PALETTE_VERSION='4';
+      const PALETTE_VERSION='5';
       const savedVersion=localStorage.getItem('paintiano_palette_version');
-      if(savedVersion!==PALETTE_VERSION){localStorage.removeItem('paintiano_custom_palette');localStorage.setItem('paintiano_palette_version',PALETTE_VERSION);return null;}
+      if(savedVersion!==PALETTE_VERSION){
+        // Force-seed the new inverse-Harmony default into localStorage,
+        // overwriting any prior saved palette (including the old default
+        // derived from COF+180, and any user-customised one). Rasto wants
+        // EVERY user (Free and Pro/Pro AI) to land on the new default on
+        // this rollout — saved customisations from before this version
+        // are intentionally discarded.
+        const seed = CUSTOM_DEFAULT_HUE.map(h=>{
+          const [r,g,b]=fromHsl(h,80,55);
+          return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
+        });
+        try{
+          localStorage.setItem('paintiano_custom_palette', JSON.stringify(seed));
+          localStorage.setItem('paintiano_palette_version', PALETTE_VERSION);
+        }catch(_){}
+        return seed;
+      }
       const raw=localStorage.getItem('paintiano_custom_palette');
       if(!raw)return null;
       const arr=JSON.parse(raw);
@@ -7905,14 +7921,19 @@ Composition rules:
           <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
         </div>
       )}
-      <div ref={canvasWrapRef} onClick={immersive ? (e)=>{ e.stopPropagation(); cycleColorFs(); wakeControls(); } : undefined} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',cursor:immersive?'pointer':'default',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
+      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',cursor:immersive?'pointer':'default',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onClick={e=>{
+          // FULLSCREEN: tap anywhere on the canvas cycles the colour mode.
+          // Done first and exclusively — no chord-select / wake / demo-stop
+          // logic runs while in immersive view. stopPropagation so the
+          // background div's onClick doesn't ALSO fire (double label bug).
+          if(immersive){ e.stopPropagation(); cycleColorFs(); wakeControls(); return; }
           // Any tap on the canvas reveals the fullscreen control and re-arms its
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
-          if(playing||immersive) wakeControls();
+          if(playing) wakeControls();
           // During the demo reel a canvas tap is the "escape" gesture — kill
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
