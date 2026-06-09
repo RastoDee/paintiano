@@ -384,6 +384,13 @@ export default function Paintiano() {
   const audioOffsetRef = useRef(0);    // offset into the audio buffer
   const samplerRef   = useRef(null);
   const samplerOk    = useRef(false);
+  // True once we've attached the AudioContext 'statechange' listener so we
+  // don't register multiple handlers across repeated unlockAudio calls. The
+  // listener detects iOS audio-session steals (another tab grabbed output,
+  // typically a second Paintiano instance) and pre-emptively kills stuck
+  // oscillators so they don't burst out as a monotone piano blast when the
+  // session returns. See unlockAudio.
+  const audioStateListenerRef = useRef(false);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -396,6 +403,7 @@ export default function Paintiano() {
   const refImage     = useRef(null);
   const refImgMood   = useRef(null);
   const refScore     = useRef(null);
+  const refSound     = useRef(null); // unified MIDI/audio/score picker
   const kbScrollRef  = useRef(null);
   const recorderRef      = useRef(null);
   const recChunksRef     = useRef([]);
@@ -407,6 +415,16 @@ export default function Paintiano() {
   const listenStreamRef  = useRef(null);
   const listenRafRef     = useRef(null);
   const listenAcRef      = useRef(null); // AudioContext for mic-listen, closed on stop
+  // Raw audio capture during Mic/Music: MediaRecorder + collected chunks +
+  // finalised Blob. When present at playback, the user can choose to play
+  // back the original source audio instead of the synthesised piano cover.
+  const listenRecorderRef = useRef(null);
+  const listenChunksRef   = useRef([]);
+  const listenBlobRef     = useRef(null); // {blob, url, durationMs} once finalised
+  const listenPCMRef      = useRef(null); // decoded AudioBuffer of the blob
+  const originalSourceRef = useRef(null); // active BufferSourceNode during playback
+  const originalRafRef    = useRef(null); // RAF id for paint-time-sync loop
+  const originalPlaybackRef = useRef(false); // true while audio buffer drives playback (no sampler)
   // Press-tracking: per-midi {pressTime,chordIdx}. On release we compute
   // the actual hold duration and patch it into the chord that captured this
   // press, so each block's width reflects how long the key was held.
@@ -448,6 +466,13 @@ export default function Paintiano() {
   // The colour reading the app chose for the current image (harmony or bw), so
   // leaving Custom returns to it rather than always to harmony.
   const appModeRef = useRef('harmony');
+  // ─── Paintiano Pro state (from 07-pro.jsx) ───
+  // Hoisted up here so `proStatus` is in scope for activePalette / shuffle pool /
+  // effectivePairs / etc. below. The hook has no parameter dependencies — order
+  // among hooks doesn't matter for correctness as long as it stays consistent.
+  const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
+          trialUsed, trialLeft, trialExhausted, consumeTrial, gateAI } = useEntitlements();
+  const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
   // Custom palette = 12 hex colors, one per pitch class (index 0 = C, 11 = B).
   // null = uninitialized. Seeded on first switch to 'custom' mode from whichever
   // mode was active. Persisted across sessions in localStorage.
@@ -475,7 +500,13 @@ export default function Paintiano() {
     const [r,g,b]=fromHsl(oppHue,80,55);
     return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
   }),[]);
-  const activePalette=customPalette||defaultCustomPalette;
+  // Pro tier uses the user's saved palette (or default if empty). Free tier
+  // is locked to the default palette — their saved colours from a previous
+  // Pro period (or before downgrade) remain in localStorage untouched, but
+  // are not applied at runtime. Upgrading restores their saved choices.
+  const activePalette=(proStatus==='free')
+    ? defaultCustomPalette
+    : (customPalette||defaultCustomPalette);
   useEffect(()=>{
     if(!customPalette)return;
     if(customPalette.every(h=>h==='#888888'))return;
@@ -520,7 +551,8 @@ export default function Paintiano() {
   const paintDur = 500;
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
-  const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);
+  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [phaseIndex,setPhaseIndex]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
   // Variation history for Random mode prev/next navigation. saltHistory holds
   // the sequence of random salts that have been shown; saltIdxRef points at the
   // current one. Play-from-start and Loop append+advance (fresh variation);
@@ -538,10 +570,13 @@ export default function Paintiano() {
   const [langOpen, setLangOpen] = useState(false);
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
 
-  // ─── Paintiano Pro state (from 07-pro.jsx) ───
-  const { proStatus, isPro, maskedEmail, activateLicense, deactivateLicense, openCheckout,
-          trialUsed, trialLeft, trialExhausted, consumeTrial, gateAI } = useEntitlements();
-  const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
+  // ─── (Pro state hoisted earlier in the component — see useEntitlements above) ───
+  // Convenience flag: Free tier user who has used all their AI trial credits.
+  // Drives the "disabled + PRO badge" visual state on AI buttons (How do you
+  // feel? · Mood from image · AI Compose · Atmosphere) and the locked mood
+  // input. Clicks on any of these still surface the paywall once, not on every
+  // tap — the visual state already communicates the gating.
+  const aiLocked = (proStatus === 'free') && trialExhausted;
   // Descriptive style labels shown on the chips (the internal keys —
   // picasso/kusama/… — stay unchanged everywhere in the logic). This keeps the
   // feature branded by what it DOES, while STYLE_INSPIRED supplies a small
@@ -586,6 +621,35 @@ export default function Paintiano() {
   const [STYLE_PAIRS] = useState(() =>
     BASE_STYLE_PAIRS.map(([a,b]) => (Math.random() < 0.5 ? [a,b] : [b,a]))
   );
+  // ─── Tier-aware artist pairs (D2, Jun 2026) ───────────────────────────────
+  // Free tier sees a FIXED set of 8 artists (the 'a' side of every BASE pair),
+  // identical for every Free user — so the "unlock 8 more" sales pitch is
+  // predictable and consistent. Paid tiers (Pro / Pro AI) get the session-
+  // shuffled STYLE_PAIRS where face position rotates randomly per app open.
+  // We also derive the locked set so the gate logic below knows which keys are
+  // behind the paywall.
+  const FREE_PAIRS = BASE_STYLE_PAIRS; // [a,b] kept in BASE order; only 'a' is reachable for free
+  const FREE_UNLOCKED_KEYS = useMemo(
+    () => new Set(BASE_STYLE_PAIRS.map(([a]) => a)),
+    []
+  );
+  const effectivePairs = (proStatus === 'free') ? FREE_PAIRS : STYLE_PAIRS;
+  // For Free: tapping a pair must NEVER select the b side. styleIsLocked tells
+  // the gate to open the paywall instead of swapping styles.
+  const styleIsLocked = useCallback((key) => {
+    if (proStatus !== 'free') return false;
+    return !FREE_UNLOCKED_KEYS.has(key);
+  }, [proStatus, FREE_UNLOCKED_KEYS]);
+  // Remembers, per pair, which member the user last selected. So when a pair's
+  // button is not currently active (you picked a DIFFERENT artist), tapping it
+  // returns to YOUR last choice from that pair — not always the default 'a'.
+  // Key = "a|b"; value = the style key last chosen from that pair.
+  const [pairLastPick, setPairLastPick] = useState({});
+  // D2 refactor (Free tier only): which pair is currently showing its "locked
+  // partner" info row beneath the artist palette. Holds the pair key "a|b" of
+  // the most recently tapped pair, or null. Tapping the same pair again toggles
+  // it off; tapping a different pair replaces it (only one info row at a time).
+  const [expandedPair, setExpandedPair] = useState(null);
   const [anim,      setAnim]      = useState(false);
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
@@ -616,15 +680,26 @@ export default function Paintiano() {
   // (Math.ceil to avoid showing "0.5" or "1.5"). Re-fires on EVERY trialLeft
   // change while in the danger zone — so the user can't miss it after a quick
   // consume. Suppressed for Pro users and when trial is fully exhausted (the
-  // paywall handles that case explicitly).
+  // paywall handles that case explicitly). Tracks whether WE set the current
+  // banner via a ref so that flipping to Pro can clear it immediately, not
+  // wait for the 6 s auto-dismiss (which leaves a "1 trial left" message
+  // visible on the freshly-Pro setup screen — confusing).
+  const trialBannerActiveRef = useRef(false);
   useEffect(()=>{
-    if(isPro||trialExhausted) return;
+    if(isPro||trialExhausted) {
+      if(trialBannerActiveRef.current){
+        setErr(''); setErrInfo(false);
+        trialBannerActiveRef.current = false;
+      }
+      return;
+    }
     const left=Math.ceil(trialLeft);
     if(left>2||left<=0) return;
     const msg = left===1
-      ? (t('trialBanner1')||'Only 1 AI trial left · Get Pro for unlimited')
-      : (t('trialBanner2')||'Only '+left+' AI trials left · Get Pro for unlimited');
+      ? (t('trialBanner1')||'Only 1 AI trial left · Get Pro AI for unlimited')
+      : (t('trialBanner2')||'Only '+left+' AI trials left · Get Pro AI for unlimited');
     setErr(msg); setErrInfo(true);
+    trialBannerActiveRef.current = true;
   },[trialLeft,isPro,trialExhausted,t]);
 
   const [working,   setWorking]   = useState(false);
@@ -656,6 +731,16 @@ export default function Paintiano() {
   useEffect(()=>{
     try{ localStorage.setItem('paintiano_mic_preset', micPreset); }catch(_){}
   },[micPreset]);
+  // Playback source for Mic/Music drafts: 'original' = play the recorded raw
+  // audio blob; 'piano' = synthesised cover from painted chords. Default
+  // 'original' when a blob is available — the cleanest sound the user could
+  // get. Falls back to piano automatically if no blob.
+  const [playSourceMic, setPlaySourceMic] = useState('original');
+  const playSourceMicRef = useRef('original');
+  useEffect(()=>{ playSourceMicRef.current = playSourceMic; },[playSourceMic]);
+  // Reactive flag — true once listenBlobRef has a finalised recording. Refs
+  // alone don't trigger re-renders, so the toggle UI needs this companion.
+  const [hasMicBlob, setHasMicBlob] = useState(false);
   // Derived: any mic mode active?
   const micActive = micPainting || micListening;
   const [micVolActive, setMicVolActive] = useState(false);
@@ -682,6 +767,8 @@ export default function Paintiano() {
   const [audioName, setAudioName] = useState('');
   const [recBlob, setRecBlob] = useState(null);   // recording output blob (share row)
   const [recName, setRecName] = useState('');      // recording output name
+  const [audioSideImage, setAudioSideImage] = useState(null); // optional original image to share alongside audio
+  const [audioRowOpen, setAudioRowOpen] = useState(false); // explicitly show the audio share row (image mode: only after Audio pick, not after REC)
   // After a record finishes, recordIntent tells the onstop handler what the
   // user actually wanted: 'story' = share PNG+audio together, 'audio' = trigger
   // saveAudio() immediately, null = manual record (show share row, default).
@@ -815,8 +902,13 @@ export default function Paintiano() {
         h = Math.imul(h, 16777619);
       }
     }
-    return (h >>> 0) ^ (rndSalt>>>0);
-  }, [chords, rndSalt, structureSeedLock]);
+    // Seed is derived ONLY from chord content — same song = same painting
+    // for any given artist style. VARY changes tones → chord hash changes →
+    // painting changes (legitimately, because the song itself is different).
+    // SHUFFLE changes only the artist → chord hash stays → painting stays
+    // identical for that song in the new artist's style.
+    return (h >>> 0);
+  }, [chords, structureSeedLock]);
   // ── SHUFFLE MODE ──────────────────────────────────────────────────────────
   // When NO artist is selected but Random is ON, the painting shuffles across
   // all artist styles: each variation (Play / Next / Vary → new seed) picks a
@@ -824,19 +916,69 @@ export default function Paintiano() {
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
+  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
+  // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
+  // shuffle across all 16. Keeps the random feature usable for Free without ever
+  // accidentally landing on a locked artist (which would just paint a Pro-only
+  // style without a clear way to dismiss it).
+  const SHUFFLE_POOL = (proStatus === 'free')
+    ? SHUFFLE_POOL_ALL.filter(k => FREE_UNLOCKED_KEYS.has(k))
+    : SHUFFLE_POOL_ALL;
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
-    // Mix the seed a little more so the style pick isn't correlated with the
-    // per-artist phase chooser (which also reads the raw seed).
+    // Default artist is deterministic per song (chord hash). Dice/Next/Play
+    // increments shuffleArtistIndex so the user can step through the whole
+    // SHUFFLE_POOL while the song itself stays the same. Each (song, artist)
+    // combination renders an identical painting.
     let h = (pollockSessionSeed>>>0);
     h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
-    return SHUFFLE_POOL[(h>>>0) % SHUFFLE_POOL.length];
-  }, [style, randomMode, pollockSessionSeed]);
+    const basePick = (h>>>0) % SHUFFLE_POOL.length;
+    return SHUFFLE_POOL[(basePick + shuffleArtistIndex) % SHUFFLE_POOL.length];
+  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL, shuffleArtistIndex]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
   // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
   // it only needs note MIDI + the colour fn, which every source provides.
   const effectiveStyle = style || shuffleStyle || (notesMode ? 'notes' : null);
+  // Pick a fresh random phaseIndex whenever the song OR the active artist
+  // changes — that triggers a new "style" for that (song, artist) pair on the
+  // first Play. Stays stable across repeated Plays of the same (song, artist).
+  // VARY keeps phaseIndex (Vary changes tones, but the artist's style should
+  // persist). Next button increments phaseIndex to cycle styles manually.
+  const prevSongArtistRef = useRef({seed:0, art:null});
+  const varyInProgressRef = useRef(false);
+  // nextRollInProgressRef: set true by Next/Play when they already explicitly
+  // rolled phaseIndex themselves. Stops useEffect from double-rolling and
+  // causing a flicker (paint shows random_A then immediately swaps to random_B).
+  const nextRollInProgressRef = useRef(false);
+  useEffect(()=>{
+    const seed = pollockSessionSeed>>>0;
+    const art = effectiveStyle || '';
+    const prev = prevSongArtistRef.current;
+    if(prev.seed !== seed || prev.art !== art){
+      prevSongArtistRef.current = {seed, art};
+      // Vary just changed the tones — same song, same artist, only tonality.
+      // Don't re-randomize the style; consume the flag and skip.
+      if(varyInProgressRef.current){
+        varyInProgressRef.current = false;
+        return;
+      }
+      // Next/Play already set the new phaseIndex itself — consume the flag
+      // and don't re-roll (would cause a visible flicker between two styles).
+      if(nextRollInProgressRef.current){
+        nextRollInProgressRef.current = false;
+        return;
+      }
+      // Skip the initial mount when there are no chords yet — avoids a stray
+      // randomization before the user has loaded any song.
+      // Re-randomize ONLY when Dice (randomMode) is on. With Dice off the
+      // user has picked a specific variant (or the deterministic default) and
+      // expects ONE painting for the whole song — Mic capture in particular
+      // would otherwise flicker through variants on every recorded chord.
+      if((seed !== 0 || art) && randomMode){
+        setPhaseIndex((Math.random()*1000)|0);
+      }
+    }
+  }, [pollockSessionSeed, effectiveStyle, randomMode]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
@@ -908,6 +1050,17 @@ export default function Paintiano() {
   // function. Identity is stable since setShowAbout is a useState setter.
   const closeAbout = useCallback(()=>setShowAbout(false),[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
+  // Paint-mode Web/Print export toggle: when ON and a source image is on
+  // hand (originalImgUrl for regular image, imgMoodThumb for MFI), overlay
+  // a small thumbnail in the corner of the saved PNG so the viewer sees
+  // what the chord painting was generated from. Resets to off when the
+  // picker re-opens so the user explicitly opts in each time.
+  const [includeSourceThumb, setIncludeSourceThumb] = useState(false);
+  const includeSourceThumbRef = useRef(false);
+  useEffect(()=>{ includeSourceThumbRef.current=includeSourceThumb; },[includeSourceThumb]);
+  const pendingWithSourceRef = useRef(false);
+  const keepSetupDuringRecRef = useRef(false);
+  useEffect(()=>{ if(!showSizePicker) setIncludeSourceThumb(false); },[showSizePicker]);
   // Inline "guide" modal: searchable how-to entries covering every feature.
   const [showGuide, setShowGuide] = useState(false);
   // Reading-text size for the Concept & Guide panels (accessibility — larger
@@ -1031,6 +1184,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
+  // When VARY restarts playback it wants the Color·Style strip to STAY open. But
+  // startPlay (async) closes the strip on a fresh (non-resume) start, and that
+  // close lands AFTER VARY's setStripOpen(true) because startPlay awaits unlock.
+  // This ref lets VARY tell startPlay "don't close the strip this once".
+  const keepStripOpenRef = useRef(false);
   // Mood-hint flash: when the user taps a disabled morph/vary, the mood
   // selector briefly pulses with a label above it pointing them there.
   const [moodHint, setMoodHint] = useState(false);
@@ -1050,6 +1208,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgDir, setImgDir] = useState('lr');
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
+  // Image playback mode: 'scan' = read the picture left→right as a score (paints
+  // a mosaic/style); 'compose' = AI writes a free-standing piece from the image
+  // material (Pro; canvas stays the original image). The transport Play/Pause/REC
+  // all follow this selection. Resets to 'scan' on every new image load.
+  const [imgPlayMode, setImgPlayMode] = useState('scan');
+  const imgPlayModeRef = useRef('scan');
+  useEffect(()=>{ imgPlayModeRef.current=imgPlayMode; },[imgPlayMode]);
   const blobUrl      = useMemo(()=>midiBlob?URL.createObjectURL(midiBlob):null,[midiBlob]);
   const audioBlobUrl = useMemo(()=>audioBlob?URL.createObjectURL(audioBlob):null,[audioBlob]);
   const busy = playing || anim || working;
@@ -1095,6 +1260,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     : (loadedSource==='image' && (!pixelRef.current || (disp===0 && !playedOnce))) ? null
     : loadedSource;
   const composedModeRef = useRef(false);
+  // True while an image-Composition piece is playing: the canvas must stay blank
+  // (the original <img> shows through) — NOT painted with the active artist style.
+  const imgComposeRef = useRef(false);
   const [selectedChordIdx, setSelectedChordIdx] = useState(null); // chord.idx selected by tapping a block (compose / compose-pause) for targeted Undo
   const selectedChordIdxRef = useRef(null);
   useEffect(()=>{ selectedChordIdxRef.current=selectedChordIdx; },[selectedChordIdx]);
@@ -1128,6 +1296,21 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Cleanup the compose-commit debounce on unmount so it can't fire commit()
   // against a torn-down state tree.
   useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);if(switchArmRef.current)clearTimeout(switchArmRef.current);try{const b=demoReelRef.current;if(b){b.active=false;b.timers.forEach(id=>clearTimeout(id));if(b.parade)clearInterval(b.parade);if(b.vary)clearInterval(b.vary);if(b.type)clearInterval(b.type);}}catch(_){}substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};},[]);
+
+  // iOS 17+: pin the audio session category to 'playback' on app mount.
+  // This makes audio output IGNORE the hardware silent switch (side mute
+  // toggle on iPhone). Without this, if the user had used MediaRecorder
+  // earlier (which switches the category to 'play-and-record' that DOES
+  // respect the silent switch) and refreshes/reopens with silent switch on,
+  // they hear nothing even though the in-app speaker shows 🔊 unmuted.
+  // Setting this on every mount keeps the category sticky to 'playback'.
+  useEffect(()=>{
+    try{
+      if(typeof navigator!=='undefined' && navigator.audioSession){
+        navigator.audioSession.type = 'playback';
+      }
+    }catch(_){}
+  },[]);
 
   useEffect(()=>{
     let dead=false;
@@ -1183,6 +1366,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // here means every downstream render decision (overlay dispatch, cache key,
     // canAppend) transparently uses the rendered style.
     const style = effectiveStyle;
+    // Image Composition playback: the canvas must stay fully transparent so the
+    // original <img> (behind it) shows through. Without this guard, when pixelRef
+    // is null (composition mode) the image branch below is skipped and execution
+    // falls through to the artist-style paint renderer — which would draw the
+    // composed notes in whatever style was last active (e.g. Kandinsky circles)
+    // ON TOP of the artwork. Clear and bail.
+    if(imgComposeRef.current){
+      try{ const _ctx=cv.getContext('2d'); _ctx.clearRect(0,0,CW,CH); }catch(_){}
+      return;
+    }
     // Image mode: keep the canvas transparent so the original painting shows through
     // unobstructed. The 96×60 pixel mosaic that used to render here was useful as
     // a "what the algorithm sees" preview, but it obscured the artwork on a phone-sized
@@ -1191,9 +1384,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(viewMode==='image'&&pixelRef.current){
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
-      // Stopped/paused: the canvas may have been blanked while we were away in
-      // Setup (the element unmounts/clears). Repaint the already-played mosaic
-      // 0..disp from pixel data so returning via "← Canvas"/Resume shows the
+      // Paused: detect via holdPausedRef, which is set synchronously the instant
+      // Pause is tapped (the state version hasn't flushed yet in the render that
+      // runs when playing flips false — that race is why the repaint still fired
+      // and wiped the freshly-painted blocks). When paused, leave the canvas
+      // exactly as the scan loop left it.
+      if(holdPaused || holdPausedRef.current) return;
+      // Fully stopped (not paused): the canvas may have been blanked while we were
+      // away in Setup (the element unmounts/clears). Repaint the already-played
+      // mosaic 0..disp from pixel data so returning via "← Canvas" shows the
       // progress that was on screen before, instead of a blank image overlay.
       try{
         const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
@@ -1227,6 +1426,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
     // Per-painting seed for renderers needing a stable whole-painting choice.
     _setArtistSeed(pollockSessionSeed);
+    // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
+    // paint so a tier change while the app is open takes effect immediately.
+    _setVariantCap(proStatus==='free' ? 2 : null);
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
@@ -1321,12 +1523,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // next throttled tick. Detect it so we can bypass the playback throttle —
       // otherwise the new variation gets swallowed by the ~9fps skip and "Next"
       // appears to do nothing during playback.
-      const seedChanged = prev.pollockSessionSeed !== pollockSessionSeed;
+      const seedChanged = prev.pollockSessionSeed !== pollockSessionSeed
+        || prev.phaseIndex !== phaseIndex
+        || prev.shuffleArtistIndex !== shuffleArtistIndex;
       if(isOverlayStyle && playing && !seedChanged && lim<chords.length && (nowMs-lastOverlayPaintRef.current)<110){
         // Skip this overlay repaint — keep last frame on canvas. Record disp so
         // the next allowed repaint covers the gap.
         prev.disp = lim; prev.pending = pending;
-        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
+        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex,shuffleArtistIndex};
         return;
       }
       lastOverlayPaintRef.current = nowMs;
@@ -1374,6 +1578,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // alone owns the canvas.
         const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic';
         _setArtistSeed(pollockSessionSeed);
+        _setVariantCap(proStatus==='free' ? 2 : null);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
             const chord=chords[i];const{n:notes,idx}=chord;
@@ -1400,22 +1605,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         } else if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0);
         // Run the canvas-wide overlay on top (this is the only per-frame cost
         // that legitimately scales with lim).
-        if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed);
-        else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc);
-        else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='bulge') drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='arcs') drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='bloom') drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='spiral') drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='gold') drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, phaseIndex);
+        else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, phaseIndex);
+        else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='bulge') drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='arcs') drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='bloom') drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='spiral') drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='gold') drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -1426,54 +1631,54 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Pollock global drip overlay — runs AFTER all cells have rendered.
       // Drips ignore cell boundaries and unify the painting under the splatter.
       if(style==='pollock' && lim>0){
-        drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='picasso' && lim>0){
-        drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='kusama' && lim>0){
-        drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed);
+        drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, phaseIndex);
       }
       if(style==='miro' && lim>0){
-        drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       // Kandinsky canvas-wide contour overlay — large outlined shapes in
       // varied colors layered over the per-cell Kandinsky composition.
       if(style==='kandinsky' && lim>0){
-        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc);
+        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, phaseIndex);
       }
       if(style==='rothko' && lim>0){
-        drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='matisse' && lim>0){
-        drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='mondrian' && lim>0){
-        drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='bulge' && lim>0){
-        drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='arcs' && lim>0){
-        drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='bloom' && lim>0){
-        drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='spiral' && lim>0){
-        drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='gold' && lim>0){
-        drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='pop' && lim>0){
-        drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='wave' && lim>0){
-        drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='comic' && lim>0){
-        drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
@@ -1483,8 +1688,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
       }
     }
-    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode]);
+    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex,shuffleArtistIndex};
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,phaseIndex,shuffleArtistIndex]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -1878,13 +2083,76 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // app keeps running. Call this from every user-gesture audio entrypoint to
   // (a) kick Tone's promise, and (b) synchronously poke the rawContext awake.
   // Cheap to call repeatedly; no-op when context is already running.
+
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
+    // Shorten Tone's scheduler look-ahead from its default 100ms to 30ms.
+    // Default 100ms means triggerAttackRelease(..., Tone.now(), ...) schedules
+    // audio 100ms ahead of the real context clock, while canvas paints happen
+    // synchronously on the same animation frame — yielding a perceptible
+    // ~100ms audio-trails-canvas desync. 30ms is the sweet spot on iOS: tight
+    // enough to feel synchronised, far enough above zero to avoid scheduler
+    // underruns on slow devices. Idempotent — setter is cheap and safe to
+    // re-apply on every unlock.
+    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    // iOS 17+ audio session API. After MediaRecorder runs, iOS WebKit
+    // pushes the audio session into the 'play-and-record' category which
+    // makes output respect the hardware silent switch — so even with
+    // 'unmuted' state inside the app, the iPhone produces no sound if the
+    // side mute switch is on. Pinning to 'playback' tells iOS to ignore
+    // the silent switch and always route audio to the speaker. Safe no-op
+    // on browsers that don't expose this API (older iOS, desktop).
+    try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type = 'playback'; } }catch(_){}
+    // Defensive: force Tone destination unmute to match the React mute
+    // state. Without this, a stale Tone.Destination.mute=true (left over
+    // from some path that set it but didn't restore) would silently
+    // suppress all output even though the React UI thinks audio is on.
+    try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
     try{
       const ac=Tone.getContext().rawContext;
       if(!ac) return;
-      if(ac.state==='running') return; // already unlocked, nothing to do
-      // Suspended — cancel pending sampler events, kick off resume.
+      // Attach a one-time 'statechange' listener so we detect mid-session
+      // audio steals: on iOS, opening a second Paintiano tab/PWA grabs the
+      // global audio session and our AudioContext transitions to
+      // 'interrupted' WITHOUT firing visibilitychange (the tab stays visible,
+      // just silent). When that happens, any oscillators/buffers scheduled
+      // mid-flight get frozen — releasing them via sampler.releaseAll() now
+      // prevents the "monotone piano blast" that otherwise erupts when the
+      // session is returned to us. Idempotent: attached only on first
+      // unlockAudio call against a live context.
+      if(!audioStateListenerRef.current){
+        try{
+          ac.addEventListener('statechange', ()=>{
+            const s = ac.state;
+            if(s==='interrupted' || s==='suspended'){
+              try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
+              try{ if(audioElRef.current) audioElRef.current.pause(); }catch(_){}
+            }
+          });
+          audioStateListenerRef.current = true;
+        }catch(_){}
+      }
+      if(ac.state==='running'){
+        // Even when 'running', play a 1-sample silent buffer to nudge iOS's
+        // audio session into the active output state. Cheap (one sample),
+        // imperceptible, and routinely fixes the "running but silent" bug
+        // that appears after MediaRecorder + share-sheet sequences.
+        try{
+          const buf = ac.createBuffer(1, 1, 22050);
+          const src = ac.createBufferSource();
+          src.buffer = buf;
+          src.connect(ac.destination);
+          src.start(0);
+          src.stop(ac.currentTime + 0.005);
+        }catch(_){}
+        return;
+      }
+      // Non-running: state is 'suspended' (we went to background) OR
+      // 'interrupted' (iOS-only — another tab stole the audio session, most
+      // commonly a second Paintiano instance). Both paths share the same
+      // recovery: cancel any sampler events that got frozen mid-flight, then
+      // resume the context. Resume on 'interrupted' isn't always honoured by
+      // iOS without a fresh user gesture, but it's a no-op safe to attempt.
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       try { ac.resume(); } catch(_){}
       // Poll briefly for the context to actually transition to 'running' before
@@ -1895,8 +2163,129 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       while(ac.state !== 'running' && Date.now() - start < 500){
         await new Promise(r=>setTimeout(r, 20));
       }
+      // After resume succeeded, fire the silent-kick buffer so iOS routes
+      // audio to the speaker.
+      if(ac.state==='running'){
+        try{
+          const buf = ac.createBuffer(1, 1, 22050);
+          const src = ac.createBufferSource();
+          src.buffer = buf;
+          src.connect(ac.destination);
+          src.start(0);
+          src.stop(ac.currentTime + 0.005);
+        }catch(_){}
+      }
     }catch(_){}
   },[]);
+
+  // iOS "running but silent after idle" recovery — the core of the lost-sound bug.
+  //
+  // Verified behaviour (WebKit + Tone.js + howler.js community, 2024-2026):
+  //   • When the page is backgrounded / the device sleeps, iOS parks the
+  //     AudioContext. Often it comes back as state==='running' yet produces NO
+  //     output — the underlying audio device was torn down. A plain resume() is a
+  //     no-op here (the context already thinks it's running), which is exactly why
+  //     every resume-only attempt failed and only a full page reload helped.
+  //   • The fix that DOES work without a reload is an explicit suspend()->resume()
+  //     cycle: forcing the context back to 'suspended' and then resuming makes iOS
+  //     re-acquire the audio device. (howler.js #1106/#928, PlayCanvas 2026.)
+  //   • This MUST run inside a user gesture — iOS only honours the re-acquire then.
+  //
+  // Called synchronously from the Resume/Play tap. No-op-cheap on desktop and when
+  // audio is healthy (the round-trip is a couple of ms and inaudible since we're
+  // not sounding anything at tap time).
+  const wakeAudioRef = useRef(0);
+  const wakeAudio = useCallback(async ()=>{
+    try{ Tone.start(); }catch(_){}
+    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type = 'playback'; } }catch(_){}
+    try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
+    let ac=null;
+    try{ ac = Tone.getContext().rawContext; }catch(_){}
+    if(!ac) return;
+    try{
+      if(ac.state === 'suspended' || ac.state === 'interrupted'){
+        try{ await ac.resume(); }catch(_){}
+      } else if(ac.state === 'running'){
+        const nowT=Date.now();
+        if(nowT - wakeAudioRef.current > 400){
+          wakeAudioRef.current=nowT;
+          try{
+            await ac.suspend();
+            await ac.resume();
+          }catch(_){
+            try{ await ac.resume(); }catch(__){}
+          }
+        }
+      }
+    }catch(_){}
+    try{
+      if(ac.state==='running'){
+        const buf=ac.createBuffer(1,1,22050);
+        const src=ac.createBufferSource();
+        src.buffer=buf; src.connect(ac.destination); src.start(0); src.stop(ac.currentTime+0.005);
+      }
+    }catch(_){}
+  },[]);
+
+  // Hard audio recovery + diagnosis — bound to a LONG-PRESS on the speaker
+  // button. For the rare case where sound dies and a page reload doesn't bring
+  // it back (iOS audio session stuck after an interruption). Reports the live
+  // state, force-resumes the context, and rebuilds the sampler if it's gone.
+  const audioHardRecover = useCallback(async ()=>{
+    let report = [];
+    let ac=null;
+    try{ ac = Tone.getContext().rawContext; }catch(_){}
+    report.push('ctx: ' + (ac ? ac.state : 'none'));
+    report.push('sampler: ' + (samplerOk.current ? 'ready' : (samplerRef.current ? 'building' : 'none')));
+    report.push('muted: ' + (mutedRef.current ? 'yes' : 'no'));
+    // Force-resume the context (covers suspended / interrupted).
+    try{ await Tone.start(); }catch(_){}
+    try{ if(ac && ac.state!=='running'){ await ac.resume(); } }catch(_){}
+    // If sampler died or never loaded, rebuild it.
+    try{
+      if(!samplerOk.current){
+        try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
+        const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+          onload:()=>{ samplerOk.current=true; setPiano('ready'); },
+          onerror:()=>{ samplerOk.current=false; setPiano('error'); },
+        }).toDestination();
+        samplerRef.current = s2;
+        report.push('→ rebuilding sampler');
+      }
+    }catch(e){ report.push('rebuild failed: '+(e&&e.message||e)); }
+    // Unmute defensively and give a silent kick.
+    try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
+    try{ const ac2=Tone.getContext().rawContext; if(ac2 && ac2.state==='running'){ const b=ac2.createBuffer(1,1,22050); const s=ac2.createBufferSource(); s.buffer=b; s.connect(ac2.destination); s.start(0); s.stop(ac2.currentTime+0.005); } }catch(_){}
+    try{ alert('Audio status\n' + report.join('\n') + '\n\nTried to recover. If still silent: fully close the browser app (swipe it away) and reopen.'); }catch(_){}
+  },[]);
+  const speakerHoldRef = useRef(null);
+  // Audio-Score action that opened share sheet), give the AudioContext a kick
+  // so playback works again. iOS Safari can suspend the context while a share
+  // sheet is on screen, and Tone.Offline (used by saveAudio / Audio export) is
+  // known to leave the live context in an inconsistent state on some
+  // browsers. unlockAudio is cheap when the context is already 'running'.
+  const prevShowSizePickerRef = useRef(false);
+  const compInputRef = useRef(null);
+  useEffect(()=>{
+    if(prevShowSizePickerRef.current && !showSizePicker){
+      // small delay so any in-flight share sheet / file picker finishes
+      // dismissing before we resume; iOS audio is reliably unsuspendable
+      // only after the modal stack is fully gone.
+      setTimeout(()=>{ unlockAudio(); }, 300);
+    }
+    // On OPEN (false→true): pre-fill the name field with the piece's default
+    // title when the user hasn't named it yet, and select the text so a single
+    // tap + type replaces it (or one delete clears it). Keeps any name the user
+    // already typed. The default mirrors the export fallback (info.title).
+    if(!prevShowSizePickerRef.current && showSizePicker){
+      const _def=(compositionName||recordingName||(info&&info.title)||'').trim();
+      if(!compositionName.trim() && _def){ setCompositionName(_def); }
+      // focus + select after the dialog has mounted
+      setTimeout(()=>{ const el=compInputRef.current; if(el){ try{ el.focus(); el.select(); }catch(_){ } } }, 60);
+    }
+    prevShowSizePickerRef.current = showSizePicker;
+  },[showSizePicker, unlockAudio, compositionName, recordingName, info]);
 
   const stopAll = useCallback(()=>{
     loadTokenRef.current++; // invalidate any in-flight async load
@@ -1910,11 +2299,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
     try{if(audioElRef.current){audioElRef.current.pause();}}catch(_){}
     try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
+    try{if(originalSourceRef.current){originalSourceRef.current.stop();originalSourceRef.current.disconnect();originalSourceRef.current=null;}}catch(_){}
+    if(originalRafRef.current){cancelAnimationFrame(originalRafRef.current);originalRafRef.current=null;}
     // Release any keys highlighted by the just-cancelled release timers.
     // Without this they linger gold even though no note is sounding.
     setActive(new Set());
     setPlaying(false);setAnim(false);
-    setHoldPaused(false);resumeFromRef.current=null;
+    setHoldPaused(false);holdPausedRef.current=false;resumeFromRef.current=null;
   },[]);
 
   // Pause playback when the tab goes to background. The audio context suspends
@@ -1934,12 +2325,50 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           setPlaying(false);setAnim(false);
         }
       }else{
-        try{Tone.start();}catch(_){}
+        // Visibility returned. While we were hidden — OR while another tab
+        // was foregrounded — the audio session may have been:
+        //   (a) suspended by iOS (normal background behaviour), OR
+        //   (b) stolen by another tab/PWA instance (most commonly a second
+        //       Paintiano tab) which puts our AudioContext into 'interrupted'
+        // Either way: oscillators/buffers that were sounding when the steal
+        // happened can stick around and burst out as a monotone piano blast
+        // the instant the context resumes. Kill them FIRST with releaseAll,
+        // then run the full unlock cycle (statechange listener, audioSession
+        // pin, ctx.resume, silent kick). Plain Tone.start() isn't enough on
+        // iOS — it doesn't clear stuck oscillators and may no-op without a
+        // user gesture, leaving the tab still silent until the next tap.
+        try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+        try{if(audioElRef.current && !audioElRef.current.paused) audioElRef.current.pause();}catch(_){}
+        unlockAudio();
       }
     };
     document.addEventListener('visibilitychange',onHide);
-    return()=>document.removeEventListener('visibilitychange',onHide);
-  },[]);
+    // pageshow fires on bfcache restores (iOS swipe-back from another page,
+    // tab switcher restoration) where visibilitychange may NOT fire. Same
+    // recovery path: kill anything stuck and re-unlock.
+    const onPageShow = (e)=>{
+      // persisted=true => restored from bfcache; persisted=false => normal
+      // load. We want recovery on both, since persisted bfcache returns are
+      // the exact case where Tone.context might still think it's running but
+      // the underlying iOS session has been re-routed away.
+      try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+      unlockAudio();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    // window focus is a third belt-and-braces signal: on iOS WKWebView
+    // (Chrome / standalone PWAs), switching between two Paintiano tabs can
+    // trigger focus/blur without a visibilitychange on the inactive tab.
+    const onFocus = ()=>{
+      try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+      unlockAudio();
+    };
+    window.addEventListener('focus', onFocus);
+    return ()=>{
+      document.removeEventListener('visibilitychange',onHide);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('focus', onFocus);
+    };
+  },[unlockAudio]);
 
   // Schedule a timeout and remember its id so stopAll can cancel it.
   // Uses a Set internally for O(1) delete on fire instead of O(n) filter.
@@ -2276,7 +2705,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const wipeCanvasNow = useCallback(()=>{
     setChords([]);chordsRef.current=[];idxRef.current=0;setPending([]);pendingRef.current=[];
     setDisp(0);setHoldPaused(false);resumeFromRef.current=null;
-    pixelRef.current=null;setViewMode('paint');setOriginalImgUrl(null);setInfo(null);
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);setInfo(null);
     substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
     lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
     try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
@@ -2421,7 +2850,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!composeMode&&!micPainting&&!micListening) draftOwnerRef.current=null;
     setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
-    pixelRef.current=null;setViewMode('paint');
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');
     // Invalidate the cached substrate canvas + last-paint signature. Without this,
     // Clear emptied the chords but left the built-up substrate cache intact, so
     // returning to the canvas (← Canvas) re-blitted the OLD painting even though
@@ -2437,7 +2866,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setCurrentMood(null);setVarySource(null);setSongQ('');
     setImgMoodThumb(null);setMoodFromImg(false);
     setDisp(0);setErr('');setStamp(s=>s+1);
-    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
+    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);setAudioRowOpen(false);
     // After clear in a creative mode, mark the canvas as draft-owned by that
     // mode again so subsequent presses commit to the right stash.
     if(composeMode) { composedModeRef.current=true; draftOwnerRef.current='compose'; }
@@ -2509,8 +2938,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
                 {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
                  __hasNeutral:activePalette.some(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1]<12;})})
             : (mode==='spectral'?SPEC_HUE:COF);
-          const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current);
-          _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood):_lit;
+          const _atmoBias2=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
+          const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current,_atmoBias2);
+          _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
         }
         setChords(_evts);chordsRef.current=_evts;
         idxRef.current=_evts.length;setDisp(_evts.length);
@@ -2518,6 +2948,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
+      // Clear also discards any pending save artefacts (recording row, score row,
+      // the SAVE button state) so the transport returns to a clean PLAY + REC
+      // bar — not stuck showing SAVE / the audio+score rows from the prior take.
+      setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
+      setScoreBlob(null); setScoreFileName(''); setScoreMsg(null);
+      setClearArmed(false);
       // loadedSource stays 'image' and forceSetup stays false → image view persists.
       // Return the page to its default (top) position so the header + collapsed
       // strip are back in their resting place — same as the generic clear() path.
@@ -2552,7 +2988,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Reset seed + structure lock — multiple Vary taps may have built up
       // a non-zero rndSalt and a structureSeedLock; both must reset so the
       // next painting starts from a clean seed state.
-      setRndSalt(0); setStructureSeedLock(null);
+      setRndSalt(0); setStructureSeedLock(null); setShuffleArtistIndex(0); setPhaseIndex(0);
       saltHistoryRef.current=[0]; saltIdxRef.current=0; setVariationPos(0);
       // Substrate cache + last-paint signature: invalidate fully so the
       // renderer can't take any fast-path shortcut against stale data.
@@ -2632,12 +3068,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
     setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
-    pixelRef.current=null;setViewMode('paint');setStamp(s=>s+1);
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setStamp(s=>s+1);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
     setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);setForceSetup(false);
     setComposeMode(false);setDemoMode(false);setLoopMode(false);loopModeRef.current=false;
-    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');
+    setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);setAudioRowOpen(false);
   },[stopAll]);
 
   // Guard switching away from a CREATION canvas (Compose/MIC) — content the user
@@ -2662,6 +3098,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const applyEvents = useCallback((events,title)=>{
     if(!events.length)return;
     setImgReturnUrl(null); setImgMoodThumb(null);
+    // Clear MFI flags — applyEvents is the chord-loader for ALL non-MFI
+    // sources (MIDI/audio/score files, song search, AI compose, recall,
+    // sample, morph, vary). Without this, moodFromImg can linger from a
+    // previous MFI piece and leave the MFI source tile glowing even
+    // though the new piece has nothing to do with image-mood composition.
+    // (Genuine MFI recall paths re-set moodContext/moodFromImg AFTER
+    // applyEvents, so this doesn't break the recall flow.)
+    setMoodFromImg(false); setMoodContext(false);
     // Stash any active creative draft before replacing the canvas with imported
     // content. The draft lives on in its mode's stash slot until the user
     // explicitly CLEARs it from inside that mode.
@@ -2674,7 +3118,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     });
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
-    pixelRef.current=null;setViewMode('paint');setOriginalImgUrl(null);
+    pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
     setGrid(g);setChords(wi);setDisp(0);
     setInfo({title,count:wi.length,dur:Math.round(lastMs/1000)});
     idxRef.current=wi.length;
@@ -2689,7 +3133,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stashDraft]);
 
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     const r=new FileReader();
@@ -2711,22 +3155,78 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   };
 
   const loadAudio=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
-    setWorking(true);setWLabel('transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
+    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    // The flow:
+    //   1. reading file → arrayBuffer
+    //   2. decoding audio → decodeAudioData via OfflineAudioContext (iOS-safe)
+    //   3. transcribing audio → FFT loop with 0–100% progress
+    //   4. applying notes → applyEvents
+    // OfflineAudioContext bypasses an iOS Chrome/Safari bug where `new
+    // AudioContext()` or `resume()` hangs forever when the existing live
+    // context is in `interrupted` state (e.g. after Tone.js piano sampler
+    // use). OfflineAudioContext has no lifecycle — it's pure arithmetic on
+    // the PCM bytes — so it's immune to that bug.
+    setWorking(true);setWLabel(t('transcribingAudio')||'transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const buf=await file.arrayBuffer();
       const blob=new Blob([buf],{type:file.type||'audio/mpeg'});
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
-      const audioBuf=await ac.decodeAudioData(buf.slice(0));
-      ac.close();
+      const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      let audioBuf = null;
+      // Try OfflineAudioContext first (interruption-immune on iOS).
+      try {
+        const offline = new OfflineAC(1, 1, 44100);
+        const decodeOff = (arrBuf, ctx) => new Promise((resolve, reject) => {
+          let settled = false;
+          const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+          const timer = setTimeout(() => finish(reject, new Error('offline decode timeout (15s)')), 15000);
+          try {
+            ctx.decodeAudioData(arrBuf,
+              (ab) => { clearTimeout(timer); finish(resolve, ab); },
+              (err) => { clearTimeout(timer); finish(reject, err || new Error('offline decode failed')); }
+            );
+          } catch(e) {
+            ctx.decodeAudioData(arrBuf).then(
+              (ab) => { clearTimeout(timer); finish(resolve, ab); },
+              (err) => { clearTimeout(timer); finish(reject, err || new Error('offline decode failed')); }
+            );
+          }
+        });
+        audioBuf = await decodeOff(buf.slice(0), offline);
+      } catch (offErr) {
+        // Fallback: live AudioContext with timeout-safe resume + decode.
+        try {
+          const ac = new AC();
+          try{ if(ac.state!=='running') await Promise.race([ac.resume(), new Promise((_,rj)=>setTimeout(()=>rj(new Error('resume timeout')),3000))]); }catch(_){}
+          const decodeLive = (arrBuf, ctx) => new Promise((resolve, reject) => {
+            let settled = false;
+            const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+            const timer = setTimeout(() => finish(reject, new Error('live decode timeout (15s)')), 15000);
+            try {
+              ctx.decodeAudioData(arrBuf,
+                (ab) => { clearTimeout(timer); finish(resolve, ab); },
+                (err) => { clearTimeout(timer); finish(reject, err || new Error('live decode failed')); }
+              );
+            } catch(e) {
+              ctx.decodeAudioData(arrBuf).then(
+                (ab) => { clearTimeout(timer); finish(resolve, ab); },
+                (err) => { clearTimeout(timer); finish(reject, err || new Error('live decode failed')); }
+              );
+            }
+          });
+          audioBuf = await decodeLive(buf.slice(0), ac);
+          try{ ac.close(); }catch(_){}
+        } catch (liveErr) {
+          throw new Error('decode failed (offline+live): ' + (offErr?.message||offErr) + ' / ' + (liveErr?.message||liveErr));
+        }
+      }
       if(loadTokenRef.current!==myToken)return;
       audioPCMRef.current=audioBuf;
       // For long files the FFT pass can take a meaningful chunk of time. Let
       // the user know so the progress bar doesn't look like a stuck app.
       if(audioBuf.duration>90){
-        setWLabel('transcribing audio · this may take a minute');
+        setWLabel(t('transcribingAudioLong')||'transcribing audio · this may take a minute');
       }
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(loadTokenRef.current!==myToken)return;
@@ -2773,6 +3273,32 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const keys=Object.keys(map);
       if(keys.length>40){ for(const k of keys.slice(0,keys.length-40)) delete map[k]; }
       localStorage.setItem(IMGMOOD_CACHE_KEY, JSON.stringify(map));
+    }catch(_){ /* quota or disabled storage — silently skip caching */ }
+  },[]);
+
+  // ── Image → Composition cache ──────────────────────────────────────────────
+  // Parallel to the mood cache above, keyed by the SAME image hash. Once an image
+  // has been "composed from", we keep the resulting piece so re-composing the
+  // same picture (a known/recognised image) replays instantly — no AI call, no
+  // credit spent. A small baked set (SAMPLE_IMGCOMPOSE) can ship known artworks.
+  const IMGCOMPOSE_CACHE_KEY='paintiano_imgcompose_cache_v1';
+  const _imgComposeCacheGet=useCallback((hash)=>{
+    try{
+      if(typeof SAMPLE_IMGCOMPOSE!=='undefined' && SAMPLE_IMGCOMPOSE && SAMPLE_IMGCOMPOSE.hash===hash) return SAMPLE_IMGCOMPOSE.result;
+    }catch(_){}
+    try{
+      const raw=localStorage.getItem(IMGCOMPOSE_CACHE_KEY); if(!raw) return null;
+      const map=JSON.parse(raw)||{}; return map[hash]||null;
+    }catch(_){ return null; }
+  },[]);
+  const _imgComposeCacheSet=useCallback((hash,result)=>{
+    try{
+      const raw=localStorage.getItem(IMGCOMPOSE_CACHE_KEY);
+      const map=raw?(JSON.parse(raw)||{}):{};
+      map[hash]=result;
+      const keys=Object.keys(map);
+      if(keys.length>20){ for(const k of keys.slice(0,keys.length-20)) delete map[k]; }
+      localStorage.setItem(IMGCOMPOSE_CACHE_KEY, JSON.stringify(map));
     }catch(_){ /* quota or disabled storage — silently skip caching */ }
   },[]);
 
@@ -3376,7 +3902,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    const file=e.target.files[0];if(!file)return;e.target.value='';if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
@@ -3413,7 +3939,24 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
-  // Built-in sample loaders — embedded files, decoded through the real pipelines
+  // Unified "Sound" input router. One file picker accepts MIDI, audio and score
+  // files; we detect which kind it is by extension and hand the SAME change-event
+  // to the existing loader (each loader reads e.target.files[0] itself, so we
+  // don't synthesise anything). The three internal modes are unchanged — this only
+  // merges the entry point so the user taps one SOUND button instead of three.
+  const loadSound=useCallback(e=>{
+    const file=e.target.files&&e.target.files[0];
+    if(!file){ return; }
+    const name=(file.name||'').toLowerCase();
+    const ext=name.slice(name.lastIndexOf('.')+1);
+    const isMidi  = /^(mid|midi)$/.test(ext) || file.type==='audio/midi' || file.type==='audio/x-midi';
+    const isScore = /^(xml|musicxml|mxl)$/.test(ext);
+    // Everything else that got through the audio picker (mp3/wav/m4a/ogg/aac…) is
+    // treated as audio — that's also the safest fallback for unknown types.
+    if(isMidi)       return loadMidi(e);
+    if(isScore)      return loadMusicXml(e);
+    return loadAudio(e);
+  },[loadMidi,loadMusicXml,loadAudio]);
   const loadSampleMidi=useCallback(()=>{
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_MIDI_B64);
@@ -3445,18 +3988,65 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stopAll,applyEvents,wipeCanvasNow]);
 
   const loadSampleAudio=useCallback(async()=>{
-    setWorking(true);setWLabel('decoding sample audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
+    setWorking(true);setWLabel(t('transcribingSample')||'transcribing sample');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_AUDIO_B64);
       const blob=new Blob([arrayBuffer],{type:'audio/mpeg'});
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
-      const audioBuf=await ac.decodeAudioData(arrayBuffer.slice(0));
-      ac.close();
+      // OfflineAudioContext-first decode (see loadAudio for the iOS bug).
+      const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      let audioBuf = null;
+      try {
+        const offline = new OfflineAC(1, 1, 44100);
+        const decodeOff = (arrBuf, ctx) => new Promise((resolve, reject) => {
+          let settled = false;
+          const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+          const timer = setTimeout(() => finish(reject, new Error('offline decode timeout (15s)')), 15000);
+          try {
+            ctx.decodeAudioData(arrBuf,
+              (ab) => { clearTimeout(timer); finish(resolve, ab); },
+              (err) => { clearTimeout(timer); finish(reject, err || new Error('offline decode failed')); }
+            );
+          } catch(e) {
+            ctx.decodeAudioData(arrBuf).then(
+              (ab) => { clearTimeout(timer); finish(resolve, ab); },
+              (err) => { clearTimeout(timer); finish(reject, err || new Error('offline decode failed')); }
+            );
+          }
+        });
+        audioBuf = await decodeOff(arrayBuffer.slice(0), offline);
+      } catch (offErr) {
+        try {
+          const ac = new AC();
+          try{ if(ac.state!=='running') await Promise.race([ac.resume(), new Promise((_,rj)=>setTimeout(()=>rj(new Error('resume timeout')),3000))]); }catch(_){}
+          const decodeLive = (arrBuf, ctx) => new Promise((resolve, reject) => {
+            let settled = false;
+            const finish = (fn, val) => { if(!settled){ settled=true; fn(val); } };
+            const timer = setTimeout(() => finish(reject, new Error('live decode timeout (15s)')), 15000);
+            try {
+              ctx.decodeAudioData(arrBuf,
+                (ab) => { clearTimeout(timer); finish(resolve, ab); },
+                (err) => { clearTimeout(timer); finish(reject, err || new Error('live decode failed')); }
+              );
+            } catch(e) {
+              ctx.decodeAudioData(arrBuf).then(
+                (ab) => { clearTimeout(timer); finish(resolve, ab); },
+                (err) => { clearTimeout(timer); finish(reject, err || new Error('live decode failed')); }
+              );
+            }
+          });
+          audioBuf = await decodeLive(arrayBuffer.slice(0), ac);
+          try{ ac.close(); }catch(_){}
+        } catch (liveErr) {
+          throw new Error('decode failed (offline+live): ' + (offErr?.message||offErr) + ' / ' + (liveErr?.message||liveErr));
+        }
+      }
       if(loadTokenRef.current!==myToken)return;
       audioPCMRef.current=audioBuf;
-      setWLabel(audioBuf.duration>90?'transcribing sample · this may take a minute':'transcribing sample');
+      if(audioBuf.duration>90){
+        setWLabel(t('transcribingSampleLong')||'transcribing sample · this may take a minute');
+      }
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));});
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
@@ -3501,7 +4091,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const evts=noteArr2events(song.notes,song.tempo);
     if(!evts.length){setErr(t('errs').noNotesGeneric);return;}
     const dispTitle=((t('moodNames')||{})[song.mood])||((t('moodNames')||{})[title])||song.title;
-    applyEvents(evts,dispTitle); setComposeSource('crafted');
+    applyEvents(evts,dispTitle); setComposeSource('crafted'); setMoodContext(true);
     // Set varySource so Vary works on crafted (library) moods too — without
     // this, the Vary button stays disabled because !varySource. AI and offline
     // mood paths already set this; the crafted-library branch was the gap.
@@ -3534,11 +4124,148 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setVarySource(song);
     const evts=noteArr2events(song.notes,song.tempo);
     if(!evts.length){ setErr(t('errs').noNotesGeneric); return; }
-    applyEvents(evts,song.title); setComposeSource('offline');
+    applyEvents(evts,song.title); setComposeSource('offline'); setMoodContext(true);
     const bytes=encodeMidi(evts,song.tempo||100);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
   },[working,stopAll,applyEvents,aiMidi,t]);
+
+  // ── Image → Composition ────────────────────────────────────────────────
+  // Extract a compact "musical material" summary from the notes the current
+  // image produced (chordsRef): which pitches appear and how often, the range,
+  // density, the energy arc left→right, and (if AI atmosphere is on) the mood.
+  // This is handed to Claude so it can compose a NEW free-standing piece FROM
+  // that material — melody, rhythm, metre, emotion — related to the image's
+  // character, rather than the literal left-to-right pixel readout.
+  const extractImageMaterial = useCallback(()=>{
+    const src = (chordsRef.current && chordsRef.current.length) ? chordsRef.current : chords;
+    if(!src || !src.length) return null;
+    const pcCount = new Array(12).fill(0); // pitch-class histogram
+    let lo=128, hi=0, noteN=0, velSum=0;
+    const half = Math.floor(src.length/2) || 1;
+    let eEarly=0, nEarly=0, eLate=0, nLate=0; // energy arc (velocity) first vs second half
+    src.forEach((ev,i)=>{
+      (ev.n||[]).forEach(n=>{
+        const m=n.m; if(typeof m!=='number') return;
+        pcCount[((m%12)+12)%12]++; noteN++;
+        if(m<lo)lo=m; if(m>hi)hi=m;
+        const v=n.v||60; velSum+=v;
+        if(i<half){ eEarly+=v; nEarly++; } else { eLate+=v; nLate++; }
+      });
+    });
+    if(!noteN) return null;
+    const NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    // Top pitch classes by frequency → the image's "palette"
+    const ranked=pcCount.map((c,i)=>({pc:NOTE[i],c})).filter(x=>x.c>0).sort((a,b)=>b.c-a.c);
+    const palette=ranked.slice(0,7).map(x=>x.pc).join(' ');
+    const noteRange=`${NOTE[((lo%12)+12)%12]}${Math.floor(lo/12)-1}–${NOTE[((hi%12)+12)%12]}${Math.floor(hi/12)-1}`;
+    const avgVel=Math.round(velSum/noteN);
+    const density=(noteN/src.length); // avg notes per event ≈ chord thickness
+    const earlyV=nEarly?eEarly/nEarly:avgVel, lateV=nLate?eLate/nLate:avgVel;
+    const arc = lateV>earlyV+8 ? 'builds / brightens toward the end'
+              : earlyV>lateV+8 ? 'opens strong then settles' : 'fairly even throughout';
+    const energy = avgVel>=95?'high, forceful':avgVel>=70?'moderate':'soft, gentle';
+    const tex = density>=3.2?'dense, chordal':density>=1.8?'mixed chords and lines':'sparse, melodic';
+    const mood = (atmoOn && atmoMood) ? (currentMood||(atmoMood.v>0.2?'bright':atmoMood.v<-0.2?'dark':'neutral')) : null;
+    return { palette, noteRange, energy, tex, arc, mood, count:noteN };
+  },[chords,atmoOn,atmoMood,currentMood]);
+
+  // Compose a real piece FROM the image's note material (no painting — keeps the
+  // original image on the canvas while it plays). Reuses the same Claude endpoint
+  // + parse + apply path as aiCompose.
+  const aiComposeFromImage=useCallback(async(afterReady)=>{
+    if(busy) return;
+    const mat=extractImageMaterial();
+    if(!mat){ setErr(t('noNotesGeneric')||'Load an image first'); setErrInfo(false); return; }
+    // AI composition flows through gateAI below (Pro AI = unlimited, Free/Pro
+    // = trial then paywall). No tier check here — the gate decides.
+    // Shared apply for both a cache hit and a fresh AI result. Keeps the ORIGINAL
+    // image on the canvas and stays in IMAGE context (no MORPH/VARY) — see the
+    // long note further down for why pixelRef is nulled. When afterReady is given
+    // (REC path) we hand off to it instead of plain Play, so the recorder and the
+    // composed playback start together — no silent lead-in while AI was thinking.
+    const _applyComposition=(parsed)=>{
+      const evts=noteArr2events(parsed.notes,parsed.tempo,{keepLong:true});
+      if(!evts.length) throw new Error('Could not parse composition');
+      const _dispT=(parsed.title&&String(parsed.title).trim())||(t('imgComposition')!=='imgComposition'?t('imgComposition'):'Composition');
+      pixelRef.current=null;
+      imgComposeRef.current=true;
+      setChords(evts); chordsRef.current=evts; idxRef.current=0; setDisp(0);
+      setInfo({title:_dispT,count:evts.length,dur:Math.round((evts[evts.length-1]?.startMs||0)/1000)+2});
+      try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(_dispT.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
+      setWorking(false); setWLabel(''); setWPct(0);
+      if(typeof afterReady==='function'){ setTimeout(()=>{ try{ afterReady(); }catch(_){} }, 80); }
+      else { setTimeout(()=>{ try{ startPlayRef.current?.(); }catch(_){} }, 60); }
+    };
+    // Known/recognised image: if we've composed from this exact picture before,
+    // replay the cached piece instantly — no AI call, no credit spent.
+    const _imgHash = originalImgUrl ? _imgMoodHash(originalImgUrl) : null;
+    if(_imgHash!=null){
+      const _cached=_imgComposeCacheGet(_imgHash);
+      if(_cached&&_cached.notes&&_cached.notes.length){
+        setErr(''); setErrInfo(false); stopAll();
+        try{ _applyComposition(_cached); return; }catch(_){ /* fall through to AI */ }
+      }
+    }
+    { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
+    setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
+    try{
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
+      const prompt=`A painting was scanned into raw musical material. Compose a beautiful, free-standing solo piano piece INSPIRED BY that material — do not replay it literally.
+Image material:
+- Pitch palette (most present pitch classes): ${mat.palette}
+- Range: ${mat.noteRange}
+- Energy: ${mat.energy}
+- Texture: ${mat.tex}
+- Energy arc: ${mat.arc}${mat.mood?`\n- Mood/atmosphere of the image: ${mat.mood}`:''}
+Use this as raw clay: let the pitch palette colour the harmony and key, let the energy and arc shape dynamics and tempo, let the texture guide density. Then compose with genuine craft — a real melody, recurring motif, clear metre and rhythm, harmonic movement, and an emotional shape that matches the image's character.
+Output ONLY a single valid JSON object — no markdown, no prose.
+Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
+Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
+Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) that fits the resulting music.
+Composition rules:
+- LENGTH: the piece MUST last at least 60 seconds of music — aim for 70–95 seconds. With the tempo you choose, make sure the LAST note's (startBeat + duration) reaches at least tempo beats (i.e. ≥ 60 seconds worth of beats). Do not stop early.
+- 90–150 notes total (enough to fill a full minute or more)
+- Pick a key that fits the palette and mood; mostly diatonic, sparing chromatic colour
+- Structure: intro (motif, sparse) → development (richer, busiest) → a contrasting middle section → return of the motif → close (quieter). Use the length for a real arc, not a loop.
+- Bass (octaves 2–3): harmonic grounding throughout, ≥20 notes
+- Melody (octaves 4–6): singable, recurring motif that develops over the full length
+- Dynamics via velocity: intro ~55–70, development ~80–110, close ~45–65
+- Vary durations (mix 0.25/0.5/1/2 beats) — clear rhythm, not uniform
+- Pitches like C4/F#3/Bb5 with octave number, sharps only (C#4 not Db4)`;
+      setWPct(40);
+      const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+      const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+      const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      let resp=null,respText='',lastErr=null;
+      for(const _ep of _endpoints){
+        try{
+          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+          const txt=await r.text();
+          if(r.ok&&txt){ resp=r; respText=txt; break; }
+          lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
+        }catch(err){ lastErr=err; }
+      }
+      setWPct(75);
+      if(!resp){ const _netErr=lastErr||new Error('compose endpoints unavailable'); _netErr._aiNet=true; throw _netErr; }
+      setAiDown(false);
+      let data; try{data=JSON.parse(respText);}catch(_){throw new Error('Response not JSON');}
+      const raw=(data.content||[]).map(b=>b.type==='text'?b.text:'').join('');
+      if(!raw)throw new Error('Empty content');
+      const parsed=extractAiJson(raw);
+      if(!parsed?.notes?.length)throw new Error('No notes');
+      gateAI(1,true);
+      // Cache the composition keyed by image hash so re-composing the same
+      // picture later is instant + free (see _imgComposeCacheGet).
+      if(_imgHash!=null){ try{ _imgComposeCacheSet(_imgHash,{notes:parsed.notes,tempo:parsed.tempo||90,title:parsed.title||''}); }catch(_){} }
+      _applyComposition(parsed);
+      return;
+    }catch(e){
+      if(e&&e._aiNet) setAiDown(true);
+      setErr(e.message||'Compose failed'); setErrInfo(false);
+    }
+    finally{ setWorking(false); setWLabel(''); setWPct(0); }
+  },[busy,extractImageMaterial,stopAll,lang,gateAI,t,isPro,originalImgUrl,_imgMoodHash,_imgComposeCacheGet,_imgComposeCacheSet]);
 
   const aiCompose=useCallback(async(overrideMood)=>{
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
@@ -3558,7 +4285,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:{note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
           setVarySource({notes:_varyNotes,tempo:parsed.tempo||90,title:(parsed.title&&String(parsed.title).trim())||title});
           const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed);
-          applyEvents(evts,_dispT); setComposeSource('ai'); setErr(''); setErrInfo(false);
+          applyEvents(evts,_dispT); setComposeSource('ai'); setMoodContext(true); setErr(''); setErrInfo(false);
           // Remember in recent (cache hit also counts — moves entry to front).
           try{ _aiComposeRecentAdd(_dispT, parsed.notes||[], parsed.tempo||90); }catch(_){}
           try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName((parsed.title||title).replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
@@ -3639,7 +4366,7 @@ Composition rules:
       // locally — matches the mood-from-image path; the AI branch was missing it.
       { const _varyNotes=(parsed.notes||[]).map(n=>Array.isArray(n)?{note:n[0],dur:n[1],beat:n[2],vel:n[3]}:{note:n.note,dur:n.dur,beat:n.beat,vel:n.vel});
         setVarySource({notes:_varyNotes,tempo:parsed.tempo||90,title:(parsed.title&&String(parsed.title).trim())||title}); }
-      const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed); applyEvents(evts,_dispT); setComposeSource('ai');
+      const _typed=(title||'').trim(); const _dispT=(parsed.title&&String(parsed.title).trim())||(_typed?_typed.charAt(0).toUpperCase()+_typed.slice(1):_typed); applyEvents(evts,_dispT); setComposeSource('ai'); setMoodContext(true);
       // Remember this AI-generated mood in the recent-3 list (text path only —
       // moodFromImg goes through composeFromImage which already adds to mfiRecent).
       try{ _aiComposeRecentAdd(_dispT, parsed.notes||[], parsed.tempo||90); }catch(_){}
@@ -3655,7 +4382,7 @@ Composition rules:
         const fevts=noteArr2events(fb.notes,fb.tempo);
         if(fevts.length){
           setVarySource(fb);
-          applyEvents(fevts,fb.title); setComposeSource('offline');
+          applyEvents(fevts,fb.title); setComposeSource('offline'); setMoodContext(true);
           const fbytes=encodeMidi(fevts,fb.tempo||100);
           setMidiBlob(new Blob([fbytes],{type:'audio/midi'}));
           setMidiName(fb.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
@@ -3676,7 +4403,12 @@ Composition rules:
     if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
-    setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    // Clear MFI state too — without this, switching from MFI to a regular
+    // image keeps moodFromImg=true, which hides the atmosphere button
+    // (condition: viewMode==='image' && originalImgUrl && !moodFromImg) and
+    // makes the image canvas look broken until the user reloads the app.
+    setMoodFromImg(false); setImgMoodThumb(null); setMoodContext(false);
     stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current; // captured after stopAll's bump
     const r=new FileReader();
@@ -3722,6 +4454,7 @@ Composition rules:
           const startMode = mode==='custom' ? 'custom' : autoMode;
           if(startMode!==mode) setMode(startMode);
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
+          imgComposeRef.current=false;
           // Process pixels into events using the chosen mode's hue→pitch table.
           // B/W uses harmony's hue table — same music as harmony, but the canvas
           // renders monochrome because gc() returns greys in bw mode.
@@ -3746,6 +4479,7 @@ Composition rules:
           if(cv){try{cv.getContext('2d').clearRect(0,0,cv.width,cv.height);}catch(_){}}
           setComposeMode(false);
           setDemoMode(false);
+          setImgPlayMode('scan'); imgPlayModeRef.current='scan';
           setOriginalImgUrl(evt.target.result);
           setGrid({N:nc,BW,BH,CW:nc*BW,CH:nr*BH});setViewMode('image');
           setChords(evts);setDisp(evts.length);setPlayedOnce(false);
@@ -3754,7 +4488,14 @@ Composition rules:
           // old fixed 2:00 constant.
           const lastEv=evts[evts.length-1];
           const realDurMs=lastEv ? (lastEv.startMs + (lastEv.n?.[0]?.durMs||0)) : IMG_TARGET_MS;
-          setInfo({title:file.name.replace(/\.[^.]+$/,''),count:evts.length,dur:Math.round(realDurMs/1000)});
+          const _imgTitle=file.name.replace(/\.[^.]+$/,'');
+          setInfo({title:_imgTitle,count:evts.length,dur:Math.round(realDurMs/1000)});
+          // New piece → reset the save name to THIS image's filename so the SAVE
+          // picker doesn't carry a stale name from a previous mood/piece.
+          setCompositionName(_imgTitle); setRecordingName('');
+          // New image is a fresh piece → drop any prior recording so the
+          // transport shows REC (record this one), not a stale SAVE button.
+          setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
           idxRef.current=evts.length;setStamp(s=>s+1);
           setPlaybackSpeed(1);playbackSpeedRef.current=1;
           setAtmoOn(false);setAtmoMood(null);
@@ -3783,8 +4524,9 @@ Composition rules:
                       { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                         __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
       : (mode==='spectral'?SPEC_HUE:COF);
-    const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current);
-    const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood):_evtsLit;
+    const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
+    const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
+    const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
     // Changing the colour mode re-transcribes the SAME painting through a new
     // hue→pitch table, so the notes change but the structure/length do not. If a
     // playback is in progress we must NOT stop it — like MIDI and live drawing,
@@ -3932,6 +4674,21 @@ Composition rules:
     const now=Date.now();
     if(now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
+    // Gentle in-gesture audio wake: just make sure the context is running. The
+    // heavier disconnect/rebuild/restart recovery was destabilising audio across
+    // all modes, so it's been removed from here.
+    try{ const ac=Tone.getContext().rawContext; if(ac && ac.state!=='running') ac.resume(); }catch(_){}
+    // Image AI-Compose mode: a FRESH Play (not a resume) that hasn't composed yet
+    // hands off to aiComposeFromImage — it composes (or replays the cached piece)
+    // and starts playback itself, with the original image kept on the canvas.
+    // Once a composition is loaded (imgComposeRef true) we fall through to normal
+    // playback so Pause/Resume/replay just play the composed piece.
+    if(viewModeRef.current==='image' && imgPlayModeRef.current==='compose'
+       && !imgComposeRef.current
+       && (resumeFromRef.current==null || resumeFromRef.current===0)){
+      try{ aiComposeFromImage(); }catch(_){}
+      return;
+    }
     const chords=chordsRef.current;
     const grid=gridRef.current;
     const info=infoRef.current;
@@ -3944,6 +4701,19 @@ Composition rules:
     // the context catches up. The 500ms safety cap in unlockAudio means this
     // can never deadlock Play even if the context never resumes.
     await unlockAudio();
+    // Silent sampler warm-up: an idle Tone.Sampler on iOS exhibits ~30ms
+    // cold-start latency on the first triggerAttackRelease — the sample buffer
+    // gets touched and the gain envelope spun up before the note actually
+    // sounds. We fire one inaudible trigger (gain≈0, duration 1ms) right after
+    // unlock so the audio pipeline is hot by the time the first real note
+    // arrives ~tens of ms later in step(). Combined with the shorter lookAhead
+    // in unlockAudio, this brings audio onset within ~10ms of canvas paint —
+    // imperceptible to the ear.
+    try{
+      if(samplerOk.current && samplerRef.current){
+        samplerRef.current.triggerAttackRelease('C4', 0.001, Tone.now(), 0.0001);
+      }
+    }catch(_){}
     // MFI hand-off: if we're showing the full picked image (mood-from-image AI
     // ready but Play not pressed yet), swap to thumbnail + paint mode now so the
     // canvas can start drawing. This is what makes Play work for MFI new images.
@@ -3966,12 +4736,23 @@ Composition rules:
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
     if(!isResume){
-      if(randomModeRef.current){ setStructureSeedLock(null); advanceVariation(); }
+      if(randomModeRef.current){
+        setStructureSeedLock(null);
+        nextRollInProgressRef.current = true;
+        // Manual artist → rotate style. Shuffle (no manual artist) → rotate
+        // artist + roll a fresh random style for that new artist.
+        if(style){ setPhaseIndex(prev=>prev+1); }
+        else { setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); }
+      }
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
-    // Play no longer auto-collapses the Color·Style strip or scrolls the page into a
-    // framed position — the fullscreen button gives an immersive view on demand.
+    // Collapse the Color·Style strip when a FRESH Play starts, so the canvas gets
+    // full focus. Only on fresh Play (not resume): the user can re-open the strip
+    // during playback to change colour/style, and we must NOT yank it shut again —
+    // nothing here closes it mid-play, so it stays open until the next fresh Play.
+    if(!isResume && !keepStripOpenRef.current) setStripOpen(false);
+    keepStripOpenRef.current=false;
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -3992,6 +4773,51 @@ Composition rules:
         audioSourceRef.current=src;
         src.onended=()=>{audioSourceRef.current=null;};
       }catch(_){}
+    }
+
+    // Mic/Music with Original source selected: route the recorded blob to the
+    // speakers, mute the sampler for this playthrough, paint visually as
+    // usual. Falls back to piano if anything in the decode/source path failed.
+    const useOriginalListen = draftOwnerRef.current==='listen' && playSourceMicRef.current==='original' && listenPCMRef.current;
+    if(useOriginalListen){
+      try{
+        const ac=Tone.getContext().rawContext;
+        // Belt and braces — kill any orphan source (with its onended detached
+        // so it can't reset our flag asynchronously).
+        if(originalSourceRef.current){
+          const prev=originalSourceRef.current;
+          try{prev.onended=null;}catch(_){}
+          try{prev.stop();}catch(_){}
+          try{prev.disconnect();}catch(_){}
+          originalSourceRef.current=null;
+        }
+        const src=ac.createBufferSource();
+        src.buffer=listenPCMRef.current;
+        src.playbackRate.value=playbackSpeedRef.current;
+        const g=ac.createGain();g.gain.value=mutedRef.current?0:1;src.connect(g);g.connect(ac.destination);src._muteGain=g;
+        const offsetSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
+        src.start(0,offsetSec);
+        originalSourceRef.current=src;
+        originalPlaybackRef.current=true;
+        // Guarded onended: only reset if THIS source is still the current one.
+        // Prevents an old stop event from clearing the flag set by a new source.
+        src.onended=()=>{
+          if(originalSourceRef.current===src){
+            originalSourceRef.current=null;
+            originalPlaybackRef.current=false;
+          }
+        };
+      }catch(_){ originalPlaybackRef.current=false; }
+    } else {
+      // Ensure no stale audio is left from a previous play; cancel any flag.
+      if(originalSourceRef.current){
+        const prev=originalSourceRef.current;
+        try{prev.onended=null;}catch(_){}
+        try{prev.stop();}catch(_){}
+        try{prev.disconnect();}catch(_){}
+        originalSourceRef.current=null;
+      }
+      originalPlaybackRef.current=false;
     }
 
     if(viewMode==='image'&&pixelRef.current){
@@ -4078,7 +4904,7 @@ Composition rules:
         try{
           const midis=n.map(({m,v,durMs})=>{
             const scaledDur=Math.round((durMs||300)/playbackSpeedRef.current);
-            if(viewMode!=='audio') playNote(m,v,scaledDur);
+            if(viewMode!=='audio' && !originalPlaybackRef.current) playNote(m,v,scaledDur);
             return{m,scaledDur};
           });
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
@@ -4126,7 +4952,7 @@ Composition rules:
       };
       step();
     }
-  },[busy,playNote,stopAll,advanceVariation]);
+  },[busy,playNote,stopAll,advanceVariation,aiComposeFromImage]);
 
 
   // Load the demo song (Für Elise) and start painting it live. Shared by the
@@ -4160,8 +4986,8 @@ Composition rules:
     setGrid(g);gridRef.current=g;
     setInfo(inf);infoRef.current=inf;
     setDisp(0);idxRef.current=wi.length;
-    setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;setStamp(s=>s+1);
-    setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);
+    setViewMode('paint');viewModeRef.current='paint';setOriginalImgUrl(null);pixelRef.current=null;imgComposeRef.current=false;setStamp(s=>s+1);
+    setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     setComposeMode(false);setPickMode(null);setSongQ('');
     setDemoMode(true);
     resumeFromRef.current=0;
@@ -4351,34 +5177,137 @@ Composition rules:
     }
     if(playing){
       resumeFromRef.current=disp;
+      holdPausedRef.current=true; // sync — render effect reads this before the state flush
       setHoldPaused(true);
       genRef.current++;timers.current.forEach(t=>clearTimeout(t));timers.current=[];
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       try{if(audioElRef.current)audioElRef.current.pause();}catch(_){}
       try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current=null;}}catch(_){}
+      // Pause the Original-source buffer too. Web Audio BufferSources can't be
+      // paused — stop and let startPlay's Resume branch recreate at offset.
+      try{if(originalSourceRef.current){originalSourceRef.current.stop();originalSourceRef.current.disconnect();originalSourceRef.current=null;}}catch(_){}
+      originalPlaybackRef.current=false;
       setActive(new Set());
       setPlaying(false);setAnim(false);
       // User-initiated pause/stop = close recording window without sealing.
       // Next fresh Play will re-open it (same semantics as Add).
       if(aiRecordingRef.current){ setAiRecording(false); }
     }else if(holdPaused){
+      // In-gesture iOS audio revive: wakeAudio() runs the verified suspend->resume
+      // cycle that re-acquires a running-but-dead audio device (see its definition).
+      // It must happen in this tap. We await it so the device is live before
+      // startPlay schedules the first note.
+      holdPausedRef.current=false; // sync — clear before the scan loop repaints
       setHoldPaused(false);
-      startPlay(); // startPlay reads and clears resumeFromRef itself
+      wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); });
     }else if(!busy){
       resumeFromRef.current=null;
-      startPlay();
+      wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); });
     }
-  },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening]);
+  },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening,wakeAudio]);
   useEffect(()=>{handlePauseClickRef.current=handlePauseClick;},[handlePauseClick]);
   useEffect(()=>{startPlayRef.current=startPlay;},[startPlay]);
 
+  // Seamless Original ⇄ Piano swap while playing.
+  // Robust pattern: derive want from state, derive have from ref, exit if
+  // same. Stop the OUTGOING source first (always sync), update the flag, then
+  // start the INCOMING source. ORIG → PIANO additionally triggers the current
+  // chord immediately so there's no silent gap before the next step() tick.
+  useEffect(()=>{
+    if(!playing) return;
+    if(draftOwnerRef.current!=='listen') return;
+    const want = (playSourceMic==='original' && !!listenPCMRef.current) ? 'original' : 'piano';
+    const have = originalPlaybackRef.current ? 'original' : 'piano';
+    if(want===have) return;
+
+    const stopSampler = ()=>{
+      try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
+      setActive(new Set());
+      // Note: do NOT clear timers.current — that holds the paint animation
+      // schedule (step() chain). Only the sampler audio is being hushed.
+    };
+    const stopOriginal = ()=>{
+      const src = originalSourceRef.current;
+      if(!src) return;
+      try{ src.onended = null; }catch(_){}
+      try{ src.stop(); }catch(_){}
+      try{ src.disconnect(); }catch(_){}
+      originalSourceRef.current = null;
+    };
+
+    const chordsArr = chordsRef.current || [];
+    const idx = Math.max(0, Math.min(chordsArr.length-1, dispRef.current|0));
+    const startMs = chordsArr[idx]?.startMs || 0;
+    const offsetSec = startMs/1000;
+
+    if(want==='original'){
+      // PIANO → ORIG. Hush sampler completely, then start the buffer at offset.
+      stopSampler();
+      stopOriginal(); // belt and braces — no orphan source
+      try{
+        const ac = Tone.getContext().rawContext;
+        const src = ac.createBufferSource();
+        src.buffer = listenPCMRef.current;
+        src.playbackRate.value = playbackSpeedRef.current;
+        const g = ac.createGain(); g.gain.value = mutedRef.current?0:1;
+        src.connect(g); g.connect(ac.destination); src._muteGain = g;
+        src.start(0, offsetSec);
+        originalSourceRef.current = src;
+        originalPlaybackRef.current = true;
+        // onended guards against stale resets — only reset if WE are still current.
+        src.onended = ()=>{
+          if(originalSourceRef.current === src){
+            originalSourceRef.current = null;
+            originalPlaybackRef.current = false;
+          }
+        };
+      }catch(_){ originalPlaybackRef.current = false; }
+    } else {
+      // ORIG → PIANO. Stop the buffer, then immediately trigger the current
+      // chord so there's no audible gap until step() reaches the next one.
+      stopOriginal();
+      originalPlaybackRef.current = false;
+      const c = chordsArr[idx];
+      if(c && c.n && c.n.length){
+        try{
+          for(const note of c.n){
+            if(typeof note.m === 'number') playNote(note.m, note.v||88, note.durMs||400);
+          }
+          // Light-up keys to match the audible chord.
+          setActive(p=>{ const s=new Set(p); for(const n of c.n){ if(typeof n.m==='number') s.add(n.m); } return s; });
+        }catch(_){}
+      }
+    }
+    // Intentionally NOT including `playing` or `disp` — toggle is the only
+    // trigger; including them would re-fire on every chord/state change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[playSourceMic]);
+
   // Auto-stop the recorder once playback finishes (playing → false).
   // A 700 ms tail lets the last notes ring out before capture closes.
+  //
+  // Guards: (1) only fire AFTER playback actually started during this
+  // recording session — without this, setRecording(true) re-renders BEFORE
+  // the async startPlay() flips setPlaying(true), so for one render cycle we
+  // have (playing=false, recording=true) which would trip this and stop the
+  // recorder ~700ms after REC was tapped, popping the SAVE picker open
+  // mid-recording. (2) only fire if the recorder is actually still in
+  // 'recording' state — if the user already tapped STOP, the recorder is
+  // already inactive and we'd schedule a redundant stop on a dead recorder.
+  const playStartedDuringRecRef = useRef(false);
   useEffect(()=>{
-    if(!playing&&recording&&recorderRef.current){
-      const r=recorderRef.current;
-      setTimeout(()=>{try{r.stop();}catch(_){}},700);
+    if(playing && recording){
+      playStartedDuringRecRef.current = true;
+      return;
     }
+    if(!playing && recording && recorderRef.current && playStartedDuringRecRef.current){
+      playStartedDuringRecRef.current = false;
+      const r=recorderRef.current;
+      setTimeout(()=>{
+        try{ if(r && r.state==='recording') r.stop(); }catch(_){}
+      },700);
+    }
+    if(!recording) playStartedDuringRecRef.current = false;
   },[playing,recording]);
 
   // Image playback scroll: image now behaves like every other mode — no
@@ -4429,6 +5358,12 @@ Composition rules:
     recorder.onstop=()=>{
       try{Tone.getDestination().disconnect(streamDest);}catch(_){}
       recStreamDestRef.current=null;
+      // Defensive: on iOS Safari, disconnect() on a node that branches into
+      // a MediaStreamAudioDestinationNode has been observed to occasionally
+      // wedge the AudioContext into a silent state. Resume the context to
+      // ensure subsequent playback (after picker close / share cancel) still
+      // produces audio. Cheap no-op if context is already 'running'.
+      unlockAudio();
       const mt=recorder.mimeType||'audio/mp4';
       const blob=new Blob(recChunksRef.current,{type:mt});
       const ext=mt.includes('ogg')?'ogg':mt.includes('mp4')?'m4a':'webm';
@@ -4436,9 +5371,14 @@ Composition rules:
       if(blob.size<2000){setErr(t('recTooShort'));setErrInfo(false);}
       else{setRecBlob(blob);setRecName(name);}
       setRecording(false);recorderRef.current=null;
+      keepSetupDuringRecRef.current=false;
       // Image-mode picker intents: react to what the user picked from SAVE,
-      // or from the REC button (which uses 'picker' = auto-open the SAVE picker
-      // after recording so the user can choose Story / Audio / Score next).
+      // or from the REC button. 'audio'/'story' come from inside the SAVE picker
+      // and still fire their action. 'picker' is the plain REC button: instead of
+      // auto-opening the SAVE picker (which felt like a jarring jump), we now do
+      // NOTHING here — the recorded blob stays on hand (recBlob, set above) and
+      // the REC button morphs into a SAVE button, so the user opens the picker
+      // themselves on tap, exactly like every other mode.
       const intent = recordIntentRef.current;
       if(intent && blob.size>=2000){
         setRecordIntent(null);
@@ -4446,9 +5386,9 @@ Composition rules:
         // Defer so the recBlob/recName state writes settle before downstream
         // helpers (saveAudio reads them via closure).
         setTimeout(()=>{
-          if(intent==='audio') saveAudio();
-          else if(intent==='story') exportImage('story', true, blob, name);
-          else if(intent==='picker') setShowSizePicker(true);
+          if(intent==='audio') saveAudio(true, pendingWithSourceRef.current);
+          else if(intent==='story') exportImage('story', true, blob, name, pendingWithSourceRef.current);
+          // 'picker' intentionally does nothing — REC→SAVE button handles it.
         }, 60);
       }
     };
@@ -4475,20 +5415,53 @@ Composition rules:
       const{raf,stream,ac}=micVolRef.current;
       cancelAnimationFrame(raf);
       stream.getTracks().forEach(t=>t.stop());
-      if(ac){try{ac.close();}catch(_){}}
+      // NOTE: ac is the shared Tone context now — must NOT close it (that would
+      // tear down all app audio). Stopping the mic stream tracks is enough; the
+      // MediaStreamSource is GC'd once the stream ends.
       micVolRef.current=null;
     }
     setMicVolActive(false);
     setMicVolLevel(0);
   },[]);
 
+  // iOS allows essentially one live AudioContext. The mic code used to spin up a
+  // SECOND `new AudioContext()` next to Tone's, and calling createMediaStreamSource
+  // on it threw InvalidStateError (the "Could not start the microphone" failure).
+  // Reuse Tone's existing, already-running context instead — one context, no clash.
+  const getSharedAC=useCallback(async()=>{
+    // CRITICAL: the audio session must allow INPUT for the mic. Elsewhere we set
+    // navigator.audioSession.type='playback' (output-only) for clean playback —
+    // but 'playback' DISABLES the microphone, which is why createMediaStreamSource
+    // started throwing InvalidStateError after the playback-session changes landed.
+    // Switch to 'play-and-record' here so capture is permitted.
+    try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){}
+    let ac=null;
+    try{ ac=Tone.getContext().rawContext; }catch(_){}
+    if(!ac){ const AC=window.AudioContext||window.webkitAudioContext; ac=new AC(); }
+    try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){}
+    return ac;
+  },[]);
+
+  // Map a getUserMedia failure to the right message. Previously every failure was
+  // reported as "access denied", which sent users to permission settings even when
+  // permission was already granted and the real cause was different (mic busy in
+  // another tab/app, no device, hardware error). Distinguish by error name.
+  const micErrMsg=useCallback((e)=>{
+    const n=(e&&e.name)||'';
+    if(n==='NotAllowedError'||n==='SecurityError') return t('micDenied');
+    if(n==='NotReadableError'||n==='AbortError') return (t('micBusy')!=='micBusy'?t('micBusy'):'Microphone is busy — another app or browser tab may be using it. Close it (and any other tab using the mic), then reload.');
+    if(n==='NotFoundError'||n==='OverconstrainedError') return (t('micNotFound')!=='micNotFound'?t('micNotFound'):'No microphone found on this device.');
+    // Unknown failure — show the actual error so it's debuggable, not a misleading "denied".
+    return (t('micFail')!=='micFail'?t('micFail'):'Could not start the microphone')+(n?(' ('+n+')'):'');
+  },[t]);
+
   const startMicVol=useCallback(async()=>{
     if(micVolActive){stopMicVol();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
+    try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
+      const ac=await getSharedAC();
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=256;
@@ -4505,9 +5478,9 @@ Composition rules:
       };
       micVolRef.current={raf:requestAnimationFrame(tick),stream,ac};
     }catch(e){
-      setErr(t('micDenied'));setErrInfo(false);
+      setErr(micErrMsg(e));setErrInfo(false);
     }
-  },[micVolActive,stopMicVol]);
+  },[micVolActive,stopMicVol,micErrMsg,getSharedAC]);
 
   const stopMicPainting=useCallback(()=>{
     // Stash the captured draft so the MIC button shows a "draft saved" glow and
@@ -4516,19 +5489,25 @@ Composition rules:
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
-    if(micAcRef.current){try{micAcRef.current.close();}catch(_){}micAcRef.current=null;}
+    if(micAcRef.current){micAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicPainting(false);
     stopMicVol();
-  },[stopMicVol,stashDraft]);
+  },[stopMicVol,stashDraft,micErrMsg,getSharedAC]);
 
   const stopMicListening=useCallback(()=>{
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(listenRafRef.current){cancelAnimationFrame(listenRafRef.current);listenRafRef.current=null;}
+    // Finalise the parallel raw-audio recorder. It owns its own onstop handler
+    // that builds the Blob; we just request stop. Tracks are closed below.
+    if(listenRecorderRef.current){
+      try{ if(listenRecorderRef.current.state!=='inactive') listenRecorderRef.current.stop(); }catch(_){}
+      listenRecorderRef.current = null;
+    }
     if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
-    if(listenAcRef.current){try{listenAcRef.current.close();}catch(_){}listenAcRef.current=null;}
+    if(listenAcRef.current){listenAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicListening(false);
     stopMicVol();
-  },[stopMicVol,stashDraft]);
+  },[stopMicVol,stashDraft,micErrMsg,getSharedAC]);
 
   // Refs so handlePauseClick (defined earlier in the file) can stop a live mic
   // mode before starting playback. The Play button now does mic-stop + play in
@@ -4541,6 +5520,7 @@ Composition rules:
   const startMicListening=useCallback(async()=>{
     if(micListening){stopMicListening();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
+    try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
     const prevOwner = draftOwnerRef.current;
     // Continuation: re-entering listen, OR switching from sing (sibling preset
     // within the unified MIC mode). In both cases we preserve the canvas.
@@ -4550,23 +5530,106 @@ Composition rules:
     setComposeMode(false);
     if(micPainting){stopMicPainting();}
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
+      // Some iOS builds reject specific audio constraints (autoGainControl:false
+      // etc.) with OverconstrainedError/NotReadableError even though the mic is
+      // available and permitted. Try the detailed request first, then fall back to
+      // a plain {audio:true} request which iOS always accepts.
+      let stream;
+      try{
+        // noiseSuppression: ON — browser-level DSP (Chrome/Safari WebRTC) is
+        // gentle on musical transients and removes the ambient hum / fan noise
+        // that was making playback sound dirty. echoCancellation stays OFF so
+        // we don't get artefacts on the source music; autoGainControl OFF so
+        // the dynamic range is preserved (soft passages stay soft).
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:false},video:false});
+      }catch(ce){
+        if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
+          stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        } else { throw ce; }
+      }
       listenStreamRef.current=stream;
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
+      const ac=await getSharedAC();
       listenAcRef.current=ac;
-      // iOS: a fresh AudioContext starts suspended; an analyser on a suspended
-      // context reads silence — which is why the FIRST entry into Music painted
-      // nothing while later re-entries worked. Await the resume (we're already in
-      // an async fn, inside the button-tap gesture) so the tick loop below reads
-      // real audio from the very first frame.
-      try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){}
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=4096; // higher resolution for better pitch detection on complex music
+      // Analyser stays on the raw source — no compressor / HP — so the FFT
+      // sees a true magnitude spectrum without DSP-induced peaks.
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
+      // Filtered branch for the *recording* stream — what the user will hear
+      // on Play. High-pass 80 Hz kills AC hum and rumble; a mild compressor
+      // brings quiet musical detail up without flattening the dynamics.
+      // MediaStreamDestination feeds MediaRecorder so the file on disk is
+      // the post-DSP signal, not the raw mic.
+      let recordStream = stream; // fallback if Web Audio routing fails
+      try{
+        const hp = ac.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
+        const comp = ac.createDynamicsCompressor();
+        comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
+        comp.attack.value = 0.005; comp.release.value = 0.15;
+        const dst = ac.createMediaStreamDestination();
+        src.connect(hp); hp.connect(comp); comp.connect(dst);
+        if(dst.stream && dst.stream.getAudioTracks().length>0) recordStream = dst.stream;
+      }catch(_){ /* fallback to raw stream — recording still works */ }
+      // Start raw audio capture in parallel — keeps the user's exact source
+      // recording so they can play it back instead of the synthesised cover.
+      // Pick the best supported mime in order of preference. Some browsers
+      // (Safari) accept only audio/mp4; Chrome/Firefox prefer webm/opus.
+      try{
+        const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
+        if(MR){
+          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          let mime = '';
+          for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
+          const opts = mime ? { mimeType: mime } : undefined;
+          const rec = new MR(recordStream, opts);
+          listenChunksRef.current = [];
+          // Clear any previous draft's blob — fresh listen session.
+          if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
+          listenBlobRef.current = null;
+          rec.ondataavailable = (e)=>{ if(e.data && e.data.size>0) listenChunksRef.current.push(e.data); };
+          rec.onstop = ()=>{
+            const chunks = listenChunksRef.current;
+            if(!chunks || chunks.length===0){ listenChunksRef.current=[]; return; }
+            const type = rec.mimeType || mime || 'audio/webm';
+            const blob = new Blob(chunks, { type });
+            const url = URL.createObjectURL(blob);
+            listenBlobRef.current = { blob, url, type };
+            listenChunksRef.current = [];
+            setHasMicBlob(true);
+            // Decode blob → AudioBuffer in background so Play can start the
+            // original recording instantly. Tone shares its rawContext so the
+            // decoded buffer is compatible with our playback path.
+            (async()=>{
+              try{
+                const arrBuf = await blob.arrayBuffer();
+                const ac = Tone.getContext().rawContext;
+                const decode = (ab,ctx)=>new Promise((res,rej)=>{
+                  let done=false; const t=setTimeout(()=>{ if(!done){done=true;rej(new Error('decode timeout'));} },10000);
+                  try{
+                    ctx.decodeAudioData(ab, b=>{ if(!done){done=true;clearTimeout(t);res(b);} }, e=>{ if(!done){done=true;clearTimeout(t);rej(e||new Error('decode failed'));} });
+                  }catch(_){
+                    ctx.decodeAudioData(ab).then(b=>{ if(!done){done=true;clearTimeout(t);res(b);} }, e=>{ if(!done){done=true;clearTimeout(t);rej(e||new Error('decode failed'));} });
+                  }
+                });
+                const buf = await decode(arrBuf, ac);
+                listenPCMRef.current = buf;
+              }catch(_){
+                // Decode failed (unsupported codec etc.) — silently fall back to
+                // piano playback; the toggle will still be there but Original
+                // tap won't have a buffer to play. Set buffer null.
+                listenPCMRef.current = null;
+              }
+            })();
+          };
+          rec.start(1000); // emit chunks every 1s for incremental delivery
+          listenRecorderRef.current = rec;
+          setHasMicBlob(false); // fresh session — old blob is gone, new one not ready yet
+        }
+      }catch(_){ /* recording optional — pitch-track still works without it */ }
       setMicListening(true);setMicArmed(false);setMicContext(true);
       startMicVol();
       stopAll();
@@ -4590,12 +5653,12 @@ Composition rules:
       let noiseFloor=0.002;
       const NOISE_GATE_MULT=1.8;  // signal must be 1.8× the noise floor
       const RMS_FLOOR_MIN=0.003;  // absolute floor — true silence
-      let prevChordSig=''; // chord-change detection
-      let prevChordStart=performance.now(); // when current chord started
-      let pendingNotes=null;     // the currently-sounding chord, awaiting its end to know duration
       let pendingSig='';
+      let pendingNotes=null;
+      let prevChordStart=performance.now();
       const emitChord=(notes,heldMs)=>{
-        // Highlight active keys
+        // Silent painting — highlight + record, but NO playback during the
+        // capture session (the user is already hearing the source audio).
         const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
         notes.forEach(({m})=>{
           setActive(p=>{const s=new Set(p);s.add(m);return s;});
@@ -4605,62 +5668,71 @@ Composition rules:
         const now2=performance.now();
         if(!sessionStart.current)sessionStart.current=now2;
         const startMs=now2-sessionStart.current;
-        // Continuous durQ proportional to TRUE held duration — like Compose.
         const durQ=Math.max(0.25,Math.min(4,heldMs/500));
         const paintedNotes=notes.map(n=>({...n,durMs:Math.round(heldMs)}));
         setChords(p=>{const next=[...p,{n:paintedNotes,idx,startMs,recorded:true,durQ}];return next;});
         setDisp(p=>p+1);
+      };
+      // Hybrid event builder:
+      //  • Strong chord-template match → triadic voicing (root + 3 + 5 + bass)
+      //  • Otherwise, if a dominant pitch is clearly above the rest → single note
+      //  • Otherwise, if multiple comparable peaks → 2–3 raw pitches as-is
+      // Returns {sig, notes} or null.
+      const buildEvent=(mag,liveSr)=>{
+        const chroma=computeChroma(mag,liveSr);
+        const det=detectChord(chroma); // null below 0.60 conf
+        const peaks=pickPitches(mag,liveSr,0.02); // original sensitivity
+        if(det){
+          const notes=generateVoicing(det.root,det.quality);
+          return { sig:'C:'+det.root+':'+det.quality, notes };
+        }
+        if(peaks.length===0) return null;
+        // Single dominant pitch: top peak ≥ 2.0× the next one → treat as melody.
+        if(peaks.length===1 || peaks[0].mag >= peaks[1].mag*2.0){
+          const m=peaks[0].midi;
+          return { sig:'N:'+m, notes:[{m,v:Math.max(70,Math.min(110,Math.round(peaks[0].mag*110)))}] };
+        }
+        // Raw multi-pitch: take top 2–3, sorted ascending (low → high).
+        const taken=peaks.slice(0,3).map(p=>({m:p.midi,v:Math.max(60,Math.min(108,Math.round(p.mag*100)))})).sort((a,b)=>a.m-b.m);
+        const sig='P:'+taken.map(n=>n.m).join(',');
+        return { sig, notes:taken };
       };
       const tick=()=>{
         if(!listenStreamRef.current){stopMicListening();return;}
         analyser.getFloatTimeDomainData(buf);
         let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
         const now=performance.now();
-        // Update the noise floor with slow decay during quiet moments only —
-        // when the level is below 1.5× current floor, treat as background and
-        // let it drift toward `rms`. During loud moments the floor stays put.
         if(rms < noiseFloor*1.5) noiseFloor = noiseFloor*0.95 + rms*0.05;
         const gate = Math.max(RMS_FLOOR_MIN, noiseFloor*NOISE_GATE_MULT);
         if(rms<gate){
-          // Silence — if a chord was sounding, end it now with its real duration.
           if(pendingNotes){
             const heldMs=now-prevChordStart;
             if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
-            pendingNotes=null;pendingSig='';prevChordSig='';
+            pendingNotes=null;pendingSig='';
           }
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
-        // Detect chord identity every ~120ms (cheap, frequent — decoupled from
-        // the old 800ms commit gate that quantized all durations equal).
         if(now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
           const mag=fftMag(buf);
-          // Read sampleRate live: a freshly-created AudioContext can report 0 (or
-          // a stale value) on the first entry until it's fully running, which made
-          // pickPitches compute garbage frequencies → no pitches → first Music
-          // session never painted. Fall back to a sane default if it's not ready.
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
-          const pitches=pickPitches(mag,liveSr,0.02); // very low — catch any peak; noise gate above filters silence
-          if(pitches.length>0){
-            const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:0}));
-            const sig=notes.map(n=>n.m).sort((a,b)=>a-b).join(',');
-            if(sig!==pendingSig){
-              // Chord changed. Flush the PREVIOUS chord with its true held time
-              // and emit the NEW one immediately — no stability gate, no prominence
-              // filter. Every detected change paints.
-              if(pendingNotes){
-                const heldMs=now-prevChordStart;
-                if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
-              }
-              pendingNotes=notes;pendingSig=sig;prevChordStart=now;
+          const ev=buildEvent(mag,liveSr);
+          if(ev && ev.sig!==pendingSig){
+            // Event changed. Flush previous, arm new — no stability gate.
+            if(pendingNotes){
+              const heldMs=now-prevChordStart;
+              if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
             }
+            pendingSig=ev.sig;
+            pendingNotes=ev.notes;
+            prevChordStart=now;
           }
         }
         listenRafRef.current=requestAnimationFrame(tick);
       };
       listenRafRef.current=requestAnimationFrame(tick);
     }catch(e){
-      setErr(t('micDenied'));setErrInfo(false);
+      setErr(micErrMsg(e));setErrInfo(false);
       setMicListening(false);
     }
   },[micListening,stopMicListening,stopAll]);
@@ -4668,6 +5740,7 @@ Composition rules:
   const startMicPainting=useCallback(async()=>{
     if(micPainting)return stopMicPainting();
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
+    try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
     const prevOwner = draftOwnerRef.current;
     // Continuation: re-entering sing, OR switching from listen (sibling preset
     // within the unified MIC mode). Preserve the canvas in both cases.
@@ -4679,10 +5752,8 @@ Composition rules:
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       micStreamRef.current=stream;
-      const AC=window.AudioContext||window.webkitAudioContext;
-      const ac=new AC();
+      const ac=await getSharedAC();
       micAcRef.current=ac;
-      try{ if(ac.state!=='running' && ac.resume) await ac.resume(); }catch(_){} // iOS: await resume so the analyser reads real audio on the first frame
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=2048;
@@ -4775,7 +5846,7 @@ Composition rules:
       };
       micRafRef.current=requestAnimationFrame(tick);
     }catch(e){
-      setErr(t('micDenied'));setErrInfo(false);
+      setErr(micErrMsg(e));setErrInfo(false);
       setMicPainting(false);
     }
   },[micPainting,stopMicPainting,playNote,stopAll,randomMode,pollockSessionSeed]);
@@ -4835,7 +5906,7 @@ Composition rules:
     }catch(e){ setScoreMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')}); }
   },[scoreBlob,scoreFileName,t]);
   // Export audio via offline render — fast, silent, independent of playback.
-  const saveAudio=useCallback(async()=>{
+  const saveAudio=useCallback(async(prepareOnly,withImage)=>{
     const src=chordsRef.current&&chordsRef.current.length?chordsRef.current:chords;
     if(!src||!src.length){setScoreMsg({tone:'err',text:t('noNotesGeneric')});return;}
     const title=(compositionName||recordingName||'Paintiano').trim()||'Paintiano';
@@ -4844,7 +5915,24 @@ Composition rules:
     let blob;
     try{ blob=await renderAudioOffline(src,{speed:1}); }
     catch(e){ blob=null; }
+    // Tone.Offline temporarily replaces the global Tone context. Restore the
+    // live audio path so the next playback isn't silent.
+    try{ await unlockAudio(); }catch(_){}
     if(!blob){ setScoreMsg({tone:'err',text:t('renderFail')}); return; }
+    // prepareOnly: don't fire the share sheet immediately. Instead hand the WAV
+    // to the in-app audio row (recBlob/recName) — same pattern as Score — so the
+    // user gets a named row with an explicit Share button and an ✕ to dismiss,
+    // rather than being thrown straight into the iOS share sheet.
+    // withImage: also stash the ORIGINAL source image so the Share button on the
+    // row sends two files (picture + audio).
+    if(prepareOnly){
+      setScoreMsg(null);
+      setRecName(finalName);
+      setRecBlob(blob);
+      setAudioSideImage(withImage ? (originalImgUrl||null) : null);
+      setAudioRowOpen(true);
+      return;
+    }
     const file=new File([blob],finalName,{type:blob.type});
     setScoreMsg({tone:'wait',text:t('saving')});
     if(navigator.share){
@@ -4867,7 +5955,7 @@ Composition rules:
       setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}},10000);
       setScoreMsg({tone:'ok',text:'download started ✓'});
     }catch(e){ setScoreMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')}); }
-  },[chords,loadedSource,compositionName,recordingName,t]);
+  },[chords,loadedSource,compositionName,recordingName,t,unlockAudio]);
   const shareRecording=async()=>{
     if(!recBlob)return;
     const ext=recName.split('.').pop()||'m4a';
@@ -4875,12 +5963,24 @@ Composition rules:
     const finalName=baseName+'.'+ext;
     setAudioShareMsg({tone:'wait',text:t('saving')});
     const file=new File([recBlob],finalName,{type:recBlob.type||'audio/mp4'});
+    // When an original source image is stashed (image-mode Audio with the
+    // "include source original image" box ticked), share BOTH the picture and
+    // the audio so the user can save/post them together.
+    let shareFiles=[file];
+    if(audioSideImage){
+      try{
+        const resp=await fetch(audioSideImage); const imgBlob=await resp.blob();
+        const imgExt=(imgBlob.type&&imgBlob.type.includes('png'))?'png':(imgBlob.type&&imgBlob.type.includes('webp'))?'webp':'jpg';
+        const imgFile=new File([imgBlob],baseName+'.'+imgExt,{type:imgBlob.type||'image/jpeg'});
+        shareFiles=[imgFile,file];
+      }catch(_){ /* if the image can't be fetched, just share the audio */ }
+    }
     // 1. Share sheet — phones + macOS
     if(navigator.share){
       try{
-        const canTry=!navigator.canShare||navigator.canShare({files:[file]});
+        const canTry=!navigator.canShare||navigator.canShare({files:shareFiles});
         if(canTry){
-          await navigator.share({files:[file],title:'Paintiano recording'});
+          await navigator.share({files:shareFiles,title:'Paintiano recording'});
           setAudioShareMsg({tone:'ok',text:t('saved')});
           return;
         }
@@ -4964,7 +6064,7 @@ Composition rules:
   // Artifact iframes block <a download>, window.open, and rewrite blob: URLs to a
   // sandbox-internal scheme — the only thing that reliably works is rendering the PNG
   // inside the iframe as <img> and letting iOS native long-press → Save to Photos do the job.
-  const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null)=>{
+  const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false)=>{
     try{
       if(!chords.length){setErr(t('errs').nothingToPrint);setErrInfo(false);return;}
       // Export the style actually on screen — in shuffle mode that's the
@@ -5003,6 +6103,7 @@ Composition rules:
         }
       }else{
         _setArtistSeed(pollockSessionSeed);
+        _setVariantCap(proStatus==='free' ? 2 : null);
         chords.forEach(({n:notes,idx})=>{
           const cell=grid.cells&&grid.cells[idx];
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
@@ -5013,56 +6114,110 @@ Composition rules:
         // hctx is already scaled; pass canvas-space CW/CH so the splatters
         // span the painting at export resolution.
         if(style==='pollock' && chords.length>0){
-          drawPollockOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawPollockOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='picasso' && chords.length>0){
-          drawPicassoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawPicassoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='kusama' && chords.length>0){
-          drawKusamaOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed);
+          drawKusamaOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, phaseIndex);
         }
         if(style==='miro' && chords.length>0){
-          drawMiroOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawMiroOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         // Kandinsky canvas-wide contour overlay.
         if(style==='kandinsky' && chords.length>0){
-          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode, gc);
+          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode, gc, phaseIndex);
         }
         if(style==='rothko' && chords.length>0){
-          drawRothkoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawRothkoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='matisse' && chords.length>0){
-          drawMatisseOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawMatisseOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='mondrian' && chords.length>0){
-          drawMondrianOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawMondrianOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='bulge' && chords.length>0){
-          drawBulgeOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawBulgeOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='arcs' && chords.length>0){
-          drawArcsOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawArcsOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='bloom' && chords.length>0){
-          drawBloomOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawBloomOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='spiral' && chords.length>0){
-          drawSpiralOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawSpiralOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='gold' && chords.length>0){
-          drawGoldOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawGoldOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='pop' && chords.length>0){
-          drawPopOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawPopOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='wave' && chords.length>0){
-          drawWaveOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawWaveOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='comic' && chords.length>0){
-          drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
       }
-      applyWatermark(hi, proStatus!=='free');   // free tier → "paintiano.app" stamp; Pro → no-op
+      // Watermark policy: stamp "paintiano.app" unless we KNOW the user is
+      // Pro (or Pro AI). `isPro` here is `pro || pro_ai` and is `false` while
+      // proStatus is still 'loading' — so a fast Free export at app open won't
+      // accidentally slip through unwatermarked.
+      applyWatermark(hi, isPro);
+      // Optional source-image thumbnail overlay (web/print only). Drawn AFTER
+      // watermark so it sits on top of the painting. Source picked from
+      // originalImgUrl (regular image mode) or imgMoodThumb (MFI hand-off).
+      // For Story, the source thumb is rendered SEPARATELY on the Story
+      // canvas above the painting (see Story compose block below) — corner
+      // overlay would look glued/cluttered against the social-format frame.
+      const srcThumbUrl = withSource ? (originalImgUrl || imgMoodThumb) : null;
+      if(srcThumbUrl && sizeMode!=='story'){
+        try{
+          const srcImg = await new Promise((res,rej)=>{
+            const im = new Image();
+            im.onload = ()=>res(im);
+            im.onerror = ()=>rej(new Error('thumb load'));
+            im.src = srcThumbUrl;
+          });
+          const iw=srcImg.naturalWidth||srcImg.width;
+          const ih=srcImg.naturalHeight||srcImg.height;
+          if(iw>0 && ih>0){
+            // Thumb sized to ~18% of the painting's shorter side. Mounted
+            // bottom-right with a small margin, framed with a thin gold
+            // border that matches the app's chrome.
+            const targetShort = Math.round(Math.min(hi.width, hi.height) * 0.18);
+            const aspect = iw/ih;
+            let tw, th;
+            if(aspect>=1){ th = targetShort; tw = Math.round(th*aspect); }
+            else        { tw = targetShort; th = Math.round(tw/aspect); }
+            const margin = Math.round(targetShort * 0.18);
+            const tx = hi.width - tw - margin;
+            const ty = hi.height - th - margin;
+            // Draw without the scale transform (which was set for chord-grid
+            // coords) — save/reset/restore.
+            const tctx = hi.getContext('2d');
+            tctx.save();
+            tctx.setTransform(1,0,0,1,0,0);
+            // subtle drop shadow behind the thumb
+            tctx.shadowColor = 'rgba(0,0,0,.55)';
+            tctx.shadowBlur = Math.round(targetShort*0.08);
+            tctx.shadowOffsetY = Math.round(targetShort*0.03);
+            tctx.drawImage(srcImg, tx, ty, tw, th);
+            tctx.restore();
+            // gold frame on top, no shadow
+            tctx.save();
+            tctx.setTransform(1,0,0,1,0,0);
+            tctx.strokeStyle = 'rgba(201,168,76,.85)';
+            tctx.lineWidth = Math.max(2, Math.round(targetShort*0.012));
+            tctx.strokeRect(tx, ty, tw, th);
+            tctx.restore();
+          }
+        }catch(_){/* thumb overlay best-effort — never block export */}
+      }
       // STORY (9:16) — compose the rendered painting onto a tall 1080×1920 dark
       // canvas, centered, with a small Paintiano wordmark below. Built for IG/
       // TikTok stories. Everything else ('web'/'print') downloads `hi` as-is.
@@ -5075,28 +6230,109 @@ Composition rules:
         const g=sctx.createRadialGradient(SW*0.5,SH*0.34,0,SW*0.5,SH*0.34,SH*0.7);
         g.addColorStop(0,'#0e0b16'); g.addColorStop(1,'#06060c');
         sctx.fillStyle=g; sctx.fillRect(0,0,SW,SH);
-        // fit the painting into the width with margins, centered vertically-ish
+        // In IMAGE mode the artwork to show IS the original picture, not the
+        // mosaic painting. Load the original and use it as the main image; skip
+        // the separate thumbnail (the original already fills the main slot).
+        const imageModeStory = (viewMode==='image' && originalImgUrl);
+        let mainImg = null;
+        if(imageModeStory){
+          try{
+            mainImg = await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('orig load')); im.src=originalImgUrl; });
+          }catch(_){ mainImg=null; }
+        }
+        // Source thumbnail (when withSource) — drawn ABOVE the painting as a
+        // small framed image. Suppressed in image-mode story (the original is
+        // already the main artwork there).
+        let storyThumbImg = null;
+        const storySrcThumbUrl = (!imageModeStory && withSource) ? (originalImgUrl || imgMoodThumb) : null;
+        if(storySrcThumbUrl){
+          try{
+            storyThumbImg = await new Promise((res,rej)=>{
+              const im=new Image();
+              im.onload=()=>res(im);
+              im.onerror=()=>rej(new Error('story thumb load'));
+              im.src=storySrcThumbUrl;
+            });
+          }catch(_){ storyThumbImg=null; }
+        }
+        // Story vertical layout: optional thumb at top, painting in the
+        // middle band, mood + wordmark below. Calculate Y positions so
+        // everything stays inside the 1920-tall safe area.
         const margin=90;
         const availW=SW-margin*2;
-        const scale=availW/hi.width;
-        const dw=availW, dh=Math.round(hi.height*scale);
-        const dx=margin, dy=Math.round((SH-dh)/2 - 40);
-        // subtle frame
+        const _artImg = (imageModeStory && mainImg) ? mainImg : hi;
+        const _artW = _artImg.width || _artImg.naturalWidth;
+        const _artH = _artImg.height || _artImg.naturalHeight;
+        const scale=availW/_artW;
+        const dw=availW, dh=Math.round(_artH*scale);
+        let thumbY = 0, thumbH = 0;
+        const THUMB_SHORT = 220;       // shorter-side target for the thumb
+        const THUMB_TOP_MARGIN = 130;  // breathing room from the top edge
+        const THUMB_BOTTOM_GAP = 60;   // gap between thumb and painting
+        if(storyThumbImg){
+          const iw=storyThumbImg.naturalWidth||storyThumbImg.width;
+          const ih=storyThumbImg.naturalHeight||storyThumbImg.height;
+          const aspect = iw && ih ? iw/ih : 1;
+          let tw, th;
+          if(aspect>=1){ th = THUMB_SHORT; tw = Math.round(th*aspect); }
+          else        { tw = THUMB_SHORT; th = Math.round(tw/aspect); }
+          // Cap width so wide thumbs don't bleed off the canvas
+          const maxTw = SW - margin*2;
+          if(tw > maxTw){ const k = maxTw/tw; tw = maxTw; th = Math.round(th*k); }
+          const tx = Math.round((SW - tw)/2);
+          thumbY = THUMB_TOP_MARGIN;
+          thumbH = th;
+          // drop shadow under thumb
+          sctx.save();
+          sctx.shadowColor='rgba(0,0,0,.55)'; sctx.shadowBlur=20; sctx.shadowOffsetY=6;
+          sctx.drawImage(storyThumbImg, tx, thumbY, tw, th);
+          sctx.restore();
+          // gold frame
+          sctx.strokeStyle='rgba(201,168,76,.55)'; sctx.lineWidth=2;
+          sctx.strokeRect(tx, thumbY, tw, th);
+        }
+        // Painting placement: below the thumb (if any), centered in the
+        // remaining vertical space. The wordmark + mood need ~260px below
+        // the painting; bias the painting upward toward the thumb so the
+        // composition reads top→down.
+        const paintingTopMin = thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160;
+        const paintingBottomReserve = 290; // mood + wordmark + tagline
+        const paintingAvailH = SH - paintingTopMin - paintingBottomReserve;
+        const dy = paintingTopMin + Math.max(0, Math.round((paintingAvailH - dh)/2));
+        const dx = margin;
         sctx.save();
         sctx.shadowColor='rgba(0,0,0,.55)'; sctx.shadowBlur=40; sctx.shadowOffsetY=12;
-        sctx.drawImage(hi, dx, dy, dw, dh);
+        sctx.drawImage(_artImg, dx, dy, dw, dh);
         sctx.restore();
         sctx.strokeStyle='rgba(201,168,76,.35)'; sctx.lineWidth=2;
         sctx.strokeRect(dx, dy, dw, dh);
-        // wordmark + tagline below the art
+        // mood label + wordmark + tagline below the art. Mood comes from
+        // currentMood when set (mood pick, MFI auto-detected mood, etc.);
+        // skipped when the composition has no mood association (pure MIDI /
+        // score / audio import). Italic serif to feel like a caption.
         sctx.textAlign='center';
+        const moodLabel = (currentMood||'').trim();
+        let cursorY = dy + dh + 110;
+        if(moodLabel){
+          sctx.fillStyle='rgba(255,220,140,.95)';
+          sctx.font='italic 500 44px "Cormorant Garamond", Georgia, serif';
+          sctx.fillText(moodLabel, SW/2, cursorY);
+          cursorY += 80;
+        }
         sctx.fillStyle='#f0c040';
         sctx.font='600 64px "Cormorant Garamond", Georgia, serif';
-        sctx.fillText('Paintiano', SW/2, dy+dh+120);
+        sctx.fillText('Paintiano', SW/2, cursorY);
+        cursorY += 48;
         sctx.fillStyle='rgba(201,168,76,.7)';
         sctx.font='500 28px "Outfit", Arial, sans-serif';
-        sctx.fillText('music → φ painting', SW/2, dy+dh+168);
+        sctx.fillText('music → φ painting', SW/2, cursorY);
         outCanvas=st;
+        // Watermark on the Story composite — the one we applied to `hi` above
+        // got shrunk along with the painting when drawImage'd onto this 1080×
+        // 1920 canvas (text 12–30px at hi resolution becomes a smear here).
+        // Re-stamp on the final canvas so Free Story exports still carry the
+        // mark. Pro skips this (applyWatermark is a no-op when isPro=true).
+        applyWatermark(st, isPro);
       }
       const blob=await new Promise(res=>outCanvas.toBlob(res,'image/png'));
       if(!blob){setErr(t('errs').printEncode);setErrInfo(false);return;}
@@ -5124,9 +6360,15 @@ Composition rules:
           const sharePayload = {files:shareFiles, title:'Paintiano'};
           if(sizeMode==='story') sharePayload.text = buildStoryCaption();
           await navigator.share(sharePayload);
+          // iOS suspends the AudioContext while the share sheet is on screen.
+          // After it dismisses, resume so subsequent Play / REC still has audio.
+          try{ await unlockAudio(); }catch(_){}
           URL.revokeObjectURL(url);
           return;
         }catch(e){
+          // Resume even on cancel/error — the share sheet was shown and the
+          // context may already be suspended.
+          try{ await unlockAudio(); }catch(_){}
           if(e&&e.name==='AbortError'){ URL.revokeObjectURL(url); return; }
           // fall through to preview so the user still gets the image
         }
@@ -5196,6 +6438,76 @@ Composition rules:
   // Help cheat-sheet popup — gold "?" FAB bottom-right opens this. Volatile
   // boolean (no persistence) — every fresh visit defaults to closed.
   const [showHelp, setShowHelp] = useState(false);
+  // ── Legal modal: which legal doc is shown inside the in-app modal
+  // ('pricing' | 'terms' | 'privacy' | 'refunds' | null). null = closed.
+  // We fetch the matching public/*.html on demand and inline-render it so the
+  // user never leaves the Paintiano context (no new tab, no full-page nav).
+  const [legalDoc, setLegalDoc] = useState(null);
+  const [legalHtml, setLegalHtml] = useState('');
+  const [legalLoading, setLegalLoading] = useState(false);
+  useEffect(()=>{
+    if(!legalDoc){ setLegalHtml(''); return; }
+    let cancelled=false;
+    setLegalLoading(true);
+    fetch('/'+legalDoc+'.html').then(r=>r.text()).then(t=>{
+      if(cancelled) return;
+      // Strip everything before <body> and after </body> so we render
+      // only the page's content — outer <html>/<head> would clash with
+      // the app's own document and break styles.
+      const m = t.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+      let body = m ? m[1] : t;
+      // The HTML file contains all 8 language sections side-by-side plus a
+      // small standalone-mode <script> with localStorage-based language
+      // detection. Inside the modal we don't want either of those: the
+      // <script> would not execute through dangerouslySetInnerHTML anyway,
+      // and the default `wrap active` on the EN section would lock us to
+      // English. Strip the script and clear the default active so the
+      // memoized renderer below can activate the section matching `lang`.
+      body = body.replace(/<script[\s\S]*?<\/script>/gi, '');
+      // Some older privacy.html / pricing.html builds still ship the
+      // <div class="langpick"><select id="lang">...</select></div> picker
+      // used in standalone-tab mode. Inside the modal it would render an
+      // unstyled, non-functional dropdown (the JS never executes through
+      // dangerouslySetInnerHTML), so strip it unconditionally.
+      body = body.replace(/<div class="langpick"[\s\S]*?<\/div>\s*/gi, '');
+      body = body.replace(/class="wrap active"/g, 'class="wrap"');
+      setLegalHtml(body);
+      setLegalLoading(false);
+    }).catch(()=>{ if(!cancelled){ setLegalHtml('<p style="color:#c9a84c;text-align:center;padding:40px">Could not load. Please try again.</p>'); setLegalLoading(false); } });
+    return ()=>{ cancelled=true; };
+  },[legalDoc]);
+  // Switch the fetched HTML to the current app language. The standalone HTML
+  // file relies on a <style>[data-lang]:not(.active){display:none}</style>
+  // rule in its <head> to show only the active section — but stripping
+  // <body> drops that rule, so we re-inject it inline. We then promote the
+  // section whose data-lang matches the app's `lang` to `wrap active`.
+  // App codes are uppercase (EN/DE/FR/ES/SK/PT) plus the camelCase zh/zhTW;
+  // HTML attrs are lowercase except zhTW. Re-runs whenever lang changes
+  // mid-modal so switching language in the app live-updates the open doc.
+  const legalHtmlForLang = useMemo(()=>{
+    if(!legalHtml) return '';
+    const map = {EN:'en', DE:'de', FR:'fr', ES:'es', SK:'sk', PT:'pt', zh:'zh', zhTW:'zhTW'};
+    const code = map[lang] || 'en';
+    const target = 'class="wrap" data-lang="'+code+'"';
+    let h = legalHtml;
+    if (h.indexOf(target) >= 0) {
+      h = h.replace(target, 'class="wrap active" data-lang="'+code+'"');
+    } else {
+      // Fall back to EN if the requested language is missing in this doc.
+      h = h.replace('class="wrap" data-lang="en"', 'class="wrap active" data-lang="en"');
+    }
+    return '<style>[data-lang]:not(.active){display:none}</style>'+h;
+  },[legalHtml, lang]);
+  // Intercept clicks on cross-doc anchors inside the modal — instead of
+  // following the href (which would navigate the whole page), open the
+  // matching doc inside the modal.
+  const onLegalClick = useCallback((e)=>{
+    const a = e.target.closest('a');
+    if(!a) return;
+    const href = a.getAttribute('href') || '';
+    const m = href.match(/^\/?(pricing|terms|privacy|refunds)\.html$/i);
+    if(m){ e.preventDefault(); setLegalDoc(m[1].toLowerCase()); }
+  },[]);
   // Onboarding phase: 'preview' (idle hero with ▶), 'playing' (real-time mirror
   // of the main canvas drawing the sample), 'done' (sample finished, CTA bar
   // appears with "Try your own" + replay).
@@ -5269,7 +6581,7 @@ Composition rules:
     // applies everywhere; in fullscreen (immersive) it also applies once the
     // piece has FINISHED and is sitting still — so the canvas can be admired as
     // a clean artwork. A tap / pointer move calls wakeControls again to reveal.
-    if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 2500); }
+    if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 4000); }
   },[playing,immersive]);
   // When playback stops, reveal controls. Outside fullscreen they then stay put;
   // in fullscreen we re-arm the idle countdown so a finished, still piece also
@@ -5301,7 +6613,11 @@ Composition rules:
   // playback beginning) returns us to the canvas even if we were parked on the
   // setup panel via "← Setup".
   useEffect(()=>{
-    if(working||composeMode||micActive||playing){ setForceSetup(false); }
+    // Newly-started activity normally returns us to the canvas. EXCEPTION: an
+    // image-mode REC (started from the setup panel) should stay put — the user
+    // is recording in place and expects REC→SAVE without the view jumping to the
+    // default play screen. keepSetupDuringRecRef guards that case.
+    if((working||composeMode||micActive||playing) && !keepSetupDuringRecRef.current){ setForceSetup(false); }
   },[working,composeMode,micActive,playing]);
   // When we (re)enter the canvas view, the <canvas> element may have just
   // remounted blank (it's gated by isActiveView). Bump stamp so the paint
@@ -5322,7 +6638,7 @@ Composition rules:
 
   return (
     <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:(showOnboarding||!isActiveView)?'48px 16px':((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px'),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
@@ -5451,8 +6767,18 @@ Composition rules:
             }
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
           <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
-          {!isPro && <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.5)',color:'rgba(201,168,76,.9)',fontWeight:600}}>{t('proBadge')}</span>}
-          {isPro && <span title={maskedEmail||''} style={{paddingBottom:2,color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>✓ {t('proManageActive')}</span>}
+          {/* Tier-adaptive PRO tab — Free sees gold "PRO" (upgrade to Pro);
+              plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI users
+              see nothing — they're already at the top tier and the badge
+              under the Paintiano title is enough. Keeps the nav row compact
+              at higher A/A zoom levels where the language picker would
+              otherwise get pushed off-screen. */}
+          {!isPro && (
+            <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.5)',color:'rgba(201,168,76,.9)',fontWeight:600}}>{t('proBadge')}</span>
+          )}
+          {isPro && !isProAI && (
+            <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} title={maskedEmail||''} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(220,150,255,.55)',color:'#dcb4ff',fontWeight:600}}>{t('proAiBadge')||'PRO AI'}</span>
+          )}
         </nav>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{padding:'4px 10px',background:readScale>1?'rgba(201,168,76,.12)':PF.faint,color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'1px solid '+(readScale>1?'rgba(201,168,76,.4)':'rgba(242,238,232,.15)'),borderRadius:20,cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:5,fontWeight:600}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>
@@ -5510,7 +6836,7 @@ Composition rules:
       </div>
       <header style={{textAlign:'center',marginBottom:isActiveView?8:18}}>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
-        {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} /></div>}
+        {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
         {!isActiveView && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
 
@@ -5541,20 +6867,19 @@ Composition rules:
               is one canonical mood UX shared across the app. */}
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
+            <button onClick={()=>{ if(sourcePickerLocked)return; if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
               <span style={{fontSize:'1.05rem'}}>✦</span>
               {t('moodHowFeel')}
-              <span aria-label="info" style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',width:16,height:16,borderRadius:'50%',border:'1px solid rgba(220,180,90,.45)',color:'rgba(220,180,90,.7)',fontSize:(.45*effScale)+'rem',fontWeight:700,letterSpacing:0,textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',lineHeight:1,fontStyle:'italic',fontFamily:'serif'}}>i</span>
             </button>
           </div>
 
           {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
           <div style={{marginBottom:14}}>
-            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||!aiUsable)?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:(imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:!aiUsable?.5:1,position:'relative'}}>
+            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'13px',borderRadius:14,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
               <span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
               {imgAiBusy?'…':(t('imgMood')||'mood from image')}
-              {!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
-              <span aria-label="info" style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',width:16,height:16,borderRadius:'50%',border:'1px solid rgba(228,178,255,.45)',color:'rgba(228,178,255,.7)',fontSize:(.45*effScale)+'rem',fontWeight:700,letterSpacing:0,textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',lineHeight:1,fontStyle:'italic',fontFamily:'serif'}}>i</span>
+              {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
+              {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
             </button>
           </div>
           <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
@@ -5562,11 +6887,12 @@ Composition rules:
           {/* SOURCE — input tiles, split into IMPORT (files) and CREATE (live) */}
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'){setForceSetup(false);return;}setPickMode('midi');}} disabled={importTileLocked} title={switchArmed==='midi'?t('switchConfirm'):recording?t('stopRecFirst'):t('midi')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='midi'?'rgba(220,90,90,.18)':activeSource==='midi'?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+(switchArmed==='midi'?'rgba(255,90,90,.6)':activeSource==='midi'?PF.blue:'rgba(91,156,246,.25)'),color:switchArmed==='midi'?'rgba(255,140,120,.95)':importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♩</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='midi'?t('switchConfirm'):t('midi').replace(/[^\p{L}]/gu,'')}</span></button>
-              <button className="pf-tool pf-audio" onClick={()=>{if(importTileLocked)return;if(activeSource==='audio'){setForceSetup(false);return;}setPickMode('audio');}} disabled={importTileLocked} title={switchArmed==='audio'?t('switchConfirm'):recording?t('stopRecFirst'):t('audio')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='audio'?'rgba(220,90,90,.18)':activeSource==='audio'?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='audio'?'rgba(255,90,90,.6)':activeSource==='audio'?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='audio'?'rgba(255,140,120,.95)':working&&wLabel.includes('audio')?PF.gold:importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='audio'?t('switchConfirm'):working&&wLabel.includes('audio')?wPct+'%':t('audio').replace(/[^\p{L}]/gu,'')}</span></button>
-              <button className="pf-tool pf-score" onClick={()=>{if(importTileLocked)return;if(activeSource==='score'){setForceSetup(false);return;}setPickMode('score');}} disabled={importTileLocked} title={switchArmed==='score'?t('switchConfirm'):recording?t('stopRecFirst'):t('score')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='score'?'rgba(220,90,90,.18)':activeSource==='score'?'rgba(169,127,245,.12)':'transparent',border:'1px solid '+(switchArmed==='score'?'rgba(255,90,90,.6)':activeSource==='score'?PF.purple:'rgba(169,127,245,.25)'),color:switchArmed==='score'?'rgba(255,140,120,.95)':working&&wLabel.includes('score')?PF.purple:importTileLocked?'rgba(169,127,245,.3)':PF.purple,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>𝄞</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='score'?t('switchConfirm'):working&&wLabel.includes('score')?wPct+'%':t('score').replace(/[^\p{L}]/gu,'')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':activeSource==='image'?'rgba(78,203,141,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':activeSource==='image'?PF.green:'rgba(78,203,141,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(78,203,141,.3)':PF.green,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
+              {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
+                  loadSound routes by file type. Active when any of the three
+                  music sources is loaded. */}
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode('sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':(t('music')!=='music'?t('music'):'MUSIC')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
             </div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',margin:'16px 0 10px',textTransform:'uppercase'}}>{t('createLabel')}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
@@ -5601,7 +6927,7 @@ Composition rules:
                   setComposeMode(true);
                   setMicArmed(false);
                 } else setComposeMode(false);
-              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}♪ {composeMode?t('composing').replace(/[^\p{L} ]/gu,''):t('compose').replace(/[^\p{L} ]/gu,'')}</button>
+              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}♪ {composeMode?t('composing').replace(/[^\p{L} ]/gu,''):t('compose').replace(/[^\p{L} ]/gu,'')}</button>
               <button className="pf-mic" onClick={()=>{
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
@@ -5646,7 +6972,7 @@ Composition rules:
                 }
                 setMicArmed(true);
                 setStayActive(true);
-              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':'transparent',border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
+              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':'transparent',border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
             </div>
           </div>
 
@@ -5740,7 +7066,7 @@ Composition rules:
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; return (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(srcBtn);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+t(srcBtn).replace(/[^\p{L}]/gu,'')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode((srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?'sound':srcBtn);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+((srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
           ); })()}
           {/* New MOOD — opens an inline mood picker right over the canvas (no
               jump back to setup); picking one loads it immediately. Shown for the
@@ -5773,11 +7099,21 @@ Composition rules:
           )}
         </div>
         <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
-          <span>{loadedSource==='image' ? (t('colorLabel') + ' · ' + t('dirLabel')) : (t('colorLabel') + ' · ' + t('styleLabel'))}</span>
+          <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : (t('colorLabel') + ' · ' + t('styleLabel'))}</span>
           <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
         </button>
-        {loadedSource!=='image' && style && STYLE_INSPIRED[style] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none'}}>{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[style])}</div>
+        {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && STYLE_INSPIRED[effectiveStyle] && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
+        )}
+        {/* Styles without an artist — mosaic (no style selected) and notes — get
+            no "inspired by". Show the active colour mode • the style name so the
+            collapsed caption isn't blank. mosaic = effectiveStyle null/none;
+            notes = effectiveStyle 'notes'. */}
+        {!stripOpen && (loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes') && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
+        )}
+        {!stripOpen && loadedSource==='image' && !moodFromImg && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):t('dir_'+imgDir)}</div>
         )}
         {stripOpen && (
         <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
@@ -5832,6 +7168,10 @@ Composition rules:
               if(!varySource||!chords.length){flashMoodHint();return;}
               const varied=rerollSong(varySource, !randomMode);
               if(!varied)return;
+              // Mark Vary in progress — the phaseIndex useEffect will see this
+              // flag and skip re-rolling the style. Vary changes tones only;
+              // the (umelec, štýl) pair must persist for 4-tuple identity.
+              varyInProgressRef.current = true;
               const wasPlaying=playing;
               // Random OFF → keep the picture STRUCTURE, change only colors+sound:
               // freeze the seed too (belt-and-braces with the pitch-only reroll).
@@ -5844,9 +7184,18 @@ Composition rules:
               if(!evts.length){setErr(t('errs').varyFail);return;}
               // applyEvents clears imgMoodThumb; in mood-from-image mode we want the
               // small source picture to stay over the canvas, so capture + restore it.
+              const _wasMfi = moodFromImg;
               const _keepThumb = moodFromImg ? imgMoodThumb : null;
               applyEvents(evts,varied.title+' ·');
-              if(_keepThumb){ setImgMoodThumb(_keepThumb); setMoodContext(true); }
+              // applyEvents now clears moodContext AND moodFromImg; restore both
+              // because a Vary of a mood piece is still a mood piece — and an MFI
+              // Vary is still MFI. Without restoring moodFromImg the header reverts
+              // to mood mode (NEW MOOD + MORPH) instead of staying MFI (NEW IMAGE,
+              // no MORPH). Vary/Morph row is wrapped in moodContext && so that's
+              // restored too.
+              setMoodContext(true);
+              if(_wasMfi){ setMoodFromImg(true); }
+              if(_keepThumb){ setImgMoodThumb(_keepThumb); }
               const bytes=encodeMidi(evts,varied.tempo||100);
               setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
               setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
@@ -5869,65 +7218,105 @@ Composition rules:
               // VARY just loads the new variation (canvas blank, ready to Play).
               // startPlay collapses the strip — re-open it just after so Vary's
               // "stay open" wins even when Vary restarts playback.
-              if(wasPlaying){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
+              if(wasPlaying){ resumeFromRef.current=0; keepStripOpenRef.current=true; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
             }} disabled={composeMode||micPainting||micListening||recording||working||!chords.length} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.64*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?1:.55,transition:'all .18s'}}>{t('vary')}</button>
           </div>
           )}
           {/* Color */}
-          {loadedSource==='image' ? (() => {
-            // IMAGE mode: the APP picks the reading from the painting's colourfulness
-            // — colourful ⇒ Color (Harmony), near-monochrome ⇒ B/W. Only the chosen
-            // one is shown (not both), next to Custom. Tapping the app chip activates
-            // it and toggles a READ-ONLY preview of the 12 Harmony colours below
-            // (looks like the Custom palette but can't be edited). Custom enters the
-            // editable palette; tapping the app chip again returns to that reading.
-            const appKey = appModeRef.current==='bw' ? 'bw' : 'color';
-            const appLabel = appKey==='bw' ? t('bw') : t('colorLabel');
-            const appActive = mode!=='custom';
-            const customActive = mode==='custom';
+          {loadedSource==='image' && !moodFromImg ? (() => {
+            // IMAGE mode: same four chips as every other mode (Harmony · Spectral ·
+            // B/W · Custom), but GATED by the app's auto-reading of the painting's
+            // colourfulness:
+            //   • colourful (vivid ≥5%) ⇒ Harmony + Spectral enabled, B/W disabled
+            //   • near-monochrome (<5%) ⇒ B/W enabled, Harmony + Spectral disabled
+            // Custom is always enabled. Default selection follows the app's pick
+            // (harmony for colour, bw for mono). Tapping the active chip toggles the
+            // read-only palette preview, exactly like the non-image modes.
+            const appColour = appModeRef.current!=='bw';   // app read the image as colourful
+            const isDisabled = (m)=> m==='bw' ? appColour : ((m==='harmony'||m==='spectral') ? !appColour : false);
             return (
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
-                <button onClick={()=>{
-                    if(mode==='custom'){
-                      // leave Custom → back to the app's reading (no preview)
-                      setCustomArmed(false); setShowColorPalette(false);
-                      if(canvasRef.current){canvasRef.current.style.opacity='0';}
-                      setTimeout(()=>{setMode(appModeRef.current||'harmony');if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-                    } else {
-                      // already on the app reading (Color or B/W) → toggle the read-only preview
-                      setShowColorPalette(v=>!v);
-                    }
-                  }}
-                  title={t('appChoseColour')}
-                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(appActive)}}>{appLabel}</button>
-                <button onClick={()=>{
-                    // Custom chip cycle:
-                    //  1st tap (not custom yet) → activate Custom (label "Custom")
-                    //  2nd tap (custom, not armed) → arm it; label becomes "edit palette",
-                    //                                 editor stays CLOSED
-                    //  3rd tap (custom, armed) → open the palette editor
-                    // Closing the editor disarms (handled where the modal closes).
-                    // Leaving Custom entirely is done via the Color/B-W chip.
-                    if(!customActive){
-                      if(canvasRef.current){canvasRef.current.style.opacity='0';}
-                      setTimeout(()=>{setMode('custom');if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-                      setCustomArmed(false);
-                    } else if(!customArmed){
-                      setCustomArmed(true);
-                    } else {
-                      setShowPaletteEditor(true);
-                    }
-                  }}
-                  style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(customActive)}}>{customActive&&customArmed?('✎ '+t('editShort')):t('custom')}</button>
+              {/* Read mode: SCAN (read the picture as a score) vs AI COMPOSE (Pro —
+                  write a piece from the image). Lives HERE, not in the transport,
+                  because it governs HOW the image is read; scan direction below is
+                  only meaningful for SCAN, so it's hidden in AI COMPOSE. */}
+              <div style={{display:'flex',gap:6}}>
+                <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'none'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
+                <button onClick={()=>{ if(busy||working) return; if(aiLocked){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('compose'); } }} disabled={busy||working} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:1,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:aiLocked?'rgba(225,175,255,.7)':(imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)'),boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'none',opacity:aiLocked?.85:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4}}>
+                  <span>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')}</span>
+                  {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
+                </button>
               </div>
-              {/* READ-ONLY preview of the 12 Harmony colours — shown when the Color
-                  reading is active and the user tapped to reveal it. Purely
-                  informational: the swatches can't be edited (Custom is for that). */}
-              {appActive && showColorPalette && (
+              {/* Divider between the read-mode toggle and the colour/scan controls */}
+              <div style={{height:1,margin:'2px 2px 0',background:'linear-gradient(90deg,transparent,rgba(242,238,232,.12),transparent)'}} />
+              {/* COLOUR chips — shown in BOTH modes: in Scan they map colour→pitch
+                  for the readout; in AI Compose they still set the palette the AI
+                  draws the piece's harmony from. Only the SCAN DIRECTION below is
+                  scan-specific (compose ignores reading order), so that's gated. */}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+                {['harmony','spectral','bw','custom'].map(m=>{
+                  const isCustomTab = m==='custom';
+                  const armed = isCustomTab && mode==='custom' && customArmed;
+                  const dis = isDisabled(m);
+                  // Free tier: Custom uses the same cycle as Pro (Custom →
+                  // Edit → action), but the third tap opens a read-only
+                  // palette PREVIEW instead of the editor modal. The palette
+                  // applied is always the default (defaultCustomPalette) —
+                  // the user's saved palette stays locked until they upgrade.
+                  const isFree = proStatus==='free';
+                  return (
+                  <button key={m} disabled={dis} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+                    if(dis) return;
+                    if(isCustomTab && mode==='custom'){
+                      if(!customArmed){
+                        // tap 1: arm → label "✎ EDIT" + PRO badge (Free)
+                        setCustomArmed(true);
+                      } else if(isFree && !showColorPalette){
+                        // tap 2 (Free): open read-only preview, keep "✎ EDIT" label
+                        setShowColorPalette(true);
+                      } else if(isFree && showColorPalette){
+                        // tap 3 (Free): close preview AND disarm → label back to "Custom"
+                        setShowColorPalette(false);
+                        setCustomArmed(false);
+                      } else {
+                        // Pro armed: open the editor modal
+                        setShowPaletteEditor(true);
+                      }
+                      return;
+                    }
+                    if(m==='custom'){ setCustomArmed(false); setShowColorPalette(false); }
+                    else if(mode===m){ setShowColorPalette(v=>!v); return; }   // tap active chip → toggle preview
+                    else setShowColorPalette(false);
+                    if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                    setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:dis?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:dis?0.32:1,whiteSpace:'nowrap',overflow:'visible',...chipStyle(mode===m)}}>
+                    <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
+                      <span>{armed?('✎ '+t('editShort')):t(m)}</span>
+                      {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
+                    </span>
+                  </button>
+                  );
+                })}
+              </div>
+              {/* READ-ONLY palette preview of the active mode (harmony/spectral/bw) —
+                  shown when the user taps the active chip. Reflects the current mode
+                  so it doubles as visual feedback for the colour reading.
+                  Free + custom + armed: shows the default custom palette swatches
+                  (since Free can't edit; the swatches are the "preview" the user
+                  gets on the third Custom tap). */}
+              {showColorPalette && (mode!=='custom' || (proStatus==='free' && customArmed)) && (
                 <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:5,padding:'8px',borderRadius:10,background:'rgba(20,18,30,.4)',border:'1px solid rgba(242,238,232,.06)'}}>
                   {['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'].map((nm,pc)=>{
-                    const [r,g,b]=colorPreview(appKey==='bw'?'bw':'harmony',pc);
+                    let r,g,b;
+                    if(mode==='custom'){
+                      // Free preview swatches read straight from defaultCustomPalette
+                      // (Pro never reaches this branch — it gets the editor modal).
+                      const hex = defaultCustomPalette[pc];
+                      const n = parseInt(hex.slice(1),16);
+                      r=(n>>16)&255; g=(n>>8)&255; b=n&255;
+                    } else {
+                      [r,g,b]=colorPreview(mode,pc);
+                    }
                     return (
                       <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
                         <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />
@@ -5937,7 +7326,9 @@ Composition rules:
                   })}
                 </div>
               )}
-              {/* SCAN direction — the order pixels are read into music (image only) */}
+              {/* SCAN direction — scan-only (compose ignores reading order). In
+                  AI Compose, show the short explainer here instead. */}
+              {imgPlayMode==='scan' ? (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('dirLabel')}</div>
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['lr','vert','spiralIn','spiralOut'].map(d=>{
@@ -5949,6 +7340,9 @@ Composition rules:
                   );
                 })}
               </div>
+              </>) : (
+                <div style={{padding:'10px 12px',marginTop:2,borderRadius:10,background:'rgba(220,150,255,.06)',border:'1px solid rgba(220,150,255,.18)',fontSize:(.54*effScale)+'rem',lineHeight:1.5,color:'rgba(228,200,255,.8)',fontStyle:'italic'}}>{t('imgComposeBlurb')!=='imgComposeBlurb'?t('imgComposeBlurb'):'AI composes a full piece from this image — its colours, energy and mood. Press Play.'}</div>
+              )}
             </div>
             );
           })() : (<>
@@ -5956,24 +7350,54 @@ Composition rules:
               {['harmony','spectral','bw','custom'].map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
+              // Free tier: Custom uses the same cycle as Pro (Custom → Edit → action),
+              // but the third tap opens a read-only palette PREVIEW instead of the
+              // editor modal. The palette applied is always the default — the user's
+              // saved palette stays locked until they upgrade.
+              const isFree = proStatus==='free';
               return (
               <button key={m} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
                 if(isCustomTab && mode==='custom'){
-                  if(!customArmed) setCustomArmed(true); else setShowPaletteEditor(true);
+                  if(!customArmed){
+                    // tap 1: arm → label "✎ EDIT" + PRO badge (Free)
+                    setCustomArmed(true);
+                  } else if(isFree && !showColorPalette){
+                    // tap 2 (Free): open read-only preview, keep "✎ EDIT" label
+                    setShowColorPalette(true);
+                  } else if(isFree && showColorPalette){
+                    // tap 3 (Free): close preview AND disarm → label back to "Custom"
+                    setShowColorPalette(false);
+                    setCustomArmed(false);
+                  } else {
+                    // Pro armed: open the editor modal
+                    setShowPaletteEditor(true);
+                  }
                   return;
                 }
-                if(m==='custom') setCustomArmed(false);
+                if(m==='custom'){ setCustomArmed(false); setShowColorPalette(false); }
                 else if(mode===m){ setShowColorPalette(v=>!v); return; }   // tap active H/S/BW tab → toggle preview
                 else setShowColorPalette(false);
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(mode===m)}}>{armed?('✎ '+t('editShort')):t(m)}</button>
+              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...chipStyle(mode===m)}}>
+                <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
+                  <span>{armed?('✎ '+t('editShort')):t(m)}</span>
+                  {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
+                </span>
+              </button>
               );})}
             </div>
-            {showColorPalette && mode!=='custom' && (
+            {showColorPalette && (mode!=='custom' || (proStatus==='free' && customArmed)) && (
               <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:5,padding:'8px',borderRadius:10,background:'rgba(20,18,30,.4)',border:'1px solid rgba(242,238,232,.06)',marginTop:8}}>
                 {['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'].map((nm,pc)=>{
-                  const [r,g,b]=colorPreview(mode,pc);
+                  let r,g,b;
+                  if(mode==='custom'){
+                    const hex = defaultCustomPalette[pc];
+                    const n = parseInt(hex.slice(1),16);
+                    r=(n>>16)&255; g=(n>>8)&255; b=n&255;
+                  } else {
+                    [r,g,b]=colorPreview(mode,pc);
+                  }
                   return (
                     <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
                       <div style={{width:'100%',aspectRatio:'1',borderRadius:6,background:`rgb(${r},${g},${b})`,border:'1px solid rgba(0,0,0,.25)'}} />
@@ -5987,44 +7411,179 @@ Composition rules:
           {/* Style — hidden in image mode: an artist re-paint makes no sense when
               the source already IS a painting; only the colour reading matters there. */}
           {loadedSource!=='image' && (
+          <div style={{textAlign:'center',marginTop:6,marginBottom:2,fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+          )}
+          {loadedSource!=='image' && (
+          <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
             {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
             <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
             ); })()}
-            {STYLE_PAIRS.map(([a,b])=>{
+            {effectivePairs.map(([a,b])=>{
+              // Free tier: only the 'a' side is reachable; the 'b' side is
+              // shown as a small "locked partner" info row beneath the palette
+              // when the pair is tapped. No paywall opens from artist taps —
+              // the lock is purely informational (Guide explains how to unlock).
+              const pairLocked = (proStatus === 'free');
               // Which of the pair is active? Determines label + next target.
               const activeKey = style===a ? a : (style===b ? b : null);
               const isOn = activeKey!==null;
+              const pairKey = a+'|'+b;
+              // The pair's "face" when not active: the member you last picked
+              // from this pair, falling back to the default 'a'. For Free this
+              // is forced to 'a' (the only reachable side).
+              const faceKey = pairLocked
+                ? a
+                : ((pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a);
               // Shuffle (Random + no manual pick): highlight whichever button
               // holds the style the shuffle landed on, and show THAT style's
               // label so the cycling reads on the buttons themselves.
               const shufKey = (shuffleStyle===a || shuffleStyle===b) ? shuffleStyle : null;
               const shufHit = shufKey!==null;
-              const label = STYLE_LABELS[activeKey || shufKey || a];
-              // Cycle: nothing→A, A→B, B→mosaic (deselect), then A again.
-              // The deselect step lets the user click back out to plain Mosaic
-              // (and so re-enable 🎲 shuffle) without reaching for the Mosaic button.
+              // Buttons show the ARTIST that inspired the style (Picasso, Klimt…)
+              // rather than the technique name. Long names are shortened to a
+              // single recognizable word so they fit the narrow 5-up grid cell.
+              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+              // For Free, label always shows the unlocked 'a' artist.
+              const _displayKey = pairLocked ? a : (activeKey || shufKey || faceKey);
+              const _artFull = STYLE_INSPIRED[_displayKey];
+              const label = _artistShort[_artFull] || _artFull;
+              // Tap behaviour:
+              //  • Free tier: always selects 'a' (the only reachable side).
+              //    Toggles the locked-partner info row beneath the palette:
+              //    tap same pair again → row hides; tap a different pair →
+              //    row reveals the new partner.
+              // Tap behaviour:
+              //
+              // FREE (only 'a' side is reachable):
+              //   shuffle OFF:
+              //     tap 1 (not active)   → paint 'a', NO info row
+              //     tap 2 (active)       → open info row "Matisse 🔒"
+              //     tap 3 (info open)    → close info row, 'a' stays active
+              //     tap 4 (info closed)  → reopen info row (cycle 2↔3)
+              //   shuffle ON:
+              //     tap 1 (not active)   → paint 'a' as shuffle-override
+              //     tap 2 (active)       → deselect → full shuffle
+              //     (no info row in shuffle mode)
+              //
+              // PAID (both sides reachable):
+              //   shuffle OFF:
+              //     tap 1 (not active)   → paint face (last pick / 'a')
+              //     tap 2 (active on a)  → flip to b
+              //     tap 3 (active on b)  → flip back to a (2-state)
+              //   shuffle ON:
+              //     tap 1 (not active)   → paint face as shuffle-override
+              //     tap 2 (active on a)  → flip to b (still override)
+              //     tap 3 (active on b)  → deselect → full shuffle
               const onClick = ()=>{
                 if(demoReelOn) return;
-                if(style===a) setStyleTo(b);
-                else if(style===b) setStyleTo(null);
-                else setStyleTo(a);
+                if(pairLocked){
+                  // ── FREE ──
+                  if(randomMode){
+                    // Shuffle ON: paint↔deselect, no info row.
+                    setExpandedPair(null);
+                    if(!isOn){
+                      setPairLastPick(p=>({...p,[pairKey]:a}));
+                      setStyleTo(a);
+                    } else {
+                      setStyleTo(null);
+                    }
+                    return;
+                  }
+                  // Shuffle OFF: paint → info → close (cycle on the same pair).
+                  if(!isOn){
+                    // Tap 1: just paint 'a', no info row.
+                    setPairLastPick(p=>({...p,[pairKey]:a}));
+                    setStyleTo(a);
+                    setExpandedPair(null);
+                  } else {
+                    // Already active: toggle the info row. Tapping a DIFFERENT
+                    // pair while one is expanded is handled by the !isOn branch
+                    // above (it closes the old row); same-pair taps cycle here.
+                    setExpandedPair(prev => prev === pairKey ? null : pairKey);
+                  }
+                  return;
+                }
+                // ── PAID ──
+                // ── PAID ──
+                // Three-state cycle, anchored on faceKey (= the side the user
+                // most recently SETTLED on for this pair, captured at the
+                // moment they deselect):
+                //   tap 1 — not active            → paint faceKey
+                //   tap 2 — active on faceKey     → flip to the other side
+                //                                   (faceKey unchanged so we
+                //                                   can still detect tap 3)
+                //   tap 3 — active on the other   → shuffle ON: capture
+                //                                   `other` as the new face,
+                //                                   then deselect → shuffle
+                //                                   shuffle OFF: flip back
+                // After a deselect, the NEXT tap 1 re-enters at the captured
+                // side, so Picasso→Matisse→deselect→tap = Matisse.
+                if(!isOn){
+                  setStyleTo(faceKey);
+                } else if(style===faceKey){
+                  const other = (faceKey===a) ? b : a;
+                  setStyleTo(other);
+                } else {
+                  // style is the OTHER side (tap 3).
+                  if(randomMode){
+                    // Remember the side we just left as the new face.
+                    setPairLastPick(p=>({...p,[pairKey]:style}));
+                    setStyleTo(null);
+                  } else {
+                    setStyleTo(faceKey);
+                  }
+                }
               };
-              const nextHint = style===a ? `tap for ${STYLE_LABELS[b]}` : (style===b ? 'tap for Mosaic' : '');
+              const _otherKey = (faceKey===a) ? b : a;
+              const nextHint = pairLocked
+                ? (randomMode
+                    ? (isOn ? 'tap to return to shuffle' : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`)
+                    : (isOn
+                        ? (expandedPair===pairKey ? 'tap to hide info' : 'tap to see partner')
+                        : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`))
+                : (!isOn
+                    ? ''
+                    : (style===faceKey
+                        ? `tap for ${STYLE_LABELS[_otherKey]}`
+                        : (randomMode ? 'tap for shuffle' : `tap for ${STYLE_LABELS[faceKey]}`)));
               return (
                 <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
-                  title={isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)}
+                  title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
                   style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
               );
             })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
             <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
+              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
               </button>
             </div>
           </div>
+          {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
+              member of the most recently tapped pair with a PRO badge.
+              Clickable: opens the paywall with reason 'settings'. Sitting
+              outside the palette buttons it reads visually as its own
+              affordance, so we honour that and route the tap to the paywall. */}
+          {proStatus==='free' && expandedPair && (()=>{
+            const [a,b] = expandedPair.split('|');
+            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+            const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
+            return (
+              <div
+                onClick={()=>{ setPaywallReason('settings'); }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setPaywallReason('settings'); } }}
+                title={`${lockedName} — Paintiano Pro`}
+                style={{textAlign:'center',marginTop:8,marginBottom:2,padding:'4px 8px',fontSize:(.58*effScale)+'rem',letterSpacing:'.06em',color:'rgba(201,168,76,.7)',fontStyle:'italic',cursor:'pointer',userSelect:'none',borderRadius:6,transition:'color .15s'}}
+              >
+                {lockedName}<ProBadge t={t} readScale={effScale} size="sm" />
+              </div>
+            );
+          })()}
+          </>
           )}
         </div>
         )}
@@ -6083,6 +7642,9 @@ Composition rules:
       <input ref={refMidi} type="file" accept="audio/midi,audio/x-midi,application/octet-stream,.mid,.midi" onChange={loadMidi} style={{display:'none'}}/>
       <input ref={refAudio} type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a,.aac" onChange={loadAudio} style={{display:'none'}}/>
       <input ref={refScore} type="file" accept="application/octet-stream" onChange={loadMusicXml} style={{display:'none'}}/>
+      {/* Unified SOUND picker: accepts MIDI, audio and score files; loadSound routes
+          by extension. accept is broad (iOS dims unknown UTIs like .mxl otherwise). */}
+      <input ref={refSound} type="file" accept="audio/midi,audio/x-midi,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,application/octet-stream,.mid,.midi,.mp3,.wav,.ogg,.m4a,.aac,.xml,.musicxml,.mxl" onChange={loadSound} style={{display:'none'}}/>
       <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
       <input ref={refImgMood} type="file" accept="image/*" onChange={loadImgMood} style={{display:'none'}}/>
 
@@ -6090,7 +7652,7 @@ Composition rules:
         <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:(.65*effScale)+'rem'}}>
-              {pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')}
+              {pickMode==='sound'?(t('musicInput')||'add music'):pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')}
             </div>
             {pickMode==='mic' ? (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -6125,21 +7687,23 @@ Composition rules:
               <button onClick={()=>{
                 if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
                 if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
-                if(pickMode==='midi') loadSampleMidi();
+                if(pickMode==='sound') loadSampleScore();
+                else if(pickMode==='midi') loadSampleMidi();
                 else if(pickMode==='audio') loadSampleAudio();
                 else if(pickMode==='score') loadSampleScore();
                 else if(pickMode==='imgmood') loadSampleImgMood();
                 else loadSampleImage();
                 setForceSetup(false);
                 setPickMode(null);
-              }} style={{padding:'12px',background:'transparent',color:pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':pickMode==='imgmood'?'rgba(228,178,255,.95)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':pickMode==='imgmood'?'rgba(220,150,255,.45)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*effScale)+'rem'}}>
+              }} style={{padding:'12px',background:'transparent',color:pickMode==='sound'?'rgba(140,180,255,.85)':pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':pickMode==='imgmood'?'rgba(228,178,255,.95)':pickMode==='image'?'rgba(255,180,100,.9)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='sound'?'rgba(120,160,255,.4)':pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':pickMode==='imgmood'?'rgba(220,150,255,.45)':pickMode==='image'?'rgba(244,124,60,.5)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*effScale)+'rem'}}>
                 {t('builtInSample')}
               </button>
               <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
-                {pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}
+                {pickMode==='sound'?SAMPLE_SCORE_NAME:pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}
               </div>
               <button onClick={()=>{
-                if(pickMode==='midi') refMidi.current?.click();
+                if(pickMode==='sound') refSound.current?.click();
+                else if(pickMode==='midi') refMidi.current?.click();
                 else if(pickMode==='audio') refAudio.current?.click();
                 else if(pickMode==='score') refScore.current?.click();
                 else if(pickMode==='imgmood') refImgMood.current?.click();
@@ -6153,7 +7717,7 @@ Composition rules:
                 {t('chooseFile')}
               </button>
               <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
-                {pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
+                {pickMode==='sound'?'.mid .midi · .mp3 .wav .m4a .ogg · .musicxml .xml .mxl':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
               </div>
               {/* Recently AI generated — Pro feature. Free users see locked items;
                   tapping any opens the paywall via _mfiRecall. Only in MFI picker. */}
@@ -6305,6 +7869,16 @@ Composition rules:
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
       {immersive && <div onClick={wakeControls} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {/* Fullscreen artist attribution — fixed near the viewport top so it sits
+          in the black letterbox ABOVE the canvas. The user prefers it high (even
+          close to the URL bar) over ever landing on the painting. Shows the
+          inspiring artist (fixed pick OR shuffle draw); hidden for Mosaic/Notes. */}
+      {immersive && effectiveStyle && effectiveStyle!=='notes' && STYLE_INSPIRED[effectiveStyle] && (
+        <div style={{position:'fixed',top:'max(8px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.95)',fontStyle:'italic',textShadow:'0 2px 10px rgba(0,0,0,.95)',pointerEvents:'none',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6}}>
+          {!style&&(<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.85}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}
+          <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
+        </div>
+      )}
       <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
@@ -6344,6 +7918,13 @@ Composition rules:
             setSelectedChordIdx(prev=>{const v=prev===hit.idx?null:hit.idx;selectedChordIdxRef.current=v;return v;});  // tap again to deselect
           }
           unlockAudio();
+          // Note playback on canvas tap is only for the plain Mosaic and the
+          // Notes overlay (both are literal note grids you can "play"). For any
+          // artist style the cells are painted abstractly — tapping (or hitting
+          // the Next button that sits over the canvas) should NOT trigger the
+          // underlying notes, which was distracting in canvas / fullscreen mode.
+          const _artistStyleNow = effectiveStyle && effectiveStyle!=='notes';
+          if(_artistStyleNow) return;
           const midis=hit.n.map(({m,v,durMs})=>{playNote(m,v,durMs||300);return{m,dur:durMs||300};});
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
           const byDur={};
@@ -6365,19 +7946,19 @@ Composition rules:
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
-          const canRollNextFs = !anim && !working && !demoReelOn && !recording;
+          const canRollNextFs = !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
           if(!exportReadyFs && !showNextFs) return null;
           return (
-            <div style={{position:'absolute',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:13,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
+            <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
-                <button onClick={(e)=>{ e.stopPropagation(); advanceVariation(); }} className="pf-lift" aria-label="next painting"
-                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'11px 22px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#ffd07a',background:'rgba(255,200,120,.16)',border:'1px solid rgba(255,200,120,.55)',boxShadow:'0 0 0 1px rgba(255,200,120,.2)',WebkitTapHighlightColor:'transparent'}}>
+                <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } wakeControls(); }} className="pf-lift" aria-label="next painting"
+                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   {t('nextPainting')||'next'} ›
                 </button>
               )}
               {exportReadyFs && typeof navigator!=='undefined' && navigator.share && (
-                <button onClick={(e)=>{ e.stopPropagation(); exportImage('story', true); }} className="pf-lift" aria-label="share to story"
+                <button onClick={(e)=>{ e.stopPropagation(); exportImage('story', true, null, null, true); }} className="pf-lift" aria-label="share to story"
                   style={{display:'inline-flex',alignItems:'center',gap:8,padding:'11px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent'}}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
                   {t('shareStory')||'Story'}
@@ -6396,7 +7977,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
+        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
@@ -6502,19 +8083,49 @@ Composition rules:
 
 
       {showSizePicker && (()=>{
-        // Tint the export picker to match the active mode: compose = green,
-        // mic = pink, everything else (played pieces) keeps the default violet.
+        // Tint the export picker to match the active source/mode so the dialog
+        // visually reads as "this is the MIDI save / image save / etc". The
+        // colour family mirrors the source tile on the setup screen.
+        //   compose      → green
+        //   mic          → pink
+        //   loaded MIDI  → blue
+        //   loaded Audio → orange
+        //   loaded Score → purple
+        //   loaded Image → green (classic image source, not MFI)
+        //   MFI          → magenta
+        //   text Mood    → gold
+        //   fallback     → violet (covers compose-finished pieces with no
+        //                  loadedSource flag yet, etc.)
         const pk = composeMode
           ? { line:'rgba(78,203,141,.9)', dim:'rgba(120,200,160,.5)', border:'rgba(78,203,141,.45)', edge:'rgba(78,203,141,.35)' }
           : (micActive||micArmed)
           ? { line:'rgba(240,106,166,.9)', dim:'rgba(240,150,190,.5)', border:'rgba(240,106,166,.45)', edge:'rgba(240,106,166,.35)' }
+          : loadedSource==='midi'
+          ? { line:'rgba(91,156,246,.95)', dim:'rgba(140,180,255,.5)', border:'rgba(91,156,246,.5)', edge:'rgba(91,156,246,.4)' }
+          : loadedSource==='audio'
+          ? { line:'rgba(244,124,60,.95)', dim:'rgba(255,160,100,.5)', border:'rgba(244,124,60,.5)', edge:'rgba(244,124,60,.4)' }
+          : loadedSource==='score'
+          ? { line:'rgba(169,127,245,.95)', dim:'rgba(200,170,255,.5)', border:'rgba(169,127,245,.5)', edge:'rgba(169,127,245,.4)' }
+          : (loadedSource==='image' && !moodFromImg)
+          ? { line:'rgba(78,203,141,.95)', dim:'rgba(120,200,160,.5)', border:'rgba(78,203,141,.5)', edge:'rgba(78,203,141,.4)' }
+          : moodFromImg
+          ? { line:'rgba(228,178,255,.95)', dim:'rgba(225,175,255,.55)', border:'rgba(220,150,255,.55)', edge:'rgba(220,150,255,.4)' }
+          : currentMood
+          ? { line:'rgba(220,180,90,.95)', dim:'rgba(220,180,90,.55)', border:'rgba(201,168,76,.55)', edge:'rgba(201,168,76,.4)' }
           : { line:'rgba(200,160,255,.85)', dim:'rgba(180,160,255,.45)', border:'rgba(180,140,255,.4)', edge:'rgba(200,160,255,.35)' };
+        // Imported-media sources (MIDI / Audio / Score files) are themselves
+        // the canonical audio/score — exporting them back into the same format
+        // is redundant. For these, the picker shows ONLY visual exports
+        // (Story / Web / Print). Image/Mood/MFI/compose/mic keep the full
+        // option set because their pieces are newly composed.
+        const isImportedMedia = loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score';
         return (
         <div onClick={()=>setShowSizePicker(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export" style={{background:'#0a0a14',border:'1px solid '+pk.edge,borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:pk.line,fontSize:(.65*effScale)+'rem'}}>
               ↓ {t('save')}</div>
             <input
+              ref={compInputRef}
               type="text"
               value={compositionName}
               onChange={e=>setCompositionName(e.target.value)}
@@ -6528,28 +8139,46 @@ Composition rules:
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {viewMode==='image' ? (
                 <>
-                  {/* Image mode: Story (PNG 9:16 + audio) / Audio (mp3 only) /
-                      Score (MusicXML). Audio + Story prefer the auto-recorded
-                      blob captured silently during the most recent Play — that
-                      makes them instant, no re-play needed. If for some reason
-                      no blob is on hand (e.g. recording stream failed in the
-                      background), fall back to the legacy picker-intent flow
-                      that records on demand. */}
+                  {/* Image mode export set:
+                      • Story — 9:16 PNG (the ORIGINAL image, not the mosaic) + audio, for IG/TikTok
+                      • checkbox "include source original image" — gates whether the
+                        ORIGINAL picture rides along with Story and Audio
+                      • Audio — opens the in-app share row (like mood/score). With the
+                        checkbox on it offers the original image + the WAV (two files);
+                        off, just the WAV.
+                      • Score — MusicXML in-app row
+                      Web/Print removed: in image mode the source already IS a picture. */}
+                  {originalImgUrl && (
+                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'9px 12px',background:includeSourceThumb?'rgba(220,150,255,.16)':'transparent',color:includeSourceThumb?'rgba(225,175,255,.95)':'rgba(180,170,150,.65)',border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.55)':'rgba(180,170,150,.22)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.6*effScale)+'rem',display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:16,height:16,borderRadius:3,border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.85)':'rgba(180,170,150,.4)'),background:includeSourceThumb?'rgba(220,150,255,.4)':'transparent',color:'#0a0a14',fontSize:'.7rem',lineHeight:1,fontWeight:700,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
+                      <span style={{flex:1,textAlign:'left'}}>{t('includeSourceImage')!=='includeSourceImage' ? t('includeSourceImage') : 'include source original image'}</span>
+                    </button>
+                  )}
                   <button onClick={()=>{
+                    pendingWithSourceRef.current=includeSourceThumb;
                     setShowSizePicker(false);
-                    if(recBlob && recName) exportImage('story', true, recBlob, recName);
+                    if(recBlob && recName) exportImage('story', true, recBlob, recName, includeSourceThumb);
                     else { setRecordIntent('story'); startRecord(); }
                   }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
                     ✦ {t('sizeStory')||'Story'}
                     <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
                   </button>
                   <button onClick={()=>{
+                    pendingWithSourceRef.current=includeSourceThumb;
                     setShowSizePicker(false);
-                    if(recBlob && recName) saveAudio();
+                    if(recBlob && recName){
+                      // The live recording from Play/REC is already on hand — just
+                      // open the in-app audio row with it (optionally carrying the
+                      // original image). No offline re-render (that could hang or
+                      // fail silently in image mode).
+                      setAudioSideImage(includeSourceThumb ? (originalImgUrl||null) : null);
+                      setAudioRowOpen(true);
+                      setAudioShareMsg(null);
+                    }
                     else { setRecordIntent('audio'); startRecord(); }
                   }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     ⏺ {t('saveAudioLabel')||'Audio'}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
+                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{includeSourceThumb ? (t('saveAudioHintImg')!=='saveAudioHintImg'?t('saveAudioHintImg'):'image + audio · save to files') : (t('saveAudioHint')||'audio · save to files')}</div>
                   </button>
                   <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     ♫ {t('scoreExport')}
@@ -6558,20 +8187,85 @@ Composition rules:
                 </>
               ) : (
                 <>
-                  {!immersive && (
-                    <button onClick={()=>exportImage('story')} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
-                      ✦ {t('sizeStory')||'Story'}
-                      <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('sizeStoryHint')||'9:16 · for IG / TikTok'}</div>
+                  {(originalImgUrl || imgMoodThumb) && (
+                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'9px 12px',background:includeSourceThumb?'rgba(220,150,255,.16)':'transparent',color:includeSourceThumb?'rgba(225,175,255,.95)':'rgba(180,170,150,.65)',border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.55)':'rgba(180,170,150,.22)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.6*effScale)+'rem',display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:16,height:16,borderRadius:3,border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.85)':'rgba(180,170,150,.4)'),background:includeSourceThumb?'rgba(220,150,255,.4)':'transparent',color:'#0a0a14',fontSize:'.7rem',lineHeight:1,fontWeight:700,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
+                      <span style={{flex:1,textAlign:'left'}}>{t('includeSourceThumb')!=='includeSourceThumb' ? t('includeSourceThumb') : 'include source thumbnail'}</span>
                     </button>
                   )}
-                  <button onClick={()=>exportImage('web')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                  {!immersive && (imgMoodThumb || originalImgUrl || loadedSource==='image' || moodFromImg || varySource || isImportedMedia) && (
+                    <button onClick={async ()=>{
+                      setShowSizePicker(false);
+                      // For MIDI/Audio/Score the user already has the original
+                      // audio file — re-bundling a fresh offline render with
+                      // the painting would just duplicate what they imported.
+                      // Story for these is painting-only (Web/Print quality
+                      // social asset). For Image/MFI/Mood/Compose/Mic we still
+                      // render audio offline and bundle both files into one
+                      // share-sheet drop.
+                      if(isImportedMedia){
+                        await exportImage('story', true, null, null, true);
+                        return;
+                      }
+                      // Paint mode: render audio offline and bundle with image.
+                      // The user has already heard the piece via PLAY — we just
+                      // need the audio FILE for the Story share, not a re-play.
+                      // Offline render is silent (no UI lockup, no disabled
+                      // controls) and faster than real-time recording.
+                      // Story always overlays source thumb + mood name when
+                      // available — no toggle (it's part of the "ready to
+                      // share" social aesthetic, not user choice).
+                      const src = chordsRef.current && chordsRef.current.length ? chordsRef.current : chords;
+                      if(!src || !src.length){ exportImage('story', true, null, null, true); return; }
+                      const title = (compositionName||recordingName||'Paintiano').trim()||'Paintiano';
+                      // Mic/Music with Original selected: use the recorded blob
+                      // directly — no re-render needed, original quality kept.
+                      const useOriginalBlob = draftOwnerRef.current==='listen' && playSourceMic==='original' && listenBlobRef.current?.blob;
+                      let audioBlob = null;
+                      let audioName;
+                      if(useOriginalBlob){
+                        audioBlob = listenBlobRef.current.blob;
+                        const ext = (listenBlobRef.current.type||'').includes('mp4') ? '.m4a' : (listenBlobRef.current.type||'').includes('ogg') ? '.ogg' : '.webm';
+                        audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+ext;
+                      } else {
+                        audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+                        setScoreMsg({tone:'wait',text:t('rendering')||'rendering audio…'});
+                        try{ audioBlob = await renderAudioOffline(src,{speed:1}); }catch(_){}
+                        setScoreMsg(null);
+                      }
+                      try{ await unlockAudio(); }catch(_){}
+                      await exportImage('story', true, audioBlob, audioName, true);
+                    }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
+                      ✦ {t('sizeStory')||'Story'}
+                      <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{isImportedMedia ? (t('storyImageHintNoAudio')||'painting · for IG / TikTok') : (t('storyImageHint')||'painting + audio · for IG / TikTok')}</div>
+                    </button>
+                  )}
+                  <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
                     🖥 {t('sizeWeb')}
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
                   </button>
-                  <button onClick={()=>exportImage('print')} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
-                    🖨 {t('sizePrint')}
+                  <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('print', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                      🖨 {t('sizePrint')}
+                      {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
+                    </span>
                     <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
                   </button>
+                  {/* Audio + Score export hidden for MIDI/Audio/Score sources
+                      (isImportedMedia) — exporting them back to the same file
+                      format the user just imported is redundant. */}
+                  {!isImportedMedia && (
+                    <button onClick={()=>{ setShowSizePicker(false); saveAudio(true); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                      ⏺ {t('saveAudioLabel')||'Audio'}
+                      <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
+                    </button>
+                  )}
+                  {!isImportedMedia && (
+                    <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                      ♫ {t('scoreExport')}
+                      <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
+                    </button>
+                  )}
                 </>
               )}
               <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*effScale)+'rem',marginTop:4}}>
@@ -6645,18 +8339,106 @@ Composition rules:
         <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'20px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase',flexShrink:0}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
-            {(()=>{ const submit=(txt)=>{ const v=(txt||'').trim(); if(!v)return; setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null); setMoodFromImg(false); setVarySource(null); setLoadedSource(null); setMoodContext(true); setSongQ(v); stopAll(); aiMoodFromText(v); if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;} setMoodHint(false); }; return (
+            {(()=>{
+              // For Free + aiLocked the input stays fully editable (so the
+              // autocomplete is useful) but the submit path is restricted to
+              // EXACT preset matches — the AI fallback (aiMoodFromText) is
+              // gated. If what the user typed doesn't resolve to a preset
+              // mood, the → button is disabled and Enter is a no-op.
+              const _normMood=(s)=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+              const _resolveMood=(txt)=>{
+                const q=_normMood(txt); if(!q) return null;
+                // Match either the internal key or the localized display name.
+                const names=t('moodNames')||{};
+                for(const m of MOODS){
+                  if(_normMood(m)===q) return m;
+                  if(_normMood(names[m]||'')===q) return m;
+                }
+                return null;
+              };
+              const submitFree=(txt)=>{
+                const m=_resolveMood(txt); if(!m) return;
+                setShowMoodMenu(false);
+                const s=findSong(m);
+                setStructureSeedLock(null); setForceSetup(false); setCurrentMood(m);
+                setVarySource(s); setImgMoodThumb(null); setMoodFromImg(false);
+                setLoadedSource(null); setMoodContext(true); setSongQ(m);
+                stopAll(); aiMidi(m);
+                if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
+                setMoodHint(false); setMoodEdit('');
+              };
+              const submit=(txt)=>{
+                if(aiLocked){ submitFree(txt); return; }
+                const v=(txt||'').trim(); if(!v)return;
+                setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null);
+                setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null);
+                setMoodFromImg(false); setVarySource(null); setLoadedSource(null);
+                setMoodContext(true); setSongQ(v); setCompositionName('');
+                setRecordingName(''); stopAll(); aiMoodFromText(v);
+                if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
+                setMoodHint(false);
+              };
+              // Submit-eligible? For Pro/Pro AI: any non-empty text. For Free
+              // aiLocked: only if the text resolves to a preset mood.
+              const canSubmit = aiLocked
+                ? (_resolveMood(moodEdit) !== null)
+                : !!moodEdit.trim();
+              return (
               <div style={{display:'flex',gap:6,marginBottom:12,flexShrink:0}}>
-                <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder={t('moodPlaceholder')} autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(moodEdit); } }} style={{flex:1,minWidth:0,background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
-                <button onClick={()=>submit(moodEdit)} disabled={!moodEdit.trim()} aria-label={t('moodGo')} title={t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:moodEdit.trim()?'pointer':'default',background:moodEdit.trim()?PF.gold:'rgba(201,168,76,.2)',color:moodEdit.trim()?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
+                <div style={{flex:1,minWidth:0,position:'relative'}}>
+                  <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder="" autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); if(canSubmit) submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
+                  {/* Empty-state placeholder: for trial-active users a marquee
+                      of examples; for aiLocked an instruction + PRO AI badge
+                      since free-typing won't reach the AI. */}
+                  {!moodEdit && !aiLocked && (()=>{
+                    const ex=t('moodExamples');
+                    const items=Array.isArray(ex)&&ex.length?ex:[t('moodPlaceholder')];
+                    const ribbon=items.join('     ·     ');
+                    return (
+                      <div aria-hidden="true" style={{position:'absolute',inset:0,borderRadius:8,overflow:'hidden',pointerEvents:'none',display:'flex',alignItems:'center'}}>
+                        <div style={{display:'flex',whiteSpace:'nowrap',willChange:'transform',animation:'pfMarquee 22s linear infinite',paddingLeft:12}}>
+                          <span style={{color:'rgba(242,238,232,.4)',fontSize:(.62*effScale)+'rem',fontStyle:'italic'}}>{ribbon}</span>
+                          <span style={{color:'rgba(242,238,232,.4)',fontSize:(.62*effScale)+'rem',fontStyle:'italic',paddingLeft:'2.5em'}}>{ribbon}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {aiLocked && !moodEdit && (
+                    <div aria-hidden="true" style={{position:'absolute',inset:0,borderRadius:8,overflow:'hidden',pointerEvents:'none',display:'inline-flex',alignItems:'center',paddingLeft:12,gap:6}}>
+                      <span style={{color:'rgba(242,238,232,.45)',fontSize:(.62*effScale)+'rem',fontStyle:'italic'}}>{t('moodChooseBelow')||'Choose a mood from the list below'}</span>
+                      <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />
+                    </div>
+                  )}
+                </div>
+                <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={aiLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
               </div>
             ); })()}
-            {/* Suggestions grid — filtered moods that match what you're typing.
-                Sits directly under the input so the autocomplete relationship is
-                obvious. Hidden when empty (no input or no matches). starts-with
-                matches rank above contains-only matches. */}
+            {/* Suggestions grid — autocomplete-filtered moods while typing.
+                For Free+aiLocked, when the input is empty we show the full
+                MOODS list alphabetically (so the user has something to pick
+                without typing); once they start typing, normal autocomplete
+                behaviour applies. Clicking any preset is free (no AI). */}
             <div style={{flex:'0 1 auto',minHeight:0,overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
-              {(()=>{ const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=_n(moodEdit.trim()); if(!q)return []; return MOODS.filter(m=>_n((t('moodNames')||{})[m]||m).startsWith(q)); })().map(m=>(
+              {(()=>{
+                const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+                const q=_n(moodEdit.trim());
+                if(!q){
+                  // Empty input: Free+aiLocked sees a short SAMPLE of moods
+                  // (6 popular ones) so the cancel button stays in the viewport
+                  // on small screens. Typing reveals normal autocomplete over
+                  // the full MOODS list. Others see nothing (their marquee
+                  // placeholder cues "type").
+                  if(aiLocked){
+                    const SAMPLE=['joyful','calm','melancholic','mysterious','romantic','epic'];
+                    return SAMPLE.filter(m=>MOODS.includes(m));
+                  }
+                  return [];
+                }
+                // Non-empty: starts-with autocomplete for everyone (works
+                // across the full MOODS list, including for aiLocked users —
+                // they can type to find any mood, then tap to play the preset).
+                return MOODS.filter(m=>_n((t('moodNames')||{})[m]||m).startsWith(q));
+              })().map(m=>(
                 <button key={m} onClick={()=>{
                   setShowMoodMenu(false);
                   const s=findSong(m);
@@ -6679,6 +8461,11 @@ Composition rules:
                 </button>
               ))}
             </div>
+            {aiLocked && !moodEdit.trim() && (
+              <div style={{textAlign:'center',marginTop:6,marginBottom:8,fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',color:'rgba(207,197,168,.45)',fontStyle:'italic',flexShrink:0}}>
+                {t('moodTypeToSearch')||'Type to search any of 95 moods…'}
+              </div>
+            )}
             {/* Recently AI generated — separate "what you made before" section,
                 always at the bottom regardless of typing state. Click replays the
                 piece for free, no AI call. */}
@@ -6744,6 +8531,9 @@ Composition rules:
                 const mn=t('moodNames')||{};
                 const morphTitleDisp=[(mn[currentMood]||currentMood), ...sel.map(m=>mn[m]||m)].join(' → ');
                 applyEvents(evts,morphTitleDisp);
+                // applyEvents now clears moodContext; restore it — morph blends
+                // mood pieces, so the result is still mood-sourced.
+                setMoodContext(true);
                 setMorphTargets(sel);
                 const bytes=encodeMidi(evts,morphed.tempo||100);
                 setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
@@ -6765,7 +8555,7 @@ Composition rules:
           🔊 {t('listenHint')}
         </div>
       )}
-      {recBlob&&(
+      {recBlob&&(viewMode!=='image'||audioRowOpen)&&(
         <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {(()=>{ const m=recName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:recName; const ext=m?m[2]:''; return (
@@ -6776,7 +8566,7 @@ Composition rules:
             ); })()}
             {audioShareMsg&&<span style={{fontSize:(.5*effScale)+'rem',color:audioShareMsg.tone==='ok'?'rgba(140,255,180,.9)':'rgba(255,140,120,.9)',flexShrink:0,marginRight:4}}>{audioShareMsg.text}</span>}
             <button onClick={shareRecording} style={{padding:'6px 14px',background:'rgba(220,90,90,.2)',color:'rgba(255,140,120,1)',border:'1px solid rgba(220,90,90,.5)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.06em',flexShrink:0,minWidth:60}}>{t('share')}</button>
-            <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
+            <button onClick={()=>{setRecBlob(null);setRecName('');setAudioShareMsg(null);setAudioSideImage(null);setAudioRowOpen(false);}} style={{padding:'6px 10px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.2)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',flexShrink:0}}>✕</button>
           </div>
           {recBlob.type&&recBlob.type.includes('webm')&&(
             <div style={{fontSize:(.48*effScale)+'rem',color:'rgba(255,180,120,.55)',letterSpacing:'.04em'}}>webm/opus format · plays in most apps and browsers; some older Windows players may not open it</div>
@@ -6828,7 +8618,7 @@ Composition rules:
           onClick={handlePauseClick}
           disabled={demoReelOn||recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
           title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
-          style={{padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'default':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.25)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.6:1,transition:'all .18s'}}>
+          style={{display:(viewMode==='image'&&(recording||!!recBlob))?'none':'inline-flex',padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.18)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.45:1,transition:'all .18s'}}>
           {holdPaused?t('resume'):playing?t('pause'):t('play')}
         </button>{/* MIC STOP / REC — in the transport row UNDER the canvas (not in
             the strip above it). Replaces the on-canvas STOP/REC buttons; the
@@ -6837,24 +8627,54 @@ Composition rules:
           <button onClick={()=>{ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); }} className="pf-lift" title={t('micActive')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,40,40,.16)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
             <span style={{width:8,height:8,borderRadius:2,background:'#ff5a5a',boxShadow:'0 0 6px #ff5a5a',display:'inline-block'}}/>⏹ {t('micActive').replace(/[^\p{L} ]/gu,'')}
           </button>
-        )}
-        {micArmed && !micActive && chords.length>0 && (
-          <button onClick={()=>{ setMicArmed(false); if(micPreset==='music') startMicListening(); else startMicPainting(); }} className="pf-lift" title={t('micTapToRecord')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,40,40,.14)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
-            <span style={{width:9,height:9,borderRadius:'50%',background:'#ff5a5a',boxShadow:'0 0 8px #ff5a5a',display:'inline-block'}}/>🎙 REC
-          </button>
-        )}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
+        )}{/* After stop, the transport pill disappears entirely — Clear is the
+            way to start a fresh song. The old "tap REC again" pill caused
+            confusion and let the user accidentally extend a finished take. */}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
-        {randomMode&&effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(()=>{
+        {/* Mic/Music source toggle — appears once the listen session has a
+            finalised audio blob and the mic is no longer live. One tap flips
+            between playing back the original recording and the synthesised
+            piano cover. Hidden during active capture and during recording. */}
+        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+          <button className="pf-lift" onClick={()=>setPlaySourceMic(p=>p==='original'?'piano':'original')}
+            title={playSourceMic==='original'?'playback: original recording — tap to switch to piano cover':'playback: piano cover — tap to switch to original recording'}
+            style={{padding:'8px 14px',background:playSourceMic==='original'?'rgba(140,200,255,.16)':'rgba(201,168,76,.16)',color:playSourceMic==='original'?'#8accff':GOLD,border:'1px solid '+(playSourceMic==='original'?'rgba(100,180,255,.55)':'rgba(201,168,76,.55)'),borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:'0 3px 10px '+(playSourceMic==='original'?'rgba(100,180,255,.25)':'rgba(201,168,76,.25)')}}>
+            {playSourceMic==='original'?'🎵 orig':'🎹 piano'}
+          </button>
+        )}
+        {/* Restart playback from chord 0 using the current source. Pairs with
+            the source toggle: toggle swaps Original ⇄ Piano in place (seamless);
+            ↺ jumps back to the beginning. Visible whenever there's a Mic listen
+            draft with a finalised recording and nothing live is happening. */}
+        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+          <button className="pf-lift"
+            onClick={()=>{
+              // Stop everything cleanly, reset position, then start fresh from idx 0.
+              stopAll();
+              setDisp(0); dispRef.current = 0;
+              resumeFromRef.current = null;
+              setHoldPaused(false); holdPausedRef.current = false;
+              // Defer one tick so the stopAll state flush settles before startPlay.
+              setTimeout(()=>{ startPlayRef.current?.(); }, 0);
+            }}
+            title="restart from start"
+            aria-label="restart from start"
+            style={{padding:'8px 12px',background:'rgba(232,85,122,.16)',color:'#ff7a9c',border:'1px solid rgba(232,85,122,.55)',borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',boxShadow:'0 3px 10px rgba(232,85,122,.25)'}}>
+            ↺
+          </button>
+        )}
+        {effectiveStyle&&chords.length>0&&!recording&&!micActive&&viewMode!=='image'&&(()=>{
           // Next is available whenever there's a painting on the canvas — during
-          // Play, during Pause, AND after the track ends. Re-roll just changes
-          // the seed; a follow-up useEffect repaints the canvas with the new
-          // variation. We deliberately do NOT gate on `busy` because `busy`
-          // includes `playing`, which would wrongly disable Next during Play.
-          const canRoll = !anim && !working && !demoReelOn && !recording;
+          // Play, during Pause, AND after the track ends. Manual artist → cycle
+          // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
+          // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
+          // with no randomMode).
+          const canRoll = !anim && !working && !demoReelOn && !recording && !micActive;
+          if(!randomMode) return null;
           return (
-            <button className="pf-lift" onClick={()=>{ if(canRoll) advanceVariation(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(255,200,120,.18)':'rgba(255,200,120,.08)',color:canRoll?'#ffd07a':'rgba(255,200,120,.3)',border:'1px solid '+(canRoll?'rgba(255,200,120,.55)':'rgba(255,200,120,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
+            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else { setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
@@ -6864,29 +8684,73 @@ Composition rules:
             export a half-animated piece. Hidden in the image source view (its
             own controls live elsewhere). */}
         {viewMode!=='image' && (()=>{
+          // Save enables once there's something to save and nothing is
+          // actively running. After Stop Live the LIVE pill is gone, micArmed
+          // may be true with chords waiting — Save is fine in that state. Play
+          // (current), recording, busy or demo reel still block.
           const exportReady =
-            (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
-             !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording)
-            || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording);
+            chords.length>0 && !playing && !anim && !holdPaused &&
+            !demoReelOn && !micActive && !busy && !recording;
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
               title={exportReady?t('save'):t('exportNeedsPlay')}
-              style={{padding:'8px 14px',background:'transparent',color:exportReady?'rgba(201,168,76,.85)':'rgba(201,168,76,.28)',border:'1px solid '+(exportReady?'rgba(201,168,76,.4)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
+              style={{padding:'8px 14px',background:exportReady?'rgba(255,200,120,.18)':'transparent',color:exportReady?'#ffd07a':'rgba(201,168,76,.28)',border:'1px solid '+(exportReady?'rgba(255,200,120,.55)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',transition:'all .18s'}}>
               ↓ {t('save')}
             </button>
           );
         })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
-          <button onClick={()=>{ if(atmoBusy) return; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable)} className="pf-lift" title={(!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere')} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)',border:'1px solid rgba(120,180,255,'+(atmoOn?'.55':'.3')+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(!atmoMood&&!aiUsable)?.5:1,transition:'all .18s'}}>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</button>
+          <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:(aiLocked&&!atmoMood)?'rgba(180,205,245,.75)':(atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)'),border:'1px solid rgba(120,180,255,'+((aiLocked&&!atmoMood)?'.4':(atmoOn?'.55':'.3'))+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(aiLocked&&!atmoMood)?.95:((!atmoMood&&!aiUsable)?.5:1),transition:'all .18s',display:'inline-flex',alignItems:'center',gap:4}}>
+            <span>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(aiLocked&&!atmoMood)?'—':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</span>
+            {aiLocked && !atmoMood && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
+          </button>
         )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
-          // REC button — runs play+record together; on completion the SAVE
-          // picker auto-opens so the user can immediately pick Story / Audio /
-          // Score for the fresh recording. No separate SAVE button needed: the
-          // picker IS the save flow, and it appears automatically after REC.
+          // REC button — single source of truth for image-mode recording:
+          //   tap once → starts a fresh recording AND playback from index 0
+          //              (clears any stale recBlob save bar, clears resume
+          //              cursor, hides PLAY/PAUSE so the user can't pause a
+          //              recording into a corrupted file)
+          //   tap again → stopRecord() → recording finishes, blob is kept
+          //   playback finishes naturally → auto-stops the recorder, blob kept
+          //
+          // Once a recording exists (recBlob) and we're idle, the button morphs
+          // into a SAVE button: tapping it opens the SAVE picker — the same
+          // explicit flow as every other mode (no auto-jump into the picker).
           const canStart = !recording && !playing && !anim && !working && chords.length>0;
+          const showSave = !recording && !!recBlob;
+          if(showSave){
+            return (
+              <button onClick={()=>{ if(recBlob) setShowSizePicker(true); }} className="pf-lift" title={t('save')} style={{padding:'8px 14px',background:'rgba(140,180,255,.14)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.55)',borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
+                ↓ {t('save')}
+              </button>
+            );
+          }
           return (
-            <button onClick={()=>{ if(recording){ stopRecord(); return; } if(!canStart) return; setRecordIntent('picker'); startRecord(); }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
+            <button onClick={()=>{
+              if(recording){ stopRecord(); return; }
+              if(!canStart) return;
+              // Fresh start: nuke stale recording artefacts so the UI is clean
+              // and the recorder definitely captures from chord index 0, not
+              // from wherever the previous playback paused.
+              setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
+              resumeFromRef.current = null;
+              setHoldPaused(false);
+              setDisp(0);
+              // Stay in the current view (e.g. the setup panel) while recording —
+              // don't let the "playback started → leave setup" effect yank us to
+              // the default play screen. Cleared when recording finishes.
+              keepSetupDuringRecRef.current = forceSetup;
+              setRecordIntent('picker');
+              // AI Compose mode, nothing composed yet: compose first, then start
+              // the recorder + playback together (no silent lead-in). Once composed
+              // (imgComposeRef true), REC records the existing piece directly.
+              if(imgPlayModeRef.current==='compose' && !imgComposeRef.current){
+                aiComposeFromImage(()=>{ try{ startRecord(); }catch(_){} });
+              } else {
+                startRecord();
+              }
+            }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
               {recording?t('recStop'):t('recArm')}
             </button>
           );
@@ -7040,26 +8904,30 @@ Composition rules:
       )}
       <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
       <div style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
-        <a href="/pricing.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Pricing</a>
+        <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
-        <a href="/terms.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Terms</a>
+        <button onClick={()=>setLegalDoc('terms')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalTerms')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
-        <a href="/privacy.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Privacy</a>
+        <button onClick={()=>setLegalDoc('privacy')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPrivacy')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
-        <a href="/refunds.html" target="_blank" rel="noopener" style={{color:'inherit',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>Refunds</a>
+        <button onClick={()=>setLegalDoc('refunds')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalRefunds')}</button>
       </div>
 
       {/* ── HELP FAB (Variant A — floating "?" bottom-right) ───────────────
-          Affordance for the setup screen only. Hidden during:
-            • onboarding (tutorial already explains everything)
-            • playback / paused playback (covers the CLEAR button in the
-              bottom controls bar; user is past the explore-features stage
-              anyway, they're now creating)
+          Affordance for the SETUP SCREEN only. Hidden as soon as the user
+          progresses to the pro/canvas view (any loaded source, picked mood,
+          compose mode, or mic mode — they all surface the bottom controls
+          bar with PLAY/LOOP/SAVE/CLEAR that the FAB would otherwise overlap).
+          Also hidden during onboarding (tutorial already explains everything).
+          Uses isActiveView (the same flag the app uses elsewhere to switch
+          between setup and canvas views), so the FAB correctly comes back
+          when the user clicks ← BACK to return to setup, even though source
+          state is still loaded under the hood.
           The FAB is fixed-position so it follows the viewport regardless of
           scroll; the popup it opens is also fixed and covers the full
           viewport. zIndex high enough to sit above app chrome but below
           the paywall modal. ── */}
-      {!showOnboarding && !playing && !holdPaused && (
+      {!showOnboarding && !isActiveView && (
         <button
           onClick={()=>setShowHelp(true)}
           aria-label={t('helpFab')||'help'}
@@ -7126,59 +8994,163 @@ Composition rules:
           <div style={{maxWidth:480, margin:'0 auto', width:'100%'}}>
             <h2 style={{
               fontFamily:"'Cormorant Garamond',serif", fontWeight:600,
-              fontSize:(1.7*effScale)+'rem', color:'#c9a84c',
-              textAlign:'center', margin:'0 0 6px',
+              fontSize:(1.45*effScale)+'rem', color:'#c9a84c',
+              textAlign:'center', margin:'0 0 4px',
             }}>{t('helpTitle')!=='helpTitle' ? t('helpTitle') : 'What does what'}</h2>
             <p style={{
               textAlign:'center',
-              color:'rgba(242,238,232,.7)',
-              fontFamily:'Arial, sans-serif',
-              fontSize:(1.0*effScale)+'rem', margin:'0 0 22px',
-              letterSpacing:'.01em', lineHeight:1.4,
+              color:'rgba(242,238,232,.65)',
+              fontFamily:'inherit',
+              fontSize:(.78*effScale)+'rem', margin:'0 0 14px',
+              letterSpacing:'.02em', lineHeight:1.35,
             }}>{t('helpSub')!=='helpSub' ? t('helpSub') : 'tap any source on the setup screen to begin'}</p>
 
             {[
               { key:'mood',    icon:'✦', color:'#ffd07a', bg:'rgba(201,168,76,.12)',  name:t('moodHowFeel')||'How do you feel?' },
               { key:'mfi',     icon:'✦', color:'#e4b2ff', bg:'rgba(220,150,255,.12)', name:t('imgMood')||'Mood from image' },
-              { key:'midi',    icon:'♩', color:'#5b9cf6', bg:'rgba(91,156,246,.12)',  name:t('midi')||'MIDI' },
-              { key:'audio',   icon:'♪', color:'#f47c3c', bg:'rgba(244,124,60,.12)',  name:t('audio')||'Audio' },
-              { key:'score',   icon:'𝄞', color:'#a97ff5', bg:'rgba(169,127,245,.12)', name:t('score')||'Score' },
-              { key:'image',   icon:'◫', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:t('image')||'Image' },
-              { key:'compose', icon:'♪', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:t('compose')||'Compose' },
-              { key:'mic',     icon:'🎙', color:'#ff6b9d', bg:'rgba(255,107,157,.12)', name:t('mic')||'Mic' },
+              { key:'music',   icon:'♪', color:'#5b9cf6', bg:'rgba(91,156,246,.12)',  name:(t('music')||'Music').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'image',   icon:'◫', color:'#f47c3c', bg:'rgba(244,124,60,.12)',  name:(t('image')||'Image').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'compose', icon:'♪', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:(t('compose')||'Compose').replace(/[^\p{L} ]/gu,'').trim() },
+              { key:'mic',     icon:'🎙', color:'#ff6b9d', bg:'rgba(255,107,157,.12)', name:(t('mic')||'Mic').replace(/[^\p{L} ]/gu,'').trim() },
             ].map(it => {
               const descKey='helpDesc_'+it.key;
               const desc = t(descKey)!==descKey ? t(descKey) : '';
               return (
                 <div key={it.key} style={{
-                  display:'flex', alignItems:'flex-start', gap:12,
-                  padding:'11px 4px',
+                  display:'flex', alignItems:'flex-start', gap:10,
+                  padding:'6px 2px',
                   borderBottom:'1px solid rgba(255,255,255,.06)',
                 }}>
                   <div style={{
-                    width:34, height:34, borderRadius:8,
+                    width:28, height:28, borderRadius:7,
                     display:'flex', alignItems:'center', justifyContent:'center',
-                    fontSize:'17px', color:it.color, background:it.bg,
+                    fontSize:'15px', color:it.color, background:it.bg,
                     flexShrink:0,
                   }}>{it.icon}</div>
                   <div style={{flex:1, minWidth:0}}>
                     <div style={{
-                      fontFamily:'Arial, sans-serif',
-                      fontSize:(.78*effScale)+'rem', fontWeight:700,
+                      fontFamily:'inherit',
+                      fontSize:(.7*effScale)+'rem', fontWeight:700,
                       letterSpacing:'.12em', textTransform:'uppercase',
-                      color:'#f2eee8', marginBottom:4,
+                      color:'#f2eee8', marginBottom:2, lineHeight:1.2,
                     }}>{it.name}</div>
                     <div style={{
-                      fontFamily:'Arial, sans-serif',
-                      fontSize:(.95*effScale)+'rem',
+                      fontFamily:'inherit',
+                      fontSize:(.82*effScale)+'rem',
                       color:'rgba(242,238,232,.78)',
-                      lineHeight:1.45,
-                      letterSpacing:'.01em',
+                      lineHeight:1.35,
+                      letterSpacing:'.005em',
                     }}>{desc}</div>
                   </div>
                 </div>
               );
             })}
+            {/* ─── Tier comparison table ────────────────────────────────────
+                Compact 3-column overview (Free / Pro / Pro AI) so the user
+                sees the tier hierarchy at a glance, without opening the
+                paywall. Pro column tinted gold, Pro AI column tinted purple
+                — same accents as the in-app feature badges and paywall, so
+                it reads as the same family. */}
+            <div style={{marginTop:22,paddingTop:18,borderTop:'1px solid rgba(255,255,255,.08)'}}>
+              <div style={{
+                fontFamily:"'Cormorant Garamond',serif",fontWeight:600,
+                fontSize:(1.05*effScale)+'rem',color:'#c9a84c',
+                textAlign:'center',marginBottom:8,letterSpacing:'.02em',
+              }}>{t('tierOverviewTitle')||'Free · Pro · Pro AI'}</div>
+              {/* Intro line ties the abstract "AI features" row in the table
+                  to the concrete help items above (How do you feel?, Mood from
+                  image, AI Compose inside Image, Atmosphere) so the user
+                  understands what "credits" apply to. */}
+              <div style={{
+                textAlign:'center',marginBottom:14,
+                fontSize:(.66*effScale)+'rem',color:'rgba(242,238,232,.6)',
+                lineHeight:1.45,letterSpacing:'.01em',
+                padding:'0 4px',
+              }}>
+                <span style={{color:'#dcb4ff',fontSize:(.72*effScale)+'rem',marginRight:4}}>✦</span>
+                {t('tierIntro')||'AI features (the ✦ items above + AI Compose & Atmosphere inside Image) use credits on Free.'}
+              </div>
+              {(()=>{
+                const GOLD_BG='rgba(201,168,76,.08)';
+                const GOLD_BG_HDR='rgba(201,168,76,.16)';
+                const GOLD_FG='#c9a84c';
+                const PURPLE_BG='rgba(220,150,255,.07)';
+                const PURPLE_BG_HDR='rgba(220,150,255,.14)';
+                const PURPLE_FG='#dcb4ff';
+                const FREE_FG='rgba(242,238,232,.55)';
+                const CELL_TXT='rgba(242,238,232,.85)';
+                const cellSty={
+                  padding:'7px 6px',textAlign:'center',
+                  fontSize:(.7*effScale)+'rem',
+                  borderBottom:'1px solid rgba(255,255,255,.06)',
+                  lineHeight:1.25,
+                };
+                const labelSty=Object.assign({},cellSty,{
+                  textAlign:'left',color:'rgba(242,238,232,.7)',
+                  fontSize:(.68*effScale)+'rem',paddingLeft:2,
+                });
+                const hdrBase={
+                  padding:'8px 4px',textAlign:'center',
+                  fontSize:(.62*effScale)+'rem',fontWeight:700,
+                  letterSpacing:'.1em',textTransform:'uppercase',
+                  borderBottom:'1px solid rgba(255,255,255,.12)',
+                  lineHeight:1.2,
+                };
+                const free=t('tierFreeName')||'Free';
+                const pro=t('tierProName')||'Pro';
+                const proAi=t('tierProAiName')||'Pro AI';
+                const yes=t('tierYes')||'✓';
+                const no=t('tierNo')||'—';
+                const allWord=t('tierAll')||'all';
+                const trial3=t('tier3Trial')||'3× trial';
+                const inf=t('tierUnlimited')||'∞';
+                const ronly=t('tierReadOnly')||'preview only';
+                const rows=[
+                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16',  null],
+                  [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord, null],
+                  [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
+                  [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],
+                  [t('tierRowWmark')  ||'Watermark',       yes,     no,         no,    null],
+                  [t('tierRowAi')     ||'AI features',     (t('tier3Credits')||'3 credits'),  (t('tier3Credits')||'3 credits'),  inf, '✦'],
+                ];
+                return (
+                  <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'inherit'}}>
+                    <thead>
+                      <tr>
+                        <th style={Object.assign({},hdrBase,{textAlign:'left',color:'rgba(242,238,232,.6)',paddingLeft:2})}></th>
+                        <th style={Object.assign({},hdrBase,{color:FREE_FG})}>{free}</th>
+                        <th style={Object.assign({},hdrBase,{color:GOLD_FG,background:GOLD_BG_HDR})}>{pro}</th>
+                        <th style={Object.assign({},hdrBase,{color:PURPLE_FG,background:PURPLE_BG_HDR})}>{proAi}</th>
+                      </tr>
+                      <tr>
+                        <th style={Object.assign({},cellSty,{textAlign:'left',color:'rgba(242,238,232,.4)',fontSize:(.6*effScale)+'rem',paddingLeft:2,fontWeight:400,letterSpacing:'.04em'})}></th>
+                        <th style={Object.assign({},cellSty,{color:FREE_FG,fontSize:(.62*effScale)+'rem',fontWeight:500})}>€0</th>
+                        <th style={Object.assign({},cellSty,{color:GOLD_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:GOLD_BG})}>€9.99</th>
+                        <th style={Object.assign({},cellSty,{color:PURPLE_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:PURPLE_BG})}>€19.99</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(([label,f,p,a,icon],i)=>(
+                        <tr key={i}>
+                          <td style={labelSty}>
+                            {icon && <span style={{color:'#dcb4ff',marginRight:5}}>{icon}</span>}
+                            {label}
+                          </td>
+                          <td style={Object.assign({},cellSty,{color:FREE_FG})}>{f}</td>
+                          <td style={Object.assign({},cellSty,{color:CELL_TXT,background:GOLD_BG})}>{p}</td>
+                          <td style={Object.assign({},cellSty,{color:CELL_TXT,background:PURPLE_BG})}>{a}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
+              <div style={{textAlign:'center',marginTop:10,fontSize:(.58*effScale)+'rem',color:'rgba(242,238,232,.4)',fontStyle:'italic',letterSpacing:'.04em',lineHeight:1.45}}>
+                {t('tierAiCreditsNote')||'AI text & image compose = 1 credit · Atmosphere = 0.5 credit'}
+                <br/>
+                {t('tierFootnote')||'One-time payment · Lifetime access'}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -7249,6 +9221,35 @@ Composition rules:
           <div style={{position:'fixed',bottom:'7vh',left:'50%',transform:'translateX(-50%)',display:'inline-flex',alignItems:'center',gap:8,padding:'8px 18px',fontSize:`clamp(${.65*effScale}rem,${1.7*effScale}vw,${.95*effScale}rem)`,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(247,243,236,.78)',background:'rgba(16,12,24,.55)',borderRadius:20,pointerEvents:'none',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(247,243,236,.18)',whiteSpace:'nowrap'}}>
             <span style={{fontSize:'.9em',opacity:.7}}>✕</span>
             {t('demoSkip')||'tap canvas to skip'}
+          </div>
+        </div>
+      )}
+
+      {/* ── LEGAL MODAL (Pricing / Terms / Privacy / Refunds) ─────────────
+          Replaces opening these as separate browser tabs. Keeps the user
+          inside the Paintiano context: ✕ closes back into the app, taps
+          outside the panel also close, and links between docs are
+          intercepted (onLegalClick) so they re-route into the modal
+          rather than navigate the whole page. The HTML for each doc is
+          fetched on demand from /public and stripped down to <body>'s
+          contents to avoid clashing <html>/<head> styles. ── */}
+      {legalDoc && (
+        <div
+          onClick={(e)=>{ if(e.target===e.currentTarget) setLegalDoc(null); }}
+          style={{position:'fixed',inset:0,zIndex:100001,background:'rgba(6,6,12,.94)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',paddingTop:`calc(env(safe-area-inset-top,0px) + 12px)`,paddingBottom:`calc(env(safe-area-inset-bottom,0px) + 12px)`,paddingLeft:12,paddingRight:12,overflow:'hidden',display:'flex',justifyContent:'center'}}
+        >
+          <div style={{position:'relative',width:'100%',maxWidth:720,height:'100%',background:'rgba(14,11,22,.92)',border:'1px solid rgba(201,168,76,.18)',borderRadius:14,boxShadow:'0 18px 60px rgba(0,0,0,.55)',display:'flex',flexDirection:'column'}}>
+            <button
+              onClick={()=>setLegalDoc(null)}
+              aria-label="close"
+              style={{position:'absolute',top:10,right:10,width:36,height:36,borderRadius:18,background:'rgba(247,243,236,.08)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(247,243,236,.18)',cursor:'pointer',fontSize:'1.15rem',lineHeight:'1',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}
+            >✕</button>
+            <div
+              onClick={onLegalClick}
+              style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'24px 22px 28px',color:'rgba(247,243,236,.92)',fontFamily:'Arial, sans-serif',fontSize:(.85*effScale)+'rem',lineHeight:1.55}}
+              className="paintiano-legal-content"
+              dangerouslySetInnerHTML={{__html: legalLoading ? '<p style="opacity:.6;text-align:center;padding:40px;">Loading…</p>' : legalHtmlForLang}}
+            />
           </div>
         </div>
       )}
