@@ -14364,11 +14364,15 @@ export default function Paintiano() {
       }
       // Skip the initial mount when there are no chords yet — avoids a stray
       // randomization before the user has loaded any song.
-      if(seed !== 0 || art){
+      // Re-randomize ONLY when Dice (randomMode) is on. With Dice off the
+      // user has picked a specific variant (or the deterministic default) and
+      // expects ONE painting for the whole song — Mic capture in particular
+      // would otherwise flicker through variants on every recorded chord.
+      if((seed !== 0 || art) && randomMode){
         setPhaseIndex((Math.random()*1000)|0);
       }
     }
-  }, [pollockSessionSeed, effectiveStyle]);
+  }, [pollockSessionSeed, effectiveStyle, randomMode]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
