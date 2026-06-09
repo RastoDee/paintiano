@@ -68,6 +68,85 @@ function fftMag(buf) {
   return mag.subarray(0, N / 2);
 }
 function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
+
+// === Mic/Music chord-transcribe helpers ===
+// computeChroma: fold FFT magnitude into 12-bin pitch-class profile.
+// Normalised so sum = 1 (so cosine similarity against templates is stable).
+function computeChroma(mag, sr) {
+  const N = mag.length * 2;
+  const bin = sr / N;
+  const chroma = new Float32Array(12);
+  // Range A1 (~55 Hz) — C8 (~4186 Hz) covers piano + most music.
+  const lo = Math.max(1, Math.floor(55 / bin));
+  const hi = Math.min(mag.length - 1, Math.ceil(4200 / bin));
+  for (let i = lo; i < hi; i++) {
+    const freq = i * bin;
+    if (freq < 55) continue;
+    const midi = Math.round(69 + 12 * Math.log2(freq / 440));
+    if (midi < 36 || midi > 96) continue;
+    const pc = ((midi % 12) + 12) % 12;
+    // Square the magnitude — emphasises strong peaks over noise floor and
+    // makes the chroma vector less polluted by broadband content.
+    chroma[pc] += mag[i] * mag[i];
+  }
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += chroma[i];
+  if (sum < 1e-12) return chroma;
+  for (let i = 0; i < 12; i++) chroma[i] /= sum;
+  return chroma;
+}
+
+// Triad templates (Krumhansl-style weights). Strong on chord tones, light on
+// the rest so close inversions/added 7ths still score the right root.
+const _MAJ_TPL = [1.0, 0.05, 0.10, 0.05, 0.85, 0.10, 0.05, 0.85, 0.05, 0.10, 0.05, 0.10];
+const _MIN_TPL = [1.0, 0.05, 0.10, 0.85, 0.05, 0.10, 0.05, 0.85, 0.05, 0.10, 0.05, 0.10];
+
+// detectChord: cosine-match chroma against 24 templates (12 maj + 12 min).
+// Returns {root:0-11, quality:'maj'|'min', conf:0-1} when match passes
+// confidence threshold; null when nothing is clear enough to commit.
+function detectChord(chroma) {
+  let bestRoot = 0, bestQ = 'maj', bestConf = 0;
+  // Precompute chroma norm
+  let chrNorm = 0;
+  for (let i = 0; i < 12; i++) chrNorm += chroma[i] * chroma[i];
+  if (chrNorm < 1e-12) return null;
+  const chrSqrt = Math.sqrt(chrNorm);
+  for (let r = 0; r < 12; r++) {
+    for (let qi = 0; qi < 2; qi++) {
+      const tpl = qi === 0 ? _MAJ_TPL : _MIN_TPL;
+      let score = 0, tplNorm = 0;
+      for (let i = 0; i < 12; i++) {
+        const t = tpl[((i - r) % 12 + 12) % 12];
+        score += chroma[i] * t;
+        tplNorm += t * t;
+      }
+      const conf = score / (chrSqrt * Math.sqrt(tplNorm));
+      if (conf > bestConf) {
+        bestConf = conf;
+        bestRoot = r;
+        bestQ = qi === 0 ? 'maj' : 'min';
+      }
+    }
+  }
+  // Threshold: 0.60 keeps clean signals, rejects noise/mush.
+  return bestConf >= 0.60 ? { root: bestRoot, quality: bestQ, conf: bestConf } : null;
+}
+
+// generateVoicing: from {root, quality} produce a clean 4-note piano voicing
+// in the C3–C5 range. Bass octave below for richness.
+// Returns [{m,v}] suitable for playNote + setChords.
+function generateVoicing(root, quality) {
+  const third = quality === 'maj' ? 4 : 3;
+  const rootMidi = 48 + (root % 12); // C3=48 .. B3=59
+  return [
+    { m: rootMidi - 12, v: 70 },         // bass
+    { m: rootMidi,       v: 92 },         // root
+    { m: rootMidi + third, v: 86 },       // 3rd
+    { m: rootMidi + 7,   v: 84 },         // 5th
+  ].filter(n => n.m >= 21 && n.m <= 108);
+}
+// === end helpers ===
+
 // Reusable typed-array buffers — module-level so transcribeAudio doesn't
 // allocate ~15K Float32Arrays during a long file import. JS is single-threaded
 // and transcribeAudio runs sequentially, so the shared state is safe.

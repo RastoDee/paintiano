@@ -5409,8 +5409,8 @@ Composition rules:
         composedModeRef.current=true;
       }
       let lastCommit=performance.now();
-      const COMMIT_INTERVAL=120; // sample chord identity frequently
-      const MIN_HOLD_MS=100;     // very short — catch quick changes; only filter very brief flickers
+      const COMMIT_INTERVAL=150; // chord-template detection runs at ~6.6 Hz
+      const MIN_HOLD_MS=180;     // shorter chords than this aren't committed
       // Adaptive noise gate is the ONLY filter — distinguishes silence/room
       // noise from any audio. Everything that gets past it gets painted, even
       // distorted or rough detections. The point is "I hear something" → paint,
@@ -5418,14 +5418,22 @@ Composition rules:
       let noiseFloor=0.002;
       const NOISE_GATE_MULT=1.8;  // signal must be 1.8× the noise floor
       const RMS_FLOOR_MIN=0.003;  // absolute floor — true silence
-      let prevChordSig=''; // chord-change detection
-      let prevChordStart=performance.now(); // when current chord started
-      let pendingNotes=null;     // the currently-sounding chord, awaiting its end to know duration
+      // Chord-history smoothing window. 5 samples × 150 ms = 750 ms window.
+      // Majority vote inside the window suppresses single-frame flicker while
+      // staying responsive enough for ~1–2 chord/sec progressions.
+      const HIST_LEN=5;
+      const STABLE_COUNT=3;       // chord must dominate ≥3/5 of the window
+      const chordHist=[];
       let pendingSig='';
+      let pendingNotes=null;
+      let prevChordStart=performance.now();
       const emitChord=(notes,heldMs)=>{
-        // Highlight active keys
+        // Highlight active keys AND play them as a piano voicing so the
+        // listened-to music gets turned into an audible cover, the same way
+        // the main Music mode plays its chord sequences.
         const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
-        notes.forEach(({m})=>{
+        notes.forEach(({m,v})=>{
+          playNote(m,v||90,sustainMs);
           setActive(p=>{const s=new Set(p);s.add(m);return s;});
           pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(sustainMs,1000));
         });
@@ -5450,39 +5458,48 @@ Composition rules:
         if(rms < noiseFloor*1.5) noiseFloor = noiseFloor*0.95 + rms*0.05;
         const gate = Math.max(RMS_FLOOR_MIN, noiseFloor*NOISE_GATE_MULT);
         if(rms<gate){
-          // Silence — if a chord was sounding, end it now with its real duration.
+          // Silence — flush pending and clear history so the next sound starts fresh.
           if(pendingNotes){
             const heldMs=now-prevChordStart;
             if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
-            pendingNotes=null;pendingSig='';prevChordSig='';
+            pendingNotes=null;pendingSig='';
           }
+          chordHist.length=0;
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
-        // Detect chord identity every ~120ms (cheap, frequent — decoupled from
-        // the old 800ms commit gate that quantized all durations equal).
         if(now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
           const mag=fftMag(buf);
-          // Read sampleRate live: a freshly-created AudioContext can report 0 (or
-          // a stale value) on the first entry until it's fully running, which made
-          // pickPitches compute garbage frequencies → no pitches → first Music
-          // session never painted. Fall back to a sane default if it's not ready.
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
-          const pitches=pickPitches(mag,liveSr,0.02); // very low — catch any peak; noise gate above filters silence
-          if(pitches.length>0){
-            const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:0}));
-            const sig=notes.map(n=>n.m).sort((a,b)=>a-b).join(',');
-            if(sig!==pendingSig){
-              // Chord changed. Flush the PREVIOUS chord with its true held time
-              // and emit the NEW one immediately — no stability gate, no prominence
-              // filter. Every detected change paints.
-              if(pendingNotes){
-                const heldMs=now-prevChordStart;
-                if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
-              }
-              pendingNotes=notes;pendingSig=sig;prevChordStart=now;
-            }
+          const chroma=computeChroma(mag,liveSr);
+          const det=detectChord(chroma);
+          const sig=det ? (det.root+':'+det.quality) : '_';
+          // Push to history; keep last HIST_LEN samples.
+          chordHist.push(sig);
+          if(chordHist.length>HIST_LEN) chordHist.shift();
+          // Majority vote (median for categorical data).
+          const counts={};
+          for(const s of chordHist) counts[s]=(counts[s]||0)+1;
+          let bestSig='_',bestCount=0;
+          for(const s in counts) if(counts[s]>bestCount){bestCount=counts[s];bestSig=s;}
+          // Not stable enough → don't commit; let pending breathe.
+          if(bestSig==='_' || bestCount<STABLE_COUNT){
+            listenRafRef.current=requestAnimationFrame(tick);return;
           }
+          // Stable chord detected.
+          if(bestSig!==pendingSig){
+            // New chord. Flush previous with true held time, then arm new.
+            if(pendingNotes){
+              const heldMs=now-prevChordStart;
+              if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
+            }
+            const [rStr,q]=bestSig.split(':');
+            const r=+rStr;
+            pendingSig=bestSig;
+            pendingNotes=generateVoicing(r,q);
+            prevChordStart=now;
+          }
+          // else: same chord holding — leave pending in place, duration accrues.
         }
         listenRafRef.current=requestAnimationFrame(tick);
       };
