@@ -18162,7 +18162,15 @@ Composition rules:
     if(useOriginalListen){
       try{
         const ac=Tone.getContext().rawContext;
-        if(originalSourceRef.current){try{originalSourceRef.current.stop();}catch(_){}originalSourceRef.current=null;}
+        // Belt and braces — kill any orphan source (with its onended detached
+        // so it can't reset our flag asynchronously).
+        if(originalSourceRef.current){
+          const prev=originalSourceRef.current;
+          try{prev.onended=null;}catch(_){}
+          try{prev.stop();}catch(_){}
+          try{prev.disconnect();}catch(_){}
+          originalSourceRef.current=null;
+        }
         const src=ac.createBufferSource();
         src.buffer=listenPCMRef.current;
         src.playbackRate.value=playbackSpeedRef.current;
@@ -18171,9 +18179,24 @@ Composition rules:
         src.start(0,offsetSec);
         originalSourceRef.current=src;
         originalPlaybackRef.current=true;
-        src.onended=()=>{originalSourceRef.current=null;originalPlaybackRef.current=false;};
+        // Guarded onended: only reset if THIS source is still the current one.
+        // Prevents an old stop event from clearing the flag set by a new source.
+        src.onended=()=>{
+          if(originalSourceRef.current===src){
+            originalSourceRef.current=null;
+            originalPlaybackRef.current=false;
+          }
+        };
       }catch(_){ originalPlaybackRef.current=false; }
     } else {
+      // Ensure no stale audio is left from a previous play; cancel any flag.
+      if(originalSourceRef.current){
+        const prev=originalSourceRef.current;
+        try{prev.onended=null;}catch(_){}
+        try{prev.stop();}catch(_){}
+        try{prev.disconnect();}catch(_){}
+        originalSourceRef.current=null;
+      }
       originalPlaybackRef.current=false;
     }
 
@@ -18566,45 +18589,78 @@ Composition rules:
   useEffect(()=>{startPlayRef.current=startPlay;},[startPlay]);
 
   // Seamless Original ⇄ Piano swap while playing.
-  // The toggle button mutates playSourceMic; this effect notices the change and
-  // re-routes audio from where the position is now — without resetting disp or
-  // canvas. The paint timeline (step) keeps running either way; we only swap
-  // what makes the sound. Original → Piano hands sound back to the sampler;
-  // Piano → Original starts the recorded buffer at chords[disp].startMs.
+  // Robust pattern: derive want from state, derive have from ref, exit if
+  // same. Stop the OUTGOING source first (always sync), update the flag, then
+  // start the INCOMING source. ORIG → PIANO additionally triggers the current
+  // chord immediately so there's no silent gap before the next step() tick.
   useEffect(()=>{
-    if(!playing) return; // toggle has no audible effect when paused / not playing
+    if(!playing) return;
     if(draftOwnerRef.current!=='listen') return;
-    const wantOriginal = playSourceMic==='original' && !!listenPCMRef.current;
-    const haveOriginal = originalPlaybackRef.current;
-    if(wantOriginal===haveOriginal) return; // already in the requested mode
+    const want = (playSourceMic==='original' && !!listenPCMRef.current) ? 'original' : 'piano';
+    const have = originalPlaybackRef.current ? 'original' : 'piano';
+    if(want===have) return;
+
+    const stopSampler = ()=>{
+      try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
+      setActive(new Set());
+      // Release timers that would have un-highlighted notes after sustain.
+      for(const t of timers.current) clearTimeout(t);
+      timers.current = []; timersSet.current.clear();
+    };
+    const stopOriginal = ()=>{
+      const src = originalSourceRef.current;
+      if(!src) return;
+      try{ src.onended = null; }catch(_){}
+      try{ src.stop(); }catch(_){}
+      try{ src.disconnect(); }catch(_){}
+      originalSourceRef.current = null;
+    };
+
     const chordsArr = chordsRef.current || [];
     const idx = Math.max(0, Math.min(chordsArr.length-1, dispRef.current|0));
     const startMs = chordsArr[idx]?.startMs || 0;
     const offsetSec = startMs/1000;
-    if(wantOriginal){
-      // Piano → Original. Hush the sampler and start the buffer at offset.
-      try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
-      setActive(new Set());
+
+    if(want==='original'){
+      // PIANO → ORIG. Hush sampler completely, then start the buffer at offset.
+      stopSampler();
+      stopOriginal(); // belt and braces — no orphan source
       try{
         const ac = Tone.getContext().rawContext;
-        if(originalSourceRef.current){ try{ originalSourceRef.current.stop(); }catch(_){} originalSourceRef.current=null; }
         const src = ac.createBufferSource();
         src.buffer = listenPCMRef.current;
         src.playbackRate.value = playbackSpeedRef.current;
-        const g = ac.createGain(); g.gain.value = mutedRef.current?0:1; src.connect(g); g.connect(ac.destination); src._muteGain=g;
+        const g = ac.createGain(); g.gain.value = mutedRef.current?0:1;
+        src.connect(g); g.connect(ac.destination); src._muteGain = g;
         src.start(0, offsetSec);
         originalSourceRef.current = src;
         originalPlaybackRef.current = true;
-        src.onended = ()=>{ originalSourceRef.current=null; originalPlaybackRef.current=false; };
-      }catch(_){ originalPlaybackRef.current=false; }
+        // onended guards against stale resets — only reset if WE are still current.
+        src.onended = ()=>{
+          if(originalSourceRef.current === src){
+            originalSourceRef.current = null;
+            originalPlaybackRef.current = false;
+          }
+        };
+      }catch(_){ originalPlaybackRef.current = false; }
     } else {
-      // Original → Piano. Stop the buffer; step() will resume sampler triggers
-      // on the next chord boundary (the originalPlaybackRef gate just opened).
-      try{ if(originalSourceRef.current){ originalSourceRef.current.stop(); originalSourceRef.current.disconnect(); originalSourceRef.current=null; } }catch(_){}
+      // ORIG → PIANO. Stop the buffer, then immediately trigger the current
+      // chord so there's no audible gap until step() reaches the next one.
+      stopOriginal();
       originalPlaybackRef.current = false;
+      const c = chordsArr[idx];
+      if(c && c.n && c.n.length){
+        try{
+          for(const note of c.n){
+            if(typeof note.m === 'number') playNote(note.m, note.v||88, note.durMs||400);
+          }
+          // Light-up keys to match the audible chord.
+          setActive(p=>{ const s=new Set(p); for(const n of c.n){ if(typeof n.m==='number') s.add(n.m); } return s; });
+        }catch(_){}
+      }
     }
     // Intentionally NOT including `playing` or `disp` — toggle is the only
-    // trigger; including them would cause stutters on every chord tick.
+    // trigger; including them would re-fire on every chord/state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[playSourceMic]);
 

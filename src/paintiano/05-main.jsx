@@ -5217,9 +5217,8 @@ Composition rules:
     const stopSampler = ()=>{
       try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
       setActive(new Set());
-      // Release timers that would have un-highlighted notes after sustain.
-      for(const t of timers.current) clearTimeout(t);
-      timers.current = []; timersSet.current.clear();
+      // Note: do NOT clear timers.current — that holds the paint animation
+      // schedule (step() chain). Only the sampler audio is being hushed.
     };
     const stopOriginal = ()=>{
       const src = originalSourceRef.current;
