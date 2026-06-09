@@ -478,7 +478,7 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
-      const PALETTE_VERSION='3';
+      const PALETTE_VERSION='4';
       const savedVersion=localStorage.getItem('paintiano_palette_version');
       if(savedVersion!==PALETTE_VERSION){localStorage.removeItem('paintiano_custom_palette');localStorage.setItem('paintiano_palette_version',PALETTE_VERSION);return null;}
       const raw=localStorage.getItem('paintiano_custom_palette');
@@ -490,15 +490,10 @@ export default function Paintiano() {
     }catch(_){}
     return null;
   });
-  // Default Custom palette = the exact OPPOSITE of Harmony: each pitch class gets
-  // the complementary hue (Harmony's COF hue + 180°). So the moment you open
-  // Custom it already plays AND sounds maximally different from Color/Harmony —
-  // no silent grey default, and the contrast is obvious on first listen. The user
-  // can still recolour any swatch in the editor.
-  // Custom default — derived from CUSTOM_DEFAULT_HUE (inverse-Harmony aesthetic:
-  // consonant intervals get distant hues, dissonant intervals get close ones).
-  // Saturation 80, lightness 55 — same anchor as before so existing artwork
-  // doesn't drift in tone, only in hue assignment.
+  // Default Custom palette — derived from CUSTOM_DEFAULT_HUE (inverse-Harmony
+  // aesthetic: consonant intervals get distant hues, dissonant intervals get
+  // close ones). Anti-harmony as a starting point so it doesn't feel like a
+  // rotated Harmony. The user can recolour any swatch in the editor (Pro).
   const defaultCustomPalette=useMemo(()=>Array.from({length:12},(_,pc)=>{
     const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
     return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
