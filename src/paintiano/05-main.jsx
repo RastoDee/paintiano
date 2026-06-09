@@ -7977,8 +7977,10 @@ Composition rules:
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
           // Palette button is the always-on companion — it joins Next/Story/Save
           // if those are showing, sits alone (centred by the flex layout) when
-          // they're not. Hidden only if the painting has no content yet.
-          const showPaletteFs = chords.length>0;
+          // they're not. Hidden until there is actual painting on the canvas
+          // (not just chords queued up): disp>0 means at least one chord has
+          // been drawn; playing / holdPaused covers active and paused playback.
+          const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
           if(!exportReadyFs && !showNextFs && !showPaletteFs) return null;
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
