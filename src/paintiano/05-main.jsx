@@ -5409,30 +5409,23 @@ Composition rules:
         composedModeRef.current=true;
       }
       let lastCommit=performance.now();
-      const COMMIT_INTERVAL=150; // detection runs at ~6.6 Hz
-      const MIN_HOLD_MS=180;     // shorter than this isn't committed
+      const COMMIT_INTERVAL=120; // sample chord identity frequently
+      const MIN_HOLD_MS=100;     // very short — catch quick changes; only filter very brief flickers
       // Adaptive noise gate is the ONLY filter — distinguishes silence/room
       // noise from any audio. Everything that gets past it gets painted, even
       // distorted or rough detections. The point is "I hear something" → paint,
       // not perfect transcription.
       let noiseFloor=0.002;
-      const NOISE_GATE_MULT=1.8;
-      const RMS_FLOOR_MIN=0.003;
-      // Smoothing window: majority vote over last HIST_LEN samples.
-      // 5 × 150 ms = 750 ms — responsive enough for 1–2 chord/sec progressions.
-      const HIST_LEN=5;
-      const STABLE_COUNT=3;       // event must hit ≥3/5 of the window
-      const chordHist=[];         // signatures of recent events
-      const eventByKey={};        // signature → notes[] (most recent occurrence)
+      const NOISE_GATE_MULT=1.8;  // signal must be 1.8× the noise floor
+      const RMS_FLOOR_MIN=0.003;  // absolute floor — true silence
       let pendingSig='';
       let pendingNotes=null;
       let prevChordStart=performance.now();
       const emitChord=(notes,heldMs)=>{
-        // Play it as a piano voicing so the listened-to music gets an audible
-        // cover, like the main Music mode plays its chord sequences.
+        // Silent painting — highlight + record, but NO playback during the
+        // capture session (the user is already hearing the source audio).
         const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
-        notes.forEach(({m,v})=>{
-          playNote(m,v||90,sustainMs);
+        notes.forEach(({m})=>{
           setActive(p=>{const s=new Set(p);s.add(m);return s;});
           pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(sustainMs,1000));
         });
@@ -5452,8 +5445,8 @@ Composition rules:
       // Returns {sig, notes} or null.
       const buildEvent=(mag,liveSr)=>{
         const chroma=computeChroma(mag,liveSr);
-        const det=detectChord(chroma); // may be null
-        const peaks=pickPitches(mag,liveSr,0.10); // top peaks, decent prominence
+        const det=detectChord(chroma); // null below 0.60 conf
+        const peaks=pickPitches(mag,liveSr,0.02); // original sensitivity
         if(det){
           const notes=generateVoicing(det.root,det.quality);
           return { sig:'C:'+det.root+':'+det.quality, notes };
@@ -5482,7 +5475,6 @@ Composition rules:
             if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
             pendingNotes=null;pendingSig='';
           }
-          chordHist.length=0;
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
         if(now-lastCommit>COMMIT_INTERVAL){
@@ -5490,24 +5482,14 @@ Composition rules:
           const mag=fftMag(buf);
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
           const ev=buildEvent(mag,liveSr);
-          const sig=ev?ev.sig:'_';
-          if(ev) eventByKey[sig]=ev.notes;
-          chordHist.push(sig);
-          if(chordHist.length>HIST_LEN) chordHist.shift();
-          const counts={};
-          for(const s of chordHist) counts[s]=(counts[s]||0)+1;
-          let bestSig='_',bestCount=0;
-          for(const s in counts) if(counts[s]>bestCount){bestCount=counts[s];bestSig=s;}
-          if(bestSig==='_' || bestCount<STABLE_COUNT){
-            listenRafRef.current=requestAnimationFrame(tick);return;
-          }
-          if(bestSig!==pendingSig){
+          if(ev && ev.sig!==pendingSig){
+            // Event changed. Flush previous, arm new — no stability gate.
             if(pendingNotes){
               const heldMs=now-prevChordStart;
               if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
             }
-            pendingSig=bestSig;
-            pendingNotes=eventByKey[bestSig] || null;
+            pendingSig=ev.sig;
+            pendingNotes=ev.notes;
             prevChordStart=now;
           }
         }
