@@ -8659,10 +8659,13 @@ Composition rules:
             export a half-animated piece. Hidden in the image source view (its
             own controls live elsewhere). */}
         {viewMode!=='image' && (()=>{
+          // Save enables once there's something to save and nothing is
+          // actively running. After Stop Live the LIVE pill is gone, micArmed
+          // may be true with chords waiting — Save is fine in that state. Play
+          // (current), recording, busy or demo reel still block.
           const exportReady =
-            (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
-             !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording)
-            || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording);
+            chords.length>0 && !playing && !anim && !holdPaused &&
+            !demoReelOn && !micActive && !busy && !recording;
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
               title={exportReady?t('save'):t('exportNeedsPlay')}
