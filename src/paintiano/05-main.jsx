@@ -5154,6 +5154,10 @@ Composition rules:
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
       try{if(audioElRef.current)audioElRef.current.pause();}catch(_){}
       try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current=null;}}catch(_){}
+      // Pause the Original-source buffer too. Web Audio BufferSources can't be
+      // paused — stop and let startPlay's Resume branch recreate at offset.
+      try{if(originalSourceRef.current){originalSourceRef.current.stop();originalSourceRef.current.disconnect();originalSourceRef.current=null;}}catch(_){}
+      originalPlaybackRef.current=false;
       setActive(new Set());
       setPlaying(false);setAnim(false);
       // User-initiated pause/stop = close recording window without sealing.
