@@ -736,6 +736,8 @@ export default function Paintiano() {
   // 'original' when a blob is available — the cleanest sound the user could
   // get. Falls back to piano automatically if no blob.
   const [playSourceMic, setPlaySourceMic] = useState('original');
+  const playSourceMicRef = useRef('original');
+  useEffect(()=>{ playSourceMicRef.current = playSourceMic; },[playSourceMic]);
   // Reactive flag — true once listenBlobRef has a finalised recording. Refs
   // alone don't trigger re-renders, so the toggle UI needs this companion.
   const [hasMicBlob, setHasMicBlob] = useState(false);
@@ -4772,7 +4774,7 @@ Composition rules:
     // Mic/Music with Original source selected: route the recorded blob to the
     // speakers, mute the sampler for this playthrough, paint visually as
     // usual. Falls back to piano if anything in the decode/source path failed.
-    const useOriginalListen = draftOwnerRef.current==='listen' && playSourceMic==='original' && listenPCMRef.current;
+    const useOriginalListen = draftOwnerRef.current==='listen' && playSourceMicRef.current==='original' && listenPCMRef.current;
     if(useOriginalListen){
       try{
         const ac=Tone.getContext().rawContext;
