@@ -5536,12 +5536,12 @@ Composition rules:
       // a plain {audio:true} request which iOS always accepts.
       let stream;
       try{
-        // noiseSuppression: ON — browser-level DSP (Chrome/Safari WebRTC) is
-        // gentle on musical transients and removes the ambient hum / fan noise
-        // that was making playback sound dirty. echoCancellation stays OFF so
-        // we don't get artefacts on the source music; autoGainControl OFF so
-        // the dynamic range is preserved (soft passages stay soft).
-        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:false},video:false});
+        // iOS Safari's noiseSuppression is voice-tuned — it crushes musical
+        // spectrum and pushes vocals forward. Disable on iOS, let our own
+        // Web Audio chain (HP + compressor below) do the cleaning. Desktop
+        // browsers ship gentler NS, so we keep it on there.
+        const isiOS = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:!isiOS,autoGainControl:false},video:false});
       }catch(ce){
         if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
           stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
@@ -7946,7 +7946,7 @@ Composition rules:
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
-          const canRollNextFs = !anim && !working && !demoReelOn && !recording;
+          const canRollNextFs = !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
           if(!exportReadyFs && !showNextFs) return null;
           return (
@@ -8665,13 +8665,13 @@ Composition rules:
             ↺
           </button>
         )}
-        {effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(()=>{
+        {effectiveStyle&&chords.length>0&&!recording&&!micActive&&viewMode!=='image'&&(()=>{
           // Next is available whenever there's a painting on the canvas — during
           // Play, during Pause, AND after the track ends. Manual artist → cycle
           // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
           // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
           // with no randomMode).
-          const canRoll = !anim && !working && !demoReelOn && !recording;
+          const canRoll = !anim && !working && !demoReelOn && !recording && !micActive;
           if(!randomMode) return null;
           return (
             <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else { setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
