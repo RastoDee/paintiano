@@ -1263,7 +1263,7 @@ function _rectChordColor(chords, pIdx, MAX_RECTS, gc){
 // stack them with uneven heights (Rothko rarely splits evenly), inset them from
 // the canvas edges, and feather every edge so the fields breathe like stained
 // washes. Fields reveal progressively as lim advances.
-function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   const cn=chords.length;
@@ -1272,13 +1272,12 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  3 = Multiform (free blurred patches).  4 = Seagram (dark portal).
   //  5 = Black on Grey (recoloured: blue over ochre).  6 = Incandescent (glowing warm fields).
   {
-    const _rocr=_seedRnd(991,ss,3,17); _rocr();_rocr();
-    const _ropick=(_rocr()*_capN(7))|0;
+    const _pn=_capN(7); const _ropick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_ropick===3){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ropick===4){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ropick===5){ rothkoPhaseBlackGrey(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ropick===6){ rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original stacked/row/grid body
+    // else fall through to original stacked/row/grid body (variant 0/1/2)
   }
   // Rothko is intentionally minimal — even 12 fields is at the high end of his
   // late stacked compositions, so we cap there rather than chasing density.
@@ -1539,7 +1538,7 @@ function rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 //     in successive voice colors with an organic figure in the centre panel.
 //   • SCATTERED CUT-OUTS: each region = a flat saturated ground with one large
 //     strewn organic shape (blob / star / leaf / algae frond).
-function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   // ── PHASE CHOOSER: commit to ONE of Matisse's modes per painting ──
@@ -1554,9 +1553,7 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  D = Nice interior (window/room bands with patterned panels).
   //  E = The Dance (curved figures on blue/green ground).
   //  F = Jazz organic (bold black-outlined organic cut shapes on white).
-  const cr=_seedRnd(202,ss,59,79);
-  cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick=(cr()*_capN(6))|0;
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ matissePhaseNice(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -1945,7 +1942,7 @@ function matissePhaseJazz(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // Per pass: a long curving drip line (style varies — thick smooth / thin
 // spidery / loop-back) + dense bead chain + heavy splatter cloud + occasional
 // fat blob where paint pooled.
-function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(lim === 0 || !chords || chords.length === 0) return;
   const ss = sessionSeed|0;
   const N = Math.min(lim, chords.length);
@@ -1955,13 +1952,12 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  0/1 = Dense all-over / Wider sparser (original body below, via pollVariant).
   //  2 = Black pourings.  3 = Totemic figuration.  4 = Handprints+drip.  5 = Blue Poles.
   {
-    const _pcr=_seedRnd(909,ss,29,61); _pcr();_pcr();
-    const _ppick=(_pcr()*_capN(6))|0;
+    const _pn=_capN(6); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_ppick===2){ pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ppick===3){ pollockPhaseTotem(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ppick===4){ pollockPhaseHands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ppick===5){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original dense/wider body
+    // else fall through to original dense/wider body (variant 0/1)
   }
 
   // Palette weights rebalanced for chromatic painting: ink dropped from 0.28
@@ -2642,7 +2638,7 @@ function pollockPhasePoles(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // biomorphic blobs, eyes, crescents, triangles. Full Miró palette -- black,
 // red, green, blue, yellow, orange -- driven by gc() note-color mapping.
 // Same freeze/seed/chord architecture as Pollock/Kandinsky.
-function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   // ── PHASE CHOOSER: commit to ONE of Picasso's modes per painting ──
@@ -2653,9 +2649,7 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  D = Harlequin Mosaic (random rows/cols, 3 orientations, skip gaps).
   //  E = Cubist Mask (random 1-2 masks, 4 face shapes, varied features).
   //  F = Cubist Dove (random 1-3 doves, 3 poses, optional olive branch).
-  const cr=_seedRnd(404,ss,53,89);
-  cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick=(cr()*_capN(6))|0;
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ picassoPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ picassoPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ picassoPhaseRose(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3428,7 +3422,7 @@ function picassoPhaseGlass(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // partition (regions stay large no matter the song length): cream ground, big
 // rectangles, ~40% filled with bold chord colors (rest cream, a few black),
 // thick black grid lines between every region. Reveals progressively with lim.
-function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   const cn=chords.length;
@@ -3468,7 +3462,7 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   };
 
   // ── STYLE CHOOSER: commit to ONE of Mondrian's real phases per painting ──
-  // Stable from the session seed, re-rolls on Vary/Random.
+  // Determined by phaseIndex (modulo phase count). The Next button cycles it.
   //  A = Classic neoplastic block-grid (white-dominant, thick black lines, blocks)
   //  B = Sparse late grid (mostly white, very few color blocks, thinner lines)
   //  C = Boogie-Woogie (NO black — colored line-tracks of small alternating squares)
@@ -3477,23 +3471,9 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  F = Lozenge (diamond canvas, grid rotated 45°)
   //  G = Tree (abstraction of branching lines)
   //  H = Pier & Ocean (scattered plus/minus marks forming a mesh)
-  const sr=_seedRnd(555,ss,29,83);
-  sr();sr(); // warm up — first xorshift output after reseed is poorly distributed
-  const styleRoll=sr();
-  // 8 phases, roughly equal weight (A a touch heavier as the canonical look).
-  // If a variant cap is active (free tier: 2), collapse to A/B only — preserves
-  // the canonical Mondrian look but locks the other 6 phases behind the paywall.
-  let phase;
-  if(_variantCap != null && _variantCap < 8){
-    // Map roll into the first _variantCap phases by equal slicing.
-    const PHASES = ['A','B','C','D','E','F','G','H'];
-    const idx = Math.min(_variantCap - 1, (styleRoll * _variantCap) | 0);
-    phase = PHASES[idx];
-  } else {
-    phase = styleRoll<0.18 ? 'A' : styleRoll<0.30 ? 'B' : styleRoll<0.42 ? 'C'
-          : styleRoll<0.54 ? 'D' : styleRoll<0.66 ? 'E' : styleRoll<0.78 ? 'F'
-          : styleRoll<0.89 ? 'G' : 'H';
-  }
+  const PHASES = ['A','B','C','D','E','F','G','H'];
+  const _mpn = _capN(8);
+  const phase = PHASES[((phaseIndex|0)%_mpn+_mpn)%_mpn];
   if(phase==='E'){ mondrianPhaseBroadway(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='F'){ mondrianPhaseLozenge(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='G'){ mondrianPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3921,7 +3901,7 @@ function mondrianPhasePier(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // chord at the corresponding position via gc(); brightness of facets builds the
 // 3D read. Spheres pull cells outward and enlarge them near their centre, then
 // release back to the flat grid at their rim.
-function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
@@ -3932,13 +3912,12 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  3 = Vega (colour deformed checkerboard).
   //  4 = Hexagon cubes (isometric).    5 = Colour interval grid.
   {
-    const _vcr=_seedRnd(531,ss,23,67); _vcr();_vcr();
-    const _vpick=(_vcr()*_capN(6))|0;
+    const _pn=_capN(6); const _vpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_vpick===2){ vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===3){ vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===4){ vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===5){ vasarelyPhaseInterval(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original sphere/cube body
+    // else fall through to original sphere/cube body (variant 0/1)
   }
   const COLS = cn<=8 ? 10 : cn<=24 ? 14 : cn<=60 ? 18 : cn<=140 ? 24 : cn<=300 ? 32 : cn<=600 ? 40 : 48;
   const ROWS = Math.max(6, Math.round(COLS * (CH / CW)));
@@ -4176,7 +4155,7 @@ function vasarelyPhaseInterval(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 //     (Stella's "Protractor" series).
 // Each colour band/ring is pulled from a chord via gc(), so the painting is a
 // direct reading of the music; rings/bands reveal progressively as lim advances.
-function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
@@ -4204,8 +4183,7 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  3 = Mitered maze.  4 = Eccentric polygons.  5 = Interlocking arcs.
   let _stellaConcentric = true;
   {
-    const _scr=_seedRnd(671,ss,31,73); _scr();_scr();
-    const _spick=(_scr()*_capN(6))|0;
+    const _pn=_capN(6); const _spick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_spick===2){ stellaPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===3){ stellaPhaseMaze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===4){ stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -4371,7 +4349,7 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // pieces breathe with lots of white, long pieces crowd the canvas. Each blot
 // is a soft radial bloom coloured from a chord via gc(); drips fall from the
 // heavier blots. Reveals progressively as lim advances.
-function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
@@ -4399,13 +4377,12 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  0/1 = Bloom blots / Edge (original body below, via bloomVariant).
   //  2 = Clustered masses.  3 = Blue Balls.  4 = Grid/lattice.  5 = Big Red mural.
   {
-    const _fcr=_seedRnd(841,ss,17,53); _fcr();_fcr();
-    const _fpick=(_fcr()*_capN(6))|0;
+    const _pn=_capN(6); const _fpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_fpick===2){ francisPhaseCluster(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===3){ francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===4){ francisPhaseGrid(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===5){ francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original bloom/edge body
+    // else fall through to original bloom/edge body (variant 0/1)
   }
 
   // Blot count auto-scales: short = airy, long = crowded. Curve grows past
@@ -4610,7 +4587,7 @@ function francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // rays (Hilma af Klint's "The Ten Largest" and "Altarpieces"). Seed picks the
 // composition per painting. Each form is coloured from a chord via gc(); forms
 // reveal progressively as lim advances. Soft pastel, organic, mystical.
-function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
@@ -4643,13 +4620,12 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  2 = Ten Largest (stacked ovoid forms).  3 = The Swan (split field + swans, recoloured).
   //  4 = Altarpiece pyramid (triangle + disc).  5 = Botanical (symmetric plant chart).
   {
-    const _kcr=_seedRnd(913,ss,19,59); _kcr();_kcr();
-    const _kpick=(_kcr()*_capN(6))|0;
+    const _pn=_capN(6); const _kpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_kpick===2){ klintPhaseTen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_kpick===3){ klintPhaseSwan(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_kpick===4){ klintPhaseAltar(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_kpick===5){ klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original spiral/mandala body
+    // else fall through to original spiral/mandala body (variant 0/1)
   }
   const mandala = rnd() < 0.5;
 
@@ -4887,7 +4863,7 @@ function klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // blocks — mosaic squares, spirals, concentric eyes, and triangle fields — each
 // filled with colour from a chord via gc(). The gold dominates; colour blocks
 // are inlaid like jewels. Ornaments reveal progressively as lim advances.
-function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
@@ -4913,13 +4889,12 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  2 = Tree of Life (spiral branches).  3 = Mosaic squares/spirals/eyes.
   //  4 = Floral meadow.  5 = Water Serpents (flowing scales).
   {
-    const _gcr=_seedRnd(971,ss,13,47); _gcr();_gcr();
-    const _gpick=(_gcr()*_capN(6))|0;
+    const _pn=_capN(6); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_gpick===2){ klimtPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===3){ klimtPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===4){ klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===5){ klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original ornament-grid/frieze body
+    // else fall through to original ornament-grid/frieze body (variant 0/1)
   }
   const gg = ctx.createLinearGradient(0, 0, CW, CH);
   gg.addColorStop(0, '#b8902f');
@@ -5174,7 +5149,7 @@ function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // "energy" ticks around them (Keith Haring's street-pop language). Each cell
 // is a colour from a chord via gc(); a simple glyph (figure, heart, star,
 // spiral, burst) sits on top with a heavy black contour and motion dashes.
-function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
@@ -5201,14 +5176,13 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  1 = Mural (big scattered glyphs).  2 = Subway chalk (colour figures on dark, recoloured).
   //  3 = Radiant baby.  4 = Barking dog row.  5 = Dancing figures crowd.
   {
-    const _hcr=_seedRnd(1011,ss,11,43); _hcr();_hcr();
-    const _hpick=(_hcr()*_capN(6))|0;
+    const _pn=_capN(6); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_hpick===1){ haringPhaseMural(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===2){ haringPhaseSubway(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===3){ haringPhaseBaby(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===4){ haringPhaseDog(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===5){ haringPhaseDance(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original glyph-grid body
+    // else fall through to original glyph-grid body (variant 0)
   }
   const COLS = cn<=6?3:cn<=18?4:cn<=45?5:cn<=100?6:cn<=200?7:cn<=350?9:12;
   const ROWS = Math.max(3, Math.round(COLS*(CH/CW)));
@@ -5457,7 +5431,7 @@ function haringPhaseDance(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // alternating colours pulled from chords via gc(); the wave parameters are
 // modulated by the music so louder/higher passages ripple harder. Reveals
 // progressively top-to-bottom as lim advances.
-function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
@@ -5484,13 +5458,12 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  3 = Cataract (warm/cold colour ribbons).  4 = Diagonal lozenges.
   //  5 = Triangle grid recoloured.
   {
-    const _rcr=_seedRnd(1031,ss,7,37); _rcr();_rcr();
-    const _rpick=(_rcr()*_capN(6))|0;
+    const _pn=_capN(6); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_rpick===2){ rileyPhaseBWWaves(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===3){ rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===4){ rileyPhaseLozenge(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===5){ rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original wavy-stripes/ripple body
+    // else fall through to original wavy-stripes/ripple body (variant 0/1)
   }
   const darkC = chordCol(0, 0.5);
   const liteC = chordCol(Math.floor(cn/2), 1.25);
@@ -5721,7 +5694,7 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // (or tile) takes its colour from a chord via gc(); the halftone density and
 // dot colour read the music. Two variants by seed: a panel grid, or a single
 // big burst-centred panel. Reveals progressively as lim advances.
-function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
@@ -5747,13 +5720,12 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   //  0/1 = Panel grid / Single big panel (original body below, via comicVariant).
   //  2 = Ben-Day full field.  3 = Brushstrokes.  4 = Dot landscape.  5 = Speech bubble.
   {
-    const _ccr=_seedRnd(1071,ss,5,29); _ccr();_ccr();
-    const _cpick=(_ccr()*_capN(6))|0;
+    const _pn=_capN(6); const _cpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_cpick===2){ comicPhaseBenDay(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===3){ comicPhaseBrush(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===4){ comicPhaseLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===5){ comicPhaseBubble(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original panel-grid/single-panel body
+    // else fall through to original panel-grid/single-panel body (variant 0/1)
   }
   function halftone(x0, y0, w, h, dotCol, spacing, rad){
     ctx.fillStyle = css(dotCol);
@@ -6114,17 +6086,15 @@ function comicPhaseBubble(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed){
+function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   // ── PHASE CHOOSER: commit to ONE of Kusama's signature modes per painting ──
-  // Stable from the session seed, re-rolls on Vary/Random. Weighted ~60/40 to A.
+  // Determined by phaseIndex (modulo phase count). The Next button cycles it.
   //  A = Polka dots on color blocks — original.  B = Dot field — original.
   //  C = Infinity Nets (looping mesh).  D = Dotted Spheres (floating dot orbs).
   //  E = Accumulation (layered dot masses).  F = Tendril nets (light on colour).
-  const cr=_seedRnd(808,ss,37,71);
-  cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick=(cr()*_capN(6))|0;
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ kusamaPhaseB(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===2){ kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===3){ kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,ss); return; }
@@ -6411,19 +6381,17 @@ function kusamaPhaseTendril(ctx,CW,CH,chords,lim,gc,sessionSeed){
 }
 
 
-function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   // ── PHASE CHOOSER: commit to ONE of Miró's modes per painting ──
-  // Stable from the session seed, re-rolls on Vary/Random. Weighted ~60/40 to A.
+  // Determined by phaseIndex (modulo phase count). The Next button cycles it.
   //  A = Constellations — original.  B = Bright sparse — original.
   //  C = Blue triptych (deep blue field, few floating marks).
   //  D = Biomorphic creatures (curvy organic figures).
   //  E = Harlequin Carnival (busy confetti of small shapes).
   //  F = Primary signs on white (clean white ground, bold red/blue/black signs).
-  const cr=_seedRnd(303,ss,47,83);
-  cr();cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick=(cr()*_capN(6))|0;
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -6856,7 +6824,7 @@ function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc){
+function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, phaseIndex){
   if(chordCount === 0) return;
   const ss = sessionSeed|0;
   // Bauhaus palette tuned to the active colour scheme. Instead of one hard-coded
@@ -6869,15 +6837,10 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc){
     return pitches.map(m=>{ const c=gc(m,100); return Array.isArray(c)?`rgb(${c[0]},${c[1]},${c[2]})`:c; });
   })();
   // ── PHASE CHOOSER: commit to ONE of Kandinsky's compositional modes ──
-  // Stable from the session seed, re-rolls on Vary/Random (seed changes).
-  //  A = Cosmic scatter (free composition: triangles, rings, diagonals, arcs,
-  //      zigzags spread across the canvas) — the original Kandinsky look.
-  //  B = Bauhaus grid (his teaching-era orderly side: concentric circles
-  //      seated in a loose grid + a few bold diagonals + a checkerboard corner).
-  // Weighted ~60/40 toward A so the original stays the common case.
-  const cr = _seedRnd(606, ss, 41, 97);
-  cr(); cr(); // warm up — first xorshift output after reseed is poorly distributed
-  const pick = (cr()*_capN(6))|0;
+  // Determined by phaseIndex (modulo phase count). The Next button cycles it.
+  //  A = Cosmic scatter (free composition).  B = Bauhaus grid.
+  //  C = Circles (concentric).  D = Composition 8.  E = Improvisation.  F = Paris.
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ kandinskyPhaseB(ctx, CW, CH, chordCount, ss, mode, palette); return; }
   if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, chordCount, ss, mode, palette); return; }
   if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, chordCount, ss, mode, palette); return; }

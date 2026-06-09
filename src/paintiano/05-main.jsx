@@ -542,7 +542,7 @@ export default function Paintiano() {
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);
-  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [phaseIndex,setPhaseIndex]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
   // Variation history for Random mode prev/next navigation. saltHistory holds
   // the sequence of random salts that have been shown; saltIdxRef points at the
   // current one. Play-from-start and Loop append+advance (fresh variation);
@@ -882,8 +882,13 @@ export default function Paintiano() {
         h = Math.imul(h, 16777619);
       }
     }
-    return (h >>> 0) ^ (rndSalt>>>0);
-  }, [chords, rndSalt, structureSeedLock]);
+    // Seed is derived ONLY from chord content — same song = same painting
+    // for any given artist style. VARY changes tones → chord hash changes →
+    // painting changes (legitimately, because the song itself is different).
+    // SHUFFLE changes only the artist → chord hash stays → painting stays
+    // identical for that song in the new artist's style.
+    return (h >>> 0);
+  }, [chords, structureSeedLock]);
   // ── SHUFFLE MODE ──────────────────────────────────────────────────────────
   // When NO artist is selected but Random is ON, the painting shuffles across
   // all artist styles: each variation (Play / Next / Vary → new seed) picks a
@@ -901,16 +906,38 @@ export default function Paintiano() {
     : SHUFFLE_POOL_ALL;
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
-    // Mix the seed a little more so the style pick isn't correlated with the
-    // per-artist phase chooser (which also reads the raw seed).
+    // Default artist is deterministic per song (chord hash). Dice/Next/Play
+    // increments shuffleArtistIndex so the user can step through the whole
+    // SHUFFLE_POOL while the song itself stays the same. Each (song, artist)
+    // combination renders an identical painting.
     let h = (pollockSessionSeed>>>0);
     h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
-    return SHUFFLE_POOL[(h>>>0) % SHUFFLE_POOL.length];
-  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL]);
+    const basePick = (h>>>0) % SHUFFLE_POOL.length;
+    return SHUFFLE_POOL[(basePick + shuffleArtistIndex) % SHUFFLE_POOL.length];
+  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL, shuffleArtistIndex]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
   // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
   // it only needs note MIDI + the colour fn, which every source provides.
   const effectiveStyle = style || shuffleStyle || (notesMode ? 'notes' : null);
+  // Pick a fresh random phaseIndex whenever the song OR the active artist
+  // changes — that triggers a new "style" for that (song, artist) pair on the
+  // first Play. Stays stable across repeated Plays of the same (song, artist).
+  // VARY keeps phaseIndex (Vary changes tones, but the artist's style should
+  // persist). Next button increments phaseIndex to cycle styles manually.
+  const prevSongArtistRef = useRef({seed:0, art:null});
+  useEffect(()=>{
+    const seed = pollockSessionSeed>>>0;
+    const art = effectiveStyle || '';
+    const prev = prevSongArtistRef.current;
+    if(prev.seed !== seed || prev.art !== art){
+      prevSongArtistRef.current = {seed, art};
+      // Skip the initial mount when there are no chords yet — avoids a stray
+      // randomization before the user has loaded any song.
+      if(seed !== 0 || art){
+        setPhaseIndex((Math.random()*1000)|0);
+      }
+    }
+  }, [pollockSessionSeed, effectiveStyle]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
@@ -1535,22 +1562,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         } else if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0);
         // Run the canvas-wide overlay on top (this is the only per-frame cost
         // that legitimately scales with lim).
-        if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed);
-        else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc);
-        else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='bulge') drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='arcs') drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='bloom') drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='spiral') drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='gold') drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
-        else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, phaseIndex);
+        else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, phaseIndex);
+        else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='bulge') drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='arcs') drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='bloom') drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='spiral') drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='gold') drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -1561,54 +1588,54 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Pollock global drip overlay — runs AFTER all cells have rendered.
       // Drips ignore cell boundaries and unify the painting under the splatter.
       if(style==='pollock' && lim>0){
-        drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='picasso' && lim>0){
-        drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='kusama' && lim>0){
-        drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed);
+        drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, phaseIndex);
       }
       if(style==='miro' && lim>0){
-        drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       // Kandinsky canvas-wide contour overlay — large outlined shapes in
       // varied colors layered over the per-cell Kandinsky composition.
       if(style==='kandinsky' && lim>0){
-        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc);
+        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, phaseIndex);
       }
       if(style==='rothko' && lim>0){
-        drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='matisse' && lim>0){
-        drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='mondrian' && lim>0){
-        drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='bulge' && lim>0){
-        drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='arcs' && lim>0){
-        drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='bloom' && lim>0){
-        drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='spiral' && lim>0){
-        drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='gold' && lim>0){
-        drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='pop' && lim>0){
-        drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='wave' && lim>0){
-        drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(style==='comic' && lim>0){
-        drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode);
+        drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
       if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
@@ -2916,7 +2943,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Reset seed + structure lock — multiple Vary taps may have built up
       // a non-zero rndSalt and a structureSeedLock; both must reset so the
       // next painting starts from a clean seed state.
-      setRndSalt(0); setStructureSeedLock(null);
+      setRndSalt(0); setStructureSeedLock(null); setShuffleArtistIndex(0);
       saltHistoryRef.current=[0]; saltIdxRef.current=0; setVariationPos(0);
       // Substrate cache + last-paint signature: invalidate fully so the
       // renderer can't take any fast-path shortcut against stale data.
@@ -4664,7 +4691,12 @@ Composition rules:
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
     if(!isResume){
-      if(randomModeRef.current){ setStructureSeedLock(null); advanceVariation(); }
+      if(randomModeRef.current){
+        setStructureSeedLock(null);
+        // Manual artist → rotate style. Shuffle (no manual artist) → rotate artist.
+        if(style){ setPhaseIndex(prev=>prev+1); }
+        else { setShuffleArtistIndex(prev=>prev+1); }
+      }
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
@@ -5817,53 +5849,53 @@ Composition rules:
         // hctx is already scaled; pass canvas-space CW/CH so the splatters
         // span the painting at export resolution.
         if(style==='pollock' && chords.length>0){
-          drawPollockOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawPollockOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='picasso' && chords.length>0){
-          drawPicassoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawPicassoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='kusama' && chords.length>0){
-          drawKusamaOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed);
+          drawKusamaOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, phaseIndex);
         }
         if(style==='miro' && chords.length>0){
-          drawMiroOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawMiroOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         // Kandinsky canvas-wide contour overlay.
         if(style==='kandinsky' && chords.length>0){
-          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode, gc);
+          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode, gc, phaseIndex);
         }
         if(style==='rothko' && chords.length>0){
-          drawRothkoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawRothkoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='matisse' && chords.length>0){
-          drawMatisseOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawMatisseOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='mondrian' && chords.length>0){
-          drawMondrianOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawMondrianOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='bulge' && chords.length>0){
-          drawBulgeOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawBulgeOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='arcs' && chords.length>0){
-          drawArcsOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawArcsOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='bloom' && chords.length>0){
-          drawBloomOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawBloomOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='spiral' && chords.length>0){
-          drawSpiralOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawSpiralOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='gold' && chords.length>0){
-          drawGoldOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawGoldOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='pop' && chords.length>0){
-          drawPopOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawPopOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='wave' && chords.length>0){
-          drawWaveOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawWaveOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
         if(style==='comic' && chords.length>0){
-          drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode);
+          drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
       }
       // Watermark policy: stamp "paintiano.app" unless we KNOW the user is
@@ -7255,7 +7287,7 @@ Composition rules:
             })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
             <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
+              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
               </button>
             </div>
@@ -7646,12 +7678,12 @@ Composition rules:
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
           const canRollNextFs = !anim && !working && !demoReelOn && !recording;
-          const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
+          const showNextFs = effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
           if(!exportReadyFs && !showNextFs) return null;
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
-                <button onClick={(e)=>{ e.stopPropagation(); advanceVariation(); wakeControls(); }} className="pf-lift" aria-label="next painting"
+                <button onClick={(e)=>{ e.stopPropagation(); if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   {t('nextPainting')||'next'} ›
                 </button>
@@ -8325,15 +8357,17 @@ Composition rules:
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
-        {randomMode&&effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(()=>{
+        {effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(()=>{
           // Next is available whenever there's a painting on the canvas — during
-          // Play, during Pause, AND after the track ends. Re-roll just changes
-          // the seed; a follow-up useEffect repaints the canvas with the new
-          // variation. We deliberately do NOT gate on `busy` because `busy`
-          // includes `playing`, which would wrongly disable Next during Play.
+          // Play, during Pause, AND after the track ends. Manual artist → cycle
+          // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
+          // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
+          // with no randomMode).
           const canRoll = !anim && !working && !demoReelOn && !recording;
+          const canNext = style || randomMode;
+          if(!canNext) return null;
           return (
-            <button className="pf-lift" onClick={()=>{ if(canRoll) advanceVariation(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
+            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
