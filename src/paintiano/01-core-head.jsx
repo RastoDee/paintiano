@@ -218,6 +218,30 @@ const specCol=(m,v=100)=>{const h=SPEC_HUE[m%12];const s=75+(v/127)*15;const[r,g
 // Harmony (musician's chromatic) and Spectral (physicist's chromatic).
 const PHI_HUE=Array.from({length:12},(_,pc)=>(pc*137.50776)%360);
 const phiCol=(m,v=100)=>{const h=PHI_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
+// Custom default — "inverse-Harmony" aesthetic. Where Harmony places
+// consonant intervals (fifths) close on the wheel and dissonances far,
+// this default does the opposite. Consonant intervals (P5, M3, m3, M6,
+// m6, P4) get far hues; dissonant intervals (m2, M2, TT, M7, m7) get
+// close hues. A pure linear mapping can't satisfy every consonant pair
+// at 180° simultaneously on 12 PCs, so this is a hand-picked compromise.
+// Marker pairs that verify the intent:
+//   C + G  (perfect fifth)   → 0°  vs 180°   — complementary
+//   C + F# (tritone)         → 0°  vs 330°   — close
+//   C + C# (semitone)        → 0°  vs 30°    — close
+const CUSTOM_DEFAULT_HUE=[
+  0,    // C   — root anchor
+  30,   // C#  — m2 close to C
+  60,   // D   — M2 close
+  240,  // D#  — m3 far
+  270,  // E   — M3 far
+  210,  // F   — P4 far
+  330,  // F#  — TT close
+  180,  // G   — P5 exactly complementary
+  90,   // G#  — m6 far
+  120,  // A   — M6 far
+  300,  // A#  — m7 medium
+  150,  // B   — M7 medium
+];
 
 // Fast RGBA string helper — avoids repeated template-string + toFixed allocations
 // in the hot inner draw loops. Rounds alpha to 3 decimal places inline.

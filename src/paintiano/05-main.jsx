@@ -478,7 +478,7 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
-      const PALETTE_VERSION='2';
+      const PALETTE_VERSION='3';
       const savedVersion=localStorage.getItem('paintiano_palette_version');
       if(savedVersion!==PALETTE_VERSION){localStorage.removeItem('paintiano_custom_palette');localStorage.setItem('paintiano_palette_version',PALETTE_VERSION);return null;}
       const raw=localStorage.getItem('paintiano_custom_palette');
@@ -495,9 +495,12 @@ export default function Paintiano() {
   // Custom it already plays AND sounds maximally different from Color/Harmony —
   // no silent grey default, and the contrast is obvious on first listen. The user
   // can still recolour any swatch in the editor.
+  // Custom default — derived from CUSTOM_DEFAULT_HUE (inverse-Harmony aesthetic:
+  // consonant intervals get distant hues, dissonant intervals get close ones).
+  // Saturation 80, lightness 55 — same anchor as before so existing artwork
+  // doesn't drift in tone, only in hue assignment.
   const defaultCustomPalette=useMemo(()=>Array.from({length:12},(_,pc)=>{
-    const oppHue=(COF[pc]+180)%360;
-    const [r,g,b]=fromHsl(oppHue,80,55);
+    const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
     return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
   }),[]);
   // Pro tier uses the user's saved palette (or default if empty). Free tier
@@ -742,6 +745,23 @@ export default function Paintiano() {
   // which palette is now driving the painting.
   const [colorToast, setColorToast] = useState(null);
   const colorToastTimerRef = useRef(null);
+  const cycleColorFs = useCallback(()=>{
+    const cycle = viewModeRef.current==='image' ? ['harmony','spectral','bw','custom'] : ['harmony','spectral','gold','custom'];
+    const cur = modeRef.current;
+    const idx = cycle.indexOf(cur);
+    const next = cycle[((idx<0?0:idx)+1) % cycle.length];
+    setMode(next);
+    if(canvasRef.current){
+      canvasRef.current.style.opacity='0';
+      setTimeout(()=>{ if(canvasRef.current) canvasRef.current.style.opacity='1'; },200);
+    }
+    try{
+      const label = (typeof t === 'function') ? t(next) : next;
+      setColorToast(label);
+      if(colorToastTimerRef.current) clearTimeout(colorToastTimerRef.current);
+      colorToastTimerRef.current = setTimeout(()=>setColorToast(null), 1500);
+    }catch(_){}
+  },[t]);
   // Reactive flag — true once listenBlobRef has a finalised recording. Refs
   // alone don't trigger re-renders, so the toggle UI needs this companion.
   const [hasMicBlob, setHasMicBlob] = useState(false);
@@ -7874,21 +7894,7 @@ Composition rules:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onClick={()=>{
-        wakeControls();
-        // Cycle color mode. In non-image view: harmony → spectral → gold → custom.
-        // In image view, BW stays as the mono option (BW images need it).
-        const cycle = viewMode==='image' ? ['harmony','spectral','bw','custom'] : ['harmony','spectral','gold','custom'];
-        const idx = cycle.indexOf(mode);
-        const next = cycle[((idx<0?0:idx)+1) % cycle.length];
-        if(canvasRef.current){canvasRef.current.style.opacity='0';}
-        setTimeout(()=>{ setMode(next); if(canvasRef.current)canvasRef.current.style.opacity='1'; },200);
-        // Toast — show the mode name for ~1.5s
-        const label = t(next);
-        setColorToast(label);
-        if(colorToastTimerRef.current) clearTimeout(colorToastTimerRef.current);
-        colorToastTimerRef.current = setTimeout(()=>setColorToast(null), 1500);
-      }} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c',cursor:'pointer'}}/>}
+      {immersive && <div onClick={()=>{ wakeControls(); cycleColorFs(); }} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c',cursor:'pointer'}}/>}
       {immersive && colorToast && (
         <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%, -50%)',zIndex:10005,padding:'14px 28px',borderRadius:30,background:'rgba(8,6,14,.72)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',color:'rgba(245,235,210,.95)',fontFamily:"'Outfit',sans-serif",fontSize:(.85*effScale)+'rem',fontWeight:600,letterSpacing:'.16em',textTransform:'uppercase',pointerEvents:'none',boxShadow:'0 8px 30px rgba(0,0,0,.55)',border:'1px solid rgba(201,168,76,.35)',animation:'pfDemoFade .18s ease-out'}}>
           {colorToast}
@@ -7904,7 +7910,7 @@ Composition rules:
           <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
         </div>
       )}
-      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
+      <div ref={canvasWrapRef} onClick={immersive ? (e)=>{ e.stopPropagation(); cycleColorFs(); wakeControls(); } : undefined} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',cursor:immersive?'pointer':'default',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onClick={e=>{
