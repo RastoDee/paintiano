@@ -1951,12 +1951,20 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
   //  0/1 = Dense all-over / Wider sparser (original body below, via pollVariant).
   //  2 = Black pourings.  3 = Totemic figuration.  4 = Handprints+drip.  5 = Blue Poles.
+  //  Free (cap=2) sees Dense + Blue Poles — those two are visually farthest
+  //  apart so the two-variant preview actually shows different paintings.
   {
     const _pn=_capN(6); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_ppick===2){ pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ppick===3){ pollockPhaseTotem(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ppick===4){ pollockPhaseHands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ppick===5){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_variantCap === 2){
+      // Free: 0 = Dense (fall through), 1 = Blue Poles.
+      if(_ppick===1){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    } else {
+      // Pro+: full ladder.
+      if(_ppick===2){ pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(_ppick===3){ pollockPhaseTotem(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(_ppick===4){ pollockPhaseHands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(_ppick===5){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    }
     // else fall through to original dense/wider body (variant 0/1)
   }
 

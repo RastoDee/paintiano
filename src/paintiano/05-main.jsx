@@ -8640,6 +8640,27 @@ Composition rules:
             {playSourceMic==='original'?'🎵 orig':'🎹 piano'}
           </button>
         )}
+        {/* Restart playback from chord 0 using the current source. Pairs with
+            the source toggle: toggle swaps Original ⇄ Piano in place (seamless);
+            ↺ jumps back to the beginning. Visible whenever there's a Mic listen
+            draft with a finalised recording and nothing live is happening. */}
+        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+          <button className="pf-lift"
+            onClick={()=>{
+              // Stop everything cleanly, reset position, then start fresh from idx 0.
+              stopAll();
+              setDisp(0); dispRef.current = 0;
+              resumeFromRef.current = null;
+              setHoldPaused(false); holdPausedRef.current = false;
+              // Defer one tick so the stopAll state flush settles before startPlay.
+              setTimeout(()=>{ startPlayRef.current?.(); }, 0);
+            }}
+            title="restart from start"
+            aria-label="restart from start"
+            style={{padding:'8px 12px',background:'rgba(232,85,122,.16)',color:'#ff7a9c',border:'1px solid rgba(232,85,122,.55)',borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',boxShadow:'0 3px 10px rgba(232,85,122,.25)'}}>
+            ↺
+          </button>
+        )}
         {effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(()=>{
           // Next is available whenever there's a painting on the canvas — during
           // Play, during Pause, AND after the track ends. Manual artist → cycle
