@@ -14233,6 +14233,10 @@ export default function Paintiano() {
   // persist). Next button increments phaseIndex to cycle styles manually.
   const prevSongArtistRef = useRef({seed:0, art:null});
   const varyInProgressRef = useRef(false);
+  // nextRollInProgressRef: set true by Next/Play when they already explicitly
+  // rolled phaseIndex themselves. Stops useEffect from double-rolling and
+  // causing a flicker (paint shows random_A then immediately swaps to random_B).
+  const nextRollInProgressRef = useRef(false);
   useEffect(()=>{
     const seed = pollockSessionSeed>>>0;
     const art = effectiveStyle || '';
@@ -14243,6 +14247,12 @@ export default function Paintiano() {
       // Don't re-randomize the style; consume the flag and skip.
       if(varyInProgressRef.current){
         varyInProgressRef.current = false;
+        return;
+      }
+      // Next/Play already set the new phaseIndex itself — consume the flag
+      // and don't re-roll (would cause a visible flicker between two styles).
+      if(nextRollInProgressRef.current){
+        nextRollInProgressRef.current = false;
         return;
       }
       // Skip the initial mount when there are no chords yet — avoids a stray
@@ -14796,12 +14806,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // next throttled tick. Detect it so we can bypass the playback throttle —
       // otherwise the new variation gets swallowed by the ~9fps skip and "Next"
       // appears to do nothing during playback.
-      const seedChanged = prev.pollockSessionSeed !== pollockSessionSeed;
+      const seedChanged = prev.pollockSessionSeed !== pollockSessionSeed
+        || prev.phaseIndex !== phaseIndex
+        || prev.shuffleArtistIndex !== shuffleArtistIndex;
       if(isOverlayStyle && playing && !seedChanged && lim<chords.length && (nowMs-lastOverlayPaintRef.current)<110){
         // Skip this overlay repaint — keep last frame on canvas. Record disp so
         // the next allowed repaint covers the gap.
         prev.disp = lim; prev.pending = pending;
-        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
+        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex,shuffleArtistIndex};
         return;
       }
       lastOverlayPaintRef.current = nowMs;
@@ -14959,8 +14971,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
       }
     }
-    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode]);
+    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex,shuffleArtistIndex};
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,phaseIndex,shuffleArtistIndex]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -18007,6 +18019,7 @@ Composition rules:
     if(!isResume){
       if(randomModeRef.current){
         setStructureSeedLock(null);
+        nextRollInProgressRef.current = true;
         // Manual artist → rotate style. Shuffle (no manual artist) → rotate
         // artist + roll a fresh random style for that new artist.
         if(style){ setPhaseIndex(prev=>prev+1); }
@@ -21002,7 +21015,7 @@ Composition rules:
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
-                <button onClick={(e)=>{ e.stopPropagation(); if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } wakeControls(); }} className="pf-lift" aria-label="next painting"
+                <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   {t('nextPainting')||'next'} ›
                 </button>
@@ -21685,7 +21698,7 @@ Composition rules:
           const canRoll = !anim && !working && !demoReelOn && !recording;
           if(!randomMode) return null;
           return (
-            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; if(style){ setPhaseIndex(prev=>prev+1); } else { setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
+            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else { setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
