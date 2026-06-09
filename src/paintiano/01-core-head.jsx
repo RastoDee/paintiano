@@ -210,6 +210,14 @@ const harmCol=(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],75+(v/127)*15,octL(m));
 // clustered D#/E/F at violet and F#/G/G# at red with a discontinuous jump.
 const SPEC_HUE=Array.from({length:12},(_,pc)=>pc*30);
 const specCol=(m,v=100)=>{const h=SPEC_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
+// Golden-angle hue map — chromatic ascent through pitch classes distributes
+// each PC by the golden angle (360°/φ² ≈ 137.5°). Same math nature uses for
+// sunflower seeds and pinecones: the maximally-spread arrangement of any
+// number of points on a circle. The 12 PCs land far apart on the colour
+// wheel with no clustering — the "chromatic of nature" companion to
+// Harmony (musician's chromatic) and Spectral (physicist's chromatic).
+const GOLD_HUE=Array.from({length:12},(_,pc)=>(pc*137.50776)%360);
+const goldCol=(m,v=100)=>{const h=GOLD_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
 
 // Fast RGBA string helper — avoids repeated template-string + toFixed allocations
 // in the hot inner draw loops. Rounds alpha to 3 decimal places inline.

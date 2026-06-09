@@ -1345,6 +1345,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(mode==='bw') return bwCol(m,v);
     if(mode==='custom') return customCol(m,v,activePalette);
     if(mode==='spectral') return specCol(m,v);
+    if(mode==='gold') return goldCol(m,v);
     return harmCol(m,v);
   },[mode,activePalette]);
 
@@ -1354,6 +1355,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const colorPreview = useCallback((md,pc)=>{
     if(md==='bw') return bwCol(36+pc*4, 100);     // 12 steps up the value ramp → grey scale
     if(md==='spectral') return specCol(60+pc, 100);
+    if(md==='gold') return goldCol(60+pc, 100);
     return harmCol(60+pc, 100);
   },[]);
 
@@ -2937,7 +2939,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             ? Object.assign(activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[0];}),
                 {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
                  __hasNeutral:activePalette.some(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1]<12;})})
-            : (mode==='spectral'?SPEC_HUE:COF);
+            : (mode==='spectral'?SPEC_HUE:mode==='gold'?GOLD_HUE:COF);
           const _atmoBias2=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
           const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current,_atmoBias2);
           _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
@@ -4523,7 +4525,7 @@ Composition rules:
       ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
                       { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                         __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
-      : (mode==='spectral'?SPEC_HUE:COF);
+      : (mode==='spectral'?SPEC_HUE:mode==='gold'?GOLD_HUE:COF);
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -7347,7 +7349,7 @@ Composition rules:
             );
           })() : (<>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-              {['harmony','spectral','bw','custom'].map(m=>{
+              {['harmony','spectral','gold','custom'].map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
               // Free tier: Custom uses the same cycle as Pro (Custom → Edit → action),
