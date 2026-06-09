@@ -925,12 +925,19 @@ export default function Paintiano() {
   // VARY keeps phaseIndex (Vary changes tones, but the artist's style should
   // persist). Next button increments phaseIndex to cycle styles manually.
   const prevSongArtistRef = useRef({seed:0, art:null});
+  const varyInProgressRef = useRef(false);
   useEffect(()=>{
     const seed = pollockSessionSeed>>>0;
     const art = effectiveStyle || '';
     const prev = prevSongArtistRef.current;
     if(prev.seed !== seed || prev.art !== art){
       prevSongArtistRef.current = {seed, art};
+      // Vary just changed the tones — same song, same artist, only tonality.
+      // Don't re-randomize the style; consume the flag and skip.
+      if(varyInProgressRef.current){
+        varyInProgressRef.current = false;
+        return;
+      }
       // Skip the initial mount when there are no chords yet — avoids a stray
       // randomization before the user has loaded any song.
       if(seed !== 0 || art){
@@ -2943,7 +2950,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Reset seed + structure lock — multiple Vary taps may have built up
       // a non-zero rndSalt and a structureSeedLock; both must reset so the
       // next painting starts from a clean seed state.
-      setRndSalt(0); setStructureSeedLock(null); setShuffleArtistIndex(0);
+      setRndSalt(0); setStructureSeedLock(null); setShuffleArtistIndex(0); setPhaseIndex(0);
       saltHistoryRef.current=[0]; saltIdxRef.current=0; setVariationPos(0);
       // Substrate cache + last-paint signature: invalidate fully so the
       // renderer can't take any fast-path shortcut against stale data.
@@ -4693,9 +4700,10 @@ Composition rules:
     if(!isResume){
       if(randomModeRef.current){
         setStructureSeedLock(null);
-        // Manual artist → rotate style. Shuffle (no manual artist) → rotate artist.
+        // Manual artist → rotate style. Shuffle (no manual artist) → rotate
+        // artist + roll a fresh random style for that new artist.
         if(style){ setPhaseIndex(prev=>prev+1); }
-        else { setShuffleArtistIndex(prev=>prev+1); }
+        else { setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); }
       }
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
@@ -6903,6 +6911,10 @@ Composition rules:
               if(!varySource||!chords.length){flashMoodHint();return;}
               const varied=rerollSong(varySource, !randomMode);
               if(!varied)return;
+              // Mark Vary in progress — the phaseIndex useEffect will see this
+              // flag and skip re-rolling the style. Vary changes tones only;
+              // the (umelec, štýl) pair must persist for 4-tuple identity.
+              varyInProgressRef.current = true;
               const wasPlaying=playing;
               // Random OFF → keep the picture STRUCTURE, change only colors+sound:
               // freeze the seed too (belt-and-braces with the pitch-only reroll).
@@ -7683,7 +7695,7 @@ Composition rules:
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
-                <button onClick={(e)=>{ e.stopPropagation(); if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); } wakeControls(); }} className="pf-lift" aria-label="next painting"
+                <button onClick={(e)=>{ e.stopPropagation(); if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   {t('nextPainting')||'next'} ›
                 </button>
@@ -8364,10 +8376,9 @@ Composition rules:
           // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
           // with no randomMode).
           const canRoll = !anim && !working && !demoReelOn && !recording;
-          const canNext = style || randomMode;
-          if(!canNext) return null;
+          if(!randomMode) return null;
           return (
-            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
+            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; if(style){ setPhaseIndex(prev=>prev+1); } else { setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
