@@ -2628,12 +2628,20 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
   //  0/1 = Dense all-over / Wider sparser (original body below, via pollVariant).
   //  2 = Black pourings.  3 = Totemic figuration.  4 = Handprints+drip.  5 = Blue Poles.
+  //  Free (cap=2) sees Dense + Blue Poles — those two are visually farthest
+  //  apart so the two-variant preview actually shows different paintings.
   {
     const _pn=_capN(6); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_ppick===2){ pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ppick===3){ pollockPhaseTotem(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ppick===4){ pollockPhaseHands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ppick===5){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_variantCap === 2){
+      // Free: 0 = Dense (fall through), 1 = Blue Poles.
+      if(_ppick===1){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    } else {
+      // Pro+: full ladder.
+      if(_ppick===2){ pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(_ppick===3){ pollockPhaseTotem(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(_ppick===4){ pollockPhaseHands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(_ppick===5){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    }
     // else fall through to original dense/wider body (variant 0/1)
   }
 
@@ -22024,6 +22032,27 @@ Composition rules:
             title={playSourceMic==='original'?'playback: original recording — tap to switch to piano cover':'playback: piano cover — tap to switch to original recording'}
             style={{padding:'8px 14px',background:playSourceMic==='original'?'rgba(140,200,255,.16)':'rgba(201,168,76,.16)',color:playSourceMic==='original'?'#8accff':GOLD,border:'1px solid '+(playSourceMic==='original'?'rgba(100,180,255,.55)':'rgba(201,168,76,.55)'),borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:'0 3px 10px '+(playSourceMic==='original'?'rgba(100,180,255,.25)':'rgba(201,168,76,.25)')}}>
             {playSourceMic==='original'?'🎵 orig':'🎹 piano'}
+          </button>
+        )}
+        {/* Restart playback from chord 0 using the current source. Pairs with
+            the source toggle: toggle swaps Original ⇄ Piano in place (seamless);
+            ↺ jumps back to the beginning. Visible whenever there's a Mic listen
+            draft with a finalised recording and nothing live is happening. */}
+        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+          <button className="pf-lift"
+            onClick={()=>{
+              // Stop everything cleanly, reset position, then start fresh from idx 0.
+              stopAll();
+              setDisp(0); dispRef.current = 0;
+              resumeFromRef.current = null;
+              setHoldPaused(false); holdPausedRef.current = false;
+              // Defer one tick so the stopAll state flush settles before startPlay.
+              setTimeout(()=>{ startPlayRef.current?.(); }, 0);
+            }}
+            title="restart from start"
+            aria-label="restart from start"
+            style={{padding:'8px 12px',background:'rgba(232,85,122,.16)',color:'#ff7a9c',border:'1px solid rgba(232,85,122,.55)',borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',boxShadow:'0 3px 10px rgba(232,85,122,.25)'}}>
+            ↺
           </button>
         )}
         {effectiveStyle&&chords.length>0&&!recording&&viewMode!=='image'&&(()=>{
