@@ -5175,6 +5175,49 @@ Composition rules:
   useEffect(()=>{handlePauseClickRef.current=handlePauseClick;},[handlePauseClick]);
   useEffect(()=>{startPlayRef.current=startPlay;},[startPlay]);
 
+  // Seamless Original ⇄ Piano swap while playing.
+  // The toggle button mutates playSourceMic; this effect notices the change and
+  // re-routes audio from where the position is now — without resetting disp or
+  // canvas. The paint timeline (step) keeps running either way; we only swap
+  // what makes the sound. Original → Piano hands sound back to the sampler;
+  // Piano → Original starts the recorded buffer at chords[disp].startMs.
+  useEffect(()=>{
+    if(!playing) return; // toggle has no audible effect when paused / not playing
+    if(draftOwnerRef.current!=='listen') return;
+    const wantOriginal = playSourceMic==='original' && !!listenPCMRef.current;
+    const haveOriginal = originalPlaybackRef.current;
+    if(wantOriginal===haveOriginal) return; // already in the requested mode
+    const chordsArr = chordsRef.current || [];
+    const idx = Math.max(0, Math.min(chordsArr.length-1, dispRef.current|0));
+    const startMs = chordsArr[idx]?.startMs || 0;
+    const offsetSec = startMs/1000;
+    if(wantOriginal){
+      // Piano → Original. Hush the sampler and start the buffer at offset.
+      try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
+      setActive(new Set());
+      try{
+        const ac = Tone.getContext().rawContext;
+        if(originalSourceRef.current){ try{ originalSourceRef.current.stop(); }catch(_){} originalSourceRef.current=null; }
+        const src = ac.createBufferSource();
+        src.buffer = listenPCMRef.current;
+        src.playbackRate.value = playbackSpeedRef.current;
+        const g = ac.createGain(); g.gain.value = mutedRef.current?0:1; src.connect(g); g.connect(ac.destination); src._muteGain=g;
+        src.start(0, offsetSec);
+        originalSourceRef.current = src;
+        originalPlaybackRef.current = true;
+        src.onended = ()=>{ originalSourceRef.current=null; originalPlaybackRef.current=false; };
+      }catch(_){ originalPlaybackRef.current=false; }
+    } else {
+      // Original → Piano. Stop the buffer; step() will resume sampler triggers
+      // on the next chord boundary (the originalPlaybackRef gate just opened).
+      try{ if(originalSourceRef.current){ originalSourceRef.current.stop(); originalSourceRef.current.disconnect(); originalSourceRef.current=null; } }catch(_){}
+      originalPlaybackRef.current = false;
+    }
+    // Intentionally NOT including `playing` or `disp` — toggle is the only
+    // trigger; including them would cause stutters on every chord tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[playSourceMic]);
+
   // Auto-stop the recorder once playback finishes (playing → false).
   // A 700 ms tail lets the last notes ring out before capture closes.
   //
