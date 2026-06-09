@@ -18857,7 +18857,12 @@ Composition rules:
       // a plain {audio:true} request which iOS always accepts.
       let stream;
       try{
-        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
+        // noiseSuppression: ON — browser-level DSP (Chrome/Safari WebRTC) is
+        // gentle on musical transients and removes the ambient hum / fan noise
+        // that was making playback sound dirty. echoCancellation stays OFF so
+        // we don't get artefacts on the source music; autoGainControl OFF so
+        // the dynamic range is preserved (soft passages stay soft).
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:false},video:false});
       }catch(ce){
         if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
           stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
@@ -18869,9 +18874,27 @@ Composition rules:
       const src=ac.createMediaStreamSource(stream);
       const analyser=ac.createAnalyser();
       analyser.fftSize=4096; // higher resolution for better pitch detection on complex music
+      // Analyser stays on the raw source — no compressor / HP — so the FFT
+      // sees a true magnitude spectrum without DSP-induced peaks.
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
+      // Filtered branch for the *recording* stream — what the user will hear
+      // on Play. High-pass 80 Hz kills AC hum and rumble; a mild compressor
+      // brings quiet musical detail up without flattening the dynamics.
+      // MediaStreamDestination feeds MediaRecorder so the file on disk is
+      // the post-DSP signal, not the raw mic.
+      let recordStream = stream; // fallback if Web Audio routing fails
+      try{
+        const hp = ac.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
+        const comp = ac.createDynamicsCompressor();
+        comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
+        comp.attack.value = 0.005; comp.release.value = 0.15;
+        const dst = ac.createMediaStreamDestination();
+        src.connect(hp); hp.connect(comp); comp.connect(dst);
+        if(dst.stream && dst.stream.getAudioTracks().length>0) recordStream = dst.stream;
+      }catch(_){ /* fallback to raw stream — recording still works */ }
       // Start raw audio capture in parallel — keeps the user's exact source
       // recording so they can play it back instead of the synthesised cover.
       // Pick the best supported mime in order of preference. Some browsers
@@ -18883,7 +18906,7 @@ Composition rules:
           let mime = '';
           for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
           const opts = mime ? { mimeType: mime } : undefined;
-          const rec = new MR(stream, opts);
+          const rec = new MR(recordStream, opts);
           listenChunksRef.current = [];
           // Clear any previous draft's blob — fresh listen session.
           if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
