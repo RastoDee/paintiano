@@ -14140,6 +14140,10 @@ export default function Paintiano() {
   const [playSourceMic, setPlaySourceMic] = useState('original');
   const playSourceMicRef = useRef('original');
   useEffect(()=>{ playSourceMicRef.current = playSourceMic; },[playSourceMic]);
+  // Fullscreen tap → cycle color mode. Brief label overlay so the user knows
+  // which palette is now driving the painting.
+  const [colorToast, setColorToast] = useState(null);
+  const colorToastTimerRef = useRef(null);
   // Reactive flag — true once listenBlobRef has a finalised recording. Refs
   // alone don't trigger re-renders, so the toggle UI needs this companion.
   const [hasMicBlob, setHasMicBlob] = useState(false);
@@ -21272,7 +21276,26 @@ Composition rules:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onClick={wakeControls} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {immersive && <div onClick={()=>{
+        wakeControls();
+        // Cycle color mode. In non-image view: harmony → spectral → gold → custom.
+        // In image view, BW stays as the mono option (BW images need it).
+        const cycle = viewMode==='image' ? ['harmony','spectral','bw','custom'] : ['harmony','spectral','gold','custom'];
+        const idx = cycle.indexOf(mode);
+        const next = cycle[((idx<0?0:idx)+1) % cycle.length];
+        if(canvasRef.current){canvasRef.current.style.opacity='0';}
+        setTimeout(()=>{ setMode(next); if(canvasRef.current)canvasRef.current.style.opacity='1'; },200);
+        // Toast — show the mode name for ~1.5s
+        const label = t(next);
+        setColorToast(label);
+        if(colorToastTimerRef.current) clearTimeout(colorToastTimerRef.current);
+        colorToastTimerRef.current = setTimeout(()=>setColorToast(null), 1500);
+      }} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c',cursor:'pointer'}}/>}
+      {immersive && colorToast && (
+        <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%, -50%)',zIndex:10005,padding:'14px 28px',borderRadius:30,background:'rgba(8,6,14,.72)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',color:'rgba(245,235,210,.95)',fontFamily:"'Outfit',sans-serif",fontSize:(.85*effScale)+'rem',fontWeight:600,letterSpacing:'.16em',textTransform:'uppercase',pointerEvents:'none',boxShadow:'0 8px 30px rgba(0,0,0,.55)',border:'1px solid rgba(201,168,76,.35)',animation:'pfDemoFade .18s ease-out'}}>
+          {colorToast}
+        </div>
+      )}
       {/* Fullscreen artist attribution — fixed near the viewport top so it sits
           in the black letterbox ABOVE the canvas. The user prefers it high (even
           close to the URL bar) over ever landing on the painting. Shows the
