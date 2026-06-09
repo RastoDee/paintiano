@@ -10466,6 +10466,85 @@ function fftMag(buf) {
   return mag.subarray(0, N / 2);
 }
 function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
+
+// === Mic/Music chord-transcribe helpers ===
+// computeChroma: fold FFT magnitude into 12-bin pitch-class profile.
+// Normalised so sum = 1 (so cosine similarity against templates is stable).
+function computeChroma(mag, sr) {
+  const N = mag.length * 2;
+  const bin = sr / N;
+  const chroma = new Float32Array(12);
+  // Range A1 (~55 Hz) — C8 (~4186 Hz) covers piano + most music.
+  const lo = Math.max(1, Math.floor(55 / bin));
+  const hi = Math.min(mag.length - 1, Math.ceil(4200 / bin));
+  for (let i = lo; i < hi; i++) {
+    const freq = i * bin;
+    if (freq < 55) continue;
+    const midi = Math.round(69 + 12 * Math.log2(freq / 440));
+    if (midi < 36 || midi > 96) continue;
+    const pc = ((midi % 12) + 12) % 12;
+    // Square the magnitude — emphasises strong peaks over noise floor and
+    // makes the chroma vector less polluted by broadband content.
+    chroma[pc] += mag[i] * mag[i];
+  }
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += chroma[i];
+  if (sum < 1e-12) return chroma;
+  for (let i = 0; i < 12; i++) chroma[i] /= sum;
+  return chroma;
+}
+
+// Triad templates (Krumhansl-style weights). Strong on chord tones, light on
+// the rest so close inversions/added 7ths still score the right root.
+const _MAJ_TPL = [1.0, 0.05, 0.10, 0.05, 0.85, 0.10, 0.05, 0.85, 0.05, 0.10, 0.05, 0.10];
+const _MIN_TPL = [1.0, 0.05, 0.10, 0.85, 0.05, 0.10, 0.05, 0.85, 0.05, 0.10, 0.05, 0.10];
+
+// detectChord: cosine-match chroma against 24 templates (12 maj + 12 min).
+// Returns {root:0-11, quality:'maj'|'min', conf:0-1} when match passes
+// confidence threshold; null when nothing is clear enough to commit.
+function detectChord(chroma) {
+  let bestRoot = 0, bestQ = 'maj', bestConf = 0;
+  // Precompute chroma norm
+  let chrNorm = 0;
+  for (let i = 0; i < 12; i++) chrNorm += chroma[i] * chroma[i];
+  if (chrNorm < 1e-12) return null;
+  const chrSqrt = Math.sqrt(chrNorm);
+  for (let r = 0; r < 12; r++) {
+    for (let qi = 0; qi < 2; qi++) {
+      const tpl = qi === 0 ? _MAJ_TPL : _MIN_TPL;
+      let score = 0, tplNorm = 0;
+      for (let i = 0; i < 12; i++) {
+        const t = tpl[((i - r) % 12 + 12) % 12];
+        score += chroma[i] * t;
+        tplNorm += t * t;
+      }
+      const conf = score / (chrSqrt * Math.sqrt(tplNorm));
+      if (conf > bestConf) {
+        bestConf = conf;
+        bestRoot = r;
+        bestQ = qi === 0 ? 'maj' : 'min';
+      }
+    }
+  }
+  // Threshold: 0.60 keeps clean signals, rejects noise/mush.
+  return bestConf >= 0.60 ? { root: bestRoot, quality: bestQ, conf: bestConf } : null;
+}
+
+// generateVoicing: from {root, quality} produce a clean 4-note piano voicing
+// in the C3–C5 range. Bass octave below for richness.
+// Returns [{m,v}] suitable for playNote + setChords.
+function generateVoicing(root, quality) {
+  const third = quality === 'maj' ? 4 : 3;
+  const rootMidi = 48 + (root % 12); // C3=48 .. B3=59
+  return [
+    { m: rootMidi - 12, v: 70 },         // bass
+    { m: rootMidi,       v: 92 },         // root
+    { m: rootMidi + third, v: 86 },       // 3rd
+    { m: rootMidi + 7,   v: 84 },         // 5th
+  ].filter(n => n.m >= 21 && n.m <= 108);
+}
+// === end helpers ===
+
 // Reusable typed-array buffers — module-level so transcribeAudio doesn't
 // allocate ~15K Float32Arrays during a long file import. JS is single-threaded
 // and transcribeAudio runs sequentially, so the shared state is safe.
@@ -18716,8 +18795,8 @@ Composition rules:
         composedModeRef.current=true;
       }
       let lastCommit=performance.now();
-      const COMMIT_INTERVAL=120; // sample chord identity frequently
-      const MIN_HOLD_MS=100;     // very short — catch quick changes; only filter very brief flickers
+      const COMMIT_INTERVAL=150; // chord-template detection runs at ~6.6 Hz
+      const MIN_HOLD_MS=180;     // shorter chords than this aren't committed
       // Adaptive noise gate is the ONLY filter — distinguishes silence/room
       // noise from any audio. Everything that gets past it gets painted, even
       // distorted or rough detections. The point is "I hear something" → paint,
@@ -18725,14 +18804,22 @@ Composition rules:
       let noiseFloor=0.002;
       const NOISE_GATE_MULT=1.8;  // signal must be 1.8× the noise floor
       const RMS_FLOOR_MIN=0.003;  // absolute floor — true silence
-      let prevChordSig=''; // chord-change detection
-      let prevChordStart=performance.now(); // when current chord started
-      let pendingNotes=null;     // the currently-sounding chord, awaiting its end to know duration
+      // Chord-history smoothing window. 5 samples × 150 ms = 750 ms window.
+      // Majority vote inside the window suppresses single-frame flicker while
+      // staying responsive enough for ~1–2 chord/sec progressions.
+      const HIST_LEN=5;
+      const STABLE_COUNT=3;       // chord must dominate ≥3/5 of the window
+      const chordHist=[];
       let pendingSig='';
+      let pendingNotes=null;
+      let prevChordStart=performance.now();
       const emitChord=(notes,heldMs)=>{
-        // Highlight active keys
+        // Highlight active keys AND play them as a piano voicing so the
+        // listened-to music gets turned into an audible cover, the same way
+        // the main Music mode plays its chord sequences.
         const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
-        notes.forEach(({m})=>{
+        notes.forEach(({m,v})=>{
+          playNote(m,v||90,sustainMs);
           setActive(p=>{const s=new Set(p);s.add(m);return s;});
           pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(m);return s;}),Math.min(sustainMs,1000));
         });
@@ -18757,39 +18844,48 @@ Composition rules:
         if(rms < noiseFloor*1.5) noiseFloor = noiseFloor*0.95 + rms*0.05;
         const gate = Math.max(RMS_FLOOR_MIN, noiseFloor*NOISE_GATE_MULT);
         if(rms<gate){
-          // Silence — if a chord was sounding, end it now with its real duration.
+          // Silence — flush pending and clear history so the next sound starts fresh.
           if(pendingNotes){
             const heldMs=now-prevChordStart;
             if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
-            pendingNotes=null;pendingSig='';prevChordSig='';
+            pendingNotes=null;pendingSig='';
           }
+          chordHist.length=0;
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
-        // Detect chord identity every ~120ms (cheap, frequent — decoupled from
-        // the old 800ms commit gate that quantized all durations equal).
         if(now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
           const mag=fftMag(buf);
-          // Read sampleRate live: a freshly-created AudioContext can report 0 (or
-          // a stale value) on the first entry until it's fully running, which made
-          // pickPitches compute garbage frequencies → no pitches → first Music
-          // session never painted. Fall back to a sane default if it's not ready.
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
-          const pitches=pickPitches(mag,liveSr,0.02); // very low — catch any peak; noise gate above filters silence
-          if(pitches.length>0){
-            const notes=pitches.slice(0,6).map(p=>({m:p.midi,v:Math.max(50,Math.min(120,Math.round(p.mag*110))),durMs:0}));
-            const sig=notes.map(n=>n.m).sort((a,b)=>a-b).join(',');
-            if(sig!==pendingSig){
-              // Chord changed. Flush the PREVIOUS chord with its true held time
-              // and emit the NEW one immediately — no stability gate, no prominence
-              // filter. Every detected change paints.
-              if(pendingNotes){
-                const heldMs=now-prevChordStart;
-                if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
-              }
-              pendingNotes=notes;pendingSig=sig;prevChordStart=now;
-            }
+          const chroma=computeChroma(mag,liveSr);
+          const det=detectChord(chroma);
+          const sig=det ? (det.root+':'+det.quality) : '_';
+          // Push to history; keep last HIST_LEN samples.
+          chordHist.push(sig);
+          if(chordHist.length>HIST_LEN) chordHist.shift();
+          // Majority vote (median for categorical data).
+          const counts={};
+          for(const s of chordHist) counts[s]=(counts[s]||0)+1;
+          let bestSig='_',bestCount=0;
+          for(const s in counts) if(counts[s]>bestCount){bestCount=counts[s];bestSig=s;}
+          // Not stable enough → don't commit; let pending breathe.
+          if(bestSig==='_' || bestCount<STABLE_COUNT){
+            listenRafRef.current=requestAnimationFrame(tick);return;
           }
+          // Stable chord detected.
+          if(bestSig!==pendingSig){
+            // New chord. Flush previous with true held time, then arm new.
+            if(pendingNotes){
+              const heldMs=now-prevChordStart;
+              if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
+            }
+            const [rStr,q]=bestSig.split(':');
+            const r=+rStr;
+            pendingSig=bestSig;
+            pendingNotes=generateVoicing(r,q);
+            prevChordStart=now;
+          }
+          // else: same chord holding — leave pending in place, duration accrues.
         }
         listenRafRef.current=requestAnimationFrame(tick);
       };

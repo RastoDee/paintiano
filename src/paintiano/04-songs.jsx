@@ -128,8 +128,10 @@ function detectChord(chroma) {
       }
     }
   }
-  // Threshold: 0.60 keeps clean signals, rejects noise/mush.
-  return bestConf >= 0.60 ? { root: bestRoot, quality: bestQ, conf: bestConf } : null;
+  // Threshold: 0.45 — tuned for real-world audio from speakers (drums,
+  // reverb, vocal formants pollute the chroma). Clean studio mixes still
+  // score 0.7+; messy speaker recordings need to land too.
+  return bestConf >= 0.45 ? { root: bestRoot, quality: bestQ, conf: bestConf } : null;
 }
 
 // generateVoicing: from {root, quality} produce a clean 4-note piano voicing
