@@ -4408,22 +4408,164 @@ function mondrianPhaseLozenge(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Mondrian G: Tree — grey/ochre abstraction of branching lines. ──
 function mondrianPhaseTree(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#bdbab2':'#c8c0a8';ctx.fillRect(0,0,CW,CH);
-  const branches=Math.max(6,Math.min(80,cn));
-  const vis=Math.max(1,Math.ceil(N/cn*branches));
-  ctx.lineCap='round';
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+5800,ss,0,0);
-    const {0:R,1:G,2:B}=_mondrianBlock(chords,Math.floor(i*(cn/branches)),gc,isBW);
-    // dark branch strokes biased toward greys (early Mondrian tree)
-    const v=Math.round((R+G+B)/3*0.4+30);
-    ctx.strokeStyle=isBW?`rgba(${v},${v},${v},0.7)`:`rgba(${Math.round(v*0.9)},${Math.round(v*0.85)},${Math.round(v*0.7)},0.7)`;
-    ctx.lineWidth=Math.max(1.5,Math.min(CW,CH)*0.005);
-    const cx=CW*0.5+(rnd()-0.5)*CW*0.3,cy=CH;
-    let x=cx,y=cy*(0.6+rnd()*0.3);ctx.beginPath();ctx.moveTo(x,y);
-    const segs=3+((rnd()*4)|0),dir=(rnd()-0.5);
-    for(let s=0;s<segs;s++){x+=dir*CW*0.12+(rnd()-0.5)*CW*0.1;y-=CH*0.12*(0.5+rnd());ctx.quadraticCurveTo(x+(rnd()-0.5)*20,y+10,x,y);}
+  const sR=_seedRnd(57001,ss,0,0); sR(); sR();
+  const variant=(sR()*4)|0; // 0=Red Avond, 1=Grey, 2=Apple, 3=Blue
+  // Background tinted by chord 0 per variant
+  const {rgb:bg0}=_picChord(chords,0,gc,isBW);
+  let bgR,bgG,bgB;
+  if(isBW){
+    if(variant===0){ bgR=bgG=bgB=70; }
+    else if(variant===1){ bgR=bgG=bgB=130; }
+    else if(variant===2){ bgR=bgG=bgB=220; }
+    else { bgR=bgG=bgB=90; }
+  } else if(variant===0){ // Red Tree / Avond — twilight
+    bgR=Math.round(20+bg0[2]*0.35); bgG=Math.round(30+bg0[1]*0.30); bgB=Math.round(50+bg0[0]*0.20);
+  } else if(variant===1){ // Grey Tree
+    bgR=Math.round(100+bg0[0]*0.15); bgG=Math.round(95+bg0[1]*0.15); bgB=Math.round(90+bg0[2]*0.15);
+  } else if(variant===2){ // Apple — cream
+    bgR=Math.round(230+bg0[0]*0.04); bgG=Math.round(225+bg0[1]*0.05); bgB=Math.round(210+bg0[2]*0.05);
+  } else { // Blue Tree
+    bgR=Math.round(35+bg0[2]*0.20); bgG=Math.round(50+bg0[1]*0.18); bgB=Math.round(85+bg0[2]*0.20);
+  }
+  ctx.fillStyle=`rgb(${bgR},${bgG},${bgB})`; ctx.fillRect(0,0,CW,CH);
+  // For Avond — vertical gradient toward black at bottom
+  if(variant===0){
+    for(let y=0;y<CH;y+=4){
+      const t=y/CH;
+      const r=Math.round(bgR*(1-t*0.4)+30*t), g=Math.round(bgG*(1-t*0.4)+20*t), b=Math.round(bgB*(1-t*0.4)+10*t);
+      ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,y,CW,4);
+    }
+  }
+  // Tree dimensions
+  const cx=CW*(0.40+sR()*0.20);
+  const baseY=CH*(0.93+sR()*0.04);
+  const topY=CH*(0.08+sR()*0.10);
+  const trunkW=Math.min(CW,CH)*(0.025+sR()*0.020);
+  const density=0.9+sR()*0.6;
+  // Build branches array
+  const branches=[];
+  // Trunk — wavy vertical
+  const trunkPts=[[cx,baseY]];
+  let tx=cx, ty=baseY;
+  for(let i=0;i<6;i++){
+    const t=(i+1)/6;
+    ty=baseY+(topY-baseY)*t;
+    tx=cx+(sR()-0.5)*trunkW*1.5;
+    trunkPts.push([tx,ty]);
+  }
+  branches.push({kind:'trunk', pts:trunkPts, w:trunkW});
+  // Main branches — 3 to 7
+  const nMain=3+((sR()*5)|0);
+  const mainBr=[];
+  for(let i=0;i<nMain;i++){
+    const startT=0.35+sR()*0.55;
+    const sx=cx+(sR()-0.5)*trunkW*1.5;
+    const sy=baseY+(topY-baseY)*startT;
+    const ang=(-Math.PI/2)+(sR()-0.5)*Math.PI*0.9;
+    const length=(baseY-topY)*(0.35+sR()*0.35);
+    const ex=sx+Math.cos(ang)*length;
+    const ey=sy+Math.sin(ang)*length;
+    const pts=[[sx,sy]];
+    for(let k=0;k<5;k++){
+      const t=(k+1)/5;
+      const mx=sx+(ex-sx)*t+(sR()-0.5)*length*0.15;
+      const my=sy+(ey-sy)*t+(sR()-0.5)*length*0.10;
+      pts.push([mx,my]);
+    }
+    const w=trunkW*(0.40+sR()*0.25);
+    branches.push({kind:'main', pts, w});
+    mainBr.push({pts, w});
+  }
+  // Sub-branches
+  const nSub=Math.round(density*(10+sR()*15));
+  for(let si=0;si<nSub;si++){
+    if(!mainBr.length) break;
+    const m=mainBr[(sR()*mainBr.length)|0];
+    const mp=m.pts;
+    const ptT=0.3+sR()*0.7;
+    const ptIdxF=ptT*(mp.length-1);
+    let iLo=ptIdxF|0;
+    let frac=ptIdxF-iLo;
+    if(iLo>=mp.length-1){ iLo=mp.length-2; frac=1; }
+    const sx2=mp[iLo][0]+(mp[iLo+1][0]-mp[iLo][0])*frac;
+    const sy2=mp[iLo][1]+(mp[iLo+1][1]-mp[iLo][1])*frac;
+    const ang=(-Math.PI/2)+(sR()-0.5)*Math.PI*1.2;
+    const length=trunkW*(2+sR()*4);
+    const ex2=sx2+Math.cos(ang)*length;
+    const ey2=sy2+Math.sin(ang)*length;
+    const pts=[[sx2,sy2]];
+    for(let k=0;k<3;k++){
+      const t=(k+1)/3;
+      const mx=sx2+(ex2-sx2)*t+(sR()-0.5)*length*0.20;
+      const my=sy2+(ey2-sy2)*t+(sR()-0.5)*length*0.15;
+      pts.push([mx,my]);
+    }
+    const w=m.w*(0.35+sR()*0.30);
+    branches.push({kind:'sub', pts, w});
+  }
+  // Twigs — single-segment fine endings
+  const nTwig=Math.round(density*(15+sR()*25));
+  for(let ti=0;ti<nTwig;ti++){
+    if(!mainBr.length) break;
+    const m=mainBr[(sR()*mainBr.length)|0];
+    const mp=m.pts;
+    const ptT=0.5+sR()*0.5;
+    const ptIdxF=ptT*(mp.length-1);
+    let iLo=ptIdxF|0;
+    let frac=ptIdxF-iLo;
+    if(iLo>=mp.length-1){ iLo=mp.length-2; frac=1; }
+    const sx3=mp[iLo][0]+(mp[iLo+1][0]-mp[iLo][0])*frac;
+    const sy3=mp[iLo][1]+(mp[iLo+1][1]-mp[iLo][1])*frac;
+    const ang=(-Math.PI/2)+(sR()-0.5)*Math.PI*1.5;
+    const length=trunkW*(0.8+sR()*2.0);
+    const ex3=sx3+Math.cos(ang)*length;
+    const ey3=sy3+Math.sin(ang)*length;
+    branches.push({kind:'twig', pts:[[sx3,sy3],[ex3,ey3]], w:m.w*0.25});
+  }
+  // Branch colour function — chord-tinted per variant
+  function branchCol(i, n){
+    const {rgb:c}=_picChord(chords,i%cn,gc,isBW);
+    if(isBW){
+      const lum=(c[0]+c[1]+c[2])/3;
+      if(variant===0) return [Math.round(180+lum*0.2),Math.round(40+lum*0.1),Math.round(30+lum*0.1)];
+      if(variant===1) return [Math.round(40+lum*0.15),Math.round(38+lum*0.15),Math.round(42+lum*0.15)];
+      if(variant===2) return [Math.round(150+lum*0.2),Math.round(80+lum*0.2),Math.round(90+lum*0.15)];
+      return [Math.round(30+lum*0.1),Math.round(60+lum*0.15),Math.round(130+lum*0.25)];
+    }
+    if(variant===0) return [Math.min(255,Math.round(c[0]*0.6+140)),Math.round(c[1]*0.3+20),Math.round(c[2]*0.3+15)];
+    if(variant===1) return [Math.round(40+c[0]*0.15),Math.round(38+c[1]*0.15),Math.round(42+c[2]*0.15)];
+    if(variant===2) return [Math.min(255,Math.round(c[0]*0.4+150)),Math.round(c[1]*0.3+80),Math.round(c[2]*0.3+90)];
+    return [Math.round(c[0]*0.2+30),Math.round(c[1]*0.3+60),Math.min(255,Math.round(c[2]*0.5+130))];
+  }
+  // Render only revealed branches based on lim
+  const vis=Math.max(1,Math.ceil(N/cn*branches.length*2.5));
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  for(let bi=0;bi<Math.min(branches.length,vis);bi++){
+    const b=branches[bi];
+    const col=branchCol(bi, branches.length);
+    ctx.strokeStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
+    ctx.lineWidth=Math.max(1, b.w);
+    ctx.beginPath();
+    ctx.moveTo(b.pts[0][0], b.pts[0][1]);
+    for(let p=1;p<b.pts.length;p++) ctx.lineTo(b.pts[p][0], b.pts[p][1]);
     ctx.stroke();
+  }
+  // Blossom dots for Apple variant
+  if(variant===2){
+    const nBlossom=60+((sR()*60)|0);
+    const blossomVis=Math.max(1,Math.ceil(N/cn*nBlossom));
+    for(let i=0;i<Math.min(nBlossom,blossomVis);i++){
+      const bR=_seedRnd(i+58000,ss,0,0);
+      const bcx=cx+(bR()-0.5)*CW*0.7;
+      const bcy=topY+bR()*(baseY-topY)*0.6;
+      const br=2+((bR()*3)|0);
+      const {rgb:c}=_picChord(chords,(i*3)%cn,gc,isBW);
+      const r=isBW?Math.round((c[0]+c[1]+c[2])/3*0.5+150):Math.min(255,Math.round(c[0]*0.5+180));
+      const g=isBW?r:Math.round(c[1]*0.3+150);
+      const bbb=isBW?r:Math.round(c[2]*0.3+160);
+      ctx.fillStyle=`rgba(${r},${g},${bbb},0.78)`;
+      ctx.beginPath(); ctx.arc(bcx,bcy,br,0,Math.PI*2); ctx.fill();
+    }
   }
 }
 
