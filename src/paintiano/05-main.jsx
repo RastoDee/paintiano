@@ -858,10 +858,11 @@ export default function Paintiano() {
   // colour blocks. Toggled by tapping the active Mosaic chip; auto-reset when any
   // artist style is chosen, or when the source is not a mood.
   const [notesMode, setNotesMode] = useState(false);
-  // $oneM$ — third tap on the Mosaic chip enters this mode: same φ-block grid
-  // as Mosaic but each cell is dressed Million-Dollar-Homepage-style (random
-  // borders, mini note labels, accent stripes, stripes/dots/crosses). Mutually
-  // exclusive with notesMode; the chip cycles Mosaic → Notes → $oneM$ → Mosaic.
+  // $oneM$ — third tap on the Mosaic chip enters this mode: chord tiles fill
+  // the canvas 100% (guillotine partition) with chaos shapes (circles, arcs,
+  // triangles, stars, squiggles, rings, half-moons, diamonds, crosses, rects)
+  // scattered on top in a Vogel spiral from the centre. Mutually exclusive
+  // with notesMode; the chip cycles Mosaic → Notes → $oneM$ → Mosaic.
   const [oneMMode, setOneMMode] = useState(false);
   // True while the canvas belongs to a MOOD (vs a file source or live mode).
   // Unlike currentMood it survives Clear, so the "+ New mood" button stays after
@@ -1581,7 +1582,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic';
+        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
         if(!fullCanvasOverlay){
@@ -1626,6 +1627,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -1685,7 +1687,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='comic' && lim>0){
         drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
+      if(style==='oneM' && lim>0){
+        drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+      }
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='oneM'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -6167,6 +6172,9 @@ Composition rules:
         if(style==='comic' && chords.length>0){
           drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
+        if(style==='oneM' && chords.length>0){
+          drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
+        }
       }
       // Watermark policy: stamp "paintiano.app" unless we KNOW the user is
       // Pro (or Pro AI). `isPro` here is `pro || pro_ai` and is `false` while
@@ -7422,22 +7430,8 @@ Composition rules:
           <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
-            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; const showOneM = canNotes && oneMMode;
-              // Cycle: plain Mosaic → Notes → $oneM$ → plain Mosaic.
-              const cycleMosaicVariant = ()=>{
-                if(!notesMode && !oneMMode){ setNotesMode(true); }
-                else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
-                else { setOneMMode(false); setNotesMode(false); }
-              };
-              const label = showOneM ? t('oneMStyle') : (showNotes ? t('notesStyle') : t('mosaicStyle'));
-              const tip = mosaicInert ? 'shuffle is on — turn off 🎲 to use Mosaic'
-                : (canNotes
-                    ? (showOneM ? '$oneM$ — tap for colour mosaic'
-                        : showNotes ? 'notes — tap for $oneM$'
-                        : 'mosaic — tap for note names')
-                    : 'mosaic — the plain reading with no artist overlay');
-              return (
-            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ cycleMosaicVariant(); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={tip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{label}</button>
+            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
+            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ if(!notesMode && !oneMMode){ setNotesMode(true); } else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); } else { setOneMMode(false); setNotesMode(false); } } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{(canNotes && oneMMode)?t('oneMStyle'):(showNotes?t('notesStyle'):t('mosaicStyle'))}</button>
             ); })()}
             {effectivePairs.map(([a,b])=>{
               // Free tier: only the 'a' side is reachable; the 'b' side is

@@ -842,111 +842,6 @@ function drawBlockNotes(ctx,bx,by,notes,gc,BW,BH){
   ctx.restore();
 }
 
-// $oneM$ — Million Dollar Homepage-style overlay. Same block grid as Mosaic
-// (one rectangle per chord, sized by the φ-grid), but each block is dressed
-// as a tiny "ad slot" in the spirit of the 2005 pixel-grid web page: saturated
-// fills, hard contrast borders, mini text labels, occasional geometric marks
-// (stripes, dots, crosses). Variation is per-block, not in layout — chaos
-// comes from each cell looking different, not from cells moving.
-//
-// Seeded from (m + bx + by) so the same chord+position always renders the
-// same decoration set, but neighbours look different.
-function drawBlockOneM(ctx,bx,by,notes,gc,BW,BH){
-  const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
-  const top=sorted[0];
-  const [r,g,b,a]=gc(top.m, top.v);
-  // Deterministic per-block PRNG — stable across re-renders.
-  let s = ((top.m * 73856093) ^ (((bx|0)+1) * 19349663) ^ (((by|0)+1) * 83492791)) >>> 0;
-  const R = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-  // 1. Base fill — saturated dominant chord colour. Pure rectangle, no gap.
-  ctx.fillStyle = _rgbaStr(r, g, b, Math.max(0.92, a));
-  ctx.fillRect(bx, by, BW, BH);
-  // 2. Decoration roulette — exactly one of these primary marks per block.
-  const variant = (R() * 100) | 0;
-  if (variant < 28) {
-    // Top accent stripe (the classic "header bar" of a tiny ad)
-    const acc = gc((top.m + 7) % 128, 110);
-    const stripeH = Math.max(2, BH * (0.14 + R()*0.10));
-    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
-    ctx.fillRect(bx, by, BW, stripeH);
-  } else if (variant < 46) {
-    // Diagonal stripes — "/// pattern" common on banner ads
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(bx, by, BW, BH);
-    ctx.clip();
-    const acc = gc((top.m + 3) % 128, 110);
-    const stripes = 3 + ((R()*4)|0);
-    ctx.strokeStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.75);
-    ctx.lineWidth = Math.max(1, Math.min(BW, BH) * 0.05);
-    const span = Math.max(BW, BH) * 2;
-    for (let i = -stripes; i < stripes*3; i++) {
-      const off = (i * Math.max(BW, BH)/stripes);
-      ctx.beginPath();
-      ctx.moveTo(bx + off, by - span);
-      ctx.lineTo(bx + off + span, by + span);
-      ctx.stroke();
-    }
-    ctx.restore();
-  } else if (variant < 60) {
-    // Center dot — "logo" mark
-    const acc = gc((top.m + 5) % 128, 110);
-    const cx = bx + BW/2, cy = by + BH/2;
-    const rad = Math.min(BW, BH) * (0.18 + R()*0.12);
-    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
-    ctx.beginPath();
-    ctx.arc(cx, cy, rad, 0, Math.PI*2);
-    ctx.fill();
-  } else if (variant < 72) {
-    // Cross / plus mark
-    const acc = gc((top.m + 5) % 128, 110);
-    ctx.strokeStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.92);
-    ctx.lineWidth = Math.max(2, Math.min(BW, BH) * 0.13);
-    ctx.beginPath();
-    ctx.moveTo(bx + BW*0.22, by + BH*0.5);
-    ctx.lineTo(bx + BW*0.78, by + BH*0.5);
-    ctx.moveTo(bx + BW*0.5,  by + BH*0.22);
-    ctx.lineTo(bx + BW*0.5,  by + BH*0.78);
-    ctx.stroke();
-  } else if (variant < 82) {
-    // Bottom band (footer bar of the "ad")
-    const acc = gc((top.m + 9) % 128, 110);
-    const bandH = Math.max(2, BH * (0.18 + R()*0.10));
-    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
-    ctx.fillRect(bx, by + BH - bandH, BW, bandH);
-  } else if (variant < 90) {
-    // Inner rectangle (nested frame)
-    const acc = gc((top.m + 4) % 128, 110);
-    const inset = Math.min(BW, BH) * (0.20 + R()*0.10);
-    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.92);
-    ctx.fillRect(bx + inset, by + inset, BW - inset*2, BH - inset*2);
-  }
-  // else: ~10% have no extra mark — pure colour rectangles in the mix.
-  // 3. Border — ~45% get a hard contrast rim (the unmistakable MDH look).
-  if (R() < 0.45) {
-    ctx.strokeStyle = 'rgba(0,0,0,0.88)';
-    ctx.lineWidth = Math.max(1, Math.min(BW, BH) * 0.05);
-    ctx.strokeRect(bx + 0.5, by + 0.5, BW - 1, BH - 1);
-  }
-  // 4. Mini note label — ~28% get the top note name printed on top of
-  // whatever decoration sits below. Skipped if the block is too small to be
-  // legible (avoids pixel-soup at tiny resolutions).
-  if (R() < 0.28 && BW > 14 && BH > 12) {
-    const name = _midiToName[top.m] || '';
-    const fs = Math.max(7, Math.min(BH*0.48, BW*0.42));
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `800 ${fs}px Georgia, serif`;
-    // Auto-contrast — light on dark fills, dark on bright fills.
-    const lum = (r*0.299 + g*0.587 + b*0.114);
-    ctx.fillStyle = lum > 150 ? 'rgba(0,0,0,0.90)' : 'rgba(255,255,255,0.96)';
-    ctx.fillText(name, bx + BW/2, by + BH/2);
-    ctx.restore();
-  }
-}
-
-
 // Dim mosaic — same crisp φ-rectangle structure as default, but each voice
 // painted at reduced alpha (~50%) so colors are visible but subdued. Used
 // as the Pollock substrate: the mosaic provides color context underneath
@@ -2007,7 +1902,6 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
   if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='oneM')return drawBlockOneM(ctx,bx,by,notes,gc,BW,BH);
   return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
 }
 
@@ -7640,6 +7534,301 @@ function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     if(kind===0){ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();}
     else if(kind===1){ctx.strokeStyle=`rgb(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]})`;ctx.lineWidth=Math.max(2,R*0.4);ctx.beginPath();ctx.moveTo(x,y-R*1.5);ctx.lineTo(x,y+R*1.5);ctx.moveTo(x-R,y);ctx.lineTo(x+R,y);ctx.stroke();}
     else{ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;ctx.beginPath();for(let s=0;s<10;s++){const a=s*Math.PI/5,rr=s%2?R*0.4:R*1.2;ctx.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);}ctx.closePath();ctx.fill();}
+  }
+}
+
+// ── $oneM$ — Million-Dollar-Homepage variant ──────────────────────────────
+// Third tap on the Mosaic chip enters this mode. Two layers:
+//   1. Background = chord-coloured rectangle tiles covering the canvas 100%
+//      (guillotine partition: recursively split the largest rect by a random
+//      ratio until we have ~60% of the chords as tiles). No gaps, no overlaps.
+//      Tiles get light decorations (borders ~30%, mini note labels ~12%).
+//   2. Foreground = chaos shapes from the remaining ~40% of chords, placed on
+//      a Vogel spiral (golden-angle fan-out from the centre) with jitter.
+//      Ten shape types — rectangle is just 8%, the rest are curves and points:
+//        circle, arc (Miró sweep), triangle, star, squiggle, rings, halfmoon,
+//        diamond, cross.
+//   Random sizes (medium 55% / large 30% / small 10% / hero 5%) regardless of
+//   shape. Saturated chord colours, hard black borders, mini note labels —
+//   everything stacks on top of the tile fill so the canvas is never empty.
+function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!chords || chords.length === 0 || lim === 0) return;
+  const isBW = mode === 'bw';
+  // Local PRNG seeded from session + phase so the painting is stable per song
+  // and re-rolls with Next/Vary just like every other artist.
+  const ss = (sessionSeed|0) ^ ((phaseIndex|0) * 0x9E3779B1) ^ 0x4D6F0001;
+  const R = (()=>{ let s = ss>>>0; return ()=>{ s = (s*1664525 + 1013904223)>>>0; return s/4294967296; }; })();
+  // Split visible chords into tiles (60%) + chaos shapes (40%). Floor + max
+  // keeps us safe with small lim values (don't try to partition into 0 rects).
+  const bgCount = Math.max(4, Math.floor(lim * 0.60));
+  const fgCount = Math.max(0, lim - bgCount);
+  // ── LAYER 1: tile fill via guillotine partition ─────────────────────────
+  // Always split the LARGEST rect in two; sometimes (10%) pick a non-largest
+  // for variation. Bias the cut to the longer side, with random 25..75% ratio.
+  const rects = [{x:0, y:0, w:CW, h:CH}];
+  while(rects.length < bgCount){
+    let maxIdx = 0, maxArea = 0;
+    for(let i=0; i<rects.length; i++){
+      const a = rects[i].w * rects[i].h;
+      if(a > maxArea){ maxArea = a; maxIdx = i; }
+    }
+    let target = rects[maxIdx];
+    if(R() < 0.10 && rects.length > 4) target = rects[(R()*rects.length)|0];
+    const cutVertical = target.w > target.h ? (R() < 0.85) : (R() < 0.15);
+    const ratio = 0.25 + R() * 0.5;
+    const idx = rects.indexOf(target);
+    rects.splice(idx, 1);
+    if(cutVertical){
+      const splitW = target.w * ratio;
+      rects.push({x: target.x,           y: target.y, w: splitW,            h: target.h});
+      rects.push({x: target.x + splitW,  y: target.y, w: target.w - splitW, h: target.h});
+    } else {
+      const splitH = target.h * ratio;
+      rects.push({x: target.x, y: target.y,          w: target.w, h: splitH});
+      rects.push({x: target.x, y: target.y + splitH, w: target.w, h: target.h - splitH});
+    }
+  }
+  // Shuffle so chord order isn't visually correlated with tile position.
+  for(let i = rects.length-1; i > 0; i--){
+    const j = (R()*(i+1))|0;
+    [rects[i], rects[j]] = [rects[j], rects[i]];
+  }
+  // Helper — get the top (highest-pitched) note of a chord. Same convention
+  // as the per-block renderers in this file.
+  const topNote = (ch)=>{
+    const notes = ch.n || ch.notes || (Array.isArray(ch) ? ch : null);
+    if(!notes || !notes.length) return null;
+    if(notes.length === 1) return notes[0];
+    let best = notes[0];
+    for(let i=1; i<notes.length; i++){ if((notes[i].m||0) > (best.m||0)) best = notes[i]; }
+    return best;
+  };
+  // Render tiles — base fill + light header/footer accents + occasional border + occasional label.
+  for(let i=0; i<bgCount && i<lim; i++){
+    const note = topNote(chords[i]); if(!note) continue;
+    const m = note.m, v = note.v != null ? note.v : 100;
+    const [r,g,b,a] = gc(m, v);
+    const rect = rects[i]; if(!rect) continue;
+    const {x, y, w, h} = rect;
+    ctx.fillStyle = _rgbaStr(r, g, b, Math.max(0.92, a));
+    ctx.fillRect(x, y, w, h);
+    // Light tile decorations — kept subtle so the chaos layer reads on top.
+    if(R() < 0.20){
+      const acc = gc((m + 7) % 128, 110);
+      ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
+      ctx.fillRect(x, y, w, Math.max(2, h * 0.15));
+    } else if(R() < 0.15){
+      const acc = gc((m + 9) % 128, 110);
+      const bh = Math.max(2, h * 0.15);
+      ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
+      ctx.fillRect(x, y + h - bh, w, bh);
+    }
+    if(R() < 0.30){
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.lineWidth = Math.max(1, Math.min(w, h) * 0.04);
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    }
+    if(R() < 0.12 && w > 16 && h > 14){
+      const name = _midiToName[m] || '';
+      const fs = Math.max(8, Math.min(h*0.45, w*0.36));
+      ctx.save();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `800 ${fs}px Georgia, serif`;
+      const lum = (r*0.299 + g*0.587 + b*0.114);
+      ctx.fillStyle = lum > 150 ? 'rgba(0,0,0,0.90)' : 'rgba(255,255,255,0.96)';
+      ctx.fillText(name, x + w/2, y + h/2);
+      ctx.restore();
+    }
+  }
+  // ── LAYER 2: chaos shapes via Vogel-spiral placement ────────────────────
+  if(fgCount === 0) return;
+  const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60;
+  const PHI_ANGLE = Math.PI * (3 - Math.sqrt(5));     // golden angle
+  const ccx = CW/2, ccy = CH/2;
+  const maxR = Math.min(CW, CH) * 0.46;
+  for(let i=0; i<fgCount; i++){
+    const note = topNote(chords[bgCount + i]); if(!note) continue;
+    const m = note.m, v = note.v != null ? note.v : 100;
+    const [r,g,b,a] = gc(m, v);
+    const baseColor = _rgbaStr(r, g, b, Math.max(0.92, a));
+    // Vogel spiral position — uniform density via sqrt growth, plus jitter.
+    const rad = Math.sqrt(i / fgCount) * maxR;
+    const ang = i * PHI_ANGLE + R()*0.4;
+    const cx = ccx + Math.cos(ang)*rad + (R()-0.5) * Math.min(CW,CH) * 0.10;
+    const cy = ccy + Math.sin(ang)*rad + (R()-0.5) * Math.min(CW,CH) * 0.10;
+    // Random size — mix of medium/large/small with rare "hero" XL.
+    const sRoll = R();
+    let size;
+    if(sRoll < 0.55)      size = fgSize * (0.5 + R()*0.6);
+    else if(sRoll < 0.85) size = fgSize * (1.0 + R()*0.8);
+    else if(sRoll < 0.95) size = fgSize * (0.25 + R()*0.30);
+    else                  size = fgSize * (1.8 + R()*1.5);
+    // Pick a shape — rect is just 8%, curves & points dominate.
+    const shapeRoll = R();
+    let shape;
+    if      (shapeRoll < 0.08) shape = 'rect';
+    else if (shapeRoll < 0.26) shape = 'circle';
+    else if (shapeRoll < 0.41) shape = 'arc';
+    else if (shapeRoll < 0.53) shape = 'triangle';
+    else if (shapeRoll < 0.65) shape = 'star';
+    else if (shapeRoll < 0.75) shape = 'squiggle';
+    else if (shapeRoll < 0.83) shape = 'rings';
+    else if (shapeRoll < 0.91) shape = 'halfmoon';
+    else if (shapeRoll < 0.97) shape = 'diamond';
+    else                       shape = 'cross';
+    if(shape === 'rect'){
+      const aspect = 0.4 + R()*1.8;
+      const w = size, h = size / aspect;
+      const x = cx - w/2, y = cy - h/2;
+      ctx.fillStyle = baseColor;
+      ctx.fillRect(x, y, w, h);
+      if(R() < 0.55){
+        ctx.strokeStyle = 'rgba(0,0,0,0.88)';
+        ctx.lineWidth = Math.max(1, Math.min(w, h) * 0.05);
+        ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      }
+    } else if(shape === 'circle'){
+      const radC = size / 2;
+      ctx.fillStyle = baseColor;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radC, 0, Math.PI*2);
+      ctx.fill();
+      if(R() < 0.55){
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = Math.max(1, radC * 0.10);
+        ctx.stroke();
+      }
+      if(R() < 0.30){
+        const acc = gc((m + 5) % 128, 110);
+        ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
+        ctx.beginPath();
+        ctx.arc(cx, cy, radC * (0.30 + R()*0.15), 0, Math.PI*2);
+        ctx.fill();
+      }
+    } else if(shape === 'arc'){
+      const radA = size * 0.6;
+      const startA = R() * Math.PI * 2;
+      const sweep = (0.35 + R()*0.80) * Math.PI;
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = Math.max(3, size * (0.05 + R()*0.07));
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(cx, cy, radA, startA, startA + sweep);
+      ctx.stroke();
+    } else if(shape === 'triangle'){
+      const radT = size * 0.55;
+      const rot = R() * Math.PI * 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rot);
+      ctx.beginPath();
+      for(let k=0; k<3; k++){
+        const a2 = (k * 2 * Math.PI / 3) - Math.PI/2;
+        const px = Math.cos(a2) * radT, py = Math.sin(a2) * radT;
+        if(k===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fillStyle = baseColor;
+      ctx.fill();
+      if(R() < 0.55){
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = Math.max(1, radT * 0.08);
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else if(shape === 'star'){
+      const outerR = size * 0.55;
+      const innerR = outerR * 0.4;
+      const points = 5;
+      const rot = -Math.PI/2 + R() * Math.PI * 2;
+      ctx.beginPath();
+      for(let k=0; k<points*2; k++){
+        const rr = (k % 2 === 0) ? outerR : innerR;
+        const a2 = rot + (k * Math.PI / points);
+        const px = cx + Math.cos(a2) * rr, py = cy + Math.sin(a2) * rr;
+        if(k===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fillStyle = baseColor;
+      ctx.fill();
+      if(R() < 0.40){
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = Math.max(1, outerR * 0.06);
+        ctx.stroke();
+      }
+    } else if(shape === 'squiggle'){
+      const len = size * 1.2;
+      const steps = 3 + ((R()*3)|0);
+      const amp = size * 0.25;
+      const baseAngle = R() * Math.PI * 2;
+      const dx = Math.cos(baseAngle), dy = Math.sin(baseAngle);
+      const nx = -dy, ny = dx;
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = Math.max(3, size * (0.06 + R()*0.06));
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      const segs = steps * 4;
+      for(let k=0; k<=segs; k++){
+        const t = k / segs;
+        const xx = cx + (t - 0.5) * len * dx + Math.sin(t * Math.PI * steps) * amp * nx;
+        const yy = cy + (t - 0.5) * len * dy + Math.sin(t * Math.PI * steps) * amp * ny;
+        if(k===0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+    } else if(shape === 'rings'){
+      const maxRR = size * 0.5;
+      for(let k=3; k>=1; k--){
+        const ringR = maxRR * (k / 3);
+        const ringCol = (k % 2 === 0) ? gc((m + 5) % 128, 110) : [r,g,b,a];
+        ctx.fillStyle = _rgbaStr(ringCol[0], ringCol[1], ringCol[2], 0.95);
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringR, 0, Math.PI*2);
+        ctx.fill();
+      }
+      if(R() < 0.30){
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+        ctx.lineWidth = Math.max(1, maxRR * 0.04);
+        ctx.beginPath();
+        ctx.arc(cx, cy, maxRR, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    } else if(shape === 'halfmoon'){
+      const radH = size * 0.55;
+      const startA = R() * Math.PI * 2;
+      ctx.fillStyle = baseColor;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radH, startA, startA + Math.PI);
+      ctx.closePath();
+      ctx.fill();
+      if(R() < 0.45){
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = Math.max(1, radH * 0.07);
+        ctx.stroke();
+      }
+    } else if(shape === 'diamond'){
+      const half = size * 0.5;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(Math.PI/4 + (R()-0.5)*0.4);
+      ctx.fillStyle = baseColor;
+      ctx.fillRect(-half, -half, half*2, half*2);
+      if(R() < 0.55){
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = Math.max(1, half * 0.08);
+        ctx.strokeRect(-half, -half, half*2, half*2);
+      }
+      ctx.restore();
+    } else { // cross
+      const half = size * 0.45;
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = Math.max(3, size * 0.15);
+      ctx.lineCap = 'butt';
+      ctx.beginPath();
+      ctx.moveTo(cx - half, cy); ctx.lineTo(cx + half, cy);
+      ctx.moveTo(cx, cy - half); ctx.lineTo(cx, cy + half);
+      ctx.stroke();
+    }
   }
 }
 
@@ -14386,10 +14575,11 @@ export default function Paintiano() {
   // colour blocks. Toggled by tapping the active Mosaic chip; auto-reset when any
   // artist style is chosen, or when the source is not a mood.
   const [notesMode, setNotesMode] = useState(false);
-  // $oneM$ — third tap on the Mosaic chip enters this mode: same φ-block grid
-  // as Mosaic but each cell is dressed Million-Dollar-Homepage-style (random
-  // borders, mini note labels, accent stripes, stripes/dots/crosses). Mutually
-  // exclusive with notesMode; the chip cycles Mosaic → Notes → $oneM$ → Mosaic.
+  // $oneM$ — third tap on the Mosaic chip enters this mode: chord tiles fill
+  // the canvas 100% (guillotine partition) with chaos shapes (circles, arcs,
+  // triangles, stars, squiggles, rings, half-moons, diamonds, crosses, rects)
+  // scattered on top in a Vogel spiral from the centre. Mutually exclusive
+  // with notesMode; the chip cycles Mosaic → Notes → $oneM$ → Mosaic.
   const [oneMMode, setOneMMode] = useState(false);
   // True while the canvas belongs to a MOOD (vs a file source or live mode).
   // Unlike currentMood it survives Clear, so the "+ New mood" button stays after
@@ -15109,7 +15299,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic';
+        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
         if(!fullCanvasOverlay){
@@ -15154,6 +15344,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -15213,7 +15404,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='comic' && lim>0){
         drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
+      if(style==='oneM' && lim>0){
+        drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+      }
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='oneM'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -19695,6 +19889,9 @@ Composition rules:
         if(style==='comic' && chords.length>0){
           drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
+        if(style==='oneM' && chords.length>0){
+          drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
+        }
       }
       // Watermark policy: stamp "paintiano.app" unless we KNOW the user is
       // Pro (or Pro AI). `isPro` here is `pro || pro_ai` and is `false` while
@@ -20950,22 +21147,8 @@ Composition rules:
           <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
-            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; const showOneM = canNotes && oneMMode;
-              // Cycle: plain Mosaic → Notes → $oneM$ → plain Mosaic.
-              const cycleMosaicVariant = ()=>{
-                if(!notesMode && !oneMMode){ setNotesMode(true); }
-                else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
-                else { setOneMMode(false); setNotesMode(false); }
-              };
-              const label = showOneM ? t('oneMStyle') : (showNotes ? t('notesStyle') : t('mosaicStyle'));
-              const tip = mosaicInert ? 'shuffle is on — turn off 🎲 to use Mosaic'
-                : (canNotes
-                    ? (showOneM ? '$oneM$ — tap for colour mosaic'
-                        : showNotes ? 'notes — tap for $oneM$'
-                        : 'mosaic — tap for note names')
-                    : 'mosaic — the plain reading with no artist overlay');
-              return (
-            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ cycleMosaicVariant(); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={tip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{label}</button>
+            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
+            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ if(!notesMode && !oneMMode){ setNotesMode(true); } else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); } else { setOneMMode(false); setNotesMode(false); } } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{(canNotes && oneMMode)?t('oneMStyle'):(showNotes?t('notesStyle'):t('mosaicStyle'))}</button>
             ); })()}
             {effectivePairs.map(([a,b])=>{
               // Free tier: only the 'a' side is reachable; the 'b' side is
