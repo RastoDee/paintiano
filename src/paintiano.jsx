@@ -13883,15 +13883,6 @@ export default function Paintiano() {
   const introRafRef   = useRef(null);
 
   const [mode,      setMode]      = useState('harmony');
-  // If the user leaves image mode while mode is still 'bw' (the app picked it
-  // for a monochrome image), force it back to harmony — the non-image colour
-  // picker has no B/W tab, so the painting would silently render grey with no
-  // visible tab selected. Image mode itself is allowed to be 'bw'.
-  useEffect(()=>{
-    if(mode==='bw' && viewMode!=='image' && loadedSource!=='image'){
-      setMode('harmony');
-    }
-  },[viewMode, loadedSource, mode]);
   const modeRef = useRef('harmony');
   useEffect(()=>{ modeRef.current=mode; },[mode]);
   // The colour reading the app chose for the current image (harmony or bw), so
@@ -14146,6 +14137,15 @@ export default function Paintiano() {
   // glance which source is currently active. The 'mood' value is implicit
   // via the mood <select> showing its own value, so we use null in that case.
   const [loadedSource, setLoadedSource] = useState(null);
+  // If the user leaves image mode while mode is still 'bw' (the app picked it
+  // for a monochrome image), force it back to harmony — the non-image colour
+  // picker has no B/W tab, so the painting would silently render grey with no
+  // visible tab selected. Image mode itself is allowed to be 'bw'.
+  useEffect(()=>{
+    if(mode==='bw' && viewMode!=='image' && loadedSource!=='image'){
+      setMode('harmony');
+    }
+  },[viewMode, loadedSource, mode]);
   const [recording, setRecording] = useState(false);
   const [micPainting, setMicPainting] = useState(false);
   const [micListening, setMicListening] = useState(false);
