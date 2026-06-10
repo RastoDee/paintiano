@@ -7600,7 +7600,9 @@ Composition rules:
                 case 5: case 6: return 3;
                 case 7: case 8: return 4;
                 case 9: case 10: return 5;
-                default: return 5;
+                // n>=11 → keep at most 2 rows by widening the grid
+                // (cols = ceil(n/2), so n=11→6, n=12→6, n=13→7 …).
+                default: return Math.ceil(_chipCount / 2);
               }
             })();
             return (
