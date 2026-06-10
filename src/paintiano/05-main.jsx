@@ -241,11 +241,12 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
         </div>
         <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18,flexWrap:'wrap'}}>
           <button onClick={()=>{
-            // Reset to the inverse-Harmony default — the same table the app
-            // seeds Custom with at first launch (consonant intervals get
-            // distant hues, dissonant intervals get close ones).
+            // Reset to Scriabin's Prometheus default — the same table the app
+            // seeds Custom with at first launch. Scriabin marked D♯ and A♯ as
+            // "metallic" → CUSTOM_DEFAULT_SAT desaturates those two so they
+            // read as steel/lead, not pure hue.
             setCustomPalette(Array.from({length:12},(_,pc)=>{
-              const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
+              const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],CUSTOM_DEFAULT_SAT[pc],55);
               return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
             }));
           }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
@@ -477,16 +478,19 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
-      const PALETTE_VERSION='5';
+      const PALETTE_VERSION='6';
       const savedVersion=localStorage.getItem('paintiano_palette_version');
       if(savedVersion!==PALETTE_VERSION){
-        // Force-seed the new inverse-Harmony default (CUSTOM_DEFAULT_HUE) into
-        // localStorage, overwriting any prior saved palette — including the old
-        // default derived from COF+180 AND any user-customised palette from a
-        // previous version. On this rollout every user (Free + Pro + Pro AI)
-        // lands on the new default. Pre-existing customisations are discarded.
-        const seed = CUSTOM_DEFAULT_HUE.map(h=>{
-          const [r,g,b]=fromHsl(h,80,55);
+        // Force-seed Scriabin's Prometheus default (CUSTOM_DEFAULT_HUE +
+        // CUSTOM_DEFAULT_SAT) into localStorage, overwriting any prior saved
+        // palette — including the old inverse-Harmony default (now promoted
+        // to the Kontra chip) AND any user-customised palette from a previous
+        // version. On this rollout every user (Free + Pro + Pro AI) lands on
+        // the new Scriabin default. Pre-existing customisations are discarded.
+        // Scriabin marked D♯ and A♯ as "metallic" → those two get sat=25 via
+        // CUSTOM_DEFAULT_SAT so the seed reads as steel/lead, not pure hue.
+        const seed = CUSTOM_DEFAULT_HUE.map((h,pc)=>{
+          const [r,g,b]=fromHsl(h,CUSTOM_DEFAULT_SAT[pc],55);
           return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
         });
         try{
@@ -504,12 +508,13 @@ export default function Paintiano() {
     }catch(_){}
     return null;
   });
-  // Default Custom palette — derived from CUSTOM_DEFAULT_HUE (inverse-Harmony
-  // aesthetic: consonant intervals get distant hues, dissonant intervals get
-  // close ones). Anti-Harmony as a starting point so it doesn't feel like a
-  // rotated Harmony. The user can recolour any swatch in the editor (Pro).
+  // Default Custom palette — Scriabin's Prometheus colour-tone mapping (1910).
+  // The most famous synaesthete in history actually saw these colours for
+  // these pitches; the table follows the circle of fifths through a rainbow,
+  // with D♯ and A♯ desaturated to ~25 % to honour Scriabin's "metallic" marks.
+  // The user can recolour any swatch in the editor (Pro).
   const defaultCustomPalette=useMemo(()=>Array.from({length:12},(_,pc)=>{
-    const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
+    const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],CUSTOM_DEFAULT_SAT[pc],55);
     return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
   }),[]);
   // Pro tier uses the user's saved palette (or default if empty). Free tier
@@ -769,7 +774,7 @@ export default function Paintiano() {
   const cycleColorFs = useCallback(()=>{
     const cycle = viewModeRef.current==='image'
       ? ['harmony','spectral','bw','custom']
-      : ['harmony','spectral','phi','custom'];
+      : ['harmony','spectral','phi','kontra','custom'];
     const cur = modeRef.current;
     const idx = cycle.indexOf(cur);
     const next = cycle[((idx<0?0:idx)+1) % cycle.length];
@@ -1407,6 +1412,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(mode==='custom') return customCol(m,v,activePalette);
     if(mode==='spectral') return specCol(m,v);
     if(mode==='phi') return phiCol(m,v);
+    if(mode==='kontra') return kontraCol(m,v);
     return harmCol(m,v);
   },[mode,activePalette]);
 
@@ -1417,6 +1423,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(md==='bw') return bwCol(36+pc*4, 100);     // 12 steps up the value ramp → grey scale
     if(md==='spectral') return specCol(60+pc, 100);
     if(md==='phi') return phiCol(60+pc, 100);
+    if(md==='kontra') return kontraCol(60+pc, 100);
     return harmCol(60+pc, 100);
   },[]);
 
@@ -3004,7 +3011,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             ? Object.assign(activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[0];}),
                 {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
                  __hasNeutral:activePalette.some(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1]<12;})})
-            : (mode==='spectral'?SPEC_HUE:COF);
+            : mode==='spectral' ? SPEC_HUE
+            : mode==='phi' ? PHI_HUE
+            : mode==='kontra' ? KONTRA_HUE
+            : COF;
           const _atmoBias2=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
           const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current,_atmoBias2);
           _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
@@ -4533,6 +4543,9 @@ Composition rules:
             ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
                             { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                               __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
+            : startMode==='spectral' ? SPEC_HUE
+            : startMode==='phi' ? PHI_HUE
+            : startMode==='kontra' ? KONTRA_HUE
             : COF;                                     // harmony & bw both read via COF
           const evts=pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -4590,7 +4603,10 @@ Composition rules:
       ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
                       { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                         __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
-      : (mode==='spectral'?SPEC_HUE:COF);
+      : mode==='spectral' ? SPEC_HUE
+      : mode==='phi' ? PHI_HUE
+      : mode==='kontra' ? KONTRA_HUE
+      : COF;
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -7323,8 +7339,8 @@ Composition rules:
                   for the readout; in AI Compose they still set the palette the AI
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
-              <div style={{display:'grid',gridTemplateColumns: appColour?'repeat(4,1fr)':'repeat(2,1fr)',gap:6}}>
-                {(appColour?['harmony','spectral','phi','custom']:['bw','custom']).map(m=>{
+              <div style={{display:'grid',gridTemplateColumns: appColour?'repeat(5,1fr)':'repeat(2,1fr)',gap:6}}>
+                {(appColour?['harmony','spectral','phi','kontra','custom']:['bw','custom']).map(m=>{
                   const isCustomTab = m==='custom';
                   const armed = isCustomTab && mode==='custom' && customArmed;
                   const dis = isDisabled(m);
@@ -7416,8 +7432,8 @@ Composition rules:
             </div>
             );
           })() : (<>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-              {['harmony','spectral','phi','custom'].map(m=>{
+            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6}}>
+              {['harmony','spectral','phi','kontra','custom'].map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
               // Free tier: Custom uses the same cycle as Pro (Custom → Edit → action),

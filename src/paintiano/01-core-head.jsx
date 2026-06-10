@@ -215,16 +215,36 @@ const specCol=(m,v=100)=>{const h=SPEC_HUE[m%12];const s=75+(v/127)*15;const[r,g
 // maximally scattered around the wheel: no two PCs near each other.
 const PHI_HUE=Array.from({length:12},(_,pc)=>(pc*137.50776)%360);
 const phiCol=(m,v=100)=>{const h=PHI_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
-// Custom default — "inverse-Harmony" aesthetic. Consonant intervals (P5,
-// M3, m3, M6, m6, P4) get FAR hues; dissonant intervals (m2, M2, TT, M7,
-// m7) get CLOSE ones. Hand-picked — no single linear formula satisfies
-// every pair on 12 PCs. Marker pairs:
+// Kontra — inverse-Harmony aesthetic. Consonant intervals (P5, M3, m3, M6,
+// m6, P4) get FAR hues; dissonant intervals (m2, M2, TT, M7, m7) get CLOSE
+// ones. Hand-picked — no single linear formula satisfies every pair on 12 PCs.
+// Marker pairs:
 //   C + G  (P5) → 0°  vs 180° — complementary
 //   C + F# (TT) → 0°  vs 330° — close
 //   C + C# (m2) → 0°  vs 30°  — close
-const CUSTOM_DEFAULT_HUE=[
+// This used to live as CUSTOM_DEFAULT_HUE; promoted to its own first-class
+// chip ("Kontra") so the inverse reading is reachable without touching the
+// editable Custom palette.
+const KONTRA_HUE=[
   0, 30, 60, 240, 270, 210, 330, 180, 90, 120, 300, 150
 ];
+// Custom default — Scriabin's Prometheus colour-tone mapping (1910). The
+// most famous synaesthete in history actually saw these colours for these
+// pitches; he wrote them into the "luce" part of his orchestral score.
+// Roughly follows the circle of fifths through a rainbow:
+//   C(red) → G(orange-pink) → D(yellow) → A(green) → E(pearly blue) → B(blue)
+// then F#(violet-blue), C#(violet), G#(purple), then steely D#(210°) and
+// metallic A#(220°), with F at deep-red 345° closing the wheel back to C.
+// Scriabin marked D♯ and A♯ as "metallic" — desaturated, not pure hue, so
+// CUSTOM_DEFAULT_SAT pulls those two down to ~25 % while the rest sit at 80 %.
+// Pitch order: C, C#, D, D#, E, F, F#, G, G#, A, A#, B.
+const CUSTOM_DEFAULT_HUE=[
+  0, 280, 60, 210, 195, 345, 260, 30, 300, 120, 220, 240
+];
+const CUSTOM_DEFAULT_SAT=[
+  80, 80, 80, 25, 80, 80, 80, 80, 80, 80, 25, 80
+];
+const kontraCol=(m,v=100)=>{const h=KONTRA_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
 
 // Fast RGBA string helper — avoids repeated template-string + toFixed allocations
 // in the hot inner draw loops. Rounds alpha to 3 decimal places inline.
