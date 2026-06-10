@@ -9507,8 +9507,14 @@ Composition rules:
             </div>
             <div style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
               <div>
-                <div style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase',marginBottom:10}}>{t('setupPalettesTitle')||'Palettes'}</div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
+                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
+                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase'}}>{t('setupPalettesTitle')||'Palettes'}</span>
+                  <span style={{display:'inline-flex',gap:14,fontSize:(.5*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase'}}>
+                    <span onClick={()=>setSetupPalettes(ALL_PALETTE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes(ALL_PALETTE_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{t('setupAll')||'All'}</span>
+                    <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{t('setupNone')||'None'}</span>
+                  </span>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:8}}>
                   {ALL_PALETTE_KEYS.map(k=>{
                     const on = setupPalettes.includes(k);
                     return (
@@ -9521,8 +9527,14 @@ Composition rules:
                 </div>
               </div>
               <div>
-                <div style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase',marginBottom:10}}>{t('setupArtistsTitle')||'Artists'}</div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
+                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
+                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase'}}>{t('setupArtistsTitle')||'Artists'}</span>
+                  <span style={{display:'inline-flex',gap:14,fontSize:(.5*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase'}}>
+                    <span onClick={()=>setSetupArtists(ALL_ARTIST_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(ALL_ARTIST_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{t('setupAll')||'All'}</span>
+                    <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{t('setupNone')||'None'}</span>
+                  </span>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:8}}>
                   {ALL_ARTIST_KEYS.map(k=>{
                     const on = setupArtists.includes(k);
                     const isLockedForFree = isFree && k!=='mosaicFamily' && !FREE_UNLOCKED_KEYS.has(k);
