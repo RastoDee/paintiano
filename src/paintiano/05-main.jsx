@@ -7274,7 +7274,7 @@ Composition rules:
                   for the readout; in AI Compose they still set the palette the AI
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
-              <div style={{display:'grid',gridTemplateColumns: appColour?'repeat(4,1fr)':'3fr 1fr',gap:6}}>
+              <div style={{display:'grid',gridTemplateColumns: appColour?'repeat(4,1fr)':'repeat(2,1fr)',gap:6}}>
                 {(appColour ? ['harmony','spectral','phi','custom'] : ['bw','custom']).map(m=>{
                   const isCustomTab = m==='custom';
                   const armed = isCustomTab && mode==='custom' && customArmed;
@@ -8717,12 +8717,11 @@ Composition rules:
             export a half-animated piece. Hidden in the image source view (its
             own controls live elsewhere). */}
         {viewMode!=='image' && (()=>{
-          // Save enables once there's something to save and nothing is
-          // actively running. After Stop Live the LIVE pill is gone, micArmed
-          // may be true with chords waiting — Save is fine in that state. Play
-          // (current), recording, busy or demo reel still block.
+          // Save enables once there's something to save AND the painting is
+          // actually drawn (disp>0 — at least one chord painted). Empty canvas
+          // is not exportable. Active playback / pause / recording also block.
           const exportReady =
-            chords.length>0 && !playing && !anim && !holdPaused &&
+            chords.length>0 && disp>0 && !playing && !anim && !holdPaused &&
             !demoReelOn && !micActive && !busy && !recording;
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
