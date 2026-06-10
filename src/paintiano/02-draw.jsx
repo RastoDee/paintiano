@@ -6415,14 +6415,22 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const isBW=mode==='bw';
   const D=Math.min(CW,CH);
 
-  // Full Miró palette
-  const BLK  = isBW?[14,12,16]  :[14,12,16];
-  const RED  = isBW?[90,85,82]  :[215,38,30];
-  const GRN  = isBW?[80,85,80]  :[40,150,55];
-  const BLU  = isBW?[75,80,110] :[28,65,200];
-  const YEL  = isBW?[170,165,140]:[225,195,25];
-  const ORA  = isBW?[130,120,100]:[220,105,20];
-  const SKIN = isBW?[180,170,155]:[205,165,120]; // warm tan/skin
+  // Miró's palette — slot identity (RED/BLU/YEL/GRN/ORA) is preserved as a
+  // five-colour vocabulary, but each slot now receives its hue from the
+  // active colour-mode (gc) via a fixed pitch-class anchor. So the SHAPES
+  // and COMPOSITION remain Miró; the chromatic mood follows Harmony / Spectral
+  // / φ / Custom. BLK and SKIN stay as Miró's signature (the heavy black
+  // outlines and warm tan ground are non-negotiable).
+  const BLK  = [14,12,16];
+  const SKIN = isBW?[180,170,155]:[205,165,120];
+  // Slot anchors — C / D / E / G / A spaced through the chromatic so they
+  // come out distinct in every mode. gc returns [r,g,b,a] — keep RGB only.
+  const fromGc=(m)=>{ const c=gc(m,110); return [c[0]|0,c[1]|0,c[2]|0]; };
+  const RED  = fromGc(60); // PC 0 — C
+  const YEL  = fromGc(62); // PC 2 — D
+  const GRN  = fromGc(64); // PC 4 — E
+  const BLU  = fromGc(67); // PC 7 — G
+  const ORA  = fromGc(69); // PC 9 — A
   const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
   // Pick accent from gc() chord color
@@ -6609,14 +6617,15 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const isBW=mode==='bw';
   const D=Math.min(CW,CH);
 
-  // Miró palette (same as phase A).
+  // Miró palette — same identity slots as phase A, hues from the active mode.
   const BLK = [14,12,16];
-  const RED = isBW?[90,85,82]  :[215,38,30];
-  const GRN = isBW?[80,85,80]  :[40,150,55];
-  const BLU = isBW?[75,80,110] :[28,65,200];
-  const YEL = isBW?[170,165,140]:[225,195,25];
-  const ORA = isBW?[130,120,100]:[220,105,20];
   const SKIN= isBW?[180,170,155]:[205,165,120];
+  const fromGc=(m)=>{ const c=gc(m,110); return [c[0]|0,c[1]|0,c[2]|0]; };
+  const RED = fromGc(60); // C
+  const YEL = fromGc(62); // D
+  const GRN = fromGc(64); // E
+  const BLU = fromGc(67); // G
+  const ORA = fromGc(69); // A
   const ACC = [RED,GRN,BLU,YEL,ORA];
   const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
@@ -6734,13 +6743,20 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 }
 
 // Miró palette helper used by the new phases.
-function _miroPal(isBW){
+function _miroPal(isBW, gc){
+  // BLK and WHT stay literal — Miró's heavy black outline and white ground are
+  // identity, not chromatic choices. RED/GRN/BLU/YEL slots receive their hue
+  // from the active colour mode via gc() on fixed pitch-class anchors, so the
+  // palette swings with Harmony / Spectral / φ / Custom while the slot-identity
+  // (which-shape-is-red, which-is-blue) is preserved by the drawing code.
+  const fromGc=(m)=>{ if(typeof gc!=='function') return null; const c=gc(m,110); return [c[0]|0,c[1]|0,c[2]|0]; };
+  const RED = fromGc(60) || (isBW?[90,85,82]  :[215,38,30]); // C
+  const YEL = fromGc(62) || (isBW?[170,165,140]:[225,195,25]); // D
+  const GRN = fromGc(64) || (isBW?[80,85,80]  :[40,150,55]); // E
+  const BLU = fromGc(67) || (isBW?[75,80,110] :[28,65,200]); // G
   return {
     BLK:[14,12,16],
-    RED: isBW?[90,85,82]  :[215,38,30],
-    GRN: isBW?[80,85,80]  :[40,150,55],
-    BLU: isBW?[75,80,110] :[28,65,200],
-    YEL: isBW?[170,165,140]:[225,195,25],
+    RED, GRN, BLU, YEL,
     WHT:[245,242,235]
   };
 }
@@ -6748,7 +6764,7 @@ function _miroPal(isBW){
 // ── Miró C: Blue triptych — a deep blue field with a few floating marks. ──
 function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW);
+  const P=_miroPal(isBW, gc);
   ctx.fillStyle=isBW?'rgb(70,72,90)':'rgb(20,55,150)';ctx.fillRect(0,0,CW,CH);
   const marks=Math.max(3,Math.min(24,Math.round(cn/8)));
   const vis=Math.max(1,Math.ceil(N/cn*marks));
@@ -6773,7 +6789,7 @@ function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró D: Biomorphic creatures — curvy organic blobs with eye-dots. ──
 function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW);
+  const P=_miroPal(isBW, gc);
   ctx.fillStyle=isBW?'rgb(224,220,212)':'rgb(238,228,206)';ctx.fillRect(0,0,CW,CH);
   const crs=Math.max(2,Math.min(14,Math.round(cn/12)));
   const vis=Math.max(1,Math.ceil(N/cn*crs));
@@ -6795,7 +6811,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró E: Harlequin Carnival — busy confetti of many small bright shapes. ──
 function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW);
+  const P=_miroPal(isBW, gc);
   ctx.fillStyle=isBW?'rgb(120,118,124)':'rgb(150,120,90)';ctx.fillRect(0,0,CW,CH);
   const units=Math.max(10,Math.min(220,cn*2));
   const vis=Math.max(1,Math.ceil(N/cn*units));
@@ -6815,7 +6831,7 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró F: Primary signs on white — clean white ground, bold red/blue/black. ──
 function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW);
+  const P=_miroPal(isBW, gc);
   ctx.fillStyle=isBW?'rgb(240,238,232)':'rgb(248,246,240)';ctx.fillRect(0,0,CW,CH);
   const signs=Math.max(3,Math.min(28,Math.round(cn/7)));
   const vis=Math.max(1,Math.ceil(N/cn*signs));
