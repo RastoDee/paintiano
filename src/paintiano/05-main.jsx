@@ -609,7 +609,7 @@ export default function Paintiano() {
     zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'包浩斯',miro:'星座',mondrian:'網格',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
-  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein'};
+  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
   // button → flip to its partner; tap again → back to Mosaic. Pairing is by
@@ -966,15 +966,29 @@ export default function Paintiano() {
     : SHUFFLE_POOL_ALL;
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
-    // Default artist is deterministic per song (chord hash). Dice/Next/Play
-    // increments shuffleArtistIndex so the user can step through the whole
-    // SHUFFLE_POOL while the song itself stays the same. Each (song, artist)
-    // combination renders an identical painting.
-    // Mosaic family ('mosaic'|'notes'|'oneM') is integrated into shuffle:
-    //  · Lock OFF (full shuffle) → pool = artists + the 3 family stops
-    //  · Lock ON  (user tapped Mosaic chip with dice on) → pool = just the 3
     const MOSAIC_FAMILY = ['mosaic','notes','oneM'];
-    const pool = mosaicShuffleLock ? MOSAIC_FAMILY : [...SHUFFLE_POOL, ...MOSAIC_FAMILY];
+    // ── LOCK MODE ──
+    // User tapped Mosaic chip with dice on. Pool is the 3 family stops in a
+    // FIXED order (Mosaic → Notes → oneM → Mosaic), starting at Mosaic.
+    // shuffleArtistIndex is reset to 0 when the lock is entered, so the first
+    // render is Mosaic and Next advances sequentially.
+    if(mosaicShuffleLock){
+      return MOSAIC_FAMILY[((shuffleArtistIndex|0) % 3 + 3) % 3];
+    }
+    // ── FULL SHUFFLE MODE ──
+    // Pool = artists + mosaic family (19 entries). Pseudo-randomly reordered
+    // per song via Fisher-Yates seeded with pollockSessionSeed → same song
+    // gives the same artist order every time (deterministic), but Mosaic /
+    // Notes / oneM can land anywhere in the sequence (not bunched at the end).
+    const base = [...SHUFFLE_POOL, ...MOSAIC_FAMILY];
+    let s = ((pollockSessionSeed >>> 0) ^ 0x9E3779B1) >>> 0;
+    if(s === 0) s = 1;
+    const _rnd = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+    const pool = base.slice();
+    for(let i = pool.length - 1; i > 0; i--){
+      const j = Math.floor(_rnd() * (i + 1));
+      const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
     let h = (pollockSessionSeed>>>0);
     h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
     const basePick = (h>>>0) % pool.length;
@@ -7959,8 +7973,9 @@ Composition rules:
       {/* Fullscreen artist attribution — fixed near the viewport top so it sits
           in the black letterbox ABOVE the canvas. The user prefers it high (even
           close to the URL bar) over ever landing on the painting. Shows the
-          inspiring artist (fixed pick OR shuffle draw); hidden for Mosaic/Notes. */}
-      {immersive && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
+          inspiring artist (fixed pick OR shuffle draw); also shown for oneM
+          ("One Million Dollar Page"). Hidden for plain Mosaic and Notes. */}
+      {immersive && effectiveStyle && effectiveStyle!=='notes' && STYLE_INSPIRED[effectiveStyle] && (
         <div style={{position:'fixed',top:'max(8px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.95)',fontStyle:'italic',textShadow:'0 2px 10px rgba(0,0,0,.95)',pointerEvents:'none',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6}}>
           {!style&&(<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.85}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}
           <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
