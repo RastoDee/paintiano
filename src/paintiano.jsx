@@ -21339,7 +21339,34 @@ Composition rules:
           )}
           {loadedSource!=='image' && (
           <>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
+          {(()=>{
+            // ── Adaptive artist grid ───────────────────────────────────────
+            // When the user has all 16 artists selected in Setup, render the
+            // pair layout (Picasso↔Matisse on one chip, 8 pairs total = 9
+            // chips with Mosaic, fits the original 5×2 grid). When fewer than
+            // 16 are selected, unpair — every selected artist gets its own
+            // chip (single toggle, no A↔B flip). Column count maps to chip
+            // count per the spec: 1→1, 2→2, 3→3, 4→2, 5→3, 6→3, 7→4, 8→4,
+            // 9→5, 10→5, 11+→5 (pair mode max).
+            const _artistOnly = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily');
+            const _allArtistsSelected = _artistOnly.every(k => setupArtists.includes(k));
+            const _selectedSolo = _artistOnly.filter(k => setupArtists.includes(k));
+            const _familyOn = setupArtists.includes('mosaicFamily');
+            const _chipCount = (_familyOn?1:0) + (_allArtistsSelected ? effectivePairs.length : _selectedSolo.length) + 1; // +1 = dice
+            const _cols = (()=>{
+              switch(_chipCount){
+                case 0: case 1: return 1;
+                case 2: return 2;
+                case 3: return 3;
+                case 4: return 2;
+                case 5: case 6: return 3;
+                case 7: case 8: return 4;
+                case 9: case 10: return 5;
+                default: return 5;
+              }
+            })();
+            return (
+          <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
             {setupArtists.includes('mosaicFamily') && (()=>{
               const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
@@ -21375,14 +21402,13 @@ Composition rules:
               }
             }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn)}}>{subLabel}</button>
             ); })()}
-            {effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b)).map(([a,b])=>{
-              // Setup-picker integration: when only ONE side of the pair is in
-              // setupArtists, the pair tile collapses to a single-toggle for
-              // that side — no A↔B flip, no info row, no third-tap deselect.
-              // Tap → toggle that side on/off.
-              const _aOn = setupArtists.includes(a);
-              const _bOn = setupArtists.includes(b);
-              const forcedSide = (_aOn && !_bOn) ? a : (!_aOn && _bOn) ? b : null;
+            {_allArtistsSelected && effectivePairs.map(([a,b])=>{
+              // Full setup — paired layout (Picasso↔Matisse on one chip).
+              // Setup picker is full → forcedSide is never engaged here, but
+              // the legacy A↔B / info-row logic remains intact.
+              const _aOn = true;
+              const _bOn = true;
+              const forcedSide = null;
               // Free tier: only the 'a' side is reachable; the 'b' side is
               // shown as a small "locked partner" info row beneath the palette
               // when the pair is tapped. No paywall opens from artist taps —
@@ -21533,6 +21559,27 @@ Composition rules:
                   style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
               );
             })}
+            {/* Solo chips — when fewer than 16 artists are selected in Setup,
+                each selected artist gets its own chip (single toggle, no A↔B
+                flip). Mosaic chip above + dice below stay as-is. */}
+            {!_allArtistsSelected && _selectedSolo.map(k=>{
+              const isFreeLocked = proStatus==='free' && !FREE_UNLOCKED_KEYS.has(k);
+              const isOn = style===k;
+              const shufHit = shuffleStyle===k;
+              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+              const _artFull = STYLE_INSPIRED[k];
+              const label = _artistShort[_artFull] || _artFull;
+              const onClick = ()=>{
+                if(demoReelOn) return;
+                if(isFreeLocked){ setPaywallReason('settings'); return; }
+                if(isOn){ setStyleTo(null); } else { setStyleTo(k); }
+              };
+              return (
+                <button key={k} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
+                  title={isFreeLocked ? `${_artFull} · Pro` : (isOn ? `${_artFull} — tap to release to Mosaic` : (shufHit ? `🎲 ${_artFull} — shuffle is painting this` : `${_artFull} — tap to paint`))}
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',opacity:isFreeLocked?.55:1,...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}{isFreeLocked && <span style={{fontSize:'.65em',opacity:.8,marginLeft:4}}>🔒</span>}</button>
+              );
+            })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
             <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
               <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
@@ -21540,6 +21587,7 @@ Composition rules:
               </button>
             </div>
           </div>
+          ); })()}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
               member of the most recently tapped pair with a PRO badge.
               Clickable: opens the paywall with reason 'settings'. Sitting
