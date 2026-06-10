@@ -564,7 +564,7 @@ export default function Paintiano() {
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);
-  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [phaseIndex,setPhaseIndex]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
   // Variation history for Random mode prev/next navigation. saltHistory holds
   // the sequence of random salts that have been shown; saltIdxRef points at the
   // current one. Play-from-start and Loop append+advance (fresh variation);
@@ -970,15 +970,22 @@ export default function Paintiano() {
     // increments shuffleArtistIndex so the user can step through the whole
     // SHUFFLE_POOL while the song itself stays the same. Each (song, artist)
     // combination renders an identical painting.
+    // Mosaic family ('mosaic'|'notes'|'oneM') is integrated into shuffle:
+    //  · Lock OFF (full shuffle) → pool = artists + the 3 family stops
+    //  · Lock ON  (user tapped Mosaic chip with dice on) → pool = just the 3
+    const MOSAIC_FAMILY = ['mosaic','notes','oneM'];
+    const pool = mosaicShuffleLock ? MOSAIC_FAMILY : [...SHUFFLE_POOL, ...MOSAIC_FAMILY];
     let h = (pollockSessionSeed>>>0);
     h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
-    const basePick = (h>>>0) % SHUFFLE_POOL.length;
-    return SHUFFLE_POOL[(basePick + shuffleArtistIndex) % SHUFFLE_POOL.length];
-  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL, shuffleArtistIndex]);
+    const basePick = (h>>>0) % pool.length;
+    return pool[(basePick + shuffleArtistIndex) % pool.length];
+  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL, shuffleArtistIndex, mosaicShuffleLock]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
+  // shuffleStyle==='mosaic' is the plain-mosaic stop in the shuffle pool — it
+  // maps to effectiveStyle=null so the default Mosaic renderer takes over.
   // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
   // it only needs note MIDI + the colour fn, which every source provides.
-  const effectiveStyle = style || shuffleStyle || (oneMMode ? 'oneM' : notesMode ? 'notes' : null);
+  const effectiveStyle = style || (shuffleStyle==='mosaic' ? null : shuffleStyle) || (oneMMode ? 'oneM' : notesMode ? 'notes' : null);
   // Pick a fresh random phaseIndex whenever the song OR the active artist
   // changes — that triggers a new "style" for that (song, artist) pair on the
   // first Play. Stays stable across repeated Plays of the same (song, artist).
@@ -1033,7 +1040,7 @@ export default function Paintiano() {
       setStyle(prev=>{
         const next = prev===k ? null : k;
         if(next===null){ setStructureSeedLock(null); }
-        else { setNotesMode(false); setOneMMode(false); } // choosing an artist exits Notes/$oneM$ mode
+        else { setNotesMode(false); setOneMMode(false); setMosaicShuffleLock(false); } // choosing an artist exits Notes/$oneM$ mode + clears shuffle lock
         return next;
       });
       if(canvasRef.current)canvasRef.current.style.opacity='1';
@@ -7466,8 +7473,39 @@ Composition rules:
           <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
-            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
-            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ if(!notesMode && !oneMMode){ setNotesMode(true); } else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); } else { setOneMMode(false); setNotesMode(false); } } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{(canNotes && oneMMode)?t('oneMStyle'):(showNotes?t('notesStyle'):t('mosaicStyle'))}</button>
+            {(()=>{
+              const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
+              const mosaicOn = style===null && (!shuffleStyle || inFamilyShuffle);
+              // Sub-label reflects the current rendered family member.
+              const subKind = (shuffleStyle==='notes') ? 'notes'
+                            : (shuffleStyle==='oneM') ? 'oneM'
+                            : (shuffleStyle==='mosaic') ? 'mosaic'
+                            : (!shuffleStyle && oneMMode) ? 'oneM'
+                            : (!shuffleStyle && notesMode) ? 'notes'
+                            : 'mosaic';
+              const subLabel = subKind==='notes' ? t('notesStyle') : subKind==='oneM' ? t('oneMStyle') : t('mosaicStyle');
+              const lockTip = randomMode
+                ? (mosaicShuffleLock ? 'mosaic family locked — tap to release back to full shuffle' : 'tap to lock shuffle to mosaic / notes / $1M$')
+                : (subKind==='oneM' ? 'tap to clear back to mosaic' : (subKind==='notes' ? 'notes — tap for $1M$' : 'mosaic — tap for note names'));
+              return (
+            <button onClick={()=>{
+              if(style!==null){ selectStyle(style); return; }
+              if(randomMode){
+                // Dice on → toggle "mosaic family" lock. Entering the lock
+                // restarts the cycle at 'mosaic' and clears the dice-off
+                // notes/oneM flags so the locked shuffle is the sole driver.
+                setMosaicShuffleLock(v=>{
+                  const nx = !v;
+                  if(nx){ setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); }
+                  return nx;
+                });
+              } else {
+                // Dice off → original 3-tap cycle Mosaic → Notes → $1M$ → Mosaic.
+                if(!notesMode && !oneMMode){ setNotesMode(true); }
+                else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
+                else { setOneMMode(false); setNotesMode(false); }
+              }
+            }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn)}}>{subLabel}</button>
             ); })()}
             {effectivePairs.map(([a,b])=>{
               // Free tier: only the 'a' side is reachable; the 'b' side is
@@ -7605,7 +7643,7 @@ Composition rules:
             })}
             {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
             <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
+              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
               </button>
             </div>
