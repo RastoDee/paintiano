@@ -544,6 +544,56 @@ export default function Paintiano() {
   // (the app's image pick shouldn't carry over as a gold SETUP tab). Cleared the
   // moment the user taps any colour tab in SETUP.
   const [setupNoSel, setSetupNoSel] = useState(false);
+  // ─── User picker preferences (Setup modal) ────────────────────────────────
+  // Lets the user narrow what shows up in the canvas-view pickers. Two arrays
+  // of opt-in keys, persisted in localStorage. Default = everything (current
+  // behavior preserved on first launch). Mosaic family is one item that
+  // covers all three states (Mosaic / Notes / oneM); the chip still cycles
+  // internally on tap, but the family is shown/hidden as a unit.
+  const ALL_PALETTE_KEYS = ['harmony','spectral','phi','kontra','custom'];
+  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','comic'];
+  const [setupPalettes, setSetupPalettes] = useState(() => {
+    try {
+      const raw = localStorage.getItem('paintiano_setup_palettes');
+      if(!raw) return ALL_PALETTE_KEYS.slice();
+      const arr = JSON.parse(raw);
+      if(!Array.isArray(arr)) return ALL_PALETTE_KEYS.slice();
+      const valid = arr.filter(k => ALL_PALETTE_KEYS.includes(k));
+      return valid.length ? valid : ALL_PALETTE_KEYS.slice();
+    } catch(_) { return ALL_PALETTE_KEYS.slice(); }
+  });
+  const [setupArtists, setSetupArtists] = useState(() => {
+    try {
+      const raw = localStorage.getItem('paintiano_setup_artists');
+      if(!raw) return ALL_ARTIST_KEYS.slice();
+      const arr = JSON.parse(raw);
+      if(!Array.isArray(arr)) return ALL_ARTIST_KEYS.slice();
+      const valid = arr.filter(k => ALL_ARTIST_KEYS.includes(k));
+      return valid.length ? valid : ALL_ARTIST_KEYS.slice();
+    } catch(_) { return ALL_ARTIST_KEYS.slice(); }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('paintiano_setup_palettes', JSON.stringify(setupPalettes)); } catch(_) {}
+  }, [setupPalettes]);
+  useEffect(() => {
+    try { localStorage.setItem('paintiano_setup_artists', JSON.stringify(setupArtists)); } catch(_) {}
+  }, [setupArtists]);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  // ─── Setup-picker safety: deselect anything the user removed ──────────────
+  // If the active palette or artist gets disabled in Setup, recover gracefully
+  // so the canvas doesn't render a hidden mode/artist.
+  useEffect(()=>{
+    if(mode==='bw') return;                       // bw is image-only, never in setupPalettes
+    if(!setupPalettes.includes(mode)){
+      const fb = setupPalettes.includes('harmony') ? 'harmony' : (setupPalettes[0] || 'harmony');
+      setMode(fb);
+    }
+  }, [setupPalettes, mode]);
+  useEffect(()=>{
+    if(style && !setupArtists.includes(style)){
+      setStyle(null);                             // disabled artist → release to Mosaic
+    }
+  }, [setupArtists, style]);
   // One-shot splash intro (palette→keyboard demo). Skippable by tap; auto-hides.
   const [showIntro, setShowIntro] = useState(()=>!INTRO_SHOWN);
   useEffect(()=>{
@@ -772,14 +822,18 @@ export default function Paintiano() {
   // phi instead, since the picker tabs match). Uses refs so setMode is the
   // only side effect and Strict Mode double-invoke is safe.
   const cycleColorFs = useCallback(()=>{
-    const cycle = viewModeRef.current==='image'
+    const allCycle = viewModeRef.current==='image'
       ? ['harmony','spectral','bw','custom']
       : ['harmony','spectral','phi','kontra','custom'];
+    // Filter to user-selected palettes (Setup picker). 'bw' is image-only and
+    // always allowed (not in setupPalettes — it's not a user-toggleable mode).
+    const cycle = allCycle.filter(m => m==='bw' || setupPalettes.includes(m));
+    if(cycle.length===0){ return; }                  // user disabled all — guard against empty
     const cur = modeRef.current;
     const idx = cycle.indexOf(cur);
     const next = cycle[((idx<0?0:idx)+1) % cycle.length];
     setMode(next);
-  },[]);
+  },[setupPalettes]);
   // Derived: any mic mode active?
   const micActive = micPainting || micListening;
   const [micVolActive, setMicVolActive] = useState(false);
@@ -972,20 +1026,27 @@ export default function Paintiano() {
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
     const MOSAIC_FAMILY = ['mosaic','notes','oneM'];
+    const familyOn = setupArtists.includes('mosaicFamily');
     // ── LOCK MODE ──
     // User tapped Mosaic chip with dice on. Pool is the 3 family stops in a
     // FIXED order (Mosaic → Notes → oneM → Mosaic), starting at Mosaic.
     // shuffleArtistIndex is reset to 0 when the lock is entered, so the first
-    // render is Mosaic and Next advances sequentially.
+    // render is Mosaic and Next advances sequentially. If user disabled the
+    // mosaic family in Setup, lock mode is a no-op (returns null → falls back
+    // to nothing, and the chip itself is hidden anyway).
     if(mosaicShuffleLock){
+      if(!familyOn) return null;
       return MOSAIC_FAMILY[((shuffleArtistIndex|0) % 3 + 3) % 3];
     }
     // ── FULL SHUFFLE MODE ──
-    // Pool = artists + mosaic family (19 entries). Pseudo-randomly reordered
-    // per song via Fisher-Yates seeded with pollockSessionSeed → same song
-    // gives the same artist order every time (deterministic), but Mosaic /
-    // Notes / oneM can land anywhere in the sequence (not bunched at the end).
-    const base = [...SHUFFLE_POOL, ...MOSAIC_FAMILY];
+    // Pool = (selected artists) + (mosaic family, only if selected in Setup).
+    // Pseudo-randomly reordered per song via Fisher-Yates seeded with
+    // pollockSessionSeed → same song gives the same order every time
+    // (deterministic), but Mosaic / Notes / oneM can land anywhere in the
+    // sequence (not bunched at the end).
+    const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k));
+    const base = familyOn ? [...filteredArtists, ...MOSAIC_FAMILY] : filteredArtists;
+    if(base.length === 0) return null;          // user disabled everything — guard
     let s = ((pollockSessionSeed >>> 0) ^ 0x9E3779B1) >>> 0;
     if(s === 0) s = 1;
     const _rnd = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
@@ -998,7 +1059,7 @@ export default function Paintiano() {
     h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
     const basePick = (h>>>0) % pool.length;
     return pool[(basePick + shuffleArtistIndex) % pool.length];
-  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL, shuffleArtistIndex, mosaicShuffleLock]);
+  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL, shuffleArtistIndex, mosaicShuffleLock, setupArtists]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
   // shuffleStyle==='mosaic' is the plain-mosaic stop in the shuffle pool — it
   // maps to effectiveStyle=null so the default Mosaic renderer takes over.
@@ -6838,6 +6899,10 @@ Composition rules:
       <div style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible'}}>
         <nav style={{display:'flex',gap:18,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('concept')}</span>
+          {/* DEMO nav item — TEMPORARILY HIDDEN. Kept here (commented) so the
+              feature can be restored in one paste; do not delete. The arming
+              logic, demoArmRef timeout, demoPlay() and demoReelStop() are all
+              still in scope and untouched — only the nav entry is removed.
           <span onClick={()=>{
             if(demoReelOn){ demoReelStop(); return; }
             if(busy)return;
@@ -6852,7 +6917,9 @@ Composition rules:
               demoArmRef.current=setTimeout(()=>{setDemoArmed(false);demoArmRef.current=null;},3000);
             }
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
+          */}
           <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
+          <span onClick={()=>setShowSetupModal(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowSetupModal(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('setupPickerLabel')||'Setup'}</span>
           {/* Tier-adaptive PRO tab — Free sees gold "PRO" (upgrade to Pro);
               plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI users
               see nothing — they're already at the top tier and the badge
@@ -7339,8 +7406,9 @@ Composition rules:
                   for the readout; in AI Compose they still set the palette the AI
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
-              <div style={{display:'grid',gridTemplateColumns: appColour?'repeat(5,1fr)':'repeat(2,1fr)',gap:6}}>
-                {(appColour?['harmony','spectral','phi','kontra','custom']:['bw','custom']).map(m=>{
+              {(()=>{ const _allTabs = appColour?['harmony','spectral','phi','kontra','custom']:['bw','custom']; const _tabs = _allTabs.filter(m => m==='bw' || setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs; return (
+              <div style={{display:'grid',gridTemplateColumns: `repeat(${_shown.length},1fr)`,gap:6}}>
+                {_shown.map(m=>{
                   const isCustomTab = m==='custom';
                   const armed = isCustomTab && mode==='custom' && customArmed;
                   const dis = isDisabled(m);
@@ -7384,6 +7452,7 @@ Composition rules:
                   );
                 })}
               </div>
+              ); })()}
               {/* READ-ONLY palette preview of the active mode (harmony/spectral/bw) —
                   shown when the user taps the active chip. Reflects the current mode
                   so it doubles as visual feedback for the colour reading.
@@ -7432,8 +7501,9 @@ Composition rules:
             </div>
             );
           })() : (<>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6}}>
-              {['harmony','spectral','phi','kontra','custom'].map(m=>{
+            {(()=>{ const _allTabs = ['harmony','spectral','phi','kontra','custom']; const _tabs = _allTabs.filter(m => setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs; return (
+            <div style={{display:'grid',gridTemplateColumns:`repeat(${_shown.length},1fr)`,gap:6}}>
+              {_shown.map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
               // Free tier: Custom uses the same cycle as Pro (Custom → Edit → action),
@@ -7473,6 +7543,7 @@ Composition rules:
               </button>
               );})}
             </div>
+            ); })()}
             {showColorPalette && (mode!=='custom' || (proStatus==='free' && customArmed)) && (
               <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:5,padding:'8px',borderRadius:10,background:'rgba(20,18,30,.4)',border:'1px solid rgba(242,238,232,.06)',marginTop:8}}>
                 {['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'].map((nm,pc)=>{
@@ -7503,7 +7574,7 @@ Composition rules:
           <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
-            {(()=>{
+            {setupArtists.includes('mosaicFamily') && (()=>{
               const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
               const mosaicOn = style===null && (!shuffleStyle || inFamilyShuffle);
               // Sub-label reflects the current rendered family member.
@@ -7537,7 +7608,14 @@ Composition rules:
               }
             }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn)}}>{subLabel}</button>
             ); })()}
-            {effectivePairs.map(([a,b])=>{
+            {effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b)).map(([a,b])=>{
+              // Setup-picker integration: when only ONE side of the pair is in
+              // setupArtists, the pair tile collapses to a single-toggle for
+              // that side — no A↔B flip, no info row, no third-tap deselect.
+              // Tap → toggle that side on/off.
+              const _aOn = setupArtists.includes(a);
+              const _bOn = setupArtists.includes(b);
+              const forcedSide = (_aOn && !_bOn) ? a : (!_aOn && _bOn) ? b : null;
               // Free tier: only the 'a' side is reachable; the 'b' side is
               // shown as a small "locked partner" info row beneath the palette
               // when the pair is tapped. No paywall opens from artist taps —
@@ -7550,9 +7628,11 @@ Composition rules:
               // The pair's "face" when not active: the member you last picked
               // from this pair, falling back to the default 'a'. For Free this
               // is forced to 'a' (the only reachable side).
-              const faceKey = pairLocked
-                ? a
-                : ((pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a);
+              const faceKey = forcedSide
+                ? forcedSide
+                : (pairLocked
+                  ? a
+                  : ((pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a));
               // Shuffle (Random + no manual pick): highlight whichever button
               // holds the style the shuffle landed on, and show THAT style's
               // label so the cycling reads on the buttons themselves.
@@ -7563,7 +7643,7 @@ Composition rules:
               // single recognizable word so they fit the narrow 5-up grid cell.
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
               // For Free, label always shows the unlocked 'a' artist.
-              const _displayKey = pairLocked ? a : (activeKey || shufKey || faceKey);
+              const _displayKey = forcedSide || (pairLocked ? a : (activeKey || shufKey || faceKey));
               const _artFull = STYLE_INSPIRED[_displayKey];
               const label = _artistShort[_artFull] || _artFull;
               // Tap behaviour:
@@ -7595,6 +7675,21 @@ Composition rules:
               //     tap 3 (active on b)  → deselect → full shuffle
               const onClick = ()=>{
                 if(demoReelOn) return;
+                // ── SINGLE-SIDE PAIR (only one side in setupArtists) ──
+                // Behaves as a plain toggle for that side: tap on → paint it,
+                // tap on (active) → deselect. No flip to the other side, no
+                // info row, no third-tap. Applies to both Free and Paid tiers.
+                if(forcedSide){
+                  if(style===forcedSide){
+                    if(randomMode){ setPairLastPick(p=>({...p,[pairKey]:forcedSide})); setStyleTo(null); }
+                    else { setStyleTo(null); }
+                  } else {
+                    setPairLastPick(p=>({...p,[pairKey]:forcedSide}));
+                    setStyleTo(forcedSide);
+                  }
+                  setExpandedPair(null);
+                  return;
+                }
                 if(pairLocked){
                   // ── FREE ──
                   if(randomMode){
@@ -9384,6 +9479,69 @@ Composition rules:
           </div>
         </div>
       )}
+
+      {/* ── SETUP PICKER MODAL ──────────────────────────────────────────────
+          Two sections: which colour palettes and which artists/Mosaic family
+          should appear in the canvas pickers. Persisted in localStorage. Min
+          1 + 1 required (close + Done disabled otherwise). Free tier sees Pro
+          artists in the list with a 🔒 indicator — checking them saves the
+          preference, but tapping the tile in canvas still hits the paywall. */}
+      {showSetupModal && (()=>{
+        const _palLabels = {harmony:t('harmony'), spectral:t('spectral'), phi:t('phi'), kontra:t('kontra'), custom:t('custom')};
+        const _artistLabels = (()=>{ const m={mosaicFamily:(t('setupMosaicFamily')||'Mosaic family')}; ALL_ARTIST_KEYS.forEach(k=>{ if(k!=='mosaicFamily') m[k]=STYLE_INSPIRED[k]||k; }); return m; })();
+        const togglePal = (k)=> setSetupPalettes(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
+        const toggleArt = (k)=> setSetupArtists(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
+        const okMin = setupPalettes.length>=1 && setupArtists.length>=1;
+        const isFree = proStatus==='free';
+        return (
+        <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) setShowSetupModal(false); }} style={{position:'fixed',inset:0,zIndex:11000,background:'rgba(8,6,14,.78)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px'}}>
+          <div style={{width:'100%',maxWidth:520,maxHeight:'92vh',display:'flex',flexDirection:'column',background:'rgba(20,16,28,.96)',border:'1px solid rgba(201,168,76,.4)',borderRadius:18,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
+            <div style={{padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(242,238,232,.08)'}}>
+              <span style={{fontSize:(.85*effScale)+'rem',fontWeight:600,letterSpacing:'.14em',color:PF.gold2,textTransform:'uppercase'}}>⚙ {t('setupPickerLabel')||'Setup'}</span>
+              <button onClick={()=>{ if(okMin) setShowSetupModal(false); }} disabled={!okMin} aria-label="close" style={{background:'transparent',border:'none',color:okMin?'rgba(247,243,236,.8)':'rgba(247,243,236,.25)',fontSize:'1.5rem',cursor:okMin?'pointer':'default',padding:'4px 8px',fontFamily:'inherit'}}>✕</button>
+            </div>
+            <div style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
+              <div>
+                <div style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase',marginBottom:10}}>{t('setupPalettesTitle')||'Palettes'}</div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
+                  {ALL_PALETTE_KEYS.map(k=>{
+                    const on = setupPalettes.includes(k);
+                    return (
+                    <button key={k} onClick={()=>togglePal(k)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 12px',background:on?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:on?PF.gold2:'rgba(230,222,196,.7)',border:'1px solid '+(on?'rgba(201,168,76,.6)':'rgba(242,238,232,.12)'),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .15s'}}>
+                      <span style={{display:'inline-flex',width:16,height:16,alignItems:'center',justifyContent:'center',borderRadius:3,border:'1px solid '+(on?PF.gold:'rgba(242,238,232,.3)'),background:on?PF.gold:'transparent',color:'#0a0612',fontSize:'.75rem',fontWeight:900}}>{on?'✓':''}</span>
+                      {_palLabels[k]}
+                    </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase',marginBottom:10}}>{t('setupArtistsTitle')||'Artists'}</div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
+                  {ALL_ARTIST_KEYS.map(k=>{
+                    const on = setupArtists.includes(k);
+                    const isLockedForFree = isFree && k!=='mosaicFamily' && !FREE_UNLOCKED_KEYS.has(k);
+                    return (
+                    <button key={k} onClick={()=>toggleArt(k)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 12px',background:on?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:on?PF.gold2:'rgba(230,222,196,.7)',border:'1px solid '+(on?'rgba(201,168,76,.6)':'rgba(242,238,232,.12)'),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',transition:'all .15s'}}>
+                      <span style={{display:'inline-flex',width:16,height:16,alignItems:'center',justifyContent:'center',borderRadius:3,border:'1px solid '+(on?PF.gold:'rgba(242,238,232,.3)'),background:on?PF.gold:'transparent',color:'#0a0612',fontSize:'.75rem',fontWeight:900,flexShrink:0}}>{on?'✓':''}</span>
+                      <span style={{flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_artistLabels[k]}</span>
+                      {isLockedForFree && (<span title={t('proLockTitle')||'Pro'} style={{fontSize:'.7em',opacity:.7,flexShrink:0}}>🔒</span>)}
+                    </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {!okMin && (
+                <div style={{padding:'10px 12px',borderRadius:8,background:'rgba(232,85,122,.12)',border:'1px solid rgba(232,85,122,.4)',color:'#ff9ab4',fontSize:(.6*effScale)+'rem',lineHeight:1.4}}>{t('setupMinError')||'Choose at least 1 palette and 1 artist.'}</div>
+              )}
+            </div>
+            <div style={{padding:'14px 20px',borderTop:'1px solid rgba(242,238,232,.08)',display:'flex',justifyContent:'flex-end',gap:8}}>
+              <button onClick={()=>{ if(okMin) setShowSetupModal(false); }} disabled={!okMin} style={{padding:'9px 22px',background:okMin?'rgba(201,168,76,.2)':'rgba(201,168,76,.06)',color:okMin?PF.gold2:'rgba(201,168,76,.35)',border:'1px solid '+(okMin?'rgba(201,168,76,.6)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase'}}>{t('setupSave')||'Done'}</button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
     </div>
   );
 }
