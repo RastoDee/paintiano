@@ -7578,19 +7578,15 @@ Composition rules:
           {loadedSource!=='image' && (
           <>
           {(()=>{
-            // ── Adaptive artist grid ───────────────────────────────────────
-            // When the user has all 16 artists selected in Setup, render the
-            // pair layout (Picasso↔Matisse on one chip, 8 pairs total = 9
-            // chips with Mosaic, fits the original 5×2 grid). When fewer than
-            // 16 are selected, unpair — every selected artist gets its own
-            // chip (single toggle, no A↔B flip). Column count maps to chip
-            // count per the spec: 1→1, 2→2, 3→3, 4→2, 5→3, 6→3, 7→4, 8→4,
-            // 9→5, 10→5, 11+→5 (pair mode max).
-            const _artistOnly = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily');
-            const _allArtistsSelected = _artistOnly.every(k => setupArtists.includes(k));
-            const _selectedSolo = _artistOnly.filter(k => setupArtists.includes(k));
+            // ── Adaptive chip grid (max 2 rows) ────────────────────────────
+            // Chip count = Mosaic (if family selected) + visible pairs in
+            // current setup. Dice sits BELOW the grid (separate flex row), so
+            // it never affects the row count. Column mapping per spec:
+            //   1→1h0d  2→2h0d  3→3h0d  4→2h2d  5→3h2d  6→3h3d
+            //   7→4h3d  8→4h4d  9→5h4d
+            const _visiblePairs = effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b));
             const _familyOn = setupArtists.includes('mosaicFamily');
-            const _chipCount = (_familyOn?1:0) + (_allArtistsSelected ? effectivePairs.length : _selectedSolo.length) + 1; // +1 = dice
+            const _chipCount = (_familyOn?1:0) + _visiblePairs.length;
             const _cols = (()=>{
               switch(_chipCount){
                 case 0: case 1: return 1;
@@ -7599,10 +7595,7 @@ Composition rules:
                 case 4: return 2;
                 case 5: case 6: return 3;
                 case 7: case 8: return 4;
-                case 9: case 10: return 5;
-                // n>=11 → keep at most 2 rows by widening the grid
-                // (cols = ceil(n/2), so n=11→6, n=12→6, n=13→7 …).
-                default: return Math.ceil(_chipCount / 2);
+                default: return 5;            // 9 = full setup → 5h+4d
               }
             })();
             return (
@@ -7642,13 +7635,13 @@ Composition rules:
               }
             }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn)}}>{subLabel}</button>
             ); })()}
-            {_allArtistsSelected && effectivePairs.map(([a,b])=>{
-              // Full setup — paired layout (Picasso↔Matisse on one chip).
-              // Setup picker is full → forcedSide is never engaged here, but
-              // the legacy A↔B / info-row logic remains intact.
-              const _aOn = true;
-              const _bOn = true;
-              const forcedSide = null;
+            {effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b)).map(([a,b])=>{
+              // Setup-picker integration: when only ONE side of the pair is in
+              // setupArtists, the pair tile collapses to a single-toggle for
+              // that side — no A↔B flip, no info row, no third-tap deselect.
+              const _aOn = setupArtists.includes(a);
+              const _bOn = setupArtists.includes(b);
+              const forcedSide = (_aOn && !_bOn) ? a : (!_aOn && _bOn) ? b : null;
               // Free tier: only the 'a' side is reachable; the 'b' side is
               // shown as a small "locked partner" info row beneath the palette
               // when the pair is tapped. No paywall opens from artist taps —
@@ -7799,28 +7792,7 @@ Composition rules:
                   style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
               );
             })}
-            {/* Solo chips — when fewer than 16 artists are selected in Setup,
-                each selected artist gets its own chip (single toggle, no A↔B
-                flip). Mosaic chip above + dice below stay as-is. */}
-            {!_allArtistsSelected && _selectedSolo.map(k=>{
-              const isFreeLocked = proStatus==='free' && !FREE_UNLOCKED_KEYS.has(k);
-              const isOn = style===k;
-              const shufHit = shuffleStyle===k;
-              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
-              const _artFull = STYLE_INSPIRED[k];
-              const label = _artistShort[_artFull] || _artFull;
-              const onClick = ()=>{
-                if(demoReelOn) return;
-                if(isFreeLocked){ setPaywallReason('settings'); return; }
-                if(isOn){ setStyleTo(null); } else { setStyleTo(k); }
-              };
-              return (
-                <button key={k} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
-                  title={isFreeLocked ? `${_artFull} · Pro` : (isOn ? `${_artFull} — tap to release to Mosaic` : (shufHit ? `🎲 ${_artFull} — shuffle is painting this` : `${_artFull} — tap to paint`))}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',opacity:isFreeLocked?.55:1,...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}{isFreeLocked && <span style={{fontSize:'.65em',opacity:.8,marginLeft:4}}>🔒</span>}</button>
-              );
-            })}
-            {/* Random 🎲 + AI Artist ✦ — paired in the last grid cell. */}
+            {/* Random 🎲 — last cell in the grid. */}
             <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center'}}>
               <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
@@ -9580,19 +9552,43 @@ Composition rules:
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase'}}>{t('setupArtistsTitle')||'Artists'}</span>
                   <span style={{display:'inline-flex',gap:14,fontSize:(.5*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase'}}>
-                    <span onClick={()=>setSetupArtists(ALL_ARTIST_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(ALL_ARTIST_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{t('setupAll')||'All'}</span>
+                    <span onClick={()=>setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()]);}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{t('setupAll')||'All'}</span>
                     <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{t('setupNone')||'None'}</span>
                   </span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
-                  {ALL_ARTIST_KEYS.map(k=>{
+                  {/* Mosaic family — single tile (the trio Mosaic / Notes / $1M$). */}
+                  {(()=>{
+                    const k='mosaicFamily';
                     const on = setupArtists.includes(k);
-                    const isLockedForFree = isFree && k!=='mosaicFamily' && !FREE_UNLOCKED_KEYS.has(k);
                     return (
                     <button key={k} onClick={()=>toggleArt(k)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 12px',background:on?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:on?PF.gold2:'rgba(230,222,196,.7)',border:'1px solid '+(on?'rgba(201,168,76,.6)':'rgba(242,238,232,.12)'),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',transition:'all .15s'}}>
                       <span style={{display:'inline-flex',width:16,height:16,alignItems:'center',justifyContent:'center',borderRadius:3,border:'1px solid '+(on?PF.gold:'rgba(242,238,232,.3)'),background:on?PF.gold:'transparent',color:'#0a0612',fontSize:'.75rem',fontWeight:900,flexShrink:0}}>{on?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_artistLabels[k]}</span>
-                      {isLockedForFree && (<span title={t('proLockTitle')||'Pro'} style={{fontSize:'.7em',opacity:.7,flexShrink:0}}>🔒</span>)}
+                    </button>
+                    );
+                  })()}
+                  {/* Artist pairs — one tile per pair, toggles BOTH sides at once.
+                      Free tier shows 🔒 next to the Pro ('b') side in the label. */}
+                  {BASE_STYLE_PAIRS.map(([a,b])=>{
+                    const on = setupArtists.includes(a) && setupArtists.includes(b);
+                    const halfOn = !on && (setupArtists.includes(a) || setupArtists.includes(b));
+                    const togglePair = ()=> setSetupArtists(prev=>{
+                      const has = prev.includes(a) && prev.includes(b);
+                      if(has){
+                        return prev.filter(x=>x!==a && x!==b);
+                      }
+                      const next = prev.slice();
+                      if(!next.includes(a)) next.push(a);
+                      if(!next.includes(b)) next.push(b);
+                      return next;
+                    });
+                    return (
+                    <button key={a+'_'+b} onClick={togglePair} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 12px',background:on?'rgba(201,168,76,.16)':(halfOn?'rgba(201,168,76,.06)':'rgba(28,24,40,.5)'),color:on?PF.gold2:'rgba(230,222,196,.7)',border:'1px solid '+(on?'rgba(201,168,76,.6)':(halfOn?'rgba(201,168,76,.3)':'rgba(242,238,232,.12)')),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',transition:'all .15s'}}>
+                      <span style={{display:'inline-flex',width:16,height:16,alignItems:'center',justifyContent:'center',borderRadius:3,border:'1px solid '+(on?PF.gold:'rgba(242,238,232,.3)'),background:on?PF.gold:'transparent',color:'#0a0612',fontSize:'.75rem',fontWeight:900,flexShrink:0}}>{on?'✓':''}</span>
+                      <span style={{flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                        {STYLE_INSPIRED[a]} · {STYLE_INSPIRED[b]}{isFree && (<span style={{marginLeft:4,fontSize:'.85em',opacity:.7}} title={t('proLockTitle')||'Pro'}>🔒</span>)}
+                      </span>
                     </button>
                     );
                   })}
