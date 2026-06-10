@@ -842,6 +842,111 @@ function drawBlockNotes(ctx,bx,by,notes,gc,BW,BH){
   ctx.restore();
 }
 
+// $oneM$ — Million Dollar Homepage-style overlay. Same block grid as Mosaic
+// (one rectangle per chord, sized by the φ-grid), but each block is dressed
+// as a tiny "ad slot" in the spirit of the 2005 pixel-grid web page: saturated
+// fills, hard contrast borders, mini text labels, occasional geometric marks
+// (stripes, dots, crosses). Variation is per-block, not in layout — chaos
+// comes from each cell looking different, not from cells moving.
+//
+// Seeded from (m + bx + by) so the same chord+position always renders the
+// same decoration set, but neighbours look different.
+function drawBlockOneM(ctx,bx,by,notes,gc,BW,BH){
+  const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
+  const top=sorted[0];
+  const [r,g,b,a]=gc(top.m, top.v);
+  // Deterministic per-block PRNG — stable across re-renders.
+  let s = ((top.m * 73856093) ^ (((bx|0)+1) * 19349663) ^ (((by|0)+1) * 83492791)) >>> 0;
+  const R = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  // 1. Base fill — saturated dominant chord colour. Pure rectangle, no gap.
+  ctx.fillStyle = _rgbaStr(r, g, b, Math.max(0.92, a));
+  ctx.fillRect(bx, by, BW, BH);
+  // 2. Decoration roulette — exactly one of these primary marks per block.
+  const variant = (R() * 100) | 0;
+  if (variant < 28) {
+    // Top accent stripe (the classic "header bar" of a tiny ad)
+    const acc = gc((top.m + 7) % 128, 110);
+    const stripeH = Math.max(2, BH * (0.14 + R()*0.10));
+    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
+    ctx.fillRect(bx, by, BW, stripeH);
+  } else if (variant < 46) {
+    // Diagonal stripes — "/// pattern" common on banner ads
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bx, by, BW, BH);
+    ctx.clip();
+    const acc = gc((top.m + 3) % 128, 110);
+    const stripes = 3 + ((R()*4)|0);
+    ctx.strokeStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.75);
+    ctx.lineWidth = Math.max(1, Math.min(BW, BH) * 0.05);
+    const span = Math.max(BW, BH) * 2;
+    for (let i = -stripes; i < stripes*3; i++) {
+      const off = (i * Math.max(BW, BH)/stripes);
+      ctx.beginPath();
+      ctx.moveTo(bx + off, by - span);
+      ctx.lineTo(bx + off + span, by + span);
+      ctx.stroke();
+    }
+    ctx.restore();
+  } else if (variant < 60) {
+    // Center dot — "logo" mark
+    const acc = gc((top.m + 5) % 128, 110);
+    const cx = bx + BW/2, cy = by + BH/2;
+    const rad = Math.min(BW, BH) * (0.18 + R()*0.12);
+    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
+    ctx.beginPath();
+    ctx.arc(cx, cy, rad, 0, Math.PI*2);
+    ctx.fill();
+  } else if (variant < 72) {
+    // Cross / plus mark
+    const acc = gc((top.m + 5) % 128, 110);
+    ctx.strokeStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.92);
+    ctx.lineWidth = Math.max(2, Math.min(BW, BH) * 0.13);
+    ctx.beginPath();
+    ctx.moveTo(bx + BW*0.22, by + BH*0.5);
+    ctx.lineTo(bx + BW*0.78, by + BH*0.5);
+    ctx.moveTo(bx + BW*0.5,  by + BH*0.22);
+    ctx.lineTo(bx + BW*0.5,  by + BH*0.78);
+    ctx.stroke();
+  } else if (variant < 82) {
+    // Bottom band (footer bar of the "ad")
+    const acc = gc((top.m + 9) % 128, 110);
+    const bandH = Math.max(2, BH * (0.18 + R()*0.10));
+    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
+    ctx.fillRect(bx, by + BH - bandH, BW, bandH);
+  } else if (variant < 90) {
+    // Inner rectangle (nested frame)
+    const acc = gc((top.m + 4) % 128, 110);
+    const inset = Math.min(BW, BH) * (0.20 + R()*0.10);
+    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.92);
+    ctx.fillRect(bx + inset, by + inset, BW - inset*2, BH - inset*2);
+  }
+  // else: ~10% have no extra mark — pure colour rectangles in the mix.
+  // 3. Border — ~45% get a hard contrast rim (the unmistakable MDH look).
+  if (R() < 0.45) {
+    ctx.strokeStyle = 'rgba(0,0,0,0.88)';
+    ctx.lineWidth = Math.max(1, Math.min(BW, BH) * 0.05);
+    ctx.strokeRect(bx + 0.5, by + 0.5, BW - 1, BH - 1);
+  }
+  // 4. Mini note label — ~28% get the top note name printed on top of
+  // whatever decoration sits below. Skipped if the block is too small to be
+  // legible (avoids pixel-soup at tiny resolutions).
+  if (R() < 0.28 && BW > 14 && BH > 12) {
+    const name = _midiToName[top.m] || '';
+    const fs = Math.max(7, Math.min(BH*0.48, BW*0.42));
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `800 ${fs}px Georgia, serif`;
+    // Auto-contrast — light on dark fills, dark on bright fills.
+    const lum = (r*0.299 + g*0.587 + b*0.114);
+    ctx.fillStyle = lum > 150 ? 'rgba(0,0,0,0.90)' : 'rgba(255,255,255,0.96)';
+    ctx.fillText(name, bx + BW/2, by + BH/2);
+    ctx.restore();
+  }
+}
+
+
 // Dim mosaic — same crisp φ-rectangle structure as default, but each voice
 // painted at reduced alpha (~50%) so colors are visible but subdued. Used
 // as the Pollock substrate: the mosaic provides color context underneath
@@ -1902,6 +2007,7 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
   if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='oneM')return drawBlockOneM(ctx,bx,by,notes,gc,BW,BH);
   return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
 }
 
@@ -7104,24 +7210,13 @@ function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  D = Biomorphic creatures (curvy organic figures).
   //  E = Harlequin Carnival (busy confetti of small shapes).
   //  F = Primary signs on white (clean white ground, bold red/blue/black signs).
-  //  Free (cap=2) sees Constellations + Blue — those two are visually farthest
-  //  apart so the two-variant preview actually shows different paintings
-  //  (A vs B alone read as the same dense composition).
-  {
-    const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_variantCap === 2){
-      // Free: 0 = Constellations (fall through), 1 = Blue triptych.
-      if(pick===1){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    } else {
-      // Pro+: full ladder.
-      if(pick===1){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===2){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===3){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===4){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===5){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    }
-    miroPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
-  }
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick===1){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===2){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===3){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===4){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===5){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  miroPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 // ── Miró phase A: the dense dark "Constellations" composition — the original. ──
@@ -7131,16 +7226,12 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const isBW=mode==='bw';
   const D=Math.min(CW,CH);
 
-  // Miró palette — derived from active colour scheme (Harmony/Spectral/φ/Custom)
-  // for non-BW, or muted greys for BW. Black + white anchor in every variant.
-  // ORA + SKIN remain fixed accents typical of Miró's broader palette (orange
-  // and warm tan/skin tones) — they're stylistic constants, not pitch slots.
-  const _P = _miroPal(isBW, gc);
-  const BLK  = _P.BLK;
-  const RED  = _P.RED;
-  const GRN  = _P.GRN;
-  const BLU  = _P.BLU;
-  const YEL  = _P.YEL;
+  // Full Miró palette
+  const BLK  = isBW?[14,12,16]  :[14,12,16];
+  const RED  = isBW?[90,85,82]  :[215,38,30];
+  const GRN  = isBW?[80,85,80]  :[40,150,55];
+  const BLU  = isBW?[75,80,110] :[28,65,200];
+  const YEL  = isBW?[170,165,140]:[225,195,25];
   const ORA  = isBW?[130,120,100]:[220,105,20];
   const SKIN = isBW?[180,170,155]:[205,165,120]; // warm tan/skin
   const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
@@ -7330,13 +7421,11 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const D=Math.min(CW,CH);
 
   // Miró palette (same as phase A).
-  // Miró palette — see _miroPal (BW = greys; non-BW = active colour scheme).
-  const _P = _miroPal(isBW, gc);
-  const BLK = _P.BLK;
-  const RED = _P.RED;
-  const GRN = _P.GRN;
-  const BLU = _P.BLU;
-  const YEL = _P.YEL;
+  const BLK = [14,12,16];
+  const RED = isBW?[90,85,82]  :[215,38,30];
+  const GRN = isBW?[80,85,80]  :[40,150,55];
+  const BLU = isBW?[75,80,110] :[28,65,200];
+  const YEL = isBW?[170,165,140]:[225,195,25];
   const ORA = isBW?[130,120,100]:[220,105,20];
   const SKIN= isBW?[180,170,155]:[205,165,120];
   const ACC = [RED,GRN,BLU,YEL,ORA];
@@ -7456,32 +7545,13 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 }
 
 // Miró palette helper used by the new phases.
-function _miroPal(isBW, gc){
-  // BW mode keeps the original muted greys — Miró without colour is texture,
-  // not a palette to shift. Black + white always remain ink and canvas
-  // (universal anchors), they don't change with the colour scheme.
-  if(isBW || typeof gc!=='function'){
-    return {
-      BLK:[14,12,16],
-      RED: isBW?[90,85,82]  :[215,38,30],
-      GRN: isBW?[80,85,80]  :[40,150,55],
-      BLU: isBW?[75,80,110] :[28,65,200],
-      YEL: isBW?[170,165,140]:[225,195,25],
-      WHT:[245,242,235]
-    };
-  }
-  // Derive the four accent slots from gc() at four representative pitch
-  // classes (C, E, G, A — the I-iii-V-vi anchor set). Active palette ripples
-  // through Miró: Harmony → COF colours; Spectral → chromatic; φ Phi →
-  // golden-angle spread; Custom → user picks. Whatever the user chose for
-  // the four pitches is what they see in every Miró canvas.
-  const samp = m => { const c = gc(m, 100); return [c[0]|0, c[1]|0, c[2]|0]; };
+function _miroPal(isBW){
   return {
     BLK:[14,12,16],
-    RED: samp(60),  // C
-    GRN: samp(64),  // E
-    BLU: samp(67),  // G
-    YEL: samp(69),  // A
+    RED: isBW?[90,85,82]  :[215,38,30],
+    GRN: isBW?[80,85,80]  :[40,150,55],
+    BLU: isBW?[75,80,110] :[28,65,200],
+    YEL: isBW?[170,165,140]:[225,195,25],
     WHT:[245,242,235]
   };
 }
@@ -7489,7 +7559,7 @@ function _miroPal(isBW, gc){
 // ── Miró C: Blue triptych — a deep blue field with a few floating marks. ──
 function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW);
   ctx.fillStyle=isBW?'rgb(70,72,90)':'rgb(20,55,150)';ctx.fillRect(0,0,CW,CH);
   const marks=Math.max(3,Math.min(24,Math.round(cn/8)));
   const vis=Math.max(1,Math.ceil(N/cn*marks));
@@ -7514,7 +7584,7 @@ function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró D: Biomorphic creatures — curvy organic blobs with eye-dots. ──
 function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW);
   ctx.fillStyle=isBW?'rgb(224,220,212)':'rgb(238,228,206)';ctx.fillRect(0,0,CW,CH);
   const crs=Math.max(2,Math.min(14,Math.round(cn/12)));
   const vis=Math.max(1,Math.ceil(N/cn*crs));
@@ -7536,7 +7606,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró E: Harlequin Carnival — busy confetti of many small bright shapes. ──
 function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW);
   ctx.fillStyle=isBW?'rgb(120,118,124)':'rgb(150,120,90)';ctx.fillRect(0,0,CW,CH);
   const units=Math.max(10,Math.min(220,cn*2));
   const vis=Math.max(1,Math.ceil(N/cn*units));
@@ -7556,7 +7626,7 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró F: Primary signs on white — clean white ground, bold red/blue/black. ──
 function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW);
   ctx.fillStyle=isBW?'rgb(240,238,232)':'rgb(248,246,240)';ctx.fillRect(0,0,CW,CH);
   const signs=Math.max(3,Math.min(28,Math.round(cn/7)));
   const vis=Math.max(1,Math.ceil(N/cn*signs));
@@ -9089,8 +9159,8 @@ const LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_music:'MIDI, mp3/wav or sheet music — Paintiano plays it, finds every chord and turns each one into a brushstroke', helpDesc_image:'pick an image — Scan plays its colours as music, or AI Compose (Pro) writes a full piece from it; flip on atmosphere to match its mood', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', imgScan:'scan', imgScanHint:'read the picture as a score', imgCompose:'AI compose', imgComposeBlurb:'AI composes a full piece from this image — its colours, energy and mood. Press Play.', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
-    harmony:'harmony', spectral:'spectral', phi:'φ / Phi', custom:'custom', bw:'b/w',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', oneMStyle:'$oneM$', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_music:'MIDI, mp3/wav or sheet music — Paintiano plays it, finds every chord and turns each one into a brushstroke', helpDesc_image:'pick an image — Scan plays its colours as music, or AI Compose (Pro) writes a full piece from it; flip on atmosphere to match its mood', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmosphere', atmoDetect:'read mood', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', imgScan:'scan', imgScanHint:'read the picture as a score', imgCompose:'AI compose', imgComposeBlurb:'AI composes a full piece from this image — its colours, energy and mood. Press Play.', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
+    harmony:'harmony', spectral:'spectral', custom:'custom', bw:'b/w',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'describe any mood — e.g. rainy day in Paris', moodHowFeel:'how do you feel?', moodTwoWays:'Type anything above — or start typing to pick a one-word mood from the list.', moodExamples:['describe any mood in your own words…','e.g. rainy day in Paris','e.g. first snow at midnight','— or just start typing and pick a mood as it appears —','e.g. furious','e.g. nostalgic'], storyCaption:{mood:'this is what {mood} sounds like ✦ paintiano.app',moodFromImg:'the mood of this image, painted ✦ paintiano.app',compose:'made this on the piano · turned it into a painting ✦ paintiano.app',micVoice:'sang into the mic, got back a painting ✦ paintiano.app',micMusic:'caught a song in the room, painted it ✦ paintiano.app',midi:'music turned into colour ✦ paintiano.app',audio:'heard it, painted it ✦ paintiano.app',score:'sheet music, turned into a painting ✦ paintiano.app',image:'what this image sounds like ✦ paintiano.app',default:'music turns into paintings ✦ paintiano.app'}, storyImageHint:'painting + audio · for IG / TikTok', storyImageHintNoAudio:'painting · for IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · save to files', scoreExportHint:'MusicXML · for MuseScore', includeSourceThumb:'include source thumbnail', includeSourceImage:'include source original image', saveAudioHintImg:'image + audio · save to files', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
     moodNames:{funny:'funny',sad:'sad',aggressive:'aggressive',dreamy:'dreamy',love:'love',nostalgic:'nostalgic',calm:'calm',excited:'excited',crazy:'crazy',hopeful:'hopeful',mysterious:'mysterious',triumphant:'triumphant',tense:'tense',playful:'playful',epic:'epic',euphoric:'euphoric',furious:'furious',serene:'serene',yearning:'yearning',mystical:'mystical',triumphal:'triumphal',melancholic:'melancholic',heroic:'heroic',mischievous:'mischievous',terrifying:'terrifying',blissful:'blissful',stormy:'stormy',warm:'warm',festive:'festive',lonely:'lonely',curious:'curious',determined:'determined',tender:'tender',joyful:'joyful',grateful:'grateful',despairing:'despairing',passionate:'passionate',magical:'magical',radiant:'radiant',happy:'happy',content:'content',wistful:'wistful',anxious:'anxious',mighty:'mighty',enchanted:'enchanted',carefree:'carefree',tearful:'tearful',bitter:'bitter',noble:'noble',danceable:'danceable',wild:'wild',relaxed:'relaxed',meditative:'meditative',ethereal:'ethereal',confident:'confident',sparkling:'sparkling',fierce:'fierce',angry:'angry',irritated:'irritated',menacing:'menacing',majestic:'majestic',spooky:'spooky',summery:'summery',pulsing:'pulsing',fresh:'fresh',dizzying:'dizzying',rueful:'rueful',gloomy:'gloomy',devoted:'devoted',nervous:'nervous',enraged:'enraged',indignant:'indignant',defiant:'defiant',unyielding:'unyielding',martial:'martial',crushed:'crushed',resigned:'resigned',abandoned:'abandoned',plaintive:'plaintive',quiet:'quiet',balanced:'balanced',restful:'restful',grounded:'grounded',fragile:'fragile',sleepy:'sleepy',flowing:'flowing',intimate:'intimate',exhilarated:'exhilarated',romantic:'romantic',moved:'moved',compassionate:'compassionate',uplifted:'uplifted',awestruck:'awestruck',fascinated:'fascinated',otherworldly:'otherworldly',misty:'misty',ghostly:'ghostly'},
@@ -9254,8 +9324,8 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_music:'MIDI, mp3/wav oder Noten — Paintiano spielt es, findet jeden Akkord und macht daraus einen Pinselstrich', helpDesc_image:'wähle ein Bild — Scan spielt seine Farben als Musik, oder KI komponiert (Pro) ein ganzes Stück daraus; mit Atmosphäre trifft es die Stimmung', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', imgScan:'scan', imgScanHint:'das Bild als Partitur lesen', imgCompose:'KI komponieren', imgComposeBlurb:'Die KI komponiert ein ganzes Stück aus diesem Bild — Farben, Energie, Stimmung. Drück Play.', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
-    harmony:'harmonie', spectral:'spektral', phi:'φ / Phi', custom:'eigen', bw:'s/w',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', oneMStyle:'$oneM$', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_music:'MIDI, mp3/wav oder Noten — Paintiano spielt es, findet jeden Akkord und macht daraus einen Pinselstrich', helpDesc_image:'wähle ein Bild — Scan spielt seine Farben als Musik, oder KI komponiert (Pro) ein ganzes Stück daraus; mit Atmosphäre trifft es die Stimmung', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'atmosphäre', atmoDetect:'stimmung lesen', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', imgScan:'scan', imgScanHint:'das Bild als Partitur lesen', imgCompose:'KI komponieren', imgComposeBlurb:'Die KI komponiert ein ganzes Stück aus diesem Bild — Farben, Energie, Stimmung. Drück Play.', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
+    harmony:'harmonie', spectral:'spektral', custom:'eigen', bw:'s/w',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'beschreibe eine Stimmung — z.B. Regentag in Paris', moodHowFeel:'wie fühlst du dich?', moodTwoWays:'Tippe oben irgendetwas — oder tippe los und wähle eine Ein-Wort-Stimmung aus der Liste.', moodExamples:['beschreibe eine Stimmung in eigenen Worten…','z.B. Regentag in Paris','z.B. erster Schnee um Mitternacht','— oder tippe einfach los und wähle eine vorgeschlagene Stimmung —','z.B. wütend','z.B. nostalgisch'], storyCaption:{mood:'so klingt {mood} ✦ paintiano.app',moodFromImg:'die Stimmung dieses Bildes, gemalt ✦ paintiano.app',compose:'am Klavier gespielt · in ein Bild verwandelt ✦ paintiano.app',micVoice:'ins Mikro gesungen, ein Bild zurückbekommen ✦ paintiano.app',micMusic:'einen Song im Raum eingefangen, gemalt ✦ paintiano.app',midi:'Musik in Farbe verwandelt ✦ paintiano.app',audio:'gehört, gemalt ✦ paintiano.app',score:'Noten, in ein Bild verwandelt ✦ paintiano.app',image:'wie dieses Bild klingt ✦ paintiano.app',default:'Musik wird zu Bildern ✦ paintiano.app'}, storyImageHint:'Bild + Audio · für IG / TikTok', storyImageHintNoAudio:'Bild · für IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · in Dateien speichern', scoreExportHint:'MusicXML · für MuseScore', includeSourceThumb:'Quellminiatur einfügen', includeSourceImage:'Originalbild beifügen', saveAudioHintImg:'Bild + Audio · in Dateien speichern', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
     moodNames:{funny:'lustig',sad:'traurig',aggressive:'aggressiv',dreamy:'verträumt',love:'liebe',nostalgic:'nostalgisch',calm:'ruhig',excited:'aufgeregt',crazy:'verrückt',hopeful:'hoffnungsvoll',mysterious:'geheimnisvoll',triumphant:'triumphierend',tense:'angespannt',playful:'verspielt',epic:'episch',euphoric:'euphorisch',furious:'wütend',serene:'gelassen',yearning:'sehnsüchtig',mystical:'mystisch',triumphal:'triumphal',melancholic:'melancholisch',heroic:'heldenhaft',mischievous:'schelmisch',terrifying:'furchterregend',blissful:'glückselig',stormy:'stürmisch',warm:'warm',festive:'festlich',lonely:'einsam',curious:'neugierig',determined:'entschlossen',tender:'zärtlich',joyful:'freudig',grateful:'dankbar',despairing:'verzweifelt',passionate:'leidenschaftlich',magical:'magisch',radiant:'strahlend',happy:'glücklich',content:'zufrieden',wistful:'wehmütig',anxious:'ängstlich',mighty:'mächtig',enchanted:'verzaubert',carefree:'sorglos',tearful:'tränenreich',bitter:'verbittert',noble:'edel',danceable:'tanzbar',wild:'wild',relaxed:'entspannt',meditative:'meditativ',ethereal:'ätherisch',confident:'selbstbewusst',sparkling:'funkelnd',fierce:'wildwütig',angry:'verärgert',irritated:'gereizt',menacing:'bedrohlich',majestic:'majestätisch',spooky:'gruselig',summery:'sommerlich',pulsing:'pulsierend',fresh:'frisch',dizzying:'schwindelerregend',rueful:'reumütig',gloomy:'düster',devoted:'hingebungsvoll',nervous:'nervös',enraged:'rasend',indignant:'empört',defiant:'trotzig',unyielding:'unnachgiebig',martial:'kriegerisch',crushed:'zerschmettert',resigned:'resigniert',abandoned:'verlassen',plaintive:'klagend',quiet:'still',balanced:'ausgeglichen',restful:'erholsam',grounded:'geerdet',fragile:'zerbrechlich',sleepy:'schläfrig',flowing:'fließend',intimate:'innig',exhilarated:'überschwänglich',romantic:'romantisch',moved:'gerührt',compassionate:'mitfühlend',uplifted:'beschwingt',awestruck:'ehrfürchtig',fascinated:'fasziniert',otherworldly:'überirdisch',misty:'neblig',ghostly:'geisterhaft'},
@@ -9416,8 +9486,8 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_music:'MIDI, mp3/wav ou partition — Paintiano le joue, trouve chaque accord et en fait un coup de pinceau', helpDesc_image:'choisis une image — Scan joue ses couleurs en musique, ou Composer IA (Pro) en écrit un morceau entier ; active l’atmosphère pour son ambiance', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', imgScan:'scan', imgScanHint:'lire l\'image comme une partition', imgCompose:'composer IA', imgComposeBlurb:'L\'IA compose un morceau entier à partir de cette image — couleurs, énergie, ambiance. Appuie sur Play.', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
-    harmony:'harmonie', spectral:'spectral', phi:'φ / Phi', custom:'perso', bw:'n/b',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', oneMStyle:'$oneM$', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_music:'MIDI, mp3/wav ou partition — Paintiano le joue, trouve chaque accord et en fait un coup de pinceau', helpDesc_image:'choisis une image — Scan joue ses couleurs en musique, ou Composer IA (Pro) en écrit un morceau entier ; active l’atmosphère pour son ambiance', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'ambiance', atmoDetect:'lire ambiance', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', imgScan:'scan', imgScanHint:'lire l\'image comme une partition', imgCompose:'composer IA', imgComposeBlurb:'L\'IA compose un morceau entier à partir de cette image — couleurs, énergie, ambiance. Appuie sur Play.', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
+    harmony:'harmonie', spectral:'spectral', custom:'perso', bw:'n/b',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'décris une humeur — ex. jour de pluie à Paris', moodHowFeel:'comment tu te sens ?', moodTwoWays:'Écris ce que tu veux ci-dessus — ou commence à taper pour choisir une humeur d\'un mot dans la liste.', moodExamples:['décris une humeur avec tes mots…','ex. jour de pluie à Paris','ex. première neige à minuit','— ou commence à taper et choisis une humeur proposée —','ex. furieux','ex. nostalgique'], storyCaption:{mood:'voilà à quoi {mood} ressemble ✦ paintiano.app',moodFromImg:'l\'humeur de cette image, peinte ✦ paintiano.app',compose:'joué au piano · transformé en peinture ✦ paintiano.app',micVoice:'chanté au micro, récupéré une peinture ✦ paintiano.app',micMusic:'attrapé un son dans la pièce, peint ✦ paintiano.app',midi:'musique transformée en couleur ✦ paintiano.app',audio:'entendu, peint ✦ paintiano.app',score:'partition, devenue peinture ✦ paintiano.app',image:'à quoi cette image ressemble en son ✦ paintiano.app',default:'la musique devient peinture ✦ paintiano.app'}, storyImageHint:'image + audio · pour IG / TikTok', storyImageHintNoAudio:'image · pour IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · sauver dans fichiers', scoreExportHint:'MusicXML · pour MuseScore', includeSourceThumb:'inclure la miniature source', includeSourceImage:'inclure l\'image source', saveAudioHintImg:'image + audio · sauver dans fichiers', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
     moodNames:{funny:'drôle',sad:'triste',aggressive:'agressif',dreamy:'rêveur',love:'amour',nostalgic:'nostalgique',calm:'calme',excited:'excité',crazy:'fou',hopeful:"plein d'espoir",mysterious:'mystérieux',triumphant:'triomphant',tense:'tendu',playful:'joueur',epic:'épique',euphoric:'euphorique',furious:'furieux',serene:'serein',yearning:'languissant',mystical:'mystique',triumphal:'triomphal',melancholic:'mélancolique',heroic:'héroïque',mischievous:'espiègle',terrifying:'terrifiant',blissful:'béat',stormy:'orageux',warm:'chaleureux',festive:'festif',lonely:'solitaire',curious:'curieux',determined:'déterminé',tender:'tendre',joyful:'joyeux',grateful:'reconnaissant',despairing:'désespéré',passionate:'passionné',magical:'magique',radiant:'radieux',happy:'heureux',content:'satisfait',wistful:'nostalgique-doux',anxious:'anxieux',mighty:'puissant',enchanted:'enchanté',carefree:'insouciant',tearful:'larmoyant',bitter:'amer',noble:'noble',danceable:'dansant',wild:'sauvage',relaxed:'détendu',meditative:'méditatif',ethereal:'éthéré',confident:'confiant',sparkling:'étincelant',fierce:'féroce',angry:'en colère',irritated:'irrité',menacing:'menaçant',majestic:'majestueux',spooky:'sinistre',summery:'estival',pulsing:'pulsant',fresh:'frais',dizzying:'vertigineux',rueful:'plein de regret',gloomy:'morne',devoted:'dévoué',nervous:'nerveux',enraged:'enragé',indignant:'indigné',defiant:'provocant',unyielding:'inflexible',martial:'martial',crushed:'anéanti',resigned:'résigné',abandoned:'abandonné',plaintive:'plaintif',quiet:'paisible',balanced:'équilibré',restful:'reposant',grounded:'ancré',fragile:'fragile',sleepy:'somnolent',flowing:'fluide',intimate:'intime',exhilarated:'exalté',romantic:'romantique',moved:'ému',compassionate:'compatissant',uplifted:'remonté',awestruck:'émerveillé',fascinated:'fasciné',otherworldly:'surnaturel',misty:'brumeux',ghostly:'fantomatique'},
@@ -9578,8 +9648,8 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_music:'MIDI, mp3/wav o partitura — Paintiano lo reproduce, encuentra cada acorde y lo convierte en un trazo', helpDesc_image:'elige una imagen — Escanear suena sus colores como música, o Componer IA (Pro) escribe una pieza entera; activa atmósfera para su ánimo', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', imgScan:'escanear', imgScanHint:'leer la imagen como partitura', imgCompose:'componer IA', imgComposeBlurb:'La IA compone una pieza completa a partir de esta imagen — colores, energía y ánimo. Pulsa Play.', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
-    harmony:'armonía', spectral:'espectral', phi:'φ / Phi', custom:'personal', bw:'b/n',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_music:'MIDI, mp3/wav o partitura — Paintiano lo reproduce, encuentra cada acorde y lo convierte en un trazo', helpDesc_image:'elige una imagen — Escanear suena sus colores como música, o Componer IA (Pro) escribe una pieza entera; activa atmósfera para su ánimo', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'ambiente', atmoDetect:'leer ambiente', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', imgScan:'escanear', imgScanHint:'leer la imagen como partitura', imgCompose:'componer IA', imgComposeBlurb:'La IA compone una pieza completa a partir de esta imagen — colores, energía y ánimo. Pulsa Play.', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
+    harmony:'armonía', spectral:'espectral', custom:'personal', bw:'b/n',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'describe un estado — p.ej. día lluvioso en París', moodHowFeel:'¿cómo te sientes?', moodTwoWays:'Escribe lo que quieras arriba — o empieza a teclear para elegir un estado de una palabra de la lista.', moodExamples:['describe un estado con tus palabras…','p.ej. día lluvioso en París','p.ej. primera nieve a medianoche','— o empieza a escribir y elige un estado de los sugeridos —','p.ej. furioso','p.ej. nostálgico'], storyCaption:{mood:'así suena {mood} ✦ paintiano.app',moodFromImg:'el estado de esta imagen, pintado ✦ paintiano.app',compose:'tocado al piano · convertido en pintura ✦ paintiano.app',micVoice:'canté al micro, me devolvió una pintura ✦ paintiano.app',micMusic:'cogí un sonido en la sala, lo pinté ✦ paintiano.app',midi:'música convertida en color ✦ paintiano.app',audio:'lo escuché, lo pinté ✦ paintiano.app',score:'partitura, convertida en pintura ✦ paintiano.app',image:'cómo suena esta imagen ✦ paintiano.app',default:'la música se vuelve pintura ✦ paintiano.app'}, storyImageHint:'imagen + audio · para IG / TikTok', storyImageHintNoAudio:'imagen · para IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · guardar en archivos', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura origen', includeSourceImage:'incluir imagen original', saveAudioHintImg:'imagen + audio · guardar en archivos', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
     moodNames:{funny:'divertido',sad:'triste',aggressive:'agresivo',dreamy:'soñador',love:'amor',nostalgic:'nostálgico',calm:'tranquilo',excited:'emocionado',crazy:'loco',hopeful:'esperanzado',mysterious:'misterioso',triumphant:'triunfante',tense:'tenso',playful:'juguetón',epic:'épico',euphoric:'eufórico',furious:'furioso',serene:'sereno',yearning:'anhelante',mystical:'místico',triumphal:'triunfal',melancholic:'melancólico',heroic:'heroico',mischievous:'travieso',terrifying:'aterrador',blissful:'dichoso',stormy:'tormentoso',warm:'cálido',festive:'festivo',lonely:'solitario',curious:'curioso',determined:'decidido',tender:'tierno',joyful:'alegre',grateful:'agradecido',despairing:'desesperado',passionate:'apasionado',magical:'mágico',radiant:'radiante',happy:'feliz',content:'contento',wistful:'melancólico-dulce',anxious:'ansioso',mighty:'poderoso',enchanted:'encantado',carefree:'despreocupado',tearful:'lloroso',bitter:'amargo',noble:'noble',danceable:'bailable',wild:'salvaje',relaxed:'relajado',meditative:'meditativo',ethereal:'etéreo',confident:'seguro',sparkling:'chispeante',fierce:'feroz',angry:'enojado',irritated:'irritado',menacing:'amenazante',majestic:'majestuoso',spooky:'espeluznante',summery:'veraniego',pulsing:'pulsante',fresh:'fresco',dizzying:'vertiginoso',rueful:'arrepentido',gloomy:'sombrío',devoted:'devoto',nervous:'nervioso',enraged:'enfurecido',indignant:'indignado',defiant:'desafiante',unyielding:'inquebrantable',martial:'marcial',crushed:'destrozado',resigned:'resignado',abandoned:'abandonado',plaintive:'lastimero',quiet:'silencioso',balanced:'equilibrado',restful:'reposado',grounded:'centrado',fragile:'frágil',sleepy:'soñoliento',flowing:'fluido',intimate:'íntimo',exhilarated:'eufórico-vivaz',romantic:'romántico',moved:'conmovido',compassionate:'compasivo',uplifted:'animado',awestruck:'asombrado',fascinated:'fascinado',otherworldly:'sobrenatural',misty:'brumoso',ghostly:'fantasmal'},
@@ -9740,8 +9810,8 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_music:'MIDI, mp3/wav alebo noty — Paintiano ich prehrá, nájde každý akord a premení ho na ťah štetca', helpDesc_image:'vyber obrázok — Sken zahrá jeho farby ako hudbu, alebo AI skladba (Pro) z neho zloží celú skladbu; zapni atmosféru a vystihne aj náladu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, broz, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', imgScan:'sken', imgScanHint:'čítať obraz ako partitúru', imgCompose:'AI skladba', imgComposeBlurb:'AI zloží celú skladbu z tohto obrazu — z jeho farieb, energie a nálady. Stlač Play.', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
-    harmony:'harmónia', spectral:'spektrum', phi:'φ / Phi', custom:'vlastná', bw:'č/b',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', oneMStyle:'$oneM$', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_music:'MIDI, mp3/wav alebo noty — Paintiano ich prehrá, nájde každý akord a premení ho na ťah štetca', helpDesc_image:'vyber obrázok — Sken zahrá jeho farby ako hudbu, alebo AI skladba (Pro) z neho zloží celú skladbu; zapni atmosféru a vystihne aj náladu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, broz, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmosféra', atmoDetect:'rozpoznať náladu', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', imgScan:'sken', imgScanHint:'čítať obraz ako partitúru', imgCompose:'AI skladba', imgComposeBlurb:'AI zloží celú skladbu z tohto obrazu — z jeho farieb, energie a nálady. Stlač Play.', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
+    harmony:'harmónia', spectral:'spektrum', custom:'vlastná', bw:'č/b',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'opíš akúkoľvek náladu — napr. daždivý deň v Paríži', moodHowFeel:'ako sa cítiš?', moodTwoWays:'Napíš hore čokoľvek — alebo začni písať a vyber jednoslovnú náladu zo zoznamu.', moodExamples:['opíš náladu vlastnými slovami…','napr. daždivý deň v Paríži','napr. prvý sneh o polnoci','— alebo začni písať a vyber z ponúkaných nálad —','napr. zúrivá','napr. nostalgická'], storyCaption:{mood:'takto znie {mood} ✦ paintiano.app',moodFromImg:'nálada tohto obrazu, namaľovaná ✦ paintiano.app',compose:'zahral som si · vznikol obraz ✦ paintiano.app',micVoice:'spieval do mikrofónu, vrátilo to obraz ✦ paintiano.app',micMusic:'zachytil zvuk v miestnosti, namaľoval ✦ paintiano.app',midi:'hudba premenená na farbu ✦ paintiano.app',audio:'vypočul, namaľoval ✦ paintiano.app',score:'noty premenené na obraz ✦ paintiano.app',image:'tak znie tento obraz ✦ paintiano.app',default:'hudba sa stáva maľbou ✦ paintiano.app'}, storyImageHint:'obraz + audio · pre IG / TikTok', storyImageHintNoAudio:'obraz · pre IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · uložiť do súborov', scoreExportHint:'MusicXML · pre MuseScore', includeSourceThumb:'pridať zdrojový náhľad', includeSourceImage:'pridať pôvodný obrázok', saveAudioHintImg:'obrázok + audio · uložiť do súborov', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
     moodNames:{funny:'veselá',sad:'smutná',aggressive:'agresívna',dreamy:'snová',love:'láska',nostalgic:'nostalgická',calm:'pokojná',excited:'vzrušená',crazy:'šialená',hopeful:'nádejná',mysterious:'tajomná',triumphant:'víťazná',tense:'napätá',playful:'hravá',epic:'epická',euphoric:'eufória',furious:'zúrivá',serene:'pokojná',yearning:'túžobná',mystical:'mystická',triumphal:'triumfálna',melancholic:'melancholická',heroic:'hrdinská',mischievous:'rozpustilá',terrifying:'desivá',blissful:'blažená',stormy:'búrlivá',warm:'vrúcna',festive:'slávnostná',lonely:'osamelá',curious:'zvedavá',determined:'odhodlaná',tender:'nežná',joyful:'radostná',grateful:'vďačná',despairing:'zúfalá',passionate:'vášnivá',magical:'magická',radiant:'žiarivá',happy:'šťastná',content:'spokojná',wistful:'clivá',anxious:'úzkostná',mighty:'mocná',enchanted:'okúzlená',carefree:'bezstarostná',tearful:'plačlivá',bitter:'zatrpknutá',noble:'vznešená',danceable:'tanečná',wild:'divoká',relaxed:'uvoľnená',meditative:'meditatívna',ethereal:'éterická',confident:'sebavedomá',sparkling:'iskrivá',fierce:'dravá',angry:'nahnevaná',irritated:'podráždená',menacing:'hrozivá',majestic:'majestátna',spooky:'strašidelná',summery:'letná',pulsing:'pulzujúca',fresh:'svieža',dizzying:'závratná',rueful:'ľútostivá',gloomy:'zachmúrená',devoted:'oddaná',nervous:'nervózna',enraged:'besná',indignant:'rozhorčená',defiant:'vzdorovitá',unyielding:'neoblomná',martial:'bojovná',crushed:'zronená',resigned:'rezignovaná',abandoned:'opustená',plaintive:'tesklivá',quiet:'tichá',balanced:'vyrovnaná',restful:'spočinutá',grounded:'usadená',fragile:'krehká',sleepy:'spánková',flowing:'plynúca',intimate:'intímna',exhilarated:'rozjarená',romantic:'romantická',moved:'dojatá',compassionate:'súcitná',uplifted:'povznesená',awestruck:'ohromená',fascinated:'fascinovaná',otherworldly:'nadpozemská',misty:'hmlistá',ghostly:'prízračná'},
@@ -9902,8 +9972,8 @@ const I18N = {
   },
   zh:{
     concept:'理念', demo:'演示', guide:'指南',
-    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', notesStyle:'音符', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_music:'MIDI、mp3/wav 或乐谱 — Paintiano 播放它，找出每个和弦，把每个变成一道笔触', helpDesc_image:'选一张图片 — 扫描把颜色当作音乐演奏，或 AI 作曲(Pro)从中谱写一首完整曲子；开启氛围模式还能捕捉它的情绪', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', imgScan:'扫描', imgScanHint:'把图像当作乐谱来读', imgCompose:'AI 作曲', imgComposeBlurb:'AI 从这幅图像谱写一首完整曲子 — 来自它的色彩、能量与情绪。按 Play。', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
-    harmony:'和声', spectral:'光谱', phi:'φ / Phi', custom:'自定义', bw:'黑白',
+    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_music:'MIDI、mp3/wav 或乐谱 — Paintiano 播放它，找出每个和弦，把每个变成一道笔触', helpDesc_image:'选一张图片 — 扫描把颜色当作音乐演奏，或 AI 作曲(Pro)从中谱写一首完整曲子；开启氛围模式还能捕捉它的情绪', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', imgScan:'扫描', imgScanHint:'把图像当作乐谱来读', imgCompose:'AI 作曲', imgComposeBlurb:'AI 从这幅图像谱写一首完整曲子 — 来自它的色彩、能量与情绪。按 Play。', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
+    harmony:'和声', spectral:'光谱', custom:'自定义', bw:'黑白',
     editPalette:'编辑调色板', editShort:'编辑', paletteEditorTitle:'你的调色板', resetPalette:'全部清除', defaultPalette:'默认',
     selectMood:'✦ 选择情绪…', moodPlaceholder:'描述任意情绪 — 例如 巴黎的雨天', moodHowFeel:'你现在感觉如何?', moodTwoWays:'在上方输入任意内容 — 或开始输入,从列表选一个单词情绪。', moodExamples:['用你自己的话描述情绪…','例如 巴黎的雨天','例如 午夜初雪','— 或直接输入,从浮现的情绪中选择 —','例如 愤怒','例如 怀旧'], storyCaption:{mood:'这就是 {mood} 的声音 ✦ paintiano.app',moodFromImg:'这幅图像的情绪,画了出来 ✦ paintiano.app',compose:'弹了钢琴 · 变成了一幅画 ✦ paintiano.app',micVoice:'对着麦克风唱,得到一幅画 ✦ paintiano.app',micMusic:'抓住了房间里的一段声音,画了下来 ✦ paintiano.app',midi:'音乐变成了颜色 ✦ paintiano.app',audio:'听见了,画了下来 ✦ paintiano.app',score:'乐谱,变成了画 ✦ paintiano.app',image:'这张图听起来是这样 ✦ paintiano.app',default:'音乐变成画 ✦ paintiano.app'}, storyImageHint:'图像 + 音频 · 给 IG / TikTok', storyImageHintNoAudio:'图像 · 给 IG / TikTok', saveAudioLabel:'音频', saveAudioHint:'mp3 · 保存到文件', scoreExportHint:'MusicXML · 给 MuseScore', includeSourceThumb:'附加来源缩略图', includeSourceImage:'附加原始图像', saveAudioHintImg:'图像 + 音频 · 保存到文件', moodGo:'开始', morph:'✦ 变形', vary:'✦ 变奏',
     moodNames:{funny:'有趣',sad:'忧伤',aggressive:'激烈',dreamy:'梦幻',love:'爱',nostalgic:'怀旧',calm:'平静',excited:'兴奋',crazy:'疯狂',hopeful:'充满希望',mysterious:'神秘',triumphant:'胜利',tense:'紧张',playful:'俏皮',epic:'史诗',euphoric:'狂喜',furious:'愤怒',serene:'宁静',yearning:'渴望',mystical:'神秘',triumphal:'凯旋',melancholic:'忧郁',heroic:'英勇',mischievous:'调皮',terrifying:'恐怖',blissful:'幸福',stormy:'风暴',warm:'温暖',festive:'节日',lonely:'孤独',curious:'好奇',determined:'坚定',tender:'温柔',joyful:'喜悦',grateful:'感激',despairing:'绝望',passionate:'热情',magical:'魔幻',radiant:'光辉',happy:'快乐',content:'满足',wistful:'怅然',anxious:'焦虑',mighty:'强大',enchanted:'着迷',carefree:'无忧',tearful:'含泪',bitter:'苦涩',noble:'高贵',danceable:'舞动',wild:'狂野',relaxed:'放松',meditative:'冥想',ethereal:'缥缈',confident:'自信',sparkling:'闪耀',fierce:'凶猛',angry:'生气',irritated:'恼火',menacing:'威胁',majestic:'庄严',spooky:'阴森',summery:'夏日',pulsing:'脉动',fresh:'清新',dizzying:'眩晕',rueful:'遗憾',gloomy:'阴郁',devoted:'忠诚',nervous:'紧张',enraged:'暴怒',indignant:'愤慨',defiant:'反抗',unyielding:'不屈',martial:'战斗',crushed:'崩溃',resigned:'认命',abandoned:'遗弃',plaintive:'哀怨',quiet:'安静',balanced:'平衡',restful:'休憩',grounded:'沉稳',fragile:'脆弱',sleepy:'困倦',flowing:'流动',intimate:'亲密',exhilarated:'兴高采烈',romantic:'浪漫',moved:'感动',compassionate:'悲悯',uplifted:'振奋',awestruck:'敬畏',fascinated:'着迷',otherworldly:'超凡',misty:'朦胧',ghostly:'幽灵'},
@@ -10070,8 +10140,8 @@ const I18N = {
   },
   zhTW:{
     concept:'理念', demo:'示範', guide:'指南',
-    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', notesStyle:'音符', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_music:'MIDI、mp3/wav 或樂譜 — Paintiano 播放它，找出每個和弦，把每個變成一道筆觸', helpDesc_image:'選一張圖片 — 掃描把顏色當作音樂演奏，或 AI 作曲(Pro)從中譜寫一首完整曲子；開啟氛圍模式還能捕捉它的情緒', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', imgScan:'掃描', imgScanHint:'把圖像當作樂譜來讀', imgCompose:'AI 作曲', imgComposeBlurb:'AI 從這幅圖像譜寫一首完整曲子 — 來自它的色彩、能量與情緒。按 Play。', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
-    harmony:'和聲', spectral:'光譜', phi:'φ / Phi', custom:'自訂', bw:'黑白',
+    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_music:'MIDI、mp3/wav 或樂譜 — Paintiano 播放它，找出每個和弦，把每個變成一道筆觸', helpDesc_image:'選一張圖片 — 掃描把顏色當作音樂演奏，或 AI 作曲(Pro)從中譜寫一首完整曲子；開啟氛圍模式還能捕捉它的情緒', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', imgScan:'掃描', imgScanHint:'把圖像當作樂譜來讀', imgCompose:'AI 作曲', imgComposeBlurb:'AI 從這幅圖像譜寫一首完整曲子 — 來自它的色彩、能量與情緒。按 Play。', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
+    harmony:'和聲', spectral:'光譜', custom:'自訂', bw:'黑白',
     editPalette:'編輯調色盤', editShort:'編輯', paletteEditorTitle:'你的調色盤', resetPalette:'全部清除', defaultPalette:'預設',
     selectMood:'✦ 選擇情緒…', moodPlaceholder:'描述任意情緒 — 例如 巴黎的雨天', moodHowFeel:'你現在感覺如何?', moodTwoWays:'在上方輸入任意內容 — 或開始輸入,從列表選一個單詞情緒。', moodExamples:['用你自己的話描述情緒…','例如 巴黎的雨天','例如 午夜初雪','— 或直接輸入,從浮現的情緒中選擇 —','例如 憤怒','例如 懷舊'], storyCaption:{mood:'這就是 {mood} 的聲音 ✦ paintiano.app',moodFromImg:'這幅圖像的情緒,畫了出來 ✦ paintiano.app',compose:'彈了鋼琴 · 變成了一幅畫 ✦ paintiano.app',micVoice:'對著麥克風唱,得到一幅畫 ✦ paintiano.app',micMusic:'抓住了房間裡的一段聲音,畫了下來 ✦ paintiano.app',midi:'音樂變成了顏色 ✦ paintiano.app',audio:'聽見了,畫了下來 ✦ paintiano.app',score:'樂譜,變成了畫 ✦ paintiano.app',image:'這張圖聽起來是這樣 ✦ paintiano.app',default:'音樂變成畫 ✦ paintiano.app'}, storyImageHint:'圖像 + 音訊 · 給 IG / TikTok', storyImageHintNoAudio:'圖像 · 給 IG / TikTok', saveAudioLabel:'音訊', saveAudioHint:'mp3 · 儲存到檔案', scoreExportHint:'MusicXML · 給 MuseScore', includeSourceThumb:'附加來源縮圖', includeSourceImage:'附加原始圖像', saveAudioHintImg:'圖像 + 音訊 · 儲存到檔案', moodGo:'開始', morph:'✦ 變形', vary:'✦ 變奏',
     moodNames:{funny:'有趣',sad:'憂傷',aggressive:'激烈',dreamy:'夢幻',love:'愛',nostalgic:'懷舊',calm:'平靜',excited:'興奮',crazy:'瘋狂',hopeful:'充滿希望',mysterious:'神秘',triumphant:'勝利',tense:'緊張',playful:'俏皮',epic:'史詩',euphoric:'狂喜',furious:'憤怒',serene:'寧靜',yearning:'渴望',mystical:'神秘',triumphal:'凱旋',melancholic:'憂鬱',heroic:'英勇',mischievous:'調皮',terrifying:'恐怖',blissful:'幸福',stormy:'風暴',warm:'溫暖',festive:'節慶',lonely:'孤獨',curious:'好奇',determined:'堅定',tender:'溫柔',joyful:'喜悅',grateful:'感激',despairing:'絕望',passionate:'熱情',magical:'魔幻',radiant:'光輝',happy:'快樂',content:'滿足',wistful:'悵然',anxious:'焦慮',mighty:'強大',enchanted:'著迷',carefree:'無憂',tearful:'含淚',bitter:'苦澀',noble:'高貴',danceable:'舞動',wild:'狂野',relaxed:'放鬆',meditative:'冥想',ethereal:'縹緲',confident:'自信',sparkling:'閃耀',fierce:'兇猛',angry:'生氣',irritated:'惱火',menacing:'威脅',majestic:'莊嚴',spooky:'陰森',summery:'夏日',pulsing:'脈動',fresh:'清新',dizzying:'眩暈',rueful:'遺憾',gloomy:'陰鬱',devoted:'忠誠',nervous:'緊張',enraged:'暴怒',indignant:'憤慨',defiant:'反抗',unyielding:'不屈',martial:'戰鬥',crushed:'崩潰',resigned:'認命',abandoned:'遺棄',plaintive:'哀怨',quiet:'安靜',balanced:'平衡',restful:'休憩',grounded:'沉穩',fragile:'脆弱',sleepy:'睏倦',flowing:'流動',intimate:'親密',exhilarated:'興高采烈',romantic:'浪漫',moved:'感動',compassionate:'悲憫',uplifted:'振奮',awestruck:'敬畏',fascinated:'著迷',otherworldly:'超凡',misty:'朦朧',ghostly:'幽靈'},
@@ -10226,8 +10296,8 @@ const I18N = {
   },
   PT:{
     concept:'conceito', demo:'demo', guide:'guia',
-    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_music:'MIDI, mp3/wav ou partitura — Paintiano toca, encontra cada acorde e transforma cada um em pincelada', helpDesc_image:'escolha uma imagem — Digitalizar toca as cores como música, ou Compor IA (Pro) escreve uma peça inteira; ative atmosfera para o humor', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atmosfera', atmoDetect:'detectar humor', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', imgScan:'digitalizar', imgScanHint:'ler a imagem como partitura', imgCompose:'compor IA', imgComposeBlurb:'A IA compõe uma peça inteira a partir desta imagem — cores, energia e humor. Carrega em Play.', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
-    harmony:'harmonia', spectral:'espectral', phi:'φ / Phi', custom:'personalizada', bw:'p&b',
+    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_music:'MIDI, mp3/wav ou partitura — Paintiano toca, encontra cada acorde e transforma cada um em pincelada', helpDesc_image:'escolha uma imagem — Digitalizar toca as cores como música, ou Compor IA (Pro) escreve uma peça inteira; ative atmosfera para o humor', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atmosfera', atmoDetect:'detectar humor', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', imgScan:'digitalizar', imgScanHint:'ler a imagem como partitura', imgCompose:'compor IA', imgComposeBlurb:'A IA compõe uma peça inteira a partir desta imagem — cores, energia e humor. Carrega em Play.', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
+    harmony:'harmonia', spectral:'espectral', custom:'personalizada', bw:'p&b',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'SUA PALETA', resetPalette:'limpar tudo', defaultPalette:'padrão',
     selectMood:'✦ escolha um humor…', moodPlaceholder:'descreva um humor — ex. dia chuvoso em Paris', moodHowFeel:'como te sentes?', moodTwoWays:'Escreve o que quiseres acima — ou começa a digitar para escolher um humor de uma palavra da lista.', moodExamples:['descreve um humor com as tuas palavras…','ex. dia chuvoso em Paris','ex. primeira neve à meia-noite','— ou começa a escrever e escolhe um humor sugerido —','ex. furioso','ex. nostálgico'], storyCaption:{mood:'é assim que {mood} soa ✦ paintiano.app',moodFromImg:'o humor desta imagem, pintado ✦ paintiano.app',compose:'toquei piano · virou pintura ✦ paintiano.app',micVoice:'cantei para o microfone, voltou uma pintura ✦ paintiano.app',micMusic:'apanhei um som na sala, pintei ✦ paintiano.app',midi:'música transformada em cor ✦ paintiano.app',audio:'ouvi, pintei ✦ paintiano.app',score:'partitura, virou pintura ✦ paintiano.app',image:'como esta imagem soa ✦ paintiano.app',default:'a música torna-se pintura ✦ paintiano.app'}, storyImageHint:'imagem + áudio · para IG / TikTok', storyImageHintNoAudio:'imagem · para IG / TikTok', saveAudioLabel:'Áudio', saveAudioHint:'mp3 · guardar em ficheiros', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura de origem', includeSourceImage:'incluir imagem original', saveAudioHintImg:'imagem + áudio · guardar em ficheiros', moodGo:'iniciar', morph:'✦ morph', vary:'✦ variar',
     moodNames:{funny:'engraçado',sad:'triste',aggressive:'agressivo',dreamy:'sonhador',love:'amor',nostalgic:'nostálgico',calm:'calmo',excited:'animado',crazy:'louco',hopeful:'esperançoso',mysterious:'misterioso',triumphant:'triunfante',tense:'tenso',playful:'brincalhão',epic:'épico',euphoric:'eufórico',furious:'furioso',serene:'sereno',yearning:'anseio',mystical:'místico',triumphal:'triunfal',melancholic:'melancólico',heroic:'heroico',mischievous:'travesso',terrifying:'aterrorizante',blissful:'abençoado',stormy:'tempestuoso',warm:'caloroso',festive:'festivo',lonely:'solitário',curious:'curioso',determined:'determinado',tender:'terno',joyful:'alegre',grateful:'grato',despairing:'desesperado',passionate:'apaixonado',magical:'mágico',radiant:'radiante',happy:'feliz',content:'contente',wistful:'saudoso',anxious:'ansioso',mighty:'poderoso',enchanted:'encantado',carefree:'despreocupado',tearful:'choroso',bitter:'amargo',noble:'nobre',danceable:'dançante',wild:'selvagem',relaxed:'relaxado',meditative:'meditativo',ethereal:'etéreo',confident:'confiante',sparkling:'brilhante',fierce:'feroz',angry:'bravo',irritated:'irritado',menacing:'ameaçador',majestic:'majestoso',spooky:'assustador',summery:'estival',pulsing:'pulsante',fresh:'fresco',dizzying:'vertiginoso',rueful:'arrependido',gloomy:'sombrio',devoted:'devoto',nervous:'nervoso',enraged:'enfurecido',indignant:'indignado',defiant:'desafiador',unyielding:'inflexível',martial:'marcial',crushed:'esmagado',resigned:'resignado',abandoned:'abandonado',plaintive:'queixoso',quiet:'quieto',balanced:'equilibrado',restful:'repousante',grounded:'centrado',fragile:'frágil',sleepy:'sonolento',flowing:'fluente',intimate:'íntimo',exhilarated:'exultante',romantic:'romântico',moved:'comovido',compassionate:'compassivo',uplifted:'elevado',awestruck:'maravilhado',fascinated:'fascinado',otherworldly:'sobrenatural',misty:'enevoado',ghostly:'fantasmagórico'},
@@ -13700,11 +13770,11 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
         <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18,flexWrap:'wrap'}}>
           <button onClick={()=>{
             // Default: restore the opposite-of-Harmony palette (each pitch class
-            // Reset to the inverse-Harmony default — same table the app
-            // seeds Custom with at first launch (consonant intervals get
-            // distant hues, dissonant intervals get close ones).
+            // gets Harmony's complementary hue). This is the same palette the app
+            // seeds Custom with, so it always plays and contrasts with Color.
             setCustomPalette(Array.from({length:12},(_,pc)=>{
-              const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
+              const oppHue=(COF[pc]+180)%360;
+              const [r,g,b]=fromHsl(oppHue,80,55);
               return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
             }));
           }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
@@ -13936,24 +14006,9 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
-      const PALETTE_VERSION='5';
+      const PALETTE_VERSION='2';
       const savedVersion=localStorage.getItem('paintiano_palette_version');
-      if(savedVersion!==PALETTE_VERSION){
-        // Force-seed the new inverse-Harmony default into localStorage,
-        // overwriting any prior saved palette (including the old default
-        // derived from COF+180, and any user-customised one). On this rollout
-        // every user (Free and Pro/Pro AI) lands on the new default —
-        // pre-existing customisations from before this version are discarded.
-        const seed = CUSTOM_DEFAULT_HUE.map(h=>{
-          const [r,g,b]=fromHsl(h,80,55);
-          return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
-        });
-        try{
-          localStorage.setItem('paintiano_custom_palette', JSON.stringify(seed));
-          localStorage.setItem('paintiano_palette_version', PALETTE_VERSION);
-        }catch(_){}
-        return seed;
-      }
+      if(savedVersion!==PALETTE_VERSION){localStorage.removeItem('paintiano_custom_palette');localStorage.setItem('paintiano_palette_version',PALETTE_VERSION);return null;}
       const raw=localStorage.getItem('paintiano_custom_palette');
       if(!raw)return null;
       const arr=JSON.parse(raw);
@@ -13963,12 +14018,14 @@ export default function Paintiano() {
     }catch(_){}
     return null;
   });
-  // Default Custom palette — derived from CUSTOM_DEFAULT_HUE (inverse-Harmony
-  // aesthetic: consonant intervals get distant hues, dissonant intervals get
-  // close ones). Anti-harmony as a starting point so it doesn't feel like a
-  // rotated Harmony. The user can recolour any swatch in the editor (Pro).
+  // Default Custom palette = the exact OPPOSITE of Harmony: each pitch class gets
+  // the complementary hue (Harmony's COF hue + 180°). So the moment you open
+  // Custom it already plays AND sounds maximally different from Color/Harmony —
+  // no silent grey default, and the contrast is obvious on first listen. The user
+  // can still recolour any swatch in the editor.
   const defaultCustomPalette=useMemo(()=>Array.from({length:12},(_,pc)=>{
-    const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
+    const oppHue=(COF[pc]+180)%360;
+    const [r,g,b]=fromHsl(oppHue,80,55);
     return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
   }),[]);
   // Pro tier uses the user's saved palette (or default if empty). Free tier
@@ -14186,15 +14243,6 @@ export default function Paintiano() {
   // glance which source is currently active. The 'mood' value is implicit
   // via the mood <select> showing its own value, so we use null in that case.
   const [loadedSource, setLoadedSource] = useState(null);
-  // If the user leaves image mode while mode is still 'bw' (the app picked it
-  // for a monochrome image), force it back to harmony — the non-image colour
-  // picker has no B/W tab, so the painting would silently render grey with no
-  // visible tab selected. Image mode itself is allowed to be 'bw'.
-  useEffect(()=>{
-    if(mode==='bw' && viewMode!=='image' && loadedSource!=='image'){
-      setMode('harmony');
-    }
-  },[viewMode, loadedSource, mode]);
   const [recording, setRecording] = useState(false);
   const [micPainting, setMicPainting] = useState(false);
   const [micListening, setMicListening] = useState(false);
@@ -14218,16 +14266,6 @@ export default function Paintiano() {
   const [playSourceMic, setPlaySourceMic] = useState('original');
   const playSourceMicRef = useRef('original');
   useEffect(()=>{ playSourceMicRef.current = playSourceMic; },[playSourceMic]);
-  // Fullscreen palette cycle: tap the blue palette button → next color mode.
-  // Toast is no longer used (label lives on the button itself), but state is
-  // preserved so the button can re-render label after setMode flushes.
-  const cycleColorFs = useCallback(()=>{
-    const cycle = viewModeRef.current==='image' ? ['harmony','spectral','bw','custom'] : ['harmony','spectral','phi','custom'];
-    const cur = modeRef.current;
-    const idx = cycle.indexOf(cur);
-    const next = cycle[((idx<0?0:idx)+1) % cycle.length];
-    setMode(next);
-  },[]);
   // Reactive flag — true once listenBlobRef has a finalised recording. Refs
   // alone don't trigger re-renders, so the toggle UI needs this companion.
   const [hasMicBlob, setHasMicBlob] = useState(false);
@@ -14348,6 +14386,11 @@ export default function Paintiano() {
   // colour blocks. Toggled by tapping the active Mosaic chip; auto-reset when any
   // artist style is chosen, or when the source is not a mood.
   const [notesMode, setNotesMode] = useState(false);
+  // $oneM$ — third tap on the Mosaic chip enters this mode: same φ-block grid
+  // as Mosaic but each cell is dressed Million-Dollar-Homepage-style (random
+  // borders, mini note labels, accent stripes, stripes/dots/crosses). Mutually
+  // exclusive with notesMode; the chip cycles Mosaic → Notes → $oneM$ → Mosaic.
+  const [oneMMode, setOneMMode] = useState(false);
   // True while the canvas belongs to a MOOD (vs a file source or live mode).
   // Unlike currentMood it survives Clear, so the "+ New mood" button stays after
   // clearing. Set when a mood is picked; cleared when a file/live source takes over.
@@ -14428,7 +14471,7 @@ export default function Paintiano() {
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
   // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
   // it only needs note MIDI + the colour fn, which every source provides.
-  const effectiveStyle = style || shuffleStyle || (notesMode ? 'notes' : null);
+  const effectiveStyle = style || shuffleStyle || (oneMMode ? 'oneM' : notesMode ? 'notes' : null);
   // Pick a fresh random phaseIndex whenever the song OR the active artist
   // changes — that triggers a new "style" for that (song, artist) pair on the
   // first Play. Stays stable across repeated Plays of the same (song, artist).
@@ -14483,7 +14526,7 @@ export default function Paintiano() {
       setStyle(prev=>{
         const next = prev===k ? null : k;
         if(next===null){ setStructureSeedLock(null); }
-        else { setNotesMode(false); } // choosing an artist exits Notes mode
+        else { setNotesMode(false); setOneMMode(false); } // choosing an artist exits Notes/$oneM$ mode
         return next;
       });
       if(canvasRef.current)canvasRef.current.style.opacity='1';
@@ -14497,7 +14540,7 @@ export default function Paintiano() {
     setTimeout(()=>{
       setStyle(()=>{
         if(k===null){ setStructureSeedLock(null); }
-        else { setNotesMode(false); }
+        else { setNotesMode(false); setOneMMode(false); }
         return k;
       });
       if(canvasRef.current)canvasRef.current.style.opacity='1';
@@ -14835,7 +14878,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(mode==='bw') return bwCol(m,v);
     if(mode==='custom') return customCol(m,v,activePalette);
     if(mode==='spectral') return specCol(m,v);
-    if(mode==='phi') return phiCol(m,v);
     return harmCol(m,v);
   },[mode,activePalette]);
 
@@ -14845,7 +14887,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const colorPreview = useCallback((md,pc)=>{
     if(md==='bw') return bwCol(36+pc*4, 100);     // 12 steps up the value ramp → grey scale
     if(md==='spectral') return specCol(60+pc, 100);
-    if(md==='phi') return phiCol(60+pc, 100);
     return harmCol(60+pc, 100);
   },[]);
 
@@ -16219,7 +16260,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // whenever the source changes (new loaded file, new mood, image↔mood switch),
   // so each fresh source starts in the normal reading rather than inheriting
   // note-names from the previous one.
-  useEffect(()=>{ setNotesMode(false); },[loadedSource,currentMood,moodFromImg]);
+  useEffect(()=>{ setNotesMode(false); setOneMMode(false); },[loadedSource,currentMood,moodFromImg]);
   // micArmed is reset explicitly at every site that leaves the MIC context
   // (start mic, ← Setup, Clear branches, source-picker handlers). A blanket
   // reset effect made micArmed flicker on/off whenever an unrelated source
@@ -16429,7 +16470,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             ? Object.assign(activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[0];}),
                 {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
                  __hasNeutral:activePalette.some(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1]<12;})})
-            : (mode==='spectral'?SPEC_HUE:mode==='phi'?PHI_HUE:COF);
+            : (mode==='spectral'?SPEC_HUE:COF);
           const _atmoBias2=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
           const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current,_atmoBias2);
           _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
@@ -18015,7 +18056,7 @@ Composition rules:
       ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
                       { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                         __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
-      : (mode==='spectral'?SPEC_HUE:mode==='phi'?PHI_HUE:COF);
+      : (mode==='spectral'?SPEC_HUE:COF);
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -20594,15 +20635,15 @@ Composition rules:
           <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : (t('colorLabel') + ' · ' + t('styleLabel'))}</span>
           <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
         </button>
-        {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && STYLE_INSPIRED[effectiveStyle] && (
+        {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
         )}
         {/* Styles without an artist — mosaic (no style selected) and notes — get
             no "inspired by". Show the active colour mode • the style name so the
             collapsed caption isn't blank. mosaic = effectiveStyle null/none;
             notes = effectiveStyle 'notes'. */}
-        {!stripOpen && (loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes') && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
+        {!stripOpen && (loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='oneM') && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='oneM'?t('oneMStyle'):effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):t('dir_'+imgDir)}</div>
@@ -20745,11 +20786,11 @@ Composition rules:
                   for the readout; in AI Compose they still set the palette the AI
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
-              <div style={{display:'grid',gridTemplateColumns: appColour?'repeat(4,1fr)':'repeat(2,1fr)',gap:6}}>
-                {(appColour ? ['harmony','spectral','phi','custom'] : ['bw','custom']).map(m=>{
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+                {['harmony','spectral','bw','custom'].map(m=>{
                   const isCustomTab = m==='custom';
                   const armed = isCustomTab && mode==='custom' && customArmed;
-                  const dis = false; // No disabled state — the picker shows only options that fit the image
+                  const dis = isDisabled(m);
                   // Free tier: Custom uses the same cycle as Pro (Custom →
                   // Edit → action), but the third tap opens a read-only
                   // palette PREVIEW instead of the editor modal. The palette
@@ -20839,7 +20880,7 @@ Composition rules:
             );
           })() : (<>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-              {['harmony','spectral','phi','custom'].map(m=>{
+              {['harmony','spectral','bw','custom'].map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
               // Free tier: Custom uses the same cycle as Pro (Custom → Edit → action),
@@ -20909,8 +20950,22 @@ Composition rules:
           <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
-            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; return (
-            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ setNotesMode(v=>!v); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={mosaicInert?'shuffle is on — turn off 🎲 to use Mosaic':(canNotes?(showNotes?'notes — tap for colour mosaic':'mosaic — tap for note names'):'mosaic — the plain reading with no artist overlay')} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{showNotes?t('notesStyle'):t('mosaicStyle')}</button>
+            {(()=>{ const mosaicOn = style===null && !shuffleStyle; const mosaicInert = !mosaicOn && !!shuffleStyle; const canNotes = mosaicOn; const showNotes = canNotes && notesMode; const showOneM = canNotes && oneMMode;
+              // Cycle: plain Mosaic → Notes → $oneM$ → plain Mosaic.
+              const cycleMosaicVariant = ()=>{
+                if(!notesMode && !oneMMode){ setNotesMode(true); }
+                else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
+                else { setOneMMode(false); setNotesMode(false); }
+              };
+              const label = showOneM ? t('oneMStyle') : (showNotes ? t('notesStyle') : t('mosaicStyle'));
+              const tip = mosaicInert ? 'shuffle is on — turn off 🎲 to use Mosaic'
+                : (canNotes
+                    ? (showOneM ? '$oneM$ — tap for colour mosaic'
+                        : showNotes ? 'notes — tap for $oneM$'
+                        : 'mosaic — tap for note names')
+                    : 'mosaic — the plain reading with no artist overlay');
+              return (
+            <button onClick={()=>{ if(mosaicInert) return; if(style!==null){ selectStyle(style); return; } if(canNotes){ cycleMosaicVariant(); } }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(mosaicInert?' pf-art-shuf':'')} title={tip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:mosaicInert?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn),...(mosaicInert?{color:PF.muted}:{})}}>{label}</button>
             ); })()}
             {effectivePairs.map(([a,b])=>{
               // Free tier: only the 'a' side is reachable; the 'b' side is
@@ -21365,7 +21420,7 @@ Composition rules:
           in the black letterbox ABOVE the canvas. The user prefers it high (even
           close to the URL bar) over ever landing on the painting. Shows the
           inspiring artist (fixed pick OR shuffle draw); hidden for Mosaic/Notes. */}
-      {immersive && effectiveStyle && effectiveStyle!=='notes' && STYLE_INSPIRED[effectiveStyle] && (
+      {immersive && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
         <div style={{position:'fixed',top:'max(8px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.95)',fontStyle:'italic',textShadow:'0 2px 10px rgba(0,0,0,.95)',pointerEvents:'none',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6}}>
           {!style&&(<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.85}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}
           <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
@@ -21400,7 +21455,7 @@ Composition rules:
           // it counts as mosaic here — only true artist styles block selection,
           // because their cells are painted abstractly.
           if(composeMode || (holdPaused && composedModeRef.current)){
-            const artistStyle = effectiveStyle && effectiveStyle!=='notes';
+            const artistStyle = effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM';
             if(artistStyle){
               const artist=STYLE_INSPIRED[effectiveStyle]||effectiveStyle;
               setErr(t('selectNeedsMosaic').replace('{artist}',artist));
@@ -21415,7 +21470,7 @@ Composition rules:
           // artist style the cells are painted abstractly — tapping (or hitting
           // the Next button that sits over the canvas) should NOT trigger the
           // underlying notes, which was distracting in canvas / fullscreen mode.
-          const _artistStyleNow = effectiveStyle && effectiveStyle!=='notes';
+          const _artistStyleNow = effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM';
           if(_artistStyleNow) return;
           const midis=hit.n.map(({m,v,durMs})=>{playNote(m,v,durMs||300);return{m,dur:durMs||300};});
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
@@ -21438,27 +21493,15 @@ Composition rules:
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
-          const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
+          const canRollNextFs = !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
-          // Palette button is the always-on companion — joins Next/Story/Save
-          // if those are showing, sits alone (centred by flex) when they're
-          // not. Visible only when there is actual painting on the canvas
-          // (not just chords queued up): disp>0 means a chord has been drawn,
-          // playing / holdPaused covers active and paused playback.
-          const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
-          if(!exportReadyFs && !showNextFs && !showPaletteFs) return null;
+          if(!exportReadyFs && !showNextFs) return null;
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
-                  {(t('next')||'next')} ›
-                </button>
-              )}
-              {showPaletteFs && (
-                <button onClick={(e)=>{ e.stopPropagation(); cycleColorFs(); wakeControls(); }} className="pf-lift" aria-label="cycle palette"
-                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 22px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#5b8bf0,#3361d9)',border:'1px solid #5b8bf0',boxShadow:'0 6px 22px rgba(51,97,217,.45)',WebkitTapHighlightColor:'transparent'}}>
-                  {t(mode)||mode} ›
+                  {t('nextPainting')||'next'} ›
                 </button>
               )}
               {exportReadyFs && typeof navigator!=='undefined' && navigator.share && (
@@ -22101,7 +22144,7 @@ Composition rules:
           return chord
             ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.55)',fontSize:(.6*effScale)+'rem',letterSpacing:'.08em'}}>· {chord}</span></span>
             : sorted.map(noteName).join(' · ');
-        })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'—'}
+        })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'&&effectiveStyle!=='oneM'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'—'}
       </div>
       {showAdvanced && composeMode && (
         <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
@@ -22175,7 +22218,7 @@ Composition rules:
           // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
           // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
           // with no randomMode).
-          const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
+          const canRoll = !anim && !working && !demoReelOn && !recording && !micActive;
           if(!randomMode) return null;
           return (
             <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else { setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
@@ -22188,11 +22231,12 @@ Composition rules:
             export a half-animated piece. Hidden in the image source view (its
             own controls live elsewhere). */}
         {viewMode!=='image' && (()=>{
-          // Save enables once there's something to save AND the painting is
-          // actually drawn (disp>0 — at least one chord painted). Empty canvas
-          // is not exportable. Active playback / pause / recording also block.
+          // Save enables once there's something to save and nothing is
+          // actively running. After Stop Live the LIVE pill is gone, micArmed
+          // may be true with chords waiting — Save is fine in that state. Play
+          // (current), recording, busy or demo reel still block.
           const exportReady =
-            chords.length>0 && disp>0 && !playing && !anim && !holdPaused &&
+            chords.length>0 && !playing && !anim && !holdPaused &&
             !demoReelOn && !micActive && !busy && !recording;
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}

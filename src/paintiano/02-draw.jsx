@@ -137,6 +137,111 @@ function drawBlockNotes(ctx,bx,by,notes,gc,BW,BH){
   ctx.restore();
 }
 
+// $oneM$ — Million Dollar Homepage-style overlay. Same block grid as Mosaic
+// (one rectangle per chord, sized by the φ-grid), but each block is dressed
+// as a tiny "ad slot" in the spirit of the 2005 pixel-grid web page: saturated
+// fills, hard contrast borders, mini text labels, occasional geometric marks
+// (stripes, dots, crosses). Variation is per-block, not in layout — chaos
+// comes from each cell looking different, not from cells moving.
+//
+// Seeded from (m + bx + by) so the same chord+position always renders the
+// same decoration set, but neighbours look different.
+function drawBlockOneM(ctx,bx,by,notes,gc,BW,BH){
+  const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
+  const top=sorted[0];
+  const [r,g,b,a]=gc(top.m, top.v);
+  // Deterministic per-block PRNG — stable across re-renders.
+  let s = ((top.m * 73856093) ^ (((bx|0)+1) * 19349663) ^ (((by|0)+1) * 83492791)) >>> 0;
+  const R = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  // 1. Base fill — saturated dominant chord colour. Pure rectangle, no gap.
+  ctx.fillStyle = _rgbaStr(r, g, b, Math.max(0.92, a));
+  ctx.fillRect(bx, by, BW, BH);
+  // 2. Decoration roulette — exactly one of these primary marks per block.
+  const variant = (R() * 100) | 0;
+  if (variant < 28) {
+    // Top accent stripe (the classic "header bar" of a tiny ad)
+    const acc = gc((top.m + 7) % 128, 110);
+    const stripeH = Math.max(2, BH * (0.14 + R()*0.10));
+    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
+    ctx.fillRect(bx, by, BW, stripeH);
+  } else if (variant < 46) {
+    // Diagonal stripes — "/// pattern" common on banner ads
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bx, by, BW, BH);
+    ctx.clip();
+    const acc = gc((top.m + 3) % 128, 110);
+    const stripes = 3 + ((R()*4)|0);
+    ctx.strokeStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.75);
+    ctx.lineWidth = Math.max(1, Math.min(BW, BH) * 0.05);
+    const span = Math.max(BW, BH) * 2;
+    for (let i = -stripes; i < stripes*3; i++) {
+      const off = (i * Math.max(BW, BH)/stripes);
+      ctx.beginPath();
+      ctx.moveTo(bx + off, by - span);
+      ctx.lineTo(bx + off + span, by + span);
+      ctx.stroke();
+    }
+    ctx.restore();
+  } else if (variant < 60) {
+    // Center dot — "logo" mark
+    const acc = gc((top.m + 5) % 128, 110);
+    const cx = bx + BW/2, cy = by + BH/2;
+    const rad = Math.min(BW, BH) * (0.18 + R()*0.12);
+    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
+    ctx.beginPath();
+    ctx.arc(cx, cy, rad, 0, Math.PI*2);
+    ctx.fill();
+  } else if (variant < 72) {
+    // Cross / plus mark
+    const acc = gc((top.m + 5) % 128, 110);
+    ctx.strokeStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.92);
+    ctx.lineWidth = Math.max(2, Math.min(BW, BH) * 0.13);
+    ctx.beginPath();
+    ctx.moveTo(bx + BW*0.22, by + BH*0.5);
+    ctx.lineTo(bx + BW*0.78, by + BH*0.5);
+    ctx.moveTo(bx + BW*0.5,  by + BH*0.22);
+    ctx.lineTo(bx + BW*0.5,  by + BH*0.78);
+    ctx.stroke();
+  } else if (variant < 82) {
+    // Bottom band (footer bar of the "ad")
+    const acc = gc((top.m + 9) % 128, 110);
+    const bandH = Math.max(2, BH * (0.18 + R()*0.10));
+    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
+    ctx.fillRect(bx, by + BH - bandH, BW, bandH);
+  } else if (variant < 90) {
+    // Inner rectangle (nested frame)
+    const acc = gc((top.m + 4) % 128, 110);
+    const inset = Math.min(BW, BH) * (0.20 + R()*0.10);
+    ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.92);
+    ctx.fillRect(bx + inset, by + inset, BW - inset*2, BH - inset*2);
+  }
+  // else: ~10% have no extra mark — pure colour rectangles in the mix.
+  // 3. Border — ~45% get a hard contrast rim (the unmistakable MDH look).
+  if (R() < 0.45) {
+    ctx.strokeStyle = 'rgba(0,0,0,0.88)';
+    ctx.lineWidth = Math.max(1, Math.min(BW, BH) * 0.05);
+    ctx.strokeRect(bx + 0.5, by + 0.5, BW - 1, BH - 1);
+  }
+  // 4. Mini note label — ~28% get the top note name printed on top of
+  // whatever decoration sits below. Skipped if the block is too small to be
+  // legible (avoids pixel-soup at tiny resolutions).
+  if (R() < 0.28 && BW > 14 && BH > 12) {
+    const name = _midiToName[top.m] || '';
+    const fs = Math.max(7, Math.min(BH*0.48, BW*0.42));
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `800 ${fs}px Georgia, serif`;
+    // Auto-contrast — light on dark fills, dark on bright fills.
+    const lum = (r*0.299 + g*0.587 + b*0.114);
+    ctx.fillStyle = lum > 150 ? 'rgba(0,0,0,0.90)' : 'rgba(255,255,255,0.96)';
+    ctx.fillText(name, bx + BW/2, by + BH/2);
+    ctx.restore();
+  }
+}
+
+
 // Dim mosaic — same crisp φ-rectangle structure as default, but each voice
 // painted at reduced alpha (~50%) so colors are visible but subdued. Used
 // as the Pollock substrate: the mosaic provides color context underneath
@@ -1197,6 +1302,7 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
   if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='oneM')return drawBlockOneM(ctx,bx,by,notes,gc,BW,BH);
   return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
 }
 
@@ -6399,24 +6505,13 @@ function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  D = Biomorphic creatures (curvy organic figures).
   //  E = Harlequin Carnival (busy confetti of small shapes).
   //  F = Primary signs on white (clean white ground, bold red/blue/black signs).
-  //  Free (cap=2) sees Constellations + Blue — those two are visually farthest
-  //  apart so the two-variant preview actually shows different paintings
-  //  (A vs B alone read as the same dense composition).
-  {
-    const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_variantCap === 2){
-      // Free: 0 = Constellations (fall through), 1 = Blue triptych.
-      if(pick===1){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    } else {
-      // Pro+: full ladder.
-      if(pick===1){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===2){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===3){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===4){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===5){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    }
-    miroPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
-  }
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick===1){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===2){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===3){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===4){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===5){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  miroPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 // ── Miró phase A: the dense dark "Constellations" composition — the original. ──
@@ -6426,16 +6521,12 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const isBW=mode==='bw';
   const D=Math.min(CW,CH);
 
-  // Miró palette — derived from active colour scheme (Harmony/Spectral/φ/Custom)
-  // for non-BW, or muted greys for BW. Black + white anchor in every variant.
-  // ORA + SKIN remain fixed accents typical of Miró's broader palette (orange
-  // and warm tan/skin tones) — they're stylistic constants, not pitch slots.
-  const _P = _miroPal(isBW, gc);
-  const BLK  = _P.BLK;
-  const RED  = _P.RED;
-  const GRN  = _P.GRN;
-  const BLU  = _P.BLU;
-  const YEL  = _P.YEL;
+  // Full Miró palette
+  const BLK  = isBW?[14,12,16]  :[14,12,16];
+  const RED  = isBW?[90,85,82]  :[215,38,30];
+  const GRN  = isBW?[80,85,80]  :[40,150,55];
+  const BLU  = isBW?[75,80,110] :[28,65,200];
+  const YEL  = isBW?[170,165,140]:[225,195,25];
   const ORA  = isBW?[130,120,100]:[220,105,20];
   const SKIN = isBW?[180,170,155]:[205,165,120]; // warm tan/skin
   const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
@@ -6625,13 +6716,11 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const D=Math.min(CW,CH);
 
   // Miró palette (same as phase A).
-  // Miró palette — see _miroPal (BW = greys; non-BW = active colour scheme).
-  const _P = _miroPal(isBW, gc);
-  const BLK = _P.BLK;
-  const RED = _P.RED;
-  const GRN = _P.GRN;
-  const BLU = _P.BLU;
-  const YEL = _P.YEL;
+  const BLK = [14,12,16];
+  const RED = isBW?[90,85,82]  :[215,38,30];
+  const GRN = isBW?[80,85,80]  :[40,150,55];
+  const BLU = isBW?[75,80,110] :[28,65,200];
+  const YEL = isBW?[170,165,140]:[225,195,25];
   const ORA = isBW?[130,120,100]:[220,105,20];
   const SKIN= isBW?[180,170,155]:[205,165,120];
   const ACC = [RED,GRN,BLU,YEL,ORA];
@@ -6751,32 +6840,13 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 }
 
 // Miró palette helper used by the new phases.
-function _miroPal(isBW, gc){
-  // BW mode keeps the original muted greys — Miró without colour is texture,
-  // not a palette to shift. Black + white always remain ink and canvas
-  // (universal anchors), they don't change with the colour scheme.
-  if(isBW || typeof gc!=='function'){
-    return {
-      BLK:[14,12,16],
-      RED: isBW?[90,85,82]  :[215,38,30],
-      GRN: isBW?[80,85,80]  :[40,150,55],
-      BLU: isBW?[75,80,110] :[28,65,200],
-      YEL: isBW?[170,165,140]:[225,195,25],
-      WHT:[245,242,235]
-    };
-  }
-  // Derive the four accent slots from gc() at four representative pitch
-  // classes (C, E, G, A — the I-iii-V-vi anchor set). Active palette ripples
-  // through Miró: Harmony → COF colours; Spectral → chromatic; φ Phi →
-  // golden-angle spread; Custom → user picks. Whatever the user chose for
-  // the four pitches is what they see in every Miró canvas.
-  const samp = m => { const c = gc(m, 100); return [c[0]|0, c[1]|0, c[2]|0]; };
+function _miroPal(isBW){
   return {
     BLK:[14,12,16],
-    RED: samp(60),  // C
-    GRN: samp(64),  // E
-    BLU: samp(67),  // G
-    YEL: samp(69),  // A
+    RED: isBW?[90,85,82]  :[215,38,30],
+    GRN: isBW?[80,85,80]  :[40,150,55],
+    BLU: isBW?[75,80,110] :[28,65,200],
+    YEL: isBW?[170,165,140]:[225,195,25],
     WHT:[245,242,235]
   };
 }
@@ -6784,7 +6854,7 @@ function _miroPal(isBW, gc){
 // ── Miró C: Blue triptych — a deep blue field with a few floating marks. ──
 function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW);
   ctx.fillStyle=isBW?'rgb(70,72,90)':'rgb(20,55,150)';ctx.fillRect(0,0,CW,CH);
   const marks=Math.max(3,Math.min(24,Math.round(cn/8)));
   const vis=Math.max(1,Math.ceil(N/cn*marks));
@@ -6809,7 +6879,7 @@ function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró D: Biomorphic creatures — curvy organic blobs with eye-dots. ──
 function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW);
   ctx.fillStyle=isBW?'rgb(224,220,212)':'rgb(238,228,206)';ctx.fillRect(0,0,CW,CH);
   const crs=Math.max(2,Math.min(14,Math.round(cn/12)));
   const vis=Math.max(1,Math.ceil(N/cn*crs));
@@ -6831,7 +6901,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró E: Harlequin Carnival — busy confetti of many small bright shapes. ──
 function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW);
   ctx.fillStyle=isBW?'rgb(120,118,124)':'rgb(150,120,90)';ctx.fillRect(0,0,CW,CH);
   const units=Math.max(10,Math.min(220,cn*2));
   const vis=Math.max(1,Math.ceil(N/cn*units));
@@ -6851,7 +6921,7 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró F: Primary signs on white — clean white ground, bold red/blue/black. ──
 function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW);
   ctx.fillStyle=isBW?'rgb(240,238,232)':'rgb(248,246,240)';ctx.fillRect(0,0,CW,CH);
   const signs=Math.max(3,Math.min(28,Math.round(cn/7)));
   const vis=Math.max(1,Math.ceil(N/cn*signs));
