@@ -241,12 +241,11 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
         </div>
         <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18,flexWrap:'wrap'}}>
           <button onClick={()=>{
-            // Default: restore the opposite-of-Harmony palette (each pitch class
-            // gets Harmony's complementary hue). This is the same palette the app
-            // seeds Custom with, so it always plays and contrasts with Color.
+            // Reset to the inverse-Harmony default — the same table the app
+            // seeds Custom with at first launch (consonant intervals get
+            // distant hues, dissonant intervals get close ones).
             setCustomPalette(Array.from({length:12},(_,pc)=>{
-              const oppHue=(COF[pc]+180)%360;
-              const [r,g,b]=fromHsl(oppHue,80,55);
+              const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
               return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
             }));
           }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
@@ -478,9 +477,24 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
-      const PALETTE_VERSION='2';
+      const PALETTE_VERSION='5';
       const savedVersion=localStorage.getItem('paintiano_palette_version');
-      if(savedVersion!==PALETTE_VERSION){localStorage.removeItem('paintiano_custom_palette');localStorage.setItem('paintiano_palette_version',PALETTE_VERSION);return null;}
+      if(savedVersion!==PALETTE_VERSION){
+        // Force-seed the new inverse-Harmony default (CUSTOM_DEFAULT_HUE) into
+        // localStorage, overwriting any prior saved palette — including the old
+        // default derived from COF+180 AND any user-customised palette from a
+        // previous version. On this rollout every user (Free + Pro + Pro AI)
+        // lands on the new default. Pre-existing customisations are discarded.
+        const seed = CUSTOM_DEFAULT_HUE.map(h=>{
+          const [r,g,b]=fromHsl(h,80,55);
+          return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
+        });
+        try{
+          localStorage.setItem('paintiano_custom_palette', JSON.stringify(seed));
+          localStorage.setItem('paintiano_palette_version', PALETTE_VERSION);
+        }catch(_){}
+        return seed;
+      }
       const raw=localStorage.getItem('paintiano_custom_palette');
       if(!raw)return null;
       const arr=JSON.parse(raw);
@@ -490,14 +504,12 @@ export default function Paintiano() {
     }catch(_){}
     return null;
   });
-  // Default Custom palette = the exact OPPOSITE of Harmony: each pitch class gets
-  // the complementary hue (Harmony's COF hue + 180°). So the moment you open
-  // Custom it already plays AND sounds maximally different from Color/Harmony —
-  // no silent grey default, and the contrast is obvious on first listen. The user
-  // can still recolour any swatch in the editor.
+  // Default Custom palette — derived from CUSTOM_DEFAULT_HUE (inverse-Harmony
+  // aesthetic: consonant intervals get distant hues, dissonant intervals get
+  // close ones). Anti-Harmony as a starting point so it doesn't feel like a
+  // rotated Harmony. The user can recolour any swatch in the editor (Pro).
   const defaultCustomPalette=useMemo(()=>Array.from({length:12},(_,pc)=>{
-    const oppHue=(COF[pc]+180)%360;
-    const [r,g,b]=fromHsl(oppHue,80,55);
+    const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
     return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
   }),[]);
   // Pro tier uses the user's saved palette (or default if empty). Free tier
@@ -715,6 +727,15 @@ export default function Paintiano() {
   // glance which source is currently active. The 'mood' value is implicit
   // via the mood <select> showing its own value, so we use null in that case.
   const [loadedSource, setLoadedSource] = useState(null);
+  // Non-image sources have no B/W tab in the colour picker — only image mode
+  // exposes B/W. If the user lands on a non-image source while mode is still
+  // 'bw' (left over from a previously loaded BW image), force back to harmony
+  // so the canvas doesn't render grey with no visibly-active tab.
+  useEffect(()=>{
+    if(mode==='bw' && viewMode!=='image' && loadedSource!=='image'){
+      setMode('harmony');
+    }
+  },[viewMode, loadedSource, mode]);
   const [recording, setRecording] = useState(false);
   const [micPainting, setMicPainting] = useState(false);
   const [micListening, setMicListening] = useState(false);
@@ -741,6 +762,19 @@ export default function Paintiano() {
   // Reactive flag — true once listenBlobRef has a finalised recording. Refs
   // alone don't trigger re-renders, so the toggle UI needs this companion.
   const [hasMicBlob, setHasMicBlob] = useState(false);
+  // Fullscreen palette cycle — tapping the blue chip in the FS control row
+  // cycles through the active mode-set (image mode uses bw, non-image uses
+  // phi instead, since the picker tabs match). Uses refs so setMode is the
+  // only side effect and Strict Mode double-invoke is safe.
+  const cycleColorFs = useCallback(()=>{
+    const cycle = viewModeRef.current==='image'
+      ? ['harmony','spectral','bw','custom']
+      : ['harmony','spectral','phi','custom'];
+    const cur = modeRef.current;
+    const idx = cycle.indexOf(cur);
+    const next = cycle[((idx<0?0:idx)+1) % cycle.length];
+    setMode(next);
+  },[]);
   // Derived: any mic mode active?
   const micActive = micPainting || micListening;
   const [micVolActive, setMicVolActive] = useState(false);
@@ -861,7 +895,7 @@ export default function Paintiano() {
   // $oneM$ — third tap on the Mosaic chip enters this mode: chord tiles fill
   // the canvas 100% (guillotine partition) with chaos shapes (circles, arcs,
   // triangles, stars, squiggles, rings, half-moons, diamonds, crosses, rects)
-  // scattered on top in a Vogel spiral from the centre. Mutually exclusive
+  // scattered on top via a Vogel spiral from the centre. Mutually exclusive
   // with notesMode; the chip cycles Mosaic → Notes → $oneM$ → Mosaic.
   const [oneMMode, setOneMMode] = useState(false);
   // True while the canvas belongs to a MOOD (vs a file source or live mode).
@@ -1351,6 +1385,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(mode==='bw') return bwCol(m,v);
     if(mode==='custom') return customCol(m,v,activePalette);
     if(mode==='spectral') return specCol(m,v);
+    if(mode==='phi') return phiCol(m,v);
     return harmCol(m,v);
   },[mode,activePalette]);
 
@@ -1360,6 +1395,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const colorPreview = useCallback((md,pc)=>{
     if(md==='bw') return bwCol(36+pc*4, 100);     // 12 steps up the value ramp → grey scale
     if(md==='spectral') return specCol(60+pc, 100);
+    if(md==='phi') return phiCol(60+pc, 100);
     return harmCol(60+pc, 100);
   },[]);
 
@@ -1490,7 +1526,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='oneM'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -1522,7 +1558,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic';
+      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -1690,7 +1726,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='oneM' && lim>0){
         drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='oneM'){
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -2041,7 +2077,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic';
+        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
         if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
@@ -7246,7 +7282,7 @@ Composition rules:
             // (harmony for colour, bw for mono). Tapping the active chip toggles the
             // read-only palette preview, exactly like the non-image modes.
             const appColour = appModeRef.current!=='bw';   // app read the image as colourful
-            const isDisabled = (m)=> m==='bw' ? appColour : ((m==='harmony'||m==='spectral') ? !appColour : false);
+            const isDisabled = (m)=> false;  // tab arrays are now appColour-aware; nothing left to disable
             return (
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {/* Read mode: SCAN (read the picture as a score) vs AI COMPOSE (Pro —
@@ -7266,8 +7302,8 @@ Composition rules:
                   for the readout; in AI Compose they still set the palette the AI
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
-              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-                {['harmony','spectral','bw','custom'].map(m=>{
+              <div style={{display:'grid',gridTemplateColumns: appColour?'repeat(4,1fr)':'repeat(2,1fr)',gap:6}}>
+                {(appColour?['harmony','spectral','phi','custom']:['bw','custom']).map(m=>{
                   const isCustomTab = m==='custom';
                   const armed = isCustomTab && mode==='custom' && customArmed;
                   const dis = isDisabled(m);
@@ -7360,7 +7396,7 @@ Composition rules:
             );
           })() : (<>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-              {['harmony','spectral','bw','custom'].map(m=>{
+              {['harmony','spectral','phi','custom'].map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
               // Free tier: Custom uses the same cycle as Pro (Custom → Edit → action),
@@ -7959,11 +7995,18 @@ Composition rules:
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
-          const canRollNextFs = !anim && !working && !demoReelOn && !recording && !micActive;
+          const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
-          if(!exportReadyFs && !showNextFs) return null;
+          const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
+          if(!exportReadyFs && !showNextFs && !showPaletteFs) return null;
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
+              {showPaletteFs && (
+                <button onClick={(e)=>{ e.stopPropagation(); cycleColorFs(); wakeControls(); }} className="pf-lift" aria-label="cycle palette"
+                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#5b8bf0,#3361d9)',border:'1px solid #5b8bf0',boxShadow:'0 6px 22px rgba(91,139,240,.45)',WebkitTapHighlightColor:'transparent'}}>
+                  {t(mode)||mode} ›
+                </button>
+              )}
               {showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
@@ -8684,7 +8727,7 @@ Composition rules:
           // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
           // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
           // with no randomMode).
-          const canRoll = !anim && !working && !demoReelOn && !recording && !micActive;
+          const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
           if(!randomMode) return null;
           return (
             <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else { setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
@@ -8702,7 +8745,7 @@ Composition rules:
           // may be true with chords waiting — Save is fine in that state. Play
           // (current), recording, busy or demo reel still block.
           const exportReady =
-            chords.length>0 && !playing && !anim && !holdPaused &&
+            chords.length>0 && disp>0 && !playing && !anim && !holdPaused &&
             !demoReelOn && !micActive && !busy && !recording;
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}

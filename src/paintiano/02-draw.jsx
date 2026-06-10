@@ -6399,13 +6399,24 @@ function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  D = Biomorphic creatures (curvy organic figures).
   //  E = Harlequin Carnival (busy confetti of small shapes).
   //  F = Primary signs on white (clean white ground, bold red/blue/black signs).
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick===1){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===2){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===3){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===4){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===5){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  miroPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
+  //  Free (cap=2) sees Constellations + Blue — those two are visually farthest
+  //  apart so the two-variant preview actually shows different paintings
+  //  (A vs B alone read as the same dense composition).
+  {
+    const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_variantCap === 2){
+      // Free: 0 = Constellations (fall through), 1 = Blue triptych.
+      if(pick===1){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    } else {
+      // Pro+: full ladder.
+      if(pick===1){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(pick===2){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(pick===3){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(pick===4){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(pick===5){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    }
+    miroPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
+  }
 }
 
 // ── Miró phase A: the dense dark "Constellations" composition — the original. ──
@@ -6415,12 +6426,16 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const isBW=mode==='bw';
   const D=Math.min(CW,CH);
 
-  // Full Miró palette
-  const BLK  = isBW?[14,12,16]  :[14,12,16];
-  const RED  = isBW?[90,85,82]  :[215,38,30];
-  const GRN  = isBW?[80,85,80]  :[40,150,55];
-  const BLU  = isBW?[75,80,110] :[28,65,200];
-  const YEL  = isBW?[170,165,140]:[225,195,25];
+  // Miró palette — derived from active colour scheme (Harmony/Spectral/φ/Custom)
+  // for non-BW, or muted greys for BW. Black + white anchor in every variant.
+  // ORA + SKIN remain fixed accents typical of Miró's broader palette (orange
+  // and warm tan/skin tones) — they're stylistic constants, not pitch slots.
+  const _P = _miroPal(isBW, gc);
+  const BLK  = _P.BLK;
+  const RED  = _P.RED;
+  const GRN  = _P.GRN;
+  const BLU  = _P.BLU;
+  const YEL  = _P.YEL;
   const ORA  = isBW?[130,120,100]:[220,105,20];
   const SKIN = isBW?[180,170,155]:[205,165,120]; // warm tan/skin
   const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
@@ -6610,11 +6625,13 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const D=Math.min(CW,CH);
 
   // Miró palette (same as phase A).
-  const BLK = [14,12,16];
-  const RED = isBW?[90,85,82]  :[215,38,30];
-  const GRN = isBW?[80,85,80]  :[40,150,55];
-  const BLU = isBW?[75,80,110] :[28,65,200];
-  const YEL = isBW?[170,165,140]:[225,195,25];
+  // Miró palette — see _miroPal (BW = greys; non-BW = active colour scheme).
+  const _P = _miroPal(isBW, gc);
+  const BLK = _P.BLK;
+  const RED = _P.RED;
+  const GRN = _P.GRN;
+  const BLU = _P.BLU;
+  const YEL = _P.YEL;
   const ORA = isBW?[130,120,100]:[220,105,20];
   const SKIN= isBW?[180,170,155]:[205,165,120];
   const ACC = [RED,GRN,BLU,YEL,ORA];
@@ -6734,13 +6751,32 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 }
 
 // Miró palette helper used by the new phases.
-function _miroPal(isBW){
+function _miroPal(isBW, gc){
+  // BW mode keeps the original muted greys — Miró without colour is texture,
+  // not a palette to shift. Black + white always remain ink and canvas
+  // (universal anchors), they don't change with the colour scheme.
+  if(isBW || typeof gc!=='function'){
+    return {
+      BLK:[14,12,16],
+      RED: isBW?[90,85,82]  :[215,38,30],
+      GRN: isBW?[80,85,80]  :[40,150,55],
+      BLU: isBW?[75,80,110] :[28,65,200],
+      YEL: isBW?[170,165,140]:[225,195,25],
+      WHT:[245,242,235]
+    };
+  }
+  // Derive the four accent slots from gc() at four representative pitch
+  // classes (C, E, G, A — the I-iii-V-vi anchor set). Active palette ripples
+  // through Miró: Harmony → COF colours; Spectral → chromatic; φ Phi →
+  // golden-angle spread; Custom → user picks. Whatever the user chose for
+  // these four pitches is what they see in every Miró canvas.
+  const samp = m => { const c = gc(m, 100); return [c[0]|0, c[1]|0, c[2]|0]; };
   return {
     BLK:[14,12,16],
-    RED: isBW?[90,85,82]  :[215,38,30],
-    GRN: isBW?[80,85,80]  :[40,150,55],
-    BLU: isBW?[75,80,110] :[28,65,200],
-    YEL: isBW?[170,165,140]:[225,195,25],
+    RED: samp(60),  // C
+    GRN: samp(64),  // E
+    BLU: samp(67),  // G
+    YEL: samp(69),  // A
     WHT:[245,242,235]
   };
 }
@@ -6748,7 +6784,7 @@ function _miroPal(isBW){
 // ── Miró C: Blue triptych — a deep blue field with a few floating marks. ──
 function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW);
+  const P=_miroPal(isBW,gc);
   ctx.fillStyle=isBW?'rgb(70,72,90)':'rgb(20,55,150)';ctx.fillRect(0,0,CW,CH);
   const marks=Math.max(3,Math.min(24,Math.round(cn/8)));
   const vis=Math.max(1,Math.ceil(N/cn*marks));
@@ -6773,7 +6809,7 @@ function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró D: Biomorphic creatures — curvy organic blobs with eye-dots. ──
 function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW);
+  const P=_miroPal(isBW,gc);
   ctx.fillStyle=isBW?'rgb(224,220,212)':'rgb(238,228,206)';ctx.fillRect(0,0,CW,CH);
   const crs=Math.max(2,Math.min(14,Math.round(cn/12)));
   const vis=Math.max(1,Math.ceil(N/cn*crs));
@@ -6795,7 +6831,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró E: Harlequin Carnival — busy confetti of many small bright shapes. ──
 function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW);
+  const P=_miroPal(isBW,gc);
   ctx.fillStyle=isBW?'rgb(120,118,124)':'rgb(150,120,90)';ctx.fillRect(0,0,CW,CH);
   const units=Math.max(10,Math.min(220,cn*2));
   const vis=Math.max(1,Math.ceil(N/cn*units));
@@ -6815,7 +6851,7 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró F: Primary signs on white — clean white ground, bold red/blue/black. ──
 function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW);
+  const P=_miroPal(isBW,gc);
   ctx.fillStyle=isBW?'rgb(240,238,232)':'rgb(248,246,240)';ctx.fillRect(0,0,CW,CH);
   const signs=Math.max(3,Math.min(28,Math.round(cn/7)));
   const vis=Math.max(1,Math.ceil(N/cn*signs));
@@ -6849,17 +6885,11 @@ function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!chords || chords.length === 0 || lim === 0) return;
   const isBW = mode === 'bw';
-  // Local PRNG seeded from session + phase so the painting is stable per song
-  // and re-rolls with Next/Vary just like every other artist.
   const ss = (sessionSeed|0) ^ ((phaseIndex|0) * 0x9E3779B1) ^ 0x4D6F0001;
   const R = (()=>{ let s = ss>>>0; return ()=>{ s = (s*1664525 + 1013904223)>>>0; return s/4294967296; }; })();
-  // Split visible chords into tiles (60%) + chaos shapes (40%). Floor + max
-  // keeps us safe with small lim values (don't try to partition into 0 rects).
   const bgCount = Math.max(4, Math.floor(lim * 0.60));
   const fgCount = Math.max(0, lim - bgCount);
   // ── LAYER 1: tile fill via guillotine partition ─────────────────────────
-  // Always split the LARGEST rect in two; sometimes (10%) pick a non-largest
-  // for variation. Bias the cut to the longer side, with random 25..75% ratio.
   const rects = [{x:0, y:0, w:CW, h:CH}];
   while(rects.length < bgCount){
     let maxIdx = 0, maxArea = 0;
@@ -6883,13 +6913,10 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       rects.push({x: target.x, y: target.y + splitH, w: target.w, h: target.h - splitH});
     }
   }
-  // Shuffle so chord order isn't visually correlated with tile position.
   for(let i = rects.length-1; i > 0; i--){
     const j = (R()*(i+1))|0;
     [rects[i], rects[j]] = [rects[j], rects[i]];
   }
-  // Helper — get the top (highest-pitched) note of a chord. Same convention
-  // as the per-block renderers in this file.
   const topNote = (ch)=>{
     const notes = ch.n || ch.notes || (Array.isArray(ch) ? ch : null);
     if(!notes || !notes.length) return null;
@@ -6898,7 +6925,6 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     for(let i=1; i<notes.length; i++){ if((notes[i].m||0) > (best.m||0)) best = notes[i]; }
     return best;
   };
-  // Render tiles — base fill + light header/footer accents + occasional border + occasional label.
   for(let i=0; i<bgCount && i<lim; i++){
     const note = topNote(chords[i]); if(!note) continue;
     const m = note.m, v = note.v != null ? note.v : 100;
@@ -6907,7 +6933,6 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     const {x, y, w, h} = rect;
     ctx.fillStyle = _rgbaStr(r, g, b, Math.max(0.92, a));
     ctx.fillRect(x, y, w, h);
-    // Light tile decorations — kept subtle so the chaos layer reads on top.
     if(R() < 0.20){
       const acc = gc((m + 7) % 128, 110);
       ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
@@ -6938,7 +6963,7 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   // ── LAYER 2: chaos shapes via Vogel-spiral placement ────────────────────
   if(fgCount === 0) return;
   const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60;
-  const PHI_ANGLE = Math.PI * (3 - Math.sqrt(5));     // golden angle
+  const PHI_ANGLE = Math.PI * (3 - Math.sqrt(5));
   const ccx = CW/2, ccy = CH/2;
   const maxR = Math.min(CW, CH) * 0.46;
   for(let i=0; i<fgCount; i++){
@@ -6946,19 +6971,16 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     const m = note.m, v = note.v != null ? note.v : 100;
     const [r,g,b,a] = gc(m, v);
     const baseColor = _rgbaStr(r, g, b, Math.max(0.92, a));
-    // Vogel spiral position — uniform density via sqrt growth, plus jitter.
     const rad = Math.sqrt(i / fgCount) * maxR;
     const ang = i * PHI_ANGLE + R()*0.4;
     const cx = ccx + Math.cos(ang)*rad + (R()-0.5) * Math.min(CW,CH) * 0.10;
     const cy = ccy + Math.sin(ang)*rad + (R()-0.5) * Math.min(CW,CH) * 0.10;
-    // Random size — mix of medium/large/small with rare "hero" XL.
     const sRoll = R();
     let size;
     if(sRoll < 0.55)      size = fgSize * (0.5 + R()*0.6);
     else if(sRoll < 0.85) size = fgSize * (1.0 + R()*0.8);
     else if(sRoll < 0.95) size = fgSize * (0.25 + R()*0.30);
     else                  size = fgSize * (1.8 + R()*1.5);
-    // Pick a shape — rect is just 8%, curves & points dominate.
     const shapeRoll = R();
     let shape;
     if      (shapeRoll < 0.08) shape = 'rect';

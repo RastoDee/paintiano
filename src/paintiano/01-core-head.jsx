@@ -210,33 +210,20 @@ const harmCol=(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],75+(v/127)*15,octL(m));
 // clustered D#/E/F at violet and F#/G/G# at red with a discontinuous jump.
 const SPEC_HUE=Array.from({length:12},(_,pc)=>pc*30);
 const specCol=(m,v=100)=>{const h=SPEC_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
-// Golden-angle hue map (φ): chromatic ascent through pitch classes distributes
-// each PC by 360°/φ² ≈ 137.5° — the same maths nature uses for sunflower
-// seeds. Twelve points land maximally spread on the colour wheel: no two
-// pitches near each other.
+// Golden-angle hue map (φ). Each pitch class advances by 360°/φ² ≈ 137.5°
+// — the same maths sunflowers use for seed spacing. Twelve points land
+// maximally scattered around the wheel: no two PCs near each other.
 const PHI_HUE=Array.from({length:12},(_,pc)=>(pc*137.50776)%360);
 const phiCol=(m,v=100)=>{const h=PHI_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
 // Custom default — "inverse-Harmony" aesthetic. Consonant intervals (P5,
 // M3, m3, M6, m6, P4) get FAR hues; dissonant intervals (m2, M2, TT, M7,
-// m7) get CLOSE ones. The opposite of what Harmony does. A pure linear
-// mapping can't satisfy every consonant pair at 180° simultaneously on 12
-// PCs, so this is a hand-picked compromise. Marker pairs:
+// m7) get CLOSE ones. Hand-picked — no single linear formula satisfies
+// every pair on 12 PCs. Marker pairs:
 //   C + G  (P5) → 0°  vs 180° — complementary
 //   C + F# (TT) → 0°  vs 330° — close
 //   C + C# (m2) → 0°  vs 30°  — close
 const CUSTOM_DEFAULT_HUE=[
-  0,    // C   — root anchor
-  30,   // C#  — m2 close to C
-  60,   // D   — M2 close
-  240,  // D#  — m3 far
-  270,  // E   — M3 far
-  210,  // F   — P4 far
-  330,  // F#  — TT close
-  180,  // G   — P5 exactly complementary
-  90,   // G#  — m6 far
-  120,  // A   — M6 far
-  300,  // A#  — m7 medium
-  150,  // B   — M7 medium
+  0, 30, 60, 240, 270, 210, 330, 180, 90, 120, 300, 150
 ];
 
 // Fast RGBA string helper — avoids repeated template-string + toFixed allocations
