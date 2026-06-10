@@ -579,21 +579,9 @@ export default function Paintiano() {
     try { localStorage.setItem('paintiano_setup_artists', JSON.stringify(setupArtists)); } catch(_) {}
   }, [setupArtists]);
   const [showSetupModal, setShowSetupModal] = useState(false);
-  // ─── Setup-picker safety: deselect anything the user removed ──────────────
-  // If the active palette or artist gets disabled in Setup, recover gracefully
-  // so the canvas doesn't render a hidden mode/artist.
-  useEffect(()=>{
-    if(mode==='bw') return;                       // bw is image-only, never in setupPalettes
-    if(!setupPalettes.includes(mode)){
-      const fb = setupPalettes.includes('harmony') ? 'harmony' : (setupPalettes[0] || 'harmony');
-      setMode(fb);
-    }
-  }, [setupPalettes, mode]);
-  useEffect(()=>{
-    if(style && !setupArtists.includes(style)){
-      setStyle(null);                             // disabled artist → release to Mosaic
-    }
-  }, [setupArtists, style]);
+  // Setup-picker fallback effects live further down, AFTER `style`/`setStyle`
+  // are declared (around line 930) — referencing them here would hit a
+  // temporal dead zone on first render.
   // One-shot splash intro (palette→keyboard demo). Skippable by tap; auto-hides.
   const [showIntro, setShowIntro] = useState(()=>!INTRO_SHOWN);
   useEffect(()=>{
@@ -933,6 +921,23 @@ export default function Paintiano() {
   // without becoming dependent on `style` (and re-creating on every switch).
   const styleRef = useRef(null);
   useEffect(()=>{ styleRef.current = style; }, [style]);
+  // ─── Setup-picker safety: deselect anything the user removed ──────────────
+  // If the active palette or artist gets disabled in Setup, recover gracefully
+  // so the canvas doesn't render a hidden mode/artist. Lives here (not next
+  // to the setupPalettes/setupArtists state) so the `style`/`setStyle` refs
+  // are already in scope — putting it earlier hit a TDZ on first render.
+  useEffect(()=>{
+    if(mode==='bw') return;                       // bw is image-only, never in setupPalettes
+    if(!setupPalettes.includes(mode)){
+      const fb = setupPalettes.includes('harmony') ? 'harmony' : (setupPalettes[0] || 'harmony');
+      setMode(fb);
+    }
+  }, [setupPalettes, mode]);
+  useEffect(()=>{
+    if(style && !setupArtists.includes(style)){
+      setStyle(null);                             // disabled artist → release to Mosaic
+    }
+  }, [setupArtists, style]);
   // ── AI "recording" lifecycle ────────────────────────────────────────────────
   // After AI generates (or you Recall an existing piece), the recent entry can
   // be RE-RECORDED by playing it once and tweaking. The "recording" window
