@@ -21760,7 +21760,7 @@ Composition rules:
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
           const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
-          const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
+          const showNextFs = randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image' && canRollNextFs;
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
           if(!exportReadyFs && !showNextFs && !showPaletteFs) return null;
           return (
@@ -22485,7 +22485,7 @@ Composition rules:
             ↺
           </button>
         )}
-        {effectiveStyle&&chords.length>0&&!recording&&!micActive&&viewMode!=='image'&&(()=>{
+        {(effectiveStyle||shuffleStyle)&&chords.length>0&&!recording&&!micActive&&viewMode!=='image'&&(()=>{
           // Next is available whenever there's a painting on the canvas — during
           // Play, during Pause, AND after the track ends. Manual artist → cycle
           // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
