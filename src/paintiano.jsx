@@ -20697,11 +20697,11 @@ Composition rules:
                   for the readout; in AI Compose they still set the palette the AI
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
-              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-                {['harmony','spectral','bw','custom'].map(m=>{
+              <div style={{display:'grid',gridTemplateColumns: appColour?'repeat(4,1fr)':'3fr 1fr',gap:6}}>
+                {(appColour ? ['harmony','spectral','phi','custom'] : ['bw','custom']).map(m=>{
                   const isCustomTab = m==='custom';
                   const armed = isCustomTab && mode==='custom' && customArmed;
-                  const dis = isDisabled(m);
+                  const dis = false; // No disabled state — the picker shows only options that fit the image
                   // Free tier: Custom uses the same cycle as Pro (Custom →
                   // Edit → action), but the third tap opens a read-only
                   // palette PREVIEW instead of the editor modal. The palette
@@ -20791,7 +20791,7 @@ Composition rules:
             );
           })() : (<>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-              {['harmony','spectral','bw','custom'].map(m=>{
+              {['harmony','spectral','phi','custom'].map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
               // Free tier: Custom uses the same cycle as Pro (Custom → Edit → action),
