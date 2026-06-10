@@ -242,11 +242,11 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
         <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18,flexWrap:'wrap'}}>
           <button onClick={()=>{
             // Default: restore the opposite-of-Harmony palette (each pitch class
-            // gets Harmony's complementary hue). This is the same palette the app
-            // seeds Custom with, so it always plays and contrasts with Color.
+            // Reset to the inverse-Harmony default — same table the app
+            // seeds Custom with at first launch (consonant intervals get
+            // distant hues, dissonant intervals get close ones).
             setCustomPalette(Array.from({length:12},(_,pc)=>{
-              const oppHue=(COF[pc]+180)%360;
-              const [r,g,b]=fromHsl(oppHue,80,55);
+              const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
               return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
             }));
           }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
@@ -738,6 +738,16 @@ export default function Paintiano() {
   const [playSourceMic, setPlaySourceMic] = useState('original');
   const playSourceMicRef = useRef('original');
   useEffect(()=>{ playSourceMicRef.current = playSourceMic; },[playSourceMic]);
+  // Fullscreen palette cycle: tap the blue palette button → next color mode.
+  // Toast is no longer used (label lives on the button itself), but state is
+  // preserved so the button can re-render label after setMode flushes.
+  const cycleColorFs = useCallback(()=>{
+    const cycle = viewModeRef.current==='image' ? ['harmony','spectral','bw','custom'] : ['harmony','spectral','phi','custom'];
+    const cur = modeRef.current;
+    const idx = cycle.indexOf(cur);
+    const next = cycle[((idx<0?0:idx)+1) % cycle.length];
+    setMode(next);
+  },[]);
   // Reactive flag — true once listenBlobRef has a finalised recording. Refs
   // alone don't trigger re-renders, so the toggle UI needs this companion.
   const [hasMicBlob, setHasMicBlob] = useState(false);
@@ -7950,13 +7960,25 @@ Composition rules:
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
           const canRollNextFs = !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && effectiveStyle && chords.length>0 && viewMode!=='image' && canRollNextFs;
-          if(!exportReadyFs && !showNextFs) return null;
+          // Palette button is the always-on companion — joins Next/Story/Save
+          // if those are showing, sits alone (centred by flex) when they're
+          // not. Visible only when there is actual painting on the canvas
+          // (not just chords queued up): disp>0 means a chord has been drawn,
+          // playing / holdPaused covers active and paused playback.
+          const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
+          if(!exportReadyFs && !showNextFs && !showPaletteFs) return null;
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); setPhaseIndex((Math.random()*1000)|0); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
-                  {t('nextPainting')||'next'} ›
+                  {(t('next')||'next')} ›
+                </button>
+              )}
+              {showPaletteFs && (
+                <button onClick={(e)=>{ e.stopPropagation(); cycleColorFs(); wakeControls(); }} className="pf-lift" aria-label="cycle palette"
+                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 22px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#5b8bf0,#3361d9)',border:'1px solid #5b8bf0',boxShadow:'0 6px 22px rgba(51,97,217,.45)',WebkitTapHighlightColor:'transparent'}}>
+                  {t(mode)||mode} ›
                 </button>
               )}
               {exportReadyFs && typeof navigator!=='undefined' && navigator.share && (

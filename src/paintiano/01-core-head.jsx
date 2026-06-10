@@ -210,24 +210,20 @@ const harmCol=(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],75+(v/127)*15,octL(m));
 // clustered D#/E/F at violet and F#/G/G# at red with a discontinuous jump.
 const SPEC_HUE=Array.from({length:12},(_,pc)=>pc*30);
 const specCol=(m,v=100)=>{const h=SPEC_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
-// φ-angle hue map — chromatic ascent through pitch classes distributes
-// each PC by the golden angle (360°/φ² ≈ 137.5°). Same math nature uses for
-// sunflower seeds and pinecones: the maximally-spread arrangement of any
-// number of points on a circle. The 12 PCs land far apart on the colour
-// wheel with no clustering — the "chromatic of nature" companion to
-// Harmony (musician's chromatic) and Spectral (physicist's chromatic).
+// Golden-angle hue map (φ): chromatic ascent through pitch classes distributes
+// each PC by 360°/φ² ≈ 137.5° — the same maths nature uses for sunflower
+// seeds. Twelve points land maximally spread on the colour wheel: no two
+// pitches near each other.
 const PHI_HUE=Array.from({length:12},(_,pc)=>(pc*137.50776)%360);
 const phiCol=(m,v=100)=>{const h=PHI_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
-// Custom default — "inverse-Harmony" aesthetic. Where Harmony places
-// consonant intervals (fifths) close on the wheel and dissonances far,
-// this default does the opposite. Consonant intervals (P5, M3, m3, M6,
-// m6, P4) get far hues; dissonant intervals (m2, M2, TT, M7, m7) get
-// close hues. A pure linear mapping can't satisfy every consonant pair
-// at 180° simultaneously on 12 PCs, so this is a hand-picked compromise.
-// Marker pairs that verify the intent:
-//   C + G  (perfect fifth)   → 0°  vs 180°   — complementary
-//   C + F# (tritone)         → 0°  vs 330°   — close
-//   C + C# (semitone)        → 0°  vs 30°    — close
+// Custom default — "inverse-Harmony" aesthetic. Consonant intervals (P5,
+// M3, m3, M6, m6, P4) get FAR hues; dissonant intervals (m2, M2, TT, M7,
+// m7) get CLOSE ones. The opposite of what Harmony does. A pure linear
+// mapping can't satisfy every consonant pair at 180° simultaneously on 12
+// PCs, so this is a hand-picked compromise. Marker pairs:
+//   C + G  (P5) → 0°  vs 180° — complementary
+//   C + F# (TT) → 0°  vs 330° — close
+//   C + C# (m2) → 0°  vs 30°  — close
 const CUSTOM_DEFAULT_HUE=[
   0,    // C   — root anchor
   30,   // C#  — m2 close to C
