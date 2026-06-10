@@ -241,11 +241,12 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
         </div>
         <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18,flexWrap:'wrap'}}>
           <button onClick={()=>{
-            // Reset Custom to the inverse-Harmony default — consonant intervals
-            // get distant hues, dissonant ones get close (the same seed as the
-            // initial setup). Mirrors defaultCustomPalette so they stay in sync.
+            // Default: restore the opposite-of-Harmony palette (each pitch class
+            // gets Harmony's complementary hue). This is the same palette the app
+            // seeds Custom with, so it always plays and contrasts with Color.
             setCustomPalette(Array.from({length:12},(_,pc)=>{
-              const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
+              const oppHue=(COF[pc]+180)%360;
+              const [r,g,b]=fromHsl(oppHue,80,55);
               return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
             }));
           }} style={{padding:'8px 16px',background:'rgba(201,168,76,.1)',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.35)',borderRadius:4,cursor:'pointer',fontSize:'.6rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>{t('defaultPalette')}</button>
@@ -2938,7 +2939,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             ? Object.assign(activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[0];}),
                 {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
                  __hasNeutral:activePalette.some(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1]<12;})})
-            : (mode==='spectral'?SPEC_HUE:(mode==='phi'?PHI_HUE:COF));
+            : (mode==='spectral'?SPEC_HUE:mode==='phi'?PHI_HUE:COF);
           const _atmoBias2=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
           const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current,_atmoBias2);
           _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
@@ -4467,7 +4468,7 @@ Composition rules:
             ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
                             { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                               __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
-            : (startMode==='spectral'?SPEC_HUE:(startMode==='phi'?PHI_HUE:COF));  // harmony & bw read via COF, phi via PHI_HUE
+            : COF;                                     // harmony & bw both read via COF
           const evts=pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
           if(!evts || !evts.length){setErr(t('errs').imgNoNotes);setErrInfo(false);setPickMode(null);return;}
@@ -4524,7 +4525,7 @@ Composition rules:
       ? Object.assign(activePalette.map(hex => { const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[0]; }),
                       { __sats: activePalette.map(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1]; }),
                         __hasNeutral: activePalette.some(hex=>{ const [r,g,b]=hexToRgb(hex); return toHsl(r,g,b)[1] < 12; }) })
-      : (mode==='spectral'?SPEC_HUE:(mode==='phi'?PHI_HUE:COF));
+      : (mode==='spectral'?SPEC_HUE:mode==='phi'?PHI_HUE:COF);
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -7234,7 +7235,7 @@ Composition rules:
             // (harmony for colour, bw for mono). Tapping the active chip toggles the
             // read-only palette preview, exactly like the non-image modes.
             const appColour = appModeRef.current!=='bw';   // app read the image as colourful
-            const isDisabled = (m)=> m==='bw' ? appColour : ((m==='harmony'||m==='spectral'||m==='phi') ? !appColour : false);
+            const isDisabled = (m)=> m==='bw' ? appColour : ((m==='harmony'||m==='spectral') ? !appColour : false);
             return (
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {/* Read mode: SCAN (read the picture as a score) vs AI COMPOSE (Pro —
@@ -7254,20 +7255,11 @@ Composition rules:
                   for the readout; in AI Compose they still set the palette the AI
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
-              {/* Tab set depends on what the image reads as. A colourful image
-                  gets the three colour palettes (Harmony / Spectral / φ Phi)
-                  plus Custom. A near-monochrome image gets a single big B/W
-                  button plus Custom — Harmony/Spectral/Phi don't apply when
-                  the source has no chromatic information. */}
-              {(()=>{
-                const imgTabs = appColour ? ['harmony','spectral','phi','custom'] : ['bw','custom'];
-                const cols = appColour ? 'repeat(4,1fr)' : '3fr 1fr';
-                return (
-              <div style={{display:'grid',gridTemplateColumns:cols,gap:6}}>
-                {imgTabs.map(m=>{
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+                {['harmony','spectral','bw','custom'].map(m=>{
                   const isCustomTab = m==='custom';
                   const armed = isCustomTab && mode==='custom' && customArmed;
-                  const dis = false; // tabs in scope are always relevant — no need to grey any out
+                  const dis = isDisabled(m);
                   // Free tier: Custom uses the same cycle as Pro (Custom →
                   // Edit → action), but the third tap opens a read-only
                   // palette PREVIEW instead of the editor modal. The palette
@@ -7308,8 +7300,6 @@ Composition rules:
                   );
                 })}
               </div>
-                );
-              })()}
               {/* READ-ONLY palette preview of the active mode (harmony/spectral/bw) —
                   shown when the user taps the active chip. Reflects the current mode
                   so it doubles as visual feedback for the colour reading.
@@ -7358,8 +7348,8 @@ Composition rules:
             </div>
             );
           })() : (<>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6}}>
-              {['harmony','spectral','phi','bw','custom'].map(m=>{
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+              {['harmony','spectral','bw','custom'].map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
               // Free tier: Custom uses the same cycle as Pro (Custom → Edit → action),
@@ -8696,12 +8686,12 @@ Composition rules:
             export a half-animated piece. Hidden in the image source view (its
             own controls live elsewhere). */}
         {viewMode!=='image' && (()=>{
-          // Save enables once there's something to save AND the painting has
-          // actually been drawn (disp>0 — at least one chord visualised), and
-          // nothing live is happening. An empty canvas with chords queued but
-          // never played isn't ready to save.
+          // Save enables once there's something to save and nothing is
+          // actively running. After Stop Live the LIVE pill is gone, micArmed
+          // may be true with chords waiting — Save is fine in that state. Play
+          // (current), recording, busy or demo reel still block.
           const exportReady =
-            chords.length>0 && disp>0 && !playing && !anim && !holdPaused &&
+            chords.length>0 && !playing && !anim && !holdPaused &&
             !demoReelOn && !micActive && !busy && !recording;
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
