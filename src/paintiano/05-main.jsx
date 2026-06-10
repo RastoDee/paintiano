@@ -461,6 +461,15 @@ export default function Paintiano() {
   const introRafRef   = useRef(null);
 
   const [mode,      setMode]      = useState('harmony');
+  // If the user leaves image mode while mode is still 'bw' (the app picked it
+  // for a monochrome image), force it back to harmony — the non-image colour
+  // picker has no B/W tab, so the painting would silently render grey with no
+  // visible tab selected. Image mode itself is allowed to be 'bw'.
+  useEffect(()=>{
+    if(mode==='bw' && viewMode!=='image' && loadedSource!=='image'){
+      setMode('harmony');
+    }
+  },[viewMode, loadedSource, mode]);
   const modeRef = useRef('harmony');
   useEffect(()=>{ modeRef.current=mode; },[mode]);
   // The colour reading the app chose for the current image (harmony or bw), so
