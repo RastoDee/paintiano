@@ -15276,7 +15276,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell. oneM is included here because drawBlock has no oneM branch — without this guard it would fall through to drawBlockMosaic and paint classic Mosaic tiles under the $1M$ overlay during playback (cleared at song end when the substrate path takes over).
     if(canAppend && lim>prev.disp){
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{

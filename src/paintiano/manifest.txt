@@ -1,0 +1,58 @@
+Paintiano — delivery manifest
+Generated: 2026-06-10T18:21:00Z
+Footer: v2.0 (unchanged)
+Changed: 05-main.jsx (1 line — oneM added to canAppend overlay-exclusion list, line 1553)
+
+=== FILE SIZES (line counts) ===
+01-core-head.jsx: 692
+02-draw.jsx:      8661
+03-i18n.jsx:      1385
+04-songs.jsx:     1877
+05-main.jsx:      9314
+
+=== KEY FEATURE MARKERS ===
+
+[01-core-head.jsx]
+  PHI_HUE table:                  1  (must be 1)
+  phiCol fn:                      1  (must be 1)
+  CUSTOM_DEFAULT_HUE table:       1  (must be 1)
+
+[02-draw.jsx]
+  drawOneMOverlay:                1  (must be 1)
+  _miroPal accepts gc:            1  (must be 1)
+  _miroPal called with gc:        4  (must be 4)
+  variant cap branch:             2  (must be 2 — Pollock + Miró)
+
+[03-i18n.jsx]
+  phi label (8 langs):            8  (must be 8)
+  oneMStyle label (8 langs):      8  (must be 8)
+
+[05-main.jsx]
+  oneMMode state:                 1  (must be 1)
+  oneMMode tap-cycle:             1  (must be 1)
+  effectiveStyle oneM branch:     1  (must be 1)
+  oneM style refs:                7  (must be >=4)   [WAS 6 — +1 from oneM in canAppend exclusion]
+  drawOneMOverlay dispatch:       3  (must be 3)
+  phi branches (gc + colorPreview): 2  (must be 2)
+  bw→harmony useEffect:           1  (must be 1)
+  PALETTE_VERSION='5':            1  (must be 1)
+  CUSTOM_DEFAULT_HUE used:        5  (must be >=3)
+  Save gate disp>0:               1  (must be 1)
+  Next gate strip:                1  (must be 1)
+  Next gate FS:                   1  (must be 1)
+  cycleColorFs callback:          1  (must be 1)
+  showPaletteFs:                  3  (must be 3)
+  Non-image picker has phi:       3  (must be >=2 — non-image + image-color)
+  Image picker conditional:       1  (must be 1)
+  Mic blob (listenBlobRef):       8  (must be >=5)
+  Source toggle (playSourceMic):  10  (must be >=5)
+  iOS wakeAudio:                  8  (must be >=2)
+  phaseIndex dice-only:           1  (must be 1)
+  oneM in canAppend exclusion:    1  (must be 1)  [NEW marker — guards the Mosaic-under-oneM bug]
+
+=== HOW TO VERIFY AFTER DEPLOY ===
+Save the bash-script "check.sh" from this delivery and run after each deploy:
+  bash check.sh
+It re-runs every grep above against your live source tree and flags any
+marker whose count diverges from this manifest — instant detection of
+silent regressions in your build pipeline.
