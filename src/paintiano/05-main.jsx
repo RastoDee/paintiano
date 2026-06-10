@@ -624,6 +624,11 @@ export default function Paintiano() {
   useEffect(()=>{ langRef.current = lang; }, [lang]);
   const [langOpen, setLangOpen] = useState(false);
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
+  // Bulletproof fallback wrapper: t() returns the key string itself when no
+  // translation exists in either the active language or EN, which means
+  // `t('foo')||'bar'` keeps `'foo'` (truthy) instead of falling through to
+  // 'bar'. ts() compares against the key so the fallback actually fires.
+  const ts = useCallback((key, fallback) => { const v = t(key); return (v && v !== key) ? v : fallback; }, [t]);
 
   // ─── (Pro state hoisted earlier in the component — see useEntitlements above) ───
   // Convenience flag: Free tier user who has used all their AI trial credits.
@@ -6902,7 +6907,7 @@ Composition rules:
         );
       })()}
       <div style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible'}}>
-        <nav style={{display:'flex',gap:18,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
+        <nav style={{display:'flex',gap:14,flexWrap:'wrap',rowGap:6,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('concept')}</span>
           {/* DEMO nav item — TEMPORARILY HIDDEN. Kept here (commented) so the
               feature can be restored in one paste; do not delete. The arming
@@ -6924,7 +6929,7 @@ Composition rules:
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
           */}
           <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
-          <span onClick={()=>setShowSetupModal(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowSetupModal(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('setupPickerLabel')||'Setup'}</span>
+          <span onClick={()=>setShowSetupModal(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowSetupModal(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{ts('setupPickerLabel','Setup')}</span>
           {/* Tier-adaptive PRO tab — Free sees gold "PRO" (upgrade to Pro);
               plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI users
               see nothing — they're already at the top tier and the badge
@@ -7587,7 +7592,9 @@ Composition rules:
             const _visiblePairs = effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b));
             const _familyOn = setupArtists.includes('mosaicFamily');
             const _chipCount = (_familyOn?1:0) + _visiblePairs.length;
-            const _cols = (()=>{
+            // baseCols per Rasto's key (chips only): 1→1, 2→2, 3→3, 4→2,
+            // 5→3, 6→3, 7→4, 8→4, 9→5.
+            const _baseCols = (()=>{
               switch(_chipCount){
                 case 0: case 1: return 1;
                 case 2: return 2;
@@ -7595,9 +7602,22 @@ Composition rules:
                 case 4: return 2;
                 case 5: case 6: return 3;
                 case 7: case 8: return 4;
-                default: return 5;            // 9 = full setup → 5h+4d
+                default: return 5;
               }
             })();
+            // With dice as +1 extra cell, even-n cases (4, 6, 8) overflow into
+            // a 3rd row. Widen the grid by 1 column and pad an empty slot
+            // before the bottom row so the chips stay on Rasto's key layout
+            // and dice lands in the last cell of row 2.
+            const _totalCells = _chipCount + 1; // chips + dice
+            const _rows = Math.ceil(_totalCells / _baseCols);
+            const _needPlaceholder = _rows > 2;
+            const _cols = _needPlaceholder ? _baseCols + 1 : _baseCols;
+            // After this many pair tiles, drop an invisible placeholder so the
+            // remaining chips + dice flow into row 2 starting from column 1.
+            const _placeholderAfterPairIdx = _needPlaceholder
+              ? (_baseCols - (_familyOn ? 1 : 0) - 1)
+              : -1;
             return (
           <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
@@ -7635,7 +7655,7 @@ Composition rules:
               }
             }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn)}}>{subLabel}</button>
             ); })()}
-            {effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b)).map(([a,b])=>{
+            {effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b)).map(([a,b], _pairIdx)=>{
               // Setup-picker integration: when only ONE side of the pair is in
               // setupArtists, the pair tile collapses to a single-toggle for
               // that side — no A↔B flip, no info row, no third-tap deselect.
@@ -7787,9 +7807,12 @@ Composition rules:
                         ? `tap for ${STYLE_LABELS[_otherKey]}`
                         : (randomMode ? 'tap for shuffle' : `tap for ${STYLE_LABELS[faceKey]}`)));
               return (
-                <button key={a+'_'+b} className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
+              <Fragment key={a+'_'+b}>
+                <button className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
                   style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
+                {_pairIdx === _placeholderAfterPairIdx && (<div aria-hidden="true" style={{visibility:'hidden'}} />)}
+              </Fragment>
               );
             })}
             {/* Random 🎲 — last cell in the grid. */}
@@ -9515,7 +9538,7 @@ Composition rules:
           preference, but tapping the tile in canvas still hits the paywall. */}
       {showSetupModal && (()=>{
         const _palLabels = {harmony:t('harmony'), spectral:t('spectral'), phi:t('phi'), kontra:t('kontra'), custom:t('custom')};
-        const _artistLabels = (()=>{ const m={mosaicFamily:(t('setupMosaicFamily')||'Mosaic family')}; ALL_ARTIST_KEYS.forEach(k=>{ if(k!=='mosaicFamily') m[k]=STYLE_INSPIRED[k]||k; }); return m; })();
+        const _artistLabels = (()=>{ const m={mosaicFamily:(ts('setupMosaicFamily','Mosaic family'))}; ALL_ARTIST_KEYS.forEach(k=>{ if(k!=='mosaicFamily') m[k]=STYLE_INSPIRED[k]||k; }); return m; })();
         const togglePal = (k)=> setSetupPalettes(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
         const toggleArt = (k)=> setSetupArtists(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
         const okMin = setupPalettes.length>=1 && setupArtists.length>=1;
@@ -9524,16 +9547,16 @@ Composition rules:
         <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) setShowSetupModal(false); }} style={{position:'fixed',inset:0,zIndex:11000,background:'rgba(8,6,14,.78)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px'}}>
           <div style={{width:'100%',maxWidth:520,maxHeight:'92vh',display:'flex',flexDirection:'column',background:'rgba(20,16,28,.96)',border:'1px solid rgba(201,168,76,.4)',borderRadius:18,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
             <div style={{padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(242,238,232,.08)'}}>
-              <span style={{fontSize:(.85*effScale)+'rem',fontWeight:600,letterSpacing:'.14em',color:PF.gold2,textTransform:'uppercase'}}>⚙ {t('setupPickerLabel')||'Setup'}</span>
+              <span style={{fontSize:(.85*effScale)+'rem',fontWeight:600,letterSpacing:'.14em',color:PF.gold2,textTransform:'uppercase'}}>⚙ {ts('setupPickerLabel','Setup')}</span>
               <button onClick={()=>{ if(okMin) setShowSetupModal(false); }} disabled={!okMin} aria-label="close" style={{background:'transparent',border:'none',color:okMin?'rgba(247,243,236,.8)':'rgba(247,243,236,.25)',fontSize:'1.5rem',cursor:okMin?'pointer':'default',padding:'4px 8px',fontFamily:'inherit'}}>✕</button>
             </div>
             <div style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
               <div>
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
-                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase'}}>{t('setupPalettesTitle')||'Palettes'}</span>
+                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase'}}>{ts('setupPalettesTitle','Palettes')}</span>
                   <span style={{display:'inline-flex',gap:14,fontSize:(.5*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase'}}>
-                    <span onClick={()=>setSetupPalettes(ALL_PALETTE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes(ALL_PALETTE_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{t('setupAll')||'All'}</span>
-                    <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{t('setupNone')||'None'}</span>
+                    <span onClick={()=>setSetupPalettes(ALL_PALETTE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes(ALL_PALETTE_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{ts('setupAll','All')}</span>
+                    <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{ts('setupNone','None')}</span>
                   </span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
@@ -9550,10 +9573,10 @@ Composition rules:
               </div>
               <div>
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
-                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase'}}>{t('setupArtistsTitle')||'Artists'}</span>
+                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase'}}>{ts('setupArtistsTitle','Artists')}</span>
                   <span style={{display:'inline-flex',gap:14,fontSize:(.5*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase'}}>
-                    <span onClick={()=>setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()]);}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{t('setupAll')||'All'}</span>
-                    <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{t('setupNone')||'None'}</span>
+                    <span onClick={()=>setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()]);}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{ts('setupAll','All')}</span>
+                    <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{ts('setupNone','None')}</span>
                   </span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
@@ -9587,7 +9610,7 @@ Composition rules:
                     <button key={a+'_'+b} onClick={togglePair} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 12px',background:on?'rgba(201,168,76,.16)':(halfOn?'rgba(201,168,76,.06)':'rgba(28,24,40,.5)'),color:on?PF.gold2:'rgba(230,222,196,.7)',border:'1px solid '+(on?'rgba(201,168,76,.6)':(halfOn?'rgba(201,168,76,.3)':'rgba(242,238,232,.12)')),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',transition:'all .15s'}}>
                       <span style={{display:'inline-flex',width:16,height:16,alignItems:'center',justifyContent:'center',borderRadius:3,border:'1px solid '+(on?PF.gold:'rgba(242,238,232,.3)'),background:on?PF.gold:'transparent',color:'#0a0612',fontSize:'.75rem',fontWeight:900,flexShrink:0}}>{on?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                        {STYLE_INSPIRED[a]} · {STYLE_INSPIRED[b]}{isFree && (<span style={{marginLeft:4,fontSize:'.85em',opacity:.7}} title={t('proLockTitle')||'Pro'}>🔒</span>)}
+                        {STYLE_INSPIRED[a]} · {STYLE_INSPIRED[b]}{isFree && (<span style={{marginLeft:4,fontSize:'.85em',opacity:.7}} title={ts('proLockTitle','Pro')}>🔒</span>)}
                       </span>
                     </button>
                     );
@@ -9595,11 +9618,11 @@ Composition rules:
                 </div>
               </div>
               {!okMin && (
-                <div style={{padding:'10px 12px',borderRadius:8,background:'rgba(232,85,122,.12)',border:'1px solid rgba(232,85,122,.4)',color:'#ff9ab4',fontSize:(.6*effScale)+'rem',lineHeight:1.4}}>{t('setupMinError')||'Choose at least 1 palette and 1 artist.'}</div>
+                <div style={{padding:'10px 12px',borderRadius:8,background:'rgba(232,85,122,.12)',border:'1px solid rgba(232,85,122,.4)',color:'#ff9ab4',fontSize:(.6*effScale)+'rem',lineHeight:1.4}}>{ts('setupMinError','Choose at least 1 palette and 1 artist.')}</div>
               )}
             </div>
             <div style={{padding:'14px 20px',borderTop:'1px solid rgba(242,238,232,.08)',display:'flex',justifyContent:'flex-end',gap:8}}>
-              <button onClick={()=>{ if(okMin) setShowSetupModal(false); }} disabled={!okMin} style={{padding:'9px 22px',background:okMin?'rgba(201,168,76,.2)':'rgba(201,168,76,.06)',color:okMin?PF.gold2:'rgba(201,168,76,.35)',border:'1px solid '+(okMin?'rgba(201,168,76,.6)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase'}}>{t('setupSave')||'Done'}</button>
+              <button onClick={()=>{ if(okMin) setShowSetupModal(false); }} disabled={!okMin} style={{padding:'9px 22px',background:okMin?'rgba(201,168,76,.2)':'rgba(201,168,76,.06)',color:okMin?PF.gold2:'rgba(201,168,76,.35)',border:'1px solid '+(okMin?'rgba(201,168,76,.6)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase'}}>{ts('setupSave','Done')}</button>
             </div>
           </div>
         </div>
