@@ -23276,7 +23276,7 @@ Composition rules:
                     <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{t('setupNone')||'None'}</span>
                   </span>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:8}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
                   {ALL_PALETTE_KEYS.map(k=>{
                     const on = setupPalettes.includes(k);
                     return (
@@ -23296,7 +23296,7 @@ Composition rules:
                     <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{t('setupNone')||'None'}</span>
                   </span>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:8}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
                   {ALL_ARTIST_KEYS.map(k=>{
                     const on = setupArtists.includes(k);
                     const isLockedForFree = isFree && k!=='mosaicFamily' && !FREE_UNLOCKED_KEYS.has(k);
