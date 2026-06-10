@@ -13900,9 +13900,24 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
-      const PALETTE_VERSION='2';
+      const PALETTE_VERSION='5';
       const savedVersion=localStorage.getItem('paintiano_palette_version');
-      if(savedVersion!==PALETTE_VERSION){localStorage.removeItem('paintiano_custom_palette');localStorage.setItem('paintiano_palette_version',PALETTE_VERSION);return null;}
+      if(savedVersion!==PALETTE_VERSION){
+        // Force-seed the new inverse-Harmony default into localStorage,
+        // overwriting any prior saved palette (including the old default
+        // derived from COF+180, and any user-customised one). On this rollout
+        // every user (Free and Pro/Pro AI) lands on the new default —
+        // pre-existing customisations from before this version are discarded.
+        const seed = CUSTOM_DEFAULT_HUE.map(h=>{
+          const [r,g,b]=fromHsl(h,80,55);
+          return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
+        });
+        try{
+          localStorage.setItem('paintiano_custom_palette', JSON.stringify(seed));
+          localStorage.setItem('paintiano_palette_version', PALETTE_VERSION);
+        }catch(_){}
+        return seed;
+      }
       const raw=localStorage.getItem('paintiano_custom_palette');
       if(!raw)return null;
       const arr=JSON.parse(raw);
@@ -13912,14 +13927,12 @@ export default function Paintiano() {
     }catch(_){}
     return null;
   });
-  // Default Custom palette = the exact OPPOSITE of Harmony: each pitch class gets
-  // the complementary hue (Harmony's COF hue + 180°). So the moment you open
-  // Custom it already plays AND sounds maximally different from Color/Harmony —
-  // no silent grey default, and the contrast is obvious on first listen. The user
-  // can still recolour any swatch in the editor.
+  // Default Custom palette — derived from CUSTOM_DEFAULT_HUE (inverse-Harmony
+  // aesthetic: consonant intervals get distant hues, dissonant intervals get
+  // close ones). Anti-harmony as a starting point so it doesn't feel like a
+  // rotated Harmony. The user can recolour any swatch in the editor (Pro).
   const defaultCustomPalette=useMemo(()=>Array.from({length:12},(_,pc)=>{
-    const oppHue=(COF[pc]+180)%360;
-    const [r,g,b]=fromHsl(oppHue,80,55);
+    const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],80,55);
     return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
   }),[]);
   // Pro tier uses the user's saved palette (or default if empty). Free tier
