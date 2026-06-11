@@ -14122,7 +14122,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
     {key:'pro',     label:t('gcat_pro')!=='gcat_pro'?t('gcat_pro'):'Pro'},
   ];
   return (
-    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.96)',zIndex:100000,backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)'}}>
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.96)',zIndex:100000,backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',display:'flex',justifyContent:'center'}}>
       <style>{`
         .pf-guide-deck::-webkit-scrollbar{display:none;}
         .pf-guide-deck{scrollbar-width:none;}
@@ -14130,7 +14130,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
         @keyframes pf-guide-card-in{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
         .pf-guide-card-inner{animation:pf-guide-card-in .4s cubic-bezier(.2,.8,.2,1) both;}
       `}</style>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',color:'rgba(247,243,236,.92)',fontFamily:'inherit'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{position:'relative',width:'100%',maxWidth:480,height:'100%',display:'flex',flexDirection:'column',color:'rgba(247,243,236,.92)',fontFamily:'inherit',borderLeft:'1px solid rgba(201,168,76,.08)',borderRight:'1px solid rgba(201,168,76,.08)',background:'rgba(8,6,14,0.35)'}}>
         {/* Top bar */}
         <div style={{flexShrink:0,padding:'14px 16px 8px',display:'flex',alignItems:'center',gap:10,position:'relative',zIndex:2}}>
           <button onClick={onClose} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
@@ -14608,7 +14608,7 @@ export default function Paintiano() {
   const saltHistoryRef = useRef([0]);
   const saltIdxRef = useRef(0);
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
-  const [lang, setLang] = useState(()=>{try{return localStorage.getItem('paintiano_lang')||'EN';}catch(_){return 'EN';}});
+  const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
   // Mirror lang into a ref so the demo reel orchestrator (whose timers were
   // scheduled with closure over the old lang) can resolve text at fire time
   // against the current language. Otherwise switching language mid-reel
