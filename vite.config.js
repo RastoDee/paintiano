@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -18,10 +19,31 @@ const __BUILD_ENV__ = JSON.stringify(
 
 export default defineConfig({
   define: { __BUILD_SHA__, __BUILD_ENV__ },
+  // ── Multi-entry build ────────────────────────────────────────────────────────
+  // index.html  → landing page (static HTML, no React, no PWA)
+  // play.html   → the PWA (React + service worker)
+  // Two physical files in dist/ means Vercel serves each path directly — no
+  // rewrite-vs-SPA-fallback fight. The PWA mounts at /play (via vercel.json
+  // rewrite from /play → /play.html).
+  build: {
+    target: 'es2020',
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        play: resolve(__dirname, 'play.html'),
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: 'prompt',
+      // PWA only attaches to the /play entry — the landing must NEVER register
+      // a service worker (otherwise the SW would intercept future / navigations
+      // and serve the PWA cached HTML instead of the static landing).
+      filename: 'sw.js',
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'],
       manifest: {
         name: 'Paintiano',
@@ -42,11 +64,17 @@ export default defineConfig({
       workbox: {
         // Embedded base64 samples push the JSX bundle above the default 2 MB precache limit
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-        // Precache only the static front-end build — never anything under /api.
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        globIgnores: ['**/api/**'],
-        // Keep navigation fallback away from /api so SPA fallback can't swallow it.
-        navigateFallbackDenylist: [/^\/api\//],
+        // Precache only the static front-end build — never anything under /api
+        // and never the landing page (we don't want offline navigations to
+        // accidentally hit a cached version while the PWA is being served).
+        globPatterns: ['**/*.{js,css,svg,png,ico,woff2}', 'play.html'],
+        globIgnores: ['**/api/**', 'index.html'],
+        // The SPA navigation fallback now targets play.html (the PWA shell),
+        // restricted to /play* URLs only. Root / and /landing.html stay
+        // un-intercepted by the SW.
+        navigateFallback: '/play.html',
+        navigateFallbackAllowlist: [/^\/play(\/|$|\?)/],
+        navigateFallbackDenylist: [/^\/api\//, /^\/$/, /^\/landing\.html/, /^\/index\.html/],
         runtimeCaching: [
           {
             // CRITICAL: force every /api/* request straight to the network.
@@ -83,9 +111,5 @@ export default defineConfig({
         ]
       }
     })
-  ],
-  build: {
-    target: 'es2020',
-    chunkSizeWarningLimit: 2000
-  }
+  ]
 });
