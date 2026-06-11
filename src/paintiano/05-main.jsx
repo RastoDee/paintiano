@@ -694,7 +694,7 @@ export default function Paintiano() {
   const saltHistoryRef = useRef([0]);
   const saltIdxRef = useRef(0);
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
-  const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
+  const [lang, setLang] = useState(()=>{try{return localStorage.getItem('paintiano_lang')||'EN';}catch(_){return 'EN';}});
   // Mirror lang into a ref so the demo reel orchestrator (whose timers were
   // scheduled with closure over the old lang) can resolve text at fire time
   // against the current language. Otherwise switching language mid-reel
@@ -5798,7 +5798,7 @@ Composition rules:
         // Web Audio chain (HP + compressor below) do the cleaning. Desktop
         // browsers ship gentler NS, so we keep it on there.
         const isiOS = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
-        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:!isiOS,autoGainControl:false},video:false});
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:!isiOS,autoGainControl:false,voiceIsolation:false},video:false});
       }catch(ce){
         if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
           stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
@@ -5822,13 +5822,24 @@ Composition rules:
       // the post-DSP signal, not the raw mic.
       let recordStream = stream; // fallback if Web Audio routing fails
       try{
+        // iOS Safari pushes mic through Voice Isolation by default, which
+        // crushes music behind any vocal. A compressor on top would amplify
+        // that vocal pump further — so on iOS we skip the compressor and
+        // route only through a gentle HP filter (kills rumble, leaves the
+        // musical spectrum intact). Desktop browsers ship a flatter mic
+        // signal, so the compressor still helps there.
+        const isiOSrec = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
         const hp = ac.createBiquadFilter();
         hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
-        const comp = ac.createDynamicsCompressor();
-        comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
-        comp.attack.value = 0.005; comp.release.value = 0.15;
         const dst = ac.createMediaStreamDestination();
-        src.connect(hp); hp.connect(comp); comp.connect(dst);
+        if(isiOSrec){
+          src.connect(hp); hp.connect(dst);
+        } else {
+          const comp = ac.createDynamicsCompressor();
+          comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
+          comp.attack.value = 0.005; comp.release.value = 0.15;
+          src.connect(hp); hp.connect(comp); comp.connect(dst);
+        }
         if(dst.stream && dst.stream.getAudioTracks().length>0) recordStream = dst.stream;
       }catch(_){ /* fallback to raw stream — recording still works */ }
       // Start raw audio capture in parallel — keeps the user's exact source
