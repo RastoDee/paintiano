@@ -1243,12 +1243,23 @@ export default function Paintiano() {
       setStyle(prev=>{
         const next = prev===k ? null : k;
         if(next===null){ setStructureSeedLock(null); }
-        else { setNotesMode(false); setOneMMode(false); setMosaicShuffleLock(false); } // choosing an artist exits Notes/$oneM$ mode + clears shuffle lock
+        else {
+          setNotesMode(false); setOneMMode(false); setMosaicShuffleLock(false); // choosing an artist exits Notes/$oneM$ mode + clears shuffle lock
+          // Compose/Mic mode + dice off: re-establish the seed lock when an
+          // artist is re-selected. The lock may have been cleared by a prior
+          // deselect (e.g. user toggled Pollock → Mosaic, which clears it).
+          // Without re-locking, pollockSessionSeed tracks the live chord hash
+          // — which grows with every new note in Compose/Mic — and the
+          // painting flickers through variants on every keystroke.
+          if(!randomModeRef.current && (composeMode||micPainting)){
+            setStructureSeedLock(prevLock=> prevLock!=null ? prevLock : ((pollockSessionSeed>>>0)||1));
+          }
+        }
         return next;
       });
       if(canvasRef.current)canvasRef.current.style.opacity='1';
     },200);
-  },[]);
+  },[composeMode, micPainting, pollockSessionSeed]);
 
   // Set the style to a specific value (no toggle). Used by paired style buttons
   // that cycle A→B→A within a pair instead of toggling a single key on/off.
