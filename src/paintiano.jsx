@@ -221,23 +221,26 @@ const phiCol=(m,v=100)=>{const h=PHI_HUE[m%12];const s=75+(v/127)*15;const[r,g,b
 // dissonant ones get CLOSE hues (the inverse of harmCol's circle-of-fifths).
 const KONTRA_HUE=[0, 30, 60, 240, 270, 210, 330, 180, 90, 120, 300, 150];
 const kontraCol=(m,v=100)=>{const h=KONTRA_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
-// Custom default — "inverse-Harmony" aesthetic. Consonant intervals (P5,
-// M3, m3, M6, m6, P4) get FAR hues; dissonant intervals (m2, M2, TT, M7,
-// m7) get CLOSE ones. Hand-picked — no single linear formula satisfies
-// every pair on 12 PCs. Marker pairs:
-//   C + G  (P5) → 0°  vs 180° — complementary
-//   C + F# (TT) → 0°  vs 330° — close
-//   C + C# (m2) → 0°  vs 30°  — close
+// Custom default — Scriabin's Prometheus colour-tone mapping (1910). The
+// most famous synaesthete in music history actually saw each pitch class
+// as a specific colour. Follows the circle of fifths around a rainbow:
+//   C  → red                G → rose/orange       D  → yellow
+//   A  → green               E → pearly blue       B  → pearly blue (shift)
+//   F# → bright blue        Db → violet            Ab → purple
+//   Eb → steel (metallic)   Bb → steel (metallic)  F  → deep red
+// "Pearly" (E, B) and "metallic steel" (Eb, Bb) are Scriabin's own marks —
+// honoured here through lower saturation in CUSTOM_DEFAULT_SAT below.
 const CUSTOM_DEFAULT_HUE=[
-  0, 30, 60, 240, 270, 210, 330, 180, 90, 120, 300, 150
+  // C    C#   D    D#   E    F    F#   G    G#   A    A#   B
+       0, 280,  60, 210, 200, 350, 230,  30, 290, 120, 210, 215
 ];
 // Per-pitch-class saturation for the Scriabin Prometheus default palette.
-// D♯ (pc=3) and A♯ (pc=10) are Scriabin's "metallic" tones — desaturated to
-// 25% so they read as steel/lead, not pure hue. Other pitch classes get a
-// full rainbow saturation of 80%.
+// Eb (pc=3) and Bb (pc=10) are Scriabin's "metallic steel" tones — 25%.
+// E (pc=4) and B (pc=11) are his "pearly" tones — 60% (medium-low).
+// Other pitch classes get bold rainbow saturation (85-95%).
 const CUSTOM_DEFAULT_SAT=[
   // C   C#  D   D#  E   F   F#  G   G#  A   A#  B
-     80, 80, 80, 25, 80, 80, 80, 80, 80, 80, 25, 80
+     95, 80, 90, 25, 60, 85, 95, 90, 80, 85, 25, 60
 ];
 
 // Fast RGBA string helper — avoids repeated template-string + toFixed allocations
@@ -14230,8 +14233,9 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
           <button onClick={()=>{
             // Reset to Scriabin's Prometheus default — the same table the app
             // seeds Custom with at first launch. Scriabin marked D♯ and A♯ as
-            // "metallic" → CUSTOM_DEFAULT_SAT desaturates those two so they
-            // read as steel/lead, not pure hue.
+            // "metallic steel" and E, B as "pearly" — CUSTOM_DEFAULT_SAT
+            // desaturates those four so they read as their respective shades,
+            // not pure hue.
             setCustomPalette(Array.from({length:12},(_,pc)=>{
               const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],CUSTOM_DEFAULT_SAT[pc],55);
               return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
@@ -14465,7 +14469,7 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
-      const PALETTE_VERSION='6';
+      const PALETTE_VERSION='7';
       const savedVersion=localStorage.getItem('paintiano_palette_version');
       if(savedVersion!==PALETTE_VERSION){
         // Force-seed Scriabin's Prometheus default (CUSTOM_DEFAULT_HUE +
@@ -14474,8 +14478,9 @@ export default function Paintiano() {
         // to the Kontra chip) AND any user-customised palette from a previous
         // version. On this rollout every user (Free + Pro + Pro AI) lands on
         // the new Scriabin default. Pre-existing customisations are discarded.
-        // Scriabin marked D♯ and A♯ as "metallic" → those two get sat=25 via
-        // CUSTOM_DEFAULT_SAT so the seed reads as steel/lead, not pure hue.
+        // Scriabin marked D♯ and A♯ as "metallic steel" (sat 25) and E, B
+        // as "pearly" (sat 60) — CUSTOM_DEFAULT_SAT honours both so the
+        // seed reads as the painter's intended shades, not pure hue.
         const seed = CUSTOM_DEFAULT_HUE.map((h,pc)=>{
           const [r,g,b]=fromHsl(h,CUSTOM_DEFAULT_SAT[pc],55);
           return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
@@ -14498,7 +14503,8 @@ export default function Paintiano() {
   // Default Custom palette — Scriabin's Prometheus colour-tone mapping (1910).
   // The most famous synaesthete in history actually saw these colours for
   // these pitches; the table follows the circle of fifths through a rainbow,
-  // with D♯ and A♯ desaturated to ~25 % to honour Scriabin's "metallic" marks.
+  // with D♯/A♯ (steel) at 25% and E/B (pearly) at 60% to honour Scriabin's
+  // own descriptive marks for those four tones.
   // The user can recolour any swatch in the editor (Pro).
   const defaultCustomPalette=useMemo(()=>Array.from({length:12},(_,pc)=>{
     const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],CUSTOM_DEFAULT_SAT[pc],55);

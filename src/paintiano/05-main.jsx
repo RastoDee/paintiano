@@ -322,8 +322,9 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
           <button onClick={()=>{
             // Reset to Scriabin's Prometheus default — the same table the app
             // seeds Custom with at first launch. Scriabin marked D♯ and A♯ as
-            // "metallic" → CUSTOM_DEFAULT_SAT desaturates those two so they
-            // read as steel/lead, not pure hue.
+            // "metallic steel" and E, B as "pearly" — CUSTOM_DEFAULT_SAT
+            // desaturates those four so they read as their respective shades,
+            // not pure hue.
             setCustomPalette(Array.from({length:12},(_,pc)=>{
               const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],CUSTOM_DEFAULT_SAT[pc],55);
               return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
@@ -557,7 +558,7 @@ export default function Paintiano() {
   // mode was active. Persisted across sessions in localStorage.
   const [customPalette, setCustomPalette] = useState(()=>{
     try{
-      const PALETTE_VERSION='6';
+      const PALETTE_VERSION='7';
       const savedVersion=localStorage.getItem('paintiano_palette_version');
       if(savedVersion!==PALETTE_VERSION){
         // Force-seed Scriabin's Prometheus default (CUSTOM_DEFAULT_HUE +
@@ -566,8 +567,9 @@ export default function Paintiano() {
         // to the Kontra chip) AND any user-customised palette from a previous
         // version. On this rollout every user (Free + Pro + Pro AI) lands on
         // the new Scriabin default. Pre-existing customisations are discarded.
-        // Scriabin marked D♯ and A♯ as "metallic" → those two get sat=25 via
-        // CUSTOM_DEFAULT_SAT so the seed reads as steel/lead, not pure hue.
+        // Scriabin marked D♯ and A♯ as "metallic steel" (sat 25) and E, B
+        // as "pearly" (sat 60) — CUSTOM_DEFAULT_SAT honours both so the
+        // seed reads as the painter's intended shades, not pure hue.
         const seed = CUSTOM_DEFAULT_HUE.map((h,pc)=>{
           const [r,g,b]=fromHsl(h,CUSTOM_DEFAULT_SAT[pc],55);
           return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
@@ -590,7 +592,8 @@ export default function Paintiano() {
   // Default Custom palette — Scriabin's Prometheus colour-tone mapping (1910).
   // The most famous synaesthete in history actually saw these colours for
   // these pitches; the table follows the circle of fifths through a rainbow,
-  // with D♯ and A♯ desaturated to ~25 % to honour Scriabin's "metallic" marks.
+  // with D♯/A♯ (steel) at 25% and E/B (pearly) at 60% to honour Scriabin's
+  // own descriptive marks for those four tones.
   // The user can recolour any swatch in the editor (Pro).
   const defaultCustomPalette=useMemo(()=>Array.from({length:12},(_,pc)=>{
     const [r,g,b]=fromHsl(CUSTOM_DEFAULT_HUE[pc],CUSTOM_DEFAULT_SAT[pc],55);

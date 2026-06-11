@@ -215,6 +215,12 @@ const specCol=(m,v=100)=>{const h=SPEC_HUE[m%12];const s=75+(v/127)*15;const[r,g
 // maximally scattered around the wheel: no two PCs near each other.
 const PHI_HUE=Array.from({length:12},(_,pc)=>(pc*137.50776)%360);
 const phiCol=(m,v=100)=>{const h=PHI_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
+// Kontra mode — the "inverse-Harmony" aesthetic that was originally the
+// Custom palette default. Promoted to its own chip so users can pick it
+// without losing their custom edits. Consonant intervals get FAR hues,
+// dissonant ones get CLOSE hues (the inverse of harmCol's circle-of-fifths).
+const KONTRA_HUE=[0, 30, 60, 240, 270, 210, 330, 180, 90, 120, 300, 150];
+const kontraCol=(m,v=100)=>{const h=KONTRA_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
 // Custom default — "inverse-Harmony" aesthetic. Consonant intervals (P5,
 // M3, m3, M6, m6, P4) get FAR hues; dissonant intervals (m2, M2, TT, M7,
 // m7) get CLOSE ones. Hand-picked — no single linear formula satisfies
