@@ -20214,11 +20214,33 @@ Composition rules:
         // remaining vertical space. The wordmark + mood need ~260px below
         // the painting; bias the painting upward toward the thumb so the
         // composition reads top→down.
-        const paintingTopMin = thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160;
+        // ── "inspired by" / bare-label header above the painting ──
+        // Mirrors the fullscreen header logic so the story shows what style
+        // is on the canvas. Suppressed in image-mode story (the original
+        // photo IS the canvas there) and when the canvas is empty.
+        const _inspKey = (!imageModeStory && chords.length>0)
+          ? (effectiveStyle || (shuffleStyle && shuffleStyle!=='mosaic' ? shuffleStyle : 'mosaic'))
+          : null;
+        const _inspBare = (_inspKey==='mosaic' || _inspKey==='notes');
+        const _inspLabel = _inspKey
+          ? (_inspBare ? STYLE_INSPIRED[_inspKey] : `inspired by ${STYLE_INSPIRED[_inspKey]}`)
+          : null;
+        const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
+        const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
         const paintingBottomReserve = 290; // mood + wordmark + tagline
         const paintingAvailH = SH - paintingTopMin - paintingBottomReserve;
         const dy = paintingTopMin + Math.max(0, Math.round((paintingAvailH - dh)/2));
         const dx = margin;
+        if(_inspLabel){
+          sctx.save();
+          sctx.textAlign='center';
+          sctx.fillStyle='rgba(201,168,76,.78)';
+          // Italic serif matches the FS header; size scales to fit oneM's long label.
+          const _fontSize = _inspLabel.length > 28 ? 36 : 44;
+          sctx.font=`italic 500 ${_fontSize}px "Cormorant Garamond", Georgia, serif`;
+          sctx.fillText(_inspLabel, SW/2, dy - 30);
+          sctx.restore();
+        }
         sctx.save();
         sctx.shadowColor='rgba(0,0,0,.55)'; sctx.shadowBlur=40; sctx.shadowOffsetY=12;
         sctx.drawImage(_artImg, dx, dy, dw, dh);
