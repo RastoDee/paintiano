@@ -1138,6 +1138,12 @@ const I18N = {
     proWelcomeTitle:'歡迎使用 Pro',
     proWelcomeBody:'此裝置上所有功能已解鎖。',
     proManageActive:'Pro',
+    morphAiUnavailable:'AI 生成的情緒不支援 Morph',
+    recentAiGenerated:'最近 AI 生成',
+    recentPlayed:'最近播放',
+    today:'今天',
+    trialBanner1:'僅剩 1 次 AI 試用 · 升級 Pro AI 享無限',
+    trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro AI 享無限',
   },
   PT:{
     concept:'conceito', demo:'demo', guide:'guia',
