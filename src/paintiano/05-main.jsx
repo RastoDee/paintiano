@@ -147,66 +147,145 @@ const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setRea
 // actual props changes (query, focus, lang, t, onClose).
 const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale}){
   const panelRef = useRef(null);
+  const deckRef = useRef(null);
   useModalFocusTrap(panelRef);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [category, setCategory] = useState('all');
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const cards = useMemo(()=>{
+    const all = getGuideCards(lang);
+    return all.filter(c => (category==='all' || c.cat===category) && guideCardMatch(c, guideQuery));
+  }, [lang, category, guideQuery]);
+  // Reset scroll to top when filter changes
+  useEffect(()=>{
+    if(deckRef.current) deckRef.current.scrollTop = 0;
+    setCurrentIdx(0);
+  }, [category, guideQuery]);
+  // Track current card via IntersectionObserver on the deck cards
+  useEffect(()=>{
+    if(!deckRef.current) return;
+    const root = deckRef.current;
+    const cardEls = root.querySelectorAll('[data-card-idx]');
+    if(!cardEls.length) return;
+    const io = new IntersectionObserver((entries)=>{
+      const visible = entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+      if(visible){
+        const idx = parseInt(visible.target.getAttribute('data-card-idx'),10);
+        if(!isNaN(idx)) setCurrentIdx(idx);
+      }
+    }, {root, threshold:[0.5, 0.75]});
+    cardEls.forEach(el=>io.observe(el));
+    return ()=>io.disconnect();
+  }, [cards.length]);
+  // Keyboard arrows for desktop accessibility
+  useEffect(()=>{
+    const onKey = (e)=>{
+      if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+        if(!deckRef.current) return;
+        if(focusedInput==='guide') return; // typing in search
+        e.preventDefault();
+        const dir = e.key==='ArrowDown' ? 1 : -1;
+        const next = Math.max(0, Math.min(cards.length-1, currentIdx + dir));
+        const target = deckRef.current.querySelector(`[data-card-idx="${next}"]`);
+        if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return ()=>window.removeEventListener('keydown', onKey);
+  }, [currentIdx, cards.length, focusedInput]);
+  const jumpTo = (idx)=>{
+    if(!deckRef.current) return;
+    const target = deckRef.current.querySelector(`[data-card-idx="${idx}"]`);
+    if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+  };
+  const CATS = [
+    {key:'all',     label:t('gcat_all')!=='gcat_all'?t('gcat_all'):'All'},
+    {key:'start',   label:t('gcat_start')!=='gcat_start'?t('gcat_start'):'Start'},
+    {key:'colors',  label:t('gcat_colors')!=='gcat_colors'?t('gcat_colors'):'Colors'},
+    {key:'style',   label:t('gcat_style')!=='gcat_style'?t('gcat_style'):'Style'},
+    {key:'music',   label:t('gcat_music')!=='gcat_music'?t('gcat_music'):'Music'},
+    {key:'save',    label:t('gcat_save')!=='gcat_save'?t('gcat_save'):'Save'},
+    {key:'pro',     label:t('gcat_pro')!=='gcat_pro'?t('gcat_pro'):'Pro'},
+  ];
   return (
-    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(140,200,255,.3)',borderRadius:8,padding:'24px 20px',color:'rgba(207,197,168,.88)',fontSize:(.78*readScale)+'rem',lineHeight:1.6,fontFamily:'inherit',position:'relative'}}>
-        <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-guide-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(140,200,255,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('guideTitle')}</div>
-        <style>{`#pf-guide-body{font-size:${(0.78*readScale).toFixed(3)}rem;}
-#pf-guide-body .pf-gsec{font-size:${(0.6*readScale).toFixed(3)}rem !important;font-weight:600 !important;letter-spacing:.06em !important;text-transform:uppercase !important;margin:24px 0 10px !important;padding:0 0 0 12px !important;position:relative !important;color:rgba(140,200,255,.85) !important;line-height:1.25 !important;}
-#pf-guide-body .pf-gsec:first-of-type{margin-top:6px !important;}
-#pf-guide-body .pf-gsec::before{content:"";position:absolute;left:0;top:0.2em;bottom:0.2em;width:2px;border-radius:1px;background:rgba(140,200,255,.6);}
-#pf-guide-body details{margin-bottom:8px !important;border:1px solid rgba(140,200,255,.10) !important;border-radius:10px !important;padding:0 !important;background:rgba(255,255,255,0.018) !important;transition:border-color .18s ease, background .18s ease;}
-#pf-guide-body details:hover{border-color:rgba(140,200,255,.22) !important;background:rgba(255,255,255,0.028) !important;}
-#pf-guide-body details[open]{border-color:rgba(140,200,255,.35) !important;background:rgba(140,200,255,0.04) !important;}
-#pf-guide-body summary{cursor:pointer;padding:11px 14px 11px 14px !important;color:rgba(140,200,255,.92) !important;font-weight:500 !important;font-size:${(0.84*readScale).toFixed(3)}rem !important;letter-spacing:.01em !important;list-style:none !important;user-select:none;display:flex;align-items:center;gap:10px;line-height:1.35;}
-#pf-guide-body summary::-webkit-details-marker{display:none;}
-#pf-guide-body summary::after{content:"›";margin-left:auto;font-size:1.1em;color:rgba(140,200,255,.5);transition:transform .2s ease;display:inline-block;}
-#pf-guide-body details[open] summary::after{transform:rotate(90deg);color:rgba(140,200,255,.85);}
-#pf-guide-body details p{margin:0 !important;padding:2px 14px 12px !important;color:rgba(207,197,168,.82) !important;font-size:${(0.78*readScale).toFixed(3)}rem !important;line-height:1.7 !important;}
-#pf-guide-body details p+p{padding-top:6px !important;}`}</style>
-        <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(140,200,255,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(140,200,255,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
-        <input
-          type="search"
-          value={guideQuery}
-          onChange={e=>setGuideQuery(e.target.value)}
-          onFocus={()=>{inputFocus.current=true;setFocusedInput('guide');}}
-          onBlur={()=>{inputFocus.current=false;setFocusedInput(null);}}
-          placeholder={t('searchGuide')}
-          autoCapitalize="off"
-          autoComplete="off"
-          spellCheck={false}
-          inputMode="search"
-          enterKeyHint="search"
-          aria-label={t('searchGuide')}
-          style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.6)',border:'1px solid '+(focusedInput==='guide'?'rgba(140,200,255,.85)':'rgba(140,200,255,.3)'),borderRadius:4,padding:'9px 12px',color:'rgba(207,197,168,.95)',fontSize:(.78*readScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',marginBottom:16,WebkitAppearance:'none',boxShadow:focusedInput==='guide'?'0 0 0 2px rgba(140,200,255,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
-        />
-        <div id="pf-guide-body">
-        {(() => {
-          const matches = orderedGuide(lang).filter(e => guideMatch(e, guideQuery));
-          if (matches.length === 0) {
-            return <p style={{textAlign:'center',opacity:.5,fontStyle:'italic',padding:'20px 0'}}>{t('noMatches')} "{guideQuery}".</p>;
-          }
-          return matches.map(entry => {
-            const sec = !guideQuery.trim() ? GUIDE_SEC[entry.id] : null;
-            return (
-            <Fragment key={entry.id}>
-              {sec && (
-                <div className="pf-gsec">{t('gsec_'+sec)}</div>
-              )}
-              <details open={!!guideQuery.trim()} style={{marginBottom:6,border:'1px solid rgba(207,197,168,.08)',borderRadius:4,padding:'2px 0',background:'rgba(255,255,255,0.012)'}}>
-                <summary style={{cursor:'pointer',padding:'9px 12px',color:'rgba(140,200,255,.92)',fontWeight:500,fontSize:(0.82*readScale)+'rem',letterSpacing:'.02em',listStyle:'none',userSelect:'none'}}>{entry.title}</summary>
-                {entry.body.split('◆').map((para,i)=>(
-                  <p key={i} style={{margin:i===0?0:'8px 0 0',padding:'2px 14px 12px',color:'rgba(207,197,168,.82)',fontSize:(0.76*readScale)+'rem',lineHeight:1.65}}>{para.trim()}</p>
-                ))}
-              </details>
-            </Fragment>
-            );
-          });
-        })()}
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.96)',zIndex:100000,backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)'}}>
+      <style>{`
+        .pf-guide-deck::-webkit-scrollbar{display:none;}
+        .pf-guide-deck{scrollbar-width:none;}
+        .pf-guide-card{scroll-snap-align:start;scroll-snap-stop:always;}
+        @keyframes pf-guide-card-in{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+        .pf-guide-card-inner{animation:pf-guide-card-in .4s cubic-bezier(.2,.8,.2,1) both;}
+      `}</style>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',color:'rgba(247,243,236,.92)',fontFamily:'inherit'}}>
+        {/* Top bar */}
+        <div style={{flexShrink:0,padding:'14px 16px 8px',display:'flex',alignItems:'center',gap:10,position:'relative',zIndex:2}}>
+          <button onClick={onClose} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
+          <div id="paintiano-guide-title" style={{flex:1,textAlign:'center',letterSpacing:'.22em',color:'rgba(201,168,76,.85)',fontSize:(.65*readScale)+'rem',textTransform:'uppercase',fontWeight:600}}>{t('guideTitle')||'Guide'}</div>
+          <button onClick={()=>{ setSearchOpen(v=>{ const n=!v; if(!n) setGuideQuery(''); return n; }); }} aria-label="search" title="search" style={{background:searchOpen?'rgba(201,168,76,.18)':'rgba(28,24,40,.6)',border:'1px solid '+(searchOpen?'rgba(201,168,76,.55)':'rgba(242,238,232,.15)'),color:searchOpen?PF.gold2:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'.95rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>⌕</button>
         </div>
-        <button onClick={onClose} style={{display:'block',margin:'20px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>close</button>
+        {/* Search (expandable) */}
+        {searchOpen && (
+          <div style={{flexShrink:0,padding:'4px 16px 8px',position:'relative',zIndex:2}}>
+            <input
+              type="search"
+              autoFocus
+              value={guideQuery}
+              onChange={e=>setGuideQuery(e.target.value)}
+              onFocus={()=>{inputFocus.current=true;setFocusedInput('guide');}}
+              onBlur={()=>{inputFocus.current=false;setFocusedInput(null);}}
+              placeholder={t('searchGuide')||'search'}
+              autoCapitalize="off"
+              autoComplete="off"
+              spellCheck={false}
+              inputMode="search"
+              enterKeyHint="search"
+              aria-label={t('searchGuide')||'search'}
+              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.7)',border:'1px solid '+(focusedInput==='guide'?'rgba(201,168,76,.7)':'rgba(242,238,232,.15)'),borderRadius:22,padding:'10px 16px',color:'rgba(247,243,236,.95)',fontSize:(.78*readScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.03em',WebkitAppearance:'none',transition:'border-color .15s ease'}}
+            />
+          </div>
+        )}
+        {/* Category chips */}
+        <div style={{flexShrink:0,padding:'2px 8px 10px',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',position:'relative',zIndex:2}} className="pf-guide-deck">
+          {CATS.map(c=>{
+            const on = category===c.key;
+            return (
+              <button key={c.key} onClick={()=>setCategory(c.key)} style={{flexShrink:0,padding:'7px 14px',borderRadius:18,background:on?'rgba(201,168,76,.18)':'rgba(28,24,40,.55)',color:on?PF.gold2:'rgba(230,222,196,.75)',border:'1px solid '+(on?'rgba(201,168,76,.55)':'rgba(242,238,232,.1)'),cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',transition:'all .15s'}}>{c.label}</button>
+            );
+          })}
+        </div>
+        {/* Swipe deck */}
+        <div ref={deckRef} className="pf-guide-deck" style={{flex:1,overflowY:'auto',overflowX:'hidden',scrollSnapType:'y mandatory',scrollBehavior:'smooth',WebkitOverflowScrolling:'touch',position:'relative'}}>
+          {cards.length===0 ? (
+            <div style={{minHeight:'100%',display:'flex',alignItems:'center',justifyContent:'center',padding:'40px 24px',color:'rgba(230,222,196,.5)',fontStyle:'italic',fontSize:(.78*readScale)+'rem',textAlign:'center'}}>{t('noMatches')||'no matches'} {guideQuery && `"${guideQuery}"`}</div>
+          ) : (
+            cards.map((card, idx)=>(
+              <div key={card.id} data-card-idx={idx} className="pf-guide-card" style={{minHeight:'100%',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px 28px 60px',boxSizing:'border-box'}}>
+                <div key={card.id+'-'+idx} className="pf-guide-card-inner" style={{maxWidth:520,width:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:18,textAlign:'center'}}>
+                  <div style={{fontSize:'5rem',lineHeight:1,color:PF.gold2,marginBottom:6,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>{card.glyph}</div>
+                  <div style={{fontSize:(1.6*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{card.title}</div>
+                  <div style={{fontSize:(.92*readScale)+'rem',lineHeight:1.55,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{card.body}</div>
+                  {card.cta && (
+                    <button onClick={()=>{ onClose(); }} style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{card.cta} →</button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        {/* Progress dots (right side, vertical) */}
+        {cards.length > 1 && (
+          <div style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:6,zIndex:3,pointerEvents:'none'}}>
+            {cards.map((_,i)=>(
+              <button key={i} onClick={()=>jumpTo(i)} aria-label={`card ${i+1}`} style={{pointerEvents:'auto',width:i===currentIdx?10:6,height:i===currentIdx?10:6,borderRadius:'50%',background:i===currentIdx?'rgba(201,168,76,.85)':'rgba(242,238,232,.3)',border:'none',cursor:'pointer',padding:0,transition:'all .2s'}} />
+            ))}
+          </div>
+        )}
+        {/* Position indicator (bottom left) */}
+        {cards.length > 0 && (
+          <div style={{position:'absolute',left:18,bottom:18,fontSize:(.6*readScale)+'rem',color:'rgba(201,168,76,.55)',letterSpacing:'.12em',pointerEvents:'none',fontVariantNumeric:'tabular-nums'}}>{currentIdx+1} / {cards.length}</div>
+        )}
+        {/* Text size toggle (bottom right) */}
+        <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{position:'absolute',right:14,bottom:12,display:'inline-flex',alignItems:'center',gap:4,padding:'5px 12px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',background:'rgba(28,24,40,.55)',border:'1px solid rgba(201,168,76,.3)',fontSize:'.55rem',fontWeight:600}}>A<span style={{fontSize:(.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.5rem',opacity:.6}}>{readScale===1?'1×':readScale===1.25?'1¼':'1½'}</span></button>
       </div>
     </div>
   );

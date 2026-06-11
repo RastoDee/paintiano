@@ -1435,6 +1435,133 @@ const GUIDE_I18N = {
   ],
 };
 function getGuide(lang){ return GUIDE_I18N[lang] || GUIDE_I18N.EN; }
+
+// ─── GUIDE CARDS ────────────────────────────────────────────────────────────
+// TikTok-style swipe deck dataset for the redesigned Guide. 12 focused cards,
+// each with a glyph, category, short title, and 2-3 sentence body. Casual,
+// Z-gen tone — no "this feature lets you …" corporate voice. Separate from
+// GUIDE_I18N (which keeps long-form reference text accessible via search).
+// Categories: 'start' | 'colors' | 'style' | 'music' | 'save' | 'pro'.
+const GUIDE_CARDS_I18N = {
+  EN: [
+    {id:'overview', glyph:'✦', cat:'start', title:`Music ⇄ painting`, body:`Same wheel, both ways. Sing, type, drop a photo — canvas fills as the music plays. Save the art, record the song. Take both home.`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`Pick what you see`, body:`Hide what you don't use. 5 palettes, 8 artist pairs, Mosaic family. Setup → top menu. Re-open anytime to widen or narrow.`, cta:`Open Setup`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 palettes, one song`, body:`Harmony, Spectral, φ Phi, Kontra, Custom. Tap a tab to switch — same notes, instant repaint. Each one paints the same music in a different colour grammar.`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = Scriabin's map`, body:`Scriabin saw colours for tones. His 1910 mapping is your Custom default — C red, G orange-pink, D yellow, all the way around. Pro lets you edit every swatch.`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: inverse harmony`, body:`Clashing chords clash on canvas. Clean intervals fly apart. The painter's reading — opposite of Harmony, sharper to the eye. Free for everyone.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 artists, 8 pairs`, body:`Mosaic is the default. Tap an artist tile and the same notes get rewritten in their hand. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 total.`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic family`, body:`Three modes, one chip. Tap to cycle: φ-grid → note labels → $1M$ chaos. The plain reading when no artist is on.`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`Dice on = surprise`, body:`Same song = same painting, always. Roll the dice and every Next paints a different artist or Mosaic stop. Tap Mosaic with dice on to lock the cycle to just the 3 family stops.`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`Sing it, paint it`, body:`Two MIC modes. 🔊 Music listens to the room (speaker, ambient). 🎤 Voice snaps your humming to C major. Both paint live. Original ⇄ Piano toggle after.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Photo → music → painting`, body:`Drop in an image. Its colours and energy become a piano piece. The piece then paints in any artist style you pick. Free does mosaic, Pro adds AI Compose.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Take both home`, body:`Save → PNG of the painting + audio of the music. Story mode crops it for Instagram / TikTok. Pro removes the watermark and lifts to 300 DPI.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro unlocks all of it`, body:`Pro €9.99 → all 16 artists, editable Custom palette, no watermark, lifetime. Pro AI €19.99 adds unlimited AI moods, image compose, atmosphere reads. One-time, no subs.`}
+  ],
+  DE: [
+    {id:'overview', glyph:'✦', cat:'start', title:`Musik ⇄ Malerei`, body:`Gleiches Rad, beide Richtungen. Singen, tippen, Foto droppen — die Leinwand füllt sich mit der Musik. Bild sichern, Song aufnehmen. Du nimmst beides mit.`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`Wähle, was du siehst`, body:`Versteck, was du nicht brauchst. 5 Paletten, 8 Künstlerpaare, Mosaik-Familie. Setup → oberes Menü. Jederzeit wieder aufmachen.`, cta:`Setup öffnen`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 Paletten, ein Song`, body:`Harmonie, Spektral, φ Phi, Kontra, Custom. Tab antippen zum Wechseln — gleiche Noten, sofort neu gemalt. Jede malt die gleiche Musik in einer anderen Farbgrammatik.`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = Skrjabins Karte`, body:`Skrjabin sah Farben für Töne. Seine Tabelle von 1910 ist dein Custom-Default — C rot, G orange-rosa, D gelb, rundum. Pro lässt dich jedes Feld umfärben.`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: inverse Harmonie`, body:`Schmutzige Akkorde kollidieren auf der Leinwand. Saubere fliegen auseinander. Das Gegenteil von Harmonie, schärfer fürs Auge. Für alle frei.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 Künstler, 8 Paare`, body:`Mosaik ist der Default. Künstler-Kachel antippen und die gleichen Noten erscheinen in seiner Handschrift. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 insgesamt.`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaik-Familie`, body:`Drei Modi, eine Kachel. Antippen zykelt: φ-Raster → Noten-Labels → $1M$-Chaos. Die schlichte Lesart, wenn kein Künstler an ist.`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`Würfel an = Überraschung`, body:`Gleicher Song = gleiches Bild, immer. Würfel an und jedes Next malt einen anderen Künstler oder Mosaik-Stop. Mosaik antippen mit Würfel an → Zyklus nur durch die 3 Familien-Stops.`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`Sing es, mal es`, body:`Zwei MIC-Modi. 🔊 Musik hört den Raum ab (Lautsprecher, Ambiente). 🎤 Stimme rastet dein Summen auf C-Dur ein. Beide malen live. Original ⇄ Klavier nachher.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Foto → Musik → Bild`, body:`Wirf ein Bild rein. Seine Farben und Energie werden zu einem Klavierstück. Das Stück wird dann in jedem Künstlerstil gemalt. Free macht Mosaik, Pro hat AI Compose.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Nimm beides mit`, body:`Sichern → PNG vom Bild + Audio vom Song. Story-Modus schneidet's für Instagram / TikTok. Pro entfernt das Wasserzeichen und hebt auf 300 DPI.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro schaltet alles frei`, body:`Pro €9.99 → alle 16 Künstler, editierbare Custom-Palette, kein Wasserzeichen, lebenslang. Pro KI €19.99 ergänzt unbegrenzte KI-Moods, Bild-Compose, Atmosphäre. Einmalig, kein Abo.`}
+  ],
+  FR: [
+    {id:'overview', glyph:'✦', cat:'start', title:`Musique ⇄ peinture`, body:`Même roue, les deux sens. Chante, tape, dépose une photo — la toile se remplit avec la musique. Sauve l'œuvre, enregistre le morceau. Tu repars avec les deux.`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`Choisis ce que tu vois`, body:`Cache ce que tu n'utilises pas. 5 palettes, 8 paires d'artistes, famille Mosaïque. Setup → menu du haut. Réouvre quand tu veux.`, cta:`Ouvrir Setup`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 palettes, une chanson`, body:`Harmonie, Spectral, φ Phi, Kontra, Custom. Tape un onglet pour changer — mêmes notes, repeint instantané. Chacune peint la même musique dans une grammaire de couleur différente.`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = la carte de Scriabine`, body:`Scriabine voyait des couleurs pour les tons. Sa table de 1910 est ton défaut Custom — Do rouge, Sol orange-rose, Ré jaune, tout autour. Pro te laisse éditer chaque case.`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra : harmonie inversée`, body:`Les accords qui se heurtent se heurtent sur la toile. Les purs s'écartent. La lecture du peintre — opposé d'Harmonie, plus tranchant. Gratuit pour tous.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 artistes, 8 paires`, body:`Mosaïque est le défaut. Tape une tuile d'artiste et les mêmes notes ressortent dans sa main. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 au total.`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Famille Mosaïque`, body:`Trois modes, une tuile. Tape pour cycler : grille-φ → notes → chaos $1M$. La lecture brute quand aucun artiste n'est actif.`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`Dés on = surprise`, body:`Même chanson = même peinture, toujours. Lance les dés et chaque Next peint un artiste ou stop Mosaïque différent. Tape Mosaïque avec les dés on pour verrouiller le cycle sur les 3 stops de la famille.`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`Chante-le, peins-le`, body:`Deux modes MIC. 🔊 Musique écoute la pièce (haut-parleur, ambiance). 🎤 Voix accroche ton fredonnement en Do majeur. Les deux peignent live. Bascule Original ⇄ Piano après.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Photo → musique → peinture`, body:`Dépose une image. Ses couleurs et son énergie deviennent un morceau de piano. Le morceau se peint ensuite dans le style d'artiste choisi. Free fait mosaïque, Pro ajoute AI Compose.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Repars avec les deux`, body:`Sauvegarder → PNG de la peinture + audio du morceau. Mode Story recadre pour Instagram / TikTok. Pro enlève le watermark et passe à 300 DPI.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro débloque tout`, body:`Pro €9.99 → tous les 16 artistes, palette Custom éditable, sans watermark, à vie. Pro IA €19.99 ajoute moods IA illimités, compose image, lectures d'atmosphère. Une fois, sans abo.`}
+  ],
+  ES: [
+    {id:'overview', glyph:'✦', cat:'start', title:`Música ⇄ pintura`, body:`Misma rueda, ambos sentidos. Canta, escribe, suelta una foto — el lienzo se llena con la música. Guarda el arte, graba la canción. Te llevas las dos.`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`Elige lo que ves`, body:`Esconde lo que no usas. 5 paletas, 8 pares de artistas, familia Mosaico. Setup → menú superior. Reabre cuando quieras.`, cta:`Abrir Setup`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 paletas, una canción`, body:`Armonía, Espectral, φ Phi, Kontra, Custom. Toca una pestaña para cambiar — mismas notas, repintado al instante. Cada una pinta la misma música en una gramática de color distinta.`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = mapa de Skriabin`, body:`Skriabin veía colores para los tonos. Su tabla de 1910 es tu predeterminado Custom — Do rojo, Sol naranja-rosa, Re amarillo, alrededor. Pro deja editar cada casilla.`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: armonía invertida`, body:`Acordes que chocan chocan en el lienzo. Los limpios se separan. La lectura del pintor — opuesto a Armonía, más afilado. Gratis para todos.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 artistas, 8 pares`, body:`Mosaico es el predeterminado. Toca una tarjeta de artista y las mismas notas salen en su mano. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 en total.`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Familia Mosaico`, body:`Tres modos, una baldosa. Toca para ciclar: rejilla-φ → notas → caos $1M$. La lectura plana cuando no hay artista activo.`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`Dado on = sorpresa`, body:`Misma canción = misma pintura, siempre. Lanza el dado y cada Siguiente pinta un artista o parada Mosaico distinta. Toca Mosaico con dado on para bloquear el ciclo a las 3 paradas de la familia.`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`Cántalo, píntalo`, body:`Dos modos MIC. 🔊 Música escucha la sala (altavoz, ambiente). 🎤 Voz engancha tu tarareo a Do mayor. Ambos pintan en vivo. Original ⇄ Piano después.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Suelta una imagen. Sus colores y energía se vuelven una pieza de piano. La pieza luego se pinta en el estilo de artista que elijas. Free hace mosaico, Pro suma AI Compose.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Llévate las dos`, body:`Guardar → PNG de la pintura + audio de la canción. Modo Story recorta para Instagram / TikTok. Pro quita la marca de agua y sube a 300 DPI.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloquea todo`, body:`Pro €9.99 → los 16 artistas, paleta Custom editable, sin marca de agua, de por vida. Pro IA €19.99 añade moods IA ilimitados, compose imagen, lecturas de atmósfera. Una vez, sin suscripción.`}
+  ],
+  SK: [
+    {id:'overview', glyph:'✦', cat:'start', title:`Hudba ⇄ maľba`, body:`To isté koleso, oboma smermi. Spievaj, píš, hoď fotku — plátno sa plní s hudbou. Ulož maľbu, nahraj pieseň. Odnesieš si oboje.`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`Vyber, čo vidíš`, body:`Schovaj, čo nepoužívaš. 5 paliet, 8 párov umelcov, Mosaic rodina. Setup → horné menu. Otvor kedykoľvek znova.`, cta:`Otvor Setup`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 paliet, jedna pieseň`, body:`Harmónia, Spektrum, φ Phi, Kontra, Custom. Klikni záložku a prepneš — tie isté noty, okamžitá premaľba. Každá pre tú istú hudbu inú farebnú gramatiku.`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = Skriabinova mapa`, body:`Skriabin videl farby pre tóny. Jeho mapa z 1910 je tvoj Custom default — C červená, G oranžovo-ružová, D žltá, dookola. Pro ti dovolí premaľovať každú farbu.`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: obrátená harmónia`, body:`Drsné akordy sa hádajú aj na plátne. Čisté kvitnú od seba. Pohľad maliara — opak Harmónie, ostrejšie pre oko. Pre všetkých zadarmo.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 umelcov, 8 párov`, body:`Mosaic je default. Klikni dlaždicu umelca a tie isté noty sa premaľujú v jeho rukopise. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 spolu.`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic rodina`, body:`Tri módy, jedna dlaždica. Klik a krúži: φ-mriežka → noty → $1M$ chaos. Holé čítanie keď žiadny umelec nie je aktívny.`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`Kocka on = prekvapenie`, body:`Tá istá pieseň = tá istá maľba, vždy. Hoď kocku a každý Next maľuje iného umelca alebo Mosaic stop. Klik na Mosaic s kockou on uzamkne cyklus iba na 3 stopy rodiny.`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`Zaspievaj, namaľuj`, body:`Dva MIC módy. 🔊 Music počúva miestnosť (reproduktor, ambient). 🎤 Voice prichytí tvoj humming na C dur. Oba maľujú live. Original ⇄ Piano prepínač potom.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Foto → hudba → maľba`, body:`Hoď fotku. Jej farby a energia sa stanú klavírnou skladbou. Skladba sa potom maľuje v štýle umelca podľa tvojho výberu. Free robí mosaic, Pro pridáva AI Compose.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Odnes si oboje`, body:`Save → PNG maľby + audio piesne. Story mód oreže pre Instagram / TikTok. Pro odstráni watermark a zdvihne na 300 DPI.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro odomkne všetko`, body:`Pro €9.99 → všetkých 16 umelcov, editovateľná Custom paleta, bez watermarku, doživotne. Pro AI €19.99 pridáva neobmedzené AI moody, image compose, atmosphere reads. Jednorazovo, bez predplatného.`}
+  ],
+  PT: [
+    {id:'overview', glyph:'✦', cat:'start', title:`Música ⇄ pintura`, body:`Mesma roda, dois sentidos. Canta, escreve, larga uma foto — a tela enche com a música. Guarda a arte, grava a canção. Levas as duas.`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`Escolhe o que vês`, body:`Esconde o que não usas. 5 paletas, 8 pares de artistas, família Mosaico. Setup → menu superior. Reabre quando quiseres.`, cta:`Abrir Setup`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 paletas, uma canção`, body:`Harmonia, Espectral, φ Phi, Kontra, Custom. Toca um separador para mudar — mesmas notas, repintura instantânea. Cada uma pinta a mesma música em gramática de cor diferente.`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = mapa de Scriabin`, body:`Scriabin via cores para tons. A tabela dele de 1910 é o teu padrão Custom — Dó vermelho, Sol laranja-rosa, Ré amarelo, à volta. Pro deixa editar cada quadrado.`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: harmonia invertida`, body:`Acordes que chocam chocam na tela. Os limpos afastam-se. A leitura do pintor — oposto da Harmonia, mais afiada. Grátis para todos.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 artistas, 8 pares`, body:`Mosaico é o padrão. Toca um quadrado de artista e as mesmas notas saem na mão dele. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 no total.`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Família Mosaico`, body:`Três modos, um quadrado. Toca para ciclar: grelha-φ → notas → caos $1M$. A leitura simples quando nenhum artista está activo.`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`Dado on = surpresa`, body:`Mesma canção = mesma pintura, sempre. Lança o dado e cada Próximo pinta artista ou paragem Mosaico diferente. Toca Mosaico com dado on para travar o ciclo nas 3 paragens da família.`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`Canta, pinta`, body:`Dois modos MIC. 🔊 Música ouve a sala (coluna, ambiente). 🎤 Voz prende o teu trauteado em Dó maior. Ambos pintam ao vivo. Original ⇄ Piano depois.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Larga uma imagem. As cores e a energia tornam-se peça de piano. A peça pinta-se depois no estilo de artista que escolhes. Free faz mosaico, Pro junta AI Compose.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Leva as duas`, body:`Guardar → PNG da pintura + áudio da canção. Modo Story corta para Instagram / TikTok. Pro tira a marca de água e sobe a 300 DPI.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloqueia tudo`, body:`Pro €9.99 → todos os 16 artistas, paleta Custom editável, sem marca de água, vitalício. Pro IA €19.99 junta moods IA ilimitados, compose imagem, leituras de atmosfera. Uma vez, sem subscrição.`}
+  ],
+  zh: [
+    {id:'overview', glyph:'✦', cat:'start', title:`音乐 ⇄ 绘画`, body:`同一个色环,双向通行。唱、打字、丢张照片 — 画布随着音乐填满。保存画作,录下歌曲。两个都带走。`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`选择你看到什么`, body:`隐藏不用的。5 个调色板、8 对艺术家、Mosaic 家族。设置 → 顶部菜单。随时重新打开。`, cta:`打开设置`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 个调色板,一首歌`, body:`和声、光谱、φ Phi、反向 Kontra、Custom。点标签切换 — 同样的音符,瞬间重绘。每个用不同的颜色语法画同一段音乐。`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = 斯克里亚宾之图`, body:`斯克里亚宾为音调看到颜色。他 1910 年的表格是你的 Custom 默认 — C 红、G 橙粉、D 黄,绕一圈。Pro 让你编辑每一格。`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`反向:倒置的和声`, body:`冲突的和弦在画布上冲突。纯净的飞散开。画家的读法 — 和声的反面,对眼睛更锋利。所有人免费。`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 位艺术家,8 对`, body:`Mosaic 是默认。点艺术家方块,同样的音符以他的手出现。毕加索、波洛克、草间、康定斯基、克里姆特、莱利、哈林 — 共 16 位。`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic 家族`, body:`三种模式,一个方块。点击循环:φ 网格 → 音符标签 → $1M$ 混乱。没有艺术家时的朴素读法。`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`骰子开 = 惊喜`, body:`同样的歌 = 同一画,总是。掷骰子,每个 Next 都画不同的艺术家或 Mosaic 站。骰子开时点 Mosaic 把循环锁在 3 个家族站。`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`唱出来,画出来`, body:`两种 MIC 模式。🔊 Music 听房间(扬声器、环境)。🎤 Voice 把哼唱锁到 C 大调。两个都现场作画。之后切换 Original ⇄ Piano。`},
+    {id:'image', glyph:'📷', cat:'music', title:`照片 → 音乐 → 画`, body:`丢张图。它的颜色和能量变成钢琴曲。曲子再以你选的艺术家风格作画。Free 做 mosaic,Pro 加 AI Compose。`},
+    {id:'save', glyph:'💾', cat:'save', title:`两个都带走`, body:`保存 → 画的 PNG + 歌的音频。Story 模式裁切给 Instagram / TikTok。Pro 去水印,升到 300 DPI。`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解锁全部`, body:`Pro €9.99 → 全部 16 位艺术家、可编辑 Custom 调色板、无水印、终身。Pro AI €19.99 加无限 AI 心情、image compose、氛围读取。一次性,无订阅。`}
+  ],
+  zhTW: [
+    {id:'overview', glyph:'✦', cat:'start', title:`音樂 ⇄ 繪畫`, body:`同一個色環,雙向通行。唱、打字、丟張照片 — 畫布隨著音樂填滿。儲存畫作,錄下歌曲。兩個都帶走。`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`選擇你看到什麼`, body:`隱藏不用的。5 個調色盤、8 對藝術家、Mosaic 家族。設定 → 頂部選單。隨時重新開啟。`, cta:`開啟設定`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 個調色盤,一首歌`, body:`和聲、光譜、φ Phi、反向 Kontra、Custom。點標籤切換 — 同樣的音符,瞬間重繪。每個用不同的顏色文法畫同一段音樂。`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = 斯克里亞賓之圖`, body:`斯克里亞賓為音調看到顏色。他 1910 年的表格是你的 Custom 預設 — C 紅、G 橘粉、D 黃,繞一圈。Pro 讓你編輯每一格。`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`反向:倒置的和聲`, body:`衝突的和弦在畫布上衝突。純淨的飛散開。畫家的讀法 — 和聲的反面,對眼睛更銳利。所有人免費。`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 位藝術家,8 對`, body:`Mosaic 是預設。點藝術家方塊,同樣的音符以他的手出現。畢卡索、波洛克、草間、康丁斯基、克林姆、萊利、哈林 — 共 16 位。`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic 家族`, body:`三種模式,一個方塊。點擊循環:φ 網格 → 音符標籤 → $1M$ 混亂。沒有藝術家時的樸素讀法。`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`骰子開 = 驚喜`, body:`同樣的歌 = 同一畫,總是。擲骰子,每個 Next 都畫不同的藝術家或 Mosaic 站。骰子開時點 Mosaic 把循環鎖在 3 個家族站。`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`唱出來,畫出來`, body:`兩種 MIC 模式。🔊 Music 聽房間(喇叭、環境)。🎤 Voice 把哼唱鎖到 C 大調。兩個都現場作畫。之後切換 Original ⇄ Piano。`},
+    {id:'image', glyph:'📷', cat:'music', title:`照片 → 音樂 → 畫`, body:`丟張圖。它的顏色和能量變成鋼琴曲。曲子再以你選的藝術家風格作畫。Free 做 mosaic,Pro 加 AI Compose。`},
+    {id:'save', glyph:'💾', cat:'save', title:`兩個都帶走`, body:`儲存 → 畫的 PNG + 歌的音訊。Story 模式裁切給 Instagram / TikTok。Pro 去浮水印,升到 300 DPI。`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖全部`, body:`Pro €9.99 → 全部 16 位藝術家、可編輯 Custom 調色盤、無浮水印、終身。Pro AI €19.99 加無限 AI 心情、image compose、氛圍讀取。一次性,無訂閱。`}
+  ],
+};
+function getGuideCards(lang){ return GUIDE_CARDS_I18N[lang] || GUIDE_CARDS_I18N.EN; }
+const guideCardMatch = (c,q) => {
+  const n = q.trim().toLowerCase();
+  if (!n) return true;
+  return c.title.toLowerCase().includes(n) || c.body.toLowerCase().includes(n);
+};
 const guideMatch = (e,q) => {
   const n = q.trim().toLowerCase();
   if (!n) return true;
