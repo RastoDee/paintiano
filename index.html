@@ -221,20 +221,32 @@ main, header, footer, section { position: relative; z-index: 1; }
   margin: 0 auto;
   aspect-ratio: 16/10;
   border-radius: 18px;
-  background: linear-gradient(180deg, var(--bg-2), var(--bg-3));
+  background: #0a0612;
   border: 1px solid var(--border);
   box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.04);
   position: relative;
   overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
 }
-.demo-canvas { width: 100%; height: 100%; }
+.demo-stack { position: absolute; inset: 0; }
+.demo-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.85s cubic-bezier(.4,0,.2,1);
+  will-change: opacity;
+}
+.demo-img.active { opacity: 1; }
 .demo-overlay {
   position: absolute; bottom: 16px; left: 16px;
   padding: 8px 14px; border-radius: 18px;
   background: rgba(10,6,18,.75); backdrop-filter: blur(8px);
-  font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--gold);
+  font-family: var(--serif); font-style: italic;
+  font-size: .85rem;
+  letter-spacing: .02em;
+  color: var(--gold-2);
+  z-index: 2;
 }
 
 /* ── 3-card features ── */
@@ -293,23 +305,31 @@ main, header, footer, section { position: relative; z-index: 1; }
   background: var(--bg-3);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: transform .25s ease;
+  transition: transform .25s ease, border-color .25s ease;
 }
-.gallery-tile:hover { transform: scale(1.025); }
-.gallery-tile:nth-child(3n) { aspect-ratio: 1/1.4; }
-.gallery-tile:nth-child(5n) { aspect-ratio: 1.4/1; }
-.gallery-tile svg { width: 100%; height: 100%; display: block; }
+.gallery-tile:hover { transform: scale(1.025); border-color: var(--border-strong); }
+.gallery-tile img {
+  width: 100%; height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  transition: transform .35s cubic-bezier(.2,.8,.2,1);
+}
+.gallery-tile:hover img { transform: scale(1.04); }
 .gallery-tile-meta {
   position: absolute; bottom: 0; left: 0; right: 0;
-  padding: 14px 12px 10px;
+  padding: 18px 14px 12px;
   background: linear-gradient(180deg, transparent, rgba(10,6,18,.92));
-  font-size: .72rem;
-  letter-spacing: .08em;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: .92rem;
+  letter-spacing: .02em;
   color: var(--gold-2);
   opacity: 0;
-  transition: opacity .2s ease;
+  transform: translateY(8px);
+  transition: opacity .25s ease, transform .25s ease;
 }
-.gallery-tile:hover .gallery-tile-meta { opacity: 1; }
+.gallery-tile:hover .gallery-tile-meta { opacity: 1; transform: translateY(0); }
 
 /* ── concept ── */
 .concept-block {
@@ -646,17 +666,6 @@ footer {
   <div class="hero-scroll-hint">scroll</div>
 </section>
 
-<!-- ─── DEMO ─── -->
-<section class="section" id="demo">
-  <div class="section-eyebrow reveal">Live</div>
-  <h2 class="reveal">This is real. No mock.</h2>
-  <p class="section-lede reveal">Same notes, sixteen hands. The canvas paints itself as the song plays.</p>
-  <div class="demo-frame reveal">
-    <canvas class="demo-canvas" id="demoCanvas"></canvas>
-    <div class="demo-overlay">Liebestraum · inspired by Kandinsky</div>
-  </div>
-</section>
-
 <!-- ─── 3 CARDS ─── -->
 <section class="section">
   <div class="section-eyebrow reveal">What it does</div>
@@ -680,12 +689,65 @@ footer {
   </div>
 </section>
 
+<!-- ─── DEMO ─── -->
+<section class="section" id="demo">
+  <div class="section-eyebrow reveal">Watch it grow</div>
+  <h2 class="reveal">Tile by tile, the song becomes a painting.</h2>
+  <p class="section-lede reveal">"The Scientist" by Coldplay — painted live in the $1M$ style. Every play makes a different one.</p>
+  <div class="demo-frame reveal">
+    <div class="demo-stack" id="demoStack">
+      <img class="demo-img active" src="/demo/demo-frame-1.webp" alt="Paintiano painting — early stage" loading="eager" decoding="async">
+      <img class="demo-img" src="/demo/demo-frame-2.webp" alt="Paintiano painting — building up" loading="eager" decoding="async">
+      <img class="demo-img" src="/demo/demo-frame-3.webp" alt="Paintiano painting — nearly full" loading="eager" decoding="async">
+      <img class="demo-img" src="/demo/demo-frame-4.webp" alt="Paintiano painting — complete" loading="eager" decoding="async">
+    </div>
+    <div class="demo-overlay">The Scientist · Coldplay · $1M$</div>
+  </div>
+</section>
+
 <!-- ─── GALLERY ─── -->
 <section class="section">
   <div class="section-eyebrow reveal">Showcase</div>
   <h2 class="reveal">Made by users.</h2>
   <p class="section-lede reveal">Yours could be next. Tag <strong style="color:var(--gold)">#paintiano</strong> on Instagram.</p>
-  <div class="gallery reveal" id="gallery"></div>
+  <div class="gallery reveal" id="gallery">
+    <a href="/play" data-try class="gallery-tile">
+      <img src="/gallery/gallery-01-pollock.webp" alt="Paintiano painting inspired by Pollock" loading="lazy" decoding="async">
+      <div class="gallery-tile-meta">inspired by Pollock</div>
+    </a>
+    <a href="/play" data-try class="gallery-tile">
+      <img src="/gallery/gallery-02-mondrian.webp" alt="Paintiano painting inspired by Mondrian" loading="lazy" decoding="async">
+      <div class="gallery-tile-meta">inspired by Mondrian</div>
+    </a>
+    <a href="/play" data-try class="gallery-tile">
+      <img src="/gallery/gallery-03-kandinsky.webp" alt="Paintiano painting inspired by Kandinsky" loading="lazy" decoding="async">
+      <div class="gallery-tile-meta">inspired by Kandinsky</div>
+    </a>
+    <a href="/play" data-try class="gallery-tile">
+      <img src="/gallery/gallery-04-miro.webp" alt="Paintiano painting inspired by Miró" loading="lazy" decoding="async">
+      <div class="gallery-tile-meta">inspired by Miró</div>
+    </a>
+    <a href="/play" data-try class="gallery-tile">
+      <img src="/gallery/gallery-05-klimt.webp" alt="Paintiano painting inspired by Klimt" loading="lazy" decoding="async">
+      <div class="gallery-tile-meta">inspired by Klimt</div>
+    </a>
+    <a href="/play" data-try class="gallery-tile">
+      <img src="/gallery/gallery-06-stella.webp" alt="Paintiano painting inspired by Frank Stella" loading="lazy" decoding="async">
+      <div class="gallery-tile-meta">inspired by Frank Stella</div>
+    </a>
+    <a href="/play" data-try class="gallery-tile">
+      <img src="/gallery/gallery-07-kusama.webp" alt="Paintiano painting inspired by Kusama" loading="lazy" decoding="async">
+      <div class="gallery-tile-meta">inspired by Kusama</div>
+    </a>
+    <a href="/play" data-try class="gallery-tile">
+      <img src="/gallery/gallery-08-samfrancis.webp" alt="Paintiano painting inspired by Sam Francis" loading="lazy" decoding="async">
+      <div class="gallery-tile-meta">inspired by Sam Francis</div>
+    </a>
+    <a href="/play" data-try class="gallery-tile">
+      <img src="/gallery/gallery-09-riley.webp" alt="Paintiano painting inspired by Bridget Riley" loading="lazy" decoding="async">
+      <div class="gallery-tile-meta">inspired by Bridget Riley</div>
+    </a>
+  </div>
 </section>
 
 <!-- ─── CONCEPT ─── -->
@@ -949,134 +1011,19 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
   loop();
 })();
 
-/* ── demo canvas: golden-ratio mosaic building up + cycling palettes ── */
-(function demoAnim() {
-  const c = document.getElementById('demoCanvas');
-  const ctx = c.getContext('2d');
-  let dpr = window.devicePixelRatio || 1;
-  function size() {
-    dpr = window.devicePixelRatio || 1;
-    c.width = c.offsetWidth * dpr;
-    c.height = c.offsetHeight * dpr;
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.scale(dpr, dpr);
+/* ── demo: 4-stage cross-fade build-up of a real Paintiano painting ── */
+(function demoCycler() {
+  const frames = document.querySelectorAll('#demoStack .demo-img');
+  if (!frames.length) return;
+  let i = 0;
+  // Each stage held ~2.4s, with 0.85s fade between (matches CSS transition)
+  function next() {
+    frames[i].classList.remove('active');
+    i = (i + 1) % frames.length;
+    frames[i].classList.add('active');
   }
-  size();
-  window.addEventListener('resize', size);
-
-  // five palettes, mimicking Paintiano modes
-  const palettes = [
-    ['#c93c3c','#c9893c','#c9bf3c','#83c93c','#3cc966','#3cc9c2','#3c83c9','#5c3cc9','#a23cc9','#c93c97','#c93c5c','#c95c3c'], // harmony
-    ['#c9a84c','#e5c87a','#d68a5c','#a8c995','#7da872','#5c8fbd','#8a6cdb','#c87aa3'], // gold
-    ['#5c3cc9','#8a3cc9','#c93cb5','#c93c5c','#c98a3c','#c9c93c'], // phi
-    ['#3cc9c2','#c98a3c','#5c3cc9','#c93c5c','#7dc93c','#c93cc9'] // kontra
-  ];
-  let paletteIdx = 0;
-  const cols = 11;
-  const rows = 7;
-  const tiles = [];
-  function buildTiles() {
-    tiles.length = 0;
-    const W = c.offsetWidth, H = c.offsetHeight;
-    const pad = 24;
-    const tw = (W - pad * 2) / cols;
-    const th = (H - pad * 2) / rows;
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        tiles.push({
-          x: pad + x * tw + tw * 0.04,
-          y: pad + y * th + th * 0.04,
-          w: tw * 0.92,
-          h: th * 0.92,
-          appearAt: Math.random() * 80 + (x + y) * 3,
-          colorIdx: Math.floor(Math.random() * 12)
-        });
-      }
-    }
-  }
-  buildTiles();
-  window.addEventListener('resize', buildTiles);
-
-  let frame = 0;
-  let cycle = 0;
-  function loop() {
-    frame++;
-    if (frame > 200) {
-      frame = 0;
-      cycle++;
-      paletteIdx = cycle % palettes.length;
-      tiles.forEach(t => {
-        t.colorIdx = Math.floor(Math.random() * 12);
-        t.appearAt = Math.random() * 80;
-      });
-    }
-    ctx.fillStyle = '#0a0612';
-    ctx.fillRect(0, 0, c.offsetWidth, c.offsetHeight);
-    const pal = palettes[paletteIdx];
-    tiles.forEach(t => {
-      if (frame < t.appearAt) return;
-      const k = Math.min(1, (frame - t.appearAt) / 20);
-      ctx.fillStyle = pal[t.colorIdx % pal.length];
-      ctx.globalAlpha = k * 0.85;
-      const w = t.w * k, h = t.h * k;
-      const dx = t.x + (t.w - w) / 2, dy = t.y + (t.h - h) / 2;
-      ctx.fillRect(dx, dy, w, h);
-      // inner ring (φ proportion)
-      ctx.globalAlpha = k * 0.35;
-      ctx.fillStyle = pal[(t.colorIdx + 3) % pal.length];
-      const iw = w * 0.382, ih = h * 0.382;
-      ctx.fillRect(dx + (w - iw) / 2, dy + (h - ih) / 2, iw, ih);
-    });
-    ctx.globalAlpha = 1;
-    requestAnimationFrame(loop);
-  }
-  loop();
-})();
-
-/* ── gallery placeholder tiles (SVG-only, no external assets) ── */
-(function gallery() {
-  const gal = document.getElementById('gallery');
-  const palettes = [
-    ['#c9a84c','#e5c87a','#1a1208','#d68a5c'],
-    ['#5c8fbd','#8a6cdb','#0e0820','#c87aa3'],
-    ['#7da872','#c9bf3c','#1a1208','#5c8fbd'],
-    ['#c93c3c','#c95c3c','#0e0820','#c9a84c'],
-    ['#8a6cdb','#c93cb5','#0e0820','#5c3cc9'],
-    ['#3cc9c2','#7da872','#0e0820','#c9bf3c'],
-    ['#d68a5c','#c9893c','#1a1208','#83c93c'],
-    ['#a23cc9','#5c3cc9','#0e0820','#c93c5c']
-  ];
-  const artists = ['Kandinsky','Pollock','Mosaic','Picasso','Kusama','Rothko','Miró','Mondrian'];
-  function makeTile(i) {
-    const p = palettes[i % palettes.length];
-    const a = artists[i % artists.length];
-    const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('viewBox','0 0 100 100');
-    svgEl.setAttribute('preserveAspectRatio','xMidYMid slice');
-    let inner = `<rect width="100" height="100" fill="${p[2]}"/>`;
-    const shapes = 18 + Math.floor(Math.random() * 12);
-    for (let k = 0; k < shapes; k++) {
-      const cx = Math.random() * 100;
-      const cy = Math.random() * 100;
-      const r = 3 + Math.random() * 18;
-      const c = p[Math.floor(Math.random() * (p.length - 1))];
-      const o = 0.4 + Math.random() * 0.6;
-      const type = Math.random();
-      if (type < 0.6) inner += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}" opacity="${o}"/>`;
-      else if (type < 0.8) inner += `<rect x="${cx-r}" y="${cy-r}" width="${r*2}" height="${r*2}" fill="${c}" opacity="${o}"/>`;
-      else inner += `<line x1="${cx-r}" y1="${cy-r}" x2="${cx+r}" y2="${cy+r}" stroke="${c}" stroke-width="${1+Math.random()*2}" opacity="${o}"/>`;
-    }
-    svgEl.innerHTML = inner;
-    const tile = document.createElement('div');
-    tile.className = 'gallery-tile';
-    tile.appendChild(svgEl);
-    const meta = document.createElement('div');
-    meta.className = 'gallery-tile-meta';
-    meta.textContent = 'inspired by ' + a;
-    tile.appendChild(meta);
-    return tile;
-  }
-  for (let i = 0; i < 8; i++) gal.appendChild(makeTile(i));
+  // First frame is active in HTML. Start cycling.
+  setInterval(next, 2400);
 })();
 
 /* ── easter egg: Konami code ── */
