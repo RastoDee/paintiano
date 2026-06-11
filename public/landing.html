@@ -1,0 +1,1126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Paintiano — Music becomes painting. Painting becomes music.</title>
+<meta name="description" content="Sing, hum, drop a photo. Watch the canvas fill. 16 artist styles, 5 colour palettes, golden-ratio grid. Save the painting, record the song. One-time purchase, no subscription.">
+<meta name="theme-color" content="#0a0612">
+
+<!-- Returning visitor → /play. Runs before render to avoid landing flash.
+     Bypass with ?welcome=1 (e.g. from in-app "Home" link) or first visit. -->
+<script>
+(function() {
+  try {
+    var url = new URL(location.href);
+    if (url.searchParams.has('welcome')) return;
+    var seen = document.cookie.indexOf('paintiano_seen=1') !== -1;
+    if (seen) {
+      location.replace('/play' + url.search + url.hash);
+    }
+  } catch (e) {}
+})();
+</script>
+
+<!-- Open Graph / social -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://paintiano.app/">
+<meta property="og:title" content="Paintiano — Music becomes painting. Painting becomes music.">
+<meta property="og:description" content="Same colour wheel, both directions. Sing it, see it, take both home.">
+<meta property="og:image" content="https://paintiano.app/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Paintiano — Music becomes painting">
+<meta name="twitter:description" content="Sing it, see it, take both home.">
+<meta name="twitter:image" content="https://paintiano.app/og.png">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%230a0612'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='serif' font-style='italic' fill='%23c9a84c' font-size='18'%3EP%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0a0612;
+  --bg-2: #14101e;
+  --bg-3: #1c1830;
+  --gold: #c9a84c;
+  --gold-2: #e5c87a;
+  --gold-soft: rgba(201,168,76,.55);
+  --text: rgba(247,243,236,.92);
+  --text-dim: rgba(230,222,196,.7);
+  --text-faint: rgba(230,222,196,.4);
+  --border: rgba(201,168,76,.15);
+  --border-strong: rgba(201,168,76,.4);
+  --shadow: 0 12px 40px rgba(0,0,0,.45);
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'Outfit', system-ui, -apple-system, Arial, sans-serif;
+  --maxw: 1140px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 400;
+  line-height: 1.55;
+  font-size: 17px;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+img { display: block; max-width: 100%; }
+
+/* ── ambient background ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 1200px 800px at 20% -10%, rgba(201,168,76,.08), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 80% 30%, rgba(120,80,200,.07), transparent 60%),
+    radial-gradient(ellipse 1100px 800px at 50% 120%, rgba(80,130,180,.06), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+main, header, footer, section { position: relative; z-index: 1; }
+
+/* ── nav ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 32px;
+  z-index: 50;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(10,6,18,.55);
+  transition: padding .25s ease, background .25s ease;
+}
+.nav.scrolled { padding: 10px 32px; background: rgba(10,6,18,.85); }
+.nav-logo {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.6rem; color: var(--gold-2);
+  letter-spacing: .02em; cursor: pointer;
+}
+.nav-cta {
+  padding: 9px 22px; border-radius: 22px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+  color: #1a1208; font-weight: 600; font-size: .9rem;
+  letter-spacing: .04em;
+  box-shadow: 0 4px 18px rgba(201,168,76,.35);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(201,168,76,.5); }
+
+/* ── hero ── */
+.hero {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  padding: 110px 24px 80px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-canvas {
+  position: absolute; inset: 0;
+  z-index: 0;
+  opacity: .35;
+  filter: blur(1px);
+}
+.hero-inner { position: relative; z-index: 2; max-width: 900px; }
+.hero h1 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(2.4rem, 7vw, 5.4rem);
+  line-height: 1.05;
+  letter-spacing: -.01em;
+  color: var(--gold-2);
+  margin-bottom: 22px;
+  background: linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 30px rgba(201,168,76,.25));
+}
+.hero h1 span { display: block; }
+.hero h1 span + span { opacity: .75; }
+.hero-sub {
+  font-family: var(--sans);
+  font-size: clamp(.95rem, 1.6vw, 1.15rem);
+  color: var(--text-dim);
+  letter-spacing: .04em;
+  margin-bottom: 42px;
+  max-width: 620px;
+  margin-left: auto; margin-right: auto;
+}
+.cta-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 36px; border-radius: 36px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+  color: #1a1208;
+  font-family: var(--sans); font-weight: 600;
+  font-size: 1.05rem; letter-spacing: .06em;
+  box-shadow: 0 8px 30px rgba(201,168,76,.45), inset 0 1px 0 rgba(255,255,255,.25);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.cta-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(201,168,76,.6), inset 0 1px 0 rgba(255,255,255,.25); }
+.cta-primary span { transition: transform .2s ease; }
+.cta-primary:hover span { transform: translateX(4px); }
+
+.hero-scroll-hint {
+  position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+  color: var(--text-faint);
+  font-size: .7rem; letter-spacing: .3em; text-transform: uppercase;
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: .3; transform: translate(-50%, 0); }
+  50% { opacity: .7; transform: translate(-50%, 6px); }
+}
+
+/* ── sections ── */
+.section {
+  padding: 110px 24px;
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+.section-eyebrow {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: .72rem;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 14px;
+  text-align: center;
+}
+.section h2 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(2rem, 4.5vw, 3.4rem);
+  line-height: 1.1;
+  text-align: center;
+  margin-bottom: 24px;
+  color: var(--gold-2);
+}
+.section-lede {
+  text-align: center;
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  color: var(--text-dim);
+  max-width: 660px;
+  margin: 0 auto 60px;
+}
+
+/* ── demo ── */
+.demo-frame {
+  max-width: 900px;
+  margin: 0 auto;
+  aspect-ratio: 16/10;
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-3));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.04);
+  position: relative;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.demo-canvas { width: 100%; height: 100%; }
+.demo-overlay {
+  position: absolute; bottom: 16px; left: 16px;
+  padding: 8px 14px; border-radius: 18px;
+  background: rgba(10,6,18,.75); backdrop-filter: blur(8px);
+  font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* ── 3-card features ── */
+.cards-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  margin-top: 32px;
+}
+.card {
+  padding: 36px 28px;
+  border-radius: 16px;
+  background: rgba(28,24,48,.4);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform .25s ease, border-color .25s ease, background .25s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-strong);
+  background: rgba(28,24,48,.55);
+}
+.card-glyph {
+  font-size: 2.6rem;
+  margin-bottom: 18px;
+  display: inline-block;
+  filter: drop-shadow(0 2px 16px rgba(201,168,76,.3));
+}
+.card h3 {
+  font-family: var(--serif); font-style: italic;
+  font-weight: 500;
+  font-size: 1.5rem;
+  color: var(--gold-2);
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+.card p {
+  color: var(--text-dim);
+  font-size: .95rem;
+  line-height: 1.6;
+}
+
+/* ── gallery ── */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.gallery-tile {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: transform .25s ease;
+}
+.gallery-tile:hover { transform: scale(1.025); }
+.gallery-tile:nth-child(3n) { aspect-ratio: 1/1.4; }
+.gallery-tile:nth-child(5n) { aspect-ratio: 1.4/1; }
+.gallery-tile svg { width: 100%; height: 100%; display: block; }
+.gallery-tile-meta {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 14px 12px 10px;
+  background: linear-gradient(180deg, transparent, rgba(10,6,18,.92));
+  font-size: .72rem;
+  letter-spacing: .08em;
+  color: var(--gold-2);
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.gallery-tile:hover .gallery-tile-meta { opacity: 1; }
+
+/* ── concept ── */
+.concept-block {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 80px 0;
+}
+.concept-quote {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  line-height: 1.4;
+  color: var(--gold-2);
+  margin-bottom: 32px;
+  background: linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.concept-prose {
+  font-size: 1.05rem;
+  color: var(--text-dim);
+  line-height: 1.75;
+  max-width: 620px;
+  margin: 0 auto;
+}
+.concept-prose strong {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* ── pricing ── */
+.pricing {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 30px;
+}
+.tier {
+  padding: 36px 28px;
+  border-radius: 16px;
+  background: rgba(28,24,48,.4);
+  border: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: relative;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.tier.featured {
+  background: linear-gradient(180deg, rgba(201,168,76,.08), rgba(28,24,48,.45));
+  border: 1px solid var(--border-strong);
+  transform: scale(1.04);
+  box-shadow: 0 10px 36px rgba(201,168,76,.18), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.tier-badge {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  padding: 5px 14px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+  color: #1a1208;
+  font-size: .65rem; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase;
+  box-shadow: 0 4px 14px rgba(201,168,76,.4);
+}
+.tier-name {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.6rem;
+  color: var(--gold-2);
+  margin-bottom: 6px;
+}
+.tier-price {
+  font-family: var(--sans);
+  font-size: 2.2rem; font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  letter-spacing: -.01em;
+}
+.tier-price small { font-size: 1rem; color: var(--text-dim); font-weight: 400; }
+.tier-tag {
+  font-size: .78rem;
+  color: var(--text-faint);
+  letter-spacing: .06em;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.tier-features {
+  list-style: none;
+  margin-bottom: 28px;
+  flex: 1;
+}
+.tier-features li {
+  padding: 7px 0 7px 24px;
+  position: relative;
+  font-size: .92rem;
+  color: var(--text-dim);
+}
+.tier-features li::before {
+  content: '✓';
+  position: absolute; left: 0;
+  color: var(--gold);
+  font-weight: 600;
+}
+.tier-features li.dim { color: var(--text-faint); }
+.tier-features li.dim::before { content: '·'; color: var(--text-faint); }
+.tier-cta {
+  display: block; text-align: center;
+  padding: 12px;
+  border-radius: 26px;
+  font-weight: 600; font-size: .92rem;
+  letter-spacing: .06em;
+  border: 1px solid var(--border-strong);
+  color: var(--gold);
+  transition: all .15s ease;
+}
+.tier-cta:hover { background: rgba(201,168,76,.1); }
+.tier.featured .tier-cta {
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+  color: #1a1208;
+  border: 1px solid transparent;
+}
+.tier.featured .tier-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(201,168,76,.35); }
+
+.pricing-note {
+  text-align: center;
+  margin-top: 38px;
+  font-size: .95rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ── FAQ ── */
+.faq {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.faq-item {
+  border-bottom: 1px solid var(--border);
+  padding: 18px 0;
+}
+.faq-item summary {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 1.08rem;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 0;
+  transition: color .15s ease;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after {
+  content: '+';
+  color: var(--gold);
+  font-size: 1.3rem;
+  font-weight: 300;
+  transition: transform .2s ease;
+}
+.faq-item[open] summary::after { transform: rotate(45deg); }
+.faq-item summary:hover { color: var(--gold-2); }
+.faq-item p {
+  margin-top: 14px;
+  color: var(--text-dim);
+  font-size: .96rem;
+  line-height: 1.7;
+  padding-right: 32px;
+}
+
+/* ── final CTA ── */
+.final-cta {
+  text-align: center;
+  padding: 110px 24px 90px;
+}
+.final-cta h2 {
+  font-family: var(--serif); font-style: italic;
+  font-weight: 500;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  margin-bottom: 30px;
+  color: var(--gold-2);
+}
+
+/* ── newsletter ── */
+.newsletter {
+  max-width: 460px;
+  margin: 32px auto 0;
+  display: flex; gap: 8px;
+}
+.newsletter input {
+  flex: 1;
+  padding: 13px 18px;
+  border-radius: 24px;
+  background: rgba(28,24,48,.55);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: .95rem;
+  outline: none;
+  transition: border-color .15s ease;
+}
+.newsletter input:focus { border-color: var(--gold-soft); }
+.newsletter button {
+  padding: 13px 22px;
+  border-radius: 24px;
+  background: var(--gold);
+  color: #1a1208;
+  font-weight: 600;
+  font-size: .9rem;
+  letter-spacing: .04em;
+  transition: background .15s ease;
+}
+.newsletter button:hover { background: var(--gold-2); }
+
+/* ── socials ── */
+.socials {
+  display: flex; justify-content: center; gap: 16px;
+  margin-top: 40px;
+}
+.socials a {
+  width: 42px; height: 42px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  transition: all .15s ease;
+}
+.socials a:hover {
+  border-color: var(--border-strong);
+  color: var(--gold);
+  transform: translateY(-2px);
+}
+
+/* ── footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 24px 36px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: .85rem;
+  letter-spacing: .04em;
+}
+.footer-links {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 6px 20px;
+  margin-bottom: 18px;
+}
+.footer-links a { color: var(--text-dim); transition: color .15s ease; }
+.footer-links a:hover { color: var(--gold); }
+.footer-credit {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--text-faint);
+  margin-top: 14px;
+}
+
+/* ── sticky mobile CTA ── */
+.sticky-cta {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 12px 16px env(safe-area-inset-bottom, 12px);
+  background: rgba(10,6,18,.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+  display: none;
+  z-index: 60;
+  transform: translateY(100%);
+  transition: transform .3s ease;
+}
+.sticky-cta.visible { transform: translateY(0); }
+.sticky-cta .cta-primary {
+  display: flex; justify-content: center;
+  width: 100%;
+  padding: 14px 24px;
+}
+
+/* ── scroll reveal ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1);
+}
+.reveal.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── mobile ── */
+@media (max-width: 880px) {
+  .nav { padding: 14px 20px; }
+  .nav.scrolled { padding: 10px 20px; }
+  .nav-cta { display: none; }
+  .section { padding: 80px 20px; }
+  .cards-3 { grid-template-columns: 1fr; }
+  .gallery { grid-template-columns: repeat(2, 1fr); }
+  .pricing { grid-template-columns: 1fr; gap: 14px; }
+  .tier.featured { transform: none; }
+  .tier-badge { top: -10px; }
+  .sticky-cta { display: block; }
+  .hero { padding: 110px 20px 100px; }
+  .hero-scroll-hint { display: none; }
+  .final-cta { padding: 80px 20px 90px; }
+  .newsletter { flex-direction: column; }
+  .newsletter button { width: 100%; }
+  body { padding-bottom: 70px; }
+}
+@media (max-width: 520px) {
+  .gallery { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .gallery-tile:nth-child(3n) { aspect-ratio: 1; }
+  .gallery-tile:nth-child(5n) { aspect-ratio: 1; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── NAV ─── -->
+<header class="nav" id="nav">
+  <div class="nav-logo" onclick="window.scrollTo({top:0,behavior:'smooth'})">Paintiano</div>
+  <a href="/play" class="nav-cta" data-try>Open app →</a>
+</header>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+  <canvas class="hero-canvas" id="heroCanvas"></canvas>
+  <div class="hero-inner">
+    <h1>
+      <span>Music becomes painting.</span>
+      <span>Painting becomes music.</span>
+    </h1>
+    <p class="hero-sub">Sing it. Hum it. Drop a photo. Watch the canvas fill as the music plays — then take both home.</p>
+    <a href="/play" class="cta-primary" data-try>Try Paintiano <span>→</span></a>
+  </div>
+  <div class="hero-scroll-hint">scroll</div>
+</section>
+
+<!-- ─── DEMO ─── -->
+<section class="section" id="demo">
+  <div class="section-eyebrow reveal">Live</div>
+  <h2 class="reveal">This is real. No mock.</h2>
+  <p class="section-lede reveal">Same notes, sixteen hands. The canvas paints itself as the song plays.</p>
+  <div class="demo-frame reveal">
+    <canvas class="demo-canvas" id="demoCanvas"></canvas>
+    <div class="demo-overlay">Liebestraum · inspired by Kandinsky</div>
+  </div>
+</section>
+
+<!-- ─── 3 CARDS ─── -->
+<section class="section">
+  <div class="section-eyebrow reveal">What it does</div>
+  <h2 class="reveal">Three doors. Same room.</h2>
+  <div class="cards-3">
+    <div class="card reveal">
+      <div class="card-glyph">🎵</div>
+      <h3>Music → painting</h3>
+      <p>Sing, hum, drop an MP3 or MIDI. Every note becomes a brushstroke. Same input, same painting, every time.</p>
+    </div>
+    <div class="card reveal">
+      <div class="card-glyph">📷</div>
+      <h3>Image → music</h3>
+      <p>Drop in a photo, a Rothko, your grandmother's portrait. Its colours become a piano piece. Hear what it sounds like.</p>
+    </div>
+    <div class="card reveal">
+      <div class="card-glyph">🎨</div>
+      <h3>16 artist styles</h3>
+      <p>Picasso, Pollock, Kusama, Klimt, Mondrian, Kandinsky… The same song rewritten in sixteen hands.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── GALLERY ─── -->
+<section class="section">
+  <div class="section-eyebrow reveal">Showcase</div>
+  <h2 class="reveal">Made by users.</h2>
+  <p class="section-lede reveal">Yours could be next. Tag <strong style="color:var(--gold)">#paintiano</strong> on Instagram.</p>
+  <div class="gallery reveal" id="gallery"></div>
+</section>
+
+<!-- ─── CONCEPT ─── -->
+<section class="section">
+  <div class="concept-block">
+    <div class="section-eyebrow reveal">The idea</div>
+    <p class="concept-quote reveal">
+      Music and painting share the same wheel.<br>
+      Scriabin saw it. Newton saw it.<br>
+      Now you can hold it in your hand.
+    </p>
+    <p class="concept-prose reveal">
+      Every note gets a colour: <strong>hue</strong> from its pitch, <strong>lightness</strong> from its octave, <strong>saturation</strong> from how hard it was played. Notes drop into a golden-ratio grid — the same proportion behind seashells, flower spirals, the Parthenon. Read the grid back and the music returns. One language, two surfaces.
+    </p>
+  </div>
+</section>
+
+<!-- ─── PRICING ─── -->
+<section class="section" id="pricing">
+  <div class="section-eyebrow reveal">Pricing</div>
+  <h2 class="reveal">Pay once. Keep forever.</h2>
+  <p class="section-lede reveal">No subscriptions. No renewals. Art shouldn't rent.</p>
+  <div class="pricing">
+
+    <div class="tier reveal">
+      <div class="tier-name">Free</div>
+      <div class="tier-price">€0</div>
+      <div class="tier-tag">Forever free</div>
+      <ul class="tier-features">
+        <li>8 unlocked artists</li>
+        <li>2 paint variants each</li>
+        <li>5 colour palettes</li>
+        <li>Custom palette read-only</li>
+        <li>3 AI trial credits</li>
+        <li class="dim">Watermark on exports</li>
+        <li class="dim">No 300 DPI print</li>
+      </ul>
+      <a href="/play" class="tier-cta" data-try>Start free</a>
+    </div>
+
+    <div class="tier featured reveal">
+      <div class="tier-badge">★ Most popular</div>
+      <div class="tier-name">Pro</div>
+      <div class="tier-price">€9.99 <small>once</small></div>
+      <div class="tier-tag">Lifetime · 5 devices</div>
+      <ul class="tier-features">
+        <li>All 16 artists</li>
+        <li>All paint variants</li>
+        <li>Editable Custom palette</li>
+        <li>No watermark</li>
+        <li>300 DPI gallery-grade print</li>
+        <li>Score export (MusicXML)</li>
+        <li class="dim">3 AI trial credits</li>
+      </ul>
+      <a href="/play?upgrade=pro" class="tier-cta">Upgrade to Pro</a>
+    </div>
+
+    <div class="tier reveal">
+      <div class="tier-name">Pro AI</div>
+      <div class="tier-price">€19.99 <small>once</small></div>
+      <div class="tier-tag">Lifetime · 5 devices</div>
+      <ul class="tier-features">
+        <li>Everything in Pro</li>
+        <li>Unlimited AI moods</li>
+        <li>AI Compose from image</li>
+        <li>AI Atmosphere reads</li>
+        <li>Morph between moods</li>
+        <li>Vary (key shift)</li>
+        <li>Mood from image</li>
+      </ul>
+      <a href="/play?upgrade=proai" class="tier-cta">Go Pro AI</a>
+    </div>
+
+  </div>
+  <p class="pricing-note reveal">One-time payment. Works on up to 5 devices.</p>
+</section>
+
+<!-- ─── FAQ ─── -->
+<section class="section">
+  <div class="section-eyebrow reveal">Questions</div>
+  <h2 class="reveal">Before you tap.</h2>
+  <div class="faq" style="margin-top:40px">
+
+    <details class="faq-item reveal">
+      <summary>Does it actually work?</summary>
+      <p>Yes. Try the demo above, or tap "Try Paintiano". No signup. No card. Free forever for what most people need.</p>
+    </details>
+
+    <details class="faq-item reveal">
+      <summary>Why one-time, not subscription?</summary>
+      <p>Because art shouldn't rent. You bought the colours once. We did too. The deal makes sense.</p>
+    </details>
+
+    <details class="faq-item reveal">
+      <summary>Mobile or desktop?</summary>
+      <p>Both. Mobile is the daily driver — install it from your browser's "Add to Home Screen" and it behaves like a native app. Desktop has the full piano + keyboard shortcuts.</p>
+    </details>
+
+    <details class="faq-item reveal">
+      <summary>What happens to my data with AI features?</summary>
+      <p>Mood text goes to the AI provider for the call only, then is discarded. No accounts. No tracking pixels. No selling your creations.</p>
+    </details>
+
+    <details class="faq-item reveal">
+      <summary>I don't know music theory.</summary>
+      <p>You don't need any. Type a feeling, hum, drop a photo. The app handles the chords. It might even teach you a few.</p>
+    </details>
+
+    <details class="faq-item reveal">
+      <summary>Can I use the paintings commercially?</summary>
+      <p>With Pro or Pro AI, yes. Free exports carry a watermark and are limited to personal use.</p>
+    </details>
+
+  </div>
+</section>
+
+<!-- ─── FINAL CTA ─── -->
+<section class="final-cta">
+  <h2 class="reveal">Your turn.</h2>
+  <a href="/play" class="cta-primary reveal" data-try>Open Paintiano <span>→</span></a>
+
+  <form class="newsletter reveal" onsubmit="event.preventDefault(); this.querySelector('button').textContent='Thanks ✓'; this.querySelector('input').value='';">
+    <input type="email" placeholder="email for launch news + book chapters" required>
+    <button type="submit">Notify me</button>
+  </form>
+
+  <div class="socials reveal">
+    <a href="https://instagram.com/paintiano.app" aria-label="Instagram" title="Instagram">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".5" fill="currentColor"/></svg>
+    </a>
+    <a href="https://tiktok.com/@paintiano" aria-label="TikTok" title="TikTok">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.86a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.29z"/></svg>
+    </a>
+    <a href="https://twitter.com/paintiano_app" aria-label="X" title="X">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2H21l-6.518 7.453L22 22h-6.917l-5.42-7.085L3.36 22H.6l6.97-7.97L0 2h7.082l4.9 6.477L18.244 2zm-1.213 18.385h1.59L7.044 3.515H5.32l11.71 16.87z"/></svg>
+    </a>
+    <a href="https://threads.net/@paintiano.app" aria-label="Threads" title="Threads">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.32 11.05a8.45 8.45 0 0 0-.34-.16c-.21-3.83-2.3-6-5.81-6.03h-.05c-2.1 0-3.84.9-4.92 2.53l1.93 1.32c.8-1.21 2.05-1.47 3-1.47h.03c1.16 0 2.05.34 2.6 1.01.41.5.68 1.18.81 2.05a14.4 14.4 0 0 0-3.32-.16c-3.35.2-5.51 2.15-5.37 4.86.07 1.38.76 2.56 1.94 3.34 1 .65 2.29.97 3.62.9 1.77-.1 3.16-.78 4.13-2.02.74-.94 1.21-2.15 1.42-3.68.86.52 1.5 1.21 1.85 2.04.6 1.4.63 3.7-1.24 5.57-1.64 1.64-3.62 2.35-6.6 2.37C9.41 21.5 6.9 20.43 5.2 18.32 3.59 16.36 2.77 13.51 2.74 9.84c.03-3.67.85-6.51 2.46-8.48C6.9-.75 9.41-1.83 12.73-1.85h.01c3.34.02 5.89 1.11 7.59 3.23.83 1.04 1.46 2.3 1.86 3.77l-2.23.59c-.34-1.18-.83-2.16-1.45-2.93-1.2-1.5-3.08-2.28-5.78-2.3-2.65.02-4.65.86-5.93 2.49-1.21 1.53-1.83 3.83-1.86 6.85.03 3.02.65 5.32 1.86 6.84 1.28 1.63 3.28 2.47 5.93 2.49 2.4-.02 3.95-.55 5.21-1.81 1.42-1.43 1.4-3.18.94-4.25-.27-.63-.76-1.15-1.46-1.53-.18 1.21-.49 2.07-.94 2.65-.57.72-1.4 1.13-2.46 1.19-.78.04-1.52-.14-2.07-.5-.66-.43-1.04-1.08-1.08-1.86-.04-.83.27-1.51.93-2.04.65-.51 1.55-.81 2.65-.87 1.18-.07 2.34.02 3.34.27.27-.99.43-2.13.46-3.42-.95-.4-2.13-.62-3.5-.62z"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="footer-links">
+    <a href="/concept">Concept</a>
+    <a href="/blog">Blog</a>
+    <a href="/press">Press kit</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="mailto:hello@paintiano.app">Contact</a>
+  </div>
+  © 2026 Paintiano · paintiano.app
+  <div class="footer-credit">Made by Raf Fel</div>
+</footer>
+
+<!-- ─── STICKY MOBILE CTA ─── -->
+<div class="sticky-cta" id="stickyCta">
+  <a href="/play" class="cta-primary" data-try>Try Paintiano <span>→</span></a>
+</div>
+
+<script>
+/* ── try-it cookie ── set paintiano_seen=1 on first CTA tap so the
+   Vercel edge middleware can redirect future root visits straight to /play */
+document.querySelectorAll('[data-try]').forEach(el => {
+  el.addEventListener('click', () => {
+    document.cookie = 'paintiano_seen=1; max-age=31536000; path=/; samesite=lax';
+  });
+});
+
+/* ── nav scroll state ── */
+const nav = document.getElementById('nav');
+const sticky = document.getElementById('stickyCta');
+let lastY = 0;
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  nav.classList.toggle('scrolled', y > 40);
+  // Sticky bottom CTA: appear after passing hero (≈one viewport)
+  if (window.innerWidth < 880) {
+    sticky.classList.toggle('visible', y > window.innerHeight * 0.7);
+  }
+  lastY = y;
+}, {passive: true});
+
+/* ── reveal on scroll ── */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('in');
+      io.unobserve(e.target);
+    }
+  });
+}, {threshold: 0.12, rootMargin: '0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+/* ── hero canvas: subtle painting animation ── */
+(function heroAnim() {
+  const c = document.getElementById('heroCanvas');
+  const ctx = c.getContext('2d');
+  let dpr = window.devicePixelRatio || 1;
+  const dots = [];
+  function size() {
+    dpr = window.devicePixelRatio || 1;
+    c.width = c.offsetWidth * dpr;
+    c.height = c.offsetHeight * dpr;
+    ctx.scale(dpr, dpr);
+  }
+  size();
+  window.addEventListener('resize', () => {
+    ctx.setTransform(1,0,0,1,0,0);
+    size();
+  });
+  const palette = ['#c9a84c','#e5c87a','#8a6cdb','#5c8fbd','#d68a5c','#7da872','#c87aa3'];
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function spawn() {
+    dots.push({
+      x: rand(0, c.offsetWidth),
+      y: rand(0, c.offsetHeight),
+      r: rand(8, 60),
+      color: palette[Math.floor(Math.random() * palette.length)],
+      alpha: 0,
+      maxAlpha: rand(.06, .18),
+      growing: true,
+      life: 0,
+      maxLife: rand(120, 280)
+    });
+  }
+  let frame = 0;
+  function loop() {
+    frame++;
+    if (frame % 8 === 0 && dots.length < 50) spawn();
+    ctx.clearRect(0, 0, c.offsetWidth, c.offsetHeight);
+    for (let i = dots.length - 1; i >= 0; i--) {
+      const d = dots[i];
+      d.life++;
+      if (d.growing) {
+        d.alpha += d.maxAlpha / 60;
+        if (d.alpha >= d.maxAlpha) d.growing = false;
+      }
+      if (d.life > d.maxLife * 0.6) {
+        d.alpha -= d.maxAlpha / 100;
+      }
+      if (d.life > d.maxLife || d.alpha <= 0) {
+        dots.splice(i, 1);
+        continue;
+      }
+      ctx.fillStyle = d.color;
+      ctx.globalAlpha = d.alpha;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fill();
+      // inner ring (φ ratio)
+      ctx.globalAlpha = d.alpha * 0.4;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r * 0.382, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ── demo canvas: golden-ratio mosaic building up + cycling palettes ── */
+(function demoAnim() {
+  const c = document.getElementById('demoCanvas');
+  const ctx = c.getContext('2d');
+  let dpr = window.devicePixelRatio || 1;
+  function size() {
+    dpr = window.devicePixelRatio || 1;
+    c.width = c.offsetWidth * dpr;
+    c.height = c.offsetHeight * dpr;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.scale(dpr, dpr);
+  }
+  size();
+  window.addEventListener('resize', size);
+
+  // five palettes, mimicking Paintiano modes
+  const palettes = [
+    ['#c93c3c','#c9893c','#c9bf3c','#83c93c','#3cc966','#3cc9c2','#3c83c9','#5c3cc9','#a23cc9','#c93c97','#c93c5c','#c95c3c'], // harmony
+    ['#c9a84c','#e5c87a','#d68a5c','#a8c995','#7da872','#5c8fbd','#8a6cdb','#c87aa3'], // gold
+    ['#5c3cc9','#8a3cc9','#c93cb5','#c93c5c','#c98a3c','#c9c93c'], // phi
+    ['#3cc9c2','#c98a3c','#5c3cc9','#c93c5c','#7dc93c','#c93cc9'] // kontra
+  ];
+  let paletteIdx = 0;
+  const cols = 11;
+  const rows = 7;
+  const tiles = [];
+  function buildTiles() {
+    tiles.length = 0;
+    const W = c.offsetWidth, H = c.offsetHeight;
+    const pad = 24;
+    const tw = (W - pad * 2) / cols;
+    const th = (H - pad * 2) / rows;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        tiles.push({
+          x: pad + x * tw + tw * 0.04,
+          y: pad + y * th + th * 0.04,
+          w: tw * 0.92,
+          h: th * 0.92,
+          appearAt: Math.random() * 80 + (x + y) * 3,
+          colorIdx: Math.floor(Math.random() * 12)
+        });
+      }
+    }
+  }
+  buildTiles();
+  window.addEventListener('resize', buildTiles);
+
+  let frame = 0;
+  let cycle = 0;
+  function loop() {
+    frame++;
+    if (frame > 200) {
+      frame = 0;
+      cycle++;
+      paletteIdx = cycle % palettes.length;
+      tiles.forEach(t => {
+        t.colorIdx = Math.floor(Math.random() * 12);
+        t.appearAt = Math.random() * 80;
+      });
+    }
+    ctx.fillStyle = '#0a0612';
+    ctx.fillRect(0, 0, c.offsetWidth, c.offsetHeight);
+    const pal = palettes[paletteIdx];
+    tiles.forEach(t => {
+      if (frame < t.appearAt) return;
+      const k = Math.min(1, (frame - t.appearAt) / 20);
+      ctx.fillStyle = pal[t.colorIdx % pal.length];
+      ctx.globalAlpha = k * 0.85;
+      const w = t.w * k, h = t.h * k;
+      const dx = t.x + (t.w - w) / 2, dy = t.y + (t.h - h) / 2;
+      ctx.fillRect(dx, dy, w, h);
+      // inner ring (φ proportion)
+      ctx.globalAlpha = k * 0.35;
+      ctx.fillStyle = pal[(t.colorIdx + 3) % pal.length];
+      const iw = w * 0.382, ih = h * 0.382;
+      ctx.fillRect(dx + (w - iw) / 2, dy + (h - ih) / 2, iw, ih);
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ── gallery placeholder tiles (SVG-only, no external assets) ── */
+(function gallery() {
+  const gal = document.getElementById('gallery');
+  const palettes = [
+    ['#c9a84c','#e5c87a','#1a1208','#d68a5c'],
+    ['#5c8fbd','#8a6cdb','#0e0820','#c87aa3'],
+    ['#7da872','#c9bf3c','#1a1208','#5c8fbd'],
+    ['#c93c3c','#c95c3c','#0e0820','#c9a84c'],
+    ['#8a6cdb','#c93cb5','#0e0820','#5c3cc9'],
+    ['#3cc9c2','#7da872','#0e0820','#c9bf3c'],
+    ['#d68a5c','#c9893c','#1a1208','#83c93c'],
+    ['#a23cc9','#5c3cc9','#0e0820','#c93c5c']
+  ];
+  const artists = ['Kandinsky','Pollock','Mosaic','Picasso','Kusama','Rothko','Miró','Mondrian'];
+  function makeTile(i) {
+    const p = palettes[i % palettes.length];
+    const a = artists[i % artists.length];
+    const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svgEl.setAttribute('viewBox','0 0 100 100');
+    svgEl.setAttribute('preserveAspectRatio','xMidYMid slice');
+    let inner = `<rect width="100" height="100" fill="${p[2]}"/>`;
+    const shapes = 18 + Math.floor(Math.random() * 12);
+    for (let k = 0; k < shapes; k++) {
+      const cx = Math.random() * 100;
+      const cy = Math.random() * 100;
+      const r = 3 + Math.random() * 18;
+      const c = p[Math.floor(Math.random() * (p.length - 1))];
+      const o = 0.4 + Math.random() * 0.6;
+      const type = Math.random();
+      if (type < 0.6) inner += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}" opacity="${o}"/>`;
+      else if (type < 0.8) inner += `<rect x="${cx-r}" y="${cy-r}" width="${r*2}" height="${r*2}" fill="${c}" opacity="${o}"/>`;
+      else inner += `<line x1="${cx-r}" y1="${cy-r}" x2="${cx+r}" y2="${cy+r}" stroke="${c}" stroke-width="${1+Math.random()*2}" opacity="${o}"/>`;
+    }
+    svgEl.innerHTML = inner;
+    const tile = document.createElement('div');
+    tile.className = 'gallery-tile';
+    tile.appendChild(svgEl);
+    const meta = document.createElement('div');
+    meta.className = 'gallery-tile-meta';
+    meta.textContent = 'inspired by ' + a;
+    tile.appendChild(meta);
+    return tile;
+  }
+  for (let i = 0; i < 8; i++) gal.appendChild(makeTile(i));
+})();
+
+/* ── easter egg: Konami code ── */
+(function konami() {
+  const seq = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+  let pos = 0;
+  document.addEventListener('keydown', e => {
+    if (e.key.toLowerCase() === seq[pos].toLowerCase()) {
+      pos++;
+      if (pos === seq.length) {
+        pos = 0;
+        document.documentElement.animate(
+          [{filter:'hue-rotate(0deg) saturate(1)'},{filter:'hue-rotate(360deg) saturate(2.2)'},{filter:'hue-rotate(0deg) saturate(1)'}],
+          {duration: 2400, iterations: 1}
+        );
+      }
+    } else pos = 0;
+  });
+})();
+
+/* ── easter egg: chord on logo click ── */
+(function logoChord() {
+  const logo = document.querySelector('.nav-logo');
+  let actx;
+  logo.addEventListener('click', e => {
+    e.stopPropagation();
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    // C major 7: C E G B
+    const freqs = [261.63, 329.63, 392.00, 493.88];
+    freqs.forEach((f, i) => {
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gain.gain.value = 0;
+      gain.gain.linearRampToValueAtTime(0.08, actx.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 1.6);
+      osc.connect(gain).connect(actx.destination);
+      osc.start();
+      osc.stop(actx.currentTime + 1.7);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

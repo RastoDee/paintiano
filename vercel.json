@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/", "has": [{ "type": "query", "key": "paid" }], "destination": "/index.html" },
+    { "source": "/", "destination": "/landing.html" },
+    { "source": "/play", "destination": "/index.html" },
+    { "source": "/play/:path*", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
@@ -7,13 +13,12 @@
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy", "value": "no-referrer" }
       ]
-    }
-  ],
-  "redirects": [
+    },
     {
-      "source": "/buy",
-      "destination": "https://paintiano.lemonsqueezy.com/checkout/buy/8d42493f-bca9-44b2-a057-8d730a8b2616",
-      "permanent": false
+      "source": "/landing.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }
+      ]
     }
   ]
 }
