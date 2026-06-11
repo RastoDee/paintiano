@@ -14597,6 +14597,16 @@ export default function Paintiano() {
   const saltIdxRef = useRef(0);
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
   const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
+  // isDesktop — tightens vertical rhythm on notebook viewports so the phone-shape
+  // column fits 100vh without a scrollbar. Mobile keeps the original spacing.
+  const [isDesktop, setIsDesktop] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px)').matches;}catch(_){return false;}});
+  useEffect(()=>{
+    if(typeof window==='undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(min-width: 769px)');
+    const onChange = (e)=>setIsDesktop(e.matches);
+    try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
+    return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
+  },[]);
   // Mirror lang into a ref so the demo reel orchestrator (whose timers were
   // scheduled with closure over the old lang) can resolve text at fire time
   // against the current language. Otherwise switching language mid-reel
@@ -21043,8 +21053,8 @@ Composition rules:
         </div>
         </div>
       </div>
-      <header style={{textAlign:'center',marginBottom:isActiveView?8:18}}>
-        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':'clamp(3rem,15vw,4.5rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
+      <header style={{textAlign:'center',marginBottom:isActiveView?8:(isDesktop?8:18)}}>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':(isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(3rem,15vw,4.5rem)'),fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
         {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
         {!isActiveView && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
@@ -21068,7 +21078,7 @@ Composition rules:
 
         {/* ── MAIN PANEL ── mood · source (color/style/scan live in the canvas
             attributes strip, shown contextually after a source is picked) ── */}
-        <div style={{background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:20,padding:20,display:'flex',flexDirection:'column',gap:18}}>
+        <div style={{background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:20,padding:isDesktop?14:20,display:'flex',flexDirection:'column',gap:isDesktop?12:18}}>
 
           {/* MOOD — single entry point. Opens the same showMoodMenu modal as
               "+ NEW MOOD" on the canvas screen, where input, suggestions, recents
