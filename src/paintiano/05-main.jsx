@@ -4487,7 +4487,9 @@ Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words
 Composition rules:
 - LENGTH: the piece MUST last at least 60 seconds of music — aim for 70–95 seconds. With the tempo you choose, make sure the LAST note's (startBeat + duration) reaches at least tempo beats (i.e. ≥ 60 seconds worth of beats). Do not stop early.
 - 90–150 notes total (enough to fill a full minute or more)
-- Pick a key that fits the palette and mood; mostly diatonic, sparing chromatic colour
+- STYLE: Western tonal piano music in the spirit of Ludovico Einaudi, Yiruma, Max Richter, Yann Tiersen, Chopin's Nocturnes, or Debussy's quieter pieces. Lyrical, singable melodies over flowing accompaniment. Avoid sounding like East-Asian traditional music (no shakuhachi/koto/gamelan/erhu evocations) unless the image is unmistakably East Asian.
+- KEY: Pick a major or natural minor key that fits the mood. Stay strictly diatonic except for occasional tasteful chromatic colour (passing tones, secondary dominants, leading tones).
+- HARMONY: Use familiar functional chord progressions (I–V–vi–IV, ii–V–I, vi–IV–I–V; for minor: i–VI–III–VII, i–iv–V–i). NO pentatonic, modal (Dorian/Phrygian/Lydian), whole-tone, or quartal harmonies regardless of what the palette suggests — the palette colours the KEY choice, not the SCALE type.
 - Structure: intro (motif, sparse) → development (richer, busiest) → a contrasting middle section → return of the motif → close (quieter). Use the length for a real arc, not a loop.
 - Bass (octaves 2–3): harmonic grounding throughout, ≥20 notes
 - Melody (octaves 4–6): singable, recurring motif that develops over the full length
