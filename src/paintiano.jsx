@@ -230,6 +230,14 @@ const phiCol=(m,v=100)=>{const h=PHI_HUE[m%12];const s=75+(v/127)*15;const[r,g,b
 const CUSTOM_DEFAULT_HUE=[
   0, 30, 60, 240, 270, 210, 330, 180, 90, 120, 300, 150
 ];
+// Per-pitch-class saturation for the Scriabin Prometheus default palette.
+// D♯ (pc=3) and A♯ (pc=10) are Scriabin's "metallic" tones — desaturated to
+// 25% so they read as steel/lead, not pure hue. Other pitch classes get a
+// full rainbow saturation of 80%.
+const CUSTOM_DEFAULT_SAT=[
+  // C   C#  D   D#  E   F   F#  G   G#  A   A#  B
+     80, 80, 80, 25, 80, 80, 80, 80, 80, 80, 25, 80
+];
 
 // Fast RGBA string helper — avoids repeated template-string + toFixed allocations
 // in the hot inner draw loops. Rounds alpha to 3 decimal places inline.
