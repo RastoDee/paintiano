@@ -117,15 +117,6 @@ const PF_STYLE = `
             scrollbar-color: rgba(201,168,76,.35) transparent;
             zoom: 0.85;
           }
-          /* Firefox fallback (no zoom support) — transform:scale on inner div */
-          @supports (-moz-appearance:none) {
-            #root { zoom: normal; }
-            #root > div:first-child {
-              transform: scale(0.85);
-              transform-origin: top center;
-              width: calc(100% / 0.85);
-            }
-          }
           #root::-webkit-scrollbar { width: 6px; }
           #root::-webkit-scrollbar-track { background: transparent; }
           #root::-webkit-scrollbar-thumb { background: rgba(201,168,76,.3); border-radius: 3px; }
