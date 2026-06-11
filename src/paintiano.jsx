@@ -23316,7 +23316,7 @@ Composition rules:
               // Match the safe-area padding so the close button sits inside
               // the notch-respecting safe zone on iPhone.
               top:'max(14px, calc(env(safe-area-inset-top) + 8px))',
-              right:16,
+              right: isDesktop ? 'calc(50% - 224px)' : 16,
               width:32, height:32, borderRadius:'50%',
               background:'rgba(255,255,255,.08)',
               color:'rgba(255,255,255,.7)',
