@@ -1268,12 +1268,21 @@ export default function Paintiano() {
     setTimeout(()=>{
       setStyle(()=>{
         if(k===null){ setStructureSeedLock(null); }
-        else { setNotesMode(false); setOneMMode(false); }
+        else {
+          setNotesMode(false); setOneMMode(false);
+          // Compose/Mic + dice off: re-establish the seed lock when an artist
+          // is re-selected through the paired-button cycle. Same rationale as
+          // selectStyle — without this the painting flickers per note after a
+          // prior Mosaic deselect cleared the lock.
+          if(!randomModeRef.current && (composeMode||micPainting)){
+            setStructureSeedLock(prevLock=> prevLock!=null ? prevLock : ((pollockSessionSeed>>>0)||1));
+          }
+        }
         return k;
       });
       if(canvasRef.current)canvasRef.current.style.opacity='1';
     },200);
-  },[]);
+  },[composeMode, micPainting, pollockSessionSeed]);
   // Append a fresh random salt and make it current (used by Play-from-start and
   // Loop replays when Random is on). Truncates any "future" entries if the user
   // had stepped Back, so the timeline stays linear.
