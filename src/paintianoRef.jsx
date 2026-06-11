@@ -88,10 +88,6 @@ const PF_STYLE = `
            shadow. App layout/JSX is unchanged; this is purely a CSS frame.
            Mobile (<769px): no changes, app fills the viewport edge-to-edge. */
         @media (min-width: 769px) {
-          /* Compact desktop: zoom-scale the whole #root so every rem AND px
-             value shrinks together — fits a 728px-tall notebook viewport
-             without scrollbar. zoom works in Chrome/Safari/Edge; Firefox
-             falls back to transform:scale via the rule below. */
           html, body {
             background: #050507 !important;
             min-height: 100vh;
@@ -115,7 +111,6 @@ const PF_STYLE = `
             position: relative;
             scrollbar-width: thin;
             scrollbar-color: rgba(201,168,76,.35) transparent;
-            zoom: 0.85;
           }
           #root::-webkit-scrollbar { width: 6px; }
           #root::-webkit-scrollbar-track { background: transparent; }
