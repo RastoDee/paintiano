@@ -14705,6 +14705,30 @@ export default function Paintiano() {
       setStyle(null);                             // disabled artist → release to Mosaic
     }
   }, [setupArtists, style]);
+  useEffect(()=>{
+    // When Mosaic family is OFF in Setup, the canvas must always have an
+    // active artist — there's no Mosaic chip to fall back to. Auto-select
+    // the first playable artist whenever style becomes null (initial mount,
+    // user deselect, setup change). Dice mode picks via shuffleStyle, so we
+    // skip when randomMode is on.
+    if(randomMode) return;
+    if(style) return;
+    if(setupArtists.includes('mosaicFamily')) return;
+    let target = null;
+    for(const k of setupArtists){
+      if(k === 'mosaicFamily') continue;
+      if(proStatus === 'free'){
+        // Free tier: pick the 'a' side of the pair containing k — always
+        // unlocked even if user ticked the locked 'b' side in Setup.
+        const pair = BASE_STYLE_PAIRS.find(([a,b]) => a===k || b===k);
+        if(pair){ target = pair[0]; break; }
+      } else {
+        target = k;
+        break;
+      }
+    }
+    if(target) setStyle(target);
+  }, [setupArtists, style, randomMode, proStatus]);
   // ── AI "recording" lifecycle ────────────────────────────────────────────────
   // After AI generates (or you Recall an existing piece), the recent entry can
   // be RE-RECORDED by playing it once and tweaking. The "recording" window
@@ -20182,8 +20206,6 @@ Composition rules:
         const _artImg = (imageModeStory && mainImg) ? mainImg : hi;
         const _artW = _artImg.width || _artImg.naturalWidth;
         const _artH = _artImg.height || _artImg.naturalHeight;
-        const scale=availW/_artW;
-        const dw=availW, dh=Math.round(_artH*scale);
         let thumbY = 0, thumbH = 0;
         const THUMB_SHORT = 220;       // shorter-side target for the thumb
         const THUMB_TOP_MARGIN = 130;  // breathing room from the top edge
@@ -20229,8 +20251,18 @@ Composition rules:
         const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
         const paintingBottomReserve = 290; // mood + wordmark + tagline
         const paintingAvailH = SH - paintingTopMin - paintingBottomReserve;
+        // Scale painting to fit BOTH dimensions. Width-only scaling overflowed
+        // the canvas footer on tall sources (mood-from-image with a portrait
+        // photo cropped off the mood/wordmark/tagline). Take the limiting
+        // axis so the painting always lands inside the safe area, and center
+        // it horizontally when scale-down narrows it.
+        const _scaleW = availW / _artW;
+        const _scaleH = paintingAvailH / _artH;
+        const scale = Math.min(_scaleW, _scaleH);
+        const dw = Math.round(_artW * scale);
+        const dh = Math.round(_artH * scale);
         const dy = paintingTopMin + Math.max(0, Math.round((paintingAvailH - dh)/2));
-        const dx = margin;
+        const dx = Math.round((SW - dw) / 2);
         if(_inspLabel){
           sctx.save();
           sctx.textAlign='center';
