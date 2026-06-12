@@ -10677,6 +10677,167 @@ const I18N = {
     proWelcomeBody:'Todos os recursos desbloqueados neste dispositivo.',
     proManageActive:'Pro',
   },
+  ja:{
+    concept:'コンセプト', demo:'デモ', guide:'ガイド',
+    sourceLabel:'ソース', moodLabel:'気持ち', colorLabel:'色', styleLabel:'スタイル', mosaicStyle:'モザイク', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'絵画、演奏', tapToSkip:'タップでスキップ', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', onbTitle:'Paintiano', onbSubtitle:'音楽が絵画に変わる', onbPlayLabel:'サンプル再生', onbCaption:'Liebestraum — Liszt · Pollock が描く', onbHint:'すべての和音が一筆に…', onbDescription:'Paintiano は音楽を聴き、各和音を一筆に変える。すべての絵がユニーク。', onbDoneLine:'あなたの絵は唯一のもの', onbReplay:'もう一度', onbTryYourOwn:'自分のもので試す', onbSkip:'スキップ', moodDesc:'気持ちを書く — AI が作曲して描く', mfiDesc:'画像を選ぶ — AI がムードを読み、描く', helpTitle:'何が何をする', helpSub:'セットアップ画面で任意のソースをタップして始める', helpClose:'閉じる', helpFab:'ヘルプ', helpDesc_mood:'気持ちを書くかタップ — Paintiano がそのムードで曲を作り、描く', helpDesc_mfi:'画像を入れる — Paintiano がムードを読み、合う曲を作り、描く', helpDesc_midi:'MIDI ファイル?Paintiano が再生し、各和音を一筆に', helpDesc_audio:'任意の mp3 や wav — Paintiano が聴き、和音を見つけ、聴こえたものを描く', helpDesc_score:'楽譜を撮る — Paintiano が音符を読み、曲を描く', helpDesc_music:'MIDI、mp3/wav、楽譜 — Paintiano が再生し、各和音を見つけ、それぞれを一筆に', helpDesc_image:'画像を選ぶ — Scan は色を音楽として演奏、AI Compose(Pro)は全曲を書く;atmosphere で画像のムードに合わせる', helpDesc_compose:'画面で直接ピアノを弾く — 各音が一筆に、ライブで', helpDesc_mic:'歌う、ハミング、口笛 — Paintiano が和音を聴き取り、ライブで描く', selectNeedsMosaic:'{artist} スタイルをオフにして音符を編集', backToSetup:'戻る', backToCanvas:'キャンバス', backToImage:'画像', newSource:'新規', dirLabel:'スキャン', dir_lr:'行', dir_vert:'列', dir_spiralIn:'内向き螺旋', dir_spiralOut:'外向き螺旋', importLabel:'インポート', createLabel:'作成', imgMood:'画像からムード', atmoLabel:'atmosphere', atmoDetect:'ムードを読む', imgComposition:'作曲', imgCompositionHint:'AI がこの画像から曲を書く', imgScan:'スキャン', imgScanHint:'画像を楽譜として読む', imgCompose:'AI compose', imgComposeBlurb:'AI がこの画像から完全な曲を書く — その色、エネルギー、ムードから。Play を押す。', aiOffline:'オフライン', aiOfflineHint:'AI 機能には接続が必要',
+    harmony:'ハーモニー', spectral:'スペクトル', phi:'φ / Phi', kontra:'Kontra', custom:'Custom', bw:'B/W', setupPickerLabel:'Setup', setupPickerHint:'キャンバスのピッカーに出すパレットとアーティストを選ぶ', setupPalettesTitle:'パレット', setupArtistsTitle:'アーティスト', setupMosaicFamily:'Mosaic ファミリー', setupSave:'完了', setupMinError:'最低 1 パレット + 1 アーティストを選んでください。', setupAll:'すべて', setupNone:'なし', gcat_all:'すべて', gcat_start:'はじめ', gcat_colors:'色', gcat_style:'スタイル', gcat_music:'音楽', gcat_save:'保存', gcat_pro:'Pro', proLockTitle:'Pro',
+    editPalette:'パレット編集', editShort:'編集', paletteEditorTitle:'あなたのパレット', resetPalette:'すべてクリア', defaultPalette:'デフォルト',
+    selectMood:'✦ ムードを選ぶ…', moodPlaceholder:'どんなムードでも — 例:パリの雨の日', moodHowFeel:'今、どう感じる?', moodTwoWays:'上に何でも書く — または入力を始めてリストから一語ムードを選ぶ。', moodExamples:['自分の言葉でムードを書く…','例:パリの雨の日','例:真夜中の初雪','— または入力を始めて、出てきたムードを選ぶ —','例:激怒','例:ノスタルジック'], storyCaption:{mood:'{mood} はこんな音 ✦ paintiano.app',moodFromImg:'この画像のムード、描きました ✦ paintiano.app',compose:'ピアノで作った曲 · 絵にした ✦ paintiano.app',micVoice:'マイクに歌ったら絵が返ってきた ✦ paintiano.app',micMusic:'部屋の歌を捕まえて描いた ✦ paintiano.app',midi:'音楽が色になった ✦ paintiano.app',audio:'聴いて、描いた ✦ paintiano.app',score:'楽譜を絵にした ✦ paintiano.app',image:'この画像の音 ✦ paintiano.app',default:'音楽が絵画になる ✦ paintiano.app'}, storyImageHint:'絵 + 音声 · IG / TikTok 用', storyImageHintNoAudio:'絵 · IG / TikTok 用', saveAudioLabel:'音声', saveAudioHint:'mp3 · ファイルに保存', scoreExportHint:'MusicXML · MuseScore 用', includeSourceThumb:'ソースサムネを含める', includeSourceImage:'ソースの元画像を含める', saveAudioHintImg:'画像 + 音声 · ファイルに保存', moodGo:'実行', morph:'✦ morph', vary:'✦ vary',
+    moodNames:{funny:'おかしな',sad:'悲しい',aggressive:'攻撃的',dreamy:'夢見るような',love:'愛',nostalgic:'ノスタルジック',calm:'静か',excited:'興奮した',crazy:'クレイジー',hopeful:'希望に満ちた',mysterious:'神秘的',triumphant:'勝ち誇った',tense:'緊張した',playful:'遊び心',epic:'壮大',euphoric:'多幸感',furious:'激怒',serene:'穏やか',yearning:'憧れ',mystical:'神秘',triumphal:'凱旋',melancholic:'メランコリック',heroic:'英雄的',mischievous:'いたずらっぽい',terrifying:'恐ろしい',blissful:'至福',stormy:'嵐のような',warm:'温かい',festive:'祝祭的',lonely:'寂しい',curious:'好奇心',determined:'決意',tender:'優しい',joyful:'喜び',grateful:'感謝',despairing:'絶望',passionate:'情熱',magical:'魔法のような',radiant:'輝く',happy:'幸せ',content:'満足',wistful:'物思いに沈んだ',anxious:'不安',mighty:'力強い',enchanted:'魅了された',carefree:'のんき',tearful:'涙の',bitter:'苦い',noble:'高貴',danceable:'踊れる',wild:'野生的',relaxed:'リラックス',meditative:'瞑想的',ethereal:'幽玄',confident:'自信',sparkling:'きらめく',fierce:'激しい',angry:'怒り',irritated:'いらだち',menacing:'威嚇的',majestic:'荘厳',spooky:'不気味',summery:'夏らしい',pulsing:'脈打つ',fresh:'新鮮',dizzying:'めまいがする',rueful:'悔やむ',gloomy:'陰鬱',devoted:'献身的',nervous:'神経質',enraged:'激怒した',indignant:'憤慨',defiant:'反抗的',unyielding:'屈しない',martial:'勇壮',crushed:'打ちひしがれた',resigned:'諦めた',abandoned:'見捨てられた',plaintive:'哀切',quiet:'静寂',balanced:'バランスの取れた',restful:'安らか',grounded:'地に足がついた',fragile:'壊れやすい',sleepy:'眠い',flowing:'流れるような',intimate:'親密',exhilarated:'高揚した',romantic:'ロマンチック',moved:'感動した',compassionate:'慈しみ',uplifted:'高められた',awestruck:'畏敬',fascinated:'魅了された',otherworldly:'別世界',misty:'霞んだ',ghostly:'幽霊のような'},
+    errs:{noNotesMidi:'MIDI に音符が見つかりません。',noNotesAudio:'音符が検出されませんでした。',noNotesXml:'MusicXML に再生可能な音符がありません。',noNotesGeneric:'音符なし。',imgRead:'画像を読み込めませんでした。',imgDecode:'画像をデコードできませんでした。',imgNoNotes:'画像から音符が生まれませんでした — もっとカラフルな画像を試してください。',notXml:'MusicXML 楽譜ではありません。.musicxml、.xml、.mxl ファイルを選んでください(MuseScore の .mscz も内部は .mxl です)。',looksMidi:'MIDI ファイルのようです。代わりに ♬ midi ボタンを使ってください。',notInLibrary:'ライブラリにありません。✦ AI で生成を試してください。',nothingToPrint:'まだ印刷するものがありません — 先に曲か画像を読み込んでください。',songNotFound:'ライブラリで曲が見つかりませんでした。',printEncode:'印刷:画像をエンコードできませんでした。',morphFail:'Morph できませんでした。',varyFail:'バリエーションは音符を生み出しませんでした。',samplesFallback:'グランドピアノのサンプルが読み込めませんでした — ビルトインのシンセにフォールバックします。音は出ますが少し豊かさが落ちます。', aiNet:'AI に接続できません — 接続を確認してもう一度お試しください。', aiBadResp:'AI の応答が不完全でした — タップでもう一度。'},
+    midi:'MIDI', audio:'AUDIO', score:'SCORE', music:'MUSIC', image:'IMAGE',
+    compose:'COMPOSE', composing:'作曲中',
+    sing:'🎤 歌う', singing:'🎤',
+    listen:'🔊 聴く', listening:'🔊 聴いています…',
+    mic:'MIC', micActive:'LIVE',
+    voicePreset:'🎤 voice', musicPreset:'🔊 music',
+    play:'▶ 再生', pause:'⏸ 一時停止', resume:'▶ 続き', mute:'音声ミュート', unmute:'音声オン', randomOn:'ランダム ON', randomOff:'ランダム OFF',
+    print:'🖨 印刷', clear:'クリア', clearConfirm:'もう一度タップでクリア', demoConfirm:'現在のものを置き換える?', switchConfirm:'キャンバスをクリーンに?', loop:'⟳ ループ', appChoseColour:'アプリが色の読み方を選んだ', undo:'↩',
+    recArm:'⏺ rec', recStop:'⏹ rec…',
+    share:'シェア', save:'保存', saving:'保存中…', saved:'保存しました ✓', scoreExport:'楽譜', scoreXmlHint:'MuseScore、Sibelius、Finale で開ける…', exportLabel:'エクスポート', exportTitle:'エクスポート', exportHint:'曲全体をエクスポート', exportScore:'楽譜 (xml)', exportScoreHint:'MuseScore などで開ける', exportAudio:'音声', exportAudioHint:'曲全体を再生して録音', exportBoth:'両方', exportBothHint:'今すぐ楽譜、続けて音声録音', exportNeedsPlay:'エクスポートするには先に再生', rendering:'音声をレンダリング中…', renderFail:'音声レンダリングに失敗',
+    chordsPlay:'和音 · タップで再生',
+    chordsOnly:'和音',
+    nameThisPiece:'この曲に名前をつける…',
+    sizeStory:'Story · 9:16', sizeStoryHint:'1080×1920 · IG / TikTok ストーリー用', shareStory:'Story', recent:'最近',
+    sizeWeb:'Web / Social', sizeWebHint:'~4× · 速い · オンライン共有',
+    sizePrint:'Print A1 · 300 DPI', sizePrintHint:'~20× · 大きなファイル · 印刷可能',
+    saveLongPressHint:'画像を長押し', saveLongPressTail:'「写真に保存」または iOS のスクリーンショット(サイド + 音量↑)で画面解像度のまま',
+    saveRightClickHint:'画像を右クリック', saveRightClickTail:'「名前を付けて画像を保存…」を選ぶ',
+    saveAlternative:'代替:', saveAlternatives:'代替案:',
+    sLeft:'秒残り',
+    loadingPiano:' ピアノを読み込み中…', grandPiano:' グランドピアノ', synthPiano:' シンセピアノ',
+    listenHint:'別の機器で再生されている音楽にこのデバイスのマイクを向けてください — 同じスマホ内のオーディオは iOS で抑制されます',
+    micDenied:'マイクへのアクセスが拒否されました。有効にするには:iOS 設定 → Safari または Chrome → マイク、またはブラウザのアドレスバーの鍵アイコンをタップ。変更後にリロード。', micUnavailable:'このブラウザではマイクが利用できません。', micBusy:'マイクが使用中です — 他のアプリかブラウザタブが使っているかもしれません。閉じてリロードしてください。', micNotFound:'このデバイスにマイクが見つかりません。', micFail:'マイクを起動できませんでした',
+    recUnsupported:'このブラウザでは録音がサポートされていません。',
+    recTooShort:'録音が短すぎました — rec を 1 秒以上押し続けてください。',
+    searchGuide:'ガイドを検索…', noMatches:'一致なし:',
+    guideTitle:'ガイド', conceptTitle:'コンセプト', gsec_start:'始め方', gsec_sources:'ソース', gsec_playing:'再生中', gsec_output:'保存 & シェア', gsec_more:'もっと', fsNormal:'A', fsLarge:'A+', fsLabel:'文字サイズ', legalPricing:'料金', legalTerms:'利用規約', legalPrivacy:'プライバシー', legalRefunds:'返金',
+    pickMoodFirst:'まずムードを選んでください', morphInto:'現在のムードを別のムードに morph', morphTitle:'{mood} を…に morph', morphHint:'最大 3 つを選ぶ — 順番に', morphGo:'morph',
+    reroll:'振り直し:新しい解釈',
+    demoMode:'デモモード — もう一度再生するにはクリア', demoSkip:'キャンバスをタップでスキップ',
+    stopRecFirst:'再生コントロールを使うには録音を停止',
+    stopListenFirst:'まず聴くのを止めてください', stopSingFirst:'まず歌うのを止めてください',
+    scaleBtn:'⚙ scale',
+    midiInput:'♬ MIDI 入力', musicInput:'♪ 音楽を追加', audioInput:'♫ AUDIO 入力', scoreInput:'𝄞 SCORE 入力', imageInput:'🖼 画像入力', micInput:'🎙 MIC 入力',
+    micVoiceHint:'歌、ハミング、口笛 · C メジャーにスナップ · 単音',
+    micMusicHint:'近くのスピーカーから音楽を再生 · 和音の変化で描く',
+    micTapToSwitch:'タップで voice ⇄ music を切り替え',
+    micTapToRecord:'🎙 をタップで録音',
+    builtInSample:'▶ 内蔵サンプル', chooseFile:'📁 ファイルを選ぶ', cancel:'キャンセル', mfiSampleTitle:'A Dream In Crimson',
+    close:'閉じる',
+    proBadge:'PRO',
+    proAiBadge:'PRO AI',
+    mfiRecent:'最近',
+    recentAiGenerated:'最近 AI 生成',
+    recentPlayed:'最近再生',
+    today:'今日',
+    trialBanner1:'AI 試用残り 1 回 · 無制限は Pro AI へ',
+    trialBanner2:'AI 試用残り 2 回 · 無制限は Pro AI へ',
+    morphAiUnavailable:'AI 生成のムードでは Morph は使えません',
+    proPaywallTitle:'Paintiano をフル解放',
+    proPaywallTitleAi:'無料 AI 作曲を使い切りました',
+    proPaywallBody:'無制限 AI 作曲を解放し、エクスポートのウォーターマークを取り除き、独立アートプロジェクトを応援。',
+    proPaywallCta:'Paintiano Pro を入手 — €9.99 永久',
+    proAiPaywallCta:'Paintiano Pro AI を入手 — €19.99 永久',
+    proPaywallFooter:'一回払い · サブスクなし · VAT 込み',
+    proEarlyBird:'アーリーバード価格 · 先着 50 名',
+    proPaywallSubtitle:'一度払えば、永久に。',
+    proSupportLine:'独立アートプロジェクトを支えることにもなります。',
+    proTierTitle:'Paintiano Pro',
+    proTierPrice:'€9.99 · アーリーバード(その後 €14.99)',
+    proValueArtists:'16 人のアーティスト(Free は 8 人)',
+    proValueTypes:'各アーティスト 6 種類の描き方(Free は 2 種類)',
+    proValuePalette:'Custom パレット — 自分の 12 色を設定',
+    proValueDpi:'300 DPI エクスポート、ウォーターマークなし',
+    proValueLife:'永久アクセス',
+    proGetCta:'Pro を入手',
+    proAiTierTitle:'Paintiano Pro AI',
+    proAiTierPrice:'€19.99 · アーリーバード(その後 €24.99)',
+    proAiValueAll:'Pro のすべて、さらに:',
+    proAiValueText:'テキスト mood からの AI 作曲',
+    proAiValueImage:'画像からの AI 作曲',
+    proAiValueAtmo:'AI atmospheric tinting',
+    proAiGetCta:'Pro AI を入手',
+    proRecommended:'おすすめ',
+    aiLockedHint:'AI は Paintiano Pro AI の一部',
+    moodChooseBelow:'下のリストからムードを選ぶ',
+    moodPickFromList:'リストからムードを選ぶ — カスタム mood は Pro AI',
+    moodTypeToSearch:'入力して 95 個のムードを検索…',
+    tierOverviewTitle:'Free · Pro · Pro AI',
+    tierIntro:'AI 機能(上記 ✦ アイテム + Image 内の AI Compose と Atmosphere)は Free でクレジットを使います。',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro AI',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'すべて',
+    tier3Trial:'3 回試用',
+    tierUnlimited:'∞',
+    tierReadOnly:'プレビューのみ',
+    tierRowArtists:'アーティスト',
+    tierRowTypes:'描き方',
+    tierRowPalette:'Custom パレット',
+    tierRowDpi:'300 DPI エクスポート',
+    tierRowWmark:'ウォーターマーク',
+    tierRowAiText:'AI テキスト mood',
+    tierRowAiImg:'AI 画像 compose',
+    tierRowAiAtmo:'AI atmosphere',
+    tierRowAi:'AI 機能',
+    tier3Credits:'3 クレジット',
+    tierAiCreditsNote:'AI テキスト & 画像 compose = 各 1 クレジット · Atmosphere = 0.5 クレジット',
+    proAboutTitle3:'Paintiano Pro · Pro AI',
+    proAboutLead3:'2 つの解放方法 — 創作スタイルに合うものを選ぶ。',
+    proAboutCompareTitle3:'Free · Pro · Pro AI',
+    proAboutHowFreeTitle:'Free ティアの動作',
+    proAboutHowFree1:'8 人のアーティストが初日から解放。各人に Pro パートナーがいる — タップして見られるが、Pro だけがそのパートナーで描ける。',
+    proAboutHowFree2:'Custom パレットはデフォルトの 12 色を表示;自分の色を編集するのは Pro。',
+    proAboutHowFree3:'AI 機能(✦)は 3 回の試用クレジット、その後 Pro AI への無制限アップグレードを促す。Free のエクスポートには常にウォーターマーク。',
+    proAboutHonestTitle3:'Pro と Pro AI について正直に',
+    proAboutHonest3_1:'両方とも一回払い。サブスクは絶対なし。今日払う価格は永久に有効。',
+    proAboutHonest3_2:'プレーン Pro はウォーターマークを取り、全アーティスト・描き方・カスタムパレットを解放 — ただし AI 呼び出しは Free と同じ 3 クレジット試用プールから。',
+    proAboutHonest3_3:'Pro AI は ✦ AI 機能を日常的に使う人のため。自分の音楽を弾いたりファイルを読み込んだりすることが多いなら、プレーン Pro が合う。',
+    proAboutHonest3_4:'クラウドストレージなし。絵は自分のデバイスに保存。ライセンスキーは最大 5 台で動作、同時 1 台。',
+    proTierPriceShort:'€9.99',
+    proAiTierPriceShort:'€19.99',
+    tierFootnote:'一回払い · 永久アクセス',
+    proValue1:'無制限 AI 作曲',
+    proValue1Sub:'好きなだけ絵を生成',
+    proValue2:'ウォーターマークなしでエクスポート',
+    proValue2Sub:'クリーンな画像、共有や印刷の準備が整っている',
+    proValue3:'永久アクセス',
+    proValue3Sub:'一回払いで永久にあなたのもの',
+    proValue4:'独立アートプロジェクトを応援',
+    proValue4Sub:'Paintiano の独立性を守る',
+    proLearnMore:'Pro について詳しく',
+    proAboutTitle:'Paintiano Pro',
+    proAboutLead:'Free のすべて、制限なし。',
+    proAboutWhatYouGet:'Pro で得られるもの',
+    proAboutCompareTitle:'Free 対 Pro',
+    proAboutCompareFeature:'機能',
+    proAboutCompareFree:'Free',
+    proAboutComparePro:'Pro',
+    proAboutCmp1:'すべての手動モード(キーボード、マイク、音声)',
+    proAboutCmp2:'すべての視覚スタイル & ムード',
+    proAboutCmp3:'AI 作曲',
+    proAboutCmp3Free:'5 回試用',
+    proAboutCmp3Pro:'無制限',
+    proAboutCmp4:'エクスポートのウォーターマーク',
+    proAboutCmp4Free:'あり',
+    proAboutCmp4Pro:'なし',
+    proAboutCmp5:'永久アクセス',
+    proAboutHonestTitle:'Pro でないものについて正直に',
+    proAboutHonest1:'Pro はすでに使っている Paintiano そのまま — 制限を取り除くだけ。ペイウォールの後ろに隠された新機能はない。',
+    proAboutHonest2:'Pro はデバイス間で自動同期しない。ライセンスキーは最大 5 台で動作。',
+    proAboutHonest3:'Pro はクラウドストレージを含まない。絵は自分のファイルに保存する。',
+    proHaveKey:'すでにキーを持っている',
+    proEnterKey:'ライセンスキーを入力',
+    proActivate:'アクティベート',
+    proBack:'戻る',
+    proInvalidKey:'このキーは有効ではありません。正しいキーをメールで確認してください。',
+    proWelcomeTitle:'Pro へようこそ',
+    proWelcomeBody:'このデバイスのすべての機能が解放されました。',
+    proManageActive:'Pro',
+  },
 };
 
 // Chord recognition: given a set of MIDI numbers, return a chord name like "C maj" or null.
@@ -11739,6 +11900,37 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>作曲</strong> 打開鋼琴。點或按住 — 按得越長,塊越寬。鍵盤也行(A–L 白鍵,W/E/T/Y/U/O/P 黑鍵)。</p>
     <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>🎙 麥克風</strong> 有兩種模式。<strong style={{color:'rgba(140,200,255,.95)'}}>🔊 音樂</strong> 聽房間裡在播放的東西,無聲地畫下和聲變化 — 歡迎長錄音。<strong style={{color:'rgba(255,140,140,.95)'}}>🎤 嗓音</strong> 跟隨你的歌唱、哼唱或口哨,一音一畫。一點切換。</p>
   </>),
+  ja: () => (<>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>音楽が絵になる。絵が音楽になる。</h3>
+    <p style={{margin:'0 0 14px'}}>すべての音が色になる。すべての色は音に戻せる。同じ円盤、同じルール、双方向。メロディーをハミング → 絵が咲く。ロスコを入れる → その音を聴く。</p>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>一つの言語、二つの表面。どちらからでも、はじめよう。</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>仕組み</h3>
+    <p style={{margin:'0 0 12px'}}>すべての音は色を得る — <em>色相</em>は音高から、<em>明度</em>はオクターブから、<em>彩度</em>は打鍵の強さから。音は黄金比のグリッドに落ちる — 貝殻、花の螺旋、パルテノン神殿の背後にある同じ比率。グリッドを逆に読めば、音楽が戻ってくる。同じ入力、同じ絵、毎回。</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>5 つの色文法</strong>が同じ音楽を読む。<strong style={{color:'rgba(201,168,76,.95)'}}>ハーモニー</strong>は五度圏順(近縁の調が集まる)。<strong style={{color:'rgba(201,168,76,.95)'}}>スペクトル</strong>は均等な 30° ステップ。<strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong>は黄金角の色相(137.5°)、色環上で最大に分散。<strong style={{color:'rgba(201,168,76,.95)'}}>Kontra(反転)</strong>はハーモニーの裏面 — 不協和音がキャンバス上でぶつかり、純粋な和音は咲き開く。画家の読み方。または <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong> — 自分のパレットの色だけが音を出す。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom のデフォルトはスクリャービン 1910 年の《プロメテウス》対応</strong> — 史上最も有名な共感覚者が、これらの音高にこれらの色を実際に見て、オーケストラ譜の「luce」パートに書き込んだ。C 赤、G オレンジピンク、D 黄、A 緑、E 真珠色の青、B 青、F♯ 青紫、C♯ 紫、G♯ 紫紅、D♯/A♯ メタリックスチール(脱彩)、F 深紅。<em>ハーモニーはスクリャービンの客観化。Custom はスクリャービンそのもの。</em></p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — 何を表示するか選ぶ</h3>
+    <p style={{margin:'0 0 22px'}}>上部メニュー、Guide と Pro の間。どのパレット(5 つ)、どのアーティストペア(8 + Mosaic ファミリー)をキャンバスのピッカーに出すかを選ぶ。デフォルトは全部 — 好みがあれば絞り込む。Free は Pro アーティストに 🔒 が付く。Shuffle プールはあなたの選択に従う。</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>音楽はどこから来るか</h3>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Mood</strong> を開く。どんな気持ちでも — <em>激怒</em>、<em>saudade</em>、<em>午前3時のドライブ</em>、どの言語でも。<strong style={{color:'rgba(201,168,76,.95)'}}>✦ AI</strong> がそれをピアノ曲に変える。<strong style={{color:'rgba(201,168,76,.95)'}}>✦ Morph</strong> はある感情を別の感情へ折り曲げる。<strong style={{color:'rgba(201,168,76,.95)'}}>✦ Vary</strong> は調を切り替える — 新しい調、新しい色、同じ曲。</p>
+    <p style={{margin:'0 0 22px'}}>あるいは自分で持ち込む:ピアノを弾く、マイクに向かって歌う、MIDI・MP3・楽譜ファイルを入れる。すべてが絵になる。</p>
+    <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>絵画スタイル</h3>
+    <p style={{margin:'0 0 12px'}}><strong>Mosaic ファミリー</strong> — 一つのタイル、三つのモード。<strong>Mosaic</strong> は素朴な読み方(きれいな φ 矩形)。タップで循環:<strong>Notes</strong>(同じグリッド、各ブロックに音名 — 即席の学習ツール)→ <strong>$1M$</strong>(Million Dollar Homepage オーバーレイ:60% 矩形、40% 十種の形、構造化されたカオス)。そして 16 人のアーティストが、それぞれのやり方で同じ音符を書き直す:</p>
+    <p style={{margin:'0 0 12px',opacity:.85}}><em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Kusama</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Pollock</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Kandinsky</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Miró</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Mondrian</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Rothko</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Matisse</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Vasarely</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Frank Stella</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Sam Francis</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Hilma af Klint</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Klimt</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Keith Haring</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Bridget Riley</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Roy Lichtenstein</strong></p>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>ピカソがあなたのプレイリストに出会う。タップ。比べる。切り替え。</p>
+    <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>↻ Shuffle</h3>
+    <p style={{margin:'0 0 22px'}}>同じ組み合わせ = 同じ絵。毎回。(同じ曲・同じ調・同じアーティスト・同じスタイル → ピクセル単位で一致。)<strong style={{color:'rgba(255,210,140,.95)'}}>Shuffle</strong> をオン:アーティスト選択中なら、<strong>Next</strong> はそのアーティストの複数のバリアントを循環。アーティスト未選択なら、Next は両方を取る — 新しいアーティスト+新しいバリアント。プールには Mosaic ファミリーの 3 ステーション(Mosaic / Notes / $1M$)も含まれ、Shuffle はそのどれかにも着地し得る。ダイス ON で Mosaic をタップすると、循環をその 3 つに<strong>ロック</strong>できる。Shuffle OFF = 現在をロック。</p>
+    <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>絵を入れる — その音を聴く</h3>
+    <p style={{margin:'0 0 12px'}}>どんな画像でもアップロード — ゴッホ、おばあちゃんの肖像、夕焼けのスクリーンショット、AI 生成のもの。Paintiano はそれを楽譜として読む、左から右、上から下。曲の長さは画像のエネルギーに比例(およそ 1½–2¾ 分)。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> モードはあなたのもの:あなたの 12 色パレットに近い色だけが音を出す。《ゲルニカ》をトロピカル・ピンクで濾過してみる。何が残るか。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>2 つの再生方法。</strong><strong>Scan</strong> は画像を楽譜として読む。<strong style={{color:'rgba(228,178,255,.95)'}}>AI Compose</strong>(Pro)は違う:画像のパレット、エネルギー、ムードを取り、まったく新しい曲を書く — 再生中、絵は画面に残る。</p>
+    <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Save · Record — 持ち帰る</h3>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> は絵を高解像度 PNG として書き出す。<strong>Story</strong>(9:16)は IG/TikTok 用、<strong>Web/Social</strong> はフィード用、または <strong>A1 · 300 DPI</strong> — 本当に印刷できる、ギャラリー級。額装。掛ける。シェア。あなたのもの。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Record</strong> は絵が再生される間に音楽を取り込み、共有可能な音声ファイルにする。さらに <strong>♫ Score</strong> は絵の音符を MusicXML に変える — MuseScore や Sibelius で開ける、本物の楽譜が、一枚の画像から。</p>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>お気に入りの曲から生まれたポスター。大切な写真から生まれた歌。それが持ち帰る部分。</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>ライブツール</h3>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> はピアノを開く。タップ、または押し続ける — 長く押すほどブロックは太くなる。キーボードも使える(A–L 白鍵、W/E/T/Y/U/O/P 黒鍵)。</p>
+    <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>🎙 Mic</strong> には 2 モード。<strong style={{color:'rgba(140,200,255,.95)'}}>🔊 Music</strong> は部屋で鳴っているものを聴き、和声の変化を静かに描く — 長時間録音も OK。<strong style={{color:'rgba(255,140,140,.95)'}}>🎤 Voice</strong> はあなたの歌・ハミング・口笛をたどり、一音ごとに一筆。タップで切り替え。</p>
+  </>),
 };
 function getConcept(lang){
   if(_conceptCache[lang]) return _conceptCache[lang];
@@ -12219,6 +12411,62 @@ const GUIDE_I18N = {
   {id:'troubleshoot', title:`問題排除`, keywords:`問題排除 問題 錯誤 壞掉 修復 bug 幫助 慢`,
    body:`如果狀態顯示「載入鋼琴中…」,等幾秒(~5 MB 樣本下載)。如果樣本失敗會回退到合成鋼琴 — app 還能運作。麥克風和分享在 Claude 沙盒裡被封鎖 — 兩者在獨立頁面上正常運作。MIC 音樂在 iOS 上無法擷取同一裝置的音訊 — 用外接喇叭或第二個裝置。`},
   ],
+  ja: [
+  {id:'tiers', title:`Free、Pro、Pro AI — 何が変わる`, keywords:`料金 ティア free pro pro ai アップグレード 解放 ロック ウォーターマーク パートナー クレジット 試用 制限 機能 サブスク 一回購入`,
+   body:`3 つのティア、すべて一回限りの購入。◆ Free — 8 人のアーティスト(Picasso、Pollock、Kusama、Mondrian、Klimt、Vasarely、af Klint、Haring)、各 2 種類の描き方が解放。各人に Pro パートナーがいる — アクティブなアーティストをもう一度タップするとパートナーが見える。Custom パレットはデフォルトの 12 色を読み取り専用で表示。エクスポートにはウォーターマーク。AI 機能(✦)は 3 回の試用クレジット、その後アップグレードを促す。◆ Pro €9.99 — 16 人全員、各人のすべての描き方、Custom パレット編集可能(自分の 12 色)、300 DPI エクスポートはウォーターマークなし、永続アクセス。AI 呼び出しは共有の 3 クレジット試用プールから。◆ Pro AI €19.99 — Pro のすべて + 無制限 AI:テキスト Mood、画像から Mood、Image 内の AI Compose、AI Atmosphere。◆ AI クレジットコスト:AI テキストと画像コンポーズは各 1 クレジット;Atmosphere は 0.5 クレジット。Free は 3 回の完全 AI 呼び出し、または 6 回の Atmosphere 読み取り、または混合。◆ 一回払い、永久所有。サブスクなし。ライセンスは最大 5 台のデバイス、同時 1 台で使用可。`},
+  {id:'overview', title:`概要 — 双方向の翻訳機`, keywords:`はじめ 入門 概要 paintianoとは 使い方 introduction`,
+   body:`音楽と絵画、双方向。同じ色環、同じ音高環。ソースを選ぶ — Compose、MIC、MIDI、Audio、Score、Image、または mood — 音楽が鳴るとキャンバスが埋まる。Save で絵を持ち帰る。Record で音楽を持ち帰る。どちらから入っても、両方持って出る。`},
+  {id:'start-here', title:`どこから始める`, keywords:`オンボーディング ここから 初めて 新規ユーザー 使い方 ガイド 方向`,
+   body:`二つの道。◆ 音楽 → 絵:気持ちを書く(どんな感情でも、どんな言語でも)、ピアノを弾く、マイクに歌う、MIDI / MP3 / 楽譜を入れる。◆ 絵 → 音楽:画像を入れる。◆ 色モード(Harmony か Spectral)を選ぶ。たぶんアーティストスタイルも。同じ音楽 = 同じ絵、ずっと。↻ Shuffle を ON にすれば、再生のたびに新バージョン。◆ 詰まった?Mood を開いて、気持ちを書いて、Play。育つのを見る。ループが他のことを教える。◆ そして絵を Save、音楽を Record。それが残る部分。`},
+  {id:'modes', title:`Harmony vs Spectral vs φ Phi vs Kontra vs Custom`, keywords:`色 color モード 色相 パレット 五度圏 半音 phi 黄金角 反転 kontra スクリャービン プロメテウス 共感覚 custom bw 白黒 モノクロ`,
+   body:`同じ音楽、5 つの色文法。◆ Harmony — 五度圏順、近縁の調が集まる。◆ Spectral — 30° 均等ステップ、半音ごとに一色。◆ φ Phi — 黄金角の色相(137.5°)、色環上で最大に分散。◆ Kontra(反転)— ハーモニーの裏面:協和音程(完全5、長3、短3、長6、短6、完全4)は遠い色相に、不協和(短2、長2、三全音、長7、短7)は近い色相に。画家の読み方 — 不協和音がキャンバス上でぶつかり、純粋な和音は咲き開く。◆ Custom — デフォルトはスクリャービン《プロメテウス》対応(1910):史上最も有名な共感覚者が、これらの音高にこれらの色を実際に見て、オーケストラ譜の "luce" パートに書き込んだ。C 赤、G オレンジピンク、D 黄、A 緑、E 真珠青、B 青、F♯ 青紫、C♯ 紫、G♯ 紫紅、D♯/A♯ メタリックスチール(脱彩)、F 深紅。だいたい虹を通る五度圏 — Harmony の主観的祖先。共感覚者の読み方。パレットにある色だけが音を出す;各マスは塗り直せる(Pro)。◆ B/W — 画像モード限定(画像がグレースケールのときアルゴリズムモードを置き換える);明度が音高、色相は無視。◆ いつでも切り替え — 同じ音符、瞬時に描き直し。アクティブタブをタップで色をプレビュー。画像モードでは app が Color か B/W を選ぶ;Custom だけがあなたの選択。◆ Free はスクリャービンのデフォルトを読み取り専用で見る;Pro と Pro AI で Custom が完全編集可。Kontra はすべてのティアで解放。`},
+  {id:'style', title:`絵画スタイル(16 人のアーティスト)`, keywords:`スタイル picasso kusama pollock kandinsky miró mondrian rothko matisse キュビズム ドリップ アーティスト 抽象 幾何 フェーズ バリアント inspired by 十六 vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
+   body:`16 人の偉大な画家、一つのキャンバス。Mosaic は素朴なデフォルト — きれいな φ-矩形。アーティストタイルをタップすると、同じ音符が彼の筆で書き直される:◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein。アーティストがアクティブな間、キャンバスに "inspired by Picasso" と表示 — 静かな署名、コスプレではない。タイルをもう一度タップで Mosaic に戻る。各画家には自作の複数のバリアントがある:Pollock は Color Pour、Black pourings、Totemic figuration、Handprints、Blue Poles、それに密な all-over drip。Mondrian は 8 種 — グリッド、Boogie-Woogie、Broadway、Lozenge、Tree、Pier & Ocean。ほとんどは 6 種。曲に対して選ばれるバリアントは決定的:同じ歌 + 同じアーティスト + 同じ調 + 同じバリアント → ピクセル単位で一致した絵、毎回。↻ Shuffle ON だと、Next ボタンはそのアーティストの他のバリアントを循環 — 同じ音符、新しい視覚解。**Free** は 8 人 — Picasso、Pollock、Kusama、Mondrian、Klimt、Vasarely、af Klint、Haring — 各 2 バリアント解放。各人には **Pro パートナー** が下で待つ:アクティブなタイルをもう一度タップすると、PRO バッジ付きでパートナー名がパレット下にスライドイン — タップして解放。**Pro** と **Pro AI** は全 16 人とすべてのバリアントを開く。`},
+  {id:'setup', title:`Setup — 表示するものを選ぶ`, keywords:`設定 setup ピッカー パレット アーティスト メニュー パーソナル カスタム フィルター 隠す 表示 設定 localStorage`,
+   body:`Setup(上部メニュー、Guide と Pro の間)で、キャンバスのピッカーを実際に使うパレットとアーティストだけに絞れる。2 セクション:5 つのパレット(Harmony、Spectral、φ Phi、Kontra、Custom)のどれをタブに出すか、どのアーティストまたは「Mosaic ファミリー」項目をスタイルタイルに出すかをチェック。◆ Mosaic ファミリーは 3 状態(Mosaic / Notes / $1M$)をカバーする 1 項目;タイル内部での循環はそのまま。◆ デフォルトは全部 — お気に入りがあるときだけ絞り込む。◆ Free ユーザーはピッカー内で Pro アーティストに 🔒 が付く — チェックは設定を保存するが、実際の描画はペイウォールに当たる。◆ 最低 1 パレット + 1 アーティスト — それを下回るとモーダルは閉じない。◆ 選択はこのデバイスに保存(localStorage)。Shuffle(↻)は選択プールからしか引かない。`},
+  {id:'random', title:`↻ Shuffle — 同じ組み合わせ=同じ絵;新しい組み合わせ=新バージョン`, keywords:`ランダム shuffle 決定論 シード 再振り バリアント 同じ音楽 違う絵 新鮮 サイコロ ユニーク 再生 next スタイル 循環 四つ組 アイデンティティ`,
+   body:`決定論のルール。同じ歌・同じ調・同じアーティスト・同じスタイル → ピクセル単位で一致した絵。永遠に。◆ ↻ Shuffle ON で Next ボタンが出る。◆ アーティスト選択中:Next はそのアーティストのバリアントを循環(Pollock は 6 種 — Color Pour、Black、Totem、Hands、Poles、密な原版;Mondrian 8 種;ほとんどは 6 種)。同じ歌、同じアーティスト → バリアントだけ循環。◆ アーティスト未選択(Mosaic):Next は両方取る — 新アーティスト+新バリアント。プールには Mosaic ファミリーの 3 ステーション(Mosaic、Notes、$1M$)も含まれ、完全 shuffle はそこにも落ち得る。◆ Shuffle ON で Mosaic チップをタップ → 循環をこの 3 つにロック(Mosaic → Notes → $1M$ → Mosaic)。任意のアーティストをタップでロック解除。◆ Shuffle OFF:Next は隠れる。◆ 色モードやアーティストを直接切り替えても再振りはしない。Next/Play だけが、しかも Shuffle ON のときだけ。`},
+  {id:'demo', title:`Demo — 30 秒の Für Elise`, keywords:`demo für elise ベートーヴェン テスト サンプル 試し オンボーディング`,
+   body:`DEMO をタップでビルトインの Für Elise 断片を聴く。鍵盤が音楽と一緒に光る。マシン全体、頭から尻まで、30 秒で。自分のものを持ち込む前のいい開口。`},
+  {id:'compose', title:`Compose — あなたのライブピアノ`, keywords:`compose 作曲 キーボード ピアノ ライブ 録音 打鍵 演奏 取り消し backspace enter space 和音 名前 認識 フレーム キャンバス 固定 黄金比`,
+   body:`♪ COMPOSE をタップ(または Enter)。ピアノが開く。鍵をタップで短いビート、押し続けて太いブロック — 長く押すほど広く描く。ハードキーボードもいける:A–L 白鍵、W/E/T/Y/U/O/P 黒鍵。Backspace = 取り消し。Space = Play/Pause。Enter でピアノ切替。和音を押し続けると名前がライブで見える(C maj、A min、D7…)。キャンバスは固定 φ フレーム — 足すほど行が縮み、絵は密になる。あなたの入場を書き込む。`},
+  {id:'mobile-keys', title:`モバイルピアノ — スワイプでスクロール`, keywords:`モバイル 携帯 iphone ipad タッチ スワイプ スクロール キーボード ピアノ 鍵 88 水平 パン`,
+   body:`携帯で 88 鍵フル。水平スワイプでパン。鍵をタップで演奏、ドラッグでスクロール。C4(中央 C)はだいたい真ん中。PC は 1 ページで全部入る — パンが必要なのはモバイルだけ。`},
+  {id:'mic', title:`🎙 MIC — 歌うか聴くか`, keywords:`mic マイク 歌 聴く 声 音楽 ハミング 口笛 環境 スピーカー spotify 部屋 音 描く ライブ プリセット rec 録音 切替 ドラフト`,
+   body:`🎙 MIC をタップ。キャンバスが開いて準備完了、中央に大きな REC ボタン。REC タップで開始。◆ 2 モード、独立キャンバス。🔊 Music(デフォルト、青):部屋で鳴っているもの — スピーカー、Spotify、環境音 — を聴き、和声の変化を静かに描く。長時間録音 OK。キャンバスは下に伸びる。🎤 Voice(赤):歌、ハミング、口笛。音高は C メジャーにスナップ、ピアノを通って鳴り、一音ごとに一筆。単音、固定 φ フレーム。◆ 左上のバッジで Music ⇄ Voice 切替。各モードは自分のドラフトを保持 — 切り替えると現在のは保存、もう一方は復元(または白紙で開始)。バッジの小さな ● はドラフト待ちの印。◆ Clear はアクティブモードのドラフトだけを消す。`},
+  {id:'scale-snap', title:`スケールスナップ — 調内にとどまる`, keywords:`スケール スナップ 調 メジャー マイナー 半音 フリー 上級`,
+   body:`Compose 内、⚙ でスケールスナップが出る。C 大、A 小、G 大、E 小、D 大、F 大、D 小にスナップ — 調外の音は最も近い調内の隣に引き寄せられる。「Free」(デフォルト)= フル半音。弾くものすべてを同じ調に落としたいときに便利。`},
+  {id:'moods', title:`✦ Mood — 気持ちに名前をつける`, keywords:`mood 気持ち ai 作曲 生成 感情 入力 どんな言語でも`,
+   body:`✦ How do you feel? をタップ。モーダルが開く。どんな気持ちでも書く — あなたの言葉で、どんな言語でも。激怒、saudade、午前3時のドライブ、ずぶ濡れ、夏のときめき。AI がピアノ曲を書く。キャンバスは再生と共に和音ごとに埋まる。その後:MORPH で別の気持ちへ、または VARY で新バージョン。何かを鳴らす最速の方法。 ◆ Free は 3 回の試用 AI 呼び出し(Mood-from-Image と AI Compose と共有);Pro AI = 無制限。`},
+  {id:'music', title:`♪ Music — MIDI、オーディオ、楽譜`, keywords:`音楽 midi オーディオ 楽譜 mp3 wav m4a ogg aac musicxml mxl mid アップロード インポート ファイル 転写 musescore finale dorico`,
+   body:`1 つのボタンですべての音楽ファイル。◆ MIDI(.mid / .midi)— 複数トラックを和音に凝縮し、テンポに合わせて描く。◆ Audio(.mp3 .wav .m4a .ogg .aac)— デコード、音高検出、描画;クリーンな単音や疎な素材で最も効果的(ソロピアノ、ボーカル、シンプルなギター)、密なミックスは難しい。◆ Score(.musicxml .xml .mxl、MuseScore、Finale、Dorico から)— 音高、長さ、強さ、和音が正確に渡る;最も精密な入力。Paintiano は自動で種類を識別。ファイル未選択で Music を開くとサンプルが試せる。`},
+{id:'image', title:`◫ Image — 絵を入れて、聴く`, keywords:`画像 絵 写真 転写 描く 色 color bw custom パレット ゲルニカ シャガール`,
+   body:`どんな画像でもアップロード。Paintiano はそれを楽譜として読む — 左から右、上から下。曲の長さは画像のエネルギーに合わせて(およそ 1½–2¾ 分)。◆ app は色の量で読み方を選ぶ。カラフル → Harmony か Spectral(色相=音高、明度=オクターブ、彩度=強さ)。モノクロ寄り(ゲルニカ、墨絵、セピア)→ B/W(明度だけが音高を駆動)。アクティブなチップをタップで色をプレビュー。◆ Custom はあなたのもの:画像をあなたのパレットでフィルタ — あなたの 12 色に近い色だけが音を出し、残りは沈黙する。デフォルトは Harmony の反対側、必ず何かが鳴ることを保証。Custom(✎)をもう一度タップで編集。 ◆ 2 つの再生方法:Scan は画像を楽譜として左から右に読む(スキャン方向を選べる)。AI Compose(Pro)は画像から完全に新しい曲を書く — そのパレット、エネルギー、ムードから — 再生中、画像は画面に残る。`},
+  {id:'morph', title:`✦ Morph — 二つの気持ちを混ぜる`, keywords:`morph クロスフェード ブレンド 移行 mood の間`,
+   body:`Mood を選んだ後に使える。✦ MORPH は一つの気持ちを別の気持ちに溶かす。前半は A、後半は B、40–60% 領域でつよさが混じる。プログレスバーに「A → B」と表示。二つの感情が一曲の中でお互いに溶け合う。◆ AI クレジット 1(Mood と共有プール);Pro AI = 無制限。`},
+  {id:'vary', title:`✦ Vary — 同じ絵、新しい調`, keywords:`vary バリエーション 調 キー 転調 音高 移調 新しい色 同じ構造 保持`,
+   body:`mood ベースの曲(テキスト mood、mood-from-image、AI Compose)で使える。◆ VARY は調を切り替える:新しい調(しばしば違うモード — メジャー ↔ マイナー)。曲のリズムと形は保たれるが、新しい調が新しい和声進行を生み、新しい色がキャンバスに流れる。選んだアーティスト、アーティストのスタイル、構造シードはロック状態 — 色だけが新しい調と共に変わる。タップし続けて調を切り替え。毎回キャンバスの縁が金色に光る。`},
+  {id:'playback', title:`Play / Pause / Seek`, keywords:`再生 一時停止 停止 続き シーク ドラッグ プログレスバー 位置 ジャンプ スクラブ`,
+   body:`Play で開始/一時停止(Space も可)。プログレスバーをタップでジャンプ。ドラッグでライブスクラブ。再生中、残り時間が出る。`},
+  {id:'loop', title:`⟳ Loop — 走らせ続ける`, keywords:`ループ リピート 循環 mood 連続`,
+   body:`mood 再生中に使える。⟳ Loop は曲をずっと繰り返す。もう一度タップで OFF。ON のときボタンは金色。部屋を音楽で満たしたいときに。`},
+  {id:'speed', title:`再生速度 — 0.25× から 4×`, keywords:`速度 遅 速 テンポ 倍率 ボタン 1x 半分 増 減`,
+   body:`現在の倍率を表示するチップ(デフォルト 1×)。タップで 1× に戻る。長押しで循環 — 0.25× → 1× を 0.25 ステップで、その後 2×、3×、4×、循環。離したところの倍率を保持。≠ 1× のときチップはハイライト。変化は即時。`},
+  {id:'mute', title:`🔊 / 🔇 ミュート — 静かに描く`, keywords:`ミュート 無音 オーディオ 音 音量 OFF ON スピーカー 静か`,
+   body:`Play の隣のスピーカーアイコンですべてのオーディオを切替。タップでミュート、もう一度で解除。絵は普通にレンダリング — 音だけが抑えられる。セッション間で記憶。静かな場所でビジュアルだけ欲しいときに。`},
+  {id:'print', title:`↓ Save — 絵を持ち帰る`, keywords:`save 保存 印刷 export png 画像 絵 サイズ web social story 9 16 instagram tiktok print a1 dpi 解像度 ポスター 壁 飾 額装 シェア ギャラリー`,
+   body:`◆ これはダイヤモンド。あなたの絵 → 高解像度 PNG、ワンタップで。◆ サイズを選ぶ:Story(9:16)は IG/TikTok 用、Web/Social(~4×、速い、Feed 用)、または Print A1 · 300 DPI(~20×、本当に印刷可、ギャラリー級)。◆ Image モードでは、Story は元の画像(モザイクでなく)をオーディオと一緒に保存;「元の画像も付ける」にチェックすると音声ファイルにも添付。◆ プレビューが開く。長押しで写真 / ファイルへ保存。◆ 額装。掛ける。シェア。お気に入りの曲からポスター。同じ歌は必ず同じ絵をくれる — あなたの歌が今、署名を持つ。◆ Free のエクスポートには小さな Paintiano ウォーターマーク。Pro と Pro AI でウォーターマーク除去、ギャラリー印刷用 Print A1 · 300 DPI も解放。`},
+  {id:'record', title:`⏺ Record — 音楽を持ち帰る`, keywords:`record 録音 rec オーディオ キャプチャ 保存 mp4 m4a 録音 シェア 名前 リネーム ファイル名`,
+   body:`◆ もう一つのダイヤモンド。Image モードで、⏺ REC は絵が再生される間オーディオを取り込む — 直接シェア可能なファイルへ。曲が終われば自動停止。◆ シェア行が現れ、ファイル名は編集可能。Share タップでシステムダイアログ(iPhone:Share → Save to Files)。◆ あなたの人生の任意の絵を、残せるサウンドトラックに変える。`},
+  {id:'score-export', title:`♫ Score — 楽譜を掴む`, keywords:`楽譜 export musicxml xml 音符 記譜 譜面 musescore sibelius finale 保存 シェア リネーム ファイル名`,
+   body:`Image モードで、Rec の隣。♫ Score は絵の音符を MusicXML ファイルにする。MuseScore、Sibelius、Finale、あるいは記譜アプリで開ける — 本物の楽譜、画像 1 枚から。印刷。演奏。音楽家の友達に渡す。`},
+  {id:'clear', title:`Clear — 賢いリセット`, keywords:`クリア リセット やり直し 削除 確認 用意 ダブルタップ 戻る setup`,
+   body:`モードごとに違う Clear。◆ Compose:キャンバスを拭く、compose に留まる。◆ MIC:アクティブモードのドラフトだけを捨てる(Voice か Music);もう一方は保持。大きな REC が戻る。◆ Image:描画痕と画像を拭く、しかし画像ビューに留まる;フル Color+Style パネルへは「← back」だけで戻る。◆ Image mood:すべて拭くがキャンバスに留まり、「+ new image」/「+ new mood」が出る。◆ MIDI / Audio / Score / テキスト mood:完全リセット。`},
+  {id:'micvol', title:`息するキャンバス(マイク音量)`, keywords:`mic 音量 息 脈動 キャンバス 部屋 音 環境`,
+   body:`MIC モード(Voice または Music)では、キャンバスが部屋の音量と共に静かに脈動する — 大きな音で少し広がり、静かなら休む。MIC と一緒に自動で開始/停止。`},
+  {id:'troubleshoot', title:`トラブルシュート`, keywords:`トラブル 問題 エラー 壊 修 bug help 遅い`,
+   body:`ステータスに「Loading piano…」と出たら数秒待つ(~5 MB のサンプルダウンロード)。サンプルが失敗するとシンセピアノにフォールバック — app は動く。マイクとシェアは Claude のサンドボックスでは無効 — 両方とも独立ページで正常動作。MIC Music は iOS で同一デバイスのオーディオをキャプチャできない — 外部スピーカーか別のデバイスを使う。`},
+  ],
 };
 function getGuide(lang){ return GUIDE_I18N[lang] || GUIDE_I18N.EN; }
 
@@ -12340,6 +12588,20 @@ const GUIDE_CARDS_I18N = {
     {id:'image', glyph:'📷', cat:'music', title:`照片 → 音樂 → 畫`, body:`丟張圖。它的顏色和能量變成鋼琴曲。曲子再以你選的藝術家風格作畫。Free 做 mosaic,Pro 加 AI Compose。`},
     {id:'save', glyph:'💾', cat:'save', title:`兩個都帶走`, body:`儲存 → 畫的 PNG + 歌的音訊。Story 模式裁切給 Instagram / TikTok。Pro 去浮水印,升到 300 DPI。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖全部`, body:`Pro €9.99 → 全部 16 位藝術家、可編輯 Custom 調色盤、無浮水印、終身。Pro AI €19.99 加無限 AI 心情、image compose、氛圍讀取。一次性,無訂閱。`}
+  ],
+  ja: [
+    {id:'overview', glyph:'✦', cat:'start', title:`音楽 ⇄ 絵画`, body:`同じ色環、双方向。歌う、打つ、写真を入れる — キャンバスが音楽と共に埋まる。絵を保存、曲を録音。両方持ち帰る。`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`見るものを選ぶ`, body:`使わないものは隠す。5 つのパレット、8 ペアのアーティスト、Mosaic ファミリー。Setup → 上部メニュー。いつでも再オープン。`, cta:`Setup を開く`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 つのパレット、一つの曲`, body:`Harmony、Spectral、φ Phi、Kontra、Custom。タブをタップで切替 — 同じ音符、瞬時に描き直し。それぞれが違う色文法で同じ音楽を描く。`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = スクリャービンの地図`, body:`スクリャービンは音に色を見た。彼の 1910 年の表があなたの Custom デフォルト — C 赤、G オレンジピンク、D 黄、ぐるりと一周。Pro でマスごとに編集可。`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra:反転したハーモニー`, body:`不協和音がキャンバスでぶつかる。純粋な和音は咲き開く。画家の読み方 — Harmony の裏面、目にはより鋭い。全員無料。`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 人のアーティスト、8 ペア`, body:`Mosaic がデフォルト。アーティストタイルをタップで、同じ音符が彼の手で現れる。ピカソ、ポロック、草間、カンディンスキー、クリムト、ライリー、ヘリング — 計 16 人。`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic ファミリー`, body:`3 モード、1 タイル。タップで循環:φ グリッド → 音名ラベル → $1M$ カオス。アーティストなしの素朴な読み方。`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`サイコロ ON = サプライズ`, body:`同じ歌 = 同じ絵、いつも。サイコロを振れば、Next ごとに違うアーティストか Mosaic ステーションが描く。サイコロ ON で Mosaic をタップすると循環を 3 ファミリーステーションにロック。`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`歌え、描け`, body:`2 つの MIC モード。🔊 Music は部屋を聴く(スピーカー、環境音)。🎤 Voice はハミングを C メジャーにスナップ。両方ともライブで描く。Original ⇄ Piano は後で切替可。`},
+    {id:'image', glyph:'📷', cat:'music', title:`写真 → 音楽 → 絵`, body:`画像を入れる。その色とエネルギーがピアノ曲になる。曲はあなたの選んだアーティストスタイルで描かれる。Free は mosaic、Pro は AI Compose を追加。`},
+    {id:'save', glyph:'💾', cat:'save', title:`両方持ち帰る`, body:`Save → 絵の PNG + 歌のオーディオ。Story モードは Instagram / TikTok 用にトリミング。Pro でウォーターマーク除去、300 DPI に。`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro はすべてを解放`, body:`Pro €9.99 → 16 人全員、Custom パレット編集可、ウォーターマークなし、永続。Pro AI €19.99 で無制限 AI mood、image compose、Atmosphere 読み取り追加。一回払い、サブスクなし。`}
   ],
 };
 function getGuideCards(lang){ return GUIDE_CARDS_I18N[lang] || GUIDE_CARDS_I18N.EN; }
@@ -12955,6 +13217,18 @@ const DEMO_REEL_I18N = {
     mfiPainting:  '畫作。',
     variations:   '無盡變奏。',
     print:        '列印它。',
+    outro:        'Paintiano',
+  },
+  ja: {
+    becomes:      '音楽。絵画。',
+    artists:      '多くの画家。',
+    aiType:       '気持ちを書く。',
+    aiResult:     '自ら描く。',
+    mfiPicture:   '画像。',
+    mfiMusic:     '音楽。',
+    mfiPainting:  '絵画。',
+    variations:   '無限の変奏。',
+    print:        '印刷する。',
     outro:        'Paintiano',
   },
 };
@@ -14614,7 +14888,7 @@ export default function Paintiano() {
   const saltHistoryRef = useRef([0]);
   const saltIdxRef = useRef(0);
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
-  const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
+  const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT',ja:'ja'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
   // isDesktop — tightens vertical rhythm on notebook viewports so the phone-shape
   // column fits 100vh without a scrollbar. Mobile keeps the original spacing.
   const [isDesktop, setIsDesktop] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px)').matches;}catch(_){return false;}});
@@ -15259,7 +15533,7 @@ export default function Paintiano() {
   const [readScale, setReadScale] = useState(1);
   // Jazyk-závislý zoom: čínske znaky majú vyššiu optickú hustotu detailov,
   // preto pre zh/zhTW pridávame 15% k readScale aby boli rovnako čitateľné ako latinka.
-  const effScale = readScale * ((lang === 'zh' || lang === 'zhTW') ? 1.15 : 1);
+  const effScale = readScale * ((lang === 'zh' || lang === 'zhTW' || lang === 'ja') ? 1.15 : 1);
   // Unified active/idle chip styling for the Color·Style strip (color modes,
   // scan direction, artist styles). Premium look: the ACTIVE chip is no longer a
   // heavy solid-gold fill with dark text — instead a soft gold-tinted fill, a
@@ -17969,7 +18243,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         }
       }
       if(!parsed){
-        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
+        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
         const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
@@ -18052,7 +18326,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _mfiCustomActive = () => moodFromImg && originalImgUrl && originalImgUrl!==SAMPLE_IMAGE_MFI_B64;
   const _mfiTitleBusyRef = useRef(false);
   const _mfiTranslateTitle = useCallback(async (text, targetAppLang)=>{
-    const _ln=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[targetAppLang])||'English';
+    const _ln=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[targetAppLang])||'English';
     const host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
     const isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(host);
     const eps=isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -18411,7 +18685,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
-      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
       const prompt=`A painting was scanned into raw musical material. Compose a beautiful, free-standing solo piano piece INSPIRED BY that material — do not replay it literally.
 Image material:
 - Pitch palette (most present pitch classes): ${mat.palette}
@@ -18504,7 +18778,7 @@ Composition rules:
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
-      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
       const prompt=`Compose a short expressive solo piano piece inspired by this mood phrase: "${title.slice(0,80)}".
 The phrase may be written in ANY language and may be colloquial, slang or idiomatic. FIRST translate it and work out the genuine emotion it expresses (e.g. anger, irritation, joy, calm, sadness, longing) — do NOT read it word-by-word and do NOT assume it is English. THEN compose music that fits that real emotion.
 Set the "title" field to a short, natural translation of the phrase into ${_langName} that captures its meaning (Title Case, max 5 words).
@@ -18802,7 +19076,7 @@ Composition rules:
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
       const b64=dataUrl.split(',')[1];
-      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
+      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
       const prompt='Look at this image and judge the EMOTION / atmosphere of the scene. Output ONLY a single JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."} where valence is -1 (sad/dark) to 1 (happy/bright), energy is 0 (calm/still) to 1 (intense/dramatic), and title is a short mood phrase in '+_langName+' (max 4 words, Title Case).';
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
@@ -20739,7 +21013,7 @@ Composition rules:
   // mid-modal so switching language in the app live-updates the open doc.
   const legalHtmlForLang = useMemo(()=>{
     if(!legalHtml) return '';
-    const map = {EN:'en', DE:'de', FR:'fr', ES:'es', SK:'sk', PT:'pt', zh:'zh', zhTW:'zhTW'};
+    const map = {EN:'en', DE:'de', FR:'fr', ES:'es', SK:'sk', PT:'pt', zh:'zh', zhTW:'zhTW', ja:'ja'};
     const code = map[lang] || 'en';
     const target = 'class="wrap" data-lang="'+code+'"';
     let h = legalHtml;
@@ -21052,6 +21326,7 @@ Composition rules:
               SK:{code:'SK',name:'Slovenčina'},
               zh:{code:'ZH',name:'中文'},
               zhTW:{code:'ZH-TW',name:'繁體中文'},
+              ja:{code:'JA',name:'日本語'},
             };
             const meta = LANG_META[lang] || {code:lang,name:lang};
             const pill = (code, active=false) => ({

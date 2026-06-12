@@ -151,6 +151,18 @@ const DEMO_REEL_I18N = {
     print:        '列印它。',
     outro:        'Paintiano',
   },
+  ja: {
+    becomes:      '音楽。絵画。',
+    artists:      '多くの画家。',
+    aiType:       '気持ちを書く。',
+    aiResult:     '自ら描く。',
+    mfiPicture:   '画像。',
+    mfiMusic:     '音楽。',
+    mfiPainting:  '絵画。',
+    variations:   '無限の変奏。',
+    print:        '印刷する。',
+    outro:        'Paintiano',
+  },
 };
 
 // Resolve overlay copy for a language with EN fallback.
