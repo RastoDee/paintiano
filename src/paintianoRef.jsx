@@ -9536,7 +9536,13 @@ const I18N = {
     proWelcomeTitle:'Welcome to Pro',
     proWelcomeBody:'All features unlocked on this device.',
     proManageActive:'Pro',    partnerIsPro:'{a} · {b} is Pro',
-      tapReturnShuffle:'tap to return to shuffle',
+      tapReturnShuffle:'tap to return to shuffle',    noNotesGeneric:'No notes.',
+    transcribingAudio:'transcribing audio',
+    transcribingAudioLong:'transcribing audio · this may take a minute',
+    transcribingSample:'transcribing sample',
+    transcribingSampleLong:'transcribing sample · this may take a minute',
+    newBy:{midi:'new',audio:'new',score:'new',image:'new',mood:'new'},
+  
   
   },
   DE:{
@@ -9700,7 +9706,13 @@ const I18N = {
     proWelcomeTitle:'Willkommen bei Pro',
     proWelcomeBody:'Alle Funktionen auf diesem Gerät freigeschaltet.',
     proManageActive:'Pro',    partnerIsPro:'{a} · {b} ist Pro',
-      tapReturnShuffle:'tippe, um zum Shuffle zurückzukehren',
+      tapReturnShuffle:'tippe, um zum Shuffle zurückzukehren',    noNotesGeneric:'Keine Noten.',
+    transcribingAudio:'transkribiere Audio',
+    transcribingAudioLong:'transkribiere Audio · das kann eine Minute dauern',
+    transcribingSample:'transkribiere Beispiel',
+    transcribingSampleLong:'transkribiere Beispiel · das kann eine Minute dauern',
+    newBy:{midi:'neu',audio:'neu',score:'neu',image:'neues',mood:'neue'},
+  
   
   },
   FR:{
@@ -9864,7 +9876,13 @@ const I18N = {
     proWelcomeTitle:'Bienvenue dans Pro',
     proWelcomeBody:'Toutes les fonctions débloquées sur cet appareil.',
     proManageActive:'Pro',    partnerIsPro:'{a} · {b} est Pro',
-      tapReturnShuffle:'touche pour revenir au shuffle',
+      tapReturnShuffle:'touche pour revenir au shuffle',    noNotesGeneric:'Aucune note.',
+    transcribingAudio:'transcription audio',
+    transcribingAudioLong:'transcription audio · cela peut prendre une minute',
+    transcribingSample:'transcription de l\'exemple',
+    transcribingSampleLong:'transcription de l\'exemple · cela peut prendre une minute',
+    newBy:{midi:'nouveau',audio:'nouveau',score:'nouvelle',image:'nouvelle',mood:'nouvelle'},
+  
   
   },
   ES:{
@@ -10028,7 +10046,13 @@ const I18N = {
     proWelcomeTitle:'Bienvenido a Pro',
     proWelcomeBody:'Todas las funciones desbloqueadas en este dispositivo.',
     proManageActive:'Pro',    partnerIsPro:'{a} · {b} es Pro',
-      tapReturnShuffle:'toca para volver al shuffle',
+      tapReturnShuffle:'toca para volver al shuffle',    noNotesGeneric:'Sin notas.',
+    transcribingAudio:'transcribiendo audio',
+    transcribingAudioLong:'transcribiendo audio · puede tardar un minuto',
+    transcribingSample:'transcribiendo muestra',
+    transcribingSampleLong:'transcribiendo muestra · puede tardar un minuto',
+    newBy:{midi:'nuevo',audio:'nuevo',score:'nueva',image:'nueva',mood:'nuevo'},
+  
   
   },
   SK:{
@@ -10192,7 +10216,13 @@ const I18N = {
     proWelcomeTitle:'Vitaj v Pro',
     proWelcomeBody:'Všetky funkcie odomknuté na tomto zariadení.',
     proManageActive:'Pro',    partnerIsPro:'{a} · {b} je Pro',
-      tapReturnShuffle:'klikni pre návrat na shuffle',
+      tapReturnShuffle:'klikni pre návrat na shuffle',    noNotesGeneric:'Žiadne noty.',
+    transcribingAudio:'prepisujem audio',
+    transcribingAudioLong:'prepisujem audio · môže to chvíľu trvať',
+    transcribingSample:'prepisujem ukážku',
+    transcribingSampleLong:'prepisujem ukážku · môže to chvíľu trvať',
+    newBy:{midi:'nový',audio:'nové',score:'nová',image:'nová',mood:'nová'},
+  
   
   },
   zh:{
@@ -10362,7 +10392,13 @@ const I18N = {
     proWelcomeTitle:'欢迎使用 Pro',
     proWelcomeBody:'此设备上所有功能已解锁。',
     proManageActive:'Pro',    partnerIsPro:'{a} · {b} 是 Pro',
-      tapReturnShuffle:'点击返回随机',
+      tapReturnShuffle:'点击返回随机',    noNotesGeneric:'没有音符。',
+    transcribingAudio:'正在转录音频',
+    transcribingAudioLong:'正在转录音频 · 可能需要一分钟',
+    transcribingSample:'正在转录示例',
+    transcribingSampleLong:'正在转录示例 · 可能需要一分钟',
+    newBy:{midi:'新',audio:'新',score:'新',image:'新',mood:'新'},
+  
   
   },
   zhTW:{
@@ -10526,7 +10562,13 @@ const I18N = {
     today:'今天',
     trialBanner1:'僅剩 1 次 AI 試用 · 升級 Pro AI 享無限',
     trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro AI 享無限',    partnerIsPro:'{a} · {b} 是 Pro',
-      tapReturnShuffle:'點擊返回隨機',
+      tapReturnShuffle:'點擊返回隨機',    noNotesGeneric:'沒有音符。',
+    transcribingAudio:'正在轉錄音訊',
+    transcribingAudioLong:'正在轉錄音訊 · 可能需要一分鐘',
+    transcribingSample:'正在轉錄範例',
+    transcribingSampleLong:'正在轉錄範例 · 可能需要一分鐘',
+    newBy:{midi:'新',audio:'新',score:'新',image:'新',mood:'新'},
+  
   
   },
   PT:{
@@ -10690,7 +10732,13 @@ const I18N = {
     proWelcomeTitle:'Bem-vindo ao Pro',
     proWelcomeBody:'Todos os recursos desbloqueados neste dispositivo.',
     proManageActive:'Pro',    partnerIsPro:'{a} · {b} é Pro',
-      tapReturnShuffle:'toca para voltar ao shuffle',
+      tapReturnShuffle:'toca para voltar ao shuffle',    noNotesGeneric:'Sem notas.',
+    transcribingAudio:'a transcrever áudio',
+    transcribingAudioLong:'a transcrever áudio · pode demorar um minuto',
+    transcribingSample:'a transcrever amostra',
+    transcribingSampleLong:'a transcrever amostra · pode demorar um minuto',
+    newBy:{midi:'novo',audio:'novo',score:'nova',image:'nova',mood:'novo'},
+  
   
   },
   ja:{
@@ -10852,7 +10900,13 @@ const I18N = {
     proInvalidKey:'このキーは有効ではありません。正しいキーをメールで確認してください。',
     proWelcomeTitle:'Pro へようこそ',
     proWelcomeBody:'このデバイスのすべての機能が解放されました。',
-    proManageActive:'Pro',    partnerIsPro:'{a} · {b} は Pro 限定',    tapReturnShuffle:'タップでシャッフルに戻る',
+    proManageActive:'Pro',    partnerIsPro:'{a} · {b} は Pro 限定',    tapReturnShuffle:'タップでシャッフルに戻る',    noNotesGeneric:'音符なし。',
+    transcribingAudio:'オーディオを書き起こし中',
+    transcribingAudioLong:'オーディオを書き起こし中 · 1 分ほどかかります',
+    transcribingSample:'サンプルを書き起こし中',
+    transcribingSampleLong:'サンプルを書き起こし中 · 1 分ほどかかります',
+    newBy:{midi:'新規',audio:'新規',score:'新規',image:'新規',mood:'新規'},
+  
   
   
   },
