@@ -9370,7 +9370,7 @@ const LEGEND=[{n:'C',pc:0},{n:'G',pc:7},{n:'D',pc:2},{n:'A',pc:9},{n:'E',pc:4},{
 // ─────────────────────────────────────────────────────────────────────────────
 // §4  I18N — UI STRINGS, CONCEPT TEXT, GUIDE TEXT
 // ─────────────────────────────────────────────────────────────────────────────
-const LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW'];
+const LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW','ja'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',

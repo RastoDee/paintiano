@@ -747,6 +747,7 @@ export default function Paintiano() {
     PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Bauhaus',miro:'Constelação',mondrian:'Grade',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ'},
     zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'包豪斯',miro:'星座',mondrian:'网格',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画'},
     zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'包浩斯',miro:'星座',mondrian:'網格',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫'},
+    ja:{picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'バウハウス',miro:'星座',mondrian:'グリッド',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
   const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
@@ -7977,10 +7978,10 @@ Composition rules:
               const _otherKey = (faceKey===a) ? b : a;
               const nextHint = pairLocked
                 ? (randomMode
-                    ? (isOn ? 'tap to return to shuffle' : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`)
+                    ? (isOn ? ts('tapReturnShuffle','tap to return to shuffle') : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b])))
                     : (isOn
                         ? (expandedPair===pairKey ? 'tap to hide info' : 'tap to see partner')
-                        : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`))
+                        : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b]))))
                 : (!isOn
                     ? ''
                     : (style===faceKey
