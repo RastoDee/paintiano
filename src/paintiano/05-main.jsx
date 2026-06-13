@@ -633,7 +633,7 @@ export default function Paintiano() {
   // covers all three states (Mosaic / Notes / oneM); the chip still cycles
   // internally on tap, but the family is shown/hidden as a unit.
   const ALL_PALETTE_KEYS = ['harmony','spectral','phi','kontra','custom'];
-  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','comic'];
+  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','comic','monet','hokusai'];
   const [setupPalettes, setSetupPalettes] = useState(() => {
     try {
       const raw = localStorage.getItem('paintiano_setup_palettes');
@@ -651,7 +651,16 @@ export default function Paintiano() {
       const arr = JSON.parse(raw);
       if(!Array.isArray(arr)) return ALL_ARTIST_KEYS.slice();
       const valid = arr.filter(k => ALL_ARTIST_KEYS.includes(k));
-      return valid.length ? valid : ALL_ARTIST_KEYS.slice();
+      if(!valid.length) return ALL_ARTIST_KEYS.slice();
+      // Auto-add any newly introduced artists (e.g. when a new pair like
+      // monet/hokusai ships) so existing users see them as enabled by default.
+      // Without this, returning users would have the new chips hidden until
+      // they manually re-visit Setup.
+      const NEW_ARTISTS = ['monet','hokusai'];
+      for(const k of NEW_ARTISTS){
+        if(ALL_ARTIST_KEYS.includes(k) && !valid.includes(k)) valid.push(k);
+      }
+      return valid;
     } catch(_) { return ALL_ARTIST_KEYS.slice(); }
   });
   useEffect(() => {
@@ -1763,7 +1772,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='oneM'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='monet'&&style!=='hokusai'&&style!=='oneM'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -1787,7 +1796,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic' && style!=='monet' && style!=='hokusai' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
@@ -7886,7 +7895,7 @@ Composition rules:
               // Buttons show the ARTIST that inspired the style (Picasso, Klimt…)
               // rather than the technique name. Long names are shortened to a
               // single recognizable word so they fit the narrow 5-up grid cell.
-              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
               // For Free, label always shows the unlocked 'a' artist.
               const _displayKey = forcedSide || (pairLocked ? a : (activeKey || shufKey || faceKey));
               const _artFull = STYLE_INSPIRED[_displayKey];
@@ -8022,7 +8031,7 @@ Composition rules:
               affordance, so we honour that and route the tap to the paywall. */}
           {proStatus==='free' && expandedPair && (()=>{
             const [a,b] = expandedPair.split('|');
-            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
             const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
             return (
               <div
@@ -9574,7 +9583,7 @@ Composition rules:
                 const inf=t('tierUnlimited')||'∞';
                 const ronly=t('tierReadOnly')||'preview only';
                 const rows=[
-                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16',  null],
+                  [t('tierRowArtists')||'Artists',         '9',     '18',       '18',  null],
                   [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord, null],
                   [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
                   [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],

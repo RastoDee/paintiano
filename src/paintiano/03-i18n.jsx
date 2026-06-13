@@ -772,7 +772,7 @@ const I18N = {
     moodPickFromList:'Vyber zo zoznamu — vlastné moody sú Pro AI',
     moodTypeToSearch:'Napíš a vyhľadaj z 95 moodov…',
     tierOverviewTitle:'Free · Pro · Pro AI',
-    tierIntro:'AI 功能（上方 ✦ 项目 + Image 中的 AI Compose 与氛围）在 Free 中使用额度。',
+    tierIntro:'AI funkcie (✦ položky vyššie + AI Compose a Atmosféra v Image) používajú kredity na Free.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',

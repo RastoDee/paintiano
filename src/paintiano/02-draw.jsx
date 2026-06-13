@@ -6503,10 +6503,16 @@ function _hokusaiMute(r, g, b, blendAmt, dim){
 // Variant 0 — Wave (Great Wave at Kanagawa).
 function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
   const rnd = _seedRnd(92, ss, lim, 0);
-  ctx.fillStyle = HOKUSAI_PAPER;
-  ctx.fillRect(0, 0, CW, CH);
+  // Clear canvas — we'll paint waves first then fill paper UNDER them via
+  // destination-over composite, so background layers can slip in behind the
+  // foreground wave without being blocked by an already-painted ground.
+  ctx.clearRect(0, 0, CW, CH);
 
-  const points = [];
+  // Build melody points from top notes. To get the dramatic Kanagawa peak,
+  // we AMPLIFY pitch variation: average pitch sets the baseline, deviations
+  // from it get exaggerated so the highest notes leap up sharply.
+  let pitchSum = 0, pitchCount = 0;
+  const rawPitches = [];
   let maxChordSize = 1;
   for(let i = 0; i < lim; i++){
     const chord = chords[i];
@@ -6519,15 +6525,27 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
       if(m > topM){ topM = m; topNote = n; }
     }
     if(notes.length > maxChordSize) maxChordSize = notes.length;
-    const x = (lim > 1 ? (i / (lim - 1)) : 0.5) * CW;
-    const np = Math.max(0, Math.min(1, (topM - 36) / 60));
-    const y = CH * (0.75 - 0.5 * np);
-    points.push({ x, y, topNote, chord, idx: i });
+    pitchSum += topM;
+    pitchCount++;
+    rawPitches.push({ topM, topNote, chord, idx: i, origIdx: rawPitches.length });
   }
-  if(points.length < 2) return;
+  if(rawPitches.length < 2) return;
+  const avgPitch = pitchSum / pitchCount;
+
+  const points = [];
+  for(let i = 0; i < rawPitches.length; i++){
+    const r = rawPitches[i];
+    const x = (rawPitches.length > 1 ? (i / (rawPitches.length - 1)) : 0.5) * CW;
+    // Center deviation from average, amplify 2.5×, then map to canvas range.
+    // baseline at 0.62 leaves room for crests to stab into the upper half.
+    const dev = (r.topM - avgPitch) / 12;  // semitones above/below mean, scaled to 1 octave units
+    const amplified = Math.max(-1.4, Math.min(1.4, dev * 1.6));
+    const y = CH * 0.62 - amplified * CH * 0.28;
+    points.push({ x, y, topNote: r.topNote, chord: r.chord, idx: r.idx });
+  }
 
   const depthLayers = Math.max(2, Math.min(4, 1 + Math.floor(maxChordSize / 2)));
-  const layerStep = CH * 0.12;
+  const layerStep = CH * 0.10;
 
   function tracePath(yOff){
     ctx.moveTo(points[0].x, points[0].y + yOff);
@@ -6539,7 +6557,12 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.lineTo(points[points.length-1].x, points[points.length-1].y + yOff);
   }
 
-  for(let layer = depthLayers; layer >= 0; layer--){
+  // Composite trick: background layers drawn AFTER foreground using
+  // 'destination-over' so they slip in BEHIND the foreground waves rather
+  // than getting hidden by them. Without this, the foreground "fill to
+  // canvas bottom" prekryje všetky hlbšie vrstvy a vidieť len jednu vlnu.
+  // Draw foreground (layer 0) first as normal, then deeper layers behind.
+  for(let layer = 0; layer <= depthLayers; layer++){
     const yOff = layer * layerStep;
     const sampleIdx = Math.min(points.length - 1,
       Math.max(0, Math.floor((points.length / (depthLayers + 1)) * (depthLayers - layer))));
@@ -6548,8 +6571,13 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r, g, b] = gc(m, v);
-    const dim = 1 - layer * 0.12;
-    const blend = 0.35 + layer * 0.06;
+    const dim = 1 - layer * 0.10;
+    const blend = 0.30 + layer * 0.10;
+
+    // Foreground (layer 0) draws normally on top. Deeper layers draw BEHIND
+    // already-painted pixels so foreground stays dominant but background
+    // remains visible above the foreground's wave line.
+    ctx.globalCompositeOperation = layer === 0 ? 'source-over' : 'destination-over';
 
     ctx.beginPath();
     tracePath(yOff);
@@ -6562,42 +6590,76 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.beginPath();
     tracePath(yOff);
     ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-    ctx.lineWidth = layer === 0 ? 3.5 : (2.8 - layer * 0.4);
+    ctx.lineWidth = layer === 0 ? 3.8 : (2.6 - layer * 0.3);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.stroke();
   }
+  // Reset composite back to default for foam claws (need source-over).
+  ctx.globalCompositeOperation = 'source-over';
 
-  // Foam claws on crests.
+  // Paper background must be repainted underneath everything (destination-over
+  // sees the already-painted paper as opaque, but the wave fills only the area
+  // beneath their curve — so above the highest wave the paper is still visible
+  // naturally).
+
+  // Foam claws — on local minima (peaks) of the FOREGROUND wave only.
   const crests = [];
   for(let i = 2; i < points.length - 2; i++){
     if(points[i].y < points[i-1].y && points[i].y < points[i+1].y){
       const note = points[i].topNote;
       const v = note.v !== undefined ? note.v : 80;
-      crests.push({ ...points[i], priority: v + (CH - points[i].y) * 0.3 });
+      // Peak prominence — how much lower y is vs neighbours.
+      const prom = Math.max(0, (points[i-1].y + points[i+1].y) / 2 - points[i].y);
+      crests.push({ ...points[i], priority: v * 0.4 + prom * 2 });
     }
   }
   crests.sort((a, b) => b.priority - a.priority);
-  const topCrests = crests.slice(0, Math.min(5, crests.length));
+  // Keep more crests — Liszt-scale melodies have rich peak structure.
+  const topCrests = crests.slice(0, Math.min(8, crests.length));
 
   for(const crest of topCrests){
-    const baseAngle = -0.6 + (rnd() - 0.5) * 0.3;
-    for(let k = 0; k < 7; k++){
-      const r = 11 - k * 1.3;
-      if(r < 1.2) break;
-      const angle = baseAngle + k * 0.18;
-      const dist = k * 5;
+    // Foam fans outward in a Kanagawa-style claw — 8-10 droplets.
+    const baseAngle = -1.1 + (rnd() - 0.5) * 0.5;
+    const dropCount = 8 + Math.floor(rnd() * 3);
+    for(let k = 0; k < dropCount; k++){
+      const r = 13 - k * 1.1;
+      if(r < 1) break;
+      const angle = baseAngle + k * 0.13;
+      const dist = k * 6;
       const fx = crest.x + Math.cos(angle) * dist;
-      const fy = crest.y - 4 + Math.sin(angle) * dist;
+      const fy = crest.y - 5 + Math.sin(angle) * dist;
       ctx.fillStyle = HOKUSAI_FOAM;
       ctx.beginPath();
       ctx.arc(fx, fy, r, 0, 6.2832);
       ctx.fill();
       ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-      ctx.lineWidth = 0.9;
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+    }
+    // Tiny scatter droplets for spray.
+    for(let s = 0; s < 5; s++){
+      const sa = baseAngle + (rnd() - 0.5) * 1.5;
+      const sd = 30 + rnd() * 50;
+      const sx = crest.x + Math.cos(sa) * sd;
+      const sy = crest.y - 5 + Math.sin(sa) * sd;
+      const sr = 1.5 + rnd() * 2.5;
+      ctx.fillStyle = HOKUSAI_FOAM;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+      ctx.lineWidth = 0.6;
       ctx.stroke();
     }
   }
+
+  // Paper backdrop — painted UNDER everything via destination-over, so it
+  // fills only the remaining transparent area (above the highest wave).
+  ctx.globalCompositeOperation = 'destination-over';
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+  ctx.globalCompositeOperation = 'source-over';
 }
 
 // Variant 1 — Mt Fuji silhouette + sky bands.
