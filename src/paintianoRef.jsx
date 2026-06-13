@@ -23520,8 +23520,8 @@ Composition rules:
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
           const setSpd=setPlaybackSpeed;
-          // Discrete rate ladder: 0.25 steps below 1× (0.25–1), whole steps above (1–4).
-          const STEPS=[0.25,0.5,0.75,1,2,3,4];
+          // Discrete rate ladder: half-speed, normal, double-speed.
+          const STEPS=[0.5,1,2];
           const label=spd===0.5?'½×':spd===1?'1×':`${(Math.round(spd*100)/100)}×`;
           // Lock speed during recording — changing rate mid-record desyncs the
           // recorded audio from the visual painting timing in the saved file.

@@ -6094,6 +6094,949 @@ function comicPhaseBubble(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+// ─── Monet (Light) — 6 variants ─────────────────────────────────────────────
+// All explore light, atmosphere, plein-air painting. Outlines forbidden.
+//  0/Garden: edge-to-edge comma-stroke carpet (Givernyho záhrada)
+//  1/Pond:   horizontal water bands + lily pads (lekná na hladine)
+//  2/Cathedral: vertical haze, dawn-to-dusk light wash (Rouenská katedrála)
+//  3/Haystack: single mass against open sky (Kopa sena)
+//  4/Snow:    cool whites + pale strokes (Zasnežená krajina)
+//  5/Mist:    near-monochrome, very soft (Hmla nad riekou)
+function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const _pn = _capN(6);
+  const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
+  if(_fpick === 1){ monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 2){ monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 3){ monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 4){ monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 5){ monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode);
+}
+
+// Variant 0 — Garden: edge-to-edge carpet of comma-strokes.
+function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 0);
+
+  ctx.fillStyle = '#EAE7D9';
+  ctx.fillRect(0, 0, CW, CH);
+
+  const aspect = CW / CH;
+  const cols = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, lim) * aspect)));
+  const rows = Math.max(1, Math.ceil(lim / cols));
+  const cw = CW / cols;
+  const ch = CH / rows;
+  const baseStrokes = cn <= 12 ? 38 : cn <= 40 ? 34 : cn <= 100 ? 30 : 26;
+
+  ctx.globalAlpha = 0.8;
+  for(let i = 0; i < lim; i++){
+    const chord = chords[i];
+    if(!chord) continue;
+    const notes = chord.n || chord.notes;
+    if(!notes || !notes.length) continue;
+    const col = i % cols;
+    const row = Math.floor(i / cols) % rows;
+    const cellX = col * cw;
+    const cellY = row * ch;
+    let topM = 0;
+    for(const n of notes){ const m = n.m!==undefined?n.m:n; if(m>topM) topM = m; }
+    const octShift = (Math.floor(topM/12) - 4) * 10;
+    const N = baseStrokes + Math.floor(rnd() * 6);
+    for(let k = 0; k < N; k++){
+      const x = cellX + rnd() * cw + (rnd() - 0.5) * cw * 0.6;
+      const y = cellY + rnd() * ch + (rnd() - 0.5) * ch * 0.6;
+      const note = notes[Math.floor(rnd() * notes.length)];
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:100;
+      const [r, g, b] = gc(m, v);
+      const jr = Math.max(0, Math.min(255, r + (rnd()-0.5)*60 + octShift));
+      const jg = Math.max(0, Math.min(255, g + (rnd()-0.5)*60 + octShift));
+      const jb = Math.max(0, Math.min(255, b + (rnd()-0.5)*60 + octShift));
+      const velScale = 0.55 + (v/127) * 0.9;
+      const rx = (5 + rnd() * 5) * velScale;
+      const ry = (2.2 + rnd() * 2) * velScale;
+      const rot = rnd() * Math.PI;
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(rot);
+      ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
+      ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, 6.2832); ctx.fill();
+      ctx.restore();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 1 — Pond: horizontal water bands with lily pad blobs.
+function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(91, ss, lim, 1);
+  // Cool watery base.
+  ctx.fillStyle = '#DCE6E0';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Horizontal stripe bands: each band = a chord. Wider strokes, layered.
+  const bands = Math.min(40, Math.max(8, lim));
+  const bandH = CH / bands;
+  ctx.globalAlpha = 0.55;
+  for(let i = 0; i < bands; i++){
+    const chord = chords[Math.floor(i / bands * lim)] || chords[0];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[i % notes.length];
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    // Shift toward cool: more blue/green, less red.
+    const tr = Math.round(r * 0.6 + 30);
+    const tg = Math.round(g * 0.7 + 60);
+    const tb = Math.round(b * 0.8 + 80);
+    const y = i * bandH;
+
+    // Multiple horizontal sweeps per band — slightly jittered.
+    const sweepsPerBand = 4 + Math.floor(rnd() * 3);
+    for(let s = 0; s < sweepsPerBand; s++){
+      const yj = y + rnd() * bandH;
+      const len = 30 + rnd() * (CW * 0.4);
+      const x0 = rnd() * (CW - len);
+      const thick = 1.5 + rnd() * 3;
+      ctx.strokeStyle = `rgb(${tr+((rnd()-0.5)*25)|0},${tg+((rnd()-0.5)*25)|0},${Math.min(255,tb+((rnd()-0.5)*25))|0})`;
+      ctx.lineWidth = thick;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x0, yj); ctx.lineTo(x0+len, yj+rnd()*2-1); ctx.stroke();
+    }
+  }
+  // Lily pads: oval blobs scattered on top, green-pink.
+  ctx.globalAlpha = 0.78;
+  const padCount = Math.min(28, Math.max(6, Math.floor(lim * 0.35)));
+  for(let p = 0; p < padCount; p++){
+    const chord = chords[p % chords.length];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const [r, g, b] = gc(m, 100);
+    const px = rnd() * CW;
+    const py = rnd() * CH;
+    const pr = 14 + rnd() * 26;
+    // Tinted toward leaf green.
+    const lr = Math.round(r * 0.35 + 70);
+    const lg = Math.round(g * 0.55 + 110);
+    const lb = Math.round(b * 0.4 + 60);
+    ctx.fillStyle = `rgb(${lr},${lg},${lb})`;
+    ctx.beginPath();
+    ctx.ellipse(px, py, pr, pr*0.62, rnd()*Math.PI, 0, 6.2832);
+    ctx.fill();
+    // Optional pink/white flower in the middle for some pads.
+    if(rnd() < 0.4){
+      ctx.fillStyle = `rgba(255,${220+((rnd()-0.5)*30)|0},${230+((rnd()-0.5)*20)|0},0.9)`;
+      ctx.beginPath();
+      ctx.arc(px+(rnd()-0.5)*pr*0.4, py+(rnd()-0.5)*pr*0.4, pr*0.22, 0, 6.2832);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 2 — Cathedral: vertical light haze, dawn→dusk wash.
+function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(91, ss, lim, 2);
+  // Pale luminous base.
+  ctx.fillStyle = '#F0E4CB';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Vertical bands across canvas, each band shifts hue (time of day).
+  // Use chord progression to drive hue rotation.
+  const bands = Math.min(64, Math.max(16, lim * 2));
+  const bw = CW / bands;
+  ctx.globalAlpha = 0.7;
+  for(let i = 0; i < bands; i++){
+    const ci = Math.floor((i / bands) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[Math.floor(rnd() * notes.length)];
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    // Vertical sweep with vertical jitter — like wash of light.
+    const x = i * bw;
+    const strokes = 18 + Math.floor(rnd() * 8);
+    for(let s = 0; s < strokes; s++){
+      const yj = rnd() * CH;
+      const lenY = 18 + rnd() * 50;
+      const dx = (rnd()-0.5) * bw * 0.8;
+      const jr = Math.max(0, Math.min(255, r + (rnd()-0.5)*40));
+      const jg = Math.max(0, Math.min(255, g + (rnd()-0.5)*40));
+      const jb = Math.max(0, Math.min(255, b + (rnd()-0.5)*40));
+      ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
+      ctx.fillRect(x + dx, yj, bw*0.9, lenY);
+    }
+  }
+  // Suggestion of architecture — vertical "pillars" at thirds.
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#8a6f3e';
+  for(let p = 1; p < 4; p++){
+    const px = CW * (p/4);
+    ctx.fillRect(px - CW*0.015, 0, CW*0.03, CH);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 3 — Haystack: single mass against open sky.
+function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(91, ss, lim, 3);
+  // Sky base — warm sunset cream.
+  ctx.fillStyle = '#F2DCB5';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Field strip at bottom 1/3, painterly horizontal strokes.
+  const horizonY = CH * 0.65;
+  ctx.globalAlpha = 0.75;
+  const fieldStrokes = Math.min(220, Math.max(60, lim * 4));
+  for(let s = 0; s < fieldStrokes; s++){
+    const ci = Math.floor(rnd() * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[Math.floor(rnd() * notes.length)] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    // Field tones: amber/ochre.
+    const fr = Math.round(r * 0.5 + 130);
+    const fg = Math.round(g * 0.4 + 90);
+    const fb = Math.round(b * 0.3 + 40);
+    const y = horizonY + rnd() * (CH - horizonY);
+    const x = rnd() * CW;
+    const len = 8 + rnd() * 22;
+    ctx.strokeStyle = `rgb(${Math.min(255,fr)},${Math.min(255,fg)},${Math.min(255,fb)})`;
+    ctx.lineWidth = 1.5 + rnd() * 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y + (rnd()-0.5) * 3);
+    ctx.stroke();
+  }
+  // Haystack — one big dome centered, painted with chord-derived colours.
+  const hx = CW * 0.5 + (rnd() - 0.5) * CW * 0.15;
+  const hy = horizonY - 10;
+  const hw = CW * 0.32;
+  const hh = CH * 0.34;
+  ctx.globalAlpha = 0.9;
+  // Build silhouette with strokes radiating from haystack.
+  const stackStrokes = Math.min(320, Math.max(80, lim * 5));
+  for(let s = 0; s < stackStrokes; s++){
+    const ci = s % lim;
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[s % notes.length] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    // Warm dim earth tones for the stack mass.
+    const sr = Math.round(r * 0.6 + 60);
+    const sg = Math.round(g * 0.4 + 30);
+    const sb = Math.round(b * 0.3 + 10);
+    // Random point within dome shape (rough ellipse).
+    const ang = rnd() * Math.PI;  // top half (dome)
+    const radR = rnd();
+    const dx = Math.cos(ang) * hw * 0.5 * Math.pow(radR, 0.7);
+    const dy = -Math.sin(ang) * hh * Math.pow(radR, 0.7);
+    const px = hx + dx;
+    const py = hy + dy;
+    ctx.strokeStyle = `rgb(${Math.min(255,sr)},${Math.min(255,sg)},${Math.min(255,sb)})`;
+    ctx.lineWidth = 2 + rnd() * 2.5;
+    ctx.lineCap = 'round';
+    const slen = 4 + rnd() * 9;
+    const sang = rnd() * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + Math.cos(sang)*slen, py + Math.sin(sang)*slen);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 4 — Snow: cool whites + pale strokes.
+function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(91, ss, lim, 4);
+  // Cold winter base — pale blue-white.
+  ctx.fillStyle = '#E6ECE8';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Pale carpet of strokes — everything washed toward white.
+  const aspect = CW / CH;
+  const cols = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, lim) * aspect)));
+  const rows = Math.max(1, Math.ceil(lim / cols));
+  const cw = CW / cols;
+  const ch = CH / rows;
+  ctx.globalAlpha = 0.65;
+  for(let i = 0; i < lim; i++){
+    const chord = chords[i];
+    if(!chord) continue;
+    const notes = chord.n || chord.notes;
+    if(!notes || !notes.length) continue;
+    const col = i % cols;
+    const row = Math.floor(i / cols) % rows;
+    const cellX = col * cw;
+    const cellY = row * ch;
+    const N = 18 + Math.floor(rnd() * 8);
+    for(let k = 0; k < N; k++){
+      const x = cellX + rnd() * cw + (rnd()-0.5) * cw * 0.5;
+      const y = cellY + rnd() * ch + (rnd()-0.5) * ch * 0.5;
+      const note = notes[Math.floor(rnd() * notes.length)];
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:100;
+      const [r, g, b] = gc(m, v);
+      // Wash 70% toward white.
+      const wr = Math.round(r * 0.3 + 200);
+      const wg = Math.round(g * 0.3 + 205);
+      const wb = Math.round(b * 0.3 + 215);
+      ctx.fillStyle = `rgb(${Math.min(255,wr)},${Math.min(255,wg)},${Math.min(255,wb)})`;
+      const rx = 4 + rnd() * 4;
+      const ry = 2 + rnd() * 2;
+      const rot = rnd() * Math.PI;
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(rot);
+      ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, 6.2832); ctx.fill();
+      ctx.restore();
+    }
+  }
+  // Snowflakes — scattered tiny white dots.
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = '#FFFFFF';
+  const flakes = Math.min(420, Math.max(120, lim * 6));
+  for(let f = 0; f < flakes; f++){
+    const x = rnd() * CW;
+    const y = rnd() * CH;
+    const r = 0.7 + rnd() * 1.6;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 5 — Mist: near-monochrome, very soft, hue-shift through piece.
+function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(91, ss, lim, 5);
+  // Determine dominant hue family from middle chord.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [];
+  const midNote = midNotes[0] || {m:60,v:80};
+  const mm = midNote.m!==undefined?midNote.m:midNote;
+  const [mr, mg, mb] = gc(mm, 100);
+  // Wash 60% toward gray.
+  const baseR = Math.round(mr * 0.4 + 150);
+  const baseG = Math.round(mg * 0.4 + 150);
+  const baseB = Math.round(mb * 0.4 + 155);
+  ctx.fillStyle = `rgb(${baseR},${baseG},${baseB})`;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Soft veils — large, very transparent ovals from chords.
+  ctx.globalAlpha = 0.18;
+  const veils = Math.min(80, Math.max(20, lim));
+  for(let i = 0; i < veils; i++){
+    const ci = Math.floor((i / veils) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[Math.floor(rnd() * notes.length)] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    const fr = Math.round(r * 0.35 + 165);
+    const fg = Math.round(g * 0.35 + 165);
+    const fb = Math.round(b * 0.35 + 170);
+    const x = rnd() * CW;
+    const y = rnd() * CH;
+    const w = CW * (0.15 + rnd() * 0.35);
+    const h = CH * (0.05 + rnd() * 0.12);
+    ctx.fillStyle = `rgb(${fr},${fg},${fb})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w, h, (rnd()-0.5) * 0.3, 0, 6.2832);
+    ctx.fill();
+  }
+  // Faint top-light bleed.
+  const grad = ctx.createLinearGradient(0, 0, 0, CH);
+  grad.addColorStop(0, 'rgba(255,255,250,0.25)');
+  grad.addColorStop(0.5, 'rgba(255,255,250,0)');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CW, CH);
+}
+
+// ─── Hokusai (Woodblock) — 6 variants ───────────────────────────────────────
+// All flat colour fields + Prussian-blue contours, no gradients. Beige paper
+// ground throughout. Woodblock rules: every region is one solid colour, hard
+// edges, dark contour line.
+//  0/Wave:    Great Wave at Kanagawa — layered sea + foam claws
+//  1/Fuji:    Red/grey Mt Fuji silhouette + sky bands
+//  2/Blossom: Plum/cherry branch with circular flowers
+//  3/Storm:   Lightning zigzag through dark sky
+//  4/Rain:    Diagonal rain lines + muted village band
+//  5/Bridge:  Drum bridge arch over water + reeds
+function drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const _pn = _capN(6);
+  const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
+  if(_fpick === 1){ hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 2){ hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 3){ hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 4){ hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 5){ hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode);
+}
+
+// ── Shared palette + helpers ──
+const HOKUSAI_PRUSSIAN = '#1B3A5B';
+const HOKUSAI_FOAM = '#F7F4EA';
+const HOKUSAI_PAPER = '#EAE3CE';
+// Convert any [r,g,b] toward the woodblock palette: drop saturation, blend
+// with Prussian to keep all panels visually unified.
+function _hokusaiMute(r, g, b, blendAmt, dim){
+  const ba = blendAmt == null ? 0.4 : blendAmt;
+  const dm = dim == null ? 1 : dim;
+  const mr = Math.round((r * (1 - ba) + 27 * ba) * dm);
+  const mg = Math.round((g * (1 - ba) + 58 * ba) * dm);
+  const mb = Math.round((b * (1 - ba) + 91 * ba) * dm);
+  return `rgb(${Math.max(0,Math.min(255,mr))},${Math.max(0,Math.min(255,mg))},${Math.max(0,Math.min(255,mb))})`;
+}
+
+// Variant 0 — Wave (Great Wave at Kanagawa).
+function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 0);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  const points = [];
+  let maxChordSize = 1;
+  for(let i = 0; i < lim; i++){
+    const chord = chords[i];
+    if(!chord) continue;
+    const notes = chord.n || chord.notes;
+    if(!notes || !notes.length) continue;
+    let topM = 0, topNote = notes[0];
+    for(const n of notes){
+      const m = n.m !== undefined ? n.m : n;
+      if(m > topM){ topM = m; topNote = n; }
+    }
+    if(notes.length > maxChordSize) maxChordSize = notes.length;
+    const x = (lim > 1 ? (i / (lim - 1)) : 0.5) * CW;
+    const np = Math.max(0, Math.min(1, (topM - 36) / 60));
+    const y = CH * (0.75 - 0.5 * np);
+    points.push({ x, y, topNote, chord, idx: i });
+  }
+  if(points.length < 2) return;
+
+  const depthLayers = Math.max(2, Math.min(4, 1 + Math.floor(maxChordSize / 2)));
+  const layerStep = CH * 0.12;
+
+  function tracePath(yOff){
+    ctx.moveTo(points[0].x, points[0].y + yOff);
+    for(let i = 1; i < points.length - 1; i++){
+      const xc = (points[i].x + points[i+1].x) / 2;
+      const yc = (points[i].y + points[i+1].y) / 2 + yOff;
+      ctx.quadraticCurveTo(points[i].x, points[i].y + yOff, xc, yc);
+    }
+    ctx.lineTo(points[points.length-1].x, points[points.length-1].y + yOff);
+  }
+
+  for(let layer = depthLayers; layer >= 0; layer--){
+    const yOff = layer * layerStep;
+    const sampleIdx = Math.min(points.length - 1,
+      Math.max(0, Math.floor((points.length / (depthLayers + 1)) * (depthLayers - layer))));
+    const samplePt = points[sampleIdx];
+    const note = samplePt.topNote;
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    const dim = 1 - layer * 0.12;
+    const blend = 0.35 + layer * 0.06;
+
+    ctx.beginPath();
+    tracePath(yOff);
+    ctx.lineTo(CW, CH);
+    ctx.lineTo(0, CH);
+    ctx.closePath();
+    ctx.fillStyle = _hokusaiMute(r, g, b, blend, dim);
+    ctx.fill();
+
+    ctx.beginPath();
+    tracePath(yOff);
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = layer === 0 ? 3.5 : (2.8 - layer * 0.4);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  // Foam claws on crests.
+  const crests = [];
+  for(let i = 2; i < points.length - 2; i++){
+    if(points[i].y < points[i-1].y && points[i].y < points[i+1].y){
+      const note = points[i].topNote;
+      const v = note.v !== undefined ? note.v : 80;
+      crests.push({ ...points[i], priority: v + (CH - points[i].y) * 0.3 });
+    }
+  }
+  crests.sort((a, b) => b.priority - a.priority);
+  const topCrests = crests.slice(0, Math.min(5, crests.length));
+
+  for(const crest of topCrests){
+    const baseAngle = -0.6 + (rnd() - 0.5) * 0.3;
+    for(let k = 0; k < 7; k++){
+      const r = 11 - k * 1.3;
+      if(r < 1.2) break;
+      const angle = baseAngle + k * 0.18;
+      const dist = k * 5;
+      const fx = crest.x + Math.cos(angle) * dist;
+      const fy = crest.y - 4 + Math.sin(angle) * dist;
+      ctx.fillStyle = HOKUSAI_FOAM;
+      ctx.beginPath();
+      ctx.arc(fx, fy, r, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
+    }
+  }
+}
+
+// Variant 1 — Mt Fuji silhouette + sky bands.
+function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 1);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Sky bands — horizontal strips, each band a chord-derived flat colour.
+  const bands = Math.min(8, Math.max(3, Math.floor(lim / 8)));
+  const bandH = CH * 0.6 / bands;
+  for(let i = 0; i < bands; i++){
+    const ci = Math.floor((i / bands) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    const blend = 0.25 + (i / bands) * 0.3;  // darker toward top
+    ctx.fillStyle = _hokusaiMute(r, g, b, blend, 1);
+    ctx.fillRect(0, i * bandH, CW, bandH + 1);  // +1 to avoid hairlines
+  }
+
+  // Fuji silhouette — symmetric trapezoid with concave shoulders.
+  const peakX = CW * 0.5 + (rnd() - 0.5) * CW * 0.05;
+  const peakY = CH * 0.18;
+  const baseY = CH * 0.7;
+  const baseHalfW = CW * 0.42;
+  // Sample a "mountain colour" from a middle chord.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+
+  ctx.beginPath();
+  ctx.moveTo(peakX - baseHalfW, baseY);
+  // Left flank — slight inward curve near peak.
+  ctx.quadraticCurveTo(peakX - baseHalfW * 0.4, baseY * 0.55, peakX - CW * 0.07, peakY + 8);
+  ctx.lineTo(peakX + CW * 0.07, peakY + 8);
+  // Right flank.
+  ctx.quadraticCurveTo(peakX + baseHalfW * 0.4, baseY * 0.55, peakX + baseHalfW, baseY);
+  ctx.closePath();
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.55, 0.85);
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 2.2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Snow cap — flat white triangle at peak.
+  ctx.beginPath();
+  ctx.moveTo(peakX - CW * 0.07, peakY + 8);
+  ctx.lineTo(peakX + CW * 0.07, peakY + 8);
+  ctx.lineTo(peakX + (rnd()-0.5) * CW * 0.04, peakY + CH * 0.07);
+  ctx.lineTo(peakX - CW * 0.04, peakY + CH * 0.05);
+  ctx.closePath();
+  ctx.fillStyle = HOKUSAI_FOAM;
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Foreground field — flat earth band.
+  ctx.fillStyle = _hokusaiMute(120, 90, 50, 0.3, 0.8);
+  ctx.fillRect(0, baseY, CW, CH - baseY);
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(0, baseY); ctx.lineTo(CW, baseY); ctx.stroke();
+}
+
+// Variant 2 — Plum/Cherry blossom branch.
+function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 2);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Branch — thick curved line entering from bottom-left or right.
+  const fromLeft = (ss & 1) === 0;
+  const startX = fromLeft ? 0 : CW;
+  const startY = CH * (0.7 + rnd() * 0.2);
+  const endX = fromLeft ? CW * (0.6 + rnd() * 0.3) : CW * (0.1 + rnd() * 0.3);
+  const endY = CH * (0.15 + rnd() * 0.2);
+
+  // Bezier control points.
+  const c1x = (startX + endX) * 0.5 + (fromLeft ? CW * 0.1 : -CW * 0.1);
+  const c1y = startY - (startY - endY) * 0.3;
+  const c2x = endX + (fromLeft ? -CW * 0.05 : CW * 0.05);
+  const c2y = endY + (startY - endY) * 0.2;
+
+  // Branch trunk — flat dark.
+  ctx.strokeStyle = '#3D2412';
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.bezierCurveTo(c1x, c1y, c2x, c2y, endX, endY);
+  ctx.stroke();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Sub-branches — short forks at jittered points along the main branch.
+  const forks = 4 + Math.floor(rnd() * 4);
+  for(let f = 0; f < forks; f++){
+    const t = 0.2 + rnd() * 0.7;
+    // Approximate point on bezier curve.
+    const ot = 1 - t;
+    const bx = ot*ot*ot*startX + 3*ot*ot*t*c1x + 3*ot*t*t*c2x + t*t*t*endX;
+    const by = ot*ot*ot*startY + 3*ot*ot*t*c1y + 3*ot*t*t*c2y + t*t*t*endY;
+    const ang = (rnd() - 0.5) * 1.6 + (fromLeft ? -1 : -2);
+    const flen = 30 + rnd() * 60;
+    const fx = bx + Math.cos(ang) * flen;
+    const fy = by + Math.sin(ang) * flen;
+    ctx.strokeStyle = '#3D2412';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(fx, fy); ctx.stroke();
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Blossoms — circular flowers along branch using chord colours.
+  const blossomCount = Math.min(60, Math.max(12, lim));
+  for(let i = 0; i < blossomCount; i++){
+    const ci = i % lim;
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[i % Math.max(1, notes.length)] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    // Pink-warm blossom: blend toward soft pink.
+    const br = Math.round(r * 0.4 + 230);
+    const bg = Math.round(g * 0.3 + 170);
+    const bbv = Math.round(b * 0.3 + 180);
+
+    // Position roughly along branch.
+    const t = 0.1 + rnd() * 0.9;
+    const ot = 1 - t;
+    const bx = ot*ot*ot*startX + 3*ot*ot*t*c1x + 3*ot*t*t*c2x + t*t*t*endX;
+    const by = ot*ot*ot*startY + 3*ot*ot*t*c1y + 3*ot*t*t*c2y + t*t*t*endY;
+    // Cluster around branch.
+    const cx = bx + (rnd() - 0.5) * 70;
+    const cy = by + (rnd() - 0.5) * 70 - 10;
+    const rad = 5 + rnd() * 8;
+
+    // 5-petal flower: 5 overlapping circles around a centre.
+    for(let p = 0; p < 5; p++){
+      const pang = (p / 5) * Math.PI * 2;
+      const px = cx + Math.cos(pang) * rad * 0.55;
+      const py = cy + Math.sin(pang) * rad * 0.55;
+      ctx.fillStyle = `rgb(${Math.min(255,br)},${Math.min(255,bg)},${Math.min(255,bbv)})`;
+      ctx.beginPath();
+      ctx.arc(px, py, rad * 0.6, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    // Yellow centre.
+    ctx.fillStyle = '#E8C24A';
+    ctx.beginPath();
+    ctx.arc(cx, cy, rad * 0.25, 0, 6.2832);
+    ctx.fill();
+  }
+}
+
+// Variant 3 — Storm: lightning zigzag through dark sky.
+function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 3);
+
+  // Dark stormy sky — sample dominant chord, push very dark.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  // Very dim sky.
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.7, 0.4);
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Horizontal storm cloud bands across top half.
+  for(let i = 0; i < 4; i++){
+    const ci = Math.floor((i / 4) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    const y = i * CH * 0.13;
+    const h = CH * 0.13;
+    ctx.fillStyle = _hokusaiMute(r, g, b, 0.6 + i * 0.05, 0.55 - i * 0.05);
+    // Wavy bottom edge.
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(CW, y);
+    ctx.lineTo(CW, y + h);
+    for(let x = CW; x >= 0; x -= CW / 12){
+      ctx.lineTo(x, y + h + (rnd() - 0.5) * 14);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  // Lightning bolts — main zigzag from cloud to ground, plus a couple smaller.
+  function drawBolt(startX, startY, endY, jaggedness){
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    let cx = startX;
+    let cy = startY;
+    const segs = 8 + Math.floor(rnd() * 4);
+    const dy = (endY - startY) / segs;
+    for(let s = 0; s < segs; s++){
+      cy += dy;
+      cx += (rnd() - 0.5) * jaggedness;
+      ctx.lineTo(cx, cy);
+    }
+    // White core.
+    ctx.strokeStyle = HOKUSAI_FOAM;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  drawBolt(CW * (0.3 + rnd() * 0.4), CH * 0.4, CH * 0.85, 50);
+  if(rnd() < 0.7) drawBolt(CW * (0.1 + rnd() * 0.2), CH * 0.45, CH * 0.7, 30);
+  if(rnd() < 0.5) drawBolt(CW * (0.65 + rnd() * 0.2), CH * 0.5, CH * 0.78, 28);
+
+  // Dark land silhouette at bottom.
+  ctx.fillStyle = HOKUSAI_PRUSSIAN;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.85);
+  for(let x = 0; x <= CW; x += CW / 18){
+    ctx.lineTo(x, CH * 0.85 + (rnd() - 0.5) * 18);
+  }
+  ctx.lineTo(CW, CH);
+  ctx.lineTo(0, CH);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Variant 4 — Rain: diagonal lines + muted village band.
+function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 4);
+  // Soft grey paper.
+  ctx.fillStyle = '#D8D4C2';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Distant mountain silhouette band.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.55, 0.7);
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.5);
+  for(let x = 0; x <= CW; x += CW / 16){
+    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * 30 - 10);
+  }
+  ctx.lineTo(CW, CH * 0.7);
+  ctx.lineTo(0, CH * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Village strip — flat brown/grey houses.
+  const houseRow = CH * 0.72;
+  const houseH = CH * 0.1;
+  const houseCount = 5 + Math.floor(rnd() * 4);
+  const hw = CW / houseCount;
+  for(let i = 0; i < houseCount; i++){
+    const ci = Math.floor((i / houseCount) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const [r, g, b] = gc(m, 90);
+    const hx = i * hw + hw * 0.1;
+    const hyTop = houseRow;
+    const hwInner = hw * 0.8;
+    // House body.
+    ctx.fillStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
+    ctx.fillRect(hx, hyTop, hwInner, houseH);
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1.3;
+    ctx.strokeRect(hx, hyTop, hwInner, houseH);
+    // Roof — triangle.
+    ctx.fillStyle = '#3D2412';
+    ctx.beginPath();
+    ctx.moveTo(hx - 4, hyTop);
+    ctx.lineTo(hx + hwInner / 2, hyTop - houseH * 0.55);
+    ctx.lineTo(hx + hwInner + 4, hyTop);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Water at bottom.
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.6, 0.55);
+  ctx.fillRect(0, houseRow + houseH, CW, CH - houseRow - houseH);
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(0, houseRow + houseH);
+  ctx.lineTo(CW, houseRow + houseH);
+  ctx.stroke();
+
+  // Rain — diagonal lines across entire canvas. Density follows lim.
+  const rainCount = Math.min(380, Math.max(120, lim * 6));
+  ctx.strokeStyle = '#3a4a5e';
+  ctx.lineWidth = 0.9;
+  for(let i = 0; i < rainCount; i++){
+    const x = rnd() * CW * 1.2 - CW * 0.1;
+    const y = rnd() * CH;
+    const len = 12 + rnd() * 18;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - len * 0.4, y + len);  // diagonal fall to bottom-left
+    ctx.stroke();
+  }
+}
+
+// Variant 5 — Bridge: drum bridge arch over water + reeds.
+function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 5);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Sky band at top — gradient-free, just 2 bands.
+  const skyChord = chords[0];
+  const skyNotes = skyChord && (skyChord.n || skyChord.notes) || [{m:72,v:80}];
+  const skyNote = skyNotes[0];
+  const [sr, sg, sb] = gc(skyNote.m!==undefined?skyNote.m:skyNote, 80);
+  ctx.fillStyle = _hokusaiMute(sr, sg, sb, 0.35, 0.95);
+  ctx.fillRect(0, 0, CW, CH * 0.4);
+
+  // Water — bottom 50%, flat colour from middle chord.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [wr, wg, wb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  ctx.fillStyle = _hokusaiMute(wr, wg, wb, 0.5, 0.7);
+  ctx.fillRect(0, CH * 0.55, CW, CH * 0.45);
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.55);
+  ctx.lineTo(CW, CH * 0.55);
+  ctx.stroke();
+
+  // Drum bridge — semi-circular arch spanning canvas, water below.
+  const bridgeCY = CH * 0.55;
+  const bridgeRadius = CW * 0.5;
+  const bridgeCX = CW * 0.5;
+  // Bridge bottom curve (visible part above water = top half of circle).
+  ctx.beginPath();
+  ctx.arc(bridgeCX, bridgeCY, bridgeRadius, Math.PI, 0, false);
+  // Top: thicker bridge surface (offset arc above).
+  const topRad = bridgeRadius + CH * 0.06;
+  ctx.lineTo(bridgeCX + topRad, bridgeCY);
+  ctx.arc(bridgeCX, bridgeCY, topRad, 0, Math.PI, true);
+  ctx.closePath();
+  // Bridge colour — chord-derived earthy brown.
+  const lastChord = chords[lim - 1] || chords[0];
+  const lastNotes = lastChord && (lastChord.n || lastChord.notes) || [{m:60,v:80}];
+  const lastNote = lastNotes[0];
+  const [br, bg, bb] = gc(lastNote.m!==undefined?lastNote.m:lastNote, 100);
+  ctx.fillStyle = _hokusaiMute(br, bg, bb, 0.4, 0.7);
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 2.2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Bridge ribbing — radial spokes from centre to inner arc.
+  const ribCount = Math.min(16, Math.max(6, Math.floor(lim / 5)));
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 0.9;
+  for(let i = 1; i < ribCount; i++){
+    const ang = Math.PI + (i / ribCount) * Math.PI;
+    const x1 = bridgeCX + Math.cos(ang) * bridgeRadius;
+    const y1 = bridgeCY + Math.sin(ang) * bridgeRadius;
+    const x2 = bridgeCX + Math.cos(ang) * topRad;
+    const y2 = bridgeCY + Math.sin(ang) * topRad;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  // Reeds at water edges — using chord notes.
+  const reedCount = Math.min(60, Math.max(15, lim));
+  for(let i = 0; i < reedCount; i++){
+    const ci = i % lim;
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const [r, g, b] = gc(m, 100);
+    // Side: alternate left/right of bridge, near banks.
+    const side = i % 2;
+    const rx = side === 0 ? rnd() * CW * 0.18 : CW - rnd() * CW * 0.18;
+    const ry = CH * 0.55 + rnd() * CH * 0.05;
+    const rh = 25 + rnd() * 40;
+    // Reed = thin tall blade.
+    ctx.strokeStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.quadraticCurveTo(rx + (rnd() - 0.5) * 8, ry - rh * 0.5, rx + (rnd() - 0.5) * 6, ry - rh);
+    ctx.stroke();
+  }
+
+  // Water ripples — horizontal short strokes.
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1;
+  const ripples = Math.min(60, Math.max(20, lim));
+  for(let i = 0; i < ripples; i++){
+    const y = CH * (0.58 + rnd() * 0.4);
+    const x = rnd() * CW;
+    const len = 16 + rnd() * 30;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + len/2, y - 2, x + len, y);
+    ctx.stroke();
+  }
+}
+
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;

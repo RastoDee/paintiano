@@ -739,18 +739,18 @@ export default function Paintiano() {
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
   const STYLE_LABELS_I18N = {
-    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic'},
-    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks'},
-    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic'},
-    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD'},
-    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic'},
-    PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Bauhaus',miro:'Constelação',mondrian:'Grade',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ'},
-    zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'包豪斯',miro:'星座',mondrian:'网格',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画'},
-    zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'包浩斯',miro:'星座',mondrian:'網格',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫'},
-    ja:{picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'バウハウス',miro:'星座',mondrian:'グリッド',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック'},
+    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic',monet:'Light',hokusai:'Woodblock'},
+    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks',monet:'Svetlo',hokusai:'Drevoryt'},
+    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic',monet:'Licht',hokusai:'Holzschnitt'},
+    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD',monet:'Lumière',hokusai:'Estampe'},
+    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic',monet:'Luz',hokusai:'Xilografía'},
+    PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Bauhaus',miro:'Constelação',mondrian:'Grade',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ',monet:'Luz',hokusai:'Xilogravura'},
+    zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'包豪斯',miro:'星座',mondrian:'网格',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画',monet:'光',hokusai:'浮世绘'},
+    zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'包浩斯',miro:'星座',mondrian:'網格',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫',monet:'光',hokusai:'浮世繪'},
+    ja:{picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'バウハウス',miro:'星座',mondrian:'グリッド',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック',monet:'光',hokusai:'浮世絵'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
-  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
+  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
   // button → flip to its partner; tap again → back to Mosaic. Pairing is by
@@ -765,6 +765,7 @@ export default function Paintiano() {
     ['bulge','wave'],
     ['spiral','arcs'],
     ['pop','comic'],
+    ['monet','hokusai'],
   ];
   // Which of each pair sits in the "A" (default-face) slot is randomised once
   // per app open, then frozen for the session (until reload). This rotates the
@@ -1142,7 +1143,7 @@ export default function Paintiano() {
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
+  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic','monet','hokusai'];
   // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
   // shuffle across all 16. Keeps the random feature usable for Free without ever
   // accidentally landing on a locked artist (which would just paint a Pro-only
@@ -1794,7 +1795,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
+      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -1854,7 +1855,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
+        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
         if(!fullCanvasOverlay){
@@ -1899,6 +1900,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='monet') drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='hokusai') drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
@@ -1959,10 +1962,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='comic' && lim>0){
         drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
+      if(style==='monet' && lim>0){
+        drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+      }
+      if(style==='hokusai' && lim>0){
+        drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+      }
       if(style==='oneM' && lim>0){
         drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='monet'&&style!=='hokusai'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -2313,7 +2322,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
+        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
         if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
@@ -6475,6 +6484,12 @@ Composition rules:
         if(style==='comic' && chords.length>0){
           drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
+        if(style==='monet' && chords.length>0){
+          drawMonetOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
+        }
+        if(style==='hokusai' && chords.length>0){
+          drawHokusaiOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
+        }
         if(style==='oneM' && chords.length>0){
           drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
@@ -7768,22 +7783,28 @@ Composition rules:
           {/* Style — hidden in image mode: an artist re-paint makes no sense when
               the source already IS a painting; only the colour reading matters there. */}
           {loadedSource!=='image' && (
-          <div style={{textAlign:'center',marginTop:6,marginBottom:2,fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+          <div style={{position:'relative',marginTop:6,marginBottom:2}}>
+            <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:26,height:26,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+            </button>
+          </div>
           )}
           {loadedSource!=='image' && (
           <>
           {(()=>{
             // ── Adaptive chip grid (max 2 rows) ────────────────────────────
             // Chip count = Mosaic (if family selected) + visible pairs in
-            // current setup. Dice sits BELOW the grid (separate flex row), so
-            // it never affects the row count. Column mapping per spec:
+            // current setup. Dice sits ABOVE the grid (in the inspired-by
+            // header row), so it never affects the row count. Column mapping
+            // per spec:
             //   1→1h0d  2→2h0d  3→3h0d  4→2h2d  5→3h2d  6→3h3d
-            //   7→4h3d  8→4h4d  9→5h4d
+            //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
             const _visiblePairs = effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b));
             const _familyOn = setupArtists.includes('mosaicFamily');
             const _chipCount = (_familyOn?1:0) + _visiblePairs.length;
             // baseCols per Rasto's key (chips only): 1→1, 2→2, 3→3, 4→2,
-            // 5→3, 6→3, 7→4, 8→4, 9→5.
+            // 5→3, 6→3, 7→4, 8→4, 9→5, 10→5.
             const _baseCols = (()=>{
               switch(_chipCount){
                 case 0: case 1: return 1;
@@ -7795,19 +7816,7 @@ Composition rules:
                 default: return 5;
               }
             })();
-            // With dice as +1 extra cell, even-n cases (4, 6, 8) overflow into
-            // a 3rd row. Widen the grid by 1 column and pad an empty slot
-            // before the bottom row so the chips stay on Rasto's key layout
-            // and dice lands in the last cell of row 2.
-            const _totalCells = _chipCount + 1; // chips + dice
-            const _rows = Math.ceil(_totalCells / _baseCols);
-            const _needPlaceholder = _rows > 2;
-            const _cols = _needPlaceholder ? _baseCols + 1 : _baseCols;
-            // After this many pair tiles, drop an invisible placeholder so the
-            // remaining chips + dice flow into row 2 starting from column 1.
-            const _placeholderAfterPairIdx = _needPlaceholder
-              ? (_baseCols - (_familyOn ? 1 : 0) - 1)
-              : -1;
+            const _cols = _baseCols;
             return (
           <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
@@ -8001,18 +8010,9 @@ Composition rules:
                 <button className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
                   style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
-                {_pairIdx === _placeholderAfterPairIdx && (<div aria-hidden="true" style={{visibility:'hidden'}} />)}
               </Fragment>
               );
             })}
-            {/* Random 🎲 — last cell in the grid. When n<=3 the dice is alone
-                in row 2; span across all columns so it centers across the
-                whole row (otherwise it sits in column 1 of row 2). */}
-            <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center',...(_chipCount<=3?{gridColumn:'1 / -1'}:{})}}>
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
-              </button>
-            </div>
           </div>
           ); })()}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
