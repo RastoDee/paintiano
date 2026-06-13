@@ -3538,7 +3538,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // length-salted to further reduce accidental collisions
     return (h^(s.length*2654435761))>>>0;
   },[]);
-  const IMGMOOD_CACHE_KEY='paintiano_imgmood_cache_v1';
+  const IMGMOOD_CACHE_KEY='paintiano_imgmood_cache_v2';
   const _imgMoodCacheGet=useCallback((hash)=>{
     // Baked sample first (offline, always free — see SAMPLE_IMGMOOD constant).
     try{
@@ -4019,6 +4019,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // DO NOT setLoadedSource('image') here — that activates classic image UI
     // (Score, Atmosphere · OFF, Rows/Columns/Spiral) which doesn't belong in MFI.
     // viewMode='image' alone is enough to render originalImgUrl as the big picture.
+    // Reset Image-AI-Compose state on MFI entry. Without this, a prior
+    // aiComposeFromImage run leaves imgComposeRef.current=true (so the draw
+    // useEffect bails on line ~1653 and the MFI canvas stays black), and
+    // imgPlayModeRef.current='compose' (so startPlay redirects MFI Play to
+    // aiComposeFromImage on line ~4986 — MFI never actually plays its own
+    // piece). MFI is its own context — clear the Image-mode refs explicitly.
+    imgComposeRef.current=false;
+    pixelRef.current=null;
+    setImgPlayMode('scan'); imgPlayModeRef.current='scan';
     setOriginalImgUrl(_src); setImgMoodThumb(null);
     // Clear the previous piece title so it doesn't linger over the new image while AI composes.
     setCurrentMood(null); setInfo(null);
@@ -4054,7 +4063,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
-        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: LENGTH — keep it SHORT, 20-35 seconds total at the chosen tempo (the LAST note\'s startBeat+duration MUST stay under tempo/2 beats — i.e. under 30 seconds at tempo 90); 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
