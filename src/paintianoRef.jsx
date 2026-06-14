@@ -2658,23 +2658,31 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const isBW = mode==='bw';
   const toGrey = (r,g,b) => { const v=Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; };
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Dense all-over / Wider sparser (original body below, via pollVariant).
-  //  2 = Black pourings.  3 = Totemic figuration.  4 = Handprints+drip.  5 = Blue Poles.
-  //  Free (cap=2) sees Dense + Blue Poles — those two are visually farthest
-  //  apart so the two-variant preview actually shows different paintings.
+  //  0 = Classic drip (Dense/Sparser, seed-driven internal pick — see body).
+  //  1 = Stenographic Figure (pre-drip 1942, totemic figures + symbols).
+  //  2 = Black pourings / theme colour pour.
+  //  3 = Lavender Mist / Totem atmospheric.
+  //  4 = White Light (post-drip 1954, INVERTED palette on dark ground).
+  //  5 = Blue Poles.
+  //  Free (cap=2) sees Dense + Stenographic — drip vs pre-drip is the most
+  //  dramatic art-historical contrast Pollock offers, so the two-variant
+  //  preview reads as "two different painters".
   {
     const _pn=_capN(6); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_variantCap === 2){
-      // Free: 0 = Dense (fall through), 1 = Blue Poles.
-      if(_ppick===1){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      // Free: 0 = Dense (fall through), 1 = Stenographic.
+      if(_ppick===1){ pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     } else {
       // Pro+: full ladder.
+      if(_ppick===1){ pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
       if(_ppick===2){ pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
       if(_ppick===3){ pollockPhaseTotem(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(_ppick===4){ pollockPhaseHands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(_ppick===4){ pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
       if(_ppick===5){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     }
-    // else fall through to original dense/wider body (variant 0/1)
+    // else fall through to original dense/wider body (variant 0; the
+    // Dense vs Sparser choice within is seed-driven, kept as natural
+    // micro-variation rather than its own Vary slot).
   }
 
   // Palette weights rebalanced for chromatic painting: ink dropped from 0.28
@@ -3323,6 +3331,287 @@ function pollockPhasePoles(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.strokeStyle=isBW?'rgba(30,30,40,0.9)':'rgba(20,30,120,0.9)';
     ctx.lineWidth=Math.max(3,CW*0.014);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(x-lean,CH*0.08);ctx.lineTo(x+lean,CH*0.92);ctx.stroke();
+  }
+}
+
+// ── Pollock G: Stenographic Figure — pre-drip (1942) era. Three totemic
+// vertical figures with eyes, horns, body segments, on a warm cream-yellow
+// ground; floating chord-coloured symbols (eyes, arrows, triangles, squiggles)
+// surround them; a black scribble line connects them across the top. Reveal
+// progress scales figure count + symbol count, so short songs show one figure,
+// long songs build the full composition.
+function pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const progress = N/Math.max(1,cn);
+
+  // Warm cream-yellow ground gradient.
+  const grad = ctx.createLinearGradient(0,0,0,CH);
+  grad.addColorStop(0, isBW?'#cfc5b2':'#e6d18a');
+  grad.addColorStop(1, isBW?'#a89e8a':'#caa55a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Horizontal brush-stroked grain — texture, no chord dependence.
+  const grainCount = 60;
+  for(let i=0;i<grainCount;i++){
+    const rnd = _seedRnd(i+7100, ss, 0, 0);
+    const r = 200+rnd()*30, g = 160+rnd()*30, b = isBW?180:(80+rnd()*30);
+    ctx.strokeStyle = `rgba(${r|0},${g|0},${b|0},${(0.15+rnd()*0.15).toFixed(2)})`;
+    ctx.lineWidth = 8+rnd()*20;
+    ctx.beginPath();
+    const y = rnd()*CH;
+    ctx.moveTo(rnd()*CW*0.3, y);
+    ctx.lineTo(CW*0.7+rnd()*CW*0.3, y+(rnd()-0.5)*30);
+    ctx.stroke();
+  }
+
+  // Figure count scales with progress: 1 → 3 over the piece.
+  const figureSlots = [
+    { x: CW*0.22, y: CH*0.55, scale: 0.85, chordPos: 0.10 },
+    { x: CW*0.50, y: CH*0.50, scale: 1.00, chordPos: 0.50 },
+    { x: CW*0.78, y: CH*0.60, scale: 0.78, chordPos: 0.90 },
+  ];
+  const visFigures = Math.max(1, Math.min(3, Math.ceil(progress * 3)));
+
+  for(let fi=0;fi<visFigures;fi++){
+    const f = figureSlots[fi];
+    const ci = Math.min(cn-1, Math.floor(f.chordPos * cn));
+    const chord = chords[ci];
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+    const W = CW*0.13*f.scale, H = CH*0.55*f.scale;
+    ctx.save();
+    ctx.translate(f.x, f.y);
+
+    // Head — elongated oval.
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
+    ctx.beginPath();
+    ctx.ellipse(0, -H*0.32, W*0.45, H*0.18, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = isBW?'#222':'#0e0a08'; ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Body — vertical totem trapezoid.
+    ctx.beginPath();
+    ctx.moveTo(-W*0.40, -H*0.20);
+    ctx.lineTo(+W*0.40, -H*0.20);
+    ctx.lineTo(+W*0.48, +H*0.30);
+    ctx.lineTo(-W*0.48, +H*0.30);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // Body segments (3 horizontal divisions).
+    for(let i=1;i<4;i++){
+      ctx.beginPath();
+      ctx.moveTo(-W*0.45, -H*0.20 + i*(H*0.50/4));
+      ctx.lineTo(+W*0.45, -H*0.20 + i*(H*0.50/4));
+      ctx.stroke();
+    }
+
+    // Eyes — two black-on-cream tribal eyes on the head.
+    ctx.fillStyle = isBW?'#1a1a1a':'#0e0a08';
+    ctx.beginPath(); ctx.arc(-W*0.15, -H*0.32, W*0.06, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(+W*0.15, -H*0.32, W*0.06, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#f0e8d0';
+    ctx.beginPath(); ctx.arc(-W*0.15+W*0.025, -H*0.34, W*0.025, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(+W*0.15+W*0.025, -H*0.34, W*0.025, 0, Math.PI*2); ctx.fill();
+
+    // Mouth — single horizontal line.
+    ctx.strokeStyle = isBW?'#1a1a1a':'#0e0a08'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-W*0.08, -H*0.22); ctx.lineTo(+W*0.08, -H*0.22); ctx.stroke();
+
+    // Top horns triangle.
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
+    ctx.beginPath();
+    ctx.moveTo(-W*0.30, -H*0.45);
+    ctx.lineTo(0, -H*0.55);
+    ctx.lineTo(+W*0.30, -H*0.45);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // Base / legs.
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-W*0.25, H*0.30); ctx.lineTo(-W*0.20, H*0.45);
+    ctx.moveTo(+W*0.25, H*0.30); ctx.lineTo(+W*0.20, H*0.45);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Floating symbols — chord-coloured, count scales with progress.
+  const symbolsMax = Math.max(8, Math.min(28, Math.round(cn*0.5)));
+  const visSymbols = Math.max(2, Math.ceil(symbolsMax*progress));
+  for(let i=0;i<visSymbols;i++){
+    const rnd = _seedRnd(i+7800, ss, 0, 0);
+    const ci = Math.floor(i*(cn/Math.max(1,symbolsMax)));
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+    const x = rnd()*CW, y = rnd()*CH;
+    const kind = i%4;
+    ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
+    ctx.lineWidth = 2.5;
+    if(kind===0){
+      // floating eye
+      ctx.beginPath();
+      ctx.ellipse(x, y, Math.min(CW,CH)*0.018, Math.min(CW,CH)*0.009, 0, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.fillStyle = isBW?'#1a1a1a':'#0e0a08';
+      ctx.beginPath(); ctx.arc(x, y, Math.min(CW,CH)*0.005, 0, Math.PI*2); ctx.fill();
+    } else if(kind===1){
+      // arrow
+      const L = Math.min(CW,CH)*0.018;
+      ctx.beginPath();
+      ctx.moveTo(x-L, y); ctx.lineTo(x+L, y);
+      ctx.moveTo(x+L*0.6, y-L*0.4); ctx.lineTo(x+L, y); ctx.lineTo(x+L*0.6, y+L*0.4);
+      ctx.stroke();
+    } else if(kind===2){
+      // triangle
+      const L = Math.min(CW,CH)*0.012;
+      ctx.beginPath();
+      ctx.moveTo(x, y-L); ctx.lineTo(x-L*0.9, y+L*0.6); ctx.lineTo(x+L*0.9, y+L*0.6);
+      ctx.closePath(); ctx.fill();
+    } else {
+      // squiggle
+      const L = Math.min(CW,CH)*0.016;
+      ctx.beginPath();
+      ctx.moveTo(x-L, y);
+      ctx.quadraticCurveTo(x-L*0.5, y-L*0.7, x, y);
+      ctx.quadraticCurveTo(x+L*0.5, y+L*0.7, x+L, y);
+      ctx.stroke();
+    }
+  }
+
+  // Black scribble connector across the top — appears late in the painting
+  // (after 60% progress) as a unifying line linking the figures.
+  if(progress > 0.6){
+    ctx.strokeStyle = isBW?'rgba(20,20,24,0.8)':'rgba(14,10,8,0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(CW*0.10, CH*0.20);
+    ctx.bezierCurveTo(CW*0.30, CH*0.10, CW*0.45, CH*0.30, CW*0.55, CH*0.15);
+    ctx.bezierCurveTo(CW*0.70, CH*0.05, CW*0.85, CH*0.25, CW*0.92, CH*0.20);
+    ctx.stroke();
+  }
+}
+
+// ── Pollock H: White Light — late-period (1954). Dark maroon-brown ground;
+// drip field with reversed proportions — 60% white/cream drips, 40% chord-
+// driven colour accents, 2% ink. Mirrors classic drip mechanics but inverts
+// the figure/ground relationship. Only Pollock variant with a dark canvas.
+function pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const progress = N/Math.max(1,cn);
+
+  // Deep maroon-brown ground (or dark grey in B/W).
+  const grad = ctx.createLinearGradient(0,0,CW,CH);
+  if(isBW){
+    grad.addColorStop(0, '#2a2622');
+    grad.addColorStop(1, '#1a1816');
+  } else {
+    grad.addColorStop(0, '#3a1c1c');
+    grad.addColorStop(1, '#2a1410');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Subtle dark grain noise — paint-rich texture, palette-independent.
+  for(let i=0;i<800;i++){
+    const rnd = _seedRnd(i+9100, ss, 0, 0);
+    const tone = isBW?60:80;
+    ctx.fillStyle = `rgba(${tone},${tone*0.5|0},${tone*0.4|0},${(0.1+rnd()*0.2).toFixed(2)})`;
+    ctx.fillRect(rnd()*CW, rnd()*CH, 1+rnd()*2, 1+rnd()*2);
+  }
+
+  // Drip count scales with chord count (~0.7×); reveal progress controls
+  // visible-pass count so painting builds up gradually as song plays.
+  const passes = Math.max(8, Math.min(220, Math.round(cn*0.7)));
+  const vis = Math.max(1, Math.ceil(passes*progress));
+
+  for(let i=0;i<vis;i++){
+    const rnd = _seedRnd(i+9500, ss, 0, 0);
+    const ci = Math.floor(i*(cn/Math.max(1,passes)));
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+
+    // 45% cream, 15% pure white, 38% chord-driven accent, 2% rare ink.
+    const pick = rnd();
+    let col;
+    if(pick < 0.45)      col = isBW?[230,230,230]:[245,240,228];  // cream
+    else if(pick < 0.60) col = [255,255,255];                       // pure white
+    else if(pick < 0.98) col = rgb;                                 // chord accent
+    else                 col = [15,12,18];                          // rare ink
+
+    // Drip from edge to edge with optional loopy (15%).
+    const padding = Math.max(CW,CH)*0.3;
+    const loopy = rnd() < 0.15;
+    let x0,y0,x1,y1;
+    if(loopy){
+      const cx=rnd()*CW, cy=rnd()*CH;
+      const reach=Math.min(CW,CH)*(0.25+rnd()*0.3);
+      const a1=rnd()*Math.PI*2, a2=a1+Math.PI+(rnd()-0.5)*1.5;
+      x0=cx+Math.cos(a1)*reach; y0=cy+Math.sin(a1)*reach;
+      x1=cx+Math.cos(a2)*reach; y1=cy+Math.sin(a2)*reach;
+    } else {
+      const side=(rnd()*4)|0;
+      if(side===0){x0=rnd()*CW;y0=-padding;x1=rnd()*CW;y1=CH+padding;}
+      else if(side===1){x0=CW+padding;y0=rnd()*CH;x1=-padding;y1=rnd()*CH;}
+      else if(side===2){x0=rnd()*CW;y0=CH+padding;x1=rnd()*CW;y1=-padding;}
+      else {x0=-padding;y0=rnd()*CH;x1=CW+padding;y1=rnd()*CH;}
+    }
+
+    // Polyline wobble (mirrors main body).
+    const segs = loopy ? 12+((rnd()*6)|0) : 8+((rnd()*5)|0);
+    const dx=x1-x0, dy=y1-y0;
+    const len=Math.sqrt(dx*dx+dy*dy)||1;
+    const px=-dy/len, py=dx/len;
+    const wobScale = loopy ? 0.32 : (rnd()<0.4 ? 0.14 : 0.20);
+    const pts=[];
+    for(let s=0;s<=segs;s++){
+      const t=s/segs;
+      const lx=x0+dx*t, ly=y0+dy*t;
+      const amp=Math.sin(t*Math.PI)*Math.min(CW,CH)*wobScale;
+      const wob=(rnd()-0.5)*2*amp;
+      pts.push({x:lx+px*wob, y:ly+py*wob});
+    }
+
+    // White/cream get slightly lower alpha so they don't completely flatten;
+    // colour accents and ink get full opacity for punch against the dark.
+    const isLight = col[0]>200 && col[1]>200;
+    const lineW = Math.min(CW,CH)*(0.003+rnd()*0.015);
+    const alpha = isLight ? (0.55+rnd()*0.30) : (0.75+rnd()*0.20);
+    ctx.strokeStyle = `rgba(${col[0]|0},${col[1]|0},${col[2]|0},${alpha.toFixed(2)})`;
+    ctx.lineWidth = lineW;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let k=1;k<pts.length-1;k++){
+      const m={x:(pts[k].x+pts[k+1].x)/2, y:(pts[k].y+pts[k+1].y)/2};
+      ctx.quadraticCurveTo(pts[k].x, pts[k].y, m.x, m.y);
+    }
+    ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+    ctx.stroke();
+
+    // Beads + occasional satellite splatter.
+    const colStr = `rgba(${col[0]|0},${col[1]|0},${col[2]|0},${alpha.toFixed(2)})`;
+    const beads = 2+Math.floor(rnd()*4);
+    for(let b=0;b<beads;b++){
+      const idx = Math.floor(rnd()*pts.length);
+      const p = pts[idx];
+      ctx.fillStyle = colStr;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, lineW*0.55 + rnd()*lineW*0.6, 0, Math.PI*2);
+      ctx.fill();
+    }
+    if(rnd()<0.5){
+      for(let b=0;b<3+Math.floor(rnd()*5);b++){
+        const idx = Math.floor(rnd()*pts.length);
+        const p = pts[idx];
+        const sx = p.x + (rnd()-0.5)*lineW*8;
+        const sy = p.y + (rnd()-0.5)*lineW*8;
+        ctx.fillStyle = colStr;
+        ctx.beginPath();
+        ctx.arc(sx, sy, lineW*0.15 + rnd()*lineW*0.4, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
   }
 }
 
