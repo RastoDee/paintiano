@@ -6825,14 +6825,15 @@ function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
 }
 
 // Variant 0 — Garden: perspective path receding to vanishing point with
-// flanking flower beds in pink/violet/yellow. The composition gives the
-// piece structure; chord notes still drive every individual stroke.
+// flanking flower beds. Composition (path + horizon + canopy) is variant
+// scaffolding; every coloured stroke comes from gc() so the painting still
+// follows the user's palette and the chord at that depth.
 function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 0);
 
-  // Warm sunlit base.
-  ctx.fillStyle = '#E8E0CC';
+  // Warm sunlit paper base (physical canvas — neutral across palettes).
+  ctx.fillStyle = '#EAE7D9';
   ctx.fillRect(0, 0, CW, CH);
 
   // Vanishing point near top centre, path widens toward viewer.
@@ -6851,18 +6852,28 @@ function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.closePath();
   ctx.fill();
 
-  // Distant tree mass at the horizon — dark green band.
-  ctx.fillStyle = '#3D5A40';
-  ctx.fillRect(0, vpy - CH * 0.04, CW, CH * 0.06);
+  // Distant tree mass at horizon — chord-derived but heavily darkened so it
+  // reads as backlit foliage. Picks an early chord (background depth).
+  const bgChord = chords[0];
+  const bgNotes = bgChord && (bgChord.n || bgChord.notes);
+  if(bgNotes && bgNotes.length){
+    const bn = bgNotes[0];
+    const bm = bn.m !== undefined ? bn.m : bn;
+    const [br, bgc, bb] = gc(bm, 100);
+    // Darken to 25% lightness — feels like trees at dusk regardless of palette.
+    ctx.fillStyle = `rgb(${Math.round(br*0.25)},${Math.round(bgc*0.25+30)},${Math.round(bb*0.25)})`;
+    ctx.fillRect(0, vpy - CH * 0.04, CW, CH * 0.06);
+  }
 
-  // Flanking flower beds — chord-driven strokes biased toward Monet pinks/
-  // violets/yellows. Density auto-scales with chord count.
+  // Flower beds — primary chord colour drives every stroke. The bed itself
+  // is a fan of comma-strokes; chord at each depth picks its own colour, so
+  // the painting "ripens" through the piece exactly as it does in other
+  // styles.
   const STROKES = Math.min(2200, Math.max(800, lim * 35));
-  ctx.globalAlpha = 0.9;
+  ctx.globalAlpha = 0.85;
   for(let k = 0; k < STROKES; k++){
     const side = rnd() < 0.5 ? -1 : 1;
-    // Bias t toward back (where path narrows) for depth.
-    const t = Math.pow(rnd(), 0.6);
+    const t = Math.pow(rnd(), 0.6);  // bias toward back (depth)
     const py = vpy + t * (pathBase - vpy);
     const pathHere = pathHalfBase * t;
     const offX = pathHere + rnd() * CW * 0.42 * (0.4 + t * 0.6);
@@ -6871,7 +6882,6 @@ function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
     const y = py + (rnd() - 0.5) * CH * 0.10;
     if(y < vpy + CH * 0.02 || y > CH) continue;
 
-    // Pick a chord by depth so foreground vs background differ.
     const ci = Math.floor(t * Math.min(lim, cn));
     const chord = chords[Math.min(cn - 1, Math.max(0, ci))];
     if(!chord) continue;
@@ -6881,14 +6891,12 @@ function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r, g, b] = gc(m, v);
-    // Blend 45% toward magenta-violet anchor so the bed reads as flowers.
-    const blend = 0.45;
-    const fr = Math.round(r * (1 - blend) + 220 * blend);
-    const fg = Math.round(g * (1 - blend) +  90 * blend);
-    const fb = Math.round(b * (1 - blend) + 170 * blend);
-    const jr = Math.max(0, Math.min(255, fr + (rnd() - 0.5) * 70));
-    const jg = Math.max(0, Math.min(255, fg + (rnd() - 0.5) * 70));
-    const jb = Math.max(0, Math.min(255, fb + (rnd() - 0.5) * 70));
+    // Slight lightness lift to brighten flowers vs. the dim canopy; chord
+    // hue is preserved.
+    const lift = 18;
+    const jr = Math.max(0, Math.min(255, r + lift + (rnd() - 0.5) * 50));
+    const jg = Math.max(0, Math.min(255, g + lift + (rnd() - 0.5) * 50));
+    const jb = Math.max(0, Math.min(255, b + lift + (rnd() - 0.5) * 50));
 
     const sz = 1.5 + rnd() * 3 * (0.5 + t);
     ctx.save();
@@ -6901,8 +6909,11 @@ function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.restore();
   }
 
-  // Green canopy strokes layered on top of the beds.
+  // Canopy strokes — chord colour gently tilted toward the green channel so
+  // foliage reads as foliage no matter the palette, without flattening the
+  // chord-driven hue.
   const CANOPY = Math.min(500, Math.max(180, lim * 8));
+  ctx.globalAlpha = 0.75;
   for(let k = 0; k < CANOPY; k++){
     const side = rnd() < 0.5 ? -1 : 1;
     const t = Math.pow(rnd(), 0.5);
@@ -6911,10 +6922,20 @@ function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
     const offX = pathHere + rnd() * CW * 0.45 * (0.4 + t * 0.6);
     const x = vpx + side * offX;
     const y = py + (rnd() - 0.5) * CH * 0.12 - CH * 0.04;
-    const r = Math.max(0, Math.min(255, 50 + (rnd() - 0.5) * 50));
-    const g = Math.max(0, Math.min(255, 130 + (rnd() - 0.5) * 40));
-    const b = Math.max(0, Math.min(255, 60 + (rnd() - 0.5) * 40));
-    ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+
+    const chord = chords[k % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Tilt toward green channel: dim R+B, lift G — keeps chord identity but
+    // suggests leafy depth.
+    const fr = Math.round(r * 0.5);
+    const fg = Math.round(g * 1.0 + 30);
+    const fb = Math.round(b * 0.5);
+    ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,fr))},${Math.max(0,Math.min(255,fg))},${Math.max(0,Math.min(255,fb))})`;
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rnd() * Math.PI);
@@ -6926,21 +6947,23 @@ function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.globalAlpha = 1;
 }
 
-// Variant 1 — Pond: vertical sky reflections (whites + pale blues) on dark
-// pond water + lily clusters with hot-pink blossoms + willow trails hanging
-// from the top edge.
+// Variant 1 — Pond: vertical sky-reflection bands + lily clusters + willow
+// trails. Sky reflections, willows, pads, and blossoms all draw from gc().
+// Substrate is a dark teal "deep water" so the palette colours read as
+// reflections on a pond rather than as a coloured floor.
 function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 1);
 
-  // Deep pond green-blue base.
+  // Dark teal pond base — physical element, palette-independent.
   ctx.fillStyle = '#1F3B45';
   ctx.fillRect(0, 0, CW, CH);
 
-  // Vertical sky reflection bands — pale blues, whites, lilacs.
+  // Vertical sky reflection bands — bright lifted chord colour (sky surface
+  // catches light → high lightness boost).
   const bands = 80;
   const bw = CW / bands;
-  ctx.globalAlpha = 0.7;
+  ctx.globalAlpha = 0.78;
   for(let i = 0; i < bands; i++){
     const x = i * bw;
     const sw = bw + rnd() * bw * 0.4;
@@ -6954,37 +6977,48 @@ function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r, g, b] = gc(m, v);
-    // Wash 70% toward sky pastels.
-    const sr = Math.round(r * 0.3 + 200);
-    const sg = Math.round(g * 0.3 + 205);
-    const sb = Math.round(b * 0.3 + 220);
-    ctx.fillStyle = `rgb(${Math.min(255,sr)},${Math.min(255,sg)},${Math.min(255,sb)})`;
+    // Lift each channel by 80 — bright reflections without losing hue.
+    const sr = Math.min(255, r + 80);
+    const sg = Math.min(255, g + 80);
+    const sb = Math.min(255, b + 90);
+    ctx.fillStyle = `rgb(${sr|0},${sg|0},${sb|0})`;
     ctx.fillRect(x, yStart, sw, len);
   }
-  // Darker green reflective shadows.
-  ctx.globalAlpha = 0.45;
+  // Dark reflective shadows — chord colour darkened heavily.
+  ctx.globalAlpha = 0.5;
   for(let i = 0; i < 30; i++){
     const x = rnd() * CW;
     const w = CW * 0.04 + rnd() * CW * 0.08;
     const y = rnd() * CH;
     const h = CH * 0.2 + rnd() * CH * 0.4;
-    const rr = 30 + rnd() * 30;
-    const gg = 60 + rnd() * 40;
-    const bb = 50 + rnd() * 30;
-    ctx.fillStyle = `rgb(${rr|0},${gg|0},${bb|0})`;
+    const chord = chords[i % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    // Darken to ~25% for shadow.
+    ctx.fillStyle = `rgb(${Math.round(r*0.25)},${Math.round(g*0.3+15)},${Math.round(b*0.3+10)})`;
     ctx.fillRect(x, y, w, h);
   }
   ctx.globalAlpha = 1;
 
-  // Willow trailing from top — vertical green strokes hanging into pond.
+  // Willow trailing from top — chord colour, tilted green for foliage feel.
   for(let i = 0; i < 40; i++){
     const x = CW * 0.7 + rnd() * CW * 0.3;
     const len = CH * (0.25 + rnd() * 0.35);
-    const rr = 40 + rnd() * 30;
-    const gg = 100 + rnd() * 30;
-    const bb = 60 + rnd() * 30;
-    const a = 0.5 + rnd() * 0.4;
-    ctx.strokeStyle = `rgba(${rr|0},${gg|0},${bb|0},${a.toFixed(2)})`;
+    const chord = chords[i % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    // Green tilt without flattening hue.
+    const wr = Math.round(r * 0.45);
+    const wg = Math.round(g * 0.95 + 25);
+    const wb = Math.round(b * 0.45);
+    const a = 0.55 + rnd() * 0.35;
+    ctx.strokeStyle = `rgba(${Math.max(0,Math.min(255,wr))},${Math.max(0,Math.min(255,wg))},${Math.max(0,Math.min(255,wb))},${a.toFixed(2)})`;
     ctx.lineWidth = 1 + rnd() * 1.5;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -6993,8 +7027,8 @@ function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.stroke();
   }
 
-  // Lily pads — green ellipses with bright pink/yellow blossom centres,
-  // clustered in 4 groups across the pond.
+  // Lily pads + blossoms. Pad uses chord colour with green tilt (leaf);
+  // blossom uses the chord colour directly with a bright lift (flower).
   const groups = 4;
   for(let g = 0; g < groups; g++){
     const cx = CW * (0.15 + g * 0.22 + rnd() * 0.05);
@@ -7004,51 +7038,67 @@ function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
       const px = cx + (rnd() - 0.5) * CW * 0.13;
       const py = cy + (rnd() - 0.5) * CH * 0.12;
       const pr = 8 + rnd() * 16;
-      // Pad — flat green.
-      const padR = 50 + rnd() * 30;
-      const padG = 100 + rnd() * 40;
-      const padB = 60 + rnd() * 30;
-      ctx.fillStyle = `rgb(${padR|0},${padG|0},${padB|0})`;
-      ctx.beginPath();
-      ctx.ellipse(px, py, pr, pr * 0.55, (rnd() - 0.5) * 0.6, 0, 6.2832);
-      ctx.fill();
-      // Blossom — chord-driven hot pink or yellow.
       const idx = (g * padsInGroup + p) % Math.max(1, cn);
       const chord = chords[idx];
       const notes = chord && (chord.n || chord.notes);
-      if(notes && notes.length){
-        const note = notes[0];
-        const m = note.m !== undefined ? note.m : note;
-        const [r, gn, b] = gc(m, 100);
-        const bloomR = Math.round(r * 0.35 + 230);
-        const bloomG = Math.round(gn * 0.3 + 130);
-        const bloomB = Math.round(b * 0.3 + 180);
-        ctx.fillStyle = `rgb(${Math.min(255,bloomR)},${Math.min(255,bloomG)},${Math.min(255,bloomB)})`;
-        ctx.beginPath();
-        ctx.arc(px + (rnd() - 0.5) * pr * 0.3, py + (rnd() - 0.5) * pr * 0.3, pr * 0.28, 0, 6.2832);
-        ctx.fill();
-      }
+      if(!notes || !notes.length) continue;
+      const note = notes[0];
+      const m = note.m !== undefined ? note.m : note;
+      const [r, gn, b] = gc(m, 100);
+      // Pad: green-tilted chord colour.
+      const padR = Math.round(r * 0.5);
+      const padG = Math.round(gn * 1.0 + 30);
+      const padB = Math.round(b * 0.5);
+      ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,padR))},${Math.max(0,Math.min(255,padG))},${Math.max(0,Math.min(255,padB))})`;
+      ctx.beginPath();
+      ctx.ellipse(px, py, pr, pr * 0.55, (rnd() - 0.5) * 0.6, 0, 6.2832);
+      ctx.fill();
+      // Blossom: pure chord colour, lifted to bright bloom.
+      const bloomR = Math.min(255, r + 50);
+      const bloomG = Math.min(255, gn + 40);
+      const bloomB = Math.min(255, b + 50);
+      ctx.fillStyle = `rgb(${bloomR},${bloomG},${bloomB})`;
+      ctx.beginPath();
+      ctx.arc(px + (rnd() - 0.5) * pr * 0.3, py + (rnd() - 0.5) * pr * 0.3, pr * 0.28, 0, 6.2832);
+      ctx.fill();
     }
   }
 }
 
-// Variant 2 — Cathedral: strong vertical gold→peach→violet wash with a
-// faint gothic spire silhouette and atmospheric chord-tinted vertical
-// strokes.
+// Variant 2 — Cathedral: vertical light wash. The wash itself is built from
+// the chord sequence (top chord → top colour, mid → mid, bottom → bottom),
+// so the gradient is the palette translated to a vertical scan. Strokes
+// layer the same chord colours back on top with mild lightness modulation.
 function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 2);
 
-  // Vertical gradient base.
+  // Sample three depth-points from the piece for a chord-driven gradient.
+  // The lift makes the gradient feel like daylight playing on stone, but
+  // the hues come straight from gc(), not from a hardcoded gold→violet.
+  function sampleChordColor(t, lightLift){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    const lr = Math.max(0, Math.min(255, r + lightLift));
+    const lg = Math.max(0, Math.min(255, g + lightLift));
+    const lb = Math.max(0, Math.min(255, b + lightLift));
+    return `rgb(${lr|0},${lg|0},${lb|0})`;
+  }
+
   const grad = ctx.createLinearGradient(0, 0, 0, CH);
-  grad.addColorStop(0,    '#F5D38A');  // gold top
-  grad.addColorStop(0.45, '#E5B9A5');  // peach mid
-  grad.addColorStop(0.85, '#9C8AB0');  // violet bottom
-  grad.addColorStop(1,    '#6B5A82');
+  grad.addColorStop(0,    sampleChordColor(0.05, 70));   // top — bright daylight tint
+  grad.addColorStop(0.45, sampleChordColor(0.40, 25));   // upper mid
+  grad.addColorStop(0.85, sampleChordColor(0.80, -30));  // lower mid — shadow
+  grad.addColorStop(1,    sampleChordColor(0.95, -60));  // bottom — deep shadow
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CW, CH);
 
-  // Cathedral silhouette — gothic tower with spire, soft transparent shadow.
+  // Cathedral silhouette — dark transparent shadow, palette-independent
+  // physical element.
   const towerCX = CW * 0.5;
   const towerW = CW * 0.42;
   const towerLeft = towerCX - towerW / 2;
@@ -7057,7 +7107,7 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
   const towerTopFlat = CH * 0.18;
   const spireTop = CH * 0.04;
 
-  ctx.fillStyle = 'rgba(80, 60, 90, 0.42)';
+  ctx.fillStyle = 'rgba(30, 22, 38, 0.35)';
   ctx.beginPath();
   ctx.moveTo(towerLeft, towerBase);
   ctx.lineTo(towerLeft, towerTopFlat);
@@ -7069,11 +7119,12 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.closePath();
   ctx.fill();
 
-  // Painterly vertical strokes overlay for atmospheric blur — each tinted
-  // toward the local gradient colour at that y so the cathedral edges blur
-  // naturally into the wash.
+  // Painterly vertical strokes — each stroke uses the chord assigned to its
+  // x-position, with lightness modulated by its y (bright at top, shadowed
+  // toward bottom). No blend toward a hardcoded gradient — the chord IS
+  // the colour.
   const STROKES = Math.min(2400, Math.max(900, lim * 40));
-  ctx.globalAlpha = 0.55;
+  ctx.globalAlpha = 0.65;
   for(let k = 0; k < STROKES; k++){
     const x = rnd() * CW;
     const y = rnd() * CH;
@@ -7088,58 +7139,63 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
     const v = note.v !== undefined ? note.v : 100;
     const [r, g, b] = gc(m, v);
 
-    // Compute local gradient bg colour at this y.
+    // Lightness modulation by y: +50 at top, -50 at bottom.
     const t = y / CH;
-    let bgR, bgG, bgB;
-    if(t < 0.45){
-      const tt = t / 0.45;
-      bgR = 245 - (245 - 229) * tt;
-      bgG = 211 - (211 - 185) * tt;
-      bgB = 138 + (165 - 138) * tt;
-    } else if(t < 0.85){
-      const tt = (t - 0.45) / 0.40;
-      bgR = 229 - (229 - 156) * tt;
-      bgG = 185 - (185 - 138) * tt;
-      bgB = 165 + (176 - 165) * tt;
-    } else {
-      const tt = (t - 0.85) / 0.15;
-      bgR = 156 - (156 - 107) * tt;
-      bgG = 138 - (138 -  90) * tt;
-      bgB = 176 - (176 - 130) * tt;
-    }
-    const blend = 0.65;
-    const finalR = Math.round(r * (1 - blend) + bgR * blend);
-    const finalG = Math.round(g * (1 - blend) + bgG * blend);
-    const finalB = Math.round(b * (1 - blend) + bgB * blend);
-    ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,finalR))},${Math.max(0,Math.min(255,finalG))},${Math.max(0,Math.min(255,finalB))})`;
+    const yLift = Math.round((1 - t * 1.4) * 50);
+    const jr = Math.max(0, Math.min(255, r + yLift + (rnd() - 0.5) * 25));
+    const jg = Math.max(0, Math.min(255, g + yLift + (rnd() - 0.5) * 25));
+    const jb = Math.max(0, Math.min(255, b + yLift + (rnd() - 0.5) * 25));
+    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
     ctx.fillRect(x, y, w, lenY);
   }
   ctx.globalAlpha = 1;
 }
 
-// Variant 3 — Haystack: solid dome silhouette anchored on horizon, warm
-// sunset sky, violet ground shadow, distant tree line.
+// Variant 3 — Haystack: dome silhouette + sky/field bands. Sky uses bright
+// lifted chord colour (sunset wash from early chords), field uses darkened
+// chord colour (cool ground from mid chords), dome uses mid-chord colour.
+// Strokes follow chord directly with a per-side lightness modulation
+// (lit / shadow), no hardcoded warm/cool anchor.
 function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 3);
 
-  // Sky gradient — coral → rose at horizon.
+  function chordColor(t){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    return gc(m, 100);
+  }
+
+  // Sky gradient — bright lifted version of the first quarter of the piece.
+  const [skyTopR, skyTopG, skyTopB] = chordColor(0.05);
+  const [skyMidR, skyMidG, skyMidB] = chordColor(0.20);
   const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.7);
-  sky.addColorStop(0, '#F5C28A');
-  sky.addColorStop(0.6, '#E89C7F');
-  sky.addColorStop(1, '#C77A6E');
+  sky.addColorStop(0,
+    `rgb(${Math.min(255, skyTopR + 70)},${Math.min(255, skyTopG + 70)},${Math.min(255, skyTopB + 70)})`);
+  sky.addColorStop(0.6,
+    `rgb(${Math.min(255, skyMidR + 40)},${Math.min(255, skyMidG + 30)},${Math.min(255, skyMidB + 30)})`);
+  const [horR, horG, horB] = chordColor(0.50);
+  sky.addColorStop(1,
+    `rgb(${Math.min(255, horR + 10)},${Math.min(255, horG)},${Math.min(255, horB - 10)})`);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CW, CH * 0.7);
 
-  // Foreground field — violet/blue shadows.
+  // Field gradient — darkened later-chord colour.
+  const [fldTopR, fldTopG, fldTopB] = chordColor(0.70);
+  const [fldBotR, fldBotG, fldBotB] = chordColor(0.95);
   const field = ctx.createLinearGradient(0, CH * 0.65, 0, CH);
-  field.addColorStop(0, '#7B6E92');
-  field.addColorStop(1, '#3F3D5C');
+  field.addColorStop(0,
+    `rgb(${Math.round(fldTopR * 0.45)},${Math.round(fldTopG * 0.45)},${Math.round(fldTopB * 0.55 + 20)})`);
+  field.addColorStop(1,
+    `rgb(${Math.round(fldBotR * 0.25)},${Math.round(fldBotG * 0.25)},${Math.round(fldBotB * 0.35 + 10)})`);
   ctx.fillStyle = field;
   ctx.fillRect(0, CH * 0.65, CW, CH * 0.35);
 
-  // Distant tree line at horizon.
-  ctx.fillStyle = '#5A4868';
+  // Distant tree line — very dark chord colour.
+  ctx.fillStyle = `rgb(${Math.round(horR * 0.3)},${Math.round(horG * 0.3)},${Math.round(horB * 0.4 + 20)})`;
   ctx.beginPath();
   ctx.moveTo(0, CH * 0.65);
   for(let x = 0; x <= CW; x += CW / 30){
@@ -7150,12 +7206,13 @@ function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.closePath();
   ctx.fill();
 
-  // Haystack dome silhouette.
+  // Haystack dome — mid-chord colour, dim warm-shifted.
+  const [stackR, stackG, stackB] = chordColor(0.55);
+  ctx.fillStyle = `rgb(${Math.round(stackR * 0.6 + 30)},${Math.round(stackG * 0.45)},${Math.round(stackB * 0.35)})`;
   const hx = CW * 0.52;
   const hyBase = CH * 0.7;
   const hw = CW * 0.34;
   const hh = CH * 0.32;
-  ctx.fillStyle = '#6A4A2C';
   ctx.beginPath();
   ctx.moveTo(hx - hw / 2, hyBase);
   ctx.bezierCurveTo(hx - hw * 0.55, hyBase - hh * 0.6, hx - hw * 0.2, hyBase - hh, hx, hyBase - hh);
@@ -7163,10 +7220,11 @@ function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.closePath();
   ctx.fill();
 
-  // Painterly strokes on the haystack — light (left) vs shadow (right) side.
+  // Painterly strokes on the haystack — chord colour, lit (left) vs. shadow
+  // (right) side via lightness multiplier only. Hue stays chord-driven.
   const STACK = Math.min(900, Math.max(300, lim * 14));
   for(let k = 0; k < STACK; k++){
-    const ang = Math.PI + rnd() * Math.PI;  // top half (dome)
+    const ang = Math.PI + rnd() * Math.PI;
     const radR = Math.pow(rnd(), 0.5);
     const dx = Math.cos(ang) * (hw / 2) * radR;
     const dy = Math.sin(ang) * hh * radR;
@@ -7180,14 +7238,11 @@ function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r, g, b] = gc(m, v);
-    const lightness = (dx < 0 ? 0.85 : 0.45) + (1 - radR) * 0.2;
-    const blend = 0.6;
-    const baseR = dx < 0 ? 200 :  90;
-    const baseG = dx < 0 ? 130 :  60;
-    const baseB = dx < 0 ?  60 :  40;
-    const finalR = Math.round((r * (1 - blend) + baseR * blend) * lightness);
-    const finalG = Math.round((g * (1 - blend) + baseG * blend) * lightness);
-    const finalB = Math.round((b * (1 - blend) + baseB * blend) * lightness);
+    // Lit side ~85% brightness, shadow side ~40% — hue preserved.
+    const lightness = (dx < 0 ? 0.95 : 0.5) + (1 - radR) * 0.15;
+    const finalR = Math.round(r * lightness);
+    const finalG = Math.round(g * lightness);
+    const finalB = Math.round(b * lightness);
     ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,finalR))},${Math.max(0,Math.min(255,finalG))},${Math.max(0,Math.min(255,finalB))})`;
     ctx.lineWidth = 1.5 + rnd() * 1.5;
     ctx.lineCap = 'round';
@@ -7199,7 +7254,8 @@ function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.stroke();
   }
 
-  // Field strokes — short horizontal brushes blended toward violet/blue.
+  // Field strokes — chord colour darkened to ~50% so the field reads as
+  // cool ground while still reflecting the palette.
   const FIELD = Math.min(1200, Math.max(400, lim * 18));
   for(let k = 0; k < FIELD; k++){
     const y = CH * 0.7 + rnd() * CH * 0.3;
@@ -7212,11 +7268,7 @@ function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
     const m = nt.m !== undefined ? nt.m : nt;
     const v = nt.v !== undefined ? nt.v : 100;
     const [r, g, b] = gc(m, v);
-    const blend = 0.7;
-    const finalR = Math.round(r * (1 - blend) + 100 * blend);
-    const finalG = Math.round(g * (1 - blend) +  85 * blend);
-    const finalB = Math.round(b * (1 - blend) + 130 * blend);
-    ctx.strokeStyle = `rgb(${finalR},${finalG},${finalB})`;
+    ctx.strokeStyle = `rgb(${Math.round(r*0.45)},${Math.round(g*0.45)},${Math.round(b*0.55 + 30)})`;
     ctx.lineWidth = 1.5 + rnd() * 1.5;
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -7225,61 +7277,81 @@ function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
 }
 
-// Variant 4 — Snow: pale grey-blue sky + snow ground with blue-violet drift
-// shadows + dark conifer silhouettes along the horizon.
+// Variant 4 — Snow: chord-driven cool sky + tinted snow + dark conifers.
+// The sky and snow both carry a subtle chord tint so the palette is visible
+// even in a "white" scene; drift shadows and tree flickers use chord colour
+// directly.
 function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 4);
 
-  // Sky gradient — pale grey-blue.
+  function chordColor(t){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    return gc(m, 100);
+  }
+
+  // Sky — light desaturated wash carrying a chord tint.
+  const [skyR, skyG, skyB] = chordColor(0.10);
   const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.6);
-  sky.addColorStop(0, '#D8DEE2');
-  sky.addColorStop(1, '#C4C9D2');
+  sky.addColorStop(0,
+    `rgb(${Math.round(skyR * 0.25 + 180)},${Math.round(skyG * 0.25 + 185)},${Math.round(skyB * 0.25 + 195)})`);
+  sky.addColorStop(1,
+    `rgb(${Math.round(skyR * 0.3 + 155)},${Math.round(skyG * 0.3 + 160)},${Math.round(skyB * 0.3 + 175)})`);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CW, CH * 0.6);
 
-  // Snow ground.
-  ctx.fillStyle = '#EDEFEF';
+  // Snow ground — chord-tinted off-white.
+  const [grndR, grndG, grndB] = chordColor(0.55);
+  ctx.fillStyle =
+    `rgb(${Math.round(grndR * 0.12 + 220)},${Math.round(grndG * 0.12 + 225)},${Math.round(grndB * 0.12 + 230)})`;
   ctx.fillRect(0, CH * 0.6, CW, CH * 0.4);
 
-  // Blue-violet drift shadows on the snow.
+  // Drift shadows — chord colour, darkened ~40% so cool palettes give cool
+  // shadows, warm palettes give warm shadows.
   ctx.globalAlpha = 0.55;
   for(let k = 0; k < 280; k++){
     const x = rnd() * CW;
     const y = CH * 0.62 + rnd() * CH * 0.36;
     const w = 20 + rnd() * 60;
     const h = 3 + rnd() * 8;
-    const sr = 110 + rnd() * 30;
-    const sg = 120 + rnd() * 25;
-    const sb = 160 + rnd() * 30;
+    const chord = chords[k % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    const sr = Math.round(r * 0.4 + 30);
+    const sg = Math.round(g * 0.4 + 40);
+    const sb = Math.round(b * 0.45 + 60);
     const a = 0.35 + rnd() * 0.4;
-    ctx.fillStyle = `rgba(${sr|0},${sg|0},${sb|0},${a.toFixed(2)})`;
+    ctx.fillStyle = `rgba(${sr},${sg},${sb},${a.toFixed(2)})`;
     ctx.beginPath();
     ctx.ellipse(x, y, w / 2, h / 2, 0, 0, 6.2832);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // Dark conifer tree silhouettes along the horizon.
+  // Dark conifer tree silhouettes — heavily darkened mid-chord, palette
+  // visible only as a tinted shadow.
+  const [trR, trG, trB] = chordColor(0.40);
   const trees = 8;
   for(let t = 0; t < trees; t++){
     const tx = (t / trees) * CW + rnd() * CW * 0.06;
     const th = CH * (0.10 + rnd() * 0.20);
     const tw = CW * (0.015 + rnd() * 0.025);
-    const tr = 30 + rnd() * 15;
-    const tg = 40 + rnd() * 15;
-    const tb = 50 + rnd() * 15;
-    ctx.fillStyle = `rgb(${tr|0},${tg|0},${tb|0})`;
-    // Trunk.
+    ctx.fillStyle =
+      `rgb(${Math.round(trR * 0.18 + 12)},${Math.round(trG * 0.18 + 18)},${Math.round(trB * 0.22 + 18)})`;
     ctx.fillRect(tx - tw * 0.2, CH * 0.6 - th, tw * 0.4, th);
-    // Upper foliage triangle.
     ctx.beginPath();
     ctx.moveTo(tx - tw,     CH * 0.6 - th * 0.3);
     ctx.lineTo(tx + tw,     CH * 0.6 - th * 0.3);
     ctx.lineTo(tx,          CH * 0.6 - th * 1.4);
     ctx.closePath();
     ctx.fill();
-    // Wider lower triangle.
     ctx.beginPath();
     ctx.moveTo(tx - tw * 1.4, CH * 0.6 - th * 0.05);
     ctx.lineTo(tx + tw * 1.4, CH * 0.6 - th * 0.05);
@@ -7288,9 +7360,10 @@ function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.fill();
   }
 
-  // Pale chord-derived flickers on the snow (subtle colour breath).
+  // Chord-driven flickers on the snow — softly lifted (snow reflects) but
+  // hue intact, so palette colours speckle visibly across the white field.
   const FLICKS = Math.min(900, Math.max(300, lim * 14));
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = 0.6;
   for(let k = 0; k < FLICKS; k++){
     const x = rnd() * CW;
     const y = CH * 0.6 + rnd() * CH * 0.4;
@@ -7301,17 +7374,18 @@ function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r, g, b] = gc(m, v);
-    const wr = Math.round(r * 0.15 + 220);
-    const wg = Math.round(g * 0.15 + 224);
-    const wb = Math.round(b * 0.15 + 234);
-    ctx.fillStyle = `rgb(${Math.min(255,wr)},${Math.min(255,wg)},${Math.min(255,wb)})`;
+    // Lift by 50 — bright but not white-washed; hue still readable.
+    const wr = Math.min(255, r + 50);
+    const wg = Math.min(255, g + 50);
+    const wb = Math.min(255, b + 60);
+    ctx.fillStyle = `rgb(${wr|0},${wg|0},${wb|0})`;
     ctx.beginPath();
     ctx.ellipse(x, y, 1.5 + rnd() * 3, 0.8 + rnd() * 1.5, rnd() * Math.PI, 0, 6.2832);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // Subtle snowflakes — fewer than before.
+  // Light snowflakes — physical white particles.
   ctx.fillStyle = '#fff';
   for(let f = 0; f < 80; f++){
     ctx.beginPath();
@@ -7320,36 +7394,50 @@ function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
 }
 
-// Variant 5 — Mist: pastel horizontal zones (sky + water) with faint
-// distant tree-line silhouette mirrored into the water + soft sun glow.
+// Variant 5 — Mist: pastel horizontal bands. Sky and water both carry a
+// strong chord tint; tree-line silhouette and veils all chord-driven.
+// Wash toward white was reduced — mist still feels diffuse but the palette
+// stays present.
 function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 5);
 
-  // Dominant hue from middle chord.
-  const midChord = chords[Math.floor(cn / 2)] || chords[0];
-  const midNotes = midChord && (midChord.n || midChord.notes) || [{ m: 60, v: 80 }];
-  const midNote = midNotes[0];
-  const mm = midNote.m !== undefined ? midNote.m : midNote;
-  const [mr, mg, mb] = gc(mm, 100);
+  function chordColor(t){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    return gc(m, 100);
+  }
 
-  // Sky gradient — pale rose with chord tint.
+  // Sky — lifted version of first-third chord. Wash is 50/50 (chord + light
+  // pastel) rather than 80/20 toward white, so the palette is clearly
+  // present.
+  const [skyR, skyG, skyB] = chordColor(0.12);
   const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.5);
-  sky.addColorStop(0, `rgb(${Math.round(mr * 0.15 + 230)},${Math.round(mg * 0.15 + 215)},${Math.round(mb * 0.15 + 220)})`);
-  sky.addColorStop(1, `rgb(${Math.round(mr * 0.20 + 210)},${Math.round(mg * 0.20 + 205)},${Math.round(mb * 0.20 + 215)})`);
+  sky.addColorStop(0,
+    `rgb(${Math.round(skyR * 0.5 + 130)},${Math.round(skyG * 0.5 + 130)},${Math.round(skyB * 0.5 + 140)})`);
+  sky.addColorStop(1,
+    `rgb(${Math.round(skyR * 0.55 + 100)},${Math.round(skyG * 0.55 + 105)},${Math.round(skyB * 0.55 + 120)})`);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CW, CH * 0.5);
 
-  // Water — mirror of sky, slightly darker.
+  // Water — mirror of sky, mid-chord based, slightly darker.
+  const [watR, watG, watB] = chordColor(0.55);
   const water = ctx.createLinearGradient(0, CH * 0.5, 0, CH);
-  water.addColorStop(0, `rgb(${Math.round(mr * 0.25 + 190)},${Math.round(mg * 0.25 + 190)},${Math.round(mb * 0.25 + 200)})`);
-  water.addColorStop(1, `rgb(${Math.round(mr * 0.30 + 170)},${Math.round(mg * 0.30 + 175)},${Math.round(mb * 0.30 + 185)})`);
+  water.addColorStop(0,
+    `rgb(${Math.round(watR * 0.55 + 90)},${Math.round(watG * 0.55 + 95)},${Math.round(watB * 0.55 + 110)})`);
+  water.addColorStop(1,
+    `rgb(${Math.round(watR * 0.6 + 60)},${Math.round(watG * 0.6 + 65)},${Math.round(watB * 0.6 + 85)})`);
   ctx.fillStyle = water;
   ctx.fillRect(0, CH * 0.5, CW, CH * 0.5);
 
-  // Faint distant tree-line silhouette at horizon.
-  ctx.globalAlpha = 0.32;
-  ctx.fillStyle = `rgb(${Math.round(mr * 0.3 + 130)},${Math.round(mg * 0.3 + 135)},${Math.round(mb * 0.3 + 145)})`;
+  // Faint tree-line at horizon — mid-chord darkened.
+  ctx.globalAlpha = 0.35;
+  const [hrR, hrG, hrB] = chordColor(0.45);
+  ctx.fillStyle =
+    `rgb(${Math.round(hrR * 0.5 + 40)},${Math.round(hrG * 0.5 + 45)},${Math.round(hrB * 0.55 + 55)})`;
   ctx.beginPath();
   ctx.moveTo(0, CH * 0.5);
   for(let x = 0; x <= CW; x += CW / 40){
@@ -7359,8 +7447,8 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.closePath();
   ctx.fill();
 
-  // Mirror it into the water (paler).
-  ctx.globalAlpha = 0.2;
+  // Mirrored into water (paler).
+  ctx.globalAlpha = 0.22;
   ctx.beginPath();
   ctx.moveTo(0, CH * 0.5);
   for(let x = 0; x <= CW; x += CW / 40){
@@ -7371,8 +7459,8 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Soft horizontal painterly veils for atmosphere.
-  ctx.globalAlpha = 0.2;
+  // Soft horizontal painterly veils — chord colour, lifted modestly.
+  ctx.globalAlpha = 0.28;
   for(let i = 0; i < Math.min(80, Math.max(40, lim)); i++){
     const y = rnd() * CH;
     const w = CW * (0.3 + rnd() * 0.5);
@@ -7385,25 +7473,26 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r, g, b] = gc(m, v);
-    const fr = Math.round(r * 0.2 + 200);
-    const fg = Math.round(g * 0.2 + 195);
-    const fb = Math.round(b * 0.2 + 215);
-    ctx.fillStyle = `rgb(${fr},${fg},${fb})`;
+    // Lift by ~50 — pastel without washing out the chord.
+    const fr = Math.min(255, r + 50);
+    const fg = Math.min(255, g + 50);
+    const fb = Math.min(255, b + 60);
+    ctx.fillStyle = `rgb(${fr|0},${fg|0},${fb|0})`;
     ctx.beginPath();
     ctx.ellipse(x + w / 2, y, w / 2, h / 2, 0, 0, 6.2832);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // Water ripple short strokes.
-  ctx.globalAlpha = 0.5;
+  // Water ripple short strokes — water chord colour with a slight lift.
+  ctx.globalAlpha = 0.55;
   for(let k = 0; k < 200; k++){
     const y = CH * 0.5 + rnd() * CH * 0.5;
     const x = rnd() * CW;
     const len = 6 + rnd() * 16;
-    const rr = Math.round(mr * 0.2 + 180);
-    const gg = Math.round(mg * 0.2 + 185);
-    const bb = Math.round(mb * 0.2 + 200);
+    const rr = Math.min(255, Math.round(watR * 0.5 + 110));
+    const gg = Math.min(255, Math.round(watG * 0.5 + 115));
+    const bb = Math.min(255, Math.round(watB * 0.5 + 130));
     const a = 0.4 + rnd() * 0.4;
     ctx.strokeStyle = `rgba(${rr},${gg},${bb},${a.toFixed(2)})`;
     ctx.lineWidth = 0.8 + rnd() * 1.2;
@@ -7414,9 +7503,10 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
   ctx.globalAlpha = 1;
 
-  // Soft sun glow near horizon centre.
-  const glowGrad = ctx.createRadialGradient(CW * 0.5, CH * 0.5, 4, CW * 0.5, CH * 0.5, CW * 0.18);
-  glowGrad.addColorStop(0, 'rgba(255,230,200,0.55)');
+  // Soft sun glow near horizon centre — physical highlight (warm regardless
+  // of palette, like a real sun). Kept low so the chord palette still reads.
+  const glowGrad = ctx.createRadialGradient(CW * 0.5, CH * 0.5, 4, CW * 0.5, CH * 0.5, CW * 0.16);
+  glowGrad.addColorStop(0, 'rgba(255,230,200,0.45)');
   glowGrad.addColorStop(1, 'rgba(255,230,200,0)');
   ctx.fillStyle = glowGrad;
   ctx.fillRect(0, CH * 0.35, CW, CH * 0.3);
