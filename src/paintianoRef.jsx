@@ -6723,15 +6723,26 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
   const BLACK = '#0a0a0a';
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Panel grid / Single big panel (original body below, via comicVariant).
-  //  2 = Ben-Day full field.  3 = Brushstrokes.  4 = Dot landscape.  5 = Speech bubble.
+  //  0 = Classic comic frame (Panel grid vs Single big panel, seed-driven
+  //      internal pick — see body below). The two sub-modes read as one
+  //      "comic" identity, so they share a single Vary slot.
+  //  1 = Closeup face (Crying Girl / Drowning Girl figuratíve).
+  //  2 = Ben-Day regions.
+  //  3 = Whaam! explosion (kinetic 1963 motif).
+  //  4 = Pop landscape (Mountain Village / Sunrise).
+  //  5 = Speech bubble + bursts (Drowning Girl / M-Maybe).
+  //  Free (cap=2) sees Panel/Single + Closeup — comic abstraction vs comic
+  //  figuration is Lichtenstein's most dramatic art-historical contrast.
   {
     const _pn=_capN(6); const _cpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_cpick===1){ comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===2){ comicPhaseBenDay(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_cpick===3){ comicPhaseBrush(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_cpick===3){ comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===4){ comicPhaseLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===5){ comicPhaseBubble(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original panel-grid/single-panel body (variant 0/1)
+    // else fall through to original panel-grid/single-panel body (variant 0;
+    // the Panel vs Single sub-pick within is seed-driven, kept as natural
+    // micro-variation rather than its own Vary slot).
   }
   function halftone(x0, y0, w, h, dotCol, spacing, rad){
     ctx.fillStyle = css(dotCol);
@@ -7090,6 +7101,242 @@ function comicPhaseBubble(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       ctx.beginPath(); ctx.moveTo(lx0,ly); ctx.lineTo(lx1,ly); ctx.stroke();
     }
   }
+}
+
+// ── Lichtenstein G: Closeup face — the iconic Lichtenstein woman from
+// Crying Girl / Drowning Girl. Chord-pink halftone skin + chord-yellow hair
+// with black strokes + huge eye with chord-coloured iris + lashes + chord-blue
+// tear + chord-red lips + speech bubble at top-right with reveal-based text
+// lines. Seven chord-driven elements at different points in the song.
+function comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const progress = N/Math.max(1,cn);
+  const INK='#0a0a0a';
+  const sR=_seedRnd(26001,ss,0,0); sR(); sR();
+
+  // Skin tone — pink, biased by an early chord.
+  const skinChord=_picChord(chords,Math.floor(cn*0.05)%cn,gc,isBW).rgb;
+  const skin=isBW
+    ? [Math.round(skinChord[0]*0.3+200),Math.round(skinChord[0]*0.3+200),Math.round(skinChord[0]*0.3+200)]
+    : [Math.min(255,skinChord[0]*0.3+220),Math.min(255,skinChord[1]*0.3+170),Math.min(255,skinChord[2]*0.3+170)];
+  ctx.fillStyle=`rgb(${skin[0]|0},${skin[1]|0},${skin[2]|0})`;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Halftone over the face area (below hairline, above lips).
+  const sp=Math.max(8,Math.min(CW,CH)*0.025);
+  const skinDot=[Math.round(skin[0]*0.6),Math.round(skin[1]*0.5),Math.round(skin[2]*0.5)];
+  _benDay(ctx,0,CH*0.15,CW,CH*0.60,`rgba(${skinDot[0]},${skinDot[1]},${skinDot[2]},0.65)`,sp,sp*0.30);
+
+  // Hair — chord-yellow band across the top.
+  const hairChord=_picChord(chords,Math.floor(cn*0.15)%cn,gc,isBW).rgb;
+  const hair=isBW
+    ? [220,220,220]
+    : [Math.min(255,hairChord[0]*0.3+230),Math.min(255,hairChord[1]*0.5+180),Math.min(255,hairChord[2]*0.2+60)];
+  ctx.fillStyle=`rgb(${hair[0]|0},${hair[1]|0},${hair[2]|0})`;
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(CW,0); ctx.lineTo(CW,CH*0.25);
+  ctx.bezierCurveTo(CW*0.7,CH*0.15,CW*0.3,CH*0.15,0,CH*0.25);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.stroke();
+  // Hair strands — count scales with reveal.
+  ctx.lineWidth=3;
+  const strands=Math.max(3,Math.ceil(10*progress));
+  for(let i=0;i<strands;i++){
+    const x=CW*(0.05+i*0.10);
+    ctx.beginPath();
+    ctx.moveTo(x,0);
+    ctx.lineTo(x+(sR()-0.5)*30,CH*0.20);
+    ctx.stroke();
+  }
+
+  // Eye — large, with chord-coloured iris.
+  const eyeX=CW*0.42, eyeY=CH*0.40;
+  const eyeW=CW*0.16, eyeH=CH*0.10;
+  // Eye white
+  ctx.fillStyle=isBW?'#e8e8e8':'#fafafa';
+  ctx.beginPath();
+  ctx.ellipse(eyeX,eyeY,eyeW/2,eyeH/2,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle=INK; ctx.lineWidth=3.5; ctx.stroke();
+  // Iris (chord-coloured)
+  const iris=_picChord(chords,Math.floor(cn*0.50)%cn,gc,isBW).rgb;
+  ctx.fillStyle=`rgb(${iris[0]|0},${iris[1]|0},${iris[2]|0})`;
+  ctx.beginPath();
+  ctx.arc(eyeX,eyeY,eyeH/2*0.85,0,Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Pupil
+  ctx.fillStyle=INK;
+  ctx.beginPath(); ctx.arc(eyeX,eyeY,eyeH/2*0.4,0,Math.PI*2); ctx.fill();
+  // Highlight
+  ctx.fillStyle='#fff';
+  ctx.beginPath();
+  ctx.arc(eyeX-eyeW*0.08,eyeY-eyeH*0.15,eyeW*0.04,0,Math.PI*2);
+  ctx.fill();
+  // Eyelashes
+  ctx.strokeStyle=INK; ctx.lineWidth=3;
+  for(let i=-3;i<=3;i++){
+    const t=i/3;
+    const x=eyeX+t*eyeW/2;
+    const y=eyeY-eyeH/2;
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineTo(x-t*8,y-18);
+    ctx.stroke();
+  }
+  // Eyebrow
+  ctx.lineWidth=5;
+  ctx.beginPath();
+  ctx.moveTo(eyeX-eyeW*0.6,eyeY-eyeH*1.5);
+  ctx.quadraticCurveTo(eyeX,eyeY-eyeH*1.9,eyeX+eyeW*0.6,eyeY-eyeH*1.3);
+  ctx.stroke();
+
+  // Tear — chord-blue droplet, only appears after ~40% progress.
+  if(progress>0.4){
+    const tearChord=_picChord(chords,Math.floor(cn*0.70)%cn,gc,isBW).rgb;
+    const tear=isBW
+      ? [180,180,180]
+      : [Math.round(tearChord[0]*0.3+80),Math.round(tearChord[1]*0.4+140),Math.round(tearChord[2]*0.5+170)];
+    ctx.fillStyle=`rgb(${tear[0]},${tear[1]},${tear[2]})`;
+    ctx.strokeStyle=INK; ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.moveTo(eyeX+eyeW*0.45,eyeY+eyeH*0.4);
+    ctx.bezierCurveTo(eyeX+eyeW*0.55,eyeY+eyeH*1.0,eyeX+eyeW*0.30,eyeY+eyeH*2.5,eyeX+eyeW*0.40,eyeY+eyeH*3.0);
+    ctx.bezierCurveTo(eyeX+eyeW*0.55,eyeY+eyeH*2.8,eyeX+eyeW*0.60,eyeY+eyeH*1.5,eyeX+eyeW*0.50,eyeY+eyeH*0.6);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+
+  // Lips — chord-red.
+  const lipChord=_picChord(chords,Math.floor(cn*0.85)%cn,gc,isBW).rgb;
+  const lip=isBW
+    ? [110,110,110]
+    : [Math.min(255,lipChord[0]*0.7+80),Math.round(lipChord[1]*0.3+30),Math.round(lipChord[2]*0.3+40)];
+  ctx.fillStyle=`rgb(${lip[0]|0},${lip[1]|0},${lip[2]|0})`;
+  ctx.strokeStyle=INK; ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(CW*0.38,CH*0.65);
+  ctx.quadraticCurveTo(CW*0.50,CH*0.62,CW*0.62,CH*0.65);
+  ctx.quadraticCurveTo(CW*0.50,CH*0.72,CW*0.38,CH*0.65);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Lip parting line
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(CW*0.40,CH*0.67); ctx.lineTo(CW*0.60,CH*0.67);
+  ctx.stroke();
+
+  // Speech bubble at top-right with text lines (lines count grows with reveal).
+  const bx=CW*0.62, by=CH*0.05, bw=CW*0.35, bh=CH*0.20;
+  ctx.fillStyle=isBW?'#f0f0f0':'#fafafa';
+  ctx.strokeStyle=INK; ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.ellipse(bx+bw/2,by+bh/2,bw/2,bh/2,0,0,Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Tail
+  ctx.beginPath();
+  ctx.moveTo(bx+bw*0.20,by+bh-2);
+  ctx.lineTo(bx+bw*0.05,by+bh+bh*0.5);
+  ctx.lineTo(bx+bw*0.40,by+bh-2);
+  ctx.closePath();
+  ctx.fillStyle=isBW?'#f0f0f0':'#fafafa'; ctx.fill(); ctx.stroke();
+  // Text lines — reveal-based count
+  ctx.strokeStyle='rgba(20,20,20,0.7)'; ctx.lineWidth=2;
+  const textLines=Math.max(1,Math.ceil(3*progress));
+  for(let i=0;i<textLines;i++){
+    const y=by+bh*0.30+i*bh*0.20;
+    ctx.beginPath();
+    ctx.moveTo(bx+bw*0.12,y);
+    ctx.lineTo(bx+bw*(0.55-i*0.05),y);
+    ctx.stroke();
+  }
+}
+
+// ── Lichtenstein H: Whaam! explosion — the iconic 1963 painting. Yellow
+// chord-driven sky with halftone wash + 3-layer jagged starburst (chord-red
+// outer + white middle + chord-yellow inner core) + 24 black motion lines
+// radiating + heavy black panel frame. Most kinetic Lichtenstein motif.
+function comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const progress = N/Math.max(1,cn);
+  const INK='#0a0a0a';
+
+  // Yellow sky background — chord-driven hue.
+  const skyChord=_picChord(chords,Math.floor(cn*0.10)%cn,gc,isBW).rgb;
+  const sky=isBW
+    ? [220,220,220]
+    : [Math.min(255,skyChord[0]*0.3+220),Math.min(255,skyChord[1]*0.3+200),Math.min(255,skyChord[2]*0.2+50)];
+  ctx.fillStyle=`rgb(${sky[0]|0},${sky[1]|0},${sky[2]|0})`;
+  ctx.fillRect(0,0,CW,CH);
+  // Halftone wash over sky.
+  const skySp=Math.max(8,Math.min(CW,CH)*0.022);
+  _benDay(ctx,0,0,CW,CH,
+    isBW?'rgba(120,120,120,0.55)':`rgba(${Math.round(sky[0]*0.6)},${Math.round(sky[1]*0.5)},${Math.round(sky[2]*0.3)},0.55)`,
+    skySp,skySp*0.28);
+
+  // Centre point of the explosion.
+  const cx=CW*0.52, cy=CH*0.50;
+
+  // OUTER LAYER — chord-red jagged starburst (24-point).
+  const explChord=_picChord(chords,Math.floor(cn*0.30)%cn,gc,isBW).rgb;
+  const exp=isBW
+    ? [180,180,180]
+    : [Math.min(255,explChord[0]*0.7+80),Math.round(explChord[1]*0.3+30),Math.round(explChord[2]*0.3+30)];
+  ctx.fillStyle=`rgb(${exp[0]|0},${exp[1]|0},${exp[2]|0})`;
+  ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.lineJoin='round';
+  ctx.beginPath();
+  const pts1=24;
+  for(let i=0;i<pts1;i++){
+    const a=(i/pts1)*Math.PI*2-Math.PI/2;
+    const r=Math.min(CW,CH)*((i%2===0)?0.42:0.30)*(0.85+0.15*Math.sin(i*0.8));
+    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // MIDDLE LAYER — white starburst (16-point), smaller.
+  ctx.fillStyle=isBW?'#f0f0f0':'#fafafa';
+  ctx.beginPath();
+  const pts2=16;
+  for(let i=0;i<pts2;i++){
+    const a=(i/pts2)*Math.PI*2-Math.PI/2;
+    const r=Math.min(CW,CH)*((i%2===0)?0.25:0.16);
+    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // INNER CORE — chord-yellow small starburst (10-point).
+  const innerChord=_picChord(chords,Math.floor(cn*0.60)%cn,gc,isBW).rgb;
+  const inner=isBW
+    ? [200,200,200]
+    : [Math.min(255,innerChord[0]*0.5+170),Math.min(255,innerChord[1]*0.5+160),Math.round(innerChord[2]*0.3+50)];
+  ctx.fillStyle=`rgb(${inner[0]|0},${inner[1]|0},${inner[2]|0})`;
+  ctx.beginPath();
+  const pts3=10;
+  for(let i=0;i<pts3;i++){
+    const a=(i/pts3)*Math.PI*2-Math.PI/2;
+    const r=Math.min(CW,CH)*((i%2===0)?0.13:0.08);
+    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // 24 motion lines — count scales with reveal so they appear during the song.
+  ctx.strokeStyle=INK; ctx.lineWidth=4;
+  const lineCount=Math.max(4,Math.ceil(24*progress));
+  for(let i=0;i<lineCount;i++){
+    const a=(i/24)*Math.PI*2;
+    const r0=Math.min(CW,CH)*0.45;
+    const r1=Math.min(CW,CH)*0.55;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);
+    ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+    ctx.stroke();
+  }
+
+  // Heavy black panel frame around the canvas.
+  ctx.lineWidth=Math.max(6,Math.min(CW,CH)*0.02);
+  ctx.strokeRect(ctx.lineWidth/2,ctx.lineWidth/2,CW-ctx.lineWidth,CH-ctx.lineWidth);
 }
 
 // ─── Monet (Light) — 6 variants ─────────────────────────────────────────────
