@@ -8152,12 +8152,22 @@ function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const ss = sessionSeed | 0;
   const _pn = _capN(6);
   const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
+  // 6-variant ladder (each slot a dedicated phase, no seed-driven collision):
+  //  0 = Poppy Field — Coquelicots (1873), horizontal landscape.
+  //  1 = Pond — Water Lilies (1899-1926).
+  //  2 = Cathedral — Rouen series (1892-94).
+  //  3 = Haystack — Wheatstacks (1890-91).
+  //  4 = Poplars — Poplars series (1891), vertical rhythm + reflection.
+  //  5 = Mist — Morning on the Seine / Impression Sunrise mood.
+  // Free preview (cap=2): Poppy Field + Pond — poppy field vs water lilies.
+  // Every phase has seed-driven layout (positions, counts, sub-modes) so
+  // different songs produce different compositions, not just different colours.
   if(_fpick === 1){ monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
   if(_fpick === 2){ monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
   if(_fpick === 3){ monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  if(_fpick === 4){ monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 4){ monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
   if(_fpick === 5){ monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode);
+  monetPhasePoppyField(ctx, CW, CH, chords, lim, gc, ss, mode);
 }
 
 // Variant 0 — Garden: perspective path receding to vanishing point with
@@ -8291,13 +8301,18 @@ function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 1);
 
+  // ── Per-song layout decisions ──
+  const bands = 60 + Math.floor(rnd()*40);        // 60-100 reflection bands
+  const willowSide = Math.floor(rnd()*3);          // 0=right, 1=left, 2=both
+  const lilyGroups = 3 + Math.floor(rnd()*4);      // 3-6 lily clusters
+  const shadowCount = 20 + Math.floor(rnd()*20);   // 20-40 dark shadows
+
   // Dark teal pond base — physical element, palette-independent.
   ctx.fillStyle = '#1F3B45';
   ctx.fillRect(0, 0, CW, CH);
 
   // Vertical sky reflection bands — bright lifted chord colour (sky surface
-  // catches light → high lightness boost).
-  const bands = 80;
+  // catches light → high lightness boost). Count varies per song.
   const bw = CW / bands;
   ctx.globalAlpha = 0.78;
   for(let i = 0; i < bands; i++){
@@ -8320,9 +8335,9 @@ function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.fillStyle = `rgb(${sr|0},${sg|0},${sb|0})`;
     ctx.fillRect(x, yStart, sw, len);
   }
-  // Dark reflective shadows — chord colour darkened heavily.
+  // Dark reflective shadows — chord colour darkened heavily. Count varies.
   ctx.globalAlpha = 0.5;
-  for(let i = 0; i < 30; i++){
+  for(let i = 0; i < shadowCount; i++){
     const x = rnd() * CW;
     const w = CW * 0.04 + rnd() * CW * 0.08;
     const y = rnd() * CH;
@@ -8340,34 +8355,40 @@ function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.globalAlpha = 1;
 
   // Willow trailing from top — chord colour, tilted green for foliage feel.
-  for(let i = 0; i < 40; i++){
-    const x = CW * 0.7 + rnd() * CW * 0.3;
-    const len = CH * (0.25 + rnd() * 0.35);
-    const chord = chords[i % Math.max(1, cn)];
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) continue;
-    const note = notes[0];
-    const m = note.m !== undefined ? note.m : note;
-    const [r, g, b] = gc(m, 100);
-    // Green tilt without flattening hue.
-    const wr = Math.round(r * 0.45);
-    const wg = Math.round(g * 0.95 + 25);
-    const wb = Math.round(b * 0.45);
-    const a = 0.55 + rnd() * 0.35;
-    ctx.strokeStyle = `rgba(${Math.max(0,Math.min(255,wr))},${Math.max(0,Math.min(255,wg))},${Math.max(0,Math.min(255,wb))},${a.toFixed(2)})`;
-    ctx.lineWidth = 1 + rnd() * 1.5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.quadraticCurveTo(x + (rnd() - 0.5) * 30, len * 0.5, x + (rnd() - 0.5) * 20, len);
-    ctx.stroke();
+  // Side (right / left / both) varies per song.
+  function willowAt(xBase, xRange, count){
+    for(let i = 0; i < count; i++){
+      const x = xBase + rnd() * xRange;
+      const len = CH * (0.25 + rnd() * 0.35);
+      const chord = chords[i % Math.max(1, cn)];
+      const notes = chord && (chord.n || chord.notes);
+      if(!notes || !notes.length) continue;
+      const note = notes[0];
+      const m = note.m !== undefined ? note.m : note;
+      const [r, g, b] = gc(m, 100);
+      const wr = Math.round(r * 0.45);
+      const wg = Math.round(g * 0.95 + 25);
+      const wb = Math.round(b * 0.45);
+      const a = 0.55 + rnd() * 0.35;
+      ctx.strokeStyle = `rgba(${Math.max(0,Math.min(255,wr))},${Math.max(0,Math.min(255,wg))},${Math.max(0,Math.min(255,wb))},${a.toFixed(2)})`;
+      ctx.lineWidth = 1 + rnd() * 1.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.quadraticCurveTo(x + (rnd() - 0.5) * 30, len * 0.5, x + (rnd() - 0.5) * 20, len);
+      ctx.stroke();
+    }
   }
+  if(willowSide === 0){ willowAt(CW*0.7, CW*0.3, 40); }
+  else if(willowSide === 1){ willowAt(0, CW*0.3, 40); }
+  else { willowAt(CW*0.7, CW*0.3, 25); willowAt(0, CW*0.3, 25); }
 
   // Lily pads + blossoms. Pad uses chord colour with green tilt (leaf);
   // blossom uses the chord colour directly with a bright lift (flower).
-  const groups = 4;
+  // Cluster count varies per song.
+  const groups = lilyGroups;
   for(let g = 0; g < groups; g++){
-    const cx = CW * (0.15 + g * 0.22 + rnd() * 0.05);
+    const cx = CW * (0.10 + (g/groups) * 0.78 + rnd() * 0.08);
     const cy = CH * (0.35 + rnd() * 0.5);
     const padsInGroup = 4 + Math.floor(rnd() * 4);
     for(let p = 0; p < padsInGroup; p++){
@@ -8434,13 +8455,16 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillRect(0, 0, CW, CH);
 
   // Cathedral silhouette — dark transparent shadow, palette-independent
-  // physical element.
-  const towerCX = CW * 0.5;
-  const towerW = CW * 0.42;
+  // physical element. Position (left/centre/right) and width vary per song.
+  const cathedralPos = Math.floor(rnd()*3);      // 0=left, 1=centre, 2=right
+  const towerXFrac = cathedralPos===0 ? 0.32 : cathedralPos===1 ? 0.50 : 0.68;
+  const towerCX = CW * towerXFrac;
+  const towerWFrac = 0.34 + rnd()*0.14;          // 0.34-0.48 width
+  const towerW = CW * towerWFrac;
   const towerLeft = towerCX - towerW / 2;
   const towerRight = towerCX + towerW / 2;
   const towerBase = CH * 0.95;
-  const towerTopFlat = CH * 0.18;
+  const towerTopFlat = CH * (0.16 + rnd()*0.06); // 0.16-0.22 top
   const spireTop = CH * 0.04;
 
   ctx.fillStyle = 'rgba(30, 22, 38, 0.35)';
@@ -8543,29 +8567,50 @@ function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fill();
 
   // Haystack dome — mid-chord colour, dim warm-shifted.
+  // Stack count (1-3), position(s), and size vary per song.
   const [stackR, stackG, stackB] = chordColor(0.55);
   ctx.fillStyle = `rgb(${Math.round(stackR * 0.6 + 30)},${Math.round(stackG * 0.45)},${Math.round(stackB * 0.35)})`;
-  const hx = CW * 0.52;
-  const hyBase = CH * 0.7;
-  const hw = CW * 0.34;
-  const hh = CH * 0.32;
-  ctx.beginPath();
-  ctx.moveTo(hx - hw / 2, hyBase);
-  ctx.bezierCurveTo(hx - hw * 0.55, hyBase - hh * 0.6, hx - hw * 0.2, hyBase - hh, hx, hyBase - hh);
-  ctx.bezierCurveTo(hx + hw * 0.2, hyBase - hh, hx + hw * 0.55, hyBase - hh * 0.6, hx + hw / 2, hyBase);
-  ctx.closePath();
-  ctx.fill();
+
+  const stackCount = 1 + Math.floor(rnd()*3);     // 1-3 haystacks
+  const stacks = [];
+  for(let s=0;s<stackCount;s++){
+    const tFrac = stackCount===1 ? 0.40 + rnd()*0.30
+                                 : 0.15 + (s/(stackCount-1))*0.70 + (rnd()-0.5)*0.08;
+    const scale = stackCount===1 ? 1.0 : 0.55 + rnd()*0.40;
+    stacks.push({
+      hx: CW*tFrac,
+      hyBase: CH*0.7,
+      hw: CW*0.34*scale,
+      hh: CH*0.32*scale,
+    });
+  }
+  // Draw each dome (back to front by scale so larger stacks overlay smaller).
+  stacks.sort((a,b)=>a.hw-b.hw);
+  for(const st of stacks){
+    ctx.beginPath();
+    ctx.moveTo(st.hx - st.hw / 2, st.hyBase);
+    ctx.bezierCurveTo(st.hx - st.hw*0.55, st.hyBase - st.hh*0.6, st.hx - st.hw*0.2, st.hyBase - st.hh, st.hx, st.hyBase - st.hh);
+    ctx.bezierCurveTo(st.hx + st.hw*0.2, st.hyBase - st.hh, st.hx + st.hw*0.55, st.hyBase - st.hh*0.6, st.hx + st.hw/2, st.hyBase);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Primary stack reference (for stroke loop below) — use largest.
+  const primary = stacks[stacks.length-1];
+  const hx = primary.hx, hyBase = primary.hyBase, hw = primary.hw, hh = primary.hh;
 
   // Painterly strokes on the haystack — chord colour, lit (left) vs. shadow
   // (right) side via lightness multiplier only. Hue stays chord-driven.
+  // Strokes distributed across all stacks proportionally to stack area.
   const STACK = Math.min(900, Math.max(300, lim * 14));
   for(let k = 0; k < STACK; k++){
+    // Pick stack weighted by area (larger gets more strokes).
+    const st = stacks[k % stackCount];
     const ang = Math.PI + rnd() * Math.PI;
     const radR = Math.pow(rnd(), 0.5);
-    const dx = Math.cos(ang) * (hw / 2) * radR;
-    const dy = Math.sin(ang) * hh * radR;
-    const px = hx + dx;
-    const py = hyBase + dy;
+    const dx = Math.cos(ang) * (st.hw / 2) * radR;
+    const dy = Math.sin(ang) * st.hh * radR;
+    const px = st.hx + dx;
+    const py = st.hyBase + dy;
     const ci = k % Math.max(1, cn);
     const chord = chords[ci];
     const notes = chord && (chord.n || chord.notes);
@@ -8747,27 +8792,30 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
     return gc(m, 100);
   }
 
+  // ── Per-song layout: sky/water ratio varies (40-60%) ──
+  const horizon = CH * (0.40 + rnd()*0.20);
+
   // Sky — lifted version of first-third chord. Wash is 50/50 (chord + light
   // pastel) rather than 80/20 toward white, so the palette is clearly
   // present.
   const [skyR, skyG, skyB] = chordColor(0.12);
-  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.5);
+  const sky = ctx.createLinearGradient(0, 0, 0, horizon);
   sky.addColorStop(0,
     `rgb(${Math.round(skyR * 0.5 + 130)},${Math.round(skyG * 0.5 + 130)},${Math.round(skyB * 0.5 + 140)})`);
   sky.addColorStop(1,
     `rgb(${Math.round(skyR * 0.55 + 100)},${Math.round(skyG * 0.55 + 105)},${Math.round(skyB * 0.55 + 120)})`);
   ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, CW, CH * 0.5);
+  ctx.fillRect(0, 0, CW, horizon);
 
   // Water — mirror of sky, mid-chord based, slightly darker.
   const [watR, watG, watB] = chordColor(0.55);
-  const water = ctx.createLinearGradient(0, CH * 0.5, 0, CH);
+  const water = ctx.createLinearGradient(0, horizon, 0, CH);
   water.addColorStop(0,
     `rgb(${Math.round(watR * 0.55 + 90)},${Math.round(watG * 0.55 + 95)},${Math.round(watB * 0.55 + 110)})`);
   water.addColorStop(1,
     `rgb(${Math.round(watR * 0.6 + 60)},${Math.round(watG * 0.6 + 65)},${Math.round(watB * 0.6 + 85)})`);
   ctx.fillStyle = water;
-  ctx.fillRect(0, CH * 0.5, CW, CH * 0.5);
+  ctx.fillRect(0, horizon, CW, CH - horizon);
 
   // Faint tree-line at horizon — mid-chord darkened.
   ctx.globalAlpha = 0.35;
@@ -8775,22 +8823,22 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle =
     `rgb(${Math.round(hrR * 0.5 + 40)},${Math.round(hrG * 0.5 + 45)},${Math.round(hrB * 0.55 + 55)})`;
   ctx.beginPath();
-  ctx.moveTo(0, CH * 0.5);
+  ctx.moveTo(0, horizon);
   for(let x = 0; x <= CW; x += CW / 40){
-    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 - CH * 0.015);
+    ctx.lineTo(x, horizon + (rnd() - 0.5) * CH * 0.04 - CH * 0.015);
   }
-  ctx.lineTo(CW, CH * 0.5);
+  ctx.lineTo(CW, horizon);
   ctx.closePath();
   ctx.fill();
 
   // Mirrored into water (paler).
   ctx.globalAlpha = 0.22;
   ctx.beginPath();
-  ctx.moveTo(0, CH * 0.5);
+  ctx.moveTo(0, horizon);
   for(let x = 0; x <= CW; x += CW / 40){
-    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 + CH * 0.015);
+    ctx.lineTo(x, horizon + (rnd() - 0.5) * CH * 0.04 + CH * 0.015);
   }
-  ctx.lineTo(CW, CH * 0.5);
+  ctx.lineTo(CW, horizon);
   ctx.closePath();
   ctx.fill();
   ctx.globalAlpha = 1;
@@ -8823,7 +8871,7 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Water ripple short strokes — water chord colour with a slight lift.
   ctx.globalAlpha = 0.55;
   for(let k = 0; k < 200; k++){
-    const y = CH * 0.5 + rnd() * CH * 0.5;
+    const y = horizon + rnd() * (CH - horizon);
     const x = rnd() * CW;
     const len = 6 + rnd() * 16;
     const rr = Math.min(255, Math.round(watR * 0.5 + 110));
@@ -8841,11 +8889,293 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
 
   // Soft sun glow near horizon centre — physical highlight (warm regardless
   // of palette, like a real sun). Kept low so the chord palette still reads.
-  const glowGrad = ctx.createRadialGradient(CW * 0.5, CH * 0.5, 4, CW * 0.5, CH * 0.5, CW * 0.16);
+  const glowGrad = ctx.createRadialGradient(CW * 0.5, horizon, 4, CW * 0.5, horizon, CW * 0.16);
   glowGrad.addColorStop(0, 'rgba(255,230,200,0.45)');
   glowGrad.addColorStop(1, 'rgba(255,230,200,0)');
   ctx.fillStyle = glowGrad;
-  ctx.fillRect(0, CH * 0.35, CW, CH * 0.3);
+  ctx.fillRect(0, horizon - CH * 0.15, CW, CH * 0.3);
+}
+
+// Variant 6 — Poppy Field (Coquelicots, 1873): horizontal landscape with sky,
+// clouds, optional tree-line, and chord-coloured poppy dabs scattered over
+// green meadow. Layout VERSATILITY: horizon height, cloud count, tree-line
+// presence, poppy distribution (uniform vs clustered), cluster centres all
+// re-rolled per session seed — different songs produce different compositions,
+// not just different colours.
+function monetPhasePoppyField(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 6);
+
+  // ── Per-song layout decisions (stable per painting, re-roll on Vary) ──
+  const horizonY = CH * (0.28 + rnd()*0.25);              // 28-53% sky/meadow
+  const cloudCount = 4 + Math.floor(rnd()*12);            // 4-16 clouds
+  const treeLineActive = rnd() < 0.7;                     // 70% chance tree-line
+  const treeLineH = CH * (0.025 + rnd()*0.04);
+  const clusterMode = rnd() < 0.5;                        // uniform vs clustered
+  const clusterCount = 3 + Math.floor(rnd()*5);           // 3-7 clusters if cluster
+  const flowerTotal = Math.min(900, Math.max(300, lim * 6));
+  const grassCount = 80 + Math.floor(rnd()*150);
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky
+  const [skyR,skyG,skyB] = chordCol(0.08);
+  const sky = ctx.createLinearGradient(0,0,0,horizonY);
+  sky.addColorStop(0, `rgb(${Math.min(255,skyR+100)},${Math.min(255,skyG+100)},${Math.min(255,skyB+110)})`);
+  sky.addColorStop(1, `rgb(${Math.min(255,skyR+70)},${Math.min(255,skyG+75)},${Math.min(255,skyB+95)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, horizonY);
+
+  // Clouds (seed-driven count + positions)
+  ctx.globalAlpha = 0.7;
+  for(let i=0;i<cloudCount;i++){
+    const cx = rnd()*CW;
+    const cy = rnd()*horizonY*0.85;
+    ctx.fillStyle = isBW ? '#d8d4cc' : '#f0e8d8';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 25+rnd()*45, 8+rnd()*10, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Meadow
+  const [fldR,fldG,fldB] = chordCol(0.55);
+  const field = ctx.createLinearGradient(0, horizonY, 0, CH);
+  field.addColorStop(0, `rgb(${Math.round(fldR*0.40+50)},${Math.round(fldG*0.75+50)},${Math.round(fldB*0.30+30)})`);
+  field.addColorStop(1, `rgb(${Math.round(fldR*0.30+30)},${Math.round(fldG*0.65+40)},${Math.round(fldB*0.25+20)})`);
+  ctx.fillStyle = field;
+  ctx.fillRect(0, horizonY, CW, CH-horizonY);
+
+  // Tree-line (seed-decided present/absent)
+  if(treeLineActive){
+    ctx.globalAlpha = 0.5;
+    const [horR,horG,horB] = chordCol(0.30);
+    ctx.fillStyle = `rgb(${Math.round(horR*0.30+20)},${Math.round(horG*0.55+30)},${Math.round(horB*0.25+15)})`;
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY);
+    for(let x=0;x<=CW;x+=CW/30) ctx.lineTo(x, horizonY + (rnd()-0.5)*CH*0.025 - treeLineH*0.5);
+    ctx.lineTo(CW, horizonY + treeLineH*0.5);
+    ctx.lineTo(0, horizonY + treeLineH*0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Cluster centres (if cluster mode)
+  let clusters = null;
+  if(clusterMode){
+    clusters = [];
+    for(let c=0;c<clusterCount;c++){
+      clusters.push({
+        cx: CW*(0.1 + rnd()*0.8),
+        cy: horizonY + rnd()*(CH-horizonY),
+        r: CW*(0.10 + rnd()*0.18),
+      });
+    }
+  }
+
+  // Poppies — seed-driven distribution
+  for(let i=0;i<flowerTotal;i++){
+    let x, y;
+    if(clusterMode){
+      const cl = clusters[Math.floor(rnd()*clusterCount)];
+      const ang = rnd()*Math.PI*2;
+      const dist = rnd()*cl.r;
+      x = cl.cx + Math.cos(ang)*dist;
+      y = cl.cy + Math.sin(ang)*dist;
+    } else {
+      const t = Math.pow(rnd(), 0.5);
+      x = rnd()*CW;
+      y = horizonY + t*(CH-horizonY);
+    }
+    if(x<0||x>CW||y<horizonY+2||y>CH) continue;
+    const [r,g,b] = chordColIdx(i);
+    const jr = Math.max(0,Math.min(255, r+30+(rnd()-0.5)*40));
+    const jg = Math.max(0,Math.min(255, g+30+(rnd()-0.5)*40));
+    const jb = Math.max(0,Math.min(255, b+30+(rnd()-0.5)*40));
+    const t = (y-horizonY)/(CH-horizonY);
+    const sz = 1.5 + rnd()*3*(0.4+t);
+    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, sz, sz*0.7, rnd()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Grass strokes
+  ctx.globalAlpha = 0.55;
+  for(let i=0;i<grassCount;i++){
+    const x = rnd()*CW;
+    const y = horizonY + rnd()*(CH-horizonY);
+    ctx.strokeStyle = `rgba(${Math.round(fldR*0.30+30)},${Math.round(fldG*0.55+30)},${Math.round(fldB*0.25+15)},0.7)`;
+    ctx.lineWidth = 1+rnd()*1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x+(rnd()-0.5)*4, y-3-rnd()*5);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 7 — Poplars (1891): vertical row of poplars + mirrored reflection.
+// Layout VERSATILITY: poplar count (5-12), spacing (uniform vs irregular),
+// water line height (42-70%), foliage density per tree, tilt active/inactive,
+// reflection depth — all re-rolled per session seed.
+function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 7);
+
+  // ── Per-song layout decisions ──
+  const poplarCount = 5 + Math.floor(rnd()*8);            // 5-12 poplars
+  const waterLine = CH * (0.42 + rnd()*0.28);             // 42-70% sky/water
+  const spacingIrregular = rnd() < 0.5;
+  const foliageBase = 50 + Math.floor(rnd()*60);
+  const tiltActive = rnd() < 0.6;
+  const reflectionDepth = 0.5 + rnd()*0.5;
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky
+  const [skyTopR,skyTopG,skyTopB] = chordCol(0.05);
+  const [skyMidR,skyMidG,skyMidB] = chordCol(0.25);
+  const sky = ctx.createLinearGradient(0, 0, 0, waterLine);
+  sky.addColorStop(0, `rgb(${Math.min(255,skyTopR+90)},${Math.min(255,skyTopG+90)},${Math.min(255,skyTopB+95)})`);
+  sky.addColorStop(1, `rgb(${Math.min(255,skyMidR+50)},${Math.min(255,skyMidG+50)},${Math.min(255,skyMidB+60)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, waterLine);
+
+  // Water
+  const [watR,watG,watB] = chordCol(0.55);
+  const water = ctx.createLinearGradient(0, waterLine, 0, CH);
+  water.addColorStop(0, `rgb(${Math.round(watR*0.6+50)},${Math.round(watG*0.6+60)},${Math.round(watB*0.6+80)})`);
+  water.addColorStop(1, `rgb(${Math.round(watR*0.5+30)},${Math.round(watG*0.5+40)},${Math.round(watB*0.55+60)})`);
+  ctx.fillStyle = water;
+  ctx.fillRect(0, waterLine, CW, CH-waterLine);
+
+  // Water ripples
+  ctx.globalAlpha = 0.3;
+  for(let i=0;i<60;i++){
+    const y = waterLine + rnd()*(CH-waterLine);
+    const w = CW*(0.3+rnd()*0.5);
+    const x = (rnd()-0.3)*CW;
+    const [r,g,b] = chordColIdx(i+10);
+    ctx.fillStyle = `rgb(${Math.min(255,r+30)|0},${Math.min(255,g+30)|0},${Math.min(255,b+50)|0})`;
+    ctx.fillRect(x, y, w, 1+rnd()*2);
+  }
+  ctx.globalAlpha = 1;
+
+  // Poplar x-positions — uniform OR irregular
+  const xs = [];
+  if(spacingIrregular){
+    for(let i=0;i<poplarCount;i++) xs.push(CW*(0.06 + rnd()*0.88));
+    xs.sort((a,b) => a-b);
+  } else {
+    for(let i=0;i<poplarCount;i++) xs.push(CW*(0.05 + (i/(poplarCount-1))*0.90));
+  }
+
+  // Draw each poplar + reflection
+  for(let p=0;p<poplarCount;p++){
+    const px = xs[p];
+    const treeTopY = CH*(0.04 + rnd()*0.08);
+    const treeH = waterLine - treeTopY;
+    const [tR,tG,tB] = chordColIdx(p*8);
+    const tilt = tiltActive ? (rnd()-0.5)*8 : 0;
+    const foliageDabs = foliageBase + Math.floor(rnd()*30);
+
+    // Trunk
+    ctx.strokeStyle = `rgba(${Math.round(tR*0.20+10)},${Math.round(tG*0.20+15)},${Math.round(tB*0.20+5)},0.95)`;
+    ctx.lineWidth = 3 + rnd()*2;
+    ctx.beginPath();
+    ctx.moveTo(px, waterLine);
+    ctx.lineTo(px+tilt, treeTopY+5);
+    ctx.stroke();
+
+    // Foliage column
+    for(let f=0;f<foliageDabs;f++){
+      const fy = treeTopY + (f/foliageDabs)*treeH;
+      const offset = (rnd()-0.5)*9 + tilt*(f/foliageDabs);
+      const tt = f/foliageDabs;
+      const lift = (1-tt)*30;
+      const fR = Math.round(tR*0.45 + lift);
+      const fG = Math.round(tG*0.75 + lift);
+      const fB = Math.round(tB*0.40 + lift);
+      ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,fR))},${Math.max(0,Math.min(255,fG))},${Math.max(0,Math.min(255,fB))})`;
+      ctx.beginPath();
+      ctx.ellipse(px+offset, fy, 4+rnd()*3, 2+rnd()*2, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Reflection
+    ctx.globalAlpha = 0.55;
+    const refTop = waterLine;
+    const refBase = refTop + treeH*reflectionDepth;
+    ctx.strokeStyle = `rgba(${Math.round(tR*0.25+15)},${Math.round(tG*0.25+20)},${Math.round(tB*0.25+10)},0.7)`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(px, refTop);
+    ctx.lineTo(px+(rnd()-0.5)*4, refBase);
+    ctx.stroke();
+    const refDabs = Math.floor(foliageDabs*0.6);
+    for(let f=0;f<refDabs;f++){
+      const fy = refTop + (f/refDabs)*(refBase-refTop);
+      const offset = (rnd()-0.5)*10;
+      const tt = f/refDabs;
+      const lift = tt*25;
+      const fR = Math.round(tR*0.40 + lift);
+      const fG = Math.round(tG*0.65 + lift);
+      const fB = Math.round(tB*0.35 + lift);
+      ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,fR))},${Math.max(0,Math.min(255,fG))},${Math.max(0,Math.min(255,fB))},0.55)`;
+      ctx.beginPath();
+      ctx.ellipse(px+offset, fy, 3+rnd()*3, 1.5+rnd()*1.5, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Horizon line
+  ctx.fillStyle = 'rgba(40,30,20,0.3)';
+  ctx.fillRect(0, waterLine-1, CW, 1.5);
 }
 
 // ─── Hokusai (Woodblock) — 6 variants ───────────────────────────────────────
