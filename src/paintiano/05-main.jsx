@@ -633,7 +633,7 @@ export default function Paintiano() {
   // covers all three states (Mosaic / Notes / oneM); the chip still cycles
   // internally on tap, but the family is shown/hidden as a unit.
   const ALL_PALETTE_KEYS = ['harmony','spectral','phi','kontra','custom'];
-  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','comic'];
+  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','comic','monet','hokusai'];
   const [setupPalettes, setSetupPalettes] = useState(() => {
     try {
       const raw = localStorage.getItem('paintiano_setup_palettes');
@@ -651,7 +651,16 @@ export default function Paintiano() {
       const arr = JSON.parse(raw);
       if(!Array.isArray(arr)) return ALL_ARTIST_KEYS.slice();
       const valid = arr.filter(k => ALL_ARTIST_KEYS.includes(k));
-      return valid.length ? valid : ALL_ARTIST_KEYS.slice();
+      if(!valid.length) return ALL_ARTIST_KEYS.slice();
+      // Auto-add any newly introduced artists (e.g. when a new pair like
+      // monet/hokusai ships) so existing users see them as enabled by default.
+      // Without this, returning users would have the new chips hidden until
+      // they manually re-visit Setup.
+      const NEW_ARTISTS = ['monet','hokusai'];
+      for(const k of NEW_ARTISTS){
+        if(ALL_ARTIST_KEYS.includes(k) && !valid.includes(k)) valid.push(k);
+      }
+      return valid;
     } catch(_) { return ALL_ARTIST_KEYS.slice(); }
   });
   useEffect(() => {
@@ -697,7 +706,7 @@ export default function Paintiano() {
   const saltHistoryRef = useRef([0]);
   const saltIdxRef = useRef(0);
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
-  const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
+  const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT',ja:'ja'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
   // isDesktop — tightens vertical rhythm on notebook viewports so the phone-shape
   // column fits 100vh without a scrollbar. Mobile keeps the original spacing.
   const [isDesktop, setIsDesktop] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px)').matches;}catch(_){return false;}});
@@ -739,17 +748,18 @@ export default function Paintiano() {
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
   const STYLE_LABELS_I18N = {
-    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic'},
-    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks'},
-    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic'},
-    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD'},
-    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic'},
-    PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Bauhaus',miro:'Constelação',mondrian:'Grade',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ'},
-    zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'包豪斯',miro:'星座',mondrian:'网格',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画'},
-    zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'包浩斯',miro:'星座',mondrian:'網格',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫'},
+    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic',monet:'Light',hokusai:'Woodblock'},
+    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks',monet:'Svetlo',hokusai:'Drevoryt'},
+    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic',monet:'Licht',hokusai:'Holzschnitt'},
+    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD',monet:'Lumière',hokusai:'Estampe'},
+    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic',monet:'Luz',hokusai:'Xilografía'},
+    PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Bauhaus',miro:'Constelação',mondrian:'Grade',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ',monet:'Luz',hokusai:'Xilogravura'},
+    zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'包豪斯',miro:'星座',mondrian:'网格',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画',monet:'光',hokusai:'浮世绘'},
+    zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'包浩斯',miro:'星座',mondrian:'網格',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫',monet:'光',hokusai:'浮世繪'},
+    ja:{picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'バウハウス',miro:'星座',mondrian:'グリッド',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック',monet:'光',hokusai:'浮世絵'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
-  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
+  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
   // button → flip to its partner; tap again → back to Mosaic. Pairing is by
@@ -764,6 +774,7 @@ export default function Paintiano() {
     ['bulge','wave'],
     ['spiral','arcs'],
     ['pop','comic'],
+    ['monet','hokusai'],
   ];
   // Which of each pair sits in the "A" (default-face) slot is randomised once
   // per app open, then frozen for the session (until reload). This rotates the
@@ -1141,7 +1152,7 @@ export default function Paintiano() {
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
+  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic','monet','hokusai'];
   // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
   // shuffle across all 16. Keeps the random feature usable for Free without ever
   // accidentally landing on a locked artist (which would just paint a Pro-only
@@ -1342,7 +1353,7 @@ export default function Paintiano() {
   const [readScale, setReadScale] = useState(1);
   // Jazyk-závislý zoom: čínske znaky majú vyššiu optickú hustotu detailov,
   // preto pre zh/zhTW pridávame 15% k readScale aby boli rovnako čitateľné ako latinka.
-  const effScale = readScale * ((lang === 'zh' || lang === 'zhTW') ? 1.15 : 1);
+  const effScale = readScale * ((lang === 'zh' || lang === 'zhTW' || lang === 'ja') ? 1.15 : 1);
   // Unified active/idle chip styling for the Color·Style strip (color modes,
   // scan direction, artist styles). Premium look: the ACTIVE chip is no longer a
   // heavy solid-gold fill with dark text — instead a soft gold-tinted fill, a
@@ -1761,7 +1772,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='oneM'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='monet'&&style!=='hokusai'&&style!=='oneM'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -1785,7 +1796,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic' && style!=='monet' && style!=='hokusai' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
@@ -1793,7 +1804,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
+      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -1853,7 +1864,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
+        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
         if(!fullCanvasOverlay){
@@ -1898,6 +1909,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='monet') drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='hokusai') drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
@@ -1958,10 +1971,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='comic' && lim>0){
         drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
+      if(style==='monet' && lim>0){
+        drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+      }
+      if(style==='hokusai' && lim>0){
+        drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+      }
       if(style==='oneM' && lim>0){
         drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='monet'&&style!=='hokusai'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -2312,7 +2331,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
+        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
         if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
@@ -3537,7 +3556,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // length-salted to further reduce accidental collisions
     return (h^(s.length*2654435761))>>>0;
   },[]);
-  const IMGMOOD_CACHE_KEY='paintiano_imgmood_cache_v1';
+  const IMGMOOD_CACHE_KEY='paintiano_imgmood_cache_v2';
   const _imgMoodCacheGet=useCallback((hash)=>{
     // Baked sample first (offline, always free — see SAMPLE_IMGMOOD constant).
     try{
@@ -4018,6 +4037,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // DO NOT setLoadedSource('image') here — that activates classic image UI
     // (Score, Atmosphere · OFF, Rows/Columns/Spiral) which doesn't belong in MFI.
     // viewMode='image' alone is enough to render originalImgUrl as the big picture.
+    // Reset Image-AI-Compose state on MFI entry. Without this, a prior
+    // aiComposeFromImage run leaves imgComposeRef.current=true (so the draw
+    // useEffect bails on line ~1653 and the MFI canvas stays black), and
+    // imgPlayModeRef.current='compose' (so startPlay redirects MFI Play to
+    // aiComposeFromImage on line ~4986 — MFI never actually plays its own
+    // piece). MFI is its own context — clear the Image-mode refs explicitly.
+    imgComposeRef.current=false;
+    pixelRef.current=null;
+    setImgPlayMode('scan'); imgPlayModeRef.current='scan';
     setOriginalImgUrl(_src); setImgMoodThumb(null);
     // Clear the previous piece title so it doesn't linger over the new image while AI composes.
     setCurrentMood(null); setInfo(null);
@@ -4052,8 +4080,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         }
       }
       if(!parsed){
-        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
-        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
+        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: LENGTH — keep it SHORT, 20-35 seconds total at the chosen tempo (the LAST note\'s startBeat+duration MUST stay under tempo/2 beats — i.e. under 30 seconds at tempo 90); 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -4135,7 +4163,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _mfiCustomActive = () => moodFromImg && originalImgUrl && originalImgUrl!==SAMPLE_IMAGE_MFI_B64;
   const _mfiTitleBusyRef = useRef(false);
   const _mfiTranslateTitle = useCallback(async (text, targetAppLang)=>{
-    const _ln=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[targetAppLang])||'English';
+    const _ln=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[targetAppLang])||'English';
     const host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
     const isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(host);
     const eps=isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -4494,7 +4522,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
-      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
       const prompt=`A painting was scanned into raw musical material. Compose a beautiful, free-standing solo piano piece INSPIRED BY that material — do not replay it literally.
 Image material:
 - Pitch palette (most present pitch classes): ${mat.palette}
@@ -4587,7 +4615,7 @@ Composition rules:
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
-      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
       const prompt=`Compose a short expressive solo piano piece inspired by this mood phrase: "${title.slice(0,80)}".
 The phrase may be written in ANY language and may be colloquial, slang or idiomatic. FIRST translate it and work out the genuine emotion it expresses (e.g. anger, irritation, joy, calm, sadness, longing) — do NOT read it word-by-word and do NOT assume it is English. THEN compose music that fits that real emotion.
 Set the "title" field to a short, natural translation of the phrase into ${_langName} that captures its meaning (Title Case, max 5 words).
@@ -4885,7 +4913,7 @@ Composition rules:
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
       const b64=dataUrl.split(',')[1];
-      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
+      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
       const prompt='Look at this image and judge the EMOTION / atmosphere of the scene. Output ONLY a single JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."} where valence is -1 (sad/dark) to 1 (happy/bright), energy is 0 (calm/still) to 1 (intense/dramatic), and title is a short mood phrase in '+_langName+' (max 4 words, Title Case).';
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
@@ -5067,10 +5095,11 @@ Composition rules:
       }catch(_){}
     }
 
-    // Mic/Music with Original source selected: route the recorded blob to the
+    // Mic with Original source selected: route the recorded blob to the
     // speakers, mute the sampler for this playthrough, paint visually as
     // usual. Falls back to piano if anything in the decode/source path failed.
-    const useOriginalListen = draftOwnerRef.current==='listen' && playSourceMicRef.current==='original' && listenPCMRef.current;
+    // Both `listen` (Music) and `sing` (Voice) record an original audio buffer.
+    const useOriginalListen = (draftOwnerRef.current==='listen' || draftOwnerRef.current==='sing') && playSourceMicRef.current==='original' && listenPCMRef.current;
     if(useOriginalListen){
       try{
         const ac=Tone.getContext().rawContext;
@@ -5507,7 +5536,7 @@ Composition rules:
   // chord immediately so there's no silent gap before the next step() tick.
   useEffect(()=>{
     if(!playing) return;
-    if(draftOwnerRef.current!=='listen') return;
+    if(draftOwnerRef.current!=='listen' && draftOwnerRef.current!=='sing') return;
     const want = (playSourceMic==='original' && !!listenPCMRef.current) ? 'original' : 'piano';
     const have = originalPlaybackRef.current ? 'original' : 'piano';
     if(want===have) return;
@@ -5780,6 +5809,13 @@ Composition rules:
     // isn't a recorded creation or is empty, so this is safe on every stop path.
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
+    // Finalise the parallel raw-audio recorder (same handler used by Music
+    // mode). Voice mode also captures original audio for the Original ⇄ Piano
+    // toggle, so this stop applies here too.
+    if(listenRecorderRef.current){
+      try{ if(listenRecorderRef.current.state!=='inactive') listenRecorderRef.current.stop(); }catch(_){}
+      listenRecorderRef.current = null;
+    }
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
     if(micAcRef.current){micAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicPainting(false);
@@ -6053,7 +6089,18 @@ Composition rules:
     setComposeMode(false);
     if(micListening){stopMicListening();}
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      // Mirror startMicListening's iOS-aware constraint negotiation so the
+      // Voice recording survives Safari's stricter audio policy. Falling back
+      // to {audio:true} on OverconstrainedError keeps the older path working.
+      let stream;
+      try{
+        const isiOS = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:!isiOS,autoGainControl:false,voiceIsolation:false},video:false});
+      }catch(ce){
+        if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
+          stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        } else { throw ce; }
+      }
       micStreamRef.current=stream;
       const ac=await getSharedAC();
       micAcRef.current=ac;
@@ -6063,6 +6110,73 @@ Composition rules:
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
+      // Parallel raw-audio capture so Voice gets the Original ⇄ Piano toggle
+      // just like Music. We share the existing listen* refs because the toggle
+      // UI and playback paths already read those — sing simply writes into
+      // them, prevailing over any earlier listen blob (last recording wins).
+      let recordStream = stream;
+      try{
+        const isiOSrec = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
+        const hp = ac.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
+        const dst = ac.createMediaStreamDestination();
+        if(isiOSrec){
+          src.connect(hp); hp.connect(dst);
+        } else {
+          const comp = ac.createDynamicsCompressor();
+          comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
+          comp.attack.value = 0.005; comp.release.value = 0.15;
+          src.connect(hp); hp.connect(comp); comp.connect(dst);
+        }
+        if(dst.stream && dst.stream.getAudioTracks().length>0) recordStream = dst.stream;
+      }catch(_){ /* fallback to raw stream — recording still works */ }
+      try{
+        const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
+        if(MR){
+          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          let mime = '';
+          for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
+          const opts = mime ? { mimeType: mime } : undefined;
+          const rec = new MR(recordStream, opts);
+          listenChunksRef.current = [];
+          // Clear any previous draft's blob — fresh sing session.
+          if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
+          listenBlobRef.current = null;
+          listenPCMRef.current = null;
+          rec.ondataavailable = (e)=>{ if(e.data && e.data.size>0) listenChunksRef.current.push(e.data); };
+          rec.onstop = ()=>{
+            const chunks = listenChunksRef.current;
+            if(!chunks || chunks.length===0){ listenChunksRef.current=[]; return; }
+            const type = rec.mimeType || mime || 'audio/webm';
+            const blob = new Blob(chunks, { type });
+            const url = URL.createObjectURL(blob);
+            listenBlobRef.current = { blob, url, type };
+            listenChunksRef.current = [];
+            setHasMicBlob(true);
+            (async()=>{
+              try{
+                const arrBuf = await blob.arrayBuffer();
+                const ac2 = Tone.getContext().rawContext;
+                const decode = (ab,ctx)=>new Promise((res,rej)=>{
+                  let done=false; const tm=setTimeout(()=>{ if(!done){done=true;rej(new Error('decode timeout'));} },10000);
+                  try{
+                    ctx.decodeAudioData(ab, b=>{ if(!done){done=true;clearTimeout(tm);res(b);} }, e=>{ if(!done){done=true;clearTimeout(tm);rej(e||new Error('decode failed'));} });
+                  }catch(_){
+                    ctx.decodeAudioData(ab).then(b=>{ if(!done){done=true;clearTimeout(tm);res(b);} }, e=>{ if(!done){done=true;clearTimeout(tm);rej(e||new Error('decode failed'));} });
+                  }
+                });
+                const buf2 = await decode(arrBuf, ac2);
+                listenPCMRef.current = buf2;
+              }catch(_){
+                listenPCMRef.current = null;
+              }
+            })();
+          };
+          rec.start(1000);
+          listenRecorderRef.current = rec;
+          setHasMicBlob(false);
+        }
+      }catch(_){ /* recording optional — pitch-track still works without it */ }
       setMicPainting(true);setMicArmed(false);setMicContext(true);
       // Frame the collapsed Color·Style strip at the top with the canvas below,
       // same as Play and compose — MIC (Voice/Music) is another "performing"
@@ -6465,6 +6579,12 @@ Composition rules:
         if(style==='comic' && chords.length>0){
           drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
+        if(style==='monet' && chords.length>0){
+          drawMonetOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
+        }
+        if(style==='hokusai' && chords.length>0){
+          drawHokusaiOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
+        }
         if(style==='oneM' && chords.length>0){
           drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
@@ -6822,7 +6942,7 @@ Composition rules:
   // mid-modal so switching language in the app live-updates the open doc.
   const legalHtmlForLang = useMemo(()=>{
     if(!legalHtml) return '';
-    const map = {EN:'en', DE:'de', FR:'fr', ES:'es', SK:'sk', PT:'pt', zh:'zh', zhTW:'zhTW'};
+    const map = {EN:'en', DE:'de', FR:'fr', ES:'es', SK:'sk', PT:'pt', zh:'zh', zhTW:'zhTW', ja:'ja'};
     const code = map[lang] || 'en';
     const target = 'class="wrap" data-lang="'+code+'"';
     let h = legalHtml;
@@ -7135,6 +7255,7 @@ Composition rules:
               SK:{code:'SK',name:'Slovenčina'},
               zh:{code:'ZH',name:'中文'},
               zhTW:{code:'ZH-TW',name:'繁體中文'},
+              ja:{code:'JA',name:'日本語'},
             };
             const meta = LANG_META[lang] || {code:lang,name:lang};
             const pill = (code, active=false) => ({
@@ -7754,25 +7875,33 @@ Composition rules:
               </div>
             )}
           </>)}
-          {/* Style — hidden in image mode: an artist re-paint makes no sense when
-              the source already IS a painting; only the colour reading matters there. */}
-          {loadedSource!=='image' && (
-          <div style={{textAlign:'center',marginTop:6,marginBottom:2,fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+          {/* Style — hidden in pure Image source modes (Scan + AI Compose).
+              MFI looks similar on screen (image is shown as backdrop) but is
+              flagged moodFromImg=true — there we DO compose a piece, so the
+              artist picker belongs there. */}
+          {(loadedSource!=='image' || moodFromImg) && (
+          <div style={{position:'relative',marginTop:6,marginBottom:2}}>
+            <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:26,height:26,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+            </button>
+          </div>
           )}
-          {loadedSource!=='image' && (
+          {(loadedSource!=='image' || moodFromImg) && (
           <>
           {(()=>{
             // ── Adaptive chip grid (max 2 rows) ────────────────────────────
             // Chip count = Mosaic (if family selected) + visible pairs in
-            // current setup. Dice sits BELOW the grid (separate flex row), so
-            // it never affects the row count. Column mapping per spec:
+            // current setup. Dice sits ABOVE the grid (in the inspired-by
+            // header row), so it never affects the row count. Column mapping
+            // per spec:
             //   1→1h0d  2→2h0d  3→3h0d  4→2h2d  5→3h2d  6→3h3d
-            //   7→4h3d  8→4h4d  9→5h4d
+            //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
             const _visiblePairs = effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b));
             const _familyOn = setupArtists.includes('mosaicFamily');
             const _chipCount = (_familyOn?1:0) + _visiblePairs.length;
             // baseCols per Rasto's key (chips only): 1→1, 2→2, 3→3, 4→2,
-            // 5→3, 6→3, 7→4, 8→4, 9→5.
+            // 5→3, 6→3, 7→4, 8→4, 9→5, 10→5.
             const _baseCols = (()=>{
               switch(_chipCount){
                 case 0: case 1: return 1;
@@ -7784,19 +7913,7 @@ Composition rules:
                 default: return 5;
               }
             })();
-            // With dice as +1 extra cell, even-n cases (4, 6, 8) overflow into
-            // a 3rd row. Widen the grid by 1 column and pad an empty slot
-            // before the bottom row so the chips stay on Rasto's key layout
-            // and dice lands in the last cell of row 2.
-            const _totalCells = _chipCount + 1; // chips + dice
-            const _rows = Math.ceil(_totalCells / _baseCols);
-            const _needPlaceholder = _rows > 2;
-            const _cols = _needPlaceholder ? _baseCols + 1 : _baseCols;
-            // After this many pair tiles, drop an invisible placeholder so the
-            // remaining chips + dice flow into row 2 starting from column 1.
-            const _placeholderAfterPairIdx = _needPlaceholder
-              ? (_baseCols - (_familyOn ? 1 : 0) - 1)
-              : -1;
+            const _cols = _baseCols;
             return (
           <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
@@ -7866,7 +7983,7 @@ Composition rules:
               // Buttons show the ARTIST that inspired the style (Picasso, Klimt…)
               // rather than the technique name. Long names are shortened to a
               // single recognizable word so they fit the narrow 5-up grid cell.
-              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
               // For Free, label always shows the unlocked 'a' artist.
               const _displayKey = forcedSide || (pairLocked ? a : (activeKey || shufKey || faceKey));
               const _artFull = STYLE_INSPIRED[_displayKey];
@@ -7976,10 +8093,10 @@ Composition rules:
               const _otherKey = (faceKey===a) ? b : a;
               const nextHint = pairLocked
                 ? (randomMode
-                    ? (isOn ? 'tap to return to shuffle' : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`)
+                    ? (isOn ? ts('tapReturnShuffle','tap to return to shuffle') : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b])))
                     : (isOn
                         ? (expandedPair===pairKey ? 'tap to hide info' : 'tap to see partner')
-                        : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`))
+                        : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b]))))
                 : (!isOn
                     ? ''
                     : (style===faceKey
@@ -7990,18 +8107,9 @@ Composition rules:
                 <button className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
                   style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
-                {_pairIdx === _placeholderAfterPairIdx && (<div aria-hidden="true" style={{visibility:'hidden'}} />)}
               </Fragment>
               );
             })}
-            {/* Random 🎲 — last cell in the grid. When n<=3 the dice is alone
-                in row 2; span across all columns so it centers across the
-                whole row (otherwise it sits in column 1 of row 2). */}
-            <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center',...(_chipCount<=3?{gridColumn:'1 / -1'}:{})}}>
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
-              </button>
-            </div>
           </div>
           ); })()}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
@@ -8011,7 +8119,7 @@ Composition rules:
               affordance, so we honour that and route the tap to the paywall. */}
           {proStatus==='free' && expandedPair && (()=>{
             const [a,b] = expandedPair.split('|');
-            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
             const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
             return (
               <div
@@ -8677,7 +8785,7 @@ Composition rules:
                       const title = (compositionName||recordingName||'Paintiano').trim()||'Paintiano';
                       // Mic/Music with Original selected: use the recorded blob
                       // directly — no re-render needed, original quality kept.
-                      const useOriginalBlob = draftOwnerRef.current==='listen' && playSourceMic==='original' && listenBlobRef.current?.blob;
+                      const useOriginalBlob = (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && playSourceMic==='original' && listenBlobRef.current?.blob;
                       let audioBlob = null;
                       let audioName;
                       if(useOriginalBlob){
@@ -9090,11 +9198,12 @@ Composition rules:
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
-        {/* Mic/Music source toggle — appears once the listen session has a
-            finalised audio blob and the mic is no longer live. One tap flips
-            between playing back the original recording and the synthesised
-            piano cover. Hidden during active capture and during recording. */}
-        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+        {/* Original ⇄ Piano source toggle — appears once the mic session
+            (Voice or Music) has a finalised audio blob and the mic is no
+            longer live. One tap flips between playing back the original
+            recording and the synthesised piano cover. Hidden during active
+            capture and during recording. */}
+        {hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && (
           <button className="pf-lift" onClick={()=>setPlaySourceMic(p=>p==='original'?'piano':'original')}
             title={playSourceMic==='original'?'playback: original recording — tap to switch to piano cover':'playback: piano cover — tap to switch to original recording'}
             style={{padding:'8px 14px',background:playSourceMic==='original'?'rgba(140,200,255,.16)':'rgba(201,168,76,.16)',color:playSourceMic==='original'?'#8accff':GOLD,border:'1px solid '+(playSourceMic==='original'?'rgba(100,180,255,.55)':'rgba(201,168,76,.55)'),borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:'0 3px 10px '+(playSourceMic==='original'?'rgba(100,180,255,.25)':'rgba(201,168,76,.25)')}}>
@@ -9103,9 +9212,9 @@ Composition rules:
         )}
         {/* Restart playback from chord 0 using the current source. Pairs with
             the source toggle: toggle swaps Original ⇄ Piano in place (seamless);
-            ↺ jumps back to the beginning. Visible whenever there's a Mic listen
-            draft with a finalised recording and nothing live is happening. */}
-        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+            ↺ jumps back to the beginning. Visible whenever there's a Mic draft
+            (Voice or Music) with a finalised recording. */}
+        {hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && (
           <button className="pf-lift"
             onClick={()=>{
               // Stop everything cleanly, reset position, then start fresh from idx 0.
@@ -9219,8 +9328,8 @@ Composition rules:
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
           const setSpd=setPlaybackSpeed;
-          // Discrete rate ladder: 0.25 steps below 1× (0.25–1), whole steps above (1–4).
-          const STEPS=[0.25,0.5,0.75,1,2,3,4];
+          // Discrete rate ladder: half-speed, normal, double-speed.
+          const STEPS=[0.5,1,2];
           const label=spd===0.5?'½×':spd===1?'1×':`${(Math.round(spd*100)/100)}×`;
           // Lock speed during recording — changing rate mid-record desyncs the
           // recorded audio from the visual painting timing in the saved file.
@@ -9563,7 +9672,7 @@ Composition rules:
                 const inf=t('tierUnlimited')||'∞';
                 const ronly=t('tierReadOnly')||'preview only';
                 const rows=[
-                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16',  null],
+                  [t('tierRowArtists')||'Artists',         '9',     '18',       '18',  null],
                   [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord, null],
                   [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
                   [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],

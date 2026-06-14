@@ -6803,6 +6803,1352 @@ function comicPhaseBubble(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+// ─── Monet (Light) — 6 variants ─────────────────────────────────────────────
+// All explore light, atmosphere, plein-air painting. Outlines forbidden.
+//  0/Garden: edge-to-edge comma-stroke carpet (Givernyho záhrada)
+//  1/Pond:   horizontal water bands + lily pads (lekná na hladine)
+//  2/Cathedral: vertical haze, dawn-to-dusk light wash (Rouenská katedrála)
+//  3/Haystack: single mass against open sky (Kopa sena)
+//  4/Snow:    cool whites + pale strokes (Zasnežená krajina)
+//  5/Mist:    near-monochrome, very soft (Hmla nad riekou)
+function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const _pn = _capN(6);
+  const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
+  if(_fpick === 1){ monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 2){ monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 3){ monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 4){ monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 5){ monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode);
+}
+
+// Variant 0 — Garden: perspective path receding to vanishing point with
+// flanking flower beds. Composition (path + horizon + canopy) is variant
+// scaffolding; every coloured stroke comes from gc() so the painting still
+// follows the user's palette and the chord at that depth.
+function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 0);
+
+  // Warm sunlit paper base (physical canvas — neutral across palettes).
+  ctx.fillStyle = '#EAE7D9';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Vanishing point near top centre, path widens toward viewer.
+  const vpx = CW * 0.5;
+  const vpy = CH * 0.22;
+  const pathBase = CH * 0.95;
+  const pathHalfBase = CW * 0.18;
+
+  // Light sandy path (triangle widening to viewer).
+  ctx.fillStyle = '#D9CFAF';
+  ctx.beginPath();
+  ctx.moveTo(CW * 0.5 - 4, vpy);
+  ctx.lineTo(CW * 0.5 + 4, vpy);
+  ctx.lineTo(vpx + pathHalfBase, pathBase);
+  ctx.lineTo(vpx - pathHalfBase, pathBase);
+  ctx.closePath();
+  ctx.fill();
+
+  // Distant tree mass at horizon — chord-derived but heavily darkened so it
+  // reads as backlit foliage. Picks an early chord (background depth).
+  const bgChord = chords[0];
+  const bgNotes = bgChord && (bgChord.n || bgChord.notes);
+  if(bgNotes && bgNotes.length){
+    const bn = bgNotes[0];
+    const bm = bn.m !== undefined ? bn.m : bn;
+    const [br, bgc, bb] = gc(bm, 100);
+    // Darken to 25% lightness — feels like trees at dusk regardless of palette.
+    ctx.fillStyle = `rgb(${Math.round(br*0.25)},${Math.round(bgc*0.25+30)},${Math.round(bb*0.25)})`;
+    ctx.fillRect(0, vpy - CH * 0.04, CW, CH * 0.06);
+  }
+
+  // Flower beds — primary chord colour drives every stroke. The bed itself
+  // is a fan of comma-strokes; chord at each depth picks its own colour, so
+  // the painting "ripens" through the piece exactly as it does in other
+  // styles.
+  const STROKES = Math.min(2200, Math.max(800, lim * 35));
+  ctx.globalAlpha = 0.85;
+  for(let k = 0; k < STROKES; k++){
+    const side = rnd() < 0.5 ? -1 : 1;
+    const t = Math.pow(rnd(), 0.6);  // bias toward back (depth)
+    const py = vpy + t * (pathBase - vpy);
+    const pathHere = pathHalfBase * t;
+    const offX = pathHere + rnd() * CW * 0.42 * (0.4 + t * 0.6);
+    const x = vpx + side * offX;
+    if(x < 0 || x > CW) continue;
+    const y = py + (rnd() - 0.5) * CH * 0.10;
+    if(y < vpy + CH * 0.02 || y > CH) continue;
+
+    const ci = Math.floor(t * Math.min(lim, cn));
+    const chord = chords[Math.min(cn - 1, Math.max(0, ci))];
+    if(!chord) continue;
+    const notes = chord.n || chord.notes;
+    if(!notes || !notes.length) continue;
+    const note = notes[Math.floor(rnd() * notes.length)];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Slight lightness lift to brighten flowers vs. the dim canopy; chord
+    // hue is preserved.
+    const lift = 18;
+    const jr = Math.max(0, Math.min(255, r + lift + (rnd() - 0.5) * 50));
+    const jg = Math.max(0, Math.min(255, g + lift + (rnd() - 0.5) * 50));
+    const jb = Math.max(0, Math.min(255, b + lift + (rnd() - 0.5) * 50));
+
+    const sz = 1.5 + rnd() * 3 * (0.5 + t);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rnd() * Math.PI);
+    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, sz * 1.4, sz * 0.5, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Canopy strokes — chord colour gently tilted toward the green channel so
+  // foliage reads as foliage no matter the palette, without flattening the
+  // chord-driven hue.
+  const CANOPY = Math.min(500, Math.max(180, lim * 8));
+  ctx.globalAlpha = 0.75;
+  for(let k = 0; k < CANOPY; k++){
+    const side = rnd() < 0.5 ? -1 : 1;
+    const t = Math.pow(rnd(), 0.5);
+    const py = vpy + t * (pathBase - vpy);
+    const pathHere = pathHalfBase * t;
+    const offX = pathHere + rnd() * CW * 0.45 * (0.4 + t * 0.6);
+    const x = vpx + side * offX;
+    const y = py + (rnd() - 0.5) * CH * 0.12 - CH * 0.04;
+
+    const chord = chords[k % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Tilt toward green channel: dim R+B, lift G — keeps chord identity but
+    // suggests leafy depth.
+    const fr = Math.round(r * 0.5);
+    const fg = Math.round(g * 1.0 + 30);
+    const fb = Math.round(b * 0.5);
+    ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,fr))},${Math.max(0,Math.min(255,fg))},${Math.max(0,Math.min(255,fb))})`;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rnd() * Math.PI);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 3 + rnd() * 3, 1.2 + rnd() * 1.2, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 1 — Pond: vertical sky-reflection bands + lily clusters + willow
+// trails. Sky reflections, willows, pads, and blossoms all draw from gc().
+// Substrate is a dark teal "deep water" so the palette colours read as
+// reflections on a pond rather than as a coloured floor.
+function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 1);
+
+  // Dark teal pond base — physical element, palette-independent.
+  ctx.fillStyle = '#1F3B45';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Vertical sky reflection bands — bright lifted chord colour (sky surface
+  // catches light → high lightness boost).
+  const bands = 80;
+  const bw = CW / bands;
+  ctx.globalAlpha = 0.78;
+  for(let i = 0; i < bands; i++){
+    const x = i * bw;
+    const sw = bw + rnd() * bw * 0.4;
+    const yStart = rnd() * CH * 0.3;
+    const len = CH * (0.4 + rnd() * 0.55);
+    const ci = Math.floor((i / bands) * Math.min(lim, cn));
+    const chord = chords[Math.min(cn - 1, Math.max(0, ci))];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Lift each channel by 80 — bright reflections without losing hue.
+    const sr = Math.min(255, r + 80);
+    const sg = Math.min(255, g + 80);
+    const sb = Math.min(255, b + 90);
+    ctx.fillStyle = `rgb(${sr|0},${sg|0},${sb|0})`;
+    ctx.fillRect(x, yStart, sw, len);
+  }
+  // Dark reflective shadows — chord colour darkened heavily.
+  ctx.globalAlpha = 0.5;
+  for(let i = 0; i < 30; i++){
+    const x = rnd() * CW;
+    const w = CW * 0.04 + rnd() * CW * 0.08;
+    const y = rnd() * CH;
+    const h = CH * 0.2 + rnd() * CH * 0.4;
+    const chord = chords[i % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    // Darken to ~25% for shadow.
+    ctx.fillStyle = `rgb(${Math.round(r*0.25)},${Math.round(g*0.3+15)},${Math.round(b*0.3+10)})`;
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.globalAlpha = 1;
+
+  // Willow trailing from top — chord colour, tilted green for foliage feel.
+  for(let i = 0; i < 40; i++){
+    const x = CW * 0.7 + rnd() * CW * 0.3;
+    const len = CH * (0.25 + rnd() * 0.35);
+    const chord = chords[i % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    // Green tilt without flattening hue.
+    const wr = Math.round(r * 0.45);
+    const wg = Math.round(g * 0.95 + 25);
+    const wb = Math.round(b * 0.45);
+    const a = 0.55 + rnd() * 0.35;
+    ctx.strokeStyle = `rgba(${Math.max(0,Math.min(255,wr))},${Math.max(0,Math.min(255,wg))},${Math.max(0,Math.min(255,wb))},${a.toFixed(2)})`;
+    ctx.lineWidth = 1 + rnd() * 1.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.quadraticCurveTo(x + (rnd() - 0.5) * 30, len * 0.5, x + (rnd() - 0.5) * 20, len);
+    ctx.stroke();
+  }
+
+  // Lily pads + blossoms. Pad uses chord colour with green tilt (leaf);
+  // blossom uses the chord colour directly with a bright lift (flower).
+  const groups = 4;
+  for(let g = 0; g < groups; g++){
+    const cx = CW * (0.15 + g * 0.22 + rnd() * 0.05);
+    const cy = CH * (0.35 + rnd() * 0.5);
+    const padsInGroup = 4 + Math.floor(rnd() * 4);
+    for(let p = 0; p < padsInGroup; p++){
+      const px = cx + (rnd() - 0.5) * CW * 0.13;
+      const py = cy + (rnd() - 0.5) * CH * 0.12;
+      const pr = 8 + rnd() * 16;
+      const idx = (g * padsInGroup + p) % Math.max(1, cn);
+      const chord = chords[idx];
+      const notes = chord && (chord.n || chord.notes);
+      if(!notes || !notes.length) continue;
+      const note = notes[0];
+      const m = note.m !== undefined ? note.m : note;
+      const [r, gn, b] = gc(m, 100);
+      // Pad: green-tilted chord colour.
+      const padR = Math.round(r * 0.5);
+      const padG = Math.round(gn * 1.0 + 30);
+      const padB = Math.round(b * 0.5);
+      ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,padR))},${Math.max(0,Math.min(255,padG))},${Math.max(0,Math.min(255,padB))})`;
+      ctx.beginPath();
+      ctx.ellipse(px, py, pr, pr * 0.55, (rnd() - 0.5) * 0.6, 0, 6.2832);
+      ctx.fill();
+      // Blossom: pure chord colour, lifted to bright bloom.
+      const bloomR = Math.min(255, r + 50);
+      const bloomG = Math.min(255, gn + 40);
+      const bloomB = Math.min(255, b + 50);
+      ctx.fillStyle = `rgb(${bloomR},${bloomG},${bloomB})`;
+      ctx.beginPath();
+      ctx.arc(px + (rnd() - 0.5) * pr * 0.3, py + (rnd() - 0.5) * pr * 0.3, pr * 0.28, 0, 6.2832);
+      ctx.fill();
+    }
+  }
+}
+
+// Variant 2 — Cathedral: vertical light wash. The wash itself is built from
+// the chord sequence (top chord → top colour, mid → mid, bottom → bottom),
+// so the gradient is the palette translated to a vertical scan. Strokes
+// layer the same chord colours back on top with mild lightness modulation.
+function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 2);
+
+  // Sample three depth-points from the piece for a chord-driven gradient.
+  // The lift makes the gradient feel like daylight playing on stone, but
+  // the hues come straight from gc(), not from a hardcoded gold→violet.
+  function sampleChordColor(t, lightLift){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    const lr = Math.max(0, Math.min(255, r + lightLift));
+    const lg = Math.max(0, Math.min(255, g + lightLift));
+    const lb = Math.max(0, Math.min(255, b + lightLift));
+    return `rgb(${lr|0},${lg|0},${lb|0})`;
+  }
+
+  const grad = ctx.createLinearGradient(0, 0, 0, CH);
+  grad.addColorStop(0,    sampleChordColor(0.05, 70));   // top — bright daylight tint
+  grad.addColorStop(0.45, sampleChordColor(0.40, 25));   // upper mid
+  grad.addColorStop(0.85, sampleChordColor(0.80, -30));  // lower mid — shadow
+  grad.addColorStop(1,    sampleChordColor(0.95, -60));  // bottom — deep shadow
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Cathedral silhouette — dark transparent shadow, palette-independent
+  // physical element.
+  const towerCX = CW * 0.5;
+  const towerW = CW * 0.42;
+  const towerLeft = towerCX - towerW / 2;
+  const towerRight = towerCX + towerW / 2;
+  const towerBase = CH * 0.95;
+  const towerTopFlat = CH * 0.18;
+  const spireTop = CH * 0.04;
+
+  ctx.fillStyle = 'rgba(30, 22, 38, 0.35)';
+  ctx.beginPath();
+  ctx.moveTo(towerLeft, towerBase);
+  ctx.lineTo(towerLeft, towerTopFlat);
+  ctx.lineTo(towerCX - CW * 0.04, towerTopFlat - CH * 0.04);
+  ctx.lineTo(towerCX, spireTop);
+  ctx.lineTo(towerCX + CW * 0.04, towerTopFlat - CH * 0.04);
+  ctx.lineTo(towerRight, towerTopFlat);
+  ctx.lineTo(towerRight, towerBase);
+  ctx.closePath();
+  ctx.fill();
+
+  // Painterly vertical strokes — each stroke uses the chord assigned to its
+  // x-position, with lightness modulated by its y (bright at top, shadowed
+  // toward bottom). No blend toward a hardcoded gradient — the chord IS
+  // the colour.
+  const STROKES = Math.min(2400, Math.max(900, lim * 40));
+  ctx.globalAlpha = 0.65;
+  for(let k = 0; k < STROKES; k++){
+    const x = rnd() * CW;
+    const y = rnd() * CH;
+    const lenY = 30 + rnd() * 120;
+    const w = 1 + rnd() * 3;
+    const ci = Math.floor((x / CW) * Math.min(lim, cn)) % Math.max(1, cn);
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[Math.floor(rnd() * notes.length)];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+
+    // Lightness modulation by y: +50 at top, -50 at bottom.
+    const t = y / CH;
+    const yLift = Math.round((1 - t * 1.4) * 50);
+    const jr = Math.max(0, Math.min(255, r + yLift + (rnd() - 0.5) * 25));
+    const jg = Math.max(0, Math.min(255, g + yLift + (rnd() - 0.5) * 25));
+    const jb = Math.max(0, Math.min(255, b + yLift + (rnd() - 0.5) * 25));
+    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
+    ctx.fillRect(x, y, w, lenY);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 3 — Haystack: dome silhouette + sky/field bands. Sky uses bright
+// lifted chord colour (sunset wash from early chords), field uses darkened
+// chord colour (cool ground from mid chords), dome uses mid-chord colour.
+// Strokes follow chord directly with a per-side lightness modulation
+// (lit / shadow), no hardcoded warm/cool anchor.
+function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 3);
+
+  function chordColor(t){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    return gc(m, 100);
+  }
+
+  // Sky gradient — bright lifted version of the first quarter of the piece.
+  const [skyTopR, skyTopG, skyTopB] = chordColor(0.05);
+  const [skyMidR, skyMidG, skyMidB] = chordColor(0.20);
+  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.7);
+  sky.addColorStop(0,
+    `rgb(${Math.min(255, skyTopR + 70)},${Math.min(255, skyTopG + 70)},${Math.min(255, skyTopB + 70)})`);
+  sky.addColorStop(0.6,
+    `rgb(${Math.min(255, skyMidR + 40)},${Math.min(255, skyMidG + 30)},${Math.min(255, skyMidB + 30)})`);
+  const [horR, horG, horB] = chordColor(0.50);
+  sky.addColorStop(1,
+    `rgb(${Math.min(255, horR + 10)},${Math.min(255, horG)},${Math.min(255, horB - 10)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH * 0.7);
+
+  // Field gradient — darkened later-chord colour.
+  const [fldTopR, fldTopG, fldTopB] = chordColor(0.70);
+  const [fldBotR, fldBotG, fldBotB] = chordColor(0.95);
+  const field = ctx.createLinearGradient(0, CH * 0.65, 0, CH);
+  field.addColorStop(0,
+    `rgb(${Math.round(fldTopR * 0.45)},${Math.round(fldTopG * 0.45)},${Math.round(fldTopB * 0.55 + 20)})`);
+  field.addColorStop(1,
+    `rgb(${Math.round(fldBotR * 0.25)},${Math.round(fldBotG * 0.25)},${Math.round(fldBotB * 0.35 + 10)})`);
+  ctx.fillStyle = field;
+  ctx.fillRect(0, CH * 0.65, CW, CH * 0.35);
+
+  // Distant tree line — very dark chord colour.
+  ctx.fillStyle = `rgb(${Math.round(horR * 0.3)},${Math.round(horG * 0.3)},${Math.round(horB * 0.4 + 20)})`;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.65);
+  for(let x = 0; x <= CW; x += CW / 30){
+    ctx.lineTo(x, CH * 0.65 + (rnd() - 0.5) * CH * 0.025 - CH * 0.01);
+  }
+  ctx.lineTo(CW, CH * 0.7);
+  ctx.lineTo(0, CH * 0.7);
+  ctx.closePath();
+  ctx.fill();
+
+  // Haystack dome — mid-chord colour, dim warm-shifted.
+  const [stackR, stackG, stackB] = chordColor(0.55);
+  ctx.fillStyle = `rgb(${Math.round(stackR * 0.6 + 30)},${Math.round(stackG * 0.45)},${Math.round(stackB * 0.35)})`;
+  const hx = CW * 0.52;
+  const hyBase = CH * 0.7;
+  const hw = CW * 0.34;
+  const hh = CH * 0.32;
+  ctx.beginPath();
+  ctx.moveTo(hx - hw / 2, hyBase);
+  ctx.bezierCurveTo(hx - hw * 0.55, hyBase - hh * 0.6, hx - hw * 0.2, hyBase - hh, hx, hyBase - hh);
+  ctx.bezierCurveTo(hx + hw * 0.2, hyBase - hh, hx + hw * 0.55, hyBase - hh * 0.6, hx + hw / 2, hyBase);
+  ctx.closePath();
+  ctx.fill();
+
+  // Painterly strokes on the haystack — chord colour, lit (left) vs. shadow
+  // (right) side via lightness multiplier only. Hue stays chord-driven.
+  const STACK = Math.min(900, Math.max(300, lim * 14));
+  for(let k = 0; k < STACK; k++){
+    const ang = Math.PI + rnd() * Math.PI;
+    const radR = Math.pow(rnd(), 0.5);
+    const dx = Math.cos(ang) * (hw / 2) * radR;
+    const dy = Math.sin(ang) * hh * radR;
+    const px = hx + dx;
+    const py = hyBase + dy;
+    const ci = k % Math.max(1, cn);
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Lit side ~85% brightness, shadow side ~40% — hue preserved.
+    const lightness = (dx < 0 ? 0.95 : 0.5) + (1 - radR) * 0.15;
+    const finalR = Math.round(r * lightness);
+    const finalG = Math.round(g * lightness);
+    const finalB = Math.round(b * lightness);
+    ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,finalR))},${Math.max(0,Math.min(255,finalG))},${Math.max(0,Math.min(255,finalB))})`;
+    ctx.lineWidth = 1.5 + rnd() * 1.5;
+    ctx.lineCap = 'round';
+    const slen = 3 + rnd() * 5;
+    const sang = ang + Math.PI / 2 + (rnd() - 0.5) * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + Math.cos(sang) * slen, py + Math.sin(sang) * slen);
+    ctx.stroke();
+  }
+
+  // Field strokes — chord colour darkened to ~50% so the field reads as
+  // cool ground while still reflecting the palette.
+  const FIELD = Math.min(1200, Math.max(400, lim * 18));
+  for(let k = 0; k < FIELD; k++){
+    const y = CH * 0.7 + rnd() * CH * 0.3;
+    const x = rnd() * CW;
+    const len = 6 + rnd() * 16;
+    const note = chords[Math.floor(rnd() * cn) % Math.max(1, cn)];
+    const ns = note && (note.n || note.notes);
+    if(!ns || !ns.length) continue;
+    const nt = ns[0];
+    const m = nt.m !== undefined ? nt.m : nt;
+    const v = nt.v !== undefined ? nt.v : 100;
+    const [r, g, b] = gc(m, v);
+    ctx.strokeStyle = `rgb(${Math.round(r*0.45)},${Math.round(g*0.45)},${Math.round(b*0.55 + 30)})`;
+    ctx.lineWidth = 1.5 + rnd() * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y + (rnd() - 0.5) * 2);
+    ctx.stroke();
+  }
+}
+
+// Variant 4 — Snow: chord-driven cool sky + tinted snow + dark conifers.
+// The sky and snow both carry a subtle chord tint so the palette is visible
+// even in a "white" scene; drift shadows and tree flickers use chord colour
+// directly.
+function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 4);
+
+  function chordColor(t){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    return gc(m, 100);
+  }
+
+  // Sky — light desaturated wash carrying a chord tint.
+  const [skyR, skyG, skyB] = chordColor(0.10);
+  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.6);
+  sky.addColorStop(0,
+    `rgb(${Math.round(skyR * 0.25 + 180)},${Math.round(skyG * 0.25 + 185)},${Math.round(skyB * 0.25 + 195)})`);
+  sky.addColorStop(1,
+    `rgb(${Math.round(skyR * 0.3 + 155)},${Math.round(skyG * 0.3 + 160)},${Math.round(skyB * 0.3 + 175)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH * 0.6);
+
+  // Snow ground — chord-tinted off-white.
+  const [grndR, grndG, grndB] = chordColor(0.55);
+  ctx.fillStyle =
+    `rgb(${Math.round(grndR * 0.12 + 220)},${Math.round(grndG * 0.12 + 225)},${Math.round(grndB * 0.12 + 230)})`;
+  ctx.fillRect(0, CH * 0.6, CW, CH * 0.4);
+
+  // Drift shadows — chord colour, darkened ~40% so cool palettes give cool
+  // shadows, warm palettes give warm shadows.
+  ctx.globalAlpha = 0.55;
+  for(let k = 0; k < 280; k++){
+    const x = rnd() * CW;
+    const y = CH * 0.62 + rnd() * CH * 0.36;
+    const w = 20 + rnd() * 60;
+    const h = 3 + rnd() * 8;
+    const chord = chords[k % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    const sr = Math.round(r * 0.4 + 30);
+    const sg = Math.round(g * 0.4 + 40);
+    const sb = Math.round(b * 0.45 + 60);
+    const a = 0.35 + rnd() * 0.4;
+    ctx.fillStyle = `rgba(${sr},${sg},${sb},${a.toFixed(2)})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w / 2, h / 2, 0, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Dark conifer tree silhouettes — heavily darkened mid-chord, palette
+  // visible only as a tinted shadow.
+  const [trR, trG, trB] = chordColor(0.40);
+  const trees = 8;
+  for(let t = 0; t < trees; t++){
+    const tx = (t / trees) * CW + rnd() * CW * 0.06;
+    const th = CH * (0.10 + rnd() * 0.20);
+    const tw = CW * (0.015 + rnd() * 0.025);
+    ctx.fillStyle =
+      `rgb(${Math.round(trR * 0.18 + 12)},${Math.round(trG * 0.18 + 18)},${Math.round(trB * 0.22 + 18)})`;
+    ctx.fillRect(tx - tw * 0.2, CH * 0.6 - th, tw * 0.4, th);
+    ctx.beginPath();
+    ctx.moveTo(tx - tw,     CH * 0.6 - th * 0.3);
+    ctx.lineTo(tx + tw,     CH * 0.6 - th * 0.3);
+    ctx.lineTo(tx,          CH * 0.6 - th * 1.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(tx - tw * 1.4, CH * 0.6 - th * 0.05);
+    ctx.lineTo(tx + tw * 1.4, CH * 0.6 - th * 0.05);
+    ctx.lineTo(tx,            CH * 0.6 - th * 0.9);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Chord-driven flickers on the snow — softly lifted (snow reflects) but
+  // hue intact, so palette colours speckle visibly across the white field.
+  const FLICKS = Math.min(900, Math.max(300, lim * 14));
+  ctx.globalAlpha = 0.6;
+  for(let k = 0; k < FLICKS; k++){
+    const x = rnd() * CW;
+    const y = CH * 0.6 + rnd() * CH * 0.4;
+    const chord = chords[k % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Lift by 50 — bright but not white-washed; hue still readable.
+    const wr = Math.min(255, r + 50);
+    const wg = Math.min(255, g + 50);
+    const wb = Math.min(255, b + 60);
+    ctx.fillStyle = `rgb(${wr|0},${wg|0},${wb|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 1.5 + rnd() * 3, 0.8 + rnd() * 1.5, rnd() * Math.PI, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Light snowflakes — physical white particles.
+  ctx.fillStyle = '#fff';
+  for(let f = 0; f < 80; f++){
+    ctx.beginPath();
+    ctx.arc(rnd() * CW, rnd() * CH * 0.65, 0.6 + rnd() * 1.4, 0, 6.2832);
+    ctx.fill();
+  }
+}
+
+// Variant 5 — Mist: pastel horizontal bands. Sky and water both carry a
+// strong chord tint; tree-line silhouette and veils all chord-driven.
+// Wash toward white was reduced — mist still feels diffuse but the palette
+// stays present.
+function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 5);
+
+  function chordColor(t){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    return gc(m, 100);
+  }
+
+  // Sky — lifted version of first-third chord. Wash is 50/50 (chord + light
+  // pastel) rather than 80/20 toward white, so the palette is clearly
+  // present.
+  const [skyR, skyG, skyB] = chordColor(0.12);
+  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.5);
+  sky.addColorStop(0,
+    `rgb(${Math.round(skyR * 0.5 + 130)},${Math.round(skyG * 0.5 + 130)},${Math.round(skyB * 0.5 + 140)})`);
+  sky.addColorStop(1,
+    `rgb(${Math.round(skyR * 0.55 + 100)},${Math.round(skyG * 0.55 + 105)},${Math.round(skyB * 0.55 + 120)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH * 0.5);
+
+  // Water — mirror of sky, mid-chord based, slightly darker.
+  const [watR, watG, watB] = chordColor(0.55);
+  const water = ctx.createLinearGradient(0, CH * 0.5, 0, CH);
+  water.addColorStop(0,
+    `rgb(${Math.round(watR * 0.55 + 90)},${Math.round(watG * 0.55 + 95)},${Math.round(watB * 0.55 + 110)})`);
+  water.addColorStop(1,
+    `rgb(${Math.round(watR * 0.6 + 60)},${Math.round(watG * 0.6 + 65)},${Math.round(watB * 0.6 + 85)})`);
+  ctx.fillStyle = water;
+  ctx.fillRect(0, CH * 0.5, CW, CH * 0.5);
+
+  // Faint tree-line at horizon — mid-chord darkened.
+  ctx.globalAlpha = 0.35;
+  const [hrR, hrG, hrB] = chordColor(0.45);
+  ctx.fillStyle =
+    `rgb(${Math.round(hrR * 0.5 + 40)},${Math.round(hrG * 0.5 + 45)},${Math.round(hrB * 0.55 + 55)})`;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.5);
+  for(let x = 0; x <= CW; x += CW / 40){
+    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 - CH * 0.015);
+  }
+  ctx.lineTo(CW, CH * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mirrored into water (paler).
+  ctx.globalAlpha = 0.22;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.5);
+  for(let x = 0; x <= CW; x += CW / 40){
+    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 + CH * 0.015);
+  }
+  ctx.lineTo(CW, CH * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Soft horizontal painterly veils — chord colour, lifted modestly.
+  ctx.globalAlpha = 0.28;
+  for(let i = 0; i < Math.min(80, Math.max(40, lim)); i++){
+    const y = rnd() * CH;
+    const w = CW * (0.3 + rnd() * 0.5);
+    const x = (rnd() - 0.3) * CW;
+    const h = CH * (0.015 + rnd() * 0.04);
+    const chord = chords[i % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Lift by ~50 — pastel without washing out the chord.
+    const fr = Math.min(255, r + 50);
+    const fg = Math.min(255, g + 50);
+    const fb = Math.min(255, b + 60);
+    ctx.fillStyle = `rgb(${fr|0},${fg|0},${fb|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y, w / 2, h / 2, 0, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Water ripple short strokes — water chord colour with a slight lift.
+  ctx.globalAlpha = 0.55;
+  for(let k = 0; k < 200; k++){
+    const y = CH * 0.5 + rnd() * CH * 0.5;
+    const x = rnd() * CW;
+    const len = 6 + rnd() * 16;
+    const rr = Math.min(255, Math.round(watR * 0.5 + 110));
+    const gg = Math.min(255, Math.round(watG * 0.5 + 115));
+    const bb = Math.min(255, Math.round(watB * 0.5 + 130));
+    const a = 0.4 + rnd() * 0.4;
+    ctx.strokeStyle = `rgba(${rr},${gg},${bb},${a.toFixed(2)})`;
+    ctx.lineWidth = 0.8 + rnd() * 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Soft sun glow near horizon centre — physical highlight (warm regardless
+  // of palette, like a real sun). Kept low so the chord palette still reads.
+  const glowGrad = ctx.createRadialGradient(CW * 0.5, CH * 0.5, 4, CW * 0.5, CH * 0.5, CW * 0.16);
+  glowGrad.addColorStop(0, 'rgba(255,230,200,0.45)');
+  glowGrad.addColorStop(1, 'rgba(255,230,200,0)');
+  ctx.fillStyle = glowGrad;
+  ctx.fillRect(0, CH * 0.35, CW, CH * 0.3);
+}
+
+// ─── Hokusai (Woodblock) — 6 variants ───────────────────────────────────────
+// All flat colour fields + Prussian-blue contours, no gradients. Beige paper
+// ground throughout. Woodblock rules: every region is one solid colour, hard
+// edges, dark contour line.
+//  0/Wave:    Great Wave at Kanagawa — layered sea + foam claws
+//  1/Fuji:    Red/grey Mt Fuji silhouette + sky bands
+//  2/Blossom: Plum/cherry branch with circular flowers
+//  3/Storm:   Lightning zigzag through dark sky
+//  4/Rain:    Diagonal rain lines + muted village band
+//  5/Bridge:  Drum bridge arch over water + reeds
+function drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const _pn = _capN(6);
+  const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
+  if(_fpick === 1){ hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 2){ hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 3){ hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 4){ hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 5){ hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode);
+}
+
+// ── Shared palette + helpers ──
+const HOKUSAI_PRUSSIAN = '#1B3A5B';
+const HOKUSAI_FOAM = '#F7F4EA';
+const HOKUSAI_PAPER = '#EAE3CE';
+// Convert any [r,g,b] toward the woodblock palette: drop saturation, blend
+// with Prussian to keep all panels visually unified.
+function _hokusaiMute(r, g, b, blendAmt, dim){
+  const ba = blendAmt == null ? 0.4 : blendAmt;
+  const dm = dim == null ? 1 : dim;
+  const mr = Math.round((r * (1 - ba) + 27 * ba) * dm);
+  const mg = Math.round((g * (1 - ba) + 58 * ba) * dm);
+  const mb = Math.round((b * (1 - ba) + 91 * ba) * dm);
+  return `rgb(${Math.max(0,Math.min(255,mr))},${Math.max(0,Math.min(255,mg))},${Math.max(0,Math.min(255,mb))})`;
+}
+
+// Variant 0 — Wave (Great Wave at Kanagawa).
+function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 0);
+  // Clear canvas — we'll paint waves first then fill paper UNDER them via
+  // destination-over composite, so background layers can slip in behind the
+  // foreground wave without being blocked by an already-painted ground.
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Build melody points from top notes. To get the dramatic Kanagawa peak,
+  // we AMPLIFY pitch variation: average pitch sets the baseline, deviations
+  // from it get exaggerated so the highest notes leap up sharply.
+  let pitchSum = 0, pitchCount = 0;
+  const rawPitches = [];
+  let maxChordSize = 1;
+  for(let i = 0; i < lim; i++){
+    const chord = chords[i];
+    if(!chord) continue;
+    const notes = chord.n || chord.notes;
+    if(!notes || !notes.length) continue;
+    let topM = 0, topNote = notes[0];
+    for(const n of notes){
+      const m = n.m !== undefined ? n.m : n;
+      if(m > topM){ topM = m; topNote = n; }
+    }
+    if(notes.length > maxChordSize) maxChordSize = notes.length;
+    pitchSum += topM;
+    pitchCount++;
+    rawPitches.push({ topM, topNote, chord, idx: i, origIdx: rawPitches.length });
+  }
+  if(rawPitches.length < 2) return;
+  const avgPitch = pitchSum / pitchCount;
+
+  const points = [];
+  for(let i = 0; i < rawPitches.length; i++){
+    const r = rawPitches[i];
+    const x = (rawPitches.length > 1 ? (i / (rawPitches.length - 1)) : 0.5) * CW;
+    // Center deviation from average, amplify 2.5×, then map to canvas range.
+    // baseline at 0.62 leaves room for crests to stab into the upper half.
+    const dev = (r.topM - avgPitch) / 12;  // semitones above/below mean, scaled to 1 octave units
+    const amplified = Math.max(-1.4, Math.min(1.4, dev * 1.6));
+    const y = CH * 0.62 - amplified * CH * 0.28;
+    points.push({ x, y, topNote: r.topNote, chord: r.chord, idx: r.idx });
+  }
+
+  const depthLayers = Math.max(2, Math.min(4, 1 + Math.floor(maxChordSize / 2)));
+  const layerStep = CH * 0.10;
+
+  function tracePath(yOff){
+    ctx.moveTo(points[0].x, points[0].y + yOff);
+    for(let i = 1; i < points.length - 1; i++){
+      const xc = (points[i].x + points[i+1].x) / 2;
+      const yc = (points[i].y + points[i+1].y) / 2 + yOff;
+      ctx.quadraticCurveTo(points[i].x, points[i].y + yOff, xc, yc);
+    }
+    ctx.lineTo(points[points.length-1].x, points[points.length-1].y + yOff);
+  }
+
+  // Composite trick: background layers drawn AFTER foreground using
+  // 'destination-over' so they slip in BEHIND the foreground waves rather
+  // than getting hidden by them. Without this, the foreground "fill to
+  // canvas bottom" prekryje všetky hlbšie vrstvy a vidieť len jednu vlnu.
+  // Draw foreground (layer 0) first as normal, then deeper layers behind.
+  for(let layer = 0; layer <= depthLayers; layer++){
+    const yOff = layer * layerStep;
+    const sampleIdx = Math.min(points.length - 1,
+      Math.max(0, Math.floor((points.length / (depthLayers + 1)) * (depthLayers - layer))));
+    const samplePt = points[sampleIdx];
+    const note = samplePt.topNote;
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    const dim = 1 - layer * 0.10;
+    const blend = 0.30 + layer * 0.10;
+
+    // Foreground (layer 0) draws normally on top. Deeper layers draw BEHIND
+    // already-painted pixels so foreground stays dominant but background
+    // remains visible above the foreground's wave line.
+    ctx.globalCompositeOperation = layer === 0 ? 'source-over' : 'destination-over';
+
+    ctx.beginPath();
+    tracePath(yOff);
+    ctx.lineTo(CW, CH);
+    ctx.lineTo(0, CH);
+    ctx.closePath();
+    ctx.fillStyle = _hokusaiMute(r, g, b, blend, dim);
+    ctx.fill();
+
+    ctx.beginPath();
+    tracePath(yOff);
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = layer === 0 ? 3.8 : (2.6 - layer * 0.3);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+  // Reset composite back to default for foam claws (need source-over).
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Paper background must be repainted underneath everything (destination-over
+  // sees the already-painted paper as opaque, but the wave fills only the area
+  // beneath their curve — so above the highest wave the paper is still visible
+  // naturally).
+
+  // Foam claws — on local minima (peaks) of the FOREGROUND wave only.
+  const crests = [];
+  for(let i = 2; i < points.length - 2; i++){
+    if(points[i].y < points[i-1].y && points[i].y < points[i+1].y){
+      const note = points[i].topNote;
+      const v = note.v !== undefined ? note.v : 80;
+      // Peak prominence — how much lower y is vs neighbours.
+      const prom = Math.max(0, (points[i-1].y + points[i+1].y) / 2 - points[i].y);
+      crests.push({ ...points[i], priority: v * 0.4 + prom * 2 });
+    }
+  }
+  crests.sort((a, b) => b.priority - a.priority);
+  // Keep more crests — Liszt-scale melodies have rich peak structure.
+  const topCrests = crests.slice(0, Math.min(8, crests.length));
+
+  for(const crest of topCrests){
+    // Foam fans outward in a Kanagawa-style claw — 8-10 droplets.
+    const baseAngle = -1.1 + (rnd() - 0.5) * 0.5;
+    const dropCount = 8 + Math.floor(rnd() * 3);
+    for(let k = 0; k < dropCount; k++){
+      const r = 13 - k * 1.1;
+      if(r < 1) break;
+      const angle = baseAngle + k * 0.13;
+      const dist = k * 6;
+      const fx = crest.x + Math.cos(angle) * dist;
+      const fy = crest.y - 5 + Math.sin(angle) * dist;
+      ctx.fillStyle = HOKUSAI_FOAM;
+      ctx.beginPath();
+      ctx.arc(fx, fy, r, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+    }
+    // Tiny scatter droplets for spray.
+    for(let s = 0; s < 5; s++){
+      const sa = baseAngle + (rnd() - 0.5) * 1.5;
+      const sd = 30 + rnd() * 50;
+      const sx = crest.x + Math.cos(sa) * sd;
+      const sy = crest.y - 5 + Math.sin(sa) * sd;
+      const sr = 1.5 + rnd() * 2.5;
+      ctx.fillStyle = HOKUSAI_FOAM;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+    }
+  }
+
+  // Paper backdrop — painted UNDER everything via destination-over, so it
+  // fills only the remaining transparent area (above the highest wave).
+  ctx.globalCompositeOperation = 'destination-over';
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// Variant 1 — Mt Fuji silhouette + sky bands.
+function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 1);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Sky bands — horizontal strips, each band a chord-derived flat colour.
+  const bands = Math.min(8, Math.max(3, Math.floor(lim / 8)));
+  const bandH = CH * 0.6 / bands;
+  for(let i = 0; i < bands; i++){
+    const ci = Math.floor((i / bands) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    const blend = 0.25 + (i / bands) * 0.3;  // darker toward top
+    ctx.fillStyle = _hokusaiMute(r, g, b, blend, 1);
+    ctx.fillRect(0, i * bandH, CW, bandH + 1);  // +1 to avoid hairlines
+  }
+
+  // Fuji silhouette — symmetric trapezoid with concave shoulders.
+  const peakX = CW * 0.5 + (rnd() - 0.5) * CW * 0.05;
+  const peakY = CH * 0.18;
+  const baseY = CH * 0.7;
+  const baseHalfW = CW * 0.42;
+  // Sample a "mountain colour" from a middle chord.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+
+  ctx.beginPath();
+  ctx.moveTo(peakX - baseHalfW, baseY);
+  // Left flank — slight inward curve near peak.
+  ctx.quadraticCurveTo(peakX - baseHalfW * 0.4, baseY * 0.55, peakX - CW * 0.07, peakY + 8);
+  ctx.lineTo(peakX + CW * 0.07, peakY + 8);
+  // Right flank.
+  ctx.quadraticCurveTo(peakX + baseHalfW * 0.4, baseY * 0.55, peakX + baseHalfW, baseY);
+  ctx.closePath();
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.55, 0.85);
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 2.2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Snow cap — flat white triangle at peak.
+  ctx.beginPath();
+  ctx.moveTo(peakX - CW * 0.07, peakY + 8);
+  ctx.lineTo(peakX + CW * 0.07, peakY + 8);
+  ctx.lineTo(peakX + (rnd()-0.5) * CW * 0.04, peakY + CH * 0.07);
+  ctx.lineTo(peakX - CW * 0.04, peakY + CH * 0.05);
+  ctx.closePath();
+  ctx.fillStyle = HOKUSAI_FOAM;
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Foreground field — flat earth band.
+  ctx.fillStyle = _hokusaiMute(120, 90, 50, 0.3, 0.8);
+  ctx.fillRect(0, baseY, CW, CH - baseY);
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(0, baseY); ctx.lineTo(CW, baseY); ctx.stroke();
+}
+
+// Variant 2 — Plum/Cherry blossom branch.
+function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 2);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Branch — thick curved line entering from bottom-left or right.
+  const fromLeft = (ss & 1) === 0;
+  const startX = fromLeft ? 0 : CW;
+  const startY = CH * (0.7 + rnd() * 0.2);
+  const endX = fromLeft ? CW * (0.6 + rnd() * 0.3) : CW * (0.1 + rnd() * 0.3);
+  const endY = CH * (0.15 + rnd() * 0.2);
+
+  // Bezier control points.
+  const c1x = (startX + endX) * 0.5 + (fromLeft ? CW * 0.1 : -CW * 0.1);
+  const c1y = startY - (startY - endY) * 0.3;
+  const c2x = endX + (fromLeft ? -CW * 0.05 : CW * 0.05);
+  const c2y = endY + (startY - endY) * 0.2;
+
+  // Branch trunk — flat dark.
+  ctx.strokeStyle = '#3D2412';
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.bezierCurveTo(c1x, c1y, c2x, c2y, endX, endY);
+  ctx.stroke();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Sub-branches — short forks at jittered points along the main branch.
+  const forks = 4 + Math.floor(rnd() * 4);
+  for(let f = 0; f < forks; f++){
+    const t = 0.2 + rnd() * 0.7;
+    // Approximate point on bezier curve.
+    const ot = 1 - t;
+    const bx = ot*ot*ot*startX + 3*ot*ot*t*c1x + 3*ot*t*t*c2x + t*t*t*endX;
+    const by = ot*ot*ot*startY + 3*ot*ot*t*c1y + 3*ot*t*t*c2y + t*t*t*endY;
+    const ang = (rnd() - 0.5) * 1.6 + (fromLeft ? -1 : -2);
+    const flen = 30 + rnd() * 60;
+    const fx = bx + Math.cos(ang) * flen;
+    const fy = by + Math.sin(ang) * flen;
+    ctx.strokeStyle = '#3D2412';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(fx, fy); ctx.stroke();
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Blossoms — circular flowers along branch using chord colours.
+  const blossomCount = Math.min(60, Math.max(12, lim));
+  for(let i = 0; i < blossomCount; i++){
+    const ci = i % lim;
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[i % Math.max(1, notes.length)] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    // Pink-warm blossom: blend toward soft pink.
+    const br = Math.round(r * 0.4 + 230);
+    const bg = Math.round(g * 0.3 + 170);
+    const bbv = Math.round(b * 0.3 + 180);
+
+    // Position roughly along branch.
+    const t = 0.1 + rnd() * 0.9;
+    const ot = 1 - t;
+    const bx = ot*ot*ot*startX + 3*ot*ot*t*c1x + 3*ot*t*t*c2x + t*t*t*endX;
+    const by = ot*ot*ot*startY + 3*ot*ot*t*c1y + 3*ot*t*t*c2y + t*t*t*endY;
+    // Cluster around branch.
+    const cx = bx + (rnd() - 0.5) * 70;
+    const cy = by + (rnd() - 0.5) * 70 - 10;
+    const rad = 5 + rnd() * 8;
+
+    // 5-petal flower: 5 overlapping circles around a centre.
+    for(let p = 0; p < 5; p++){
+      const pang = (p / 5) * Math.PI * 2;
+      const px = cx + Math.cos(pang) * rad * 0.55;
+      const py = cy + Math.sin(pang) * rad * 0.55;
+      ctx.fillStyle = `rgb(${Math.min(255,br)},${Math.min(255,bg)},${Math.min(255,bbv)})`;
+      ctx.beginPath();
+      ctx.arc(px, py, rad * 0.6, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    // Yellow centre.
+    ctx.fillStyle = '#E8C24A';
+    ctx.beginPath();
+    ctx.arc(cx, cy, rad * 0.25, 0, 6.2832);
+    ctx.fill();
+  }
+}
+
+// Variant 3 — Storm: lightning zigzag through dark sky.
+function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 3);
+
+  // Dark stormy sky — sample dominant chord, push very dark.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  // Very dim sky.
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.7, 0.4);
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Horizontal storm cloud bands across top half.
+  for(let i = 0; i < 4; i++){
+    const ci = Math.floor((i / 4) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    const y = i * CH * 0.13;
+    const h = CH * 0.13;
+    ctx.fillStyle = _hokusaiMute(r, g, b, 0.6 + i * 0.05, 0.55 - i * 0.05);
+    // Wavy bottom edge.
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(CW, y);
+    ctx.lineTo(CW, y + h);
+    for(let x = CW; x >= 0; x -= CW / 12){
+      ctx.lineTo(x, y + h + (rnd() - 0.5) * 14);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  // Lightning bolts — main zigzag from cloud to ground, plus a couple smaller.
+  function drawBolt(startX, startY, endY, jaggedness){
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    let cx = startX;
+    let cy = startY;
+    const segs = 8 + Math.floor(rnd() * 4);
+    const dy = (endY - startY) / segs;
+    for(let s = 0; s < segs; s++){
+      cy += dy;
+      cx += (rnd() - 0.5) * jaggedness;
+      ctx.lineTo(cx, cy);
+    }
+    // White core.
+    ctx.strokeStyle = HOKUSAI_FOAM;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  drawBolt(CW * (0.3 + rnd() * 0.4), CH * 0.4, CH * 0.85, 50);
+  if(rnd() < 0.7) drawBolt(CW * (0.1 + rnd() * 0.2), CH * 0.45, CH * 0.7, 30);
+  if(rnd() < 0.5) drawBolt(CW * (0.65 + rnd() * 0.2), CH * 0.5, CH * 0.78, 28);
+
+  // Dark land silhouette at bottom.
+  ctx.fillStyle = HOKUSAI_PRUSSIAN;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.85);
+  for(let x = 0; x <= CW; x += CW / 18){
+    ctx.lineTo(x, CH * 0.85 + (rnd() - 0.5) * 18);
+  }
+  ctx.lineTo(CW, CH);
+  ctx.lineTo(0, CH);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Variant 4 — Rain: diagonal lines + muted village band.
+function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 4);
+  // Soft grey paper.
+  ctx.fillStyle = '#D8D4C2';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Distant mountain silhouette band.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.55, 0.7);
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.5);
+  for(let x = 0; x <= CW; x += CW / 16){
+    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * 30 - 10);
+  }
+  ctx.lineTo(CW, CH * 0.7);
+  ctx.lineTo(0, CH * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Village strip — flat brown/grey houses.
+  const houseRow = CH * 0.72;
+  const houseH = CH * 0.1;
+  const houseCount = 5 + Math.floor(rnd() * 4);
+  const hw = CW / houseCount;
+  for(let i = 0; i < houseCount; i++){
+    const ci = Math.floor((i / houseCount) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const [r, g, b] = gc(m, 90);
+    const hx = i * hw + hw * 0.1;
+    const hyTop = houseRow;
+    const hwInner = hw * 0.8;
+    // House body.
+    ctx.fillStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
+    ctx.fillRect(hx, hyTop, hwInner, houseH);
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1.3;
+    ctx.strokeRect(hx, hyTop, hwInner, houseH);
+    // Roof — triangle.
+    ctx.fillStyle = '#3D2412';
+    ctx.beginPath();
+    ctx.moveTo(hx - 4, hyTop);
+    ctx.lineTo(hx + hwInner / 2, hyTop - houseH * 0.55);
+    ctx.lineTo(hx + hwInner + 4, hyTop);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Water at bottom.
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.6, 0.55);
+  ctx.fillRect(0, houseRow + houseH, CW, CH - houseRow - houseH);
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(0, houseRow + houseH);
+  ctx.lineTo(CW, houseRow + houseH);
+  ctx.stroke();
+
+  // Rain — diagonal lines across entire canvas. Density follows lim.
+  const rainCount = Math.min(380, Math.max(120, lim * 6));
+  ctx.strokeStyle = '#3a4a5e';
+  ctx.lineWidth = 0.9;
+  for(let i = 0; i < rainCount; i++){
+    const x = rnd() * CW * 1.2 - CW * 0.1;
+    const y = rnd() * CH;
+    const len = 12 + rnd() * 18;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - len * 0.4, y + len);  // diagonal fall to bottom-left
+    ctx.stroke();
+  }
+}
+
+// Variant 5 — Bridge: drum bridge arch over water + reeds.
+function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 5);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Sky band at top — gradient-free, just 2 bands.
+  const skyChord = chords[0];
+  const skyNotes = skyChord && (skyChord.n || skyChord.notes) || [{m:72,v:80}];
+  const skyNote = skyNotes[0];
+  const [sr, sg, sb] = gc(skyNote.m!==undefined?skyNote.m:skyNote, 80);
+  ctx.fillStyle = _hokusaiMute(sr, sg, sb, 0.35, 0.95);
+  ctx.fillRect(0, 0, CW, CH * 0.4);
+
+  // Water — bottom 50%, flat colour from middle chord.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [wr, wg, wb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  ctx.fillStyle = _hokusaiMute(wr, wg, wb, 0.5, 0.7);
+  ctx.fillRect(0, CH * 0.55, CW, CH * 0.45);
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.55);
+  ctx.lineTo(CW, CH * 0.55);
+  ctx.stroke();
+
+  // Drum bridge — semi-circular arch spanning canvas, water below.
+  const bridgeCY = CH * 0.55;
+  const bridgeRadius = CW * 0.5;
+  const bridgeCX = CW * 0.5;
+  // Bridge bottom curve (visible part above water = top half of circle).
+  ctx.beginPath();
+  ctx.arc(bridgeCX, bridgeCY, bridgeRadius, Math.PI, 0, false);
+  // Top: thicker bridge surface (offset arc above).
+  const topRad = bridgeRadius + CH * 0.06;
+  ctx.lineTo(bridgeCX + topRad, bridgeCY);
+  ctx.arc(bridgeCX, bridgeCY, topRad, 0, Math.PI, true);
+  ctx.closePath();
+  // Bridge colour — chord-derived earthy brown.
+  const lastChord = chords[lim - 1] || chords[0];
+  const lastNotes = lastChord && (lastChord.n || lastChord.notes) || [{m:60,v:80}];
+  const lastNote = lastNotes[0];
+  const [br, bg, bb] = gc(lastNote.m!==undefined?lastNote.m:lastNote, 100);
+  ctx.fillStyle = _hokusaiMute(br, bg, bb, 0.4, 0.7);
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 2.2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Bridge ribbing — radial spokes from centre to inner arc.
+  const ribCount = Math.min(16, Math.max(6, Math.floor(lim / 5)));
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 0.9;
+  for(let i = 1; i < ribCount; i++){
+    const ang = Math.PI + (i / ribCount) * Math.PI;
+    const x1 = bridgeCX + Math.cos(ang) * bridgeRadius;
+    const y1 = bridgeCY + Math.sin(ang) * bridgeRadius;
+    const x2 = bridgeCX + Math.cos(ang) * topRad;
+    const y2 = bridgeCY + Math.sin(ang) * topRad;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  // Reeds at water edges — using chord notes.
+  const reedCount = Math.min(60, Math.max(15, lim));
+  for(let i = 0; i < reedCount; i++){
+    const ci = i % lim;
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const [r, g, b] = gc(m, 100);
+    // Side: alternate left/right of bridge, near banks.
+    const side = i % 2;
+    const rx = side === 0 ? rnd() * CW * 0.18 : CW - rnd() * CW * 0.18;
+    const ry = CH * 0.55 + rnd() * CH * 0.05;
+    const rh = 25 + rnd() * 40;
+    // Reed = thin tall blade.
+    ctx.strokeStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.quadraticCurveTo(rx + (rnd() - 0.5) * 8, ry - rh * 0.5, rx + (rnd() - 0.5) * 6, ry - rh);
+    ctx.stroke();
+  }
+
+  // Water ripples — horizontal short strokes.
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1;
+  const ripples = Math.min(60, Math.max(20, lim));
+  for(let i = 0; i < ripples; i++){
+    const y = CH * (0.58 + rnd() * 0.4);
+    const x = rnd() * CW;
+    const len = 16 + rnd() * 30;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + len/2, y - 2, x + len, y);
+    ctx.stroke();
+  }
+}
+
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
@@ -9370,7 +10716,7 @@ const LEGEND=[{n:'C',pc:0},{n:'G',pc:7},{n:'D',pc:2},{n:'A',pc:9},{n:'E',pc:4},{
 // ─────────────────────────────────────────────────────────────────────────────
 // §4  I18N — UI STRINGS, CONCEPT TEXT, GUIDE TEXT
 // ─────────────────────────────────────────────────────────────────────────────
-const LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW'];
+const LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW','ja'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
@@ -9535,7 +10881,15 @@ const I18N = {
     proInvalidKey:'This key is not valid. Check your email for the correct key.',
     proWelcomeTitle:'Welcome to Pro',
     proWelcomeBody:'All features unlocked on this device.',
-    proManageActive:'Pro',
+    proManageActive:'Pro',    partnerIsPro:'{a} · {b} is Pro',
+      tapReturnShuffle:'tap to return to shuffle',    noNotesGeneric:'No notes.',
+    transcribingAudio:'transcribing audio',
+    transcribingAudioLong:'transcribing audio · this may take a minute',
+    transcribingSample:'transcribing sample',
+    transcribingSampleLong:'transcribing sample · this may take a minute',
+    newBy:{midi:'new',audio:'new',score:'new',image:'new',mood:'new'},
+  
+  
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
@@ -9697,7 +11051,15 @@ const I18N = {
     proInvalidKey:'Dieser Schlüssel ist ungültig. Bitte prüfe deine E-Mail.',
     proWelcomeTitle:'Willkommen bei Pro',
     proWelcomeBody:'Alle Funktionen auf diesem Gerät freigeschaltet.',
-    proManageActive:'Pro',
+    proManageActive:'Pro',    partnerIsPro:'{a} · {b} ist Pro',
+      tapReturnShuffle:'tippe, um zum Shuffle zurückzukehren',    noNotesGeneric:'Keine Noten.',
+    transcribingAudio:'transkribiere Audio',
+    transcribingAudioLong:'transkribiere Audio · das kann eine Minute dauern',
+    transcribingSample:'transkribiere Beispiel',
+    transcribingSampleLong:'transkribiere Beispiel · das kann eine Minute dauern',
+    newBy:{midi:'neu',audio:'neu',score:'neu',image:'neues',mood:'neue'},
+  
+  
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
@@ -9859,7 +11221,15 @@ const I18N = {
     proInvalidKey:'Cette clé n’est pas valide. Vérifiez votre e-mail.',
     proWelcomeTitle:'Bienvenue dans Pro',
     proWelcomeBody:'Toutes les fonctions débloquées sur cet appareil.',
-    proManageActive:'Pro',
+    proManageActive:'Pro',    partnerIsPro:'{a} · {b} est Pro',
+      tapReturnShuffle:'touche pour revenir au shuffle',    noNotesGeneric:'Aucune note.',
+    transcribingAudio:'transcription audio',
+    transcribingAudioLong:'transcription audio · cela peut prendre une minute',
+    transcribingSample:'transcription de l\'exemple',
+    transcribingSampleLong:'transcription de l\'exemple · cela peut prendre une minute',
+    newBy:{midi:'nouveau',audio:'nouveau',score:'nouvelle',image:'nouvelle',mood:'nouvelle'},
+  
+  
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
@@ -10021,7 +11391,15 @@ const I18N = {
     proInvalidKey:'Esta clave no es válida. Revisa tu correo electrónico.',
     proWelcomeTitle:'Bienvenido a Pro',
     proWelcomeBody:'Todas las funciones desbloqueadas en este dispositivo.',
-    proManageActive:'Pro',
+    proManageActive:'Pro',    partnerIsPro:'{a} · {b} es Pro',
+      tapReturnShuffle:'toca para volver al shuffle',    noNotesGeneric:'Sin notas.',
+    transcribingAudio:'transcribiendo audio',
+    transcribingAudioLong:'transcribiendo audio · puede tardar un minuto',
+    transcribingSample:'transcribiendo muestra',
+    transcribingSampleLong:'transcribiendo muestra · puede tardar un minuto',
+    newBy:{midi:'nuevo',audio:'nuevo',score:'nueva',image:'nueva',mood:'nuevo'},
+  
+  
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
@@ -10110,7 +11488,7 @@ const I18N = {
     moodPickFromList:'Vyber zo zoznamu — vlastné moody sú Pro AI',
     moodTypeToSearch:'Napíš a vyhľadaj z 95 moodov…',
     tierOverviewTitle:'Free · Pro · Pro AI',
-    tierIntro:'AI 功能（上方 ✦ 项目 + Image 中的 AI Compose 与氛围）在 Free 中使用额度。',
+    tierIntro:'AI funkcie (✦ položky vyššie + AI Compose a Atmosféra v Image) používajú kredity na Free.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -10183,7 +11561,15 @@ const I18N = {
     proInvalidKey:'Tento kľúč nie je platný. Skontroluj svoj e-mail.',
     proWelcomeTitle:'Vitaj v Pro',
     proWelcomeBody:'Všetky funkcie odomknuté na tomto zariadení.',
-    proManageActive:'Pro',
+    proManageActive:'Pro',    partnerIsPro:'{a} · {b} je Pro',
+      tapReturnShuffle:'klikni pre návrat na shuffle',    noNotesGeneric:'Žiadne noty.',
+    transcribingAudio:'prepisujem audio',
+    transcribingAudioLong:'prepisujem audio · môže to chvíľu trvať',
+    transcribingSample:'prepisujem ukážku',
+    transcribingSampleLong:'prepisujem ukážku · môže to chvíľu trvať',
+    newBy:{midi:'nový',audio:'nové',score:'nová',image:'nová',mood:'nová'},
+  
+  
   },
   zh:{
     concept:'理念', demo:'演示', guide:'指南',
@@ -10351,7 +11737,15 @@ const I18N = {
     proInvalidKey:'此密钥无效。请检查您的电子邮件。',
     proWelcomeTitle:'欢迎使用 Pro',
     proWelcomeBody:'此设备上所有功能已解锁。',
-    proManageActive:'Pro',
+    proManageActive:'Pro',    partnerIsPro:'{a} · {b} 是 Pro',
+      tapReturnShuffle:'点击返回随机',    noNotesGeneric:'没有音符。',
+    transcribingAudio:'正在转录音频',
+    transcribingAudioLong:'正在转录音频 · 可能需要一分钟',
+    transcribingSample:'正在转录示例',
+    transcribingSampleLong:'正在转录示例 · 可能需要一分钟',
+    newBy:{midi:'新',audio:'新',score:'新',image:'新',mood:'新'},
+  
+  
   },
   zhTW:{
     concept:'理念', demo:'示範', guide:'指南',
@@ -10513,7 +11907,15 @@ const I18N = {
     recentPlayed:'最近播放',
     today:'今天',
     trialBanner1:'僅剩 1 次 AI 試用 · 升級 Pro AI 享無限',
-    trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro AI 享無限',
+    trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro AI 享無限',    partnerIsPro:'{a} · {b} 是 Pro',
+      tapReturnShuffle:'點擊返回隨機',    noNotesGeneric:'沒有音符。',
+    transcribingAudio:'正在轉錄音訊',
+    transcribingAudioLong:'正在轉錄音訊 · 可能需要一分鐘',
+    transcribingSample:'正在轉錄範例',
+    transcribingSampleLong:'正在轉錄範例 · 可能需要一分鐘',
+    newBy:{midi:'新',audio:'新',score:'新',image:'新',mood:'新'},
+  
+  
   },
   PT:{
     concept:'conceito', demo:'demo', guide:'guia',
@@ -10675,7 +12077,184 @@ const I18N = {
     proInvalidKey:'Esta chave não é válida. Verifique seu e-mail.',
     proWelcomeTitle:'Bem-vindo ao Pro',
     proWelcomeBody:'Todos os recursos desbloqueados neste dispositivo.',
-    proManageActive:'Pro',
+    proManageActive:'Pro',    partnerIsPro:'{a} · {b} é Pro',
+      tapReturnShuffle:'toca para voltar ao shuffle',    noNotesGeneric:'Sem notas.',
+    transcribingAudio:'a transcrever áudio',
+    transcribingAudioLong:'a transcrever áudio · pode demorar um minuto',
+    transcribingSample:'a transcrever amostra',
+    transcribingSampleLong:'a transcrever amostra · pode demorar um minuto',
+    newBy:{midi:'novo',audio:'novo',score:'nova',image:'nova',mood:'novo'},
+  
+  
+  },
+  ja:{
+    concept:'コンセプト', demo:'デモ', guide:'ガイド',
+    sourceLabel:'ソース', moodLabel:'気持ち', colorLabel:'色', styleLabel:'スタイル', mosaicStyle:'モザイク', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'絵画、演奏', tapToSkip:'タップでスキップ', inspiredBy:'{artist} に着想を得て', inspiredByTitle:'着想', onbTitle:'Paintiano', onbSubtitle:'音楽が絵画に変わる', onbPlayLabel:'サンプル再生', onbCaption:'Liebestraum — Liszt · Pollock が描く', onbHint:'すべての和音が一筆に…', onbDescription:'Paintiano は音楽を聴き、各和音を一筆に変える。すべての絵がユニーク。', onbDoneLine:'あなたの絵は唯一のもの', onbReplay:'もう一度', onbTryYourOwn:'自分のもので試す', onbSkip:'スキップ', moodDesc:'気持ちを書く — AI が作曲して描く', mfiDesc:'画像を選ぶ — AI がムードを読み、描く', helpTitle:'何が何をする', helpSub:'セットアップ画面で任意のソースをタップして始める', helpClose:'閉じる', helpFab:'ヘルプ', helpDesc_mood:'気持ちを書くかタップ — Paintiano がそのムードで曲を作り、描く', helpDesc_mfi:'画像を入れる — Paintiano がムードを読み、合う曲を作り、描く', helpDesc_midi:'MIDI ファイル?Paintiano が再生し、各和音を一筆に', helpDesc_audio:'任意の mp3 や wav — Paintiano が聴き、和音を見つけ、聴こえたものを描く', helpDesc_score:'楽譜を撮る — Paintiano が音符を読み、曲を描く', helpDesc_music:'MIDI、mp3/wav、楽譜 — Paintiano が再生し、各和音を見つけ、それぞれを一筆に', helpDesc_image:'画像を選ぶ — Scan は色を音楽として演奏、AI Compose(Pro)は全曲を書く;atmosphere で画像のムードに合わせる', helpDesc_compose:'画面で直接ピアノを弾く — 各音が一筆に、ライブで', helpDesc_mic:'歌う、ハミング、口笛 — Paintiano が和音を聴き取り、ライブで描く', selectNeedsMosaic:'{artist} スタイルをオフにして音符を編集', backToSetup:'戻る', backToCanvas:'キャンバス', backToImage:'画像', newSource:'新規', dirLabel:'スキャン', dir_lr:'行', dir_vert:'列', dir_spiralIn:'内向き螺旋', dir_spiralOut:'外向き螺旋', importLabel:'インポート', createLabel:'作成', imgMood:'画像からムード', atmoLabel:'雰囲気', atmoDetect:'ムードを読む', imgComposition:'作曲', imgCompositionHint:'AI がこの画像から曲を書く', imgScan:'スキャン', imgScanHint:'画像を楽譜として読む', imgCompose:'AI 作曲', imgComposeBlurb:'AI がこの画像から完全な曲を書く — その色、エネルギー、ムードから。Play を押す。', aiOffline:'オフライン', aiOfflineHint:'AI 機能には接続が必要',
+    harmony:'ハーモニー', spectral:'スペクトル', phi:'φ / Phi', kontra:'反転', custom:'カスタム', bw:'白黒', setupPickerLabel:'セットアップ', setupPickerHint:'キャンバスのピッカーに出すパレットとアーティストを選ぶ', setupPalettesTitle:'パレット', setupArtistsTitle:'アーティスト', setupMosaicFamily:'Mosaic ファミリー', setupSave:'完了', setupMinError:'最低 1 パレット + 1 アーティストを選んでください。', setupAll:'すべて', setupNone:'なし', gcat_all:'すべて', gcat_start:'はじめ', gcat_colors:'色', gcat_style:'スタイル', gcat_music:'音楽', gcat_save:'保存', gcat_pro:'Pro', proLockTitle:'Pro',
+    editPalette:'パレット編集', editShort:'編集', paletteEditorTitle:'あなたのパレット', resetPalette:'すべてクリア', defaultPalette:'デフォルト',
+    selectMood:'✦ ムードを選ぶ…', moodPlaceholder:'どんなムードでも — 例:パリの雨の日', moodHowFeel:'今、どう感じる?', moodTwoWays:'上に何でも書く — または入力を始めてリストから一語ムードを選ぶ。', moodExamples:['自分の言葉でムードを書く…','例:パリの雨の日','例:真夜中の初雪','— または入力を始めて、出てきたムードを選ぶ —','例:激怒','例:ノスタルジック'], storyCaption:{mood:'{mood} はこんな音 ✦ paintiano.app',moodFromImg:'この画像のムード、描きました ✦ paintiano.app',compose:'ピアノで作った曲 · 絵にした ✦ paintiano.app',micVoice:'マイクに歌ったら絵が返ってきた ✦ paintiano.app',micMusic:'部屋の歌を捕まえて描いた ✦ paintiano.app',midi:'音楽が色になった ✦ paintiano.app',audio:'聴いて、描いた ✦ paintiano.app',score:'楽譜を絵にした ✦ paintiano.app',image:'この画像の音 ✦ paintiano.app',default:'音楽が絵画になる ✦ paintiano.app'}, storyImageHint:'絵 + 音声 · IG / TikTok 用', storyImageHintNoAudio:'絵 · IG / TikTok 用', saveAudioLabel:'音声', saveAudioHint:'mp3 · ファイルに保存', scoreExportHint:'MusicXML · MuseScore 用', includeSourceThumb:'ソースサムネを含める', includeSourceImage:'ソースの元画像を含める', saveAudioHintImg:'画像 + 音声 · ファイルに保存', moodGo:'実行', morph:'✦ モーフ', vary:'✦ バリエーション',
+    moodNames:{funny:'おかしな',sad:'悲しい',aggressive:'攻撃的',dreamy:'夢見るような',love:'愛',nostalgic:'ノスタルジック',calm:'静か',excited:'興奮した',crazy:'クレイジー',hopeful:'希望に満ちた',mysterious:'神秘的',triumphant:'勝ち誇った',tense:'緊張した',playful:'遊び心',epic:'壮大',euphoric:'多幸感',furious:'激怒',serene:'穏やか',yearning:'憧れ',mystical:'神秘',triumphal:'凱旋',melancholic:'メランコリック',heroic:'英雄的',mischievous:'いたずらっぽい',terrifying:'恐ろしい',blissful:'至福',stormy:'嵐のような',warm:'温かい',festive:'祝祭的',lonely:'寂しい',curious:'好奇心',determined:'決意',tender:'優しい',joyful:'喜び',grateful:'感謝',despairing:'絶望',passionate:'情熱',magical:'魔法のような',radiant:'輝く',happy:'幸せ',content:'満足',wistful:'物思いに沈んだ',anxious:'不安',mighty:'力強い',enchanted:'魅了された',carefree:'のんき',tearful:'涙の',bitter:'苦い',noble:'高貴',danceable:'踊れる',wild:'野生的',relaxed:'リラックス',meditative:'瞑想的',ethereal:'幽玄',confident:'自信',sparkling:'きらめく',fierce:'激しい',angry:'怒り',irritated:'いらだち',menacing:'威嚇的',majestic:'荘厳',spooky:'不気味',summery:'夏らしい',pulsing:'脈打つ',fresh:'新鮮',dizzying:'めまいがする',rueful:'悔やむ',gloomy:'陰鬱',devoted:'献身的',nervous:'神経質',enraged:'激怒した',indignant:'憤慨',defiant:'反抗的',unyielding:'屈しない',martial:'勇壮',crushed:'打ちひしがれた',resigned:'諦めた',abandoned:'見捨てられた',plaintive:'哀切',quiet:'静寂',balanced:'バランスの取れた',restful:'安らか',grounded:'地に足がついた',fragile:'壊れやすい',sleepy:'眠い',flowing:'流れるような',intimate:'親密',exhilarated:'高揚した',romantic:'ロマンチック',moved:'感動した',compassionate:'慈しみ',uplifted:'高められた',awestruck:'畏敬',fascinated:'魅了された',otherworldly:'別世界',misty:'霞んだ',ghostly:'幽霊のような'},
+    errs:{noNotesMidi:'MIDI に音符が見つかりません。',noNotesAudio:'音符が検出されませんでした。',noNotesXml:'MusicXML に再生可能な音符がありません。',noNotesGeneric:'音符なし。',imgRead:'画像を読み込めませんでした。',imgDecode:'画像をデコードできませんでした。',imgNoNotes:'画像から音符が生まれませんでした — もっとカラフルな画像を試してください。',notXml:'MusicXML 楽譜ではありません。.musicxml、.xml、.mxl ファイルを選んでください(MuseScore の .mscz も内部は .mxl です)。',looksMidi:'MIDI ファイルのようです。代わりに ♬ midi ボタンを使ってください。',notInLibrary:'ライブラリにありません。✦ AI で生成を試してください。',nothingToPrint:'まだ印刷するものがありません — 先に曲か画像を読み込んでください。',songNotFound:'ライブラリで曲が見つかりませんでした。',printEncode:'印刷:画像をエンコードできませんでした。',morphFail:'Morph できませんでした。',varyFail:'バリエーションは音符を生み出しませんでした。',samplesFallback:'グランドピアノのサンプルが読み込めませんでした — ビルトインのシンセにフォールバックします。音は出ますが少し豊かさが落ちます。', aiNet:'AI に接続できません — 接続を確認してもう一度お試しください。', aiBadResp:'AI の応答が不完全でした — タップでもう一度。'},
+    midi:'MIDI', audio:'オーディオ', score:'楽譜', music:'音楽', image:'画像',
+    compose:'作曲', composing:'作曲中',
+    sing:'🎤 歌う', singing:'🎤',
+    listen:'🔊 聴く', listening:'🔊 聴いています…',
+    mic:'マイク', micActive:'ライブ',
+    voicePreset:'🎤 声', musicPreset:'🔊 音楽',
+    play:'▶ 再生', pause:'⏸ 一時停止', resume:'▶ 続き', mute:'音声ミュート', unmute:'音声オン', randomOn:'ランダム ON', randomOff:'ランダム OFF',
+    print:'🖨 印刷', clear:'クリア', clearConfirm:'もう一度タップでクリア', demoConfirm:'現在のものを置き換える?', switchConfirm:'キャンバスをクリーンに?', loop:'⟳ ループ', appChoseColour:'アプリが色の読み方を選んだ', undo:'↩',
+    recArm:'⏺ 録音', recStop:'⏹ 録音…',
+    share:'シェア', save:'保存', saving:'保存中…', saved:'保存しました ✓', scoreExport:'楽譜', scoreXmlHint:'MuseScore、Sibelius、Finale で開ける…', exportLabel:'エクスポート', exportTitle:'エクスポート', exportHint:'曲全体をエクスポート', exportScore:'楽譜 (xml)', exportScoreHint:'MuseScore などで開ける', exportAudio:'音声', exportAudioHint:'曲全体を再生して録音', exportBoth:'両方', exportBothHint:'今すぐ楽譜、続けて音声録音', exportNeedsPlay:'エクスポートするには先に再生', rendering:'音声をレンダリング中…', renderFail:'音声レンダリングに失敗',
+    chordsPlay:'和音 · タップで再生',
+    chordsOnly:'和音',
+    nameThisPiece:'この曲に名前をつける…',
+    sizeStory:'ストーリー · 9:16', sizeStoryHint:'1080×1920 · IG / TikTok ストーリー用', shareStory:'ストーリー', recent:'最近',
+    sizeWeb:'ウェブ / SNS', sizeWebHint:'~4× · 速い · オンライン共有',
+    sizePrint:'印刷 A1 · 300 DPI', sizePrintHint:'~20× · 大きなファイル · 印刷可能',
+    saveLongPressHint:'画像を長押し', saveLongPressTail:'「写真に保存」または iOS のスクリーンショット(サイド + 音量↑)で画面解像度のまま',
+    saveRightClickHint:'画像を右クリック', saveRightClickTail:'「名前を付けて画像を保存…」を選ぶ',
+    saveAlternative:'代替:', saveAlternatives:'代替案:',
+    sLeft:'秒残り',
+    loadingPiano:' ピアノを読み込み中…', grandPiano:' グランドピアノ', synthPiano:' シンセピアノ',
+    listenHint:'別の機器で再生されている音楽にこのデバイスのマイクを向けてください — 同じスマホ内のオーディオは iOS で抑制されます',
+    micDenied:'マイクへのアクセスが拒否されました。有効にするには:iOS 設定 → Safari または Chrome → マイク、またはブラウザのアドレスバーの鍵アイコンをタップ。変更後にリロード。', micUnavailable:'このブラウザではマイクが利用できません。', micBusy:'マイクが使用中です — 他のアプリかブラウザタブが使っているかもしれません。閉じてリロードしてください。', micNotFound:'このデバイスにマイクが見つかりません。', micFail:'マイクを起動できませんでした',
+    recUnsupported:'このブラウザでは録音がサポートされていません。',
+    recTooShort:'録音が短すぎました — rec を 1 秒以上押し続けてください。',
+    searchGuide:'ガイドを検索…', noMatches:'一致なし:',
+    guideTitle:'ガイド', conceptTitle:'コンセプト', gsec_start:'始め方', gsec_sources:'ソース', gsec_playing:'再生中', gsec_output:'保存 & シェア', gsec_more:'もっと', fsNormal:'A', fsLarge:'A+', fsLabel:'文字サイズ', legalPricing:'料金', legalTerms:'利用規約', legalPrivacy:'プライバシー', legalRefunds:'返金',
+    pickMoodFirst:'まずムードを選んでください', morphInto:'現在のムードを別のムードに morph', morphTitle:'{mood} を…に morph', morphHint:'最大 3 つを選ぶ — 順番に', morphGo:'モーフ',
+    reroll:'振り直し:新しい解釈',
+    demoMode:'デモモード — もう一度再生するにはクリア', demoSkip:'キャンバスをタップでスキップ',
+    stopRecFirst:'再生コントロールを使うには録音を停止',
+    stopListenFirst:'まず聴くのを止めてください', stopSingFirst:'まず歌うのを止めてください',
+    scaleBtn:'⚙ スケール',
+    midiInput:'♬ MIDI 入力', musicInput:'♪ 音楽を追加', audioInput:'♫ AUDIO 入力', scoreInput:'𝄞 SCORE 入力', imageInput:'🖼 画像入力', micInput:'🎙 MIC 入力',
+    micVoiceHint:'歌、ハミング、口笛 · C メジャーにスナップ · 単音',
+    micMusicHint:'近くのスピーカーから音楽を再生 · 和音の変化で描く',
+    micTapToSwitch:'タップで voice ⇄ music を切り替え',
+    micTapToRecord:'🎙 をタップで録音',
+    builtInSample:'▶ 内蔵サンプル', chooseFile:'📁 ファイルを選ぶ', cancel:'キャンセル', mfiSampleTitle:'緋色の夢',
+    close:'閉じる',
+    proBadge:'PRO',
+    proAiBadge:'PRO AI',
+    mfiRecent:'最近',
+    recentAiGenerated:'最近 AI 生成',
+    recentPlayed:'最近再生',
+    today:'今日',
+    trialBanner1:'AI 試用残り 1 回 · 無制限は Pro AI へ',
+    trialBanner2:'AI 試用残り 2 回 · 無制限は Pro AI へ',
+    morphAiUnavailable:'AI 生成のムードでは Morph は使えません',
+    proPaywallTitle:'Paintiano をフル解放',
+    proPaywallTitleAi:'無料 AI 作曲を使い切りました',
+    proPaywallBody:'無制限 AI 作曲を解放し、エクスポートのウォーターマークを取り除き、独立アートプロジェクトを応援。',
+    proPaywallCta:'Paintiano Pro を入手 — €9.99 永久',
+    proAiPaywallCta:'Paintiano Pro AI を入手 — €19.99 永久',
+    proPaywallFooter:'一回払い · サブスクなし · VAT 込み',
+    proEarlyBird:'アーリーバード価格 · 先着 50 名',
+    proPaywallSubtitle:'一度払えば、永久に。',
+    proSupportLine:'独立アートプロジェクトを支えることにもなります。',
+    proTierTitle:'Paintiano Pro',
+    proTierPrice:'€9.99 · アーリーバード(その後 €14.99)',
+    proValueArtists:'16 人のアーティスト(Free は 8 人)',
+    proValueTypes:'各アーティスト 6 種類の描き方(Free は 2 種類)',
+    proValuePalette:'Custom パレット — 自分の 12 色を設定',
+    proValueDpi:'300 DPI エクスポート、ウォーターマークなし',
+    proValueLife:'永久アクセス',
+    proGetCta:'Pro を入手',
+    proAiTierTitle:'Paintiano Pro AI',
+    proAiTierPrice:'€19.99 · アーリーバード(その後 €24.99)',
+    proAiValueAll:'Pro のすべて、さらに:',
+    proAiValueText:'テキスト mood からの AI 作曲',
+    proAiValueImage:'画像からの AI 作曲',
+    proAiValueAtmo:'AI 雰囲気の色調',
+    proAiGetCta:'Pro AI を入手',
+    proRecommended:'おすすめ',
+    aiLockedHint:'AI は Paintiano Pro AI の一部',
+    moodChooseBelow:'下のリストからムードを選ぶ',
+    moodPickFromList:'リストからムードを選ぶ — カスタム mood は Pro AI',
+    moodTypeToSearch:'入力して 95 個のムードを検索…',
+    tierOverviewTitle:'Free · Pro · Pro AI',
+    tierIntro:'AI 機能(上記 ✦ アイテム + Image 内の AI Compose と Atmosphere)は Free でクレジットを使います。',
+    tierFreeName:'Free',
+    tierProName:'Pro',
+    tierProAiName:'Pro AI',
+    tierYes:'✓',
+    tierNo:'—',
+    tierAll:'すべて',
+    tier3Trial:'3 回試用',
+    tierUnlimited:'∞',
+    tierReadOnly:'プレビューのみ',
+    tierRowArtists:'アーティスト',
+    tierRowTypes:'描き方',
+    tierRowPalette:'Custom パレット',
+    tierRowDpi:'300 DPI エクスポート',
+    tierRowWmark:'ウォーターマーク',
+    tierRowAiText:'AI テキスト mood',
+    tierRowAiImg:'AI 画像 compose',
+    tierRowAiAtmo:'AI 雰囲気',
+    tierRowAi:'AI 機能',
+    tier3Credits:'3 クレジット',
+    tierAiCreditsNote:'AI テキスト & 画像 compose = 各 1 クレジット · Atmosphere = 0.5 クレジット',
+    proAboutTitle3:'Paintiano Pro · Pro AI',
+    proAboutLead3:'2 つの解放方法 — 創作スタイルに合うものを選ぶ。',
+    proAboutCompareTitle3:'Free · Pro · Pro AI',
+    proAboutHowFreeTitle:'Free ティアの動作',
+    proAboutHowFree1:'8 人のアーティストが初日から解放。各人に Pro パートナーがいる — タップして見られるが、Pro だけがそのパートナーで描ける。',
+    proAboutHowFree2:'Custom パレットはデフォルトの 12 色を表示;自分の色を編集するのは Pro。',
+    proAboutHowFree3:'AI 機能(✦)は 3 回の試用クレジット、その後 Pro AI への無制限アップグレードを促す。Free のエクスポートには常にウォーターマーク。',
+    proAboutHonestTitle3:'Pro と Pro AI について正直に',
+    proAboutHonest3_1:'両方とも一回払い。サブスクは絶対なし。今日払う価格は永久に有効。',
+    proAboutHonest3_2:'プレーン Pro はウォーターマークを取り、全アーティスト・描き方・カスタムパレットを解放 — ただし AI 呼び出しは Free と同じ 3 クレジット試用プールから。',
+    proAboutHonest3_3:'Pro AI は ✦ AI 機能を日常的に使う人のため。自分の音楽を弾いたりファイルを読み込んだりすることが多いなら、プレーン Pro が合う。',
+    proAboutHonest3_4:'クラウドストレージなし。絵は自分のデバイスに保存。ライセンスキーは最大 5 台で動作、同時 1 台。',
+    proTierPriceShort:'€9.99',
+    proAiTierPriceShort:'€19.99',
+    tierFootnote:'一回払い · 永久アクセス',
+    proValue1:'無制限 AI 作曲',
+    proValue1Sub:'好きなだけ絵を生成',
+    proValue2:'ウォーターマークなしでエクスポート',
+    proValue2Sub:'クリーンな画像、共有や印刷の準備が整っている',
+    proValue3:'永久アクセス',
+    proValue3Sub:'一回払いで永久にあなたのもの',
+    proValue4:'独立アートプロジェクトを応援',
+    proValue4Sub:'Paintiano の独立性を守る',
+    proLearnMore:'Pro について詳しく',
+    proAboutTitle:'Paintiano Pro',
+    proAboutLead:'Free のすべて、制限なし。',
+    proAboutWhatYouGet:'Pro で得られるもの',
+    proAboutCompareTitle:'Free 対 Pro',
+    proAboutCompareFeature:'機能',
+    proAboutCompareFree:'Free',
+    proAboutComparePro:'Pro',
+    proAboutCmp1:'すべての手動モード(キーボード、マイク、音声)',
+    proAboutCmp2:'すべての視覚スタイル & ムード',
+    proAboutCmp3:'AI 作曲',
+    proAboutCmp3Free:'5 回試用',
+    proAboutCmp3Pro:'無制限',
+    proAboutCmp4:'エクスポートのウォーターマーク',
+    proAboutCmp4Free:'あり',
+    proAboutCmp4Pro:'なし',
+    proAboutCmp5:'永久アクセス',
+    proAboutHonestTitle:'Pro でないものについて正直に',
+    proAboutHonest1:'Pro はすでに使っている Paintiano そのまま — 制限を取り除くだけ。ペイウォールの後ろに隠された新機能はない。',
+    proAboutHonest2:'Pro はデバイス間で自動同期しない。ライセンスキーは最大 5 台で動作。',
+    proAboutHonest3:'Pro はクラウドストレージを含まない。絵は自分のファイルに保存する。',
+    proHaveKey:'すでにキーを持っている',
+    proEnterKey:'ライセンスキーを入力',
+    proActivate:'アクティベート',
+    proBack:'戻る',
+    proInvalidKey:'このキーは有効ではありません。正しいキーをメールで確認してください。',
+    proWelcomeTitle:'Pro へようこそ',
+    proWelcomeBody:'このデバイスのすべての機能が解放されました。',
+    proManageActive:'Pro',    partnerIsPro:'{a} · {b} は Pro 限定',    tapReturnShuffle:'タップでシャッフルに戻る',    noNotesGeneric:'音符なし。',
+    transcribingAudio:'オーディオを書き起こし中',
+    transcribingAudioLong:'オーディオを書き起こし中 · 1 分ほどかかります',
+    transcribingSample:'サンプルを書き起こし中',
+    transcribingSampleLong:'サンプルを書き起こし中 · 1 分ほどかかります',
+    newBy:{midi:'新規',audio:'新規',score:'新規',image:'新規',mood:'新規'},
+  
+  
+  
   },
 };
 
@@ -11496,7 +13075,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>One language, two surfaces. Pick a side and go.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>How it works</h3>
     <p style={{margin:'0 0 12px'}}>Each note gets a colour: <em>hue</em> from its pitch, <em>lightness</em> from its octave, <em>saturation</em> from how hard it was played. Notes drop into a golden-ratio grid — the same proportion behind seashells, flower spirals, the Parthenon. Read the grid back and the music returns. Same input, same painting, every time.</p>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Five colour grammars</strong> to read the same music. Tap <strong style={{color:'rgba(201,168,76,.95)'}}>Harmony</strong> for the circle-of-fifths order (related keys cluster). <strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> for even 30° steps. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> for golden-angle hues (137.5°), maximally scattered around the wheel. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> for the inverse of Harmony — clashing chords clash on canvas, clean ones bloom apart. The painter's reading. Or <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, where only colours in your palette make sound.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Five colour grammars</strong> to read the same music. Tap <strong style={{color:'rgba(201,168,76,.95)'}}>Harmony</strong> for the circle-of-fifths order (related keys cluster). <strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> for visual equal temperament — twelve equal hues for twelve equal semitones. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> for golden-angle hues (137.5°), maximally scattered around the wheel. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> for the inverse of Harmony — clashing chords clash on canvas, clean ones bloom apart. The painter's reading. Or <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, where only colours in your palette make sound.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom defaults to Scriabin's 1910 Prometheus mapping</strong> — the most famous synaesthete in history actually saw these colours for these pitches and wrote them into his orchestral score's "luce" part. C red, G orange-pink, D yellow, A green, E pearly blue, B blue, F♯ violet-blue, C♯ violet, G♯ purple, D♯/A♯ metallic-steel (desaturated), F deep red. <em>Harmony is Scriabin objectified. Custom is Scriabin original.</em></p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — pick what you see</h3>
     <p style={{margin:'0 0 22px'}}>Top menu, between Guide and Pro. Pick which palettes (5) and which artist pairs (8 + Mosaic family) appear in the canvas pickers. Default is everything — narrow down once you have favourites. Free sees Pro artists with 🔒. The Shuffle pool follows your selection.</p>
@@ -11527,7 +13106,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Eine Sprache, zwei Oberflächen. Wähl eine Seite und leg los.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>So funktioniert's</h3>
     <p style={{margin:'0 0 12px'}}>Jede Note bekommt eine Farbe: <em>Farbton</em> aus der Tonhöhe, <em>Helligkeit</em> aus der Oktave, <em>Sättigung</em> aus der Anschlagstärke. Die Noten fallen in ein Raster im goldenen Schnitt — dieselbe Proportion wie in Schneckenhäusern, Blütenspiralen, dem Parthenon. Lies das Raster zurück und die Musik kommt wieder. Gleicher Input, gleiches Bild, immer.</p>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Fünf Farbgrammatiken</strong> für dieselbe Musik. Tippe <strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie</strong> für die Quintenzirkel-Reihenfolge (verwandte Tonarten clustern). <strong style={{color:'rgba(201,168,76,.95)'}}>Spektral</strong> für gleichmäßige 30°-Schritte. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> für Goldwinkel-Töne (137,5°), maximal verteilt. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> für die umgekehrte Harmonie — schmutzige Akkorde kollidieren auf der Leinwand, saubere blühen auseinander. Die Lesart des Malers. Oder <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, wo nur Farben aus deiner Palette klingen.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Fünf Farbgrammatiken</strong> für dieselbe Musik. Tippe <strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie</strong> für die Quintenzirkel-Reihenfolge (verwandte Tonarten clustern). <strong style={{color:'rgba(201,168,76,.95)'}}>Spektral</strong> für visuelle gleichstufige Stimmung — zwölf gleiche Farbtöne für zwölf gleiche Halbtöne. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> für Goldwinkel-Töne (137,5°), maximal verteilt. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> für die umgekehrte Harmonie — schmutzige Akkorde kollidieren auf der Leinwand, saubere blühen auseinander. Die Lesart des Malers. Oder <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, wo nur Farben aus deiner Palette klingen.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom startet mit Skrjabins Prometheus-Mapping von 1910</strong> — der berühmteste Synästhet der Geschichte sah diese Farben für diese Tonhöhen und schrieb sie in den "luce"-Part seines Orchesterwerks. C rot, G orange-rosa, D gelb, A grün, E perlblau, H blau, Fis violett-blau, Cis violett, Gis purpur, Dis/Ais metallisch-stählern (entsättigt), F dunkelrot. <em>Harmonie ist Skrjabin objektiviert. Custom ist Skrjabin original.</em></p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — wähle, was du siehst</h3>
     <p style={{margin:'0 0 22px'}}>Oberes Menü, zwischen Guide und Pro. Wähle, welche Paletten (5) und welche Künstlerpaare (8 + Mosaik-Familie) in den Wählern erscheinen. Standard ist alles — grenze ein, sobald du Favoriten hast. Free sieht Pro-Künstler mit 🔒. Der Shuffle-Pool folgt deiner Auswahl.</p>
@@ -11558,7 +13137,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Une langue, deux surfaces. Choisis un côté et lance-toi.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Comment ça marche</h3>
     <p style={{margin:'0 0 12px'}}>Chaque note reçoit une couleur : <em>teinte</em> selon la hauteur, <em>luminosité</em> selon l'octave, <em>saturation</em> selon la force de jeu. Les notes tombent dans une grille au nombre d'or — la proportion des coquillages, des spirales florales, du Parthénon. Relis la grille et la musique revient. Même entrée, même peinture, toujours.</p>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Cinq grammaires de couleur</strong> pour la même musique. Tape <strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie</strong> pour l'ordre du cercle des quintes (les tonalités voisines clustèrent). <strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> pour des pas de 30° égaux. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> pour des teintes en angle doré (137,5°), dispersion maximale sur la roue. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> pour l'harmonie inversée — les accords qui se heurtent se heurtent sur la toile, les purs s'écartent. La lecture du peintre. Ou <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, où seules les couleurs de ta palette sonnent.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Cinq grammaires de couleur</strong> pour la même musique. Tape <strong style={{color:'rgba(201,168,76,.95)'}}>Harmonie</strong> pour l'ordre du cercle des quintes (les tonalités voisines clustèrent). <strong style={{color:'rgba(201,168,76,.95)'}}>Spectral</strong> pour le tempérament égal visuel — douze teintes égales pour douze demi-tons égaux. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> pour des teintes en angle doré (137,5°), dispersion maximale sur la roue. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> pour l'harmonie inversée — les accords qui se heurtent se heurtent sur la toile, les purs s'écartent. La lecture du peintre. Ou <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, où seules les couleurs de ta palette sonnent.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom démarre avec la carte Prométhée de Scriabine (1910)</strong> — le plus célèbre synesthète de l'histoire voyait vraiment ces couleurs pour ces hauteurs et les a écrites dans la partie "luce" de sa partition orchestrale. Do rouge, Sol orange-rose, Ré jaune, La vert, Mi bleu nacré, Si bleu, Fa♯ bleu-violet, Do♯ violet, Sol♯ pourpre, Ré♯/La♯ métallique-acier (désaturés), Fa rouge sombre. <em>Harmonie est Scriabine objectivé. Custom est Scriabine original.</em></p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — choisis ce que tu vois</h3>
     <p style={{margin:'0 0 22px'}}>Menu du haut, entre Guide et Pro. Choisis quelles palettes (5) et quelles paires d'artistes (8 + famille Mosaïque) apparaissent dans les sélecteurs. Défaut : tout. Restreins quand tu as des favoris. Free voit les artistes Pro avec 🔒. Le pool de Shuffle suit ta sélection.</p>
@@ -11589,7 +13168,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Un idioma, dos superficies. Elige un lado y arranca.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Cómo funciona</h3>
     <p style={{margin:'0 0 12px'}}>Cada nota recibe un color: <em>tono</em> según la altura, <em>luminosidad</em> según la octava, <em>saturación</em> según la fuerza. Las notas caen en una cuadrícula áurea — la misma proporción de las caracolas, las espirales florales, el Partenón. Relee la cuadrícula y vuelve la música. Misma entrada, misma pintura, siempre.</p>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Cinco gramáticas de color</strong> para la misma música. Toca <strong style={{color:'rgba(201,168,76,.95)'}}>Armonía</strong> para el orden del círculo de quintas (tonalidades emparentadas se agrupan). <strong style={{color:'rgba(201,168,76,.95)'}}>Espectral</strong> para pasos de 30° iguales. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> para tonos con ángulo áureo (137,5°), dispersión máxima en la rueda. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> para la armonía inversa — acordes que chocan chocan en el lienzo, los limpios se separan. La lectura del pintor. O <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, donde sólo los colores de tu paleta suenan.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Cinco gramáticas de color</strong> para la misma música. Toca <strong style={{color:'rgba(201,168,76,.95)'}}>Armonía</strong> para el orden del círculo de quintas (tonalidades emparentadas se agrupan). <strong style={{color:'rgba(201,168,76,.95)'}}>Espectral</strong> para temperamento igual visual — doce tonos iguales para doce semitonos iguales. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> para tonos con ángulo áureo (137,5°), dispersión máxima en la rueda. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> para la armonía inversa — acordes que chocan chocan en el lienzo, los limpios se separan. La lectura del pintor. O <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, donde sólo los colores de tu paleta suenan.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom arranca con el mapa Prometeo de Skriabin (1910)</strong> — el sinesteta más famoso de la historia veía realmente estos colores para estos tonos y los escribió en la parte "luce" de su partitura orquestal. Do rojo, Sol naranja-rosa, Re amarillo, La verde, Mi azul perlado, Si azul, Fa♯ azul-violeta, Do♯ violeta, Sol♯ púrpura, Re♯/La♯ metálico-acero (desaturados), Fa rojo oscuro. <em>Armonía es Skriabin objetivado. Custom es Skriabin original.</em></p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — elige lo que ves</h3>
     <p style={{margin:'0 0 22px'}}>Menú superior, entre Guide y Pro. Elige qué paletas (5) y qué pares de artistas (8 + familia Mosaico) aparecen en los selectores. Por defecto: todo. Restringe cuando tengas favoritos. Free ve los artistas Pro con 🔒. El pool de Shuffle sigue tu selección.</p>
@@ -11620,7 +13199,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Jeden jazyk, dva povrchy. Vyber si stranu a štartuj.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Ako to funguje</h3>
     <p style={{margin:'0 0 12px'}}>Každá nota dostane farbu: <em>odtieň</em> z výšky, <em>jas</em> z oktávy, <em>sýtosť</em> zo sily úhozu. Noty padajú do mriežky v zlatom reze — tá istá proporcia ako v ulitách, kvetinových špirálach, Parthenóne. Prečítaj mriežku späť a hudba sa vráti. Ten istý vstup, tá istá maľba, vždy.</p>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Päť gramatík farby</strong> pre tú istú hudbu. Klikni <strong style={{color:'rgba(201,168,76,.95)'}}>Harmónia</strong> pre poradie kvintového kruhu (príbuzné tóniny sa zhlukujú). <strong style={{color:'rgba(201,168,76,.95)'}}>Spektrum</strong> pre rovnomerné 30° kroky. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> pre odtiene cez zlatý uhol (137,5°), maximálne rozptýlené po kruhu. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> pre obrátenú Harmóniu — drsné akordy sa hádajú aj na plátne, čisté kvitnú od seba. Pohľad maliara. Alebo <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, kde znejú iba farby z tvojej palety.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Päť gramatík farby</strong> pre tú istú hudbu. Klikni <strong style={{color:'rgba(201,168,76,.95)'}}>Harmónia</strong> pre poradie kvintového kruhu (príbuzné tóniny sa zhlukujú). <strong style={{color:'rgba(201,168,76,.95)'}}>Spektrum</strong> pre vizuálne rovnaké temperovanie — dvanásť rovnakých odtieňov pre dvanásť rovnakých polotónov. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> pre odtiene cez zlatý uhol (137,5°), maximálne rozptýlené po kruhu. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> pre obrátenú Harmóniu — drsné akordy sa hádajú aj na plátne, čisté kvitnú od seba. Pohľad maliara. Alebo <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, kde znejú iba farby z tvojej palety.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom default je Skriabinova mapa z Prometea (1910)</strong> — najslávnejší synestét histórie tieto farby pre tieto tóny skutočne videl a napísal ich do "luce" partu svojej orchestrálnej partitúry. C červená, G oranžovo-ružová, D žltá, A zelená, E perleťovo-belasá, H modrá, Fis fialovo-modrá, Cis fialová, Gis purpurová, Dis/Ais kovovo-oceľové (desaturované), F tmavočervená. <em>Harmónia je Skriabin zobjektívnený. Custom je Skriabin pôvodný.</em></p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — vyber si, čo vidíš</h3>
     <p style={{margin:'0 0 22px'}}>Horné menu, medzi Guide a Pro. Vyber, ktoré palety (5) a ktoré páry umelcov (8 + Mosaic rodina) sa majú zobraziť v selektoroch canvasu. Default je všetko — zúž len keď máš obľúbencov. Free vidí Pro umelcov s 🔒. Pool Shuffle nasleduje tvoj výber.</p>
@@ -11651,7 +13230,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>Uma linguagem, duas superfícies. Escolhe um lado e vai.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Como funciona</h3>
     <p style={{margin:'0 0 12px'}}>Cada nota ganha uma cor: <em>matiz</em> da altura, <em>luminosidade</em> da oitava, <em>saturação</em> da força do toque. As notas caem numa grelha em proporção áurea — a mesma das conchas, das espirais florais, do Pártenon. Lê a grelha de volta e a música regressa. Mesma entrada, mesma pintura, sempre.</p>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Cinco gramáticas de cor</strong> para a mesma música. Toca <strong style={{color:'rgba(201,168,76,.95)'}}>Harmonia</strong> para a ordem do círculo de quintas (tonalidades aparentadas agrupam-se). <strong style={{color:'rgba(201,168,76,.95)'}}>Espectral</strong> para passos iguais de 30°. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> para tons em ângulo dourado (137,5°), dispersão máxima na roda. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> para a Harmonia invertida — acordes que chocam chocam na tela, os limpos afastam-se. A leitura do pintor. Ou <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, onde só as cores da tua paleta soam.</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Cinco gramáticas de cor</strong> para a mesma música. Toca <strong style={{color:'rgba(201,168,76,.95)'}}>Harmonia</strong> para a ordem do círculo de quintas (tonalidades aparentadas agrupam-se). <strong style={{color:'rgba(201,168,76,.95)'}}>Espectral</strong> para temperamento igual visual — doze matizes iguais para doze semitons iguais. <strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> para tons em ângulo dourado (137,5°), dispersão máxima na roda. <strong style={{color:'rgba(201,168,76,.95)'}}>Kontra</strong> para a Harmonia invertida — acordes que chocam chocam na tela, os limpos afastam-se. A leitura do pintor. Ou <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>, onde só as cores da tua paleta soam.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom arranca com o mapa Prometeu de Scriabin (1910)</strong> — o sinesteta mais famoso da história via realmente estas cores para estes tons e escreveu-as na parte "luce" da partitura orquestral. Dó vermelho, Sol laranja-rosa, Ré amarelo, Lá verde, Mi azul perolado, Si azul, Fá♯ azul-violeta, Dó♯ violeta, Sol♯ púrpura, Ré♯/Lá♯ metálico-aço (dessaturados), Fá vermelho escuro. <em>Harmonia é Scriabin objectivado. Custom é Scriabin original.</em></p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — escolhe o que vês</h3>
     <p style={{margin:'0 0 22px'}}>Menu superior, entre Guide e Pro. Escolhe quais paletas (5) e quais pares de artistas (8 + família Mosaico) aparecem nos selectores. Por defeito: tudo. Restringe quando tiveres favoritos. Free vê os artistas Pro com 🔒. O pool de Shuffle segue a tua selecção.</p>
@@ -11682,7 +13261,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>一种语言,两个表面。选一边,开始。</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>原理</h3>
     <p style={{margin:'0 0 12px'}}>每个音符获得一种颜色:<em>色相</em>来自音高,<em>明度</em>来自八度,<em>饱和度</em>来自演奏力度。音符落入黄金比例网格 — 与贝壳、花朵螺旋、帕特农神庙背后的比例相同。反读网格,音乐回归。同样的输入,同样的画,每一次。</p>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>五种颜色语法</strong>读同一段音乐。点击 <strong style={{color:'rgba(201,168,76,.95)'}}>和声</strong> 用五度圈顺序(相关调聚集)。<strong style={{color:'rgba(201,168,76,.95)'}}>光谱</strong> 用均匀的 30° 间隔。<strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> 用黄金角色相(137.5°),色轮上最大分散。<strong style={{color:'rgba(201,168,76,.95)'}}>反向 Kontra</strong> 是和声的反面 — 冲突的和弦在画布上冲突,纯净的绽放分开。画家的读法。或 <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>,只有你调色板里的颜色发声。</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>五种颜色语法</strong>读同一段音乐。点击 <strong style={{color:'rgba(201,168,76,.95)'}}>和声</strong> 用五度圈顺序(相关调聚集)。<strong style={{color:'rgba(201,168,76,.95)'}}>光谱</strong> 是视觉的平均律 — 十二个相等色相对应十二个相等半音。<strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> 用黄金角色相(137.5°),色轮上最大分散。<strong style={{color:'rgba(201,168,76,.95)'}}>反向 Kontra</strong> 是和声的反面 — 冲突的和弦在画布上冲突,纯净的绽放分开。画家的读法。或 <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>,只有你调色板里的颜色发声。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom 默认是斯克里亚宾 1910 年的《普罗米修斯》映射</strong> — 历史上最著名的联觉者真的为这些音高看到了这些颜色,并把它们写进了管弦乐谱的"luce"声部。C 红、G 橙粉、D 黄、A 绿、E 珠蓝、B 蓝、F♯ 紫蓝、C♯ 紫、G♯ 紫红、D♯/A♯ 金属钢色(去饱和)、F 深红。<em>和声是斯克里亚宾的客观化。Custom 是原本的斯克里亚宾。</em></p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — 选择你看到什么</h3>
     <p style={{margin:'0 0 22px'}}>顶部菜单,在 Guide 和 Pro 之间。选择哪些调色板(5 个)和哪些艺术家对(8 + Mosaic 家族)出现在画布选择器中。默认全部 — 有偏好时再缩窄。Free 看到 Pro 艺术家带 🔒。Shuffle 池跟随你的选择。</p>
@@ -11714,7 +13293,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>一種語言,兩個表面。選一邊,出發。</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>原理</h3>
     <p style={{margin:'0 0 12px'}}>每個音符獲得一種顏色:<em>色相</em>來自音高,<em>明度</em>來自八度,<em>飽和度</em>來自彈奏力度。音符落入黃金比例網格 — 與貝殼、花朵螺旋、帕德嫩神廟背後的比例相同。反讀網格,音樂回歸。同樣的輸入,同樣的畫,每一次。</p>
-    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>五種顏色文法</strong>讀同一段音樂。點擊 <strong style={{color:'rgba(201,168,76,.95)'}}>和聲</strong> 用五度圈順序(相關調聚集)。<strong style={{color:'rgba(201,168,76,.95)'}}>光譜</strong> 用均勻的 30° 間隔。<strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> 用黃金角色相(137.5°),色輪上最大分散。<strong style={{color:'rgba(201,168,76,.95)'}}>反向 Kontra</strong> 是和聲的反面 — 衝突的和弦在畫布上衝突,純淨的綻放分開。畫家的讀法。或 <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>,只有你調色盤裡的顏色發聲。</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>五種顏色文法</strong>讀同一段音樂。點擊 <strong style={{color:'rgba(201,168,76,.95)'}}>和聲</strong> 用五度圈順序(相關調聚集)。<strong style={{color:'rgba(201,168,76,.95)'}}>光譜</strong> 是視覺的平均律 — 十二個相等色相對應十二個相等半音。<strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong> 用黃金角色相(137.5°),色輪上最大分散。<strong style={{color:'rgba(201,168,76,.95)'}}>反向 Kontra</strong> 是和聲的反面 — 衝突的和弦在畫布上衝突,純淨的綻放分開。畫家的讀法。或 <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong>,只有你調色盤裡的顏色發聲。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom 預設是斯克里亞賓 1910 年的《普羅米修斯》映射</strong> — 歷史上最著名的聯覺者真的為這些音高看到了這些顏色,並把它們寫進了管弦樂譜的「luce」聲部。C 紅、G 橘粉、D 黃、A 綠、E 珠藍、B 藍、F♯ 紫藍、C♯ 紫、G♯ 紫紅、D♯/A♯ 金屬鋼色(去飽和)、F 深紅。<em>和聲是斯克里亞賓的客觀化。Custom 是原本的斯克里亞賓。</em></p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — 選擇你看到什麼</h3>
     <p style={{margin:'0 0 22px'}}>頂部選單,在 Guide 和 Pro 之間。選擇哪些調色盤(5 個)和哪些藝術家對(8 + Mosaic 家族)出現在畫布選擇器中。預設全部 — 有偏好時再縮窄。Free 看到 Pro 藝術家帶 🔒。Shuffle 池跟隨你的選擇。</p>
@@ -11738,6 +13317,37 @@ const CONCEPT_I18N = {
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>即時工具</h3>
     <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>作曲</strong> 打開鋼琴。點或按住 — 按得越長,塊越寬。鍵盤也行(A–L 白鍵,W/E/T/Y/U/O/P 黑鍵)。</p>
     <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>🎙 麥克風</strong> 有兩種模式。<strong style={{color:'rgba(140,200,255,.95)'}}>🔊 音樂</strong> 聽房間裡在播放的東西,無聲地畫下和聲變化 — 歡迎長錄音。<strong style={{color:'rgba(255,140,140,.95)'}}>🎤 嗓音</strong> 跟隨你的歌唱、哼唱或口哨,一音一畫。一點切換。</p>
+  </>),
+  ja: () => (<>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>音楽が絵になる。絵が音楽になる。</h3>
+    <p style={{margin:'0 0 14px'}}>すべての音が色になる。すべての色は音に戻せる。同じ円盤、同じルール、双方向。メロディーをハミング → 絵が咲く。ロスコを入れる → その音を聴く。</p>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>一つの言語、二つの表面。どちらからでも、はじめよう。</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>仕組み</h3>
+    <p style={{margin:'0 0 12px'}}>すべての音は色を得る — <em>色相</em>は音高から、<em>明度</em>はオクターブから、<em>彩度</em>は打鍵の強さから。音は黄金比のグリッドに落ちる — 貝殻、花の螺旋、パルテノン神殿の背後にある同じ比率。グリッドを逆に読めば、音楽が戻ってくる。同じ入力、同じ絵、毎回。</p>
+    <p style={{margin:'0 0 14px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>5 つの色文法</strong>が同じ音楽を読む。<strong style={{color:'rgba(201,168,76,.95)'}}>ハーモニー</strong>は五度圏順(近縁の調が集まる)。<strong style={{color:'rgba(201,168,76,.95)'}}>スペクトル</strong>は視覚の平均律 — 12 の等しい色相が 12 の等しい半音に対応。<strong style={{color:'rgba(201,168,76,.95)'}}>φ Phi</strong>は黄金角の色相(137.5°)、色環上で最大に分散。<strong style={{color:'rgba(201,168,76,.95)'}}>Kontra(反転)</strong>はハーモニーの裏面 — 不協和音がキャンバス上でぶつかり、純粋な和音は咲き開く。画家の読み方。または <strong style={{color:'rgba(201,168,76,.95)'}}>Custom</strong> — 自分のパレットの色だけが音を出す。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Custom のデフォルトはスクリャービン 1910 年の《プロメテウス》対応</strong> — 史上最も有名な共感覚者が、これらの音高にこれらの色を実際に見て、オーケストラ譜の「luce」パートに書き込んだ。C 赤、G オレンジピンク、D 黄、A 緑、E 真珠色の青、B 青、F♯ 青紫、C♯ 紫、G♯ 紫紅、D♯/A♯ メタリックスチール(脱彩)、F 深紅。<em>ハーモニーはスクリャービンの客観化。Custom はスクリャービンそのもの。</em></p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>⚙ Setup — 何を表示するか選ぶ</h3>
+    <p style={{margin:'0 0 22px'}}>上部メニュー、Guide と Pro の間。どのパレット(5 つ)、どのアーティストペア(8 + Mosaic ファミリー)をキャンバスのピッカーに出すかを選ぶ。デフォルトは全部 — 好みがあれば絞り込む。Free は Pro アーティストに 🔒 が付く。Shuffle プールはあなたの選択に従う。</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>音楽はどこから来るか</h3>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Mood</strong> を開く。どんな気持ちでも — <em>激怒</em>、<em>saudade</em>、<em>午前3時のドライブ</em>、どの言語でも。<strong style={{color:'rgba(201,168,76,.95)'}}>✦ AI</strong> がそれをピアノ曲に変える。<strong style={{color:'rgba(201,168,76,.95)'}}>✦ Morph</strong> はある感情を別の感情へ折り曲げる。<strong style={{color:'rgba(201,168,76,.95)'}}>✦ Vary</strong> は調を切り替える — 新しい調、新しい色、同じ曲。</p>
+    <p style={{margin:'0 0 22px'}}>あるいは自分で持ち込む:ピアノを弾く、マイクに向かって歌う、MIDI・MP3・楽譜ファイルを入れる。すべてが絵になる。</p>
+    <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>絵画スタイル</h3>
+    <p style={{margin:'0 0 12px'}}><strong>Mosaic ファミリー</strong> — 一つのタイル、三つのモード。<strong>Mosaic</strong> は素朴な読み方(きれいな φ 矩形)。タップで循環:<strong>Notes</strong>(同じグリッド、各ブロックに音名 — 即席の学習ツール)→ <strong>$1M$</strong>(Million Dollar Homepage オーバーレイ:60% 矩形、40% 十種の形、構造化されたカオス)。そして 16 人のアーティストが、それぞれのやり方で同じ音符を書き直す:</p>
+    <p style={{margin:'0 0 12px',opacity:.85}}><em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Picasso</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Kusama</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Pollock</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Kandinsky</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Miró</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Mondrian</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Rothko</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Matisse</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Vasarely</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Frank Stella</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Sam Francis</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Hilma af Klint</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Klimt</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Keith Haring</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Bridget Riley</strong> · <em>inspired by</em> <strong style={{color:'rgba(210,170,255,.9)'}}>Roy Lichtenstein</strong></p>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.75}}>ピカソがあなたのプレイリストに出会う。タップ。比べる。切り替え。</p>
+    <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.15)',paddingBottom:6}}>↻ Shuffle</h3>
+    <p style={{margin:'0 0 22px'}}>同じ組み合わせ = 同じ絵。毎回。(同じ曲・同じ調・同じアーティスト・同じスタイル → ピクセル単位で一致。)<strong style={{color:'rgba(255,210,140,.95)'}}>Shuffle</strong> をオン:アーティスト選択中なら、<strong>Next</strong> はそのアーティストの複数のバリアントを循環。アーティスト未選択なら、Next は両方を取る — 新しいアーティスト+新しいバリアント。プールには Mosaic ファミリーの 3 ステーション(Mosaic / Notes / $1M$)も含まれ、Shuffle はそのどれかにも着地し得る。ダイス ON で Mosaic をタップすると、循環をその 3 つに<strong>ロック</strong>できる。Shuffle OFF = 現在をロック。</p>
+    <h3 style={{color:'rgba(210,160,255,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(210,160,255,.15)',paddingBottom:6}}>絵を入れる — その音を聴く</h3>
+    <p style={{margin:'0 0 12px'}}>どんな画像でもアップロード — ゴッホ、おばあちゃんの肖像、夕焼けのスクリーンショット、AI 生成のもの。Paintiano はそれを楽譜として読む、左から右、上から下。曲の長さは画像のエネルギーに比例(およそ 1½–2¾ 分)。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> モードはあなたのもの:あなたの 12 色パレットに近い色だけが音を出す。《ゲルニカ》をトロピカル・ピンクで濾過してみる。何が残るか。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>2 つの再生方法。</strong><strong>Scan</strong> は画像を楽譜として読む。<strong style={{color:'rgba(228,178,255,.95)'}}>AI Compose</strong>(Pro)は違う:画像のパレット、エネルギー、ムードを取り、まったく新しい曲を書く — 再生中、絵は画面に残る。</p>
+    <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Save · Record — 持ち帰る</h3>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> は絵を高解像度 PNG として書き出す。<strong>Story</strong>(9:16)は IG/TikTok 用、<strong>Web/Social</strong> はフィード用、または <strong>A1 · 300 DPI</strong> — 本当に印刷できる、ギャラリー級。額装。掛ける。シェア。あなたのもの。</p>
+    <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Record</strong> は絵が再生される間に音楽を取り込み、共有可能な音声ファイルにする。さらに <strong>♫ Score</strong> は絵の音符を MusicXML に変える — MuseScore や Sibelius で開ける、本物の楽譜が、一枚の画像から。</p>
+    <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>お気に入りの曲から生まれたポスター。大切な写真から生まれた歌。それが持ち帰る部分。</p>
+    <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>ライブツール</h3>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>Compose</strong> はピアノを開く。タップ、または押し続ける — 長く押すほどブロックは太くなる。キーボードも使える(A–L 白鍵、W/E/T/Y/U/O/P 黒鍵)。</p>
+    <p style={{margin:'0 0 4px'}}><strong style={{color:'rgba(201,168,76,.95)'}}>🎙 Mic</strong> には 2 モード。<strong style={{color:'rgba(140,200,255,.95)'}}>🔊 Music</strong> は部屋で鳴っているものを聴き、和声の変化を静かに描く — 長時間録音も OK。<strong style={{color:'rgba(255,140,140,.95)'}}>🎤 Voice</strong> はあなたの歌・ハミング・口笛をたどり、一音ごとに一筆。タップで切り替え。</p>
   </>),
 };
 function getConcept(lang){
@@ -11779,7 +13389,7 @@ const GUIDE_I18N = {
   {id:'start-here', title:`Where to begin`, keywords:`onboarding start here begin first time new user how to use guide orient direction`,
    body:`Two paths in. ◆ Music → painting: type a mood (any feeling, any language), play the piano, sing into the mic, or drop in music — a MIDI, MP3 or score. ◆ Painting → music: drop in an image. ◆ Pick a colour mode (Harmony or Spectral). Maybe an artist style. Same music = same painting, always. Turn on ↻ Shuffle for a fresh take each Play. ◆ Stuck? Open Mood, type a feeling, hit Play. Watch it build. The loop teaches the rest. ◆ Then Save the painting and Record the music. Those are the parts you keep.`},
   {id:'modes', title:`Harmony vs Spectral vs φ Phi vs Kontra vs Custom`, keywords:`colour color mode hue palette circle fifths chromatic phi golden angle kontra inverse counter scriabin prometheus synaesthesia custom bw black white modes pro editable read-only`,
-   body:`Five colour grammars for the same music. ◆ Harmony — circle-of-fifths order, related keys cluster. ◆ Spectral — even 30° steps, one colour per semitone. ◆ φ Phi — golden-angle hues (137.5°), maximally scattered around the wheel, no two pitch classes near each other. ◆ Kontra — inverse-Harmony: consonant intervals (P5, M3, m3, M6, m6, P4) get FAR hues; dissonant ones (m2, M2, TT, M7, m7) get CLOSE ones. The painter's reading — clashing chords clash on canvas, clean ones bloom apart. ◆ Custom — defaults to Scriabin's Prometheus mapping (1910): the most famous synaesthete in history actually saw these colours for these pitches and wrote them into his orchestral score's "luce" part. C red, G orange-pink, D yellow, A green, E pearly blue, B blue, F♯ violet-blue, C♯ violet, G♯ purple, D♯/A♯ metallic-steel (desaturated), F deep red. Roughly the circle of fifths through a rainbow — a subjective ancestor of Harmony. The synaesthete's reading. Only colours in your palette make sound; the user can recolour any swatch (Pro). ◆ B/W — image mode only (replaces the algorithmic modes when an image is grayscale); lightness tracks pitch, hue ignored. ◆ Switch anytime — same notes, instant repaint. Tap an active tab to preview its colours. In image mode the app picks Color or B/W for you; only Custom is yours to set. ◆ Free sees the Scriabin default as read-only preview; Pro and Pro AI make Custom fully editable — pick your own 12 colours. Kontra is unlocked on every tier.`},
+   body:`Five colour grammars for the same music. ◆ Harmony — circle-of-fifths order, related keys cluster. ◆ Spectral — visual equal temperament: twelve equal hue steps for twelve equal semitones. Closes the wheel — B leads back to C in colour, the way it does in music. The eye's chromatic scale. (Aside: shift any pitch up 40 octaves and you land in visible light — A4 (440 Hz) becomes ~484 THz, a warm red. Spectral chooses equal partition over real wavelengths so the magenta end of the wheel survives. The eye's visible range isn't a full octave. Spectral picks balance over physics.) ◆ φ Phi — golden-angle hues (137.5°), maximally scattered around the wheel, no two pitch classes near each other. ◆ Kontra — inverse-Harmony: consonant intervals (P5, M3, m3, M6, m6, P4) get FAR hues; dissonant ones (m2, M2, TT, M7, m7) get CLOSE ones. The painter's reading — clashing chords clash on canvas, clean ones bloom apart. ◆ Custom — defaults to Scriabin's Prometheus mapping (1910): the most famous synaesthete in history actually saw these colours for these pitches and wrote them into his orchestral score's "luce" part. C red, G orange-pink, D yellow, A green, E pearly blue, B blue, F♯ violet-blue, C♯ violet, G♯ purple, D♯/A♯ metallic-steel (desaturated), F deep red. Roughly the circle of fifths through a rainbow — a subjective ancestor of Harmony. The synaesthete's reading. Only colours in your palette make sound; the user can recolour any swatch (Pro). ◆ B/W — image mode only (replaces the algorithmic modes when an image is grayscale); lightness tracks pitch, hue ignored. ◆ Switch anytime — same notes, instant repaint. Tap an active tab to preview its colours. In image mode the app picks Color or B/W for you; only Custom is yours to set. ◆ Free sees the Scriabin default as read-only preview; Pro and Pro AI make Custom fully editable — pick your own 12 colours. Kontra is unlocked on every tier.`},
   {id:'style', title:`Painting styles (16 artists)`, keywords:`style picasso kusama pollock kandinsky miró miro mondrian rothko matisse cubist polka dots drip splatter constellation collage cut-out grid colour field fields artist abstract geometric phase variation inspired by sixteen vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
    body:`Sixteen great painters, one canvas. Mosaic is the plain default — clean φ-rectangles. Tap any artist tile and the same notes get rewritten in their hand: ◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein. When an artist is active, the canvas shows "inspired by Picasso" — a quiet credit, never a costume. Tap the tile again to release back to Mosaic. Each painter holds several variants of their own work: Pollock has Color Pour, Black pourings, Totemic figuration, Handprints, Blue Poles, plus the dense all-over drip. Mondrian has eight — block grids, Boogie-Woogie, Broadway, Lozenge, Tree, Pier & Ocean. Most artists have six. The variant chosen for a piece is deterministic: same song + same artist + same key + same variant → pixel-identical painting, every time. Turn on ↻ Shuffle and the Next button cycles through that artist's other variants — same notes, fresh visual answer.`},
   {id:'setup', title:`Setup — pick what you see`, keywords:`setup picker palette artist menu personal customize narrow filter choose hide show preferences localStorage settings`,
@@ -11835,7 +13445,7 @@ const GUIDE_I18N = {
   {id:'start-here', title:`Wo anfangen`, keywords:`onboarding start hier beginn erste mal neuer benutzer wie verwenden anleitung orientierung richtung`,
    body:`Zwei Wege rein. ◆ Musik → Bild: tipp eine Stimmung (jedes Gefühl, jede Sprache), spiel Klavier, sing ins Mikro, oder lad ein Musik (MIDI, MP3 oder Noten). ◆ Bild → Musik: lad ein Bild. ◆ Wähl einen Farbmodus (Harmonie oder Spektral). Vielleicht einen Künstlerstil. Gleiche Musik = gleiches Bild, immer. Schalt ↻ Shuffle ein für eine neue Fassung bei jedem Play. ◆ Festgefahren? Öffne Mood, tipp ein Gefühl, drück Play. Sieh zu, wie\'s wächst. Die Schleife lehrt den Rest. ◆ Dann Speichern und Aufnehmen. Das sind die Teile, die du behältst.`},
   {id:'modes', title:`Harmonie vs Spektral vs φ Phi vs Kontra vs Custom`, keywords:`farbe color modus farbton palette quintenzirkel chromatisch phi goldener winkel kontra umgekehrt skrjabin prometheus synästhesie custom bw schwarz weiß modi`,
-   body:`Fünf Farbgrammatiken für dieselbe Musik. ◆ Harmonie — Quintenzirkel-Reihenfolge, verwandte Tonarten clustern. ◆ Spektral — 30°-Schritte gleichmäßig, eine Farbe pro Halbton. ◆ φ Phi — Goldwinkel-Töne (137,5°), maximal verteilt auf dem Farbrad. ◆ Kontra — umgekehrte Harmonie: konsonante Intervalle (Q, T, ts, S, ss, q) bekommen WEIT entfernte Farbtöne, dissonante (k2, G2, Tritonus, M7, m7) NAHE. Die Lesart des Malers — schmutzige Akkorde kollidieren auf der Leinwand, klare blühen auseinander. ◆ Custom — Vorgabe ist Skrjabins Prometheus-Mapping (1910): der berühmteste Synästhet der Geschichte sah diese Farben für diese Tonhöhen und schrieb sie in den "luce"-Part seines Orchesterwerks. C rot, G orange-rosa, D gelb, A grün, E perlblau, H blau, Fis violett-blau, Cis violett, Gis purpur, Dis/Ais metallisch-stählern (entsättigt), F dunkelrot. Etwa der Quintenzirkel durch einen Regenbogen — ein subjektiver Vorfahre der Harmonie. Die Lesart des Synästheten. Nur Farben aus deiner Palette klingen; jeden Swatch nachfärben (Pro). ◆ B/W — nur im Bildmodus (ersetzt die algorithmischen Modi bei Graustufenbildern); Helligkeit folgt der Tonhöhe, Farbton ignoriert. ◆ Jederzeit wechseln — gleiche Noten, sofort neu gemalt. Tipp einen aktiven Tab an für Farbvorschau. Im Bildmodus wählt die App Color oder B/W; nur Custom bleibt dir überlassen. ◆ Free sieht den Skrjabin-Standard als schreibgeschützte Vorschau; Pro und Pro KI machen Custom voll editierbar. Kontra ist in jedem Tier freigeschaltet.`},
+   body:`Fünf Farbgrammatiken für dieselbe Musik. ◆ Harmonie — Quintenzirkel-Reihenfolge, verwandte Tonarten clustern. ◆ Spektral — visuelle gleichstufige Stimmung: zwölf gleiche Farbton-Schritte für zwölf gleiche Halbtöne. Schließt das Rad — H führt farblich zu C zurück, so wie es musikalisch tut. Die chromatische Skala des Auges. (Nebenbei: Verschiebe eine Tonhöhe um 40 Oktaven nach oben und du landest im sichtbaren Licht — A4 (440 Hz) wird zu ~484 THz, ein warmes Rot. Spektral macht diese Verschiebung nicht; es wählt gleiche Aufteilung statt echter Wellenlängen, damit das Magenta-Ende des Rades überlebt. Der sichtbare Bereich des Auges ist keine volle Oktave. Spektral wählt Balance vor Physik.) ◆ φ Phi — Goldwinkel-Töne (137,5°), maximal verteilt auf dem Farbrad. ◆ Kontra — umgekehrte Harmonie: konsonante Intervalle (Q, T, ts, S, ss, q) bekommen WEIT entfernte Farbtöne, dissonante (k2, G2, Tritonus, M7, m7) NAHE. Die Lesart des Malers — schmutzige Akkorde kollidieren auf der Leinwand, klare blühen auseinander. ◆ Custom — Vorgabe ist Skrjabins Prometheus-Mapping (1910): der berühmteste Synästhet der Geschichte sah diese Farben für diese Tonhöhen und schrieb sie in den "luce"-Part seines Orchesterwerks. C rot, G orange-rosa, D gelb, A grün, E perlblau, H blau, Fis violett-blau, Cis violett, Gis purpur, Dis/Ais metallisch-stählern (entsättigt), F dunkelrot. Etwa der Quintenzirkel durch einen Regenbogen — ein subjektiver Vorfahre der Harmonie. Die Lesart des Synästheten. Nur Farben aus deiner Palette klingen; jeden Swatch nachfärben (Pro). ◆ B/W — nur im Bildmodus (ersetzt die algorithmischen Modi bei Graustufenbildern); Helligkeit folgt der Tonhöhe, Farbton ignoriert. ◆ Jederzeit wechseln — gleiche Noten, sofort neu gemalt. Tipp einen aktiven Tab an für Farbvorschau. Im Bildmodus wählt die App Color oder B/W; nur Custom bleibt dir überlassen. ◆ Free sieht den Skrjabin-Standard als schreibgeschützte Vorschau; Pro und Pro KI machen Custom voll editierbar. Kontra ist in jedem Tier freigeschaltet.`},
   {id:'style', title:`Malstile (16 Künstler)`, keywords:`stil picasso kusama pollock kandinsky miró mondrian rothko matisse cubist drip artist abstrakt geometrisch phase variation inspired by sechzehn vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
    body:`Sechzehn große Maler, eine Leinwand. Mosaik ist die schlichte Voreinstellung — saubere φ-Rechtecke. Tippe eine Künstler-Kachel und dieselben Noten werden in seiner Handschrift neu geschrieben: ◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein. Wenn ein Künstler aktiv ist, zeigt die Leinwand "inspired by Picasso" — eine stille Würdigung, nie ein Kostüm. Nochmal antippen, zurück zu Mosaik. Jeder Maler hält mehrere Varianten seines eigenen Werks: Pollock hat Color Pour, Black Pourings, Totemic Figuration, Handprints, Blue Poles plus den dichten All-over-Drip. Mondrian hat acht — Blockraster, Boogie-Woogie, Broadway, Lozenge, Baum, Pier & Ocean. Die meisten haben sechs. Die für ein Stück gewählte Variante ist deterministisch: gleiches Stück + gleicher Künstler + gleiche Tonart + gleiche Variante → pixel-identisches Bild, jedes Mal. ↻ Shuffle an, der Weiter-Knopf zykelt durch die anderen Varianten dieses Künstlers — gleiche Noten, frische visuelle Antwort. **Free** schaltet acht Maler frei — Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring — mit je zwei Varianten. Jeder hat einen **Pro-Partner**, der darunter wartet: tippe eine aktive Kachel ein zweites Mal und der Partnername gleitet unter die Palette mit einem PRO-Badge — antippen zum Freischalten. **Pro** und **Pro KI** öffnen alle sechzehn mit allen Varianten.`},
   {id:'setup', title:`Setup — wähle, was du siehst`, keywords:`setup auswahl palette künstler menü persönlich anpassen filtern verbergen zeigen einstellungen localStorage`,
@@ -11891,7 +13501,7 @@ const GUIDE_I18N = {
   {id:'start-here', title:`Par où commencer`, keywords:`onboarding début ici commencer première fois nouvel utilisateur comment utiliser guide orienter direction`,
    body:`Deux chemins. ◆ Musique → peinture : tape une humeur (n\'importe quel ressenti, n\'importe quelle langue), joue du piano, chante au micro, ou charge un de la musique (MIDI, MP3 ou partition). ◆ Peinture → musique : charge une image. ◆ Choisis un mode couleur (Harmonie ou Spectral). Peut-être un style d\'artiste. Même musique = même peinture, toujours. Active ↻ Shuffle pour une nouvelle version à chaque Lecture. ◆ Bloqué ? Ouvre Mood, tape un ressenti, lance. Regarde-la se construire. La boucle apprend le reste. ◆ Puis Enregistre la peinture et capture la musique. C\'est ce que tu gardes.`},
   {id:'modes', title:`Harmonie vs Spectral vs φ Phi vs Kontra vs Custom`, keywords:`couleur color mode teinte palette cercle quintes chromatique phi angle doré kontra contre inverse scriabine prométhée synesthésie custom bw noir blanc modes`,
-   body:`Cinq grammaires de couleur pour la même musique. ◆ Harmonie — ordre du cercle des quintes, les tonalités voisines clustèrent. ◆ Spectral — pas de 30° égaux, une couleur par demi-ton. ◆ φ Phi — teintes en angle doré (137,5°), dispersion maximale sur la roue. ◆ Kontra — harmonie inversée : les intervalles consonants (Q, T3, t3, S6, s6, Q4) reçoivent des teintes ÉLOIGNÉES ; les dissonants (s2, T2, triton, T7, s7) des teintes PROCHES. La lecture du peintre — les accords qui se heurtent se heurtent sur la toile, les purs s'écartent. ◆ Custom — défaut : le mapping Prométhée de Scriabine (1910). Le plus célèbre synesthète de l'histoire voyait vraiment ces couleurs pour ces hauteurs ; il les a écrites dans la partie "luce" de sa partition orchestrale. C rouge, G orange-rose, D jaune, A vert, E bleu nacré, H bleu, Fa♯ bleu-violet, Do♯ violet, Sol♯ pourpre, Ré♯/La♯ métallique-acier (désaturés), F rouge sombre. Grosso modo le cercle des quintes à travers un arc-en-ciel — un ancêtre subjectif de l'Harmonie. La lecture du synesthète. Seules les couleurs de ta palette sonnent ; chaque case repeignable (Pro). ◆ B/W — mode image uniquement (remplace les modes algorithmiques quand l'image est en niveaux de gris) ; luminosité suit la hauteur, teinte ignorée. ◆ Change à tout moment — mêmes notes, repeint instantané. Tape un onglet actif pour prévisualiser ses couleurs. En mode image, l\'app choisit Color ou B/W ; seul Custom est à toi. ◆ Free voit le défaut Scriabine en lecture seule ; Pro et Pro IA rendent Custom entièrement éditable. Kontra est débloqué dans toutes les versions.`},
+   body:`Cinq grammaires de couleur pour la même musique. ◆ Harmonie — ordre du cercle des quintes, les tonalités voisines clustèrent. ◆ Spectral — tempérament égal visuel : douze pas de teinte égaux pour douze demi-tons égaux. Ferme la roue — Si ramène à Do en couleur, comme il y ramène en musique. La gamme chromatique de l'œil. (Aparté : décale n'importe quelle hauteur de 40 octaves vers le haut et tu atterris dans la lumière visible — A4 (440 Hz) devient ~484 THz, un rouge chaud. Spectral ne fait pas ce décalage ; il choisit la partition égale plutôt que les vraies longueurs d'onde pour que l'extrémité magenta de la roue survive. La plage visible de l'œil n'est pas une octave complète. Spectral choisit l'équilibre plutôt que la physique.) ◆ φ Phi — teintes en angle doré (137,5°), dispersion maximale sur la roue. ◆ Kontra — harmonie inversée : les intervalles consonants (Q, T3, t3, S6, s6, Q4) reçoivent des teintes ÉLOIGNÉES ; les dissonants (s2, T2, triton, T7, s7) des teintes PROCHES. La lecture du peintre — les accords qui se heurtent se heurtent sur la toile, les purs s'écartent. ◆ Custom — défaut : le mapping Prométhée de Scriabine (1910). Le plus célèbre synesthète de l'histoire voyait vraiment ces couleurs pour ces hauteurs ; il les a écrites dans la partie "luce" de sa partition orchestrale. C rouge, G orange-rose, D jaune, A vert, E bleu nacré, H bleu, Fa♯ bleu-violet, Do♯ violet, Sol♯ pourpre, Ré♯/La♯ métallique-acier (désaturés), F rouge sombre. Grosso modo le cercle des quintes à travers un arc-en-ciel — un ancêtre subjectif de l'Harmonie. La lecture du synesthète. Seules les couleurs de ta palette sonnent ; chaque case repeignable (Pro). ◆ B/W — mode image uniquement (remplace les modes algorithmiques quand l'image est en niveaux de gris) ; luminosité suit la hauteur, teinte ignorée. ◆ Change à tout moment — mêmes notes, repeint instantané. Tape un onglet actif pour prévisualiser ses couleurs. En mode image, l\'app choisit Color ou B/W ; seul Custom est à toi. ◆ Free voit le défaut Scriabine en lecture seule ; Pro et Pro IA rendent Custom entièrement éditable. Kontra est débloqué dans toutes les versions.`},
   {id:'style', title:`Styles de peinture (16 artistes)`, keywords:`style picasso kusama pollock kandinsky miró mondrian rothko matisse cubiste drip artiste abstrait géométrique phase variation inspired by seize vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
    body:`Seize grands peintres, une seule toile. Mosaïque est le défaut brut — rectangles φ nets. Tape une tuile d'artiste et les mêmes notes sont réécrites de sa main : ◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein. Quand un artiste est actif, la toile affiche "inspired by Picasso" — un crédit discret, jamais un costume. Retape la tuile pour revenir à Mosaïque. Chaque peintre tient plusieurs variantes de son œuvre : Pollock a Color Pour, Black pourings, Totemic figuration, Handprints, Blue Poles, plus le dense all-over drip. Mondrian en a huit — grilles, Boogie-Woogie, Broadway, Lozenge, Arbre, Pier & Ocean. La plupart en ont six. La variante choisie pour un morceau est déterministe : même morceau + même artiste + même tonalité + même variante → peinture pixel-identique, à chaque fois. Active ↻ Shuffle et le bouton Suivant cycle entre les autres variantes de cet artiste — mêmes notes, réponse visuelle fraîche. **Free** débloque huit peintres — Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring — avec deux variantes chacun. Chacun a un **partenaire Pro** qui attend dessous : retape une tuile active et le nom du partenaire glisse sous la palette avec un badge PRO — tape pour débloquer. **Pro** et **Pro IA** ouvrent les seize avec toutes les variantes.`},
   {id:'setup', title:`Setup — choisis ce que tu vois`, keywords:`setup sélecteur palette artiste menu personnel personnaliser filtrer cacher afficher préférences localStorage`,
@@ -11947,7 +13557,7 @@ const GUIDE_I18N = {
   {id:'start-here', title:`Por dónde empezar`, keywords:`onboarding empezar aquí inicio primera vez nuevo usuario cómo usar guía orientar dirección`,
    body:`Dos caminos. ◆ Música → pintura: escribe un sentir (cualquier emoción, cualquier idioma), toca el piano, canta al micro, o carga un música (MIDI, MP3 o partitura). ◆ Pintura → música: carga una imagen. ◆ Elige un modo color (Armonía o Espectral). Quizás un estilo. Misma música = misma pintura, siempre. Activa ↻ Shuffle para una versión fresca cada Reproducir. ◆ ¿Atascado? Abre Mood, escribe un sentir, dale Play. Míralo construirse. El loop enseña el resto. ◆ Luego Guardar la pintura y Grabar la música. Esas son las partes que te quedas.`},
   {id:'modes', title:`Armonía vs Espectral vs φ Phi vs Kontra vs Custom`, keywords:`color modo tono paleta círculo quintas cromático phi ángulo dorado kontra contra inverso skriabin prometeo sinestesia custom bw negro blanco modos`,
-   body:`Cinco gramáticas de color para la misma música. ◆ Armonía — orden del círculo de quintas, tonalidades emparentadas se agrupan. ◆ Espectral — pasos de 30° iguales, un color por semitono. ◆ φ Phi — tonos con ángulo áureo (137,5°), máxima dispersión en la rueda. ◆ Kontra — armonía inversa: los intervalos consonantes (5J, 3M, 3m, 6M, 6m, 4J) reciben tonos LEJANOS; los disonantes (2m, 2M, tritono, 7M, 7m) reciben tonos CERCANOS. La lectura del pintor — los acordes que chocan chocan en el lienzo, los limpios florecen separados. ◆ Custom — por defecto, el mapa Prometeo de Skriabin (1910): el sinestésico más famoso de la historia veía realmente estos colores para estos tonos y los escribió en la parte "luce" de su partitura orquestal. Do rojo, Sol naranja-rosa, Re amarillo, La verde, Mi azul perlado, Si azul, Fa♯ azul-violeta, Do♯ violeta, Sol♯ púrpura, Re♯/La♯ metálico-acero (desaturados), Fa rojo oscuro. Aproximadamente el círculo de quintas a través de un arcoíris — un ancestro subjetivo de la Armonía. La lectura del sinestésico. Solo suenan los colores de tu paleta; cualquier casilla se puede repintar (Pro). ◆ B/W — solo en modo imagen (reemplaza los modos algorítmicos cuando la imagen es en escala de grises); luminosidad sigue la altura, tono ignorado. ◆ Cambia en cualquier momento — mismas notas, repintado instantáneo. Toca una pestaña activa para previsualizar sus colores. En modo imagen la app elige Color o B/W; solo Custom es tuyo. ◆ Free ve el default Skriabin en solo lectura; Pro y Pro IA hacen Custom totalmente editable. Kontra está desbloqueado en todos los planes.`},
+   body:`Cinco gramáticas de color para la misma música. ◆ Armonía — orden del círculo de quintas, tonalidades emparentadas se agrupan. ◆ Espectral — temperamento igual visual: doce pasos de tono iguales para doce semitonos iguales. Cierra la rueda — Si conduce de vuelta a Do en color, como lo hace en música. La escala cromática del ojo. (Aparte: desplaza cualquier altura 40 octavas hacia arriba y aterrizas en la luz visible — A4 (440 Hz) se vuelve ~484 THz, un rojo cálido. Espectral no hace ese desplazamiento; elige partición igual en vez de longitudes de onda reales para que el extremo magenta de la rueda sobreviva. El rango visible del ojo no es una octava completa. Espectral elige equilibrio sobre física.) ◆ φ Phi — tonos con ángulo áureo (137,5°), máxima dispersión en la rueda. ◆ Kontra — armonía inversa: los intervalos consonantes (5J, 3M, 3m, 6M, 6m, 4J) reciben tonos LEJANOS; los disonantes (2m, 2M, tritono, 7M, 7m) reciben tonos CERCANOS. La lectura del pintor — los acordes que chocan chocan en el lienzo, los limpios florecen separados. ◆ Custom — por defecto, el mapa Prometeo de Skriabin (1910): el sinestésico más famoso de la historia veía realmente estos colores para estos tonos y los escribió en la parte "luce" de su partitura orquestal. Do rojo, Sol naranja-rosa, Re amarillo, La verde, Mi azul perlado, Si azul, Fa♯ azul-violeta, Do♯ violeta, Sol♯ púrpura, Re♯/La♯ metálico-acero (desaturados), Fa rojo oscuro. Aproximadamente el círculo de quintas a través de un arcoíris — un ancestro subjetivo de la Armonía. La lectura del sinestésico. Solo suenan los colores de tu paleta; cualquier casilla se puede repintar (Pro). ◆ B/W — solo en modo imagen (reemplaza los modos algorítmicos cuando la imagen es en escala de grises); luminosidad sigue la altura, tono ignorado. ◆ Cambia en cualquier momento — mismas notas, repintado instantáneo. Toca una pestaña activa para previsualizar sus colores. En modo imagen la app elige Color o B/W; solo Custom es tuyo. ◆ Free ve el default Skriabin en solo lectura; Pro y Pro IA hacen Custom totalmente editable. Kontra está desbloqueado en todos los planes.`},
   {id:'style', title:`Estilos de pintura (16 artistas)`, keywords:`estilo picasso kusama pollock kandinsky miró mondrian rothko matisse cubista drip artista abstracto geométrico fase variación inspired by dieciséis vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
    body:`Dieciséis grandes pintores, un lienzo. Mosaico es el default plano — rectángulos φ limpios. Toca una baldosa de artista y las mismas notas se reescriben con su mano: ◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein. Cuando un artista está activo, el lienzo muestra "inspired by Picasso" — un crédito discreto, nunca un disfraz. Toca la baldosa otra vez para volver a Mosaico. Cada pintor guarda varias variantes de su obra: Pollock tiene Color Pour, Black pourings, Totemic figuration, Handprints, Blue Poles, más el denso all-over drip. Mondrian tiene ocho — cuadrículas de bloques, Boogie-Woogie, Broadway, Lozenge, Árbol, Pier & Ocean. La mayoría tiene seis. La variante elegida para una pieza es determinista: misma canción + mismo artista + misma tonalidad + misma variante → pintura pixel-idéntica, cada vez. Activa ↻ Shuffle y el botón Siguiente cicla entre las otras variantes de ese artista — mismas notas, respuesta visual fresca. **Free** desbloquea ocho pintores — Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring — con dos variantes cada uno. Cada uno tiene un **compañero Pro** esperando debajo: toca una baldosa activa por segunda vez y el nombre del compañero aparece bajo la paleta con un badge PRO — tócalo para desbloquear. **Pro** y **Pro IA** abren los dieciséis con todas las variantes.`},
   {id:'setup', title:`Setup — elige lo que ves`, keywords:`setup selector paleta artista menú personal personalizar filtrar ocultar mostrar preferencias localStorage`,
@@ -12003,7 +13613,7 @@ const GUIDE_I18N = {
   {id:'start-here', title:`Odkiaľ začať`, keywords:`onboarding začať tu prvýkrát nový užívateľ ako používať návod orientovať smer`,
    body:`Dve cesty dnu. ◆ Hudba → maľba: napíš pocit (hocijaký, hocijaký jazyk), hraj na klavíri, spievaj do mikrofónu, alebo vlož hudbu (MIDI, MP3 alebo noty). ◆ Maľba → hudba: vlož obrázok. ◆ Vyber farebný mód (Harmónia alebo Spektrum). Možno štýl umelca. Tá istá hudba = tá istá maľba, vždy. Zapni ↻ Shuffle pre čerstvú verziu pri každom Prehrať. ◆ Stojíš? Otvor Mood, napíš pocit, klikni Prehrať. Pozeraj, ako rastie. Slučka naučí zvyšok. ◆ Potom Ulož maľbu a Nahraj hudbu. To sú časti, ktoré si nechávaš.`},
   {id:'modes', title:`Harmónia vs Spektrum vs φ Phi vs Kontra vs Custom`, keywords:`farba color mód odtieň paleta kvintový kruh chromatický phi zlatý uhol kontra opak skriabin prometeus synestézia custom bw čierny biely módy`,
-   body:`Päť gramatík farby pre tú istú hudbu. ◆ Harmónia — kvintový kruh, príbuzné tóniny sa zhlukujú. ◆ Spektrum — rovnomerné 30° kroky, jedna farba na poltón. ◆ φ Phi — odtiene cez zlatý uhol (137,5°), maximálne rozptýlené na kruhu. ◆ Kontra — obrátená Harmónia: konsonantné intervaly (Č5, V3, m3, V6, m6, Č4) dostanú VZDIALENÉ odtiene; disonantné (m2, V2, tritón, V7, m7) BLÍZKE. Pohľad maliara — drsné akordy sa hádajú aj na plátne, čisté kvitnú od seba. ◆ Custom — default je Skriabinova mapa z Prometea (1910): najslávnejší synestét histórie tieto farby pre tieto tóny skutočne videl a napísal ich do "luce" partu svojej orchestrálnej partitúry. C červená, G oranžovo-ružová, D žltá, A zelená, E perleťovo-belasá, H modrá, Fis fialovo-modrá, Cis fialová, Gis purpurová, Dis/Ais kovovo-oceľové (desaturované), F tmavočervená. V podstate kruh kvínt cez dúhu — subjektívny predchodca Harmónie. Pohľad synestéta. Znejú len farby z tvojej palety; každé políčko prefarbiť (Pro). ◆ B/W — len v móde obrázka (nahrádza algoritmické módy keď je obrázok šedotónový); jas sleduje výšku tónu, odtieň ignorovaný. ◆ Prepni hocikedy — tie isté noty, okamžitá premaľba. Klikni aktívnu záložku pre náhľad farieb. V móde obrázka aplikácia vyberie Color alebo B/W; len Custom je tvoj. ◆ Free vidí Skriabinov default iba na čítanie; Pro a Pro AI robia Custom plne editovateľný. Kontra je odomknutá na všetkých tieroch.`},
+   body:`Päť gramatík farby pre tú istú hudbu. ◆ Harmónia — kvintový kruh, príbuzné tóniny sa zhlukujú. ◆ Spektrum — vizuálne rovnaké temperovanie: dvanásť rovnakých krokov tónu pre dvanásť rovnakých polotónov. Uzatvára koleso — H vedie späť k C farebne, tak ako hudobne. Chromatická stupnica oka. (Mimochodom: posuň ktorúkoľvek výšku tónu o 40 oktáv hore a si vo viditeľnom svetle — A4 (440 Hz) sa stane ~484 THz, teplá červená. Spektrum tento posun nerobí; volí rovnaké rozdelenie pred reálnymi vlnovými dĺžkami, aby magentový koniec kola prežil. Viditeľný rozsah oka nie je celá oktáva. Spektrum volí balans pred fyzikou.) ◆ φ Phi — odtiene cez zlatý uhol (137,5°), maximálne rozptýlené na kruhu. ◆ Kontra — obrátená Harmónia: konsonantné intervaly (Č5, V3, m3, V6, m6, Č4) dostanú VZDIALENÉ odtiene; disonantné (m2, V2, tritón, V7, m7) BLÍZKE. Pohľad maliara — drsné akordy sa hádajú aj na plátne, čisté kvitnú od seba. ◆ Custom — default je Skriabinova mapa z Prometea (1910): najslávnejší synestét histórie tieto farby pre tieto tóny skutočne videl a napísal ich do "luce" partu svojej orchestrálnej partitúry. C červená, G oranžovo-ružová, D žltá, A zelená, E perleťovo-belasá, H modrá, Fis fialovo-modrá, Cis fialová, Gis purpurová, Dis/Ais kovovo-oceľové (desaturované), F tmavočervená. V podstate kruh kvínt cez dúhu — subjektívny predchodca Harmónie. Pohľad synestéta. Znejú len farby z tvojej palety; každé políčko prefarbiť (Pro). ◆ B/W — len v móde obrázka (nahrádza algoritmické módy keď je obrázok šedotónový); jas sleduje výšku tónu, odtieň ignorovaný. ◆ Prepni hocikedy — tie isté noty, okamžitá premaľba. Klikni aktívnu záložku pre náhľad farieb. V móde obrázka aplikácia vyberie Color alebo B/W; len Custom je tvoj. ◆ Free vidí Skriabinov default iba na čítanie; Pro a Pro AI robia Custom plne editovateľný. Kontra je odomknutá na všetkých tieroch.`},
   {id:'style', title:`Maliarske štýly (16 umelcov)`, keywords:`štýl picasso kusama pollock kandinsky miró mondrian rothko matisse kubizmus drip umelec abstraktný geometrický fáza variácia inspired by šestnásť vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
    body:`Šestnásť veľkých maliarov, jedno plátno. Mosaic je čistý základ — čisté φ-obdĺžniky. Klikni na dlaždicu umelca a tie isté noty sa prepíšu v jeho rukopise: ◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein. Keď je umelec aktívny, na plátne sa zobrazí "inspired by Picasso" — tichá pocta, nikdy kostým. Klikni na dlaždicu znova a vrátiš sa do Mosaic. Každý maliar má niekoľko variantov svojho vlastného diela: Pollock má Color Pour, Black pourings, Totemic figuration, Handprints, Blue Poles plus hustý all-over drip. Mondrian má osem — blokové mriežky, Boogie-Woogie, Broadway, Lozenge, Strom, Pier & Ocean. Väčšina má šesť. Variant zvolený pre skladbu je deterministický: tá istá skladba + ten istý umelec + tá istá tonalita + ten istý variant → pixel-identická maľba, vždy. Zapni ↻ Shuffle a tlačidlo Next cyklí cez ďalšie varianty toho umelca — tie isté noty, čerstvá vizuálna odpoveď. **Free** odomyká osem maliarov — Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring — s dvomi variantmi každý. Každý má **Pro partnera** ktorý čaká pod ním: klikni na aktívnu dlaždicu druhýkrát a meno partnera sa zjaví pod paletou s PRO badge — klikni naň pre odomknutie. **Pro** a **Pro AI** otvárajú všetkých šestnástich so všetkými variantmi.`},
   {id:'setup', title:`Setup — vyber si, čo vidíš`, keywords:`setup selektor paleta umelec menu osobný prispôsobiť filter skryť zobraziť preferencie localStorage`,
@@ -12059,7 +13669,7 @@ const GUIDE_I18N = {
   {id:'start-here', title:`Por onde começar`, keywords:`onboarding começar aqui início primeira vez novo utilizador como usar guia orientar direção`,
    body:`Dois caminhos. ◆ Música → pintura: escreve um sentir (qualquer emoção, qualquer língua), toca piano, canta para o microfone, ou carrega um música (MIDI, MP3 ou partitura). ◆ Pintura → música: carrega uma imagem. ◆ Escolhe um modo de cor (Harmonia ou Espectral). Talvez um estilo. Mesma música = mesma pintura, sempre. Liga ↻ Shuffle para uma versão fresca em cada Play. ◆ Empacado? Abre Mood, escreve um sentir, dá Play. Vê-a construir-se. O loop ensina o resto. ◆ Depois Guarda a pintura e Grava a música. Essas são as partes que ficam contigo.`},
   {id:'modes', title:`Harmonia vs Espectral vs φ Phi vs Kontra vs Custom`, keywords:`cor color modo matiz paleta círculo quintas cromático phi ângulo dourado kontra contra inverso scriabin prometeu sinestesia custom bw preto branco modos`,
-   body:`Cinco gramáticas de cor para a mesma música. ◆ Harmonia — ordem do círculo de quintas, tonalidades aparentadas agrupam-se. ◆ Espectral — passos de 30° iguais, uma cor por semitom. ◆ φ Phi — matizes em ângulo dourado (137,5°), dispersão máxima na roda. ◆ Kontra — harmonia inversa: intervalos consonantes (5J, 3M, 3m, 6M, 6m, 4J) recebem matizes DISTANTES; dissonantes (2m, 2M, trítono, 7M, 7m) recebem matizes PRÓXIMOS. A leitura do pintor — acordes que chocam chocam na tela, os limpos florescem afastados. ◆ Custom — padrão é o mapa Prometeu de Scriabin (1910): o sinesteta mais famoso da história viu mesmo estas cores para estes tons e escreveu-as na parte "luce" da sua partitura orquestral. Dó vermelho, Sol laranja-rosa, Ré amarelo, Lá verde, Mi azul-pérola, Si azul, Fá♯ azul-violeta, Dó♯ violeta, Sol♯ púrpura, Ré♯/Lá♯ metálico-aço (desaturados), Fá vermelho escuro. Aproximadamente o círculo de quintas através de um arco-íris — um ancestral subjetivo da Harmonia. A leitura do sinesteta. Só as cores da tua paleta soam; cada quadrado pode ser repintado (Pro). ◆ B/W — só em modo imagem (substitui os modos algorítmicos quando a imagem é em escala de cinzentos); luminosidade segue a altura, matiz ignorado. ◆ Muda a qualquer hora — mesmas notas, repintura instantânea. Toca uma aba ativa para pré-visualizar as cores. Em modo imagem a app escolhe Color ou B/W; só Custom é teu. ◆ Free vê o padrão Scriabin só de leitura; Pro e Pro IA tornam Custom totalmente editável. Kontra está desbloqueado em todos os planos.`},
+   body:`Cinco gramáticas de cor para a mesma música. ◆ Harmonia — ordem do círculo de quintas, tonalidades aparentadas agrupam-se. ◆ Espectral — temperamento igual visual: doze passos de matiz iguais para doze semitons iguais. Fecha a roda — Si leva de volta a Dó em cor, como leva em música. A escala cromática do olho. (Aparte: desloca qualquer altura 40 oitavas para cima e aterras na luz visível — A4 (440 Hz) torna-se ~484 THz, um vermelho quente. Espectral não faz esse deslocamento; escolhe partição igual em vez de comprimentos de onda reais para que o extremo magenta da roda sobreviva. O alcance visível do olho não é uma oitava completa. Espectral escolhe equilíbrio sobre física.) ◆ φ Phi — matizes em ângulo dourado (137,5°), dispersão máxima na roda. ◆ Kontra — harmonia inversa: intervalos consonantes (5J, 3M, 3m, 6M, 6m, 4J) recebem matizes DISTANTES; dissonantes (2m, 2M, trítono, 7M, 7m) recebem matizes PRÓXIMOS. A leitura do pintor — acordes que chocam chocam na tela, os limpos florescem afastados. ◆ Custom — padrão é o mapa Prometeu de Scriabin (1910): o sinesteta mais famoso da história viu mesmo estas cores para estes tons e escreveu-as na parte "luce" da sua partitura orquestral. Dó vermelho, Sol laranja-rosa, Ré amarelo, Lá verde, Mi azul-pérola, Si azul, Fá♯ azul-violeta, Dó♯ violeta, Sol♯ púrpura, Ré♯/Lá♯ metálico-aço (desaturados), Fá vermelho escuro. Aproximadamente o círculo de quintas através de um arco-íris — um ancestral subjetivo da Harmonia. A leitura do sinesteta. Só as cores da tua paleta soam; cada quadrado pode ser repintado (Pro). ◆ B/W — só em modo imagem (substitui os modos algorítmicos quando a imagem é em escala de cinzentos); luminosidade segue a altura, matiz ignorado. ◆ Muda a qualquer hora — mesmas notas, repintura instantânea. Toca uma aba ativa para pré-visualizar as cores. Em modo imagem a app escolhe Color ou B/W; só Custom é teu. ◆ Free vê o padrão Scriabin só de leitura; Pro e Pro IA tornam Custom totalmente editável. Kontra está desbloqueado em todos os planos.`},
   {id:'style', title:`Estilos de pintura (16 artistas)`, keywords:`estilo picasso kusama pollock kandinsky miró mondrian rothko matisse cubista drip artista abstrato geométrico fase variação inspired by dezasseis vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
    body:`Dezasseis grandes pintores, uma tela. Mosaico é o default plano — rectângulos φ limpos. Toca uma peça de artista e as mesmas notas são reescritas pela sua mão: ◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein. Quando um artista está ativo, a tela mostra "inspired by Picasso" — um crédito discreto, nunca uma fantasia. Toca a peça novamente para voltar a Mosaico. Cada pintor guarda várias variantes da sua obra: Pollock tem Color Pour, Black pourings, Totemic figuration, Handprints, Blue Poles, mais o denso all-over drip. Mondrian tem oito — grelhas de blocos, Boogie-Woogie, Broadway, Lozenge, Árvore, Pier & Ocean. A maioria tem seis. A variante escolhida para uma peça é determinista: mesma música + mesmo artista + mesma tonalidade + mesma variante → pintura pixel-idêntica, sempre. Liga o ↻ Shuffle e o botão Seguinte circula pelas outras variantes desse artista — mesmas notas, resposta visual fresca. **Free** desbloqueia oito pintores — Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring — com duas variantes cada. Cada um tem um **parceiro Pro** à espera por baixo: toca uma peça ativa pela segunda vez e o nome do parceiro desliza debaixo da paleta com um badge PRO — toca para desbloquear. **Pro** e **Pro IA** abrem os dezasseis com todas as variantes.`},
   {id:'setup', title:`Setup — escolhe o que vês`, keywords:`setup seletor paleta artista menu pessoal personalizar filtrar esconder mostrar preferências localStorage`,
@@ -12115,7 +13725,7 @@ const GUIDE_I18N = {
   {id:'start-here', title:`从哪开始`, keywords:`入门 从这里开始 第一次 新用户 怎么使用 指南 方向`,
    body:`两条路。◆ 音乐 → 画:输入一种感觉(任何情绪,任何语言)、弹钢琴、对麦克风唱、或丢入 MIDI / MP3 / 乐谱。◆ 画 → 音乐:丢入一张图。◆ 选颜色模式(和声或光谱)。也许一个艺术家风格。同样的音乐 = 同样的画,永远。打开 ↻ Shuffle,每次播放都来个新版本。◆ 卡住了?打开 Mood,输入一种感觉,点播放。看它生长。循环会教你其他的。◆ 然后保存画,录音乐。这些是你留下的部分。`},
   {id:'modes', title:`和声 vs 光谱 vs φ Phi vs 反向 vs Custom`, keywords:`颜色 color 模式 色相 调色板 五度圈 半音 phi 黄金角 反向 对抗 kontra 斯克里亚宾 普罗米修斯 联觉 custom bw 黑白 模式`,
-   body:`同一段音乐,五种颜色语法。◆ 和声 — 五度圈顺序,相关调聚集。◆ 光谱 — 30° 均匀分步,每个半音一种颜色。◆ φ Phi — 黄金角色相(137.5°),色轮上最大分散。◆ 反向(Kontra)— 反和声:协和音程(纯五、大三、小三、大六、小六、纯四)得到 远 的色相;不协和(小二、大二、三全音、大七、小七)得到 近 的色相。画家的读法 — 冲突的和弦在画布上冲突,纯净的绽放分开。◆ Custom — 默认是斯克里亚宾的《普罗米修斯》映射(1910):历史上最著名的联觉者真的为这些音高看到了这些颜色,并把它们写进了管弦乐谱的"luce"声部。C 红、G 橙粉、D 黄、A 绿、E 珠蓝、B 蓝、F♯ 紫蓝、C♯ 紫、G♯ 紫红、D♯/A♯ 金属钢色(去饱和)、F 深红。大致是穿过彩虹的五度圈 — 和声的主观祖先。联觉者的读法。只有调色板里的颜色发声;每格都可重涂(Pro)。◆ B/W — 仅图像模式下(图像为灰阶时取代算法模式);明度跟音高,色相忽略。◆ 随时切换 — 同样的音符,瞬间重绘。点击活跃标签预览颜色。图像模式下 app 替你选 Color 或 B/W;只有 Custom 由你决定。◆ Free 只读地看到斯克里亚宾默认;Pro 和 Pro AI 让 Custom 完全可编辑。反向(Kontra)在所有层级都解锁。`},
+   body:`同一段音乐,五种颜色语法。◆ 和声 — 五度圈顺序,相关调聚集。◆ 光谱 — 视觉的平均律:十二个相等色相步对应十二个相等半音。关闭色环 — B 在颜色上引回 C,正如在音乐中引回 C。眼睛的半音阶。(顺带一提:把任何音高向上移 40 个八度,就落入可见光 — A4(440 Hz)变成 ~484 THz,温暖的红色。光谱不做这个位移;它选择均等划分而非真实波长,以保留色环上的洋红端。眼睛的可见范围不是一个完整八度。光谱选择平衡而非物理。)◆ φ Phi — 黄金角色相(137.5°),色轮上最大分散。◆ 反向(Kontra)— 反和声:协和音程(纯五、大三、小三、大六、小六、纯四)得到 远 的色相;不协和(小二、大二、三全音、大七、小七)得到 近 的色相。画家的读法 — 冲突的和弦在画布上冲突,纯净的绽放分开。◆ Custom — 默认是斯克里亚宾的《普罗米修斯》映射(1910):历史上最著名的联觉者真的为这些音高看到了这些颜色,并把它们写进了管弦乐谱的"luce"声部。C 红、G 橙粉、D 黄、A 绿、E 珠蓝、B 蓝、F♯ 紫蓝、C♯ 紫、G♯ 紫红、D♯/A♯ 金属钢色(去饱和)、F 深红。大致是穿过彩虹的五度圈 — 和声的主观祖先。联觉者的读法。只有调色板里的颜色发声;每格都可重涂(Pro)。◆ B/W — 仅图像模式下(图像为灰阶时取代算法模式);明度跟音高,色相忽略。◆ 随时切换 — 同样的音符,瞬间重绘。点击活跃标签预览颜色。图像模式下 app 替你选 Color 或 B/W;只有 Custom 由你决定。◆ Free 只读地看到斯克里亚宾默认;Pro 和 Pro AI 让 Custom 完全可编辑。反向(Kontra)在所有层级都解锁。`},
   {id:'style', title:`绘画风格(16 位艺术家)`, keywords:`风格 picasso kusama pollock kandinsky miró mondrian rothko matisse 立体派 drip 艺术家 抽象 几何 阶段 变体 inspired by 十六 vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
    body:`十六位伟大画家,一张画布。Mosaic 是朴素的默认 — 干净的 φ-矩形。点击任一艺术家方块,同样的音符会以他的笔法重写:◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein。当艺术家处于活动状态时,画布显示 "inspired by Picasso" — 一个安静的署名,从不是戏装。再点方块即回到 Mosaic。每位画家都有自己作品的若干变体:Pollock 有 Color Pour、Black pourings、Totemic figuration、Handprints、Blue Poles,加上密集的 all-over drip。Mondrian 有八种 — 方格、Boogie-Woogie、Broadway、Lozenge、树、Pier & Ocean。大多数有六种。为一首曲子选择的变体是决定性的:同一首歌 + 同一艺术家 + 同一调性 + 同一变体 → 像素级一致的画,每一次。打开 ↻ Shuffle,Next 按钮在该艺术家的其他变体之间循环 — 同样的音符,新的视觉答案。**Free** 解锁八位画家 — Picasso、Pollock、Kusama、Mondrian、Klimt、Vasarely、af Klint、Haring — 每位两种变体。每位都有一个 **Pro 伙伴** 等在下面:再次点击活动方块,伙伴名字带着 PRO 徽章滑入调色板下方 — 点击解锁。**Pro** 和 **Pro AI** 打开全部十六位画家及所有变体。`},
   {id:'setup', title:`设置 — 选择你要看到什么`, keywords:`设置 setup 选择器 调色板 艺术家 菜单 个人 自定义 筛选 隐藏 显示 偏好 localStorage`,
@@ -12171,7 +13781,7 @@ const GUIDE_I18N = {
   {id:'start-here', title:`從哪開始`, keywords:`入門 從這裡開始 第一次 新用戶 怎麼使用 指南 方向`,
    body:`兩條路。◆ 音樂 → 畫:輸入一種感覺(任何情緒、任何語言)、彈鋼琴、對麥克風唱、或丟入 MIDI / MP3 / 樂譜。◆ 畫 → 音樂:丟入一張圖。◆ 選顏色模式(和聲或光譜)。也許一個藝術家風格。同樣的音樂 = 同樣的畫,永遠。打開 ↻ Shuffle,每次播放都來個新版本。◆ 卡住了?打開 Mood,輸入一種感覺,點播放。看它生長。循環會教你其他的。◆ 然後儲存畫,錄音樂。這些是你留下的部分。`},
   {id:'modes', title:`和聲 vs 光譜 vs φ Phi vs 反向 vs Custom`, keywords:`顏色 color 模式 色相 調色盤 五度圈 半音 phi 黃金角 反向 對抗 kontra 斯克里亞賓 普羅米修斯 聯覺 custom bw 黑白 模式`,
-   body:`同一段音樂,五種顏色文法。◆ 和聲 — 五度圈順序,相關調聚集。◆ 光譜 — 30° 均勻分步,每個半音一種顏色。◆ φ Phi — 黃金角色相(137.5°),色輪上最大分散。◆ 反向(Kontra)— 反和聲:協和音程(純五、大三、小三、大六、小六、純四)得到 遠 的色相;不協和(小二、大二、三全音、大七、小七)得到 近 的色相。畫家的讀法 — 衝突的和弦在畫布上衝突,純淨的綻放分開。◆ Custom — 預設是斯克里亞賓的《普羅米修斯》映射(1910):歷史上最著名的聯覺者真的為這些音高看到了這些顏色,並把它們寫進了管弦樂譜的"luce"聲部。C 紅、G 橘粉、D 黃、A 綠、E 珠藍、B 藍、F♯ 紫藍、C♯ 紫、G♯ 紫紅、D♯/A♯ 金屬鋼色(去飽和)、F 深紅。大致是穿過彩虹的五度圈 — 和聲的主觀祖先。聯覺者的讀法。只有調色盤裡的顏色發聲;每格都可重塗(Pro)。◆ B/W — 僅圖像模式下(圖像為灰階時取代演算法模式);明度跟音高,色相忽略。◆ 隨時切換 — 同樣的音符,瞬間重繪。點擊活躍標籤預覽顏色。圖像模式下 app 替你選 Color 或 B/W;只有 Custom 由你決定。◆ Free 唯讀地看到斯克里亞賓預設;Pro 和 Pro AI 讓 Custom 完全可編輯。反向(Kontra)在所有層級都解鎖。`},
+   body:`同一段音樂,五種顏色文法。◆ 和聲 — 五度圈順序,相關調聚集。◆ 光譜 — 視覺的平均律:十二個相等色相步對應十二個相等半音。關閉色環 — B 在顏色上引回 C,正如在音樂中引回 C。眼睛的半音階。(順帶一提:把任何音高向上移 40 個八度,就落入可見光 — A4(440 Hz)變成 ~484 THz,溫暖的紅色。光譜不做這個位移;它選擇均等劃分而非真實波長,以保留色環上的洋紅端。眼睛的可見範圍不是一個完整八度。光譜選擇平衡而非物理。)◆ φ Phi — 黃金角色相(137.5°),色輪上最大分散。◆ 反向(Kontra)— 反和聲:協和音程(純五、大三、小三、大六、小六、純四)得到 遠 的色相;不協和(小二、大二、三全音、大七、小七)得到 近 的色相。畫家的讀法 — 衝突的和弦在畫布上衝突,純淨的綻放分開。◆ Custom — 預設是斯克里亞賓的《普羅米修斯》映射(1910):歷史上最著名的聯覺者真的為這些音高看到了這些顏色,並把它們寫進了管弦樂譜的"luce"聲部。C 紅、G 橘粉、D 黃、A 綠、E 珠藍、B 藍、F♯ 紫藍、C♯ 紫、G♯ 紫紅、D♯/A♯ 金屬鋼色(去飽和)、F 深紅。大致是穿過彩虹的五度圈 — 和聲的主觀祖先。聯覺者的讀法。只有調色盤裡的顏色發聲;每格都可重塗(Pro)。◆ B/W — 僅圖像模式下(圖像為灰階時取代演算法模式);明度跟音高,色相忽略。◆ 隨時切換 — 同樣的音符,瞬間重繪。點擊活躍標籤預覽顏色。圖像模式下 app 替你選 Color 或 B/W;只有 Custom 由你決定。◆ Free 唯讀地看到斯克里亞賓預設;Pro 和 Pro AI 讓 Custom 完全可編輯。反向(Kontra)在所有層級都解鎖。`},
   {id:'style', title:`繪畫風格(16 位藝術家)`, keywords:`風格 picasso kusama pollock kandinsky miró mondrian rothko matisse 立體派 drip 藝術家 抽象 幾何 階段 變體 inspired by 十六 vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
    body:`十六位偉大畫家,一張畫布。Mosaic 是樸素的預設 — 乾淨的 φ-矩形。點擊任一藝術家方塊,同樣的音符會以他的筆法重寫:◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein。當藝術家處於活動狀態時,畫布顯示 "inspired by Picasso" — 一個安靜的署名,從不是戲裝。再點方塊即回到 Mosaic。每位畫家都有自己作品的若干變體:Pollock 有 Color Pour、Black pourings、Totemic figuration、Handprints、Blue Poles,加上密集的 all-over drip。Mondrian 有八種 — 方格、Boogie-Woogie、Broadway、Lozenge、樹、Pier & Ocean。大多數有六種。為一首曲子選擇的變體是決定性的:同一首歌 + 同一藝術家 + 同一調性 + 同一變體 → 像素級一致的畫,每一次。打開 ↻ Shuffle,Next 按鈕在該藝術家的其他變體之間循環 — 同樣的音符,新的視覺答案。**Free** 解鎖八位畫家 — Picasso、Pollock、Kusama、Mondrian、Klimt、Vasarely、af Klint、Haring — 每位兩種變體。每位都有一個 **Pro 夥伴** 等在下面:再次點擊活動方塊,夥伴名字帶著 PRO 徽章滑入調色盤下方 — 點擊解鎖。**Pro** 和 **Pro AI** 打開全部十六位畫家及所有變體。`},
   {id:'setup', title:`設定 — 選擇你要看到什麼`, keywords:`設定 setup 選擇器 調色盤 藝術家 選單 個人 自訂 篩選 隱藏 顯示 偏好 localStorage`,
@@ -12219,6 +13829,62 @@ const GUIDE_I18N = {
   {id:'troubleshoot', title:`問題排除`, keywords:`問題排除 問題 錯誤 壞掉 修復 bug 幫助 慢`,
    body:`如果狀態顯示「載入鋼琴中…」,等幾秒(~5 MB 樣本下載)。如果樣本失敗會回退到合成鋼琴 — app 還能運作。麥克風和分享在 Claude 沙盒裡被封鎖 — 兩者在獨立頁面上正常運作。MIC 音樂在 iOS 上無法擷取同一裝置的音訊 — 用外接喇叭或第二個裝置。`},
   ],
+  ja: [
+  {id:'tiers', title:`Free、Pro、Pro AI — 何が変わる`, keywords:`料金 ティア free pro pro ai アップグレード 解放 ロック ウォーターマーク パートナー クレジット 試用 制限 機能 サブスク 一回購入`,
+   body:`3 つのティア、すべて一回限りの購入。◆ Free — 8 人のアーティスト(Picasso、Pollock、Kusama、Mondrian、Klimt、Vasarely、af Klint、Haring)、各 2 種類の描き方が解放。各人に Pro パートナーがいる — アクティブなアーティストをもう一度タップするとパートナーが見える。Custom パレットはデフォルトの 12 色を読み取り専用で表示。エクスポートにはウォーターマーク。AI 機能(✦)は 3 回の試用クレジット、その後アップグレードを促す。◆ Pro €9.99 — 16 人全員、各人のすべての描き方、Custom パレット編集可能(自分の 12 色)、300 DPI エクスポートはウォーターマークなし、永続アクセス。AI 呼び出しは共有の 3 クレジット試用プールから。◆ Pro AI €19.99 — Pro のすべて + 無制限 AI:テキスト Mood、画像から Mood、Image 内の AI Compose、AI Atmosphere。◆ AI クレジットコスト:AI テキストと画像コンポーズは各 1 クレジット;Atmosphere は 0.5 クレジット。Free は 3 回の完全 AI 呼び出し、または 6 回の Atmosphere 読み取り、または混合。◆ 一回払い、永久所有。サブスクなし。ライセンスは最大 5 台のデバイス、同時 1 台で使用可。`},
+  {id:'overview', title:`概要 — 双方向の翻訳機`, keywords:`はじめ 入門 概要 paintianoとは 使い方 introduction`,
+   body:`音楽と絵画、双方向。同じ色環、同じ音高環。ソースを選ぶ — Compose、MIC、MIDI、Audio、Score、Image、または mood — 音楽が鳴るとキャンバスが埋まる。Save で絵を持ち帰る。Record で音楽を持ち帰る。どちらから入っても、両方持って出る。`},
+  {id:'start-here', title:`どこから始める`, keywords:`オンボーディング ここから 初めて 新規ユーザー 使い方 ガイド 方向`,
+   body:`二つの道。◆ 音楽 → 絵:気持ちを書く(どんな感情でも、どんな言語でも)、ピアノを弾く、マイクに歌う、MIDI / MP3 / 楽譜を入れる。◆ 絵 → 音楽:画像を入れる。◆ 色モード(Harmony か Spectral)を選ぶ。たぶんアーティストスタイルも。同じ音楽 = 同じ絵、ずっと。↻ Shuffle を ON にすれば、再生のたびに新バージョン。◆ 詰まった?Mood を開いて、気持ちを書いて、Play。育つのを見る。ループが他のことを教える。◆ そして絵を Save、音楽を Record。それが残る部分。`},
+  {id:'modes', title:`Harmony vs Spectral vs φ Phi vs Kontra vs Custom`, keywords:`色 color モード 色相 パレット 五度圏 半音 phi 黄金角 反転 kontra スクリャービン プロメテウス 共感覚 custom bw 白黒 モノクロ`,
+   body:`同じ音楽、5 つの色文法。◆ Harmony — 五度圏順、近縁の調が集まる。◆ Spectral — 視覚の平均律:12 の等しい色相ステップが 12 の等しい半音に対応。色環を閉じる — B が色において C に戻る、音楽でそうするように。目のクロマチック・スケール。(余談:どの音高でも 40 オクターブ上に移せば可視光に入る — A4(440 Hz)は ~484 THz、暖かい赤になる。Spectral はこの移動をしない;真の波長ではなく等分割を選び、色環のマゼンタ端が生き残るようにする。目の可視範囲は完全な 1 オクターブではない。Spectral は物理より均衡を選ぶ。)◆ φ Phi — 黄金角の色相(137.5°)、色環上で最大に分散。◆ Kontra(反転)— ハーモニーの裏面:協和音程(完全5、長3、短3、長6、短6、完全4)は遠い色相に、不協和(短2、長2、三全音、長7、短7)は近い色相に。画家の読み方 — 不協和音がキャンバス上でぶつかり、純粋な和音は咲き開く。◆ Custom — デフォルトはスクリャービン《プロメテウス》対応(1910):史上最も有名な共感覚者が、これらの音高にこれらの色を実際に見て、オーケストラ譜の "luce" パートに書き込んだ。C 赤、G オレンジピンク、D 黄、A 緑、E 真珠青、B 青、F♯ 青紫、C♯ 紫、G♯ 紫紅、D♯/A♯ メタリックスチール(脱彩)、F 深紅。だいたい虹を通る五度圏 — Harmony の主観的祖先。共感覚者の読み方。パレットにある色だけが音を出す;各マスは塗り直せる(Pro)。◆ B/W — 画像モード限定(画像がグレースケールのときアルゴリズムモードを置き換える);明度が音高、色相は無視。◆ いつでも切り替え — 同じ音符、瞬時に描き直し。アクティブタブをタップで色をプレビュー。画像モードでは app が Color か B/W を選ぶ;Custom だけがあなたの選択。◆ Free はスクリャービンのデフォルトを読み取り専用で見る;Pro と Pro AI で Custom が完全編集可。Kontra はすべてのティアで解放。`},
+  {id:'style', title:`絵画スタイル(16 人のアーティスト)`, keywords:`スタイル picasso kusama pollock kandinsky miró mondrian rothko matisse キュビズム ドリップ アーティスト 抽象 幾何 フェーズ バリアント inspired by 十六 vasarely stella sam francis hilma af klint klimt haring riley lichtenstein`,
+   body:`16 人の偉大な画家、一つのキャンバス。Mosaic は素朴なデフォルト — きれいな φ-矩形。アーティストタイルをタップすると、同じ音符が彼の筆で書き直される:◆ Picasso ◆ Kusama ◆ Pollock ◆ Kandinsky ◆ Miró ◆ Mondrian ◆ Rothko ◆ Matisse ◆ Vasarely ◆ Frank Stella ◆ Sam Francis ◆ Hilma af Klint ◆ Klimt ◆ Keith Haring ◆ Bridget Riley ◆ Roy Lichtenstein。アーティストがアクティブな間、キャンバスに "inspired by Picasso" と表示 — 静かな署名、コスプレではない。タイルをもう一度タップで Mosaic に戻る。各画家には自作の複数のバリアントがある:Pollock は Color Pour、Black pourings、Totemic figuration、Handprints、Blue Poles、それに密な all-over drip。Mondrian は 8 種 — グリッド、Boogie-Woogie、Broadway、Lozenge、Tree、Pier & Ocean。ほとんどは 6 種。曲に対して選ばれるバリアントは決定的:同じ歌 + 同じアーティスト + 同じ調 + 同じバリアント → ピクセル単位で一致した絵、毎回。↻ Shuffle ON だと、Next ボタンはそのアーティストの他のバリアントを循環 — 同じ音符、新しい視覚解。**Free** は 8 人 — Picasso、Pollock、Kusama、Mondrian、Klimt、Vasarely、af Klint、Haring — 各 2 バリアント解放。各人には **Pro パートナー** が下で待つ:アクティブなタイルをもう一度タップすると、PRO バッジ付きでパートナー名がパレット下にスライドイン — タップして解放。**Pro** と **Pro AI** は全 16 人とすべてのバリアントを開く。`},
+  {id:'setup', title:`Setup — 表示するものを選ぶ`, keywords:`設定 setup ピッカー パレット アーティスト メニュー パーソナル カスタム フィルター 隠す 表示 設定 localStorage`,
+   body:`Setup(上部メニュー、Guide と Pro の間)で、キャンバスのピッカーを実際に使うパレットとアーティストだけに絞れる。2 セクション:5 つのパレット(Harmony、Spectral、φ Phi、Kontra、Custom)のどれをタブに出すか、どのアーティストまたは「Mosaic ファミリー」項目をスタイルタイルに出すかをチェック。◆ Mosaic ファミリーは 3 状態(Mosaic / Notes / $1M$)をカバーする 1 項目;タイル内部での循環はそのまま。◆ デフォルトは全部 — お気に入りがあるときだけ絞り込む。◆ Free ユーザーはピッカー内で Pro アーティストに 🔒 が付く — チェックは設定を保存するが、実際の描画はペイウォールに当たる。◆ 最低 1 パレット + 1 アーティスト — それを下回るとモーダルは閉じない。◆ 選択はこのデバイスに保存(localStorage)。Shuffle(↻)は選択プールからしか引かない。`},
+  {id:'random', title:`↻ Shuffle — 同じ組み合わせ=同じ絵;新しい組み合わせ=新バージョン`, keywords:`ランダム shuffle 決定論 シード 再振り バリアント 同じ音楽 違う絵 新鮮 サイコロ ユニーク 再生 next スタイル 循環 四つ組 アイデンティティ`,
+   body:`決定論のルール。同じ歌・同じ調・同じアーティスト・同じスタイル → ピクセル単位で一致した絵。永遠に。◆ ↻ Shuffle ON で Next ボタンが出る。◆ アーティスト選択中:Next はそのアーティストのバリアントを循環(Pollock は 6 種 — Color Pour、Black、Totem、Hands、Poles、密な原版;Mondrian 8 種;ほとんどは 6 種)。同じ歌、同じアーティスト → バリアントだけ循環。◆ アーティスト未選択(Mosaic):Next は両方取る — 新アーティスト+新バリアント。プールには Mosaic ファミリーの 3 ステーション(Mosaic、Notes、$1M$)も含まれ、完全 shuffle はそこにも落ち得る。◆ Shuffle ON で Mosaic チップをタップ → 循環をこの 3 つにロック(Mosaic → Notes → $1M$ → Mosaic)。任意のアーティストをタップでロック解除。◆ Shuffle OFF:Next は隠れる。◆ 色モードやアーティストを直接切り替えても再振りはしない。Next/Play だけが、しかも Shuffle ON のときだけ。`},
+  {id:'demo', title:`Demo — 30 秒の Für Elise`, keywords:`demo für elise ベートーヴェン テスト サンプル 試し オンボーディング`,
+   body:`DEMO をタップでビルトインの Für Elise 断片を聴く。鍵盤が音楽と一緒に光る。マシン全体、頭から尻まで、30 秒で。自分のものを持ち込む前のいい開口。`},
+  {id:'compose', title:`Compose — あなたのライブピアノ`, keywords:`compose 作曲 キーボード ピアノ ライブ 録音 打鍵 演奏 取り消し backspace enter space 和音 名前 認識 フレーム キャンバス 固定 黄金比`,
+   body:`♪ COMPOSE をタップ(または Enter)。ピアノが開く。鍵をタップで短いビート、押し続けて太いブロック — 長く押すほど広く描く。ハードキーボードもいける:A–L 白鍵、W/E/T/Y/U/O/P 黒鍵。Backspace = 取り消し。Space = Play/Pause。Enter でピアノ切替。和音を押し続けると名前がライブで見える(C maj、A min、D7…)。キャンバスは固定 φ フレーム — 足すほど行が縮み、絵は密になる。あなたの入場を書き込む。`},
+  {id:'mobile-keys', title:`モバイルピアノ — スワイプでスクロール`, keywords:`モバイル 携帯 iphone ipad タッチ スワイプ スクロール キーボード ピアノ 鍵 88 水平 パン`,
+   body:`携帯で 88 鍵フル。水平スワイプでパン。鍵をタップで演奏、ドラッグでスクロール。C4(中央 C)はだいたい真ん中。PC は 1 ページで全部入る — パンが必要なのはモバイルだけ。`},
+  {id:'mic', title:`🎙 MIC — 歌うか聴くか`, keywords:`mic マイク 歌 聴く 声 音楽 ハミング 口笛 環境 スピーカー spotify 部屋 音 描く ライブ プリセット rec 録音 切替 ドラフト`,
+   body:`🎙 MIC をタップ。キャンバスが開いて準備完了、中央に大きな REC ボタン。REC タップで開始。◆ 2 モード、独立キャンバス。🔊 Music(デフォルト、青):部屋で鳴っているもの — スピーカー、Spotify、環境音 — を聴き、和声の変化を静かに描く。長時間録音 OK。キャンバスは下に伸びる。🎤 Voice(赤):歌、ハミング、口笛。音高は C メジャーにスナップ、ピアノを通って鳴り、一音ごとに一筆。単音、固定 φ フレーム。◆ 左上のバッジで Music ⇄ Voice 切替。各モードは自分のドラフトを保持 — 切り替えると現在のは保存、もう一方は復元(または白紙で開始)。バッジの小さな ● はドラフト待ちの印。◆ Clear はアクティブモードのドラフトだけを消す。`},
+  {id:'scale-snap', title:`スケールスナップ — 調内にとどまる`, keywords:`スケール スナップ 調 メジャー マイナー 半音 フリー 上級`,
+   body:`Compose 内、⚙ でスケールスナップが出る。C 大、A 小、G 大、E 小、D 大、F 大、D 小にスナップ — 調外の音は最も近い調内の隣に引き寄せられる。「Free」(デフォルト)= フル半音。弾くものすべてを同じ調に落としたいときに便利。`},
+  {id:'moods', title:`✦ Mood — 気持ちに名前をつける`, keywords:`mood 気持ち ai 作曲 生成 感情 入力 どんな言語でも`,
+   body:`✦ How do you feel? をタップ。モーダルが開く。どんな気持ちでも書く — あなたの言葉で、どんな言語でも。激怒、saudade、午前3時のドライブ、ずぶ濡れ、夏のときめき。AI がピアノ曲を書く。キャンバスは再生と共に和音ごとに埋まる。その後:MORPH で別の気持ちへ、または VARY で新バージョン。何かを鳴らす最速の方法。 ◆ Free は 3 回の試用 AI 呼び出し(Mood-from-Image と AI Compose と共有);Pro AI = 無制限。`},
+  {id:'music', title:`♪ Music — MIDI、オーディオ、楽譜`, keywords:`音楽 midi オーディオ 楽譜 mp3 wav m4a ogg aac musicxml mxl mid アップロード インポート ファイル 転写 musescore finale dorico`,
+   body:`1 つのボタンですべての音楽ファイル。◆ MIDI(.mid / .midi)— 複数トラックを和音に凝縮し、テンポに合わせて描く。◆ Audio(.mp3 .wav .m4a .ogg .aac)— デコード、音高検出、描画;クリーンな単音や疎な素材で最も効果的(ソロピアノ、ボーカル、シンプルなギター)、密なミックスは難しい。◆ Score(.musicxml .xml .mxl、MuseScore、Finale、Dorico から)— 音高、長さ、強さ、和音が正確に渡る;最も精密な入力。Paintiano は自動で種類を識別。ファイル未選択で Music を開くとサンプルが試せる。`},
+{id:'image', title:`◫ Image — 絵を入れて、聴く`, keywords:`画像 絵 写真 転写 描く 色 color bw custom パレット ゲルニカ シャガール`,
+   body:`どんな画像でもアップロード。Paintiano はそれを楽譜として読む — 左から右、上から下。曲の長さは画像のエネルギーに合わせて(およそ 1½–2¾ 分)。◆ app は色の量で読み方を選ぶ。カラフル → Harmony か Spectral(色相=音高、明度=オクターブ、彩度=強さ)。モノクロ寄り(ゲルニカ、墨絵、セピア)→ B/W(明度だけが音高を駆動)。アクティブなチップをタップで色をプレビュー。◆ Custom はあなたのもの:画像をあなたのパレットでフィルタ — あなたの 12 色に近い色だけが音を出し、残りは沈黙する。デフォルトは Harmony の反対側、必ず何かが鳴ることを保証。Custom(✎)をもう一度タップで編集。 ◆ 2 つの再生方法:Scan は画像を楽譜として左から右に読む(スキャン方向を選べる)。AI Compose(Pro)は画像から完全に新しい曲を書く — そのパレット、エネルギー、ムードから — 再生中、画像は画面に残る。`},
+  {id:'morph', title:`✦ Morph — 二つの気持ちを混ぜる`, keywords:`morph クロスフェード ブレンド 移行 mood の間`,
+   body:`Mood を選んだ後に使える。✦ MORPH は一つの気持ちを別の気持ちに溶かす。前半は A、後半は B、40–60% 領域でつよさが混じる。プログレスバーに「A → B」と表示。二つの感情が一曲の中でお互いに溶け合う。◆ AI クレジット 1(Mood と共有プール);Pro AI = 無制限。`},
+  {id:'vary', title:`✦ Vary — 同じ絵、新しい調`, keywords:`vary バリエーション 調 キー 転調 音高 移調 新しい色 同じ構造 保持`,
+   body:`mood ベースの曲(テキスト mood、mood-from-image、AI Compose)で使える。◆ VARY は調を切り替える:新しい調(しばしば違うモード — メジャー ↔ マイナー)。曲のリズムと形は保たれるが、新しい調が新しい和声進行を生み、新しい色がキャンバスに流れる。選んだアーティスト、アーティストのスタイル、構造シードはロック状態 — 色だけが新しい調と共に変わる。タップし続けて調を切り替え。毎回キャンバスの縁が金色に光る。`},
+  {id:'playback', title:`Play / Pause / Seek`, keywords:`再生 一時停止 停止 続き シーク ドラッグ プログレスバー 位置 ジャンプ スクラブ`,
+   body:`Play で開始/一時停止(Space も可)。プログレスバーをタップでジャンプ。ドラッグでライブスクラブ。再生中、残り時間が出る。`},
+  {id:'loop', title:`⟳ Loop — 走らせ続ける`, keywords:`ループ リピート 循環 mood 連続`,
+   body:`mood 再生中に使える。⟳ Loop は曲をずっと繰り返す。もう一度タップで OFF。ON のときボタンは金色。部屋を音楽で満たしたいときに。`},
+  {id:'speed', title:`再生速度 — 0.25× から 4×`, keywords:`速度 遅 速 テンポ 倍率 ボタン 1x 半分 増 減`,
+   body:`現在の倍率を表示するチップ(デフォルト 1×)。タップで 1× に戻る。長押しで循環 — 0.25× → 1× を 0.25 ステップで、その後 2×、3×、4×、循環。離したところの倍率を保持。≠ 1× のときチップはハイライト。変化は即時。`},
+  {id:'mute', title:`🔊 / 🔇 ミュート — 静かに描く`, keywords:`ミュート 無音 オーディオ 音 音量 OFF ON スピーカー 静か`,
+   body:`Play の隣のスピーカーアイコンですべてのオーディオを切替。タップでミュート、もう一度で解除。絵は普通にレンダリング — 音だけが抑えられる。セッション間で記憶。静かな場所でビジュアルだけ欲しいときに。`},
+  {id:'print', title:`↓ Save — 絵を持ち帰る`, keywords:`save 保存 印刷 export png 画像 絵 サイズ web social story 9 16 instagram tiktok print a1 dpi 解像度 ポスター 壁 飾 額装 シェア ギャラリー`,
+   body:`◆ これはダイヤモンド。あなたの絵 → 高解像度 PNG、ワンタップで。◆ サイズを選ぶ:Story(9:16)は IG/TikTok 用、Web/Social(~4×、速い、Feed 用)、または Print A1 · 300 DPI(~20×、本当に印刷可、ギャラリー級)。◆ Image モードでは、Story は元の画像(モザイクでなく)をオーディオと一緒に保存;「元の画像も付ける」にチェックすると音声ファイルにも添付。◆ プレビューが開く。長押しで写真 / ファイルへ保存。◆ 額装。掛ける。シェア。お気に入りの曲からポスター。同じ歌は必ず同じ絵をくれる — あなたの歌が今、署名を持つ。◆ Free のエクスポートには小さな Paintiano ウォーターマーク。Pro と Pro AI でウォーターマーク除去、ギャラリー印刷用 Print A1 · 300 DPI も解放。`},
+  {id:'record', title:`⏺ Record — 音楽を持ち帰る`, keywords:`record 録音 rec オーディオ キャプチャ 保存 mp4 m4a 録音 シェア 名前 リネーム ファイル名`,
+   body:`◆ もう一つのダイヤモンド。Image モードで、⏺ REC は絵が再生される間オーディオを取り込む — 直接シェア可能なファイルへ。曲が終われば自動停止。◆ シェア行が現れ、ファイル名は編集可能。Share タップでシステムダイアログ(iPhone:Share → Save to Files)。◆ あなたの人生の任意の絵を、残せるサウンドトラックに変える。`},
+  {id:'score-export', title:`♫ Score — 楽譜を掴む`, keywords:`楽譜 export musicxml xml 音符 記譜 譜面 musescore sibelius finale 保存 シェア リネーム ファイル名`,
+   body:`Image モードで、Rec の隣。♫ Score は絵の音符を MusicXML ファイルにする。MuseScore、Sibelius、Finale、あるいは記譜アプリで開ける — 本物の楽譜、画像 1 枚から。印刷。演奏。音楽家の友達に渡す。`},
+  {id:'clear', title:`Clear — 賢いリセット`, keywords:`クリア リセット やり直し 削除 確認 用意 ダブルタップ 戻る setup`,
+   body:`モードごとに違う Clear。◆ Compose:キャンバスを拭く、compose に留まる。◆ MIC:アクティブモードのドラフトだけを捨てる(Voice か Music);もう一方は保持。大きな REC が戻る。◆ Image:描画痕と画像を拭く、しかし画像ビューに留まる;フル Color+Style パネルへは「← back」だけで戻る。◆ Image mood:すべて拭くがキャンバスに留まり、「+ new image」/「+ new mood」が出る。◆ MIDI / Audio / Score / テキスト mood:完全リセット。`},
+  {id:'micvol', title:`息するキャンバス(マイク音量)`, keywords:`mic 音量 息 脈動 キャンバス 部屋 音 環境`,
+   body:`MIC モード(Voice または Music)では、キャンバスが部屋の音量と共に静かに脈動する — 大きな音で少し広がり、静かなら休む。MIC と一緒に自動で開始/停止。`},
+  {id:'troubleshoot', title:`トラブルシュート`, keywords:`トラブル 問題 エラー 壊 修 bug help 遅い`,
+   body:`ステータスに「Loading piano…」と出たら数秒待つ(~5 MB のサンプルダウンロード)。サンプルが失敗するとシンセピアノにフォールバック — app は動く。マイクとシェアは Claude のサンドボックスでは無効 — 両方とも独立ページで正常動作。MIC Music は iOS で同一デバイスのオーディオをキャプチャできない — 外部スピーカーか別のデバイスを使う。`},
+  ],
 };
 function getGuide(lang){ return GUIDE_I18N[lang] || GUIDE_I18N.EN; }
 
@@ -12233,6 +13899,9 @@ const GUIDE_CARDS_I18N = {
     {id:'overview', glyph:'✦', cat:'start', title:`Music ⇄ painting`, body:`Same wheel, both ways. Sing, type, drop a photo — canvas fills as the music plays. Save the art, record the song. Take both home.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Pick what you see`, body:`Hide what you don't use. 5 palettes, 8 artist pairs, Mosaic family. Setup → top menu. Re-open anytime to widen or narrow.`, cta:`Open Setup`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 palettes, one song`, body:`Harmony, Spectral, φ Phi, Kontra, Custom. Tap a tab to switch — same notes, instant repaint. Each one paints the same music in a different colour grammar.`},
+    {id:'harmony', glyph:'◯', cat:'colors', title:`Harmony = circle of fifths`, body:`The same wheel every musician learns. C and G sit close in colour because they sit close in music. Modulate up a fifth, watch the hues shift one notch. Western harmony, made visible.`},
+    {id:'spectral', glyph:'🌈', cat:'colors', title:`Spectral = equal temperament for the eye`, body:`12 equal hue steps for 12 equal semitones. Closes the wheel — B leads back to C in colour, the way it does in music. Bach tuned the keyboard this way. Spectral tunes the canvas.`},
+    {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = golden angle`, body:`Each note's hue rotates by 137.5° — the same angle sunflowers use to pack seeds, galaxies to spiral. Maximally scattered colours, no two ever crowding. Nature's anti-clustering rule.`},
     {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = Scriabin's map`, body:`Scriabin saw colours for tones. His 1910 mapping is your Custom default — C red, G orange-pink, D yellow, all the way around. Pro lets you edit every swatch.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: inverse harmony`, body:`Clashing chords clash on canvas. Clean intervals fly apart. The painter's reading — opposite of Harmony, sharper to the eye. Free for everyone.`},
     {id:'style', glyph:'🎨', cat:'style', title:`16 artists, 8 pairs`, body:`Mosaic is the default. Tap an artist tile and the same notes get rewritten in their hand. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 total.`},
@@ -12247,6 +13916,9 @@ const GUIDE_CARDS_I18N = {
     {id:'overview', glyph:'✦', cat:'start', title:`Musik ⇄ Malerei`, body:`Gleiches Rad, beide Richtungen. Singen, tippen, Foto droppen — die Leinwand füllt sich mit der Musik. Bild sichern, Song aufnehmen. Du nimmst beides mit.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Wähle, was du siehst`, body:`Versteck, was du nicht brauchst. 5 Paletten, 8 Künstlerpaare, Mosaik-Familie. Setup → oberes Menü. Jederzeit wieder aufmachen.`, cta:`Setup öffnen`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 Paletten, ein Song`, body:`Harmonie, Spektral, φ Phi, Kontra, Custom. Tab antippen zum Wechseln — gleiche Noten, sofort neu gemalt. Jede malt die gleiche Musik in einer anderen Farbgrammatik.`},
+    {id:'harmony', glyph:'◯', cat:'colors', title:`Harmonie = Quintenzirkel`, body:`Das Rad, das jeder Musiker lernt. C und G liegen farblich nah, weil sie musikalisch nah sind. Moduliere eine Quinte hoch — die Farbtöne wandern eine Stelle weiter. Westliche Harmonik, sichtbar gemacht.`},
+    {id:'spectral', glyph:'🌈', cat:'colors', title:`Spektral = gleichstufige Stimmung fürs Auge`, body:`12 gleiche Farbtonschritte für 12 gleiche Halbtöne. Das Rad schließt sich — H führt farblich zu C zurück, wie musikalisch. Bach stimmte das Klavier so. Spektral stimmt die Leinwand.`},
+    {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = goldener Winkel`, body:`Jeder Ton rotiert um 137,5° — derselbe Winkel, mit dem Sonnenblumen Samen packen und Galaxien spiralen. Maximal verstreute Farben, keine zwei drängen sich. Naturgesetz gegen Klumpen.`},
     {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = Skrjabins Karte`, body:`Skrjabin sah Farben für Töne. Seine Tabelle von 1910 ist dein Custom-Default — C rot, G orange-rosa, D gelb, rundum. Pro lässt dich jedes Feld umfärben.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: inverse Harmonie`, body:`Schmutzige Akkorde kollidieren auf der Leinwand. Saubere fliegen auseinander. Das Gegenteil von Harmonie, schärfer fürs Auge. Für alle frei.`},
     {id:'style', glyph:'🎨', cat:'style', title:`16 Künstler, 8 Paare`, body:`Mosaik ist der Default. Künstler-Kachel antippen und die gleichen Noten erscheinen in seiner Handschrift. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 insgesamt.`},
@@ -12261,6 +13933,9 @@ const GUIDE_CARDS_I18N = {
     {id:'overview', glyph:'✦', cat:'start', title:`Musique ⇄ peinture`, body:`Même roue, les deux sens. Chante, tape, dépose une photo — la toile se remplit avec la musique. Sauve l'œuvre, enregistre le morceau. Tu repars avec les deux.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Choisis ce que tu vois`, body:`Cache ce que tu n'utilises pas. 5 palettes, 8 paires d'artistes, famille Mosaïque. Setup → menu du haut. Réouvre quand tu veux.`, cta:`Ouvrir Setup`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 palettes, une chanson`, body:`Harmonie, Spectral, φ Phi, Kontra, Custom. Tape un onglet pour changer — mêmes notes, repeint instantané. Chacune peint la même musique dans une grammaire de couleur différente.`},
+    {id:'harmony', glyph:'◯', cat:'colors', title:`Harmonie = cercle des quintes`, body:`La même roue que tout musicien apprend. Do et Sol sont proches en couleur car proches en musique. Module d'une quinte vers le haut — les teintes glissent d'un cran. L'harmonie occidentale, rendue visible.`},
+    {id:'spectral', glyph:'🌈', cat:'colors', title:`Spectral = tempérament égal pour l'œil`, body:`12 pas de teinte égaux pour 12 demi-tons égaux. Ferme la roue — Si ramène à Do en couleur, comme en musique. Bach accordait le clavier ainsi. Spectral accorde la toile.`},
+    {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = angle d'or`, body:`Chaque note tourne de 137,5° — le même angle que les tournesols pour ranger leurs graines, les galaxies pour spiraler. Couleurs maximalement éparpillées, jamais deux qui se serrent. La règle anti-grappes de la nature.`},
     {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = la carte de Scriabine`, body:`Scriabine voyait des couleurs pour les tons. Sa table de 1910 est ton défaut Custom — Do rouge, Sol orange-rose, Ré jaune, tout autour. Pro te laisse éditer chaque case.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra : harmonie inversée`, body:`Les accords qui se heurtent se heurtent sur la toile. Les purs s'écartent. La lecture du peintre — opposé d'Harmonie, plus tranchant. Gratuit pour tous.`},
     {id:'style', glyph:'🎨', cat:'style', title:`16 artistes, 8 paires`, body:`Mosaïque est le défaut. Tape une tuile d'artiste et les mêmes notes ressortent dans sa main. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 au total.`},
@@ -12275,6 +13950,9 @@ const GUIDE_CARDS_I18N = {
     {id:'overview', glyph:'✦', cat:'start', title:`Música ⇄ pintura`, body:`Misma rueda, ambos sentidos. Canta, escribe, suelta una foto — el lienzo se llena con la música. Guarda el arte, graba la canción. Te llevas las dos.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Elige lo que ves`, body:`Esconde lo que no usas. 5 paletas, 8 pares de artistas, familia Mosaico. Setup → menú superior. Reabre cuando quieras.`, cta:`Abrir Setup`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 paletas, una canción`, body:`Armonía, Espectral, φ Phi, Kontra, Custom. Toca una pestaña para cambiar — mismas notas, repintado al instante. Cada una pinta la misma música en una gramática de color distinta.`},
+    {id:'harmony', glyph:'◯', cat:'colors', title:`Armonía = círculo de quintas`, body:`La rueda que todo músico aprende. Do y Sol están cerca en color porque están cerca en música. Modula una quinta arriba — los tonos giran un puesto. La armonía occidental, hecha visible.`},
+    {id:'spectral', glyph:'🌈', cat:'colors', title:`Espectral = temperamento igual para el ojo`, body:`12 pasos de tono iguales para 12 semitonos iguales. Cierra la rueda — Si lleva de vuelta a Do en color, como en música. Bach afinaba el teclado así. Espectral afina el lienzo.`},
+    {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = ángulo dorado`, body:`Cada nota rota 137.5° — el mismo ángulo que usan los girasoles para empacar semillas, las galaxias para espiralar. Colores máximamente esparcidos, nunca dos amontonándose. La regla anti-grupos de la naturaleza.`},
     {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = mapa de Skriabin`, body:`Skriabin veía colores para los tonos. Su tabla de 1910 es tu predeterminado Custom — Do rojo, Sol naranja-rosa, Re amarillo, alrededor. Pro deja editar cada casilla.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: armonía invertida`, body:`Acordes que chocan chocan en el lienzo. Los limpios se separan. La lectura del pintor — opuesto a Armonía, más afilado. Gratis para todos.`},
     {id:'style', glyph:'🎨', cat:'style', title:`16 artistas, 8 pares`, body:`Mosaico es el predeterminado. Toca una tarjeta de artista y las mismas notas salen en su mano. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 en total.`},
@@ -12289,6 +13967,9 @@ const GUIDE_CARDS_I18N = {
     {id:'overview', glyph:'✦', cat:'start', title:`Hudba ⇄ maľba`, body:`To isté koleso, oboma smermi. Spievaj, píš, hoď fotku — plátno sa plní s hudbou. Ulož maľbu, nahraj pieseň. Odnesieš si oboje.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Vyber, čo vidíš`, body:`Schovaj, čo nepoužívaš. 5 paliet, 8 párov umelcov, Mosaic rodina. Setup → horné menu. Otvor kedykoľvek znova.`, cta:`Otvor Setup`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 paliet, jedna pieseň`, body:`Harmónia, Spektrum, φ Phi, Kontra, Custom. Klikni záložku a prepneš — tie isté noty, okamžitá premaľba. Každá pre tú istú hudbu inú farebnú gramatiku.`},
+    {id:'harmony', glyph:'◯', cat:'colors', title:`Harmónia = kvintový kruh`, body:`Koleso, ktoré sa učí každý hudobník. C a G stoja farebne blízko, lebo stoja hudobne blízko. Posuň o kvintu hore — odtiene sa pohnú o jednu pozíciu. Západná harmónia, urobená viditeľnou.`},
+    {id:'spectral', glyph:'🌈', cat:'colors', title:`Spektrum = rovnaké temperovanie pre oko`, body:`12 rovnakých krokov tónu pre 12 rovnakých polotónov. Koleso sa uzatvára — H vedie späť k C farebne, tak ako hudobne. Bach takto ladil klavír. Spektrum ladí plátno.`},
+    {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = zlatý uhol`, body:`Každý tón sa otáča o 137,5° — rovnaký uhol, ktorý slnečnice používajú na balenie semien, galaxie na špirálu. Maximálne rozptýlené farby, nikdy sa dve nezhlukujú. Pravidlo prírody proti zoskupovaniu.`},
     {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = Skriabinova mapa`, body:`Skriabin videl farby pre tóny. Jeho mapa z 1910 je tvoj Custom default — C červená, G oranžovo-ružová, D žltá, dookola. Pro ti dovolí premaľovať každú farbu.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: obrátená harmónia`, body:`Drsné akordy sa hádajú aj na plátne. Čisté kvitnú od seba. Pohľad maliara — opak Harmónie, ostrejšie pre oko. Pre všetkých zadarmo.`},
     {id:'style', glyph:'🎨', cat:'style', title:`16 umelcov, 8 párov`, body:`Mosaic je default. Klikni dlaždicu umelca a tie isté noty sa premaľujú v jeho rukopise. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 spolu.`},
@@ -12303,6 +13984,9 @@ const GUIDE_CARDS_I18N = {
     {id:'overview', glyph:'✦', cat:'start', title:`Música ⇄ pintura`, body:`Mesma roda, dois sentidos. Canta, escreve, larga uma foto — a tela enche com a música. Guarda a arte, grava a canção. Levas as duas.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Escolhe o que vês`, body:`Esconde o que não usas. 5 paletas, 8 pares de artistas, família Mosaico. Setup → menu superior. Reabre quando quiseres.`, cta:`Abrir Setup`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 paletas, uma canção`, body:`Harmonia, Espectral, φ Phi, Kontra, Custom. Toca um separador para mudar — mesmas notas, repintura instantânea. Cada uma pinta a mesma música em gramática de cor diferente.`},
+    {id:'harmony', glyph:'◯', cat:'colors', title:`Harmonia = círculo de quintas`, body:`A roda que todo músico aprende. Dó e Sol estão perto em cor porque estão perto em música. Modula uma quinta acima — os matizes deslizam uma casa. A harmonia ocidental, tornada visível.`},
+    {id:'spectral', glyph:'🌈', cat:'colors', title:`Espectral = temperamento igual para o olho`, body:`12 passos de matiz iguais para 12 semitons iguais. Fecha a roda — Si leva de volta a Dó em cor, como em música. Bach afinava o teclado assim. Espectral afina a tela.`},
+    {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = ângulo dourado`, body:`Cada nota gira 137,5° — o mesmo ângulo que os girassóis usam para empacotar sementes, as galáxias para espiralar. Cores maximamente espalhadas, nunca duas se aglomerando. A regra anti-grupos da natureza.`},
     {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = mapa de Scriabin`, body:`Scriabin via cores para tons. A tabela dele de 1910 é o teu padrão Custom — Dó vermelho, Sol laranja-rosa, Ré amarelo, à volta. Pro deixa editar cada quadrado.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: harmonia invertida`, body:`Acordes que chocam chocam na tela. Os limpos afastam-se. A leitura do pintor — oposto da Harmonia, mais afiada. Grátis para todos.`},
     {id:'style', glyph:'🎨', cat:'style', title:`16 artistas, 8 pares`, body:`Mosaico é o padrão. Toca um quadrado de artista e as mesmas notas saem na mão dele. Picasso, Pollock, Kusama, Kandinsky, Klimt, Riley, Haring — 16 no total.`},
@@ -12317,6 +14001,9 @@ const GUIDE_CARDS_I18N = {
     {id:'overview', glyph:'✦', cat:'start', title:`音乐 ⇄ 绘画`, body:`同一个色环,双向通行。唱、打字、丢张照片 — 画布随着音乐填满。保存画作,录下歌曲。两个都带走。`},
     {id:'setup', glyph:'⚙', cat:'start', title:`选择你看到什么`, body:`隐藏不用的。5 个调色板、8 对艺术家、Mosaic 家族。设置 → 顶部菜单。随时重新打开。`, cta:`打开设置`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 个调色板,一首歌`, body:`和声、光谱、φ Phi、反向 Kontra、Custom。点标签切换 — 同样的音符,瞬间重绘。每个用不同的颜色语法画同一段音乐。`},
+    {id:'harmony', glyph:'◯', cat:'colors', title:`和声 = 五度圈`, body:`每个音乐家都学过的色环。C 和 G 在色彩上接近,因为在音乐上接近。向上转调一个五度 — 色相滑动一格。西方和声,变得可见。`},
+    {id:'spectral', glyph:'🌈', cat:'colors', title:`光谱 = 视觉的平均律`, body:`12 个相等色相步对应 12 个相等半音。色环闭合 — B 在色彩上引回 C,正如音乐中。巴赫这样调钢琴。光谱这样调画布。`},
+    {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = 黄金角`, body:`每个音符旋转 137.5° — 与向日葵打包种子、星系旋转的角度相同。颜色最大限度散开,从不两两挤在一起。大自然的反聚集规则。`},
     {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = 斯克里亚宾之图`, body:`斯克里亚宾为音调看到颜色。他 1910 年的表格是你的 Custom 默认 — C 红、G 橙粉、D 黄,绕一圈。Pro 让你编辑每一格。`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`反向:倒置的和声`, body:`冲突的和弦在画布上冲突。纯净的飞散开。画家的读法 — 和声的反面,对眼睛更锋利。所有人免费。`},
     {id:'style', glyph:'🎨', cat:'style', title:`16 位艺术家,8 对`, body:`Mosaic 是默认。点艺术家方块,同样的音符以他的手出现。毕加索、波洛克、草间、康定斯基、克里姆特、莱利、哈林 — 共 16 位。`},
@@ -12331,6 +14018,9 @@ const GUIDE_CARDS_I18N = {
     {id:'overview', glyph:'✦', cat:'start', title:`音樂 ⇄ 繪畫`, body:`同一個色環,雙向通行。唱、打字、丟張照片 — 畫布隨著音樂填滿。儲存畫作,錄下歌曲。兩個都帶走。`},
     {id:'setup', glyph:'⚙', cat:'start', title:`選擇你看到什麼`, body:`隱藏不用的。5 個調色盤、8 對藝術家、Mosaic 家族。設定 → 頂部選單。隨時重新開啟。`, cta:`開啟設定`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 個調色盤,一首歌`, body:`和聲、光譜、φ Phi、反向 Kontra、Custom。點標籤切換 — 同樣的音符,瞬間重繪。每個用不同的顏色文法畫同一段音樂。`},
+    {id:'harmony', glyph:'◯', cat:'colors', title:`和聲 = 五度圈`, body:`每個音樂家都學過的色環。C 和 G 在色彩上接近,因為在音樂上接近。向上轉調一個五度 — 色相滑動一格。西方和聲,變得可見。`},
+    {id:'spectral', glyph:'🌈', cat:'colors', title:`光譜 = 視覺的平均律`, body:`12 個相等色相步對應 12 個相等半音。色環閉合 — B 在色彩上引回 C,正如音樂中。巴赫這樣調鋼琴。光譜這樣調畫布。`},
+    {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = 黃金角`, body:`每個音符旋轉 137.5° — 與向日葵打包種子、星系旋轉的角度相同。顏色最大限度散開,從不兩兩擠在一起。大自然的反聚集規則。`},
     {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = 斯克里亞賓之圖`, body:`斯克里亞賓為音調看到顏色。他 1910 年的表格是你的 Custom 預設 — C 紅、G 橘粉、D 黃,繞一圈。Pro 讓你編輯每一格。`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`反向:倒置的和聲`, body:`衝突的和弦在畫布上衝突。純淨的飛散開。畫家的讀法 — 和聲的反面,對眼睛更銳利。所有人免費。`},
     {id:'style', glyph:'🎨', cat:'style', title:`16 位藝術家,8 對`, body:`Mosaic 是預設。點藝術家方塊,同樣的音符以他的手出現。畢卡索、波洛克、草間、康丁斯基、克林姆、萊利、哈林 — 共 16 位。`},
@@ -12340,6 +14030,23 @@ const GUIDE_CARDS_I18N = {
     {id:'image', glyph:'📷', cat:'music', title:`照片 → 音樂 → 畫`, body:`丟張圖。它的顏色和能量變成鋼琴曲。曲子再以你選的藝術家風格作畫。Free 做 mosaic,Pro 加 AI Compose。`},
     {id:'save', glyph:'💾', cat:'save', title:`兩個都帶走`, body:`儲存 → 畫的 PNG + 歌的音訊。Story 模式裁切給 Instagram / TikTok。Pro 去浮水印,升到 300 DPI。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖全部`, body:`Pro €9.99 → 全部 16 位藝術家、可編輯 Custom 調色盤、無浮水印、終身。Pro AI €19.99 加無限 AI 心情、image compose、氛圍讀取。一次性,無訂閱。`}
+  ],
+  ja: [
+    {id:'overview', glyph:'✦', cat:'start', title:`音楽 ⇄ 絵画`, body:`同じ色環、双方向。歌う、打つ、写真を入れる — キャンバスが音楽と共に埋まる。絵を保存、曲を録音。両方持ち帰る。`},
+    {id:'setup', glyph:'⚙', cat:'start', title:`見るものを選ぶ`, body:`使わないものは隠す。5 つのパレット、8 ペアのアーティスト、Mosaic ファミリー。Setup → 上部メニュー。いつでも再オープン。`, cta:`Setup を開く`},
+    {id:'modes', glyph:'φ', cat:'colors', title:`5 つのパレット、一つの曲`, body:`Harmony、Spectral、φ Phi、Kontra、Custom。タブをタップで切替 — 同じ音符、瞬時に描き直し。それぞれが違う色文法で同じ音楽を描く。`},
+    {id:'harmony', glyph:'◯', cat:'colors', title:`ハーモニー = 五度圏`, body:`どの音楽家も学ぶ環。C と G は音楽的に近いから色も近い。五度上に転調すれば、色相が一つずれる。西洋ハーモニーを目に見える形に。`},
+    {id:'spectral', glyph:'🌈', cat:'colors', title:`スペクトル = 目の平均律`, body:`12 の等しい色相ステップが 12 の等しい半音に対応。環は閉じる — B は色において C に戻る、音楽でそうするように。バッハは鍵盤をこう調律した。スペクトルはキャンバスを調律する。`},
+    {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = 黄金角`, body:`各音符は 137.5° 回転 — ヒマワリが種を詰める、銀河が螺旋を描くのと同じ角度。最大限に散らばった色、二つが寄り合うことはない。自然の反密集ルール。`},
+    {id:'custom', glyph:'🌈', cat:'colors', title:`Custom = スクリャービンの地図`, body:`スクリャービンは音に色を見た。彼の 1910 年の表があなたの Custom デフォルト — C 赤、G オレンジピンク、D 黄、ぐるりと一周。Pro でマスごとに編集可。`},
+    {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra:反転したハーモニー`, body:`不協和音がキャンバスでぶつかる。純粋な和音は咲き開く。画家の読み方 — Harmony の裏面、目にはより鋭い。全員無料。`},
+    {id:'style', glyph:'🎨', cat:'style', title:`16 人のアーティスト、8 ペア`, body:`Mosaic がデフォルト。アーティストタイルをタップで、同じ音符が彼の手で現れる。ピカソ、ポロック、草間、カンディンスキー、クリムト、ライリー、ヘリング — 計 16 人。`},
+    {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic ファミリー`, body:`3 モード、1 タイル。タップで循環:φ グリッド → 音名ラベル → $1M$ カオス。アーティストなしの素朴な読み方。`},
+    {id:'shuffle', glyph:'🎲', cat:'style', title:`サイコロ ON = サプライズ`, body:`同じ歌 = 同じ絵、いつも。サイコロを振れば、Next ごとに違うアーティストか Mosaic ステーションが描く。サイコロ ON で Mosaic をタップすると循環を 3 ファミリーステーションにロック。`},
+    {id:'mic', glyph:'🎙', cat:'music', title:`歌え、描け`, body:`2 つの MIC モード。🔊 Music は部屋を聴く(スピーカー、環境音)。🎤 Voice はハミングを C メジャーにスナップ。両方ともライブで描く。Original ⇄ Piano は後で切替可。`},
+    {id:'image', glyph:'📷', cat:'music', title:`写真 → 音楽 → 絵`, body:`画像を入れる。その色とエネルギーがピアノ曲になる。曲はあなたの選んだアーティストスタイルで描かれる。Free は mosaic、Pro は AI Compose を追加。`},
+    {id:'save', glyph:'💾', cat:'save', title:`両方持ち帰る`, body:`Save → 絵の PNG + 歌のオーディオ。Story モードは Instagram / TikTok 用にトリミング。Pro でウォーターマーク除去、300 DPI に。`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro はすべてを解放`, body:`Pro €9.99 → 16 人全員、Custom パレット編集可、ウォーターマークなし、永続。Pro AI €19.99 で無制限 AI mood、image compose、Atmosphere 読み取り追加。一回払い、サブスクなし。`}
   ],
 };
 function getGuideCards(lang){ return GUIDE_CARDS_I18N[lang] || GUIDE_CARDS_I18N.EN; }
@@ -12955,6 +14662,18 @@ const DEMO_REEL_I18N = {
     mfiPainting:  '畫作。',
     variations:   '無盡變奏。',
     print:        '列印它。',
+    outro:        'Paintiano',
+  },
+  ja: {
+    becomes:      '音楽。絵画。',
+    artists:      '多くの画家。',
+    aiType:       '気持ちを書く。',
+    aiResult:     '自ら描く。',
+    mfiPicture:   '画像。',
+    mfiMusic:     '音楽。',
+    mfiPainting:  '絵画。',
+    variations:   '無限の変奏。',
+    print:        '印刷する。',
     outro:        'Paintiano',
   },
 };
@@ -14550,7 +16269,7 @@ export default function Paintiano() {
   // covers all three states (Mosaic / Notes / oneM); the chip still cycles
   // internally on tap, but the family is shown/hidden as a unit.
   const ALL_PALETTE_KEYS = ['harmony','spectral','phi','kontra','custom'];
-  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','comic'];
+  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','comic','monet','hokusai'];
   const [setupPalettes, setSetupPalettes] = useState(() => {
     try {
       const raw = localStorage.getItem('paintiano_setup_palettes');
@@ -14568,7 +16287,16 @@ export default function Paintiano() {
       const arr = JSON.parse(raw);
       if(!Array.isArray(arr)) return ALL_ARTIST_KEYS.slice();
       const valid = arr.filter(k => ALL_ARTIST_KEYS.includes(k));
-      return valid.length ? valid : ALL_ARTIST_KEYS.slice();
+      if(!valid.length) return ALL_ARTIST_KEYS.slice();
+      // Auto-add any newly introduced artists (e.g. when a new pair like
+      // monet/hokusai ships) so existing users see them as enabled by default.
+      // Without this, returning users would have the new chips hidden until
+      // they manually re-visit Setup.
+      const NEW_ARTISTS = ['monet','hokusai'];
+      for(const k of NEW_ARTISTS){
+        if(ALL_ARTIST_KEYS.includes(k) && !valid.includes(k)) valid.push(k);
+      }
+      return valid;
     } catch(_) { return ALL_ARTIST_KEYS.slice(); }
   });
   useEffect(() => {
@@ -14614,7 +16342,7 @@ export default function Paintiano() {
   const saltHistoryRef = useRef([0]);
   const saltIdxRef = useRef(0);
   const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
-  const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
+  const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT',ja:'ja'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
   // isDesktop — tightens vertical rhythm on notebook viewports so the phone-shape
   // column fits 100vh without a scrollbar. Mobile keeps the original spacing.
   const [isDesktop, setIsDesktop] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px)').matches;}catch(_){return false;}});
@@ -14656,17 +16384,18 @@ export default function Paintiano() {
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
   const STYLE_LABELS_I18N = {
-    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic'},
-    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks'},
-    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic'},
-    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD'},
-    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic'},
-    PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Bauhaus',miro:'Constelação',mondrian:'Grade',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ'},
-    zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'包豪斯',miro:'星座',mondrian:'网格',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画'},
-    zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'包浩斯',miro:'星座',mondrian:'網格',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫'},
+    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic',monet:'Light',hokusai:'Woodblock'},
+    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks',monet:'Svetlo',hokusai:'Drevoryt'},
+    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic',monet:'Licht',hokusai:'Holzschnitt'},
+    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD',monet:'Lumière',hokusai:'Estampe'},
+    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic',monet:'Luz',hokusai:'Xilografía'},
+    PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Bauhaus',miro:'Constelação',mondrian:'Grade',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ',monet:'Luz',hokusai:'Xilogravura'},
+    zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'包豪斯',miro:'星座',mondrian:'网格',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画',monet:'光',hokusai:'浮世绘'},
+    zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'包浩斯',miro:'星座',mondrian:'網格',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫',monet:'光',hokusai:'浮世繪'},
+    ja:{picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'バウハウス',miro:'星座',mondrian:'グリッド',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック',monet:'光',hokusai:'浮世絵'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
-  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
+  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',comic:'Roy Lichtenstein',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
   // button → flip to its partner; tap again → back to Mosaic. Pairing is by
@@ -14681,6 +16410,7 @@ export default function Paintiano() {
     ['bulge','wave'],
     ['spiral','arcs'],
     ['pop','comic'],
+    ['monet','hokusai'],
   ];
   // Which of each pair sits in the "A" (default-face) slot is randomised once
   // per app open, then frozen for the session (until reload). This rotates the
@@ -15058,7 +16788,7 @@ export default function Paintiano() {
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic'];
+  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','comic','monet','hokusai'];
   // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
   // shuffle across all 16. Keeps the random feature usable for Free without ever
   // accidentally landing on a locked artist (which would just paint a Pro-only
@@ -15259,7 +16989,7 @@ export default function Paintiano() {
   const [readScale, setReadScale] = useState(1);
   // Jazyk-závislý zoom: čínske znaky majú vyššiu optickú hustotu detailov,
   // preto pre zh/zhTW pridávame 15% k readScale aby boli rovnako čitateľné ako latinka.
-  const effScale = readScale * ((lang === 'zh' || lang === 'zhTW') ? 1.15 : 1);
+  const effScale = readScale * ((lang === 'zh' || lang === 'zhTW' || lang === 'ja') ? 1.15 : 1);
   // Unified active/idle chip styling for the Color·Style strip (color modes,
   // scan direction, artist styles). Premium look: the ACTIVE chip is no longer a
   // heavy solid-gold fill with dark text — instead a soft gold-tinted fill, a
@@ -15678,7 +17408,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='oneM'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='monet'&&style!=='hokusai'&&style!=='oneM'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -15702,7 +17432,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic' && style!=='monet' && style!=='hokusai' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
@@ -15710,7 +17440,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
+      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -15770,7 +17500,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
+        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
         if(!fullCanvasOverlay){
@@ -15815,6 +17545,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='monet') drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+        else if(style==='hokusai') drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
@@ -15875,10 +17607,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='comic' && lim>0){
         drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
+      if(style==='monet' && lim>0){
+        drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+      }
+      if(style==='hokusai' && lim>0){
+        drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
+      }
       if(style==='oneM' && lim>0){
         drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, phaseIndex);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'){
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='monet'&&style!=='hokusai'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -16229,7 +17967,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='oneM';
+        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
         if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
@@ -17454,7 +19192,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // length-salted to further reduce accidental collisions
     return (h^(s.length*2654435761))>>>0;
   },[]);
-  const IMGMOOD_CACHE_KEY='paintiano_imgmood_cache_v1';
+  const IMGMOOD_CACHE_KEY='paintiano_imgmood_cache_v2';
   const _imgMoodCacheGet=useCallback((hash)=>{
     // Baked sample first (offline, always free — see SAMPLE_IMGMOOD constant).
     try{
@@ -17935,6 +19673,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // DO NOT setLoadedSource('image') here — that activates classic image UI
     // (Score, Atmosphere · OFF, Rows/Columns/Spiral) which doesn't belong in MFI.
     // viewMode='image' alone is enough to render originalImgUrl as the big picture.
+    // Reset Image-AI-Compose state on MFI entry. Without this, a prior
+    // aiComposeFromImage run leaves imgComposeRef.current=true (so the draw
+    // useEffect bails on line ~1653 and the MFI canvas stays black), and
+    // imgPlayModeRef.current='compose' (so startPlay redirects MFI Play to
+    // aiComposeFromImage on line ~4986 — MFI never actually plays its own
+    // piece). MFI is its own context — clear the Image-mode refs explicitly.
+    imgComposeRef.current=false;
+    pixelRef.current=null;
+    setImgPlayMode('scan'); imgPlayModeRef.current='scan';
     setOriginalImgUrl(_src); setImgMoodThumb(null);
     // Clear the previous piece title so it doesn't linger over the new image while AI composes.
     setCurrentMood(null); setInfo(null);
@@ -17969,8 +19716,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         }
       }
       if(!parsed){
-        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
-        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+        const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
+        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: LENGTH — keep it SHORT, 20-35 seconds total at the chosen tempo (the LAST note\'s startBeat+duration MUST stay under tempo/2 beats — i.e. under 30 seconds at tempo 90); 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -18052,7 +19799,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _mfiCustomActive = () => moodFromImg && originalImgUrl && originalImgUrl!==SAMPLE_IMAGE_MFI_B64;
   const _mfiTitleBusyRef = useRef(false);
   const _mfiTranslateTitle = useCallback(async (text, targetAppLang)=>{
-    const _ln=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[targetAppLang])||'English';
+    const _ln=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[targetAppLang])||'English';
     const host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
     const isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(host);
     const eps=isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -18411,7 +20158,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
-      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
       const prompt=`A painting was scanned into raw musical material. Compose a beautiful, free-standing solo piano piece INSPIRED BY that material — do not replay it literally.
 Image material:
 - Pitch palette (most present pitch classes): ${mat.palette}
@@ -18504,7 +20251,7 @@ Composition rules:
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
-      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang]||'English';
+      const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
       const prompt=`Compose a short expressive solo piano piece inspired by this mood phrase: "${title.slice(0,80)}".
 The phrase may be written in ANY language and may be colloquial, slang or idiomatic. FIRST translate it and work out the genuine emotion it expresses (e.g. anger, irritation, joy, calm, sadness, longing) — do NOT read it word-by-word and do NOT assume it is English. THEN compose music that fits that real emotion.
 Set the "title" field to a short, natural translation of the phrase into ${_langName} that captures its meaning (Title Case, max 5 words).
@@ -18802,7 +20549,7 @@ Composition rules:
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
       const b64=dataUrl.split(',')[1];
-      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese'}[lang])||'English';
+      const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
       const prompt='Look at this image and judge the EMOTION / atmosphere of the scene. Output ONLY a single JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."} where valence is -1 (sad/dark) to 1 (happy/bright), energy is 0 (calm/still) to 1 (intense/dramatic), and title is a short mood phrase in '+_langName+' (max 4 words, Title Case).';
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
@@ -18984,10 +20731,11 @@ Composition rules:
       }catch(_){}
     }
 
-    // Mic/Music with Original source selected: route the recorded blob to the
+    // Mic with Original source selected: route the recorded blob to the
     // speakers, mute the sampler for this playthrough, paint visually as
     // usual. Falls back to piano if anything in the decode/source path failed.
-    const useOriginalListen = draftOwnerRef.current==='listen' && playSourceMicRef.current==='original' && listenPCMRef.current;
+    // Both `listen` (Music) and `sing` (Voice) record an original audio buffer.
+    const useOriginalListen = (draftOwnerRef.current==='listen' || draftOwnerRef.current==='sing') && playSourceMicRef.current==='original' && listenPCMRef.current;
     if(useOriginalListen){
       try{
         const ac=Tone.getContext().rawContext;
@@ -19424,7 +21172,7 @@ Composition rules:
   // chord immediately so there's no silent gap before the next step() tick.
   useEffect(()=>{
     if(!playing) return;
-    if(draftOwnerRef.current!=='listen') return;
+    if(draftOwnerRef.current!=='listen' && draftOwnerRef.current!=='sing') return;
     const want = (playSourceMic==='original' && !!listenPCMRef.current) ? 'original' : 'piano';
     const have = originalPlaybackRef.current ? 'original' : 'piano';
     if(want===have) return;
@@ -19697,6 +21445,13 @@ Composition rules:
     // isn't a recorded creation or is empty, so this is safe on every stop path.
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
+    // Finalise the parallel raw-audio recorder (same handler used by Music
+    // mode). Voice mode also captures original audio for the Original ⇄ Piano
+    // toggle, so this stop applies here too.
+    if(listenRecorderRef.current){
+      try{ if(listenRecorderRef.current.state!=='inactive') listenRecorderRef.current.stop(); }catch(_){}
+      listenRecorderRef.current = null;
+    }
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
     if(micAcRef.current){micAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicPainting(false);
@@ -19970,7 +21725,18 @@ Composition rules:
     setComposeMode(false);
     if(micListening){stopMicListening();}
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      // Mirror startMicListening's iOS-aware constraint negotiation so the
+      // Voice recording survives Safari's stricter audio policy. Falling back
+      // to {audio:true} on OverconstrainedError keeps the older path working.
+      let stream;
+      try{
+        const isiOS = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:!isiOS,autoGainControl:false,voiceIsolation:false},video:false});
+      }catch(ce){
+        if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
+          stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        } else { throw ce; }
+      }
       micStreamRef.current=stream;
       const ac=await getSharedAC();
       micAcRef.current=ac;
@@ -19980,6 +21746,73 @@ Composition rules:
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
+      // Parallel raw-audio capture so Voice gets the Original ⇄ Piano toggle
+      // just like Music. We share the existing listen* refs because the toggle
+      // UI and playback paths already read those — sing simply writes into
+      // them, prevailing over any earlier listen blob (last recording wins).
+      let recordStream = stream;
+      try{
+        const isiOSrec = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
+        const hp = ac.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
+        const dst = ac.createMediaStreamDestination();
+        if(isiOSrec){
+          src.connect(hp); hp.connect(dst);
+        } else {
+          const comp = ac.createDynamicsCompressor();
+          comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
+          comp.attack.value = 0.005; comp.release.value = 0.15;
+          src.connect(hp); hp.connect(comp); comp.connect(dst);
+        }
+        if(dst.stream && dst.stream.getAudioTracks().length>0) recordStream = dst.stream;
+      }catch(_){ /* fallback to raw stream — recording still works */ }
+      try{
+        const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
+        if(MR){
+          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          let mime = '';
+          for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
+          const opts = mime ? { mimeType: mime } : undefined;
+          const rec = new MR(recordStream, opts);
+          listenChunksRef.current = [];
+          // Clear any previous draft's blob — fresh sing session.
+          if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
+          listenBlobRef.current = null;
+          listenPCMRef.current = null;
+          rec.ondataavailable = (e)=>{ if(e.data && e.data.size>0) listenChunksRef.current.push(e.data); };
+          rec.onstop = ()=>{
+            const chunks = listenChunksRef.current;
+            if(!chunks || chunks.length===0){ listenChunksRef.current=[]; return; }
+            const type = rec.mimeType || mime || 'audio/webm';
+            const blob = new Blob(chunks, { type });
+            const url = URL.createObjectURL(blob);
+            listenBlobRef.current = { blob, url, type };
+            listenChunksRef.current = [];
+            setHasMicBlob(true);
+            (async()=>{
+              try{
+                const arrBuf = await blob.arrayBuffer();
+                const ac2 = Tone.getContext().rawContext;
+                const decode = (ab,ctx)=>new Promise((res,rej)=>{
+                  let done=false; const tm=setTimeout(()=>{ if(!done){done=true;rej(new Error('decode timeout'));} },10000);
+                  try{
+                    ctx.decodeAudioData(ab, b=>{ if(!done){done=true;clearTimeout(tm);res(b);} }, e=>{ if(!done){done=true;clearTimeout(tm);rej(e||new Error('decode failed'));} });
+                  }catch(_){
+                    ctx.decodeAudioData(ab).then(b=>{ if(!done){done=true;clearTimeout(tm);res(b);} }, e=>{ if(!done){done=true;clearTimeout(tm);rej(e||new Error('decode failed'));} });
+                  }
+                });
+                const buf2 = await decode(arrBuf, ac2);
+                listenPCMRef.current = buf2;
+              }catch(_){
+                listenPCMRef.current = null;
+              }
+            })();
+          };
+          rec.start(1000);
+          listenRecorderRef.current = rec;
+          setHasMicBlob(false);
+        }
+      }catch(_){ /* recording optional — pitch-track still works without it */ }
       setMicPainting(true);setMicArmed(false);setMicContext(true);
       // Frame the collapsed Color·Style strip at the top with the canvas below,
       // same as Play and compose — MIC (Voice/Music) is another "performing"
@@ -20382,6 +22215,12 @@ Composition rules:
         if(style==='comic' && chords.length>0){
           drawComicOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
+        if(style==='monet' && chords.length>0){
+          drawMonetOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
+        }
+        if(style==='hokusai' && chords.length>0){
+          drawHokusaiOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
+        }
         if(style==='oneM' && chords.length>0){
           drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, phaseIndex);
         }
@@ -20739,7 +22578,7 @@ Composition rules:
   // mid-modal so switching language in the app live-updates the open doc.
   const legalHtmlForLang = useMemo(()=>{
     if(!legalHtml) return '';
-    const map = {EN:'en', DE:'de', FR:'fr', ES:'es', SK:'sk', PT:'pt', zh:'zh', zhTW:'zhTW'};
+    const map = {EN:'en', DE:'de', FR:'fr', ES:'es', SK:'sk', PT:'pt', zh:'zh', zhTW:'zhTW', ja:'ja'};
     const code = map[lang] || 'en';
     const target = 'class="wrap" data-lang="'+code+'"';
     let h = legalHtml;
@@ -21052,6 +22891,7 @@ Composition rules:
               SK:{code:'SK',name:'Slovenčina'},
               zh:{code:'ZH',name:'中文'},
               zhTW:{code:'ZH-TW',name:'繁體中文'},
+              ja:{code:'JA',name:'日本語'},
             };
             const meta = LANG_META[lang] || {code:lang,name:lang};
             const pill = (code, active=false) => ({
@@ -21671,25 +23511,33 @@ Composition rules:
               </div>
             )}
           </>)}
-          {/* Style — hidden in image mode: an artist re-paint makes no sense when
-              the source already IS a painting; only the colour reading matters there. */}
-          {loadedSource!=='image' && (
-          <div style={{textAlign:'center',marginTop:6,marginBottom:2,fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+          {/* Style — hidden in pure Image source modes (Scan + AI Compose).
+              MFI looks similar on screen (image is shown as backdrop) but is
+              flagged moodFromImg=true — there we DO compose a piece, so the
+              artist picker belongs there. */}
+          {(loadedSource!=='image' || moodFromImg) && (
+          <div style={{position:'relative',marginTop:6,marginBottom:2}}>
+            <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:26,height:26,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+            </button>
+          </div>
           )}
-          {loadedSource!=='image' && (
+          {(loadedSource!=='image' || moodFromImg) && (
           <>
           {(()=>{
             // ── Adaptive chip grid (max 2 rows) ────────────────────────────
             // Chip count = Mosaic (if family selected) + visible pairs in
-            // current setup. Dice sits BELOW the grid (separate flex row), so
-            // it never affects the row count. Column mapping per spec:
+            // current setup. Dice sits ABOVE the grid (in the inspired-by
+            // header row), so it never affects the row count. Column mapping
+            // per spec:
             //   1→1h0d  2→2h0d  3→3h0d  4→2h2d  5→3h2d  6→3h3d
-            //   7→4h3d  8→4h4d  9→5h4d
+            //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
             const _visiblePairs = effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b));
             const _familyOn = setupArtists.includes('mosaicFamily');
             const _chipCount = (_familyOn?1:0) + _visiblePairs.length;
             // baseCols per Rasto's key (chips only): 1→1, 2→2, 3→3, 4→2,
-            // 5→3, 6→3, 7→4, 8→4, 9→5.
+            // 5→3, 6→3, 7→4, 8→4, 9→5, 10→5.
             const _baseCols = (()=>{
               switch(_chipCount){
                 case 0: case 1: return 1;
@@ -21701,19 +23549,7 @@ Composition rules:
                 default: return 5;
               }
             })();
-            // With dice as +1 extra cell, even-n cases (4, 6, 8) overflow into
-            // a 3rd row. Widen the grid by 1 column and pad an empty slot
-            // before the bottom row so the chips stay on Rasto's key layout
-            // and dice lands in the last cell of row 2.
-            const _totalCells = _chipCount + 1; // chips + dice
-            const _rows = Math.ceil(_totalCells / _baseCols);
-            const _needPlaceholder = _rows > 2;
-            const _cols = _needPlaceholder ? _baseCols + 1 : _baseCols;
-            // After this many pair tiles, drop an invisible placeholder so the
-            // remaining chips + dice flow into row 2 starting from column 1.
-            const _placeholderAfterPairIdx = _needPlaceholder
-              ? (_baseCols - (_familyOn ? 1 : 0) - 1)
-              : -1;
+            const _cols = _baseCols;
             return (
           <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
@@ -21783,7 +23619,7 @@ Composition rules:
               // Buttons show the ARTIST that inspired the style (Picasso, Klimt…)
               // rather than the technique name. Long names are shortened to a
               // single recognizable word so they fit the narrow 5-up grid cell.
-              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
               // For Free, label always shows the unlocked 'a' artist.
               const _displayKey = forcedSide || (pairLocked ? a : (activeKey || shufKey || faceKey));
               const _artFull = STYLE_INSPIRED[_displayKey];
@@ -21893,10 +23729,10 @@ Composition rules:
               const _otherKey = (faceKey===a) ? b : a;
               const nextHint = pairLocked
                 ? (randomMode
-                    ? (isOn ? 'tap to return to shuffle' : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`)
+                    ? (isOn ? ts('tapReturnShuffle','tap to return to shuffle') : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b])))
                     : (isOn
                         ? (expandedPair===pairKey ? 'tap to hide info' : 'tap to see partner')
-                        : `${STYLE_LABELS[a]} · ${STYLE_LABELS[b]} is Pro`))
+                        : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b]))))
                 : (!isOn
                     ? ''
                     : (style===faceKey
@@ -21907,18 +23743,9 @@ Composition rules:
                 <button className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
                   style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
-                {_pairIdx === _placeholderAfterPairIdx && (<div aria-hidden="true" style={{visibility:'hidden'}} />)}
               </Fragment>
               );
             })}
-            {/* Random 🎲 — last cell in the grid. When n<=3 the dice is alone
-                in row 2; span across all columns so it centers across the
-                whole row (otherwise it sits in column 1 of row 2). */}
-            <div style={{justifySelf:'center',display:'flex',gap:6,alignItems:'center',...(_chipCount<=3?{gridColumn:'1 / -1'}:{})}}>
-              <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{flexShrink:0,width:36,height:36,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
-              </button>
-            </div>
           </div>
           ); })()}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
@@ -21928,7 +23755,7 @@ Composition rules:
               affordance, so we honour that and route the tap to the paywall. */}
           {proStatus==='free' && expandedPair && (()=>{
             const [a,b] = expandedPair.split('|');
-            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein'};
+            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
             const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
             return (
               <div
@@ -22594,7 +24421,7 @@ Composition rules:
                       const title = (compositionName||recordingName||'Paintiano').trim()||'Paintiano';
                       // Mic/Music with Original selected: use the recorded blob
                       // directly — no re-render needed, original quality kept.
-                      const useOriginalBlob = draftOwnerRef.current==='listen' && playSourceMic==='original' && listenBlobRef.current?.blob;
+                      const useOriginalBlob = (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && playSourceMic==='original' && listenBlobRef.current?.blob;
                       let audioBlob = null;
                       let audioName;
                       if(useOriginalBlob){
@@ -23007,11 +24834,12 @@ Composition rules:
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
-        {/* Mic/Music source toggle — appears once the listen session has a
-            finalised audio blob and the mic is no longer live. One tap flips
-            between playing back the original recording and the synthesised
-            piano cover. Hidden during active capture and during recording. */}
-        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+        {/* Original ⇄ Piano source toggle — appears once the mic session
+            (Voice or Music) has a finalised audio blob and the mic is no
+            longer live. One tap flips between playing back the original
+            recording and the synthesised piano cover. Hidden during active
+            capture and during recording. */}
+        {hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && (
           <button className="pf-lift" onClick={()=>setPlaySourceMic(p=>p==='original'?'piano':'original')}
             title={playSourceMic==='original'?'playback: original recording — tap to switch to piano cover':'playback: piano cover — tap to switch to original recording'}
             style={{padding:'8px 14px',background:playSourceMic==='original'?'rgba(140,200,255,.16)':'rgba(201,168,76,.16)',color:playSourceMic==='original'?'#8accff':GOLD,border:'1px solid '+(playSourceMic==='original'?'rgba(100,180,255,.55)':'rgba(201,168,76,.55)'),borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:'0 3px 10px '+(playSourceMic==='original'?'rgba(100,180,255,.25)':'rgba(201,168,76,.25)')}}>
@@ -23020,9 +24848,9 @@ Composition rules:
         )}
         {/* Restart playback from chord 0 using the current source. Pairs with
             the source toggle: toggle swaps Original ⇄ Piano in place (seamless);
-            ↺ jumps back to the beginning. Visible whenever there's a Mic listen
-            draft with a finalised recording and nothing live is happening. */}
-        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+            ↺ jumps back to the beginning. Visible whenever there's a Mic draft
+            (Voice or Music) with a finalised recording. */}
+        {hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && (
           <button className="pf-lift"
             onClick={()=>{
               // Stop everything cleanly, reset position, then start fresh from idx 0.
@@ -23136,8 +24964,8 @@ Composition rules:
         {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
           const setSpd=setPlaybackSpeed;
-          // Discrete rate ladder: 0.25 steps below 1× (0.25–1), whole steps above (1–4).
-          const STEPS=[0.25,0.5,0.75,1,2,3,4];
+          // Discrete rate ladder: half-speed, normal, double-speed.
+          const STEPS=[0.5,1,2];
           const label=spd===0.5?'½×':spd===1?'1×':`${(Math.round(spd*100)/100)}×`;
           // Lock speed during recording — changing rate mid-record desyncs the
           // recorded audio from the visual painting timing in the saved file.
@@ -23480,7 +25308,7 @@ Composition rules:
                 const inf=t('tierUnlimited')||'∞';
                 const ronly=t('tierReadOnly')||'preview only';
                 const rows=[
-                  [t('tierRowArtists')||'Artists',         '8',     '16',       '16',  null],
+                  [t('tierRowArtists')||'Artists',         '9',     '18',       '18',  null],
                   [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord, null],
                   [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
                   [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],

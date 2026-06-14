@@ -6094,6 +6094,1352 @@ function comicPhaseBubble(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+// ─── Monet (Light) — 6 variants ─────────────────────────────────────────────
+// All explore light, atmosphere, plein-air painting. Outlines forbidden.
+//  0/Garden: edge-to-edge comma-stroke carpet (Givernyho záhrada)
+//  1/Pond:   horizontal water bands + lily pads (lekná na hladine)
+//  2/Cathedral: vertical haze, dawn-to-dusk light wash (Rouenská katedrála)
+//  3/Haystack: single mass against open sky (Kopa sena)
+//  4/Snow:    cool whites + pale strokes (Zasnežená krajina)
+//  5/Mist:    near-monochrome, very soft (Hmla nad riekou)
+function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const _pn = _capN(6);
+  const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
+  if(_fpick === 1){ monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 2){ monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 3){ monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 4){ monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 5){ monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode);
+}
+
+// Variant 0 — Garden: perspective path receding to vanishing point with
+// flanking flower beds. Composition (path + horizon + canopy) is variant
+// scaffolding; every coloured stroke comes from gc() so the painting still
+// follows the user's palette and the chord at that depth.
+function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 0);
+
+  // Warm sunlit paper base (physical canvas — neutral across palettes).
+  ctx.fillStyle = '#EAE7D9';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Vanishing point near top centre, path widens toward viewer.
+  const vpx = CW * 0.5;
+  const vpy = CH * 0.22;
+  const pathBase = CH * 0.95;
+  const pathHalfBase = CW * 0.18;
+
+  // Light sandy path (triangle widening to viewer).
+  ctx.fillStyle = '#D9CFAF';
+  ctx.beginPath();
+  ctx.moveTo(CW * 0.5 - 4, vpy);
+  ctx.lineTo(CW * 0.5 + 4, vpy);
+  ctx.lineTo(vpx + pathHalfBase, pathBase);
+  ctx.lineTo(vpx - pathHalfBase, pathBase);
+  ctx.closePath();
+  ctx.fill();
+
+  // Distant tree mass at horizon — chord-derived but heavily darkened so it
+  // reads as backlit foliage. Picks an early chord (background depth).
+  const bgChord = chords[0];
+  const bgNotes = bgChord && (bgChord.n || bgChord.notes);
+  if(bgNotes && bgNotes.length){
+    const bn = bgNotes[0];
+    const bm = bn.m !== undefined ? bn.m : bn;
+    const [br, bgc, bb] = gc(bm, 100);
+    // Darken to 25% lightness — feels like trees at dusk regardless of palette.
+    ctx.fillStyle = `rgb(${Math.round(br*0.25)},${Math.round(bgc*0.25+30)},${Math.round(bb*0.25)})`;
+    ctx.fillRect(0, vpy - CH * 0.04, CW, CH * 0.06);
+  }
+
+  // Flower beds — primary chord colour drives every stroke. The bed itself
+  // is a fan of comma-strokes; chord at each depth picks its own colour, so
+  // the painting "ripens" through the piece exactly as it does in other
+  // styles.
+  const STROKES = Math.min(2200, Math.max(800, lim * 35));
+  ctx.globalAlpha = 0.85;
+  for(let k = 0; k < STROKES; k++){
+    const side = rnd() < 0.5 ? -1 : 1;
+    const t = Math.pow(rnd(), 0.6);  // bias toward back (depth)
+    const py = vpy + t * (pathBase - vpy);
+    const pathHere = pathHalfBase * t;
+    const offX = pathHere + rnd() * CW * 0.42 * (0.4 + t * 0.6);
+    const x = vpx + side * offX;
+    if(x < 0 || x > CW) continue;
+    const y = py + (rnd() - 0.5) * CH * 0.10;
+    if(y < vpy + CH * 0.02 || y > CH) continue;
+
+    const ci = Math.floor(t * Math.min(lim, cn));
+    const chord = chords[Math.min(cn - 1, Math.max(0, ci))];
+    if(!chord) continue;
+    const notes = chord.n || chord.notes;
+    if(!notes || !notes.length) continue;
+    const note = notes[Math.floor(rnd() * notes.length)];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Slight lightness lift to brighten flowers vs. the dim canopy; chord
+    // hue is preserved.
+    const lift = 18;
+    const jr = Math.max(0, Math.min(255, r + lift + (rnd() - 0.5) * 50));
+    const jg = Math.max(0, Math.min(255, g + lift + (rnd() - 0.5) * 50));
+    const jb = Math.max(0, Math.min(255, b + lift + (rnd() - 0.5) * 50));
+
+    const sz = 1.5 + rnd() * 3 * (0.5 + t);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rnd() * Math.PI);
+    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, sz * 1.4, sz * 0.5, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Canopy strokes — chord colour gently tilted toward the green channel so
+  // foliage reads as foliage no matter the palette, without flattening the
+  // chord-driven hue.
+  const CANOPY = Math.min(500, Math.max(180, lim * 8));
+  ctx.globalAlpha = 0.75;
+  for(let k = 0; k < CANOPY; k++){
+    const side = rnd() < 0.5 ? -1 : 1;
+    const t = Math.pow(rnd(), 0.5);
+    const py = vpy + t * (pathBase - vpy);
+    const pathHere = pathHalfBase * t;
+    const offX = pathHere + rnd() * CW * 0.45 * (0.4 + t * 0.6);
+    const x = vpx + side * offX;
+    const y = py + (rnd() - 0.5) * CH * 0.12 - CH * 0.04;
+
+    const chord = chords[k % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Tilt toward green channel: dim R+B, lift G — keeps chord identity but
+    // suggests leafy depth.
+    const fr = Math.round(r * 0.5);
+    const fg = Math.round(g * 1.0 + 30);
+    const fb = Math.round(b * 0.5);
+    ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,fr))},${Math.max(0,Math.min(255,fg))},${Math.max(0,Math.min(255,fb))})`;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rnd() * Math.PI);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 3 + rnd() * 3, 1.2 + rnd() * 1.2, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 1 — Pond: vertical sky-reflection bands + lily clusters + willow
+// trails. Sky reflections, willows, pads, and blossoms all draw from gc().
+// Substrate is a dark teal "deep water" so the palette colours read as
+// reflections on a pond rather than as a coloured floor.
+function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 1);
+
+  // Dark teal pond base — physical element, palette-independent.
+  ctx.fillStyle = '#1F3B45';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Vertical sky reflection bands — bright lifted chord colour (sky surface
+  // catches light → high lightness boost).
+  const bands = 80;
+  const bw = CW / bands;
+  ctx.globalAlpha = 0.78;
+  for(let i = 0; i < bands; i++){
+    const x = i * bw;
+    const sw = bw + rnd() * bw * 0.4;
+    const yStart = rnd() * CH * 0.3;
+    const len = CH * (0.4 + rnd() * 0.55);
+    const ci = Math.floor((i / bands) * Math.min(lim, cn));
+    const chord = chords[Math.min(cn - 1, Math.max(0, ci))];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Lift each channel by 80 — bright reflections without losing hue.
+    const sr = Math.min(255, r + 80);
+    const sg = Math.min(255, g + 80);
+    const sb = Math.min(255, b + 90);
+    ctx.fillStyle = `rgb(${sr|0},${sg|0},${sb|0})`;
+    ctx.fillRect(x, yStart, sw, len);
+  }
+  // Dark reflective shadows — chord colour darkened heavily.
+  ctx.globalAlpha = 0.5;
+  for(let i = 0; i < 30; i++){
+    const x = rnd() * CW;
+    const w = CW * 0.04 + rnd() * CW * 0.08;
+    const y = rnd() * CH;
+    const h = CH * 0.2 + rnd() * CH * 0.4;
+    const chord = chords[i % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    // Darken to ~25% for shadow.
+    ctx.fillStyle = `rgb(${Math.round(r*0.25)},${Math.round(g*0.3+15)},${Math.round(b*0.3+10)})`;
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.globalAlpha = 1;
+
+  // Willow trailing from top — chord colour, tilted green for foliage feel.
+  for(let i = 0; i < 40; i++){
+    const x = CW * 0.7 + rnd() * CW * 0.3;
+    const len = CH * (0.25 + rnd() * 0.35);
+    const chord = chords[i % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    // Green tilt without flattening hue.
+    const wr = Math.round(r * 0.45);
+    const wg = Math.round(g * 0.95 + 25);
+    const wb = Math.round(b * 0.45);
+    const a = 0.55 + rnd() * 0.35;
+    ctx.strokeStyle = `rgba(${Math.max(0,Math.min(255,wr))},${Math.max(0,Math.min(255,wg))},${Math.max(0,Math.min(255,wb))},${a.toFixed(2)})`;
+    ctx.lineWidth = 1 + rnd() * 1.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.quadraticCurveTo(x + (rnd() - 0.5) * 30, len * 0.5, x + (rnd() - 0.5) * 20, len);
+    ctx.stroke();
+  }
+
+  // Lily pads + blossoms. Pad uses chord colour with green tilt (leaf);
+  // blossom uses the chord colour directly with a bright lift (flower).
+  const groups = 4;
+  for(let g = 0; g < groups; g++){
+    const cx = CW * (0.15 + g * 0.22 + rnd() * 0.05);
+    const cy = CH * (0.35 + rnd() * 0.5);
+    const padsInGroup = 4 + Math.floor(rnd() * 4);
+    for(let p = 0; p < padsInGroup; p++){
+      const px = cx + (rnd() - 0.5) * CW * 0.13;
+      const py = cy + (rnd() - 0.5) * CH * 0.12;
+      const pr = 8 + rnd() * 16;
+      const idx = (g * padsInGroup + p) % Math.max(1, cn);
+      const chord = chords[idx];
+      const notes = chord && (chord.n || chord.notes);
+      if(!notes || !notes.length) continue;
+      const note = notes[0];
+      const m = note.m !== undefined ? note.m : note;
+      const [r, gn, b] = gc(m, 100);
+      // Pad: green-tilted chord colour.
+      const padR = Math.round(r * 0.5);
+      const padG = Math.round(gn * 1.0 + 30);
+      const padB = Math.round(b * 0.5);
+      ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,padR))},${Math.max(0,Math.min(255,padG))},${Math.max(0,Math.min(255,padB))})`;
+      ctx.beginPath();
+      ctx.ellipse(px, py, pr, pr * 0.55, (rnd() - 0.5) * 0.6, 0, 6.2832);
+      ctx.fill();
+      // Blossom: pure chord colour, lifted to bright bloom.
+      const bloomR = Math.min(255, r + 50);
+      const bloomG = Math.min(255, gn + 40);
+      const bloomB = Math.min(255, b + 50);
+      ctx.fillStyle = `rgb(${bloomR},${bloomG},${bloomB})`;
+      ctx.beginPath();
+      ctx.arc(px + (rnd() - 0.5) * pr * 0.3, py + (rnd() - 0.5) * pr * 0.3, pr * 0.28, 0, 6.2832);
+      ctx.fill();
+    }
+  }
+}
+
+// Variant 2 — Cathedral: vertical light wash. The wash itself is built from
+// the chord sequence (top chord → top colour, mid → mid, bottom → bottom),
+// so the gradient is the palette translated to a vertical scan. Strokes
+// layer the same chord colours back on top with mild lightness modulation.
+function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 2);
+
+  // Sample three depth-points from the piece for a chord-driven gradient.
+  // The lift makes the gradient feel like daylight playing on stone, but
+  // the hues come straight from gc(), not from a hardcoded gold→violet.
+  function sampleChordColor(t, lightLift){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    const lr = Math.max(0, Math.min(255, r + lightLift));
+    const lg = Math.max(0, Math.min(255, g + lightLift));
+    const lb = Math.max(0, Math.min(255, b + lightLift));
+    return `rgb(${lr|0},${lg|0},${lb|0})`;
+  }
+
+  const grad = ctx.createLinearGradient(0, 0, 0, CH);
+  grad.addColorStop(0,    sampleChordColor(0.05, 70));   // top — bright daylight tint
+  grad.addColorStop(0.45, sampleChordColor(0.40, 25));   // upper mid
+  grad.addColorStop(0.85, sampleChordColor(0.80, -30));  // lower mid — shadow
+  grad.addColorStop(1,    sampleChordColor(0.95, -60));  // bottom — deep shadow
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Cathedral silhouette — dark transparent shadow, palette-independent
+  // physical element.
+  const towerCX = CW * 0.5;
+  const towerW = CW * 0.42;
+  const towerLeft = towerCX - towerW / 2;
+  const towerRight = towerCX + towerW / 2;
+  const towerBase = CH * 0.95;
+  const towerTopFlat = CH * 0.18;
+  const spireTop = CH * 0.04;
+
+  ctx.fillStyle = 'rgba(30, 22, 38, 0.35)';
+  ctx.beginPath();
+  ctx.moveTo(towerLeft, towerBase);
+  ctx.lineTo(towerLeft, towerTopFlat);
+  ctx.lineTo(towerCX - CW * 0.04, towerTopFlat - CH * 0.04);
+  ctx.lineTo(towerCX, spireTop);
+  ctx.lineTo(towerCX + CW * 0.04, towerTopFlat - CH * 0.04);
+  ctx.lineTo(towerRight, towerTopFlat);
+  ctx.lineTo(towerRight, towerBase);
+  ctx.closePath();
+  ctx.fill();
+
+  // Painterly vertical strokes — each stroke uses the chord assigned to its
+  // x-position, with lightness modulated by its y (bright at top, shadowed
+  // toward bottom). No blend toward a hardcoded gradient — the chord IS
+  // the colour.
+  const STROKES = Math.min(2400, Math.max(900, lim * 40));
+  ctx.globalAlpha = 0.65;
+  for(let k = 0; k < STROKES; k++){
+    const x = rnd() * CW;
+    const y = rnd() * CH;
+    const lenY = 30 + rnd() * 120;
+    const w = 1 + rnd() * 3;
+    const ci = Math.floor((x / CW) * Math.min(lim, cn)) % Math.max(1, cn);
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[Math.floor(rnd() * notes.length)];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+
+    // Lightness modulation by y: +50 at top, -50 at bottom.
+    const t = y / CH;
+    const yLift = Math.round((1 - t * 1.4) * 50);
+    const jr = Math.max(0, Math.min(255, r + yLift + (rnd() - 0.5) * 25));
+    const jg = Math.max(0, Math.min(255, g + yLift + (rnd() - 0.5) * 25));
+    const jb = Math.max(0, Math.min(255, b + yLift + (rnd() - 0.5) * 25));
+    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
+    ctx.fillRect(x, y, w, lenY);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 3 — Haystack: dome silhouette + sky/field bands. Sky uses bright
+// lifted chord colour (sunset wash from early chords), field uses darkened
+// chord colour (cool ground from mid chords), dome uses mid-chord colour.
+// Strokes follow chord directly with a per-side lightness modulation
+// (lit / shadow), no hardcoded warm/cool anchor.
+function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 3);
+
+  function chordColor(t){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    return gc(m, 100);
+  }
+
+  // Sky gradient — bright lifted version of the first quarter of the piece.
+  const [skyTopR, skyTopG, skyTopB] = chordColor(0.05);
+  const [skyMidR, skyMidG, skyMidB] = chordColor(0.20);
+  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.7);
+  sky.addColorStop(0,
+    `rgb(${Math.min(255, skyTopR + 70)},${Math.min(255, skyTopG + 70)},${Math.min(255, skyTopB + 70)})`);
+  sky.addColorStop(0.6,
+    `rgb(${Math.min(255, skyMidR + 40)},${Math.min(255, skyMidG + 30)},${Math.min(255, skyMidB + 30)})`);
+  const [horR, horG, horB] = chordColor(0.50);
+  sky.addColorStop(1,
+    `rgb(${Math.min(255, horR + 10)},${Math.min(255, horG)},${Math.min(255, horB - 10)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH * 0.7);
+
+  // Field gradient — darkened later-chord colour.
+  const [fldTopR, fldTopG, fldTopB] = chordColor(0.70);
+  const [fldBotR, fldBotG, fldBotB] = chordColor(0.95);
+  const field = ctx.createLinearGradient(0, CH * 0.65, 0, CH);
+  field.addColorStop(0,
+    `rgb(${Math.round(fldTopR * 0.45)},${Math.round(fldTopG * 0.45)},${Math.round(fldTopB * 0.55 + 20)})`);
+  field.addColorStop(1,
+    `rgb(${Math.round(fldBotR * 0.25)},${Math.round(fldBotG * 0.25)},${Math.round(fldBotB * 0.35 + 10)})`);
+  ctx.fillStyle = field;
+  ctx.fillRect(0, CH * 0.65, CW, CH * 0.35);
+
+  // Distant tree line — very dark chord colour.
+  ctx.fillStyle = `rgb(${Math.round(horR * 0.3)},${Math.round(horG * 0.3)},${Math.round(horB * 0.4 + 20)})`;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.65);
+  for(let x = 0; x <= CW; x += CW / 30){
+    ctx.lineTo(x, CH * 0.65 + (rnd() - 0.5) * CH * 0.025 - CH * 0.01);
+  }
+  ctx.lineTo(CW, CH * 0.7);
+  ctx.lineTo(0, CH * 0.7);
+  ctx.closePath();
+  ctx.fill();
+
+  // Haystack dome — mid-chord colour, dim warm-shifted.
+  const [stackR, stackG, stackB] = chordColor(0.55);
+  ctx.fillStyle = `rgb(${Math.round(stackR * 0.6 + 30)},${Math.round(stackG * 0.45)},${Math.round(stackB * 0.35)})`;
+  const hx = CW * 0.52;
+  const hyBase = CH * 0.7;
+  const hw = CW * 0.34;
+  const hh = CH * 0.32;
+  ctx.beginPath();
+  ctx.moveTo(hx - hw / 2, hyBase);
+  ctx.bezierCurveTo(hx - hw * 0.55, hyBase - hh * 0.6, hx - hw * 0.2, hyBase - hh, hx, hyBase - hh);
+  ctx.bezierCurveTo(hx + hw * 0.2, hyBase - hh, hx + hw * 0.55, hyBase - hh * 0.6, hx + hw / 2, hyBase);
+  ctx.closePath();
+  ctx.fill();
+
+  // Painterly strokes on the haystack — chord colour, lit (left) vs. shadow
+  // (right) side via lightness multiplier only. Hue stays chord-driven.
+  const STACK = Math.min(900, Math.max(300, lim * 14));
+  for(let k = 0; k < STACK; k++){
+    const ang = Math.PI + rnd() * Math.PI;
+    const radR = Math.pow(rnd(), 0.5);
+    const dx = Math.cos(ang) * (hw / 2) * radR;
+    const dy = Math.sin(ang) * hh * radR;
+    const px = hx + dx;
+    const py = hyBase + dy;
+    const ci = k % Math.max(1, cn);
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Lit side ~85% brightness, shadow side ~40% — hue preserved.
+    const lightness = (dx < 0 ? 0.95 : 0.5) + (1 - radR) * 0.15;
+    const finalR = Math.round(r * lightness);
+    const finalG = Math.round(g * lightness);
+    const finalB = Math.round(b * lightness);
+    ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,finalR))},${Math.max(0,Math.min(255,finalG))},${Math.max(0,Math.min(255,finalB))})`;
+    ctx.lineWidth = 1.5 + rnd() * 1.5;
+    ctx.lineCap = 'round';
+    const slen = 3 + rnd() * 5;
+    const sang = ang + Math.PI / 2 + (rnd() - 0.5) * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + Math.cos(sang) * slen, py + Math.sin(sang) * slen);
+    ctx.stroke();
+  }
+
+  // Field strokes — chord colour darkened to ~50% so the field reads as
+  // cool ground while still reflecting the palette.
+  const FIELD = Math.min(1200, Math.max(400, lim * 18));
+  for(let k = 0; k < FIELD; k++){
+    const y = CH * 0.7 + rnd() * CH * 0.3;
+    const x = rnd() * CW;
+    const len = 6 + rnd() * 16;
+    const note = chords[Math.floor(rnd() * cn) % Math.max(1, cn)];
+    const ns = note && (note.n || note.notes);
+    if(!ns || !ns.length) continue;
+    const nt = ns[0];
+    const m = nt.m !== undefined ? nt.m : nt;
+    const v = nt.v !== undefined ? nt.v : 100;
+    const [r, g, b] = gc(m, v);
+    ctx.strokeStyle = `rgb(${Math.round(r*0.45)},${Math.round(g*0.45)},${Math.round(b*0.55 + 30)})`;
+    ctx.lineWidth = 1.5 + rnd() * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y + (rnd() - 0.5) * 2);
+    ctx.stroke();
+  }
+}
+
+// Variant 4 — Snow: chord-driven cool sky + tinted snow + dark conifers.
+// The sky and snow both carry a subtle chord tint so the palette is visible
+// even in a "white" scene; drift shadows and tree flickers use chord colour
+// directly.
+function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 4);
+
+  function chordColor(t){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    return gc(m, 100);
+  }
+
+  // Sky — light desaturated wash carrying a chord tint.
+  const [skyR, skyG, skyB] = chordColor(0.10);
+  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.6);
+  sky.addColorStop(0,
+    `rgb(${Math.round(skyR * 0.25 + 180)},${Math.round(skyG * 0.25 + 185)},${Math.round(skyB * 0.25 + 195)})`);
+  sky.addColorStop(1,
+    `rgb(${Math.round(skyR * 0.3 + 155)},${Math.round(skyG * 0.3 + 160)},${Math.round(skyB * 0.3 + 175)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH * 0.6);
+
+  // Snow ground — chord-tinted off-white.
+  const [grndR, grndG, grndB] = chordColor(0.55);
+  ctx.fillStyle =
+    `rgb(${Math.round(grndR * 0.12 + 220)},${Math.round(grndG * 0.12 + 225)},${Math.round(grndB * 0.12 + 230)})`;
+  ctx.fillRect(0, CH * 0.6, CW, CH * 0.4);
+
+  // Drift shadows — chord colour, darkened ~40% so cool palettes give cool
+  // shadows, warm palettes give warm shadows.
+  ctx.globalAlpha = 0.55;
+  for(let k = 0; k < 280; k++){
+    const x = rnd() * CW;
+    const y = CH * 0.62 + rnd() * CH * 0.36;
+    const w = 20 + rnd() * 60;
+    const h = 3 + rnd() * 8;
+    const chord = chords[k % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const [r, g, b] = gc(m, 100);
+    const sr = Math.round(r * 0.4 + 30);
+    const sg = Math.round(g * 0.4 + 40);
+    const sb = Math.round(b * 0.45 + 60);
+    const a = 0.35 + rnd() * 0.4;
+    ctx.fillStyle = `rgba(${sr},${sg},${sb},${a.toFixed(2)})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w / 2, h / 2, 0, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Dark conifer tree silhouettes — heavily darkened mid-chord, palette
+  // visible only as a tinted shadow.
+  const [trR, trG, trB] = chordColor(0.40);
+  const trees = 8;
+  for(let t = 0; t < trees; t++){
+    const tx = (t / trees) * CW + rnd() * CW * 0.06;
+    const th = CH * (0.10 + rnd() * 0.20);
+    const tw = CW * (0.015 + rnd() * 0.025);
+    ctx.fillStyle =
+      `rgb(${Math.round(trR * 0.18 + 12)},${Math.round(trG * 0.18 + 18)},${Math.round(trB * 0.22 + 18)})`;
+    ctx.fillRect(tx - tw * 0.2, CH * 0.6 - th, tw * 0.4, th);
+    ctx.beginPath();
+    ctx.moveTo(tx - tw,     CH * 0.6 - th * 0.3);
+    ctx.lineTo(tx + tw,     CH * 0.6 - th * 0.3);
+    ctx.lineTo(tx,          CH * 0.6 - th * 1.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(tx - tw * 1.4, CH * 0.6 - th * 0.05);
+    ctx.lineTo(tx + tw * 1.4, CH * 0.6 - th * 0.05);
+    ctx.lineTo(tx,            CH * 0.6 - th * 0.9);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Chord-driven flickers on the snow — softly lifted (snow reflects) but
+  // hue intact, so palette colours speckle visibly across the white field.
+  const FLICKS = Math.min(900, Math.max(300, lim * 14));
+  ctx.globalAlpha = 0.6;
+  for(let k = 0; k < FLICKS; k++){
+    const x = rnd() * CW;
+    const y = CH * 0.6 + rnd() * CH * 0.4;
+    const chord = chords[k % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Lift by 50 — bright but not white-washed; hue still readable.
+    const wr = Math.min(255, r + 50);
+    const wg = Math.min(255, g + 50);
+    const wb = Math.min(255, b + 60);
+    ctx.fillStyle = `rgb(${wr|0},${wg|0},${wb|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 1.5 + rnd() * 3, 0.8 + rnd() * 1.5, rnd() * Math.PI, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Light snowflakes — physical white particles.
+  ctx.fillStyle = '#fff';
+  for(let f = 0; f < 80; f++){
+    ctx.beginPath();
+    ctx.arc(rnd() * CW, rnd() * CH * 0.65, 0.6 + rnd() * 1.4, 0, 6.2832);
+    ctx.fill();
+  }
+}
+
+// Variant 5 — Mist: pastel horizontal bands. Sky and water both carry a
+// strong chord tint; tree-line silhouette and veils all chord-driven.
+// Wash toward white was reduced — mist still feels diffuse but the palette
+// stays present.
+function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 5);
+
+  function chordColor(t){
+    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    return gc(m, 100);
+  }
+
+  // Sky — lifted version of first-third chord. Wash is 50/50 (chord + light
+  // pastel) rather than 80/20 toward white, so the palette is clearly
+  // present.
+  const [skyR, skyG, skyB] = chordColor(0.12);
+  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.5);
+  sky.addColorStop(0,
+    `rgb(${Math.round(skyR * 0.5 + 130)},${Math.round(skyG * 0.5 + 130)},${Math.round(skyB * 0.5 + 140)})`);
+  sky.addColorStop(1,
+    `rgb(${Math.round(skyR * 0.55 + 100)},${Math.round(skyG * 0.55 + 105)},${Math.round(skyB * 0.55 + 120)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH * 0.5);
+
+  // Water — mirror of sky, mid-chord based, slightly darker.
+  const [watR, watG, watB] = chordColor(0.55);
+  const water = ctx.createLinearGradient(0, CH * 0.5, 0, CH);
+  water.addColorStop(0,
+    `rgb(${Math.round(watR * 0.55 + 90)},${Math.round(watG * 0.55 + 95)},${Math.round(watB * 0.55 + 110)})`);
+  water.addColorStop(1,
+    `rgb(${Math.round(watR * 0.6 + 60)},${Math.round(watG * 0.6 + 65)},${Math.round(watB * 0.6 + 85)})`);
+  ctx.fillStyle = water;
+  ctx.fillRect(0, CH * 0.5, CW, CH * 0.5);
+
+  // Faint tree-line at horizon — mid-chord darkened.
+  ctx.globalAlpha = 0.35;
+  const [hrR, hrG, hrB] = chordColor(0.45);
+  ctx.fillStyle =
+    `rgb(${Math.round(hrR * 0.5 + 40)},${Math.round(hrG * 0.5 + 45)},${Math.round(hrB * 0.55 + 55)})`;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.5);
+  for(let x = 0; x <= CW; x += CW / 40){
+    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 - CH * 0.015);
+  }
+  ctx.lineTo(CW, CH * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mirrored into water (paler).
+  ctx.globalAlpha = 0.22;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.5);
+  for(let x = 0; x <= CW; x += CW / 40){
+    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 + CH * 0.015);
+  }
+  ctx.lineTo(CW, CH * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Soft horizontal painterly veils — chord colour, lifted modestly.
+  ctx.globalAlpha = 0.28;
+  for(let i = 0; i < Math.min(80, Math.max(40, lim)); i++){
+    const y = rnd() * CH;
+    const w = CW * (0.3 + rnd() * 0.5);
+    const x = (rnd() - 0.3) * CW;
+    const h = CH * (0.015 + rnd() * 0.04);
+    const chord = chords[i % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Lift by ~50 — pastel without washing out the chord.
+    const fr = Math.min(255, r + 50);
+    const fg = Math.min(255, g + 50);
+    const fb = Math.min(255, b + 60);
+    ctx.fillStyle = `rgb(${fr|0},${fg|0},${fb|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y, w / 2, h / 2, 0, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Water ripple short strokes — water chord colour with a slight lift.
+  ctx.globalAlpha = 0.55;
+  for(let k = 0; k < 200; k++){
+    const y = CH * 0.5 + rnd() * CH * 0.5;
+    const x = rnd() * CW;
+    const len = 6 + rnd() * 16;
+    const rr = Math.min(255, Math.round(watR * 0.5 + 110));
+    const gg = Math.min(255, Math.round(watG * 0.5 + 115));
+    const bb = Math.min(255, Math.round(watB * 0.5 + 130));
+    const a = 0.4 + rnd() * 0.4;
+    ctx.strokeStyle = `rgba(${rr},${gg},${bb},${a.toFixed(2)})`;
+    ctx.lineWidth = 0.8 + rnd() * 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Soft sun glow near horizon centre — physical highlight (warm regardless
+  // of palette, like a real sun). Kept low so the chord palette still reads.
+  const glowGrad = ctx.createRadialGradient(CW * 0.5, CH * 0.5, 4, CW * 0.5, CH * 0.5, CW * 0.16);
+  glowGrad.addColorStop(0, 'rgba(255,230,200,0.45)');
+  glowGrad.addColorStop(1, 'rgba(255,230,200,0)');
+  ctx.fillStyle = glowGrad;
+  ctx.fillRect(0, CH * 0.35, CW, CH * 0.3);
+}
+
+// ─── Hokusai (Woodblock) — 6 variants ───────────────────────────────────────
+// All flat colour fields + Prussian-blue contours, no gradients. Beige paper
+// ground throughout. Woodblock rules: every region is one solid colour, hard
+// edges, dark contour line.
+//  0/Wave:    Great Wave at Kanagawa — layered sea + foam claws
+//  1/Fuji:    Red/grey Mt Fuji silhouette + sky bands
+//  2/Blossom: Plum/cherry branch with circular flowers
+//  3/Storm:   Lightning zigzag through dark sky
+//  4/Rain:    Diagonal rain lines + muted village band
+//  5/Bridge:  Drum bridge arch over water + reeds
+function drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const _pn = _capN(6);
+  const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
+  if(_fpick === 1){ hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 2){ hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 3){ hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 4){ hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 5){ hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode);
+}
+
+// ── Shared palette + helpers ──
+const HOKUSAI_PRUSSIAN = '#1B3A5B';
+const HOKUSAI_FOAM = '#F7F4EA';
+const HOKUSAI_PAPER = '#EAE3CE';
+// Convert any [r,g,b] toward the woodblock palette: drop saturation, blend
+// with Prussian to keep all panels visually unified.
+function _hokusaiMute(r, g, b, blendAmt, dim){
+  const ba = blendAmt == null ? 0.4 : blendAmt;
+  const dm = dim == null ? 1 : dim;
+  const mr = Math.round((r * (1 - ba) + 27 * ba) * dm);
+  const mg = Math.round((g * (1 - ba) + 58 * ba) * dm);
+  const mb = Math.round((b * (1 - ba) + 91 * ba) * dm);
+  return `rgb(${Math.max(0,Math.min(255,mr))},${Math.max(0,Math.min(255,mg))},${Math.max(0,Math.min(255,mb))})`;
+}
+
+// Variant 0 — Wave (Great Wave at Kanagawa).
+function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 0);
+  // Clear canvas — we'll paint waves first then fill paper UNDER them via
+  // destination-over composite, so background layers can slip in behind the
+  // foreground wave without being blocked by an already-painted ground.
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Build melody points from top notes. To get the dramatic Kanagawa peak,
+  // we AMPLIFY pitch variation: average pitch sets the baseline, deviations
+  // from it get exaggerated so the highest notes leap up sharply.
+  let pitchSum = 0, pitchCount = 0;
+  const rawPitches = [];
+  let maxChordSize = 1;
+  for(let i = 0; i < lim; i++){
+    const chord = chords[i];
+    if(!chord) continue;
+    const notes = chord.n || chord.notes;
+    if(!notes || !notes.length) continue;
+    let topM = 0, topNote = notes[0];
+    for(const n of notes){
+      const m = n.m !== undefined ? n.m : n;
+      if(m > topM){ topM = m; topNote = n; }
+    }
+    if(notes.length > maxChordSize) maxChordSize = notes.length;
+    pitchSum += topM;
+    pitchCount++;
+    rawPitches.push({ topM, topNote, chord, idx: i, origIdx: rawPitches.length });
+  }
+  if(rawPitches.length < 2) return;
+  const avgPitch = pitchSum / pitchCount;
+
+  const points = [];
+  for(let i = 0; i < rawPitches.length; i++){
+    const r = rawPitches[i];
+    const x = (rawPitches.length > 1 ? (i / (rawPitches.length - 1)) : 0.5) * CW;
+    // Center deviation from average, amplify 2.5×, then map to canvas range.
+    // baseline at 0.62 leaves room for crests to stab into the upper half.
+    const dev = (r.topM - avgPitch) / 12;  // semitones above/below mean, scaled to 1 octave units
+    const amplified = Math.max(-1.4, Math.min(1.4, dev * 1.6));
+    const y = CH * 0.62 - amplified * CH * 0.28;
+    points.push({ x, y, topNote: r.topNote, chord: r.chord, idx: r.idx });
+  }
+
+  const depthLayers = Math.max(2, Math.min(4, 1 + Math.floor(maxChordSize / 2)));
+  const layerStep = CH * 0.10;
+
+  function tracePath(yOff){
+    ctx.moveTo(points[0].x, points[0].y + yOff);
+    for(let i = 1; i < points.length - 1; i++){
+      const xc = (points[i].x + points[i+1].x) / 2;
+      const yc = (points[i].y + points[i+1].y) / 2 + yOff;
+      ctx.quadraticCurveTo(points[i].x, points[i].y + yOff, xc, yc);
+    }
+    ctx.lineTo(points[points.length-1].x, points[points.length-1].y + yOff);
+  }
+
+  // Composite trick: background layers drawn AFTER foreground using
+  // 'destination-over' so they slip in BEHIND the foreground waves rather
+  // than getting hidden by them. Without this, the foreground "fill to
+  // canvas bottom" prekryje všetky hlbšie vrstvy a vidieť len jednu vlnu.
+  // Draw foreground (layer 0) first as normal, then deeper layers behind.
+  for(let layer = 0; layer <= depthLayers; layer++){
+    const yOff = layer * layerStep;
+    const sampleIdx = Math.min(points.length - 1,
+      Math.max(0, Math.floor((points.length / (depthLayers + 1)) * (depthLayers - layer))));
+    const samplePt = points[sampleIdx];
+    const note = samplePt.topNote;
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    const dim = 1 - layer * 0.10;
+    const blend = 0.30 + layer * 0.10;
+
+    // Foreground (layer 0) draws normally on top. Deeper layers draw BEHIND
+    // already-painted pixels so foreground stays dominant but background
+    // remains visible above the foreground's wave line.
+    ctx.globalCompositeOperation = layer === 0 ? 'source-over' : 'destination-over';
+
+    ctx.beginPath();
+    tracePath(yOff);
+    ctx.lineTo(CW, CH);
+    ctx.lineTo(0, CH);
+    ctx.closePath();
+    ctx.fillStyle = _hokusaiMute(r, g, b, blend, dim);
+    ctx.fill();
+
+    ctx.beginPath();
+    tracePath(yOff);
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = layer === 0 ? 3.8 : (2.6 - layer * 0.3);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+  // Reset composite back to default for foam claws (need source-over).
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Paper background must be repainted underneath everything (destination-over
+  // sees the already-painted paper as opaque, but the wave fills only the area
+  // beneath their curve — so above the highest wave the paper is still visible
+  // naturally).
+
+  // Foam claws — on local minima (peaks) of the FOREGROUND wave only.
+  const crests = [];
+  for(let i = 2; i < points.length - 2; i++){
+    if(points[i].y < points[i-1].y && points[i].y < points[i+1].y){
+      const note = points[i].topNote;
+      const v = note.v !== undefined ? note.v : 80;
+      // Peak prominence — how much lower y is vs neighbours.
+      const prom = Math.max(0, (points[i-1].y + points[i+1].y) / 2 - points[i].y);
+      crests.push({ ...points[i], priority: v * 0.4 + prom * 2 });
+    }
+  }
+  crests.sort((a, b) => b.priority - a.priority);
+  // Keep more crests — Liszt-scale melodies have rich peak structure.
+  const topCrests = crests.slice(0, Math.min(8, crests.length));
+
+  for(const crest of topCrests){
+    // Foam fans outward in a Kanagawa-style claw — 8-10 droplets.
+    const baseAngle = -1.1 + (rnd() - 0.5) * 0.5;
+    const dropCount = 8 + Math.floor(rnd() * 3);
+    for(let k = 0; k < dropCount; k++){
+      const r = 13 - k * 1.1;
+      if(r < 1) break;
+      const angle = baseAngle + k * 0.13;
+      const dist = k * 6;
+      const fx = crest.x + Math.cos(angle) * dist;
+      const fy = crest.y - 5 + Math.sin(angle) * dist;
+      ctx.fillStyle = HOKUSAI_FOAM;
+      ctx.beginPath();
+      ctx.arc(fx, fy, r, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+    }
+    // Tiny scatter droplets for spray.
+    for(let s = 0; s < 5; s++){
+      const sa = baseAngle + (rnd() - 0.5) * 1.5;
+      const sd = 30 + rnd() * 50;
+      const sx = crest.x + Math.cos(sa) * sd;
+      const sy = crest.y - 5 + Math.sin(sa) * sd;
+      const sr = 1.5 + rnd() * 2.5;
+      ctx.fillStyle = HOKUSAI_FOAM;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+    }
+  }
+
+  // Paper backdrop — painted UNDER everything via destination-over, so it
+  // fills only the remaining transparent area (above the highest wave).
+  ctx.globalCompositeOperation = 'destination-over';
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// Variant 1 — Mt Fuji silhouette + sky bands.
+function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 1);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Sky bands — horizontal strips, each band a chord-derived flat colour.
+  const bands = Math.min(8, Math.max(3, Math.floor(lim / 8)));
+  const bandH = CH * 0.6 / bands;
+  for(let i = 0; i < bands; i++){
+    const ci = Math.floor((i / bands) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    const blend = 0.25 + (i / bands) * 0.3;  // darker toward top
+    ctx.fillStyle = _hokusaiMute(r, g, b, blend, 1);
+    ctx.fillRect(0, i * bandH, CW, bandH + 1);  // +1 to avoid hairlines
+  }
+
+  // Fuji silhouette — symmetric trapezoid with concave shoulders.
+  const peakX = CW * 0.5 + (rnd() - 0.5) * CW * 0.05;
+  const peakY = CH * 0.18;
+  const baseY = CH * 0.7;
+  const baseHalfW = CW * 0.42;
+  // Sample a "mountain colour" from a middle chord.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+
+  ctx.beginPath();
+  ctx.moveTo(peakX - baseHalfW, baseY);
+  // Left flank — slight inward curve near peak.
+  ctx.quadraticCurveTo(peakX - baseHalfW * 0.4, baseY * 0.55, peakX - CW * 0.07, peakY + 8);
+  ctx.lineTo(peakX + CW * 0.07, peakY + 8);
+  // Right flank.
+  ctx.quadraticCurveTo(peakX + baseHalfW * 0.4, baseY * 0.55, peakX + baseHalfW, baseY);
+  ctx.closePath();
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.55, 0.85);
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 2.2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Snow cap — flat white triangle at peak.
+  ctx.beginPath();
+  ctx.moveTo(peakX - CW * 0.07, peakY + 8);
+  ctx.lineTo(peakX + CW * 0.07, peakY + 8);
+  ctx.lineTo(peakX + (rnd()-0.5) * CW * 0.04, peakY + CH * 0.07);
+  ctx.lineTo(peakX - CW * 0.04, peakY + CH * 0.05);
+  ctx.closePath();
+  ctx.fillStyle = HOKUSAI_FOAM;
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Foreground field — flat earth band.
+  ctx.fillStyle = _hokusaiMute(120, 90, 50, 0.3, 0.8);
+  ctx.fillRect(0, baseY, CW, CH - baseY);
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(0, baseY); ctx.lineTo(CW, baseY); ctx.stroke();
+}
+
+// Variant 2 — Plum/Cherry blossom branch.
+function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 2);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Branch — thick curved line entering from bottom-left or right.
+  const fromLeft = (ss & 1) === 0;
+  const startX = fromLeft ? 0 : CW;
+  const startY = CH * (0.7 + rnd() * 0.2);
+  const endX = fromLeft ? CW * (0.6 + rnd() * 0.3) : CW * (0.1 + rnd() * 0.3);
+  const endY = CH * (0.15 + rnd() * 0.2);
+
+  // Bezier control points.
+  const c1x = (startX + endX) * 0.5 + (fromLeft ? CW * 0.1 : -CW * 0.1);
+  const c1y = startY - (startY - endY) * 0.3;
+  const c2x = endX + (fromLeft ? -CW * 0.05 : CW * 0.05);
+  const c2y = endY + (startY - endY) * 0.2;
+
+  // Branch trunk — flat dark.
+  ctx.strokeStyle = '#3D2412';
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.bezierCurveTo(c1x, c1y, c2x, c2y, endX, endY);
+  ctx.stroke();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Sub-branches — short forks at jittered points along the main branch.
+  const forks = 4 + Math.floor(rnd() * 4);
+  for(let f = 0; f < forks; f++){
+    const t = 0.2 + rnd() * 0.7;
+    // Approximate point on bezier curve.
+    const ot = 1 - t;
+    const bx = ot*ot*ot*startX + 3*ot*ot*t*c1x + 3*ot*t*t*c2x + t*t*t*endX;
+    const by = ot*ot*ot*startY + 3*ot*ot*t*c1y + 3*ot*t*t*c2y + t*t*t*endY;
+    const ang = (rnd() - 0.5) * 1.6 + (fromLeft ? -1 : -2);
+    const flen = 30 + rnd() * 60;
+    const fx = bx + Math.cos(ang) * flen;
+    const fy = by + Math.sin(ang) * flen;
+    ctx.strokeStyle = '#3D2412';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(fx, fy); ctx.stroke();
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Blossoms — circular flowers along branch using chord colours.
+  const blossomCount = Math.min(60, Math.max(12, lim));
+  for(let i = 0; i < blossomCount; i++){
+    const ci = i % lim;
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[i % Math.max(1, notes.length)] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    // Pink-warm blossom: blend toward soft pink.
+    const br = Math.round(r * 0.4 + 230);
+    const bg = Math.round(g * 0.3 + 170);
+    const bbv = Math.round(b * 0.3 + 180);
+
+    // Position roughly along branch.
+    const t = 0.1 + rnd() * 0.9;
+    const ot = 1 - t;
+    const bx = ot*ot*ot*startX + 3*ot*ot*t*c1x + 3*ot*t*t*c2x + t*t*t*endX;
+    const by = ot*ot*ot*startY + 3*ot*ot*t*c1y + 3*ot*t*t*c2y + t*t*t*endY;
+    // Cluster around branch.
+    const cx = bx + (rnd() - 0.5) * 70;
+    const cy = by + (rnd() - 0.5) * 70 - 10;
+    const rad = 5 + rnd() * 8;
+
+    // 5-petal flower: 5 overlapping circles around a centre.
+    for(let p = 0; p < 5; p++){
+      const pang = (p / 5) * Math.PI * 2;
+      const px = cx + Math.cos(pang) * rad * 0.55;
+      const py = cy + Math.sin(pang) * rad * 0.55;
+      ctx.fillStyle = `rgb(${Math.min(255,br)},${Math.min(255,bg)},${Math.min(255,bbv)})`;
+      ctx.beginPath();
+      ctx.arc(px, py, rad * 0.6, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    // Yellow centre.
+    ctx.fillStyle = '#E8C24A';
+    ctx.beginPath();
+    ctx.arc(cx, cy, rad * 0.25, 0, 6.2832);
+    ctx.fill();
+  }
+}
+
+// Variant 3 — Storm: lightning zigzag through dark sky.
+function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 3);
+
+  // Dark stormy sky — sample dominant chord, push very dark.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  // Very dim sky.
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.7, 0.4);
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Horizontal storm cloud bands across top half.
+  for(let i = 0; i < 4; i++){
+    const ci = Math.floor((i / 4) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:100;
+    const [r, g, b] = gc(m, v);
+    const y = i * CH * 0.13;
+    const h = CH * 0.13;
+    ctx.fillStyle = _hokusaiMute(r, g, b, 0.6 + i * 0.05, 0.55 - i * 0.05);
+    // Wavy bottom edge.
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(CW, y);
+    ctx.lineTo(CW, y + h);
+    for(let x = CW; x >= 0; x -= CW / 12){
+      ctx.lineTo(x, y + h + (rnd() - 0.5) * 14);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  // Lightning bolts — main zigzag from cloud to ground, plus a couple smaller.
+  function drawBolt(startX, startY, endY, jaggedness){
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    let cx = startX;
+    let cy = startY;
+    const segs = 8 + Math.floor(rnd() * 4);
+    const dy = (endY - startY) / segs;
+    for(let s = 0; s < segs; s++){
+      cy += dy;
+      cx += (rnd() - 0.5) * jaggedness;
+      ctx.lineTo(cx, cy);
+    }
+    // White core.
+    ctx.strokeStyle = HOKUSAI_FOAM;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  drawBolt(CW * (0.3 + rnd() * 0.4), CH * 0.4, CH * 0.85, 50);
+  if(rnd() < 0.7) drawBolt(CW * (0.1 + rnd() * 0.2), CH * 0.45, CH * 0.7, 30);
+  if(rnd() < 0.5) drawBolt(CW * (0.65 + rnd() * 0.2), CH * 0.5, CH * 0.78, 28);
+
+  // Dark land silhouette at bottom.
+  ctx.fillStyle = HOKUSAI_PRUSSIAN;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.85);
+  for(let x = 0; x <= CW; x += CW / 18){
+    ctx.lineTo(x, CH * 0.85 + (rnd() - 0.5) * 18);
+  }
+  ctx.lineTo(CW, CH);
+  ctx.lineTo(0, CH);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Variant 4 — Rain: diagonal lines + muted village band.
+function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 4);
+  // Soft grey paper.
+  ctx.fillStyle = '#D8D4C2';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Distant mountain silhouette band.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.55, 0.7);
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.5);
+  for(let x = 0; x <= CW; x += CW / 16){
+    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * 30 - 10);
+  }
+  ctx.lineTo(CW, CH * 0.7);
+  ctx.lineTo(0, CH * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Village strip — flat brown/grey houses.
+  const houseRow = CH * 0.72;
+  const houseH = CH * 0.1;
+  const houseCount = 5 + Math.floor(rnd() * 4);
+  const hw = CW / houseCount;
+  for(let i = 0; i < houseCount; i++){
+    const ci = Math.floor((i / houseCount) * lim);
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const [r, g, b] = gc(m, 90);
+    const hx = i * hw + hw * 0.1;
+    const hyTop = houseRow;
+    const hwInner = hw * 0.8;
+    // House body.
+    ctx.fillStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
+    ctx.fillRect(hx, hyTop, hwInner, houseH);
+    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+    ctx.lineWidth = 1.3;
+    ctx.strokeRect(hx, hyTop, hwInner, houseH);
+    // Roof — triangle.
+    ctx.fillStyle = '#3D2412';
+    ctx.beginPath();
+    ctx.moveTo(hx - 4, hyTop);
+    ctx.lineTo(hx + hwInner / 2, hyTop - houseH * 0.55);
+    ctx.lineTo(hx + hwInner + 4, hyTop);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Water at bottom.
+  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.6, 0.55);
+  ctx.fillRect(0, houseRow + houseH, CW, CH - houseRow - houseH);
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(0, houseRow + houseH);
+  ctx.lineTo(CW, houseRow + houseH);
+  ctx.stroke();
+
+  // Rain — diagonal lines across entire canvas. Density follows lim.
+  const rainCount = Math.min(380, Math.max(120, lim * 6));
+  ctx.strokeStyle = '#3a4a5e';
+  ctx.lineWidth = 0.9;
+  for(let i = 0; i < rainCount; i++){
+    const x = rnd() * CW * 1.2 - CW * 0.1;
+    const y = rnd() * CH;
+    const len = 12 + rnd() * 18;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - len * 0.4, y + len);  // diagonal fall to bottom-left
+    ctx.stroke();
+  }
+}
+
+// Variant 5 — Bridge: drum bridge arch over water + reeds.
+function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const rnd = _seedRnd(92, ss, lim, 5);
+  ctx.fillStyle = HOKUSAI_PAPER;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Sky band at top — gradient-free, just 2 bands.
+  const skyChord = chords[0];
+  const skyNotes = skyChord && (skyChord.n || skyChord.notes) || [{m:72,v:80}];
+  const skyNote = skyNotes[0];
+  const [sr, sg, sb] = gc(skyNote.m!==undefined?skyNote.m:skyNote, 80);
+  ctx.fillStyle = _hokusaiMute(sr, sg, sb, 0.35, 0.95);
+  ctx.fillRect(0, 0, CW, CH * 0.4);
+
+  // Water — bottom 50%, flat colour from middle chord.
+  const midChord = chords[Math.floor(lim / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
+  const midNote = midNotes[0];
+  const [wr, wg, wb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  ctx.fillStyle = _hokusaiMute(wr, wg, wb, 0.5, 0.7);
+  ctx.fillRect(0, CH * 0.55, CW, CH * 0.45);
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.55);
+  ctx.lineTo(CW, CH * 0.55);
+  ctx.stroke();
+
+  // Drum bridge — semi-circular arch spanning canvas, water below.
+  const bridgeCY = CH * 0.55;
+  const bridgeRadius = CW * 0.5;
+  const bridgeCX = CW * 0.5;
+  // Bridge bottom curve (visible part above water = top half of circle).
+  ctx.beginPath();
+  ctx.arc(bridgeCX, bridgeCY, bridgeRadius, Math.PI, 0, false);
+  // Top: thicker bridge surface (offset arc above).
+  const topRad = bridgeRadius + CH * 0.06;
+  ctx.lineTo(bridgeCX + topRad, bridgeCY);
+  ctx.arc(bridgeCX, bridgeCY, topRad, 0, Math.PI, true);
+  ctx.closePath();
+  // Bridge colour — chord-derived earthy brown.
+  const lastChord = chords[lim - 1] || chords[0];
+  const lastNotes = lastChord && (lastChord.n || lastChord.notes) || [{m:60,v:80}];
+  const lastNote = lastNotes[0];
+  const [br, bg, bb] = gc(lastNote.m!==undefined?lastNote.m:lastNote, 100);
+  ctx.fillStyle = _hokusaiMute(br, bg, bb, 0.4, 0.7);
+  ctx.fill();
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 2.2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Bridge ribbing — radial spokes from centre to inner arc.
+  const ribCount = Math.min(16, Math.max(6, Math.floor(lim / 5)));
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 0.9;
+  for(let i = 1; i < ribCount; i++){
+    const ang = Math.PI + (i / ribCount) * Math.PI;
+    const x1 = bridgeCX + Math.cos(ang) * bridgeRadius;
+    const y1 = bridgeCY + Math.sin(ang) * bridgeRadius;
+    const x2 = bridgeCX + Math.cos(ang) * topRad;
+    const y2 = bridgeCY + Math.sin(ang) * topRad;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  // Reeds at water edges — using chord notes.
+  const reedCount = Math.min(60, Math.max(15, lim));
+  for(let i = 0; i < reedCount; i++){
+    const ci = i % lim;
+    const chord = chords[ci] || chords[0];
+    const notes = chord && (chord.n || chord.notes) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m!==undefined?note.m:note;
+    const [r, g, b] = gc(m, 100);
+    // Side: alternate left/right of bridge, near banks.
+    const side = i % 2;
+    const rx = side === 0 ? rnd() * CW * 0.18 : CW - rnd() * CW * 0.18;
+    const ry = CH * 0.55 + rnd() * CH * 0.05;
+    const rh = 25 + rnd() * 40;
+    // Reed = thin tall blade.
+    ctx.strokeStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.quadraticCurveTo(rx + (rnd() - 0.5) * 8, ry - rh * 0.5, rx + (rnd() - 0.5) * 6, ry - rh);
+    ctx.stroke();
+  }
+
+  // Water ripples — horizontal short strokes.
+  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
+  ctx.lineWidth = 1;
+  const ripples = Math.min(60, Math.max(20, lim));
+  for(let i = 0; i < ripples; i++){
+    const y = CH * (0.58 + rnd() * 0.4);
+    const x = rnd() * CW;
+    const len = 16 + rnd() * 30;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + len/2, y - 2, x + len, y);
+    ctx.stroke();
+  }
+}
+
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
