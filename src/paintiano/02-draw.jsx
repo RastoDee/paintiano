@@ -4779,15 +4779,26 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   ctx.fillStyle = '#f7f5ef';
   ctx.fillRect(0, 0, CW, CH);
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Bloom blots / Edge (original body below, via bloomVariant).
-  //  2 = Clustered masses.  3 = Blue Balls.  4 = Grid/lattice.  5 = Big Red mural.
+  //  0 = Classic Sam Francis (Bloom blots / Edge, seed-driven internal pick —
+  //      the two layouts read as one "white-ground bloom" identity so they
+  //      share a single Vary slot).
+  //  1 = Mandala (1970s concentric/spiritual phase).
+  //  2 = Clustered masses (centre).
+  //  3 = Blue Balls (blue dominant).
+  //  4 = Towards Disappearance (1957-58, minimal sparse marks).
+  //  5 = Big Red mural (red field + edge incursions).
+  //  Free (cap=2) sees Bloom + Mandala — dense organic vs ordered concentric
+  //  is the strongest visual contrast in Sam Francis's catalogue.
   {
     const _pn=_capN(6); const _fpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_fpick===1){ francisPhaseMandala(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===2){ francisPhaseCluster(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===3){ francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_fpick===4){ francisPhaseGrid(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_fpick===4){ francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===5){ francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original bloom/edge body (variant 0/1)
+    // else fall through to original bloom/edge body (variant 0; the bloom vs
+    // edge sub-pick within is seed-driven, kept as natural micro-variation
+    // rather than its own Vary slot).
   }
 
   // Blot count auto-scales: short = airy, long = crowded. Curve grows past
@@ -4983,6 +4994,112 @@ function francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const R=Math.min(CW,CH)*(0.03+rnd()*0.05);
     ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
     ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ── Sam Francis G: Mandala (1970s series). White ground + 10 concentric
+// chord-coloured rings + 24 petal spokes radiating outward + white centre
+// dot. Sam Francis's late spiritual phase — ordered, centred, mystical.
+function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  ctx.fillStyle = isBW ? '#f4f2ee' : '#f7f5ef';
+  ctx.fillRect(0,0,CW,CH);
+
+  const cx = CW/2, cy = CH/2;
+  const maxR = Math.min(CW,CH)*0.45;
+  const rings = 10;
+  const visRings = Math.max(1, Math.ceil(rings*reveal));
+
+  // Concentric rings outer→inner (so inner sits on top).
+  for(let r=visRings;r>=1;r--){
+    const radius = maxR * (r/rings);
+    const {rgb} = _picChord(chords, Math.floor(r/rings * cn)%cn, gc, isBW);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.55 + (r%2)*0.15).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Petal spokes radiating.
+  const spokes = 24;
+  const visSpokes = Math.max(2, Math.ceil(spokes*reveal));
+  for(let s=0;s<visSpokes;s++){
+    const ang = (s/spokes)*Math.PI*2;
+    const {rgb} = _picChord(chords, (s*5)%cn, gc, isBW);
+    const rnd = _seedRnd(s+5000, ss, 0, 0);
+    const inner = maxR*0.35;
+    const outer = maxR*(0.9+rnd()*0.15);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.65)`;
+    ctx.beginPath();
+    const ax = cx + Math.cos(ang)*inner;
+    const ay = cy + Math.sin(ang)*inner;
+    const bx = cx + Math.cos(ang+0.06)*outer;
+    const by = cy + Math.sin(ang+0.06)*outer;
+    const cxx = cx + Math.cos(ang-0.06)*outer;
+    const cyy = cy + Math.sin(ang-0.06)*outer;
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.lineTo(cxx, cyy);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // White centre dot — the still point.
+  ctx.fillStyle = isBW ? '#f4f2ee' : '#f7f5ef';
+  ctx.beginPath();
+  ctx.arc(cx, cy, maxR*0.12, 0, Math.PI*2);
+  ctx.fill();
+}
+
+// ── Sam Francis H: Towards Disappearance (1957-58). Ultra-minimal: only
+// 8-12 sparse, faint chord-coloured marks scattered across canvas + canvas
+// grain. Each mark is a soft low-opacity bloom + occasional tiny dot.
+// The "quiet" Sam Francis — opposite of Bloom field's density.
+function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  ctx.fillStyle = isBW ? '#f6f4f0' : '#f9f7f1';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Faint canvas grain.
+  for(let i=0;i<400;i++){
+    const rnd = _seedRnd(i+6000, ss, 0, 0);
+    const tone = isBW ? '195,195,195' : '200,195,180';
+    ctx.fillStyle = `rgba(${tone},${(0.06+rnd()*0.10).toFixed(2)})`;
+    ctx.fillRect(rnd()*CW, rnd()*CH, 1+rnd()*2, 1+rnd()*2);
+  }
+
+  // Sparse marks — count scales gently with chord count but stays minimal.
+  const marks = Math.max(4, Math.min(14, Math.round(cn/12) + 6));
+  const vis = Math.max(2, Math.ceil(marks*reveal));
+
+  for(let i=0;i<vis;i++){
+    const rnd = _seedRnd(i+6100, ss, 0, 0);
+    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+    const x = CW*0.1 + rnd()*CW*0.8;
+    const y = CH*0.1 + rnd()*CH*0.8;
+    const r = Math.min(CW,CH) * (0.04+rnd()*0.06);
+
+    // Very faint bloom — low opacity gradient.
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.35)`);
+    g.addColorStop(0.6, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.15)`);
+    g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fill();
+
+    // Occasional tiny dot/spatter near the bloom.
+    if(rnd() > 0.5){
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.5)`;
+      ctx.beginPath();
+      ctx.arc(x + (rnd()-0.5)*r*1.5, y + (rnd()-0.5)*r*1.5, 1.5+rnd()*2, 0, Math.PI*2);
+      ctx.fill();
+    }
   }
 }
 
