@@ -23084,12 +23084,11 @@ Composition rules:
               </div>
             )}
           </>)}
-          {/* Style — hidden in image Scan mode: an artist re-paint makes no
-              sense when the source already IS a painting and we're just
-              reading its colours. In Image AI Compose (MFI) we DO generate
-              a piece of music from the image, then paint it — so artist
-              chips belong there just like for any other source. */}
-          {!(loadedSource==='image' && imgPlayMode==='scan') && (
+          {/* Style — hidden when the source IS an image (both Scan and AI
+              Compose modes). The image already IS a painting; an artist
+              re-paint makes no sense there. MFI uses loadedSource='mood'
+              (with moodFromImg flag), so chips show there as expected. */}
+          {loadedSource!=='image' && (
           <div style={{position:'relative',marginTop:6,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
             <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:26,height:26,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
@@ -23097,7 +23096,7 @@ Composition rules:
             </button>
           </div>
           )}
-          {!(loadedSource==='image' && imgPlayMode==='scan') && (
+          {loadedSource!=='image' && (
           <>
           {(()=>{
             // ── Adaptive chip grid (max 2 rows) ────────────────────────────

@@ -5095,10 +5095,11 @@ Composition rules:
       }catch(_){}
     }
 
-    // Mic/Music with Original source selected: route the recorded blob to the
+    // Mic with Original source selected: route the recorded blob to the
     // speakers, mute the sampler for this playthrough, paint visually as
     // usual. Falls back to piano if anything in the decode/source path failed.
-    const useOriginalListen = draftOwnerRef.current==='listen' && playSourceMicRef.current==='original' && listenPCMRef.current;
+    // Both `listen` (Music) and `sing` (Voice) record an original audio buffer.
+    const useOriginalListen = (draftOwnerRef.current==='listen' || draftOwnerRef.current==='sing') && playSourceMicRef.current==='original' && listenPCMRef.current;
     if(useOriginalListen){
       try{
         const ac=Tone.getContext().rawContext;
@@ -5535,7 +5536,7 @@ Composition rules:
   // chord immediately so there's no silent gap before the next step() tick.
   useEffect(()=>{
     if(!playing) return;
-    if(draftOwnerRef.current!=='listen') return;
+    if(draftOwnerRef.current!=='listen' && draftOwnerRef.current!=='sing') return;
     const want = (playSourceMic==='original' && !!listenPCMRef.current) ? 'original' : 'piano';
     const have = originalPlaybackRef.current ? 'original' : 'piano';
     if(want===have) return;
@@ -5808,6 +5809,13 @@ Composition rules:
     // isn't a recorded creation or is empty, so this is safe on every stop path.
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
+    // Finalise the parallel raw-audio recorder (same handler used by Music
+    // mode). Voice mode also captures original audio for the Original ⇄ Piano
+    // toggle, so this stop applies here too.
+    if(listenRecorderRef.current){
+      try{ if(listenRecorderRef.current.state!=='inactive') listenRecorderRef.current.stop(); }catch(_){}
+      listenRecorderRef.current = null;
+    }
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
     if(micAcRef.current){micAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicPainting(false);
@@ -6081,7 +6089,18 @@ Composition rules:
     setComposeMode(false);
     if(micListening){stopMicListening();}
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      // Mirror startMicListening's iOS-aware constraint negotiation so the
+      // Voice recording survives Safari's stricter audio policy. Falling back
+      // to {audio:true} on OverconstrainedError keeps the older path working.
+      let stream;
+      try{
+        const isiOS = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:!isiOS,autoGainControl:false,voiceIsolation:false},video:false});
+      }catch(ce){
+        if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
+          stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        } else { throw ce; }
+      }
       micStreamRef.current=stream;
       const ac=await getSharedAC();
       micAcRef.current=ac;
@@ -6091,6 +6110,73 @@ Composition rules:
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
+      // Parallel raw-audio capture so Voice gets the Original ⇄ Piano toggle
+      // just like Music. We share the existing listen* refs because the toggle
+      // UI and playback paths already read those — sing simply writes into
+      // them, prevailing over any earlier listen blob (last recording wins).
+      let recordStream = stream;
+      try{
+        const isiOSrec = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
+        const hp = ac.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
+        const dst = ac.createMediaStreamDestination();
+        if(isiOSrec){
+          src.connect(hp); hp.connect(dst);
+        } else {
+          const comp = ac.createDynamicsCompressor();
+          comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
+          comp.attack.value = 0.005; comp.release.value = 0.15;
+          src.connect(hp); hp.connect(comp); comp.connect(dst);
+        }
+        if(dst.stream && dst.stream.getAudioTracks().length>0) recordStream = dst.stream;
+      }catch(_){ /* fallback to raw stream — recording still works */ }
+      try{
+        const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
+        if(MR){
+          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          let mime = '';
+          for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
+          const opts = mime ? { mimeType: mime } : undefined;
+          const rec = new MR(recordStream, opts);
+          listenChunksRef.current = [];
+          // Clear any previous draft's blob — fresh sing session.
+          if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
+          listenBlobRef.current = null;
+          listenPCMRef.current = null;
+          rec.ondataavailable = (e)=>{ if(e.data && e.data.size>0) listenChunksRef.current.push(e.data); };
+          rec.onstop = ()=>{
+            const chunks = listenChunksRef.current;
+            if(!chunks || chunks.length===0){ listenChunksRef.current=[]; return; }
+            const type = rec.mimeType || mime || 'audio/webm';
+            const blob = new Blob(chunks, { type });
+            const url = URL.createObjectURL(blob);
+            listenBlobRef.current = { blob, url, type };
+            listenChunksRef.current = [];
+            setHasMicBlob(true);
+            (async()=>{
+              try{
+                const arrBuf = await blob.arrayBuffer();
+                const ac2 = Tone.getContext().rawContext;
+                const decode = (ab,ctx)=>new Promise((res,rej)=>{
+                  let done=false; const tm=setTimeout(()=>{ if(!done){done=true;rej(new Error('decode timeout'));} },10000);
+                  try{
+                    ctx.decodeAudioData(ab, b=>{ if(!done){done=true;clearTimeout(tm);res(b);} }, e=>{ if(!done){done=true;clearTimeout(tm);rej(e||new Error('decode failed'));} });
+                  }catch(_){
+                    ctx.decodeAudioData(ab).then(b=>{ if(!done){done=true;clearTimeout(tm);res(b);} }, e=>{ if(!done){done=true;clearTimeout(tm);rej(e||new Error('decode failed'));} });
+                  }
+                });
+                const buf2 = await decode(arrBuf, ac2);
+                listenPCMRef.current = buf2;
+              }catch(_){
+                listenPCMRef.current = null;
+              }
+            })();
+          };
+          rec.start(1000);
+          listenRecorderRef.current = rec;
+          setHasMicBlob(false);
+        }
+      }catch(_){ /* recording optional — pitch-track still works without it */ }
       setMicPainting(true);setMicArmed(false);setMicContext(true);
       // Frame the collapsed Color·Style strip at the top with the canvas below,
       // same as Play and compose — MIC (Voice/Music) is another "performing"
@@ -7789,11 +7875,11 @@ Composition rules:
               </div>
             )}
           </>)}
-          {/* Style — hidden when the source IS an image (both Scan and AI
-              Compose modes). The image already IS a painting; an artist
-              re-paint makes no sense there. MFI uses loadedSource='mood'
-              (with moodFromImg flag), so chips show there as expected. */}
-          {loadedSource!=='image' && (
+          {/* Style — hidden in pure Image source modes (Scan + AI Compose).
+              MFI looks similar on screen (image is shown as backdrop) but is
+              flagged moodFromImg=true — there we DO compose a piece, so the
+              artist picker belongs there. */}
+          {(loadedSource!=='image' || moodFromImg) && (
           <div style={{position:'relative',marginTop:6,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
             <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:26,height:26,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
@@ -7801,7 +7887,7 @@ Composition rules:
             </button>
           </div>
           )}
-          {loadedSource!=='image' && (
+          {(loadedSource!=='image' || moodFromImg) && (
           <>
           {(()=>{
             // ── Adaptive chip grid (max 2 rows) ────────────────────────────
@@ -8699,7 +8785,7 @@ Composition rules:
                       const title = (compositionName||recordingName||'Paintiano').trim()||'Paintiano';
                       // Mic/Music with Original selected: use the recorded blob
                       // directly — no re-render needed, original quality kept.
-                      const useOriginalBlob = draftOwnerRef.current==='listen' && playSourceMic==='original' && listenBlobRef.current?.blob;
+                      const useOriginalBlob = (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && playSourceMic==='original' && listenBlobRef.current?.blob;
                       let audioBlob = null;
                       let audioName;
                       if(useOriginalBlob){
@@ -9112,11 +9198,12 @@ Composition rules:
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
-        {/* Mic/Music source toggle — appears once the listen session has a
-            finalised audio blob and the mic is no longer live. One tap flips
-            between playing back the original recording and the synthesised
-            piano cover. Hidden during active capture and during recording. */}
-        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+        {/* Original ⇄ Piano source toggle — appears once the mic session
+            (Voice or Music) has a finalised audio blob and the mic is no
+            longer live. One tap flips between playing back the original
+            recording and the synthesised piano cover. Hidden during active
+            capture and during recording. */}
+        {hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && (
           <button className="pf-lift" onClick={()=>setPlaySourceMic(p=>p==='original'?'piano':'original')}
             title={playSourceMic==='original'?'playback: original recording — tap to switch to piano cover':'playback: piano cover — tap to switch to original recording'}
             style={{padding:'8px 14px',background:playSourceMic==='original'?'rgba(140,200,255,.16)':'rgba(201,168,76,.16)',color:playSourceMic==='original'?'#8accff':GOLD,border:'1px solid '+(playSourceMic==='original'?'rgba(100,180,255,.55)':'rgba(201,168,76,.55)'),borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:'0 3px 10px '+(playSourceMic==='original'?'rgba(100,180,255,.25)':'rgba(201,168,76,.25)')}}>
@@ -9125,9 +9212,9 @@ Composition rules:
         )}
         {/* Restart playback from chord 0 using the current source. Pairs with
             the source toggle: toggle swaps Original ⇄ Piano in place (seamless);
-            ↺ jumps back to the beginning. Visible whenever there's a Mic listen
-            draft with a finalised recording and nothing live is happening. */}
-        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+            ↺ jumps back to the beginning. Visible whenever there's a Mic draft
+            (Voice or Music) with a finalised recording. */}
+        {hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && (
           <button className="pf-lift"
             onClick={()=>{
               // Stop everything cleanly, reset position, then start fresh from idx 0.

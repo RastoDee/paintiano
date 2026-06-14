@@ -6824,351 +6824,602 @@ function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode);
 }
 
-// Variant 0 — Garden: edge-to-edge carpet of comma-strokes.
+// Variant 0 — Garden: perspective path receding to vanishing point with
+// flanking flower beds in pink/violet/yellow. The composition gives the
+// piece structure; chord notes still drive every individual stroke.
 function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 0);
 
-  ctx.fillStyle = '#EAE7D9';
+  // Warm sunlit base.
+  ctx.fillStyle = '#E8E0CC';
   ctx.fillRect(0, 0, CW, CH);
 
-  const aspect = CW / CH;
-  const cols = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, lim) * aspect)));
-  const rows = Math.max(1, Math.ceil(lim / cols));
-  const cw = CW / cols;
-  const ch = CH / rows;
-  const baseStrokes = cn <= 12 ? 38 : cn <= 40 ? 34 : cn <= 100 ? 30 : 26;
+  // Vanishing point near top centre, path widens toward viewer.
+  const vpx = CW * 0.5;
+  const vpy = CH * 0.22;
+  const pathBase = CH * 0.95;
+  const pathHalfBase = CW * 0.18;
 
-  ctx.globalAlpha = 0.8;
-  for(let i = 0; i < lim; i++){
-    const chord = chords[i];
+  // Light sandy path (triangle widening to viewer).
+  ctx.fillStyle = '#D9CFAF';
+  ctx.beginPath();
+  ctx.moveTo(CW * 0.5 - 4, vpy);
+  ctx.lineTo(CW * 0.5 + 4, vpy);
+  ctx.lineTo(vpx + pathHalfBase, pathBase);
+  ctx.lineTo(vpx - pathHalfBase, pathBase);
+  ctx.closePath();
+  ctx.fill();
+
+  // Distant tree mass at the horizon — dark green band.
+  ctx.fillStyle = '#3D5A40';
+  ctx.fillRect(0, vpy - CH * 0.04, CW, CH * 0.06);
+
+  // Flanking flower beds — chord-driven strokes biased toward Monet pinks/
+  // violets/yellows. Density auto-scales with chord count.
+  const STROKES = Math.min(2200, Math.max(800, lim * 35));
+  ctx.globalAlpha = 0.9;
+  for(let k = 0; k < STROKES; k++){
+    const side = rnd() < 0.5 ? -1 : 1;
+    // Bias t toward back (where path narrows) for depth.
+    const t = Math.pow(rnd(), 0.6);
+    const py = vpy + t * (pathBase - vpy);
+    const pathHere = pathHalfBase * t;
+    const offX = pathHere + rnd() * CW * 0.42 * (0.4 + t * 0.6);
+    const x = vpx + side * offX;
+    if(x < 0 || x > CW) continue;
+    const y = py + (rnd() - 0.5) * CH * 0.10;
+    if(y < vpy + CH * 0.02 || y > CH) continue;
+
+    // Pick a chord by depth so foreground vs background differ.
+    const ci = Math.floor(t * Math.min(lim, cn));
+    const chord = chords[Math.min(cn - 1, Math.max(0, ci))];
     if(!chord) continue;
     const notes = chord.n || chord.notes;
     if(!notes || !notes.length) continue;
-    const col = i % cols;
-    const row = Math.floor(i / cols) % rows;
-    const cellX = col * cw;
-    const cellY = row * ch;
-    let topM = 0;
-    for(const n of notes){ const m = n.m!==undefined?n.m:n; if(m>topM) topM = m; }
-    const octShift = (Math.floor(topM/12) - 4) * 10;
-    const N = baseStrokes + Math.floor(rnd() * 6);
-    for(let k = 0; k < N; k++){
-      const x = cellX + rnd() * cw + (rnd() - 0.5) * cw * 0.6;
-      const y = cellY + rnd() * ch + (rnd() - 0.5) * ch * 0.6;
-      const note = notes[Math.floor(rnd() * notes.length)];
-      const m = note.m!==undefined?note.m:note;
-      const v = note.v!==undefined?note.v:100;
-      const [r, g, b] = gc(m, v);
-      const jr = Math.max(0, Math.min(255, r + (rnd()-0.5)*60 + octShift));
-      const jg = Math.max(0, Math.min(255, g + (rnd()-0.5)*60 + octShift));
-      const jb = Math.max(0, Math.min(255, b + (rnd()-0.5)*60 + octShift));
-      const velScale = 0.55 + (v/127) * 0.9;
-      const rx = (5 + rnd() * 5) * velScale;
-      const ry = (2.2 + rnd() * 2) * velScale;
-      const rot = rnd() * Math.PI;
-      ctx.save();
-      ctx.translate(x, y); ctx.rotate(rot);
-      ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
-      ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, 6.2832); ctx.fill();
-      ctx.restore();
-    }
-  }
-  ctx.globalAlpha = 1;
-}
-
-// Variant 1 — Pond: horizontal water bands with lily pad blobs.
-function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const rnd = _seedRnd(91, ss, lim, 1);
-  // Cool watery base.
-  ctx.fillStyle = '#DCE6E0';
-  ctx.fillRect(0, 0, CW, CH);
-
-  // Horizontal stripe bands: each band = a chord. Wider strokes, layered.
-  const bands = Math.min(40, Math.max(8, lim));
-  const bandH = CH / bands;
-  ctx.globalAlpha = 0.55;
-  for(let i = 0; i < bands; i++){
-    const chord = chords[Math.floor(i / bands * lim)] || chords[0];
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) continue;
-    const note = notes[i % notes.length];
-    const m = note.m!==undefined?note.m:note;
-    const v = note.v!==undefined?note.v:100;
+    const note = notes[Math.floor(rnd() * notes.length)];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
     const [r, g, b] = gc(m, v);
-    // Shift toward cool: more blue/green, less red.
-    const tr = Math.round(r * 0.6 + 30);
-    const tg = Math.round(g * 0.7 + 60);
-    const tb = Math.round(b * 0.8 + 80);
-    const y = i * bandH;
+    // Blend 45% toward magenta-violet anchor so the bed reads as flowers.
+    const blend = 0.45;
+    const fr = Math.round(r * (1 - blend) + 220 * blend);
+    const fg = Math.round(g * (1 - blend) +  90 * blend);
+    const fb = Math.round(b * (1 - blend) + 170 * blend);
+    const jr = Math.max(0, Math.min(255, fr + (rnd() - 0.5) * 70));
+    const jg = Math.max(0, Math.min(255, fg + (rnd() - 0.5) * 70));
+    const jb = Math.max(0, Math.min(255, fb + (rnd() - 0.5) * 70));
 
-    // Multiple horizontal sweeps per band — slightly jittered.
-    const sweepsPerBand = 4 + Math.floor(rnd() * 3);
-    for(let s = 0; s < sweepsPerBand; s++){
-      const yj = y + rnd() * bandH;
-      const len = 30 + rnd() * (CW * 0.4);
-      const x0 = rnd() * (CW - len);
-      const thick = 1.5 + rnd() * 3;
-      ctx.strokeStyle = `rgb(${tr+((rnd()-0.5)*25)|0},${tg+((rnd()-0.5)*25)|0},${Math.min(255,tb+((rnd()-0.5)*25))|0})`;
-      ctx.lineWidth = thick;
-      ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(x0, yj); ctx.lineTo(x0+len, yj+rnd()*2-1); ctx.stroke();
-    }
-  }
-  // Lily pads: oval blobs scattered on top, green-pink.
-  ctx.globalAlpha = 0.78;
-  const padCount = Math.min(28, Math.max(6, Math.floor(lim * 0.35)));
-  for(let p = 0; p < padCount; p++){
-    const chord = chords[p % chords.length];
-    const notes = chord && (chord.n || chord.notes) || [];
-    const note = notes[0] || {m:60,v:80};
-    const m = note.m!==undefined?note.m:note;
-    const [r, g, b] = gc(m, 100);
-    const px = rnd() * CW;
-    const py = rnd() * CH;
-    const pr = 14 + rnd() * 26;
-    // Tinted toward leaf green.
-    const lr = Math.round(r * 0.35 + 70);
-    const lg = Math.round(g * 0.55 + 110);
-    const lb = Math.round(b * 0.4 + 60);
-    ctx.fillStyle = `rgb(${lr},${lg},${lb})`;
+    const sz = 1.5 + rnd() * 3 * (0.5 + t);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rnd() * Math.PI);
+    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
     ctx.beginPath();
-    ctx.ellipse(px, py, pr, pr*0.62, rnd()*Math.PI, 0, 6.2832);
+    ctx.ellipse(0, 0, sz * 1.4, sz * 0.5, 0, 0, 6.2832);
     ctx.fill();
-    // Optional pink/white flower in the middle for some pads.
-    if(rnd() < 0.4){
-      ctx.fillStyle = `rgba(255,${220+((rnd()-0.5)*30)|0},${230+((rnd()-0.5)*20)|0},0.9)`;
-      ctx.beginPath();
-      ctx.arc(px+(rnd()-0.5)*pr*0.4, py+(rnd()-0.5)*pr*0.4, pr*0.22, 0, 6.2832);
-      ctx.fill();
-    }
+    ctx.restore();
+  }
+
+  // Green canopy strokes layered on top of the beds.
+  const CANOPY = Math.min(500, Math.max(180, lim * 8));
+  for(let k = 0; k < CANOPY; k++){
+    const side = rnd() < 0.5 ? -1 : 1;
+    const t = Math.pow(rnd(), 0.5);
+    const py = vpy + t * (pathBase - vpy);
+    const pathHere = pathHalfBase * t;
+    const offX = pathHere + rnd() * CW * 0.45 * (0.4 + t * 0.6);
+    const x = vpx + side * offX;
+    const y = py + (rnd() - 0.5) * CH * 0.12 - CH * 0.04;
+    const r = Math.max(0, Math.min(255, 50 + (rnd() - 0.5) * 50));
+    const g = Math.max(0, Math.min(255, 130 + (rnd() - 0.5) * 40));
+    const b = Math.max(0, Math.min(255, 60 + (rnd() - 0.5) * 40));
+    ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rnd() * Math.PI);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 3 + rnd() * 3, 1.2 + rnd() * 1.2, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
 }
 
-// Variant 2 — Cathedral: vertical light haze, dawn→dusk wash.
-function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const rnd = _seedRnd(91, ss, lim, 2);
-  // Pale luminous base.
-  ctx.fillStyle = '#F0E4CB';
+// Variant 1 — Pond: vertical sky reflections (whites + pale blues) on dark
+// pond water + lily clusters with hot-pink blossoms + willow trails hanging
+// from the top edge.
+function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 1);
+
+  // Deep pond green-blue base.
+  ctx.fillStyle = '#1F3B45';
   ctx.fillRect(0, 0, CW, CH);
 
-  // Vertical bands across canvas, each band shifts hue (time of day).
-  // Use chord progression to drive hue rotation.
-  const bands = Math.min(64, Math.max(16, lim * 2));
+  // Vertical sky reflection bands — pale blues, whites, lilacs.
+  const bands = 80;
   const bw = CW / bands;
   ctx.globalAlpha = 0.7;
   for(let i = 0; i < bands; i++){
-    const ci = Math.floor((i / bands) * lim);
-    const chord = chords[ci] || chords[0];
+    const x = i * bw;
+    const sw = bw + rnd() * bw * 0.4;
+    const yStart = rnd() * CH * 0.3;
+    const len = CH * (0.4 + rnd() * 0.55);
+    const ci = Math.floor((i / bands) * Math.min(lim, cn));
+    const chord = chords[Math.min(cn - 1, Math.max(0, ci))];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    // Wash 70% toward sky pastels.
+    const sr = Math.round(r * 0.3 + 200);
+    const sg = Math.round(g * 0.3 + 205);
+    const sb = Math.round(b * 0.3 + 220);
+    ctx.fillStyle = `rgb(${Math.min(255,sr)},${Math.min(255,sg)},${Math.min(255,sb)})`;
+    ctx.fillRect(x, yStart, sw, len);
+  }
+  // Darker green reflective shadows.
+  ctx.globalAlpha = 0.45;
+  for(let i = 0; i < 30; i++){
+    const x = rnd() * CW;
+    const w = CW * 0.04 + rnd() * CW * 0.08;
+    const y = rnd() * CH;
+    const h = CH * 0.2 + rnd() * CH * 0.4;
+    const rr = 30 + rnd() * 30;
+    const gg = 60 + rnd() * 40;
+    const bb = 50 + rnd() * 30;
+    ctx.fillStyle = `rgb(${rr|0},${gg|0},${bb|0})`;
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.globalAlpha = 1;
+
+  // Willow trailing from top — vertical green strokes hanging into pond.
+  for(let i = 0; i < 40; i++){
+    const x = CW * 0.7 + rnd() * CW * 0.3;
+    const len = CH * (0.25 + rnd() * 0.35);
+    const rr = 40 + rnd() * 30;
+    const gg = 100 + rnd() * 30;
+    const bb = 60 + rnd() * 30;
+    const a = 0.5 + rnd() * 0.4;
+    ctx.strokeStyle = `rgba(${rr|0},${gg|0},${bb|0},${a.toFixed(2)})`;
+    ctx.lineWidth = 1 + rnd() * 1.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.quadraticCurveTo(x + (rnd() - 0.5) * 30, len * 0.5, x + (rnd() - 0.5) * 20, len);
+    ctx.stroke();
+  }
+
+  // Lily pads — green ellipses with bright pink/yellow blossom centres,
+  // clustered in 4 groups across the pond.
+  const groups = 4;
+  for(let g = 0; g < groups; g++){
+    const cx = CW * (0.15 + g * 0.22 + rnd() * 0.05);
+    const cy = CH * (0.35 + rnd() * 0.5);
+    const padsInGroup = 4 + Math.floor(rnd() * 4);
+    for(let p = 0; p < padsInGroup; p++){
+      const px = cx + (rnd() - 0.5) * CW * 0.13;
+      const py = cy + (rnd() - 0.5) * CH * 0.12;
+      const pr = 8 + rnd() * 16;
+      // Pad — flat green.
+      const padR = 50 + rnd() * 30;
+      const padG = 100 + rnd() * 40;
+      const padB = 60 + rnd() * 30;
+      ctx.fillStyle = `rgb(${padR|0},${padG|0},${padB|0})`;
+      ctx.beginPath();
+      ctx.ellipse(px, py, pr, pr * 0.55, (rnd() - 0.5) * 0.6, 0, 6.2832);
+      ctx.fill();
+      // Blossom — chord-driven hot pink or yellow.
+      const idx = (g * padsInGroup + p) % Math.max(1, cn);
+      const chord = chords[idx];
+      const notes = chord && (chord.n || chord.notes);
+      if(notes && notes.length){
+        const note = notes[0];
+        const m = note.m !== undefined ? note.m : note;
+        const [r, gn, b] = gc(m, 100);
+        const bloomR = Math.round(r * 0.35 + 230);
+        const bloomG = Math.round(gn * 0.3 + 130);
+        const bloomB = Math.round(b * 0.3 + 180);
+        ctx.fillStyle = `rgb(${Math.min(255,bloomR)},${Math.min(255,bloomG)},${Math.min(255,bloomB)})`;
+        ctx.beginPath();
+        ctx.arc(px + (rnd() - 0.5) * pr * 0.3, py + (rnd() - 0.5) * pr * 0.3, pr * 0.28, 0, 6.2832);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+// Variant 2 — Cathedral: strong vertical gold→peach→violet wash with a
+// faint gothic spire silhouette and atmospheric chord-tinted vertical
+// strokes.
+function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 2);
+
+  // Vertical gradient base.
+  const grad = ctx.createLinearGradient(0, 0, 0, CH);
+  grad.addColorStop(0,    '#F5D38A');  // gold top
+  grad.addColorStop(0.45, '#E5B9A5');  // peach mid
+  grad.addColorStop(0.85, '#9C8AB0');  // violet bottom
+  grad.addColorStop(1,    '#6B5A82');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Cathedral silhouette — gothic tower with spire, soft transparent shadow.
+  const towerCX = CW * 0.5;
+  const towerW = CW * 0.42;
+  const towerLeft = towerCX - towerW / 2;
+  const towerRight = towerCX + towerW / 2;
+  const towerBase = CH * 0.95;
+  const towerTopFlat = CH * 0.18;
+  const spireTop = CH * 0.04;
+
+  ctx.fillStyle = 'rgba(80, 60, 90, 0.42)';
+  ctx.beginPath();
+  ctx.moveTo(towerLeft, towerBase);
+  ctx.lineTo(towerLeft, towerTopFlat);
+  ctx.lineTo(towerCX - CW * 0.04, towerTopFlat - CH * 0.04);
+  ctx.lineTo(towerCX, spireTop);
+  ctx.lineTo(towerCX + CW * 0.04, towerTopFlat - CH * 0.04);
+  ctx.lineTo(towerRight, towerTopFlat);
+  ctx.lineTo(towerRight, towerBase);
+  ctx.closePath();
+  ctx.fill();
+
+  // Painterly vertical strokes overlay for atmospheric blur — each tinted
+  // toward the local gradient colour at that y so the cathedral edges blur
+  // naturally into the wash.
+  const STROKES = Math.min(2400, Math.max(900, lim * 40));
+  ctx.globalAlpha = 0.55;
+  for(let k = 0; k < STROKES; k++){
+    const x = rnd() * CW;
+    const y = rnd() * CH;
+    const lenY = 30 + rnd() * 120;
+    const w = 1 + rnd() * 3;
+    const ci = Math.floor((x / CW) * Math.min(lim, cn)) % Math.max(1, cn);
+    const chord = chords[ci];
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) continue;
     const note = notes[Math.floor(rnd() * notes.length)];
-    const m = note.m!==undefined?note.m:note;
-    const v = note.v!==undefined?note.v:100;
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
     const [r, g, b] = gc(m, v);
-    // Vertical sweep with vertical jitter — like wash of light.
-    const x = i * bw;
-    const strokes = 18 + Math.floor(rnd() * 8);
-    for(let s = 0; s < strokes; s++){
-      const yj = rnd() * CH;
-      const lenY = 18 + rnd() * 50;
-      const dx = (rnd()-0.5) * bw * 0.8;
-      const jr = Math.max(0, Math.min(255, r + (rnd()-0.5)*40));
-      const jg = Math.max(0, Math.min(255, g + (rnd()-0.5)*40));
-      const jb = Math.max(0, Math.min(255, b + (rnd()-0.5)*40));
-      ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
-      ctx.fillRect(x + dx, yj, bw*0.9, lenY);
+
+    // Compute local gradient bg colour at this y.
+    const t = y / CH;
+    let bgR, bgG, bgB;
+    if(t < 0.45){
+      const tt = t / 0.45;
+      bgR = 245 - (245 - 229) * tt;
+      bgG = 211 - (211 - 185) * tt;
+      bgB = 138 + (165 - 138) * tt;
+    } else if(t < 0.85){
+      const tt = (t - 0.45) / 0.40;
+      bgR = 229 - (229 - 156) * tt;
+      bgG = 185 - (185 - 138) * tt;
+      bgB = 165 + (176 - 165) * tt;
+    } else {
+      const tt = (t - 0.85) / 0.15;
+      bgR = 156 - (156 - 107) * tt;
+      bgG = 138 - (138 -  90) * tt;
+      bgB = 176 - (176 - 130) * tt;
     }
-  }
-  // Suggestion of architecture — vertical "pillars" at thirds.
-  ctx.globalAlpha = 0.15;
-  ctx.fillStyle = '#8a6f3e';
-  for(let p = 1; p < 4; p++){
-    const px = CW * (p/4);
-    ctx.fillRect(px - CW*0.015, 0, CW*0.03, CH);
+    const blend = 0.65;
+    const finalR = Math.round(r * (1 - blend) + bgR * blend);
+    const finalG = Math.round(g * (1 - blend) + bgG * blend);
+    const finalB = Math.round(b * (1 - blend) + bgB * blend);
+    ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,finalR))},${Math.max(0,Math.min(255,finalG))},${Math.max(0,Math.min(255,finalB))})`;
+    ctx.fillRect(x, y, w, lenY);
   }
   ctx.globalAlpha = 1;
 }
 
-// Variant 3 — Haystack: single mass against open sky.
+// Variant 3 — Haystack: solid dome silhouette anchored on horizon, warm
+// sunset sky, violet ground shadow, distant tree line.
 function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 3);
-  // Sky base — warm sunset cream.
-  ctx.fillStyle = '#F2DCB5';
-  ctx.fillRect(0, 0, CW, CH);
 
-  // Field strip at bottom 1/3, painterly horizontal strokes.
-  const horizonY = CH * 0.65;
-  ctx.globalAlpha = 0.75;
-  const fieldStrokes = Math.min(220, Math.max(60, lim * 4));
-  for(let s = 0; s < fieldStrokes; s++){
-    const ci = Math.floor(rnd() * lim);
-    const chord = chords[ci] || chords[0];
-    const notes = chord && (chord.n || chord.notes) || [];
-    const note = notes[Math.floor(rnd() * notes.length)] || {m:60,v:80};
-    const m = note.m!==undefined?note.m:note;
-    const v = note.v!==undefined?note.v:100;
-    const [r, g, b] = gc(m, v);
-    // Field tones: amber/ochre.
-    const fr = Math.round(r * 0.5 + 130);
-    const fg = Math.round(g * 0.4 + 90);
-    const fb = Math.round(b * 0.3 + 40);
-    const y = horizonY + rnd() * (CH - horizonY);
-    const x = rnd() * CW;
-    const len = 8 + rnd() * 22;
-    ctx.strokeStyle = `rgb(${Math.min(255,fr)},${Math.min(255,fg)},${Math.min(255,fb)})`;
-    ctx.lineWidth = 1.5 + rnd() * 2.5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + len, y + (rnd()-0.5) * 3);
-    ctx.stroke();
+  // Sky gradient — coral → rose at horizon.
+  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.7);
+  sky.addColorStop(0, '#F5C28A');
+  sky.addColorStop(0.6, '#E89C7F');
+  sky.addColorStop(1, '#C77A6E');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH * 0.7);
+
+  // Foreground field — violet/blue shadows.
+  const field = ctx.createLinearGradient(0, CH * 0.65, 0, CH);
+  field.addColorStop(0, '#7B6E92');
+  field.addColorStop(1, '#3F3D5C');
+  ctx.fillStyle = field;
+  ctx.fillRect(0, CH * 0.65, CW, CH * 0.35);
+
+  // Distant tree line at horizon.
+  ctx.fillStyle = '#5A4868';
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.65);
+  for(let x = 0; x <= CW; x += CW / 30){
+    ctx.lineTo(x, CH * 0.65 + (rnd() - 0.5) * CH * 0.025 - CH * 0.01);
   }
-  // Haystack — one big dome centered, painted with chord-derived colours.
-  const hx = CW * 0.5 + (rnd() - 0.5) * CW * 0.15;
-  const hy = horizonY - 10;
-  const hw = CW * 0.32;
-  const hh = CH * 0.34;
-  ctx.globalAlpha = 0.9;
-  // Build silhouette with strokes radiating from haystack.
-  const stackStrokes = Math.min(320, Math.max(80, lim * 5));
-  for(let s = 0; s < stackStrokes; s++){
-    const ci = s % lim;
-    const chord = chords[ci] || chords[0];
-    const notes = chord && (chord.n || chord.notes) || [];
-    const note = notes[s % notes.length] || {m:60,v:80};
-    const m = note.m!==undefined?note.m:note;
-    const v = note.v!==undefined?note.v:100;
-    const [r, g, b] = gc(m, v);
-    // Warm dim earth tones for the stack mass.
-    const sr = Math.round(r * 0.6 + 60);
-    const sg = Math.round(g * 0.4 + 30);
-    const sb = Math.round(b * 0.3 + 10);
-    // Random point within dome shape (rough ellipse).
-    const ang = rnd() * Math.PI;  // top half (dome)
-    const radR = rnd();
-    const dx = Math.cos(ang) * hw * 0.5 * Math.pow(radR, 0.7);
-    const dy = -Math.sin(ang) * hh * Math.pow(radR, 0.7);
+  ctx.lineTo(CW, CH * 0.7);
+  ctx.lineTo(0, CH * 0.7);
+  ctx.closePath();
+  ctx.fill();
+
+  // Haystack dome silhouette.
+  const hx = CW * 0.52;
+  const hyBase = CH * 0.7;
+  const hw = CW * 0.34;
+  const hh = CH * 0.32;
+  ctx.fillStyle = '#6A4A2C';
+  ctx.beginPath();
+  ctx.moveTo(hx - hw / 2, hyBase);
+  ctx.bezierCurveTo(hx - hw * 0.55, hyBase - hh * 0.6, hx - hw * 0.2, hyBase - hh, hx, hyBase - hh);
+  ctx.bezierCurveTo(hx + hw * 0.2, hyBase - hh, hx + hw * 0.55, hyBase - hh * 0.6, hx + hw / 2, hyBase);
+  ctx.closePath();
+  ctx.fill();
+
+  // Painterly strokes on the haystack — light (left) vs shadow (right) side.
+  const STACK = Math.min(900, Math.max(300, lim * 14));
+  for(let k = 0; k < STACK; k++){
+    const ang = Math.PI + rnd() * Math.PI;  // top half (dome)
+    const radR = Math.pow(rnd(), 0.5);
+    const dx = Math.cos(ang) * (hw / 2) * radR;
+    const dy = Math.sin(ang) * hh * radR;
     const px = hx + dx;
-    const py = hy + dy;
-    ctx.strokeStyle = `rgb(${Math.min(255,sr)},${Math.min(255,sg)},${Math.min(255,sb)})`;
-    ctx.lineWidth = 2 + rnd() * 2.5;
+    const py = hyBase + dy;
+    const ci = k % Math.max(1, cn);
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    const lightness = (dx < 0 ? 0.85 : 0.45) + (1 - radR) * 0.2;
+    const blend = 0.6;
+    const baseR = dx < 0 ? 200 :  90;
+    const baseG = dx < 0 ? 130 :  60;
+    const baseB = dx < 0 ?  60 :  40;
+    const finalR = Math.round((r * (1 - blend) + baseR * blend) * lightness);
+    const finalG = Math.round((g * (1 - blend) + baseG * blend) * lightness);
+    const finalB = Math.round((b * (1 - blend) + baseB * blend) * lightness);
+    ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,finalR))},${Math.max(0,Math.min(255,finalG))},${Math.max(0,Math.min(255,finalB))})`;
+    ctx.lineWidth = 1.5 + rnd() * 1.5;
     ctx.lineCap = 'round';
-    const slen = 4 + rnd() * 9;
-    const sang = rnd() * Math.PI * 2;
+    const slen = 3 + rnd() * 5;
+    const sang = ang + Math.PI / 2 + (rnd() - 0.5) * 0.5;
     ctx.beginPath();
     ctx.moveTo(px, py);
-    ctx.lineTo(px + Math.cos(sang)*slen, py + Math.sin(sang)*slen);
+    ctx.lineTo(px + Math.cos(sang) * slen, py + Math.sin(sang) * slen);
+    ctx.stroke();
+  }
+
+  // Field strokes — short horizontal brushes blended toward violet/blue.
+  const FIELD = Math.min(1200, Math.max(400, lim * 18));
+  for(let k = 0; k < FIELD; k++){
+    const y = CH * 0.7 + rnd() * CH * 0.3;
+    const x = rnd() * CW;
+    const len = 6 + rnd() * 16;
+    const note = chords[Math.floor(rnd() * cn) % Math.max(1, cn)];
+    const ns = note && (note.n || note.notes);
+    if(!ns || !ns.length) continue;
+    const nt = ns[0];
+    const m = nt.m !== undefined ? nt.m : nt;
+    const v = nt.v !== undefined ? nt.v : 100;
+    const [r, g, b] = gc(m, v);
+    const blend = 0.7;
+    const finalR = Math.round(r * (1 - blend) + 100 * blend);
+    const finalG = Math.round(g * (1 - blend) +  85 * blend);
+    const finalB = Math.round(b * (1 - blend) + 130 * blend);
+    ctx.strokeStyle = `rgb(${finalR},${finalG},${finalB})`;
+    ctx.lineWidth = 1.5 + rnd() * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y + (rnd() - 0.5) * 2);
+    ctx.stroke();
+  }
+}
+
+// Variant 4 — Snow: pale grey-blue sky + snow ground with blue-violet drift
+// shadows + dark conifer silhouettes along the horizon.
+function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 4);
+
+  // Sky gradient — pale grey-blue.
+  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.6);
+  sky.addColorStop(0, '#D8DEE2');
+  sky.addColorStop(1, '#C4C9D2');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH * 0.6);
+
+  // Snow ground.
+  ctx.fillStyle = '#EDEFEF';
+  ctx.fillRect(0, CH * 0.6, CW, CH * 0.4);
+
+  // Blue-violet drift shadows on the snow.
+  ctx.globalAlpha = 0.55;
+  for(let k = 0; k < 280; k++){
+    const x = rnd() * CW;
+    const y = CH * 0.62 + rnd() * CH * 0.36;
+    const w = 20 + rnd() * 60;
+    const h = 3 + rnd() * 8;
+    const sr = 110 + rnd() * 30;
+    const sg = 120 + rnd() * 25;
+    const sb = 160 + rnd() * 30;
+    const a = 0.35 + rnd() * 0.4;
+    ctx.fillStyle = `rgba(${sr|0},${sg|0},${sb|0},${a.toFixed(2)})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w / 2, h / 2, 0, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Dark conifer tree silhouettes along the horizon.
+  const trees = 8;
+  for(let t = 0; t < trees; t++){
+    const tx = (t / trees) * CW + rnd() * CW * 0.06;
+    const th = CH * (0.10 + rnd() * 0.20);
+    const tw = CW * (0.015 + rnd() * 0.025);
+    const tr = 30 + rnd() * 15;
+    const tg = 40 + rnd() * 15;
+    const tb = 50 + rnd() * 15;
+    ctx.fillStyle = `rgb(${tr|0},${tg|0},${tb|0})`;
+    // Trunk.
+    ctx.fillRect(tx - tw * 0.2, CH * 0.6 - th, tw * 0.4, th);
+    // Upper foliage triangle.
+    ctx.beginPath();
+    ctx.moveTo(tx - tw,     CH * 0.6 - th * 0.3);
+    ctx.lineTo(tx + tw,     CH * 0.6 - th * 0.3);
+    ctx.lineTo(tx,          CH * 0.6 - th * 1.4);
+    ctx.closePath();
+    ctx.fill();
+    // Wider lower triangle.
+    ctx.beginPath();
+    ctx.moveTo(tx - tw * 1.4, CH * 0.6 - th * 0.05);
+    ctx.lineTo(tx + tw * 1.4, CH * 0.6 - th * 0.05);
+    ctx.lineTo(tx,            CH * 0.6 - th * 0.9);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Pale chord-derived flickers on the snow (subtle colour breath).
+  const FLICKS = Math.min(900, Math.max(300, lim * 14));
+  ctx.globalAlpha = 0.5;
+  for(let k = 0; k < FLICKS; k++){
+    const x = rnd() * CW;
+    const y = CH * 0.6 + rnd() * CH * 0.4;
+    const chord = chords[k % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[k % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    const wr = Math.round(r * 0.15 + 220);
+    const wg = Math.round(g * 0.15 + 224);
+    const wb = Math.round(b * 0.15 + 234);
+    ctx.fillStyle = `rgb(${Math.min(255,wr)},${Math.min(255,wg)},${Math.min(255,wb)})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 1.5 + rnd() * 3, 0.8 + rnd() * 1.5, rnd() * Math.PI, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Subtle snowflakes — fewer than before.
+  ctx.fillStyle = '#fff';
+  for(let f = 0; f < 80; f++){
+    ctx.beginPath();
+    ctx.arc(rnd() * CW, rnd() * CH * 0.65, 0.6 + rnd() * 1.4, 0, 6.2832);
+    ctx.fill();
+  }
+}
+
+// Variant 5 — Mist: pastel horizontal zones (sky + water) with faint
+// distant tree-line silhouette mirrored into the water + soft sun glow.
+function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const rnd = _seedRnd(91, ss, lim, 5);
+
+  // Dominant hue from middle chord.
+  const midChord = chords[Math.floor(cn / 2)] || chords[0];
+  const midNotes = midChord && (midChord.n || midChord.notes) || [{ m: 60, v: 80 }];
+  const midNote = midNotes[0];
+  const mm = midNote.m !== undefined ? midNote.m : midNote;
+  const [mr, mg, mb] = gc(mm, 100);
+
+  // Sky gradient — pale rose with chord tint.
+  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.5);
+  sky.addColorStop(0, `rgb(${Math.round(mr * 0.15 + 230)},${Math.round(mg * 0.15 + 215)},${Math.round(mb * 0.15 + 220)})`);
+  sky.addColorStop(1, `rgb(${Math.round(mr * 0.20 + 210)},${Math.round(mg * 0.20 + 205)},${Math.round(mb * 0.20 + 215)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH * 0.5);
+
+  // Water — mirror of sky, slightly darker.
+  const water = ctx.createLinearGradient(0, CH * 0.5, 0, CH);
+  water.addColorStop(0, `rgb(${Math.round(mr * 0.25 + 190)},${Math.round(mg * 0.25 + 190)},${Math.round(mb * 0.25 + 200)})`);
+  water.addColorStop(1, `rgb(${Math.round(mr * 0.30 + 170)},${Math.round(mg * 0.30 + 175)},${Math.round(mb * 0.30 + 185)})`);
+  ctx.fillStyle = water;
+  ctx.fillRect(0, CH * 0.5, CW, CH * 0.5);
+
+  // Faint distant tree-line silhouette at horizon.
+  ctx.globalAlpha = 0.32;
+  ctx.fillStyle = `rgb(${Math.round(mr * 0.3 + 130)},${Math.round(mg * 0.3 + 135)},${Math.round(mb * 0.3 + 145)})`;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.5);
+  for(let x = 0; x <= CW; x += CW / 40){
+    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 - CH * 0.015);
+  }
+  ctx.lineTo(CW, CH * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mirror it into the water (paler).
+  ctx.globalAlpha = 0.2;
+  ctx.beginPath();
+  ctx.moveTo(0, CH * 0.5);
+  for(let x = 0; x <= CW; x += CW / 40){
+    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 + CH * 0.015);
+  }
+  ctx.lineTo(CW, CH * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Soft horizontal painterly veils for atmosphere.
+  ctx.globalAlpha = 0.2;
+  for(let i = 0; i < Math.min(80, Math.max(40, lim)); i++){
+    const y = rnd() * CH;
+    const w = CW * (0.3 + rnd() * 0.5);
+    const x = (rnd() - 0.3) * CW;
+    const h = CH * (0.015 + rnd() * 0.04);
+    const chord = chords[i % Math.max(1, cn)];
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) continue;
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r, g, b] = gc(m, v);
+    const fr = Math.round(r * 0.2 + 200);
+    const fg = Math.round(g * 0.2 + 195);
+    const fb = Math.round(b * 0.2 + 215);
+    ctx.fillStyle = `rgb(${fr},${fg},${fb})`;
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y, w / 2, h / 2, 0, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Water ripple short strokes.
+  ctx.globalAlpha = 0.5;
+  for(let k = 0; k < 200; k++){
+    const y = CH * 0.5 + rnd() * CH * 0.5;
+    const x = rnd() * CW;
+    const len = 6 + rnd() * 16;
+    const rr = Math.round(mr * 0.2 + 180);
+    const gg = Math.round(mg * 0.2 + 185);
+    const bb = Math.round(mb * 0.2 + 200);
+    const a = 0.4 + rnd() * 0.4;
+    ctx.strokeStyle = `rgba(${rr},${gg},${bb},${a.toFixed(2)})`;
+    ctx.lineWidth = 0.8 + rnd() * 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
-}
 
-// Variant 4 — Snow: cool whites + pale strokes.
-function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const rnd = _seedRnd(91, ss, lim, 4);
-  // Cold winter base — pale blue-white.
-  ctx.fillStyle = '#E6ECE8';
-  ctx.fillRect(0, 0, CW, CH);
-
-  // Pale carpet of strokes — everything washed toward white.
-  const aspect = CW / CH;
-  const cols = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, lim) * aspect)));
-  const rows = Math.max(1, Math.ceil(lim / cols));
-  const cw = CW / cols;
-  const ch = CH / rows;
-  ctx.globalAlpha = 0.65;
-  for(let i = 0; i < lim; i++){
-    const chord = chords[i];
-    if(!chord) continue;
-    const notes = chord.n || chord.notes;
-    if(!notes || !notes.length) continue;
-    const col = i % cols;
-    const row = Math.floor(i / cols) % rows;
-    const cellX = col * cw;
-    const cellY = row * ch;
-    const N = 18 + Math.floor(rnd() * 8);
-    for(let k = 0; k < N; k++){
-      const x = cellX + rnd() * cw + (rnd()-0.5) * cw * 0.5;
-      const y = cellY + rnd() * ch + (rnd()-0.5) * ch * 0.5;
-      const note = notes[Math.floor(rnd() * notes.length)];
-      const m = note.m!==undefined?note.m:note;
-      const v = note.v!==undefined?note.v:100;
-      const [r, g, b] = gc(m, v);
-      // Wash 70% toward white.
-      const wr = Math.round(r * 0.3 + 200);
-      const wg = Math.round(g * 0.3 + 205);
-      const wb = Math.round(b * 0.3 + 215);
-      ctx.fillStyle = `rgb(${Math.min(255,wr)},${Math.min(255,wg)},${Math.min(255,wb)})`;
-      const rx = 4 + rnd() * 4;
-      const ry = 2 + rnd() * 2;
-      const rot = rnd() * Math.PI;
-      ctx.save();
-      ctx.translate(x, y); ctx.rotate(rot);
-      ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, 6.2832); ctx.fill();
-      ctx.restore();
-    }
-  }
-  // Snowflakes — scattered tiny white dots.
-  ctx.globalAlpha = 0.85;
-  ctx.fillStyle = '#FFFFFF';
-  const flakes = Math.min(420, Math.max(120, lim * 6));
-  for(let f = 0; f < flakes; f++){
-    const x = rnd() * CW;
-    const y = rnd() * CH;
-    const r = 0.7 + rnd() * 1.6;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
-
-// Variant 5 — Mist: near-monochrome, very soft, hue-shift through piece.
-function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const rnd = _seedRnd(91, ss, lim, 5);
-  // Determine dominant hue family from middle chord.
-  const midChord = chords[Math.floor(lim / 2)] || chords[0];
-  const midNotes = midChord && (midChord.n || midChord.notes) || [];
-  const midNote = midNotes[0] || {m:60,v:80};
-  const mm = midNote.m!==undefined?midNote.m:midNote;
-  const [mr, mg, mb] = gc(mm, 100);
-  // Wash 60% toward gray.
-  const baseR = Math.round(mr * 0.4 + 150);
-  const baseG = Math.round(mg * 0.4 + 150);
-  const baseB = Math.round(mb * 0.4 + 155);
-  ctx.fillStyle = `rgb(${baseR},${baseG},${baseB})`;
-  ctx.fillRect(0, 0, CW, CH);
-
-  // Soft veils — large, very transparent ovals from chords.
-  ctx.globalAlpha = 0.18;
-  const veils = Math.min(80, Math.max(20, lim));
-  for(let i = 0; i < veils; i++){
-    const ci = Math.floor((i / veils) * lim);
-    const chord = chords[ci] || chords[0];
-    const notes = chord && (chord.n || chord.notes) || [];
-    const note = notes[Math.floor(rnd() * notes.length)] || {m:60,v:80};
-    const m = note.m!==undefined?note.m:note;
-    const v = note.v!==undefined?note.v:100;
-    const [r, g, b] = gc(m, v);
-    const fr = Math.round(r * 0.35 + 165);
-    const fg = Math.round(g * 0.35 + 165);
-    const fb = Math.round(b * 0.35 + 170);
-    const x = rnd() * CW;
-    const y = rnd() * CH;
-    const w = CW * (0.15 + rnd() * 0.35);
-    const h = CH * (0.05 + rnd() * 0.12);
-    ctx.fillStyle = `rgb(${fr},${fg},${fb})`;
-    ctx.beginPath();
-    ctx.ellipse(x, y, w, h, (rnd()-0.5) * 0.3, 0, 6.2832);
-    ctx.fill();
-  }
-  // Faint top-light bleed.
-  const grad = ctx.createLinearGradient(0, 0, 0, CH);
-  grad.addColorStop(0, 'rgba(255,255,250,0.25)');
-  grad.addColorStop(0.5, 'rgba(255,255,250,0)');
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, CW, CH);
+  // Soft sun glow near horizon centre.
+  const glowGrad = ctx.createRadialGradient(CW * 0.5, CH * 0.5, 4, CW * 0.5, CH * 0.5, CW * 0.18);
+  glowGrad.addColorStop(0, 'rgba(255,230,200,0.55)');
+  glowGrad.addColorStop(1, 'rgba(255,230,200,0)');
+  ctx.fillStyle = glowGrad;
+  ctx.fillRect(0, CH * 0.35, CW, CH * 0.3);
 }
 
 // ─── Hokusai (Woodblock) — 6 variants ───────────────────────────────────────
@@ -20390,10 +20641,11 @@ Composition rules:
       }catch(_){}
     }
 
-    // Mic/Music with Original source selected: route the recorded blob to the
+    // Mic with Original source selected: route the recorded blob to the
     // speakers, mute the sampler for this playthrough, paint visually as
     // usual. Falls back to piano if anything in the decode/source path failed.
-    const useOriginalListen = draftOwnerRef.current==='listen' && playSourceMicRef.current==='original' && listenPCMRef.current;
+    // Both `listen` (Music) and `sing` (Voice) record an original audio buffer.
+    const useOriginalListen = (draftOwnerRef.current==='listen' || draftOwnerRef.current==='sing') && playSourceMicRef.current==='original' && listenPCMRef.current;
     if(useOriginalListen){
       try{
         const ac=Tone.getContext().rawContext;
@@ -20830,7 +21082,7 @@ Composition rules:
   // chord immediately so there's no silent gap before the next step() tick.
   useEffect(()=>{
     if(!playing) return;
-    if(draftOwnerRef.current!=='listen') return;
+    if(draftOwnerRef.current!=='listen' && draftOwnerRef.current!=='sing') return;
     const want = (playSourceMic==='original' && !!listenPCMRef.current) ? 'original' : 'piano';
     const have = originalPlaybackRef.current ? 'original' : 'piano';
     if(want===have) return;
@@ -21103,6 +21355,13 @@ Composition rules:
     // isn't a recorded creation or is empty, so this is safe on every stop path.
     if(draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen') stashDraft(draftOwnerRef.current);
     if(micRafRef.current){cancelAnimationFrame(micRafRef.current);micRafRef.current=null;}
+    // Finalise the parallel raw-audio recorder (same handler used by Music
+    // mode). Voice mode also captures original audio for the Original ⇄ Piano
+    // toggle, so this stop applies here too.
+    if(listenRecorderRef.current){
+      try{ if(listenRecorderRef.current.state!=='inactive') listenRecorderRef.current.stop(); }catch(_){}
+      listenRecorderRef.current = null;
+    }
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
     if(micAcRef.current){micAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicPainting(false);
@@ -21376,7 +21635,18 @@ Composition rules:
     setComposeMode(false);
     if(micListening){stopMicListening();}
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      // Mirror startMicListening's iOS-aware constraint negotiation so the
+      // Voice recording survives Safari's stricter audio policy. Falling back
+      // to {audio:true} on OverconstrainedError keeps the older path working.
+      let stream;
+      try{
+        const isiOS = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:!isiOS,autoGainControl:false,voiceIsolation:false},video:false});
+      }catch(ce){
+        if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
+          stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        } else { throw ce; }
+      }
       micStreamRef.current=stream;
       const ac=await getSharedAC();
       micAcRef.current=ac;
@@ -21386,6 +21656,73 @@ Composition rules:
       src.connect(analyser);
       const buf=new Float32Array(analyser.fftSize);
       const sr=ac.sampleRate;
+      // Parallel raw-audio capture so Voice gets the Original ⇄ Piano toggle
+      // just like Music. We share the existing listen* refs because the toggle
+      // UI and playback paths already read those — sing simply writes into
+      // them, prevailing over any earlier listen blob (last recording wins).
+      let recordStream = stream;
+      try{
+        const isiOSrec = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
+        const hp = ac.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
+        const dst = ac.createMediaStreamDestination();
+        if(isiOSrec){
+          src.connect(hp); hp.connect(dst);
+        } else {
+          const comp = ac.createDynamicsCompressor();
+          comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
+          comp.attack.value = 0.005; comp.release.value = 0.15;
+          src.connect(hp); hp.connect(comp); comp.connect(dst);
+        }
+        if(dst.stream && dst.stream.getAudioTracks().length>0) recordStream = dst.stream;
+      }catch(_){ /* fallback to raw stream — recording still works */ }
+      try{
+        const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
+        if(MR){
+          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          let mime = '';
+          for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
+          const opts = mime ? { mimeType: mime } : undefined;
+          const rec = new MR(recordStream, opts);
+          listenChunksRef.current = [];
+          // Clear any previous draft's blob — fresh sing session.
+          if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
+          listenBlobRef.current = null;
+          listenPCMRef.current = null;
+          rec.ondataavailable = (e)=>{ if(e.data && e.data.size>0) listenChunksRef.current.push(e.data); };
+          rec.onstop = ()=>{
+            const chunks = listenChunksRef.current;
+            if(!chunks || chunks.length===0){ listenChunksRef.current=[]; return; }
+            const type = rec.mimeType || mime || 'audio/webm';
+            const blob = new Blob(chunks, { type });
+            const url = URL.createObjectURL(blob);
+            listenBlobRef.current = { blob, url, type };
+            listenChunksRef.current = [];
+            setHasMicBlob(true);
+            (async()=>{
+              try{
+                const arrBuf = await blob.arrayBuffer();
+                const ac2 = Tone.getContext().rawContext;
+                const decode = (ab,ctx)=>new Promise((res,rej)=>{
+                  let done=false; const tm=setTimeout(()=>{ if(!done){done=true;rej(new Error('decode timeout'));} },10000);
+                  try{
+                    ctx.decodeAudioData(ab, b=>{ if(!done){done=true;clearTimeout(tm);res(b);} }, e=>{ if(!done){done=true;clearTimeout(tm);rej(e||new Error('decode failed'));} });
+                  }catch(_){
+                    ctx.decodeAudioData(ab).then(b=>{ if(!done){done=true;clearTimeout(tm);res(b);} }, e=>{ if(!done){done=true;clearTimeout(tm);rej(e||new Error('decode failed'));} });
+                  }
+                });
+                const buf2 = await decode(arrBuf, ac2);
+                listenPCMRef.current = buf2;
+              }catch(_){
+                listenPCMRef.current = null;
+              }
+            })();
+          };
+          rec.start(1000);
+          listenRecorderRef.current = rec;
+          setHasMicBlob(false);
+        }
+      }catch(_){ /* recording optional — pitch-track still works without it */ }
       setMicPainting(true);setMicArmed(false);setMicContext(true);
       // Frame the collapsed Color·Style strip at the top with the canvas below,
       // same as Play and compose — MIC (Voice/Music) is another "performing"
@@ -23084,11 +23421,11 @@ Composition rules:
               </div>
             )}
           </>)}
-          {/* Style — hidden when the source IS an image (both Scan and AI
-              Compose modes). The image already IS a painting; an artist
-              re-paint makes no sense there. MFI uses loadedSource='mood'
-              (with moodFromImg flag), so chips show there as expected. */}
-          {loadedSource!=='image' && (
+          {/* Style — hidden in pure Image source modes (Scan + AI Compose).
+              MFI looks similar on screen (image is shown as backdrop) but is
+              flagged moodFromImg=true — there we DO compose a piece, so the
+              artist picker belongs there. */}
+          {(loadedSource!=='image' || moodFromImg) && (
           <div style={{position:'relative',marginTop:6,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
             <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:26,height:26,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
@@ -23096,7 +23433,7 @@ Composition rules:
             </button>
           </div>
           )}
-          {loadedSource!=='image' && (
+          {(loadedSource!=='image' || moodFromImg) && (
           <>
           {(()=>{
             // ── Adaptive chip grid (max 2 rows) ────────────────────────────
@@ -23994,7 +24331,7 @@ Composition rules:
                       const title = (compositionName||recordingName||'Paintiano').trim()||'Paintiano';
                       // Mic/Music with Original selected: use the recorded blob
                       // directly — no re-render needed, original quality kept.
-                      const useOriginalBlob = draftOwnerRef.current==='listen' && playSourceMic==='original' && listenBlobRef.current?.blob;
+                      const useOriginalBlob = (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && playSourceMic==='original' && listenBlobRef.current?.blob;
                       let audioBlob = null;
                       let audioName;
                       if(useOriginalBlob){
@@ -24407,11 +24744,12 @@ Composition rules:
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
         )}
-        {/* Mic/Music source toggle — appears once the listen session has a
-            finalised audio blob and the mic is no longer live. One tap flips
-            between playing back the original recording and the synthesised
-            piano cover. Hidden during active capture and during recording. */}
-        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+        {/* Original ⇄ Piano source toggle — appears once the mic session
+            (Voice or Music) has a finalised audio blob and the mic is no
+            longer live. One tap flips between playing back the original
+            recording and the synthesised piano cover. Hidden during active
+            capture and during recording. */}
+        {hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && (
           <button className="pf-lift" onClick={()=>setPlaySourceMic(p=>p==='original'?'piano':'original')}
             title={playSourceMic==='original'?'playback: original recording — tap to switch to piano cover':'playback: piano cover — tap to switch to original recording'}
             style={{padding:'8px 14px',background:playSourceMic==='original'?'rgba(140,200,255,.16)':'rgba(201,168,76,.16)',color:playSourceMic==='original'?'#8accff':GOLD,border:'1px solid '+(playSourceMic==='original'?'rgba(100,180,255,.55)':'rgba(201,168,76,.55)'),borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:'0 3px 10px '+(playSourceMic==='original'?'rgba(100,180,255,.25)':'rgba(201,168,76,.25)')}}>
@@ -24420,9 +24758,9 @@ Composition rules:
         )}
         {/* Restart playback from chord 0 using the current source. Pairs with
             the source toggle: toggle swaps Original ⇄ Piano in place (seamless);
-            ↺ jumps back to the beginning. Visible whenever there's a Mic listen
-            draft with a finalised recording and nothing live is happening. */}
-        {hasMicBlob && !micActive && !recording && draftOwnerRef.current==='listen' && (
+            ↺ jumps back to the beginning. Visible whenever there's a Mic draft
+            (Voice or Music) with a finalised recording. */}
+        {hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && (
           <button className="pf-lift"
             onClick={()=>{
               // Stop everything cleanly, reset position, then start fresh from idx 0.
