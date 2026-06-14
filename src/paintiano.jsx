@@ -5021,17 +5021,25 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const cn = chords.length;
   const rnd = _seedRnd(53, ss, 0, 0);
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Sphere swell / Cube grid (original body below, via useCubes).
-  //  2 = Plastic-unit cells (square cells each holding a sized circle, op-art bulge).
-  //  3 = Vega (colour deformed checkerboard).
-  //  4 = Hexagon cubes (isometric).    5 = Colour interval grid.
+  //  0 = Classic bulge (Sphere swell / Cube grid, seed-driven internal pick —
+  //      the two layouts read as one "bulge" identity so they share a slot).
+  //  1 = Vonal — sphere with radiating rays (1968, centrifugal motion).
+  //  2 = Vega — colour deformed checkerboard with central bulge.
+  //  3 = Banya — diagonal split cells (1964, zigzag color rhythm).
+  //  4 = Hexagon cubes — isometric tumbling block (3D).
+  //  5 = Plastic-unit cells — discs in cells with central bulge.
+  //  Free (cap=2) sees Sphere/Cube + Vonal — grid-warp vs ray-radiate is the
+  //  strongest op-art contrast Vasarely\'s catalogue offers.
   {
     const _pn=_capN(6); const _vpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_vpick===2){ vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_vpick===3){ vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===1){ vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===2){ vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===3){ vasarelyPhaseBanya(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===4){ vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_vpick===5){ vasarelyPhaseInterval(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original sphere/cube body (variant 0/1)
+    if(_vpick===5){ vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    // else fall through to original sphere/cube body (variant 0; the sphere
+    // vs cube sub-pick within is seed-driven, kept as natural micro-variation
+    // rather than its own Vary slot).
   }
   const COLS = cn<=8 ? 10 : cn<=24 ? 14 : cn<=60 ? 18 : cn<=140 ? 24 : cn<=300 ? 32 : cn<=600 ? 40 : 48;
   const ROWS = Math.max(6, Math.round(COLS * (CH / CW)));
@@ -5257,6 +5265,117 @@ function vasarelyPhaseInterval(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const cr2=[Math.round(rgb[0]*(0.6+t*0.4)),Math.round(rgb[1]*(0.6+t*0.4)),Math.round(rgb[2]*(0.6+t*0.4))];
     ctx.fillStyle=`rgb(${cr2[0]},${cr2[1]},${cr2[2]})`;
     ctx.fillRect(c*cw+cw*0.06,r*chh+chh*0.06,cw*0.88,chh*0.88);
+  }
+}
+
+// ── Vasarely G: Vonal — sphere with radiating rays (1968 series). Central
+// chord-gradient sphere + 48 chord-coloured wedge rays radiating outward,
+// alternating bright/dark. Strong centrifugal motion. Reveal scales ray
+// visibility (sphere shows throughout).
+function vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Dark ground.
+  ctx.fillStyle = isBW ? '#0e0e0e' : '#0a0a14';
+  ctx.fillRect(0,0,CW,CH);
+
+  const cx = CW/2, cy = CH/2;
+  const R = Math.min(CW,CH) * 0.32;
+
+  // 48 radiating rays.
+  const rays = 48;
+  const visRays = Math.max(8, Math.ceil(rays*reveal));
+  for(let i=0;i<visRays;i++){
+    const ang = (i/rays)*Math.PI*2;
+    const {rgb} = _picChord(chords, (i*2)%cn, gc, isBW);
+    const mul = (i%2) ? 1 : 0.55;
+    ctx.fillStyle = `rgb(${Math.min(255,rgb[0]*mul)|0},${Math.min(255,rgb[1]*mul)|0},${Math.min(255,rgb[2]*mul)|0})`;
+    ctx.beginPath();
+    const inner = R;
+    const outer = Math.hypot(CW,CH);
+    const halfAng = Math.PI/rays;
+    ctx.moveTo(cx + Math.cos(ang-halfAng)*inner, cy + Math.sin(ang-halfAng)*inner);
+    ctx.lineTo(cx + Math.cos(ang-halfAng)*outer, cy + Math.sin(ang-halfAng)*outer);
+    ctx.lineTo(cx + Math.cos(ang+halfAng)*outer, cy + Math.sin(ang+halfAng)*outer);
+    ctx.lineTo(cx + Math.cos(ang+halfAng)*inner, cy + Math.sin(ang+halfAng)*inner);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Central sphere with chord gradient.
+  const gc1 = _picChord(chords, 0, gc, isBW).rgb;
+  const gc2 = _picChord(chords, Math.floor(cn/2)%cn, gc, isBW).rgb;
+  const grad = ctx.createRadialGradient(cx - R*0.3, cy - R*0.3, R*0.1, cx, cy, R);
+  grad.addColorStop(0, `rgb(${Math.min(255,gc1[0]+80)|0},${Math.min(255,gc1[1]+80)|0},${Math.min(255,gc1[2]+80)|0})`);
+  grad.addColorStop(1, `rgb(${gc2[0]|0},${gc2[1]|0},${gc2[2]|0})`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = isBW ? '#0e0e0e' : '#0a0a14';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+}
+
+// ── Vasarely H: Banya — diagonal split cells (1964 · Yapocsa series).
+// Grid of squares, each split diagonally into 2 chord-coloured triangles.
+// Diagonal direction alternates per cell creating zigzag visual rhythm.
+// Reveal sweeps top-left → bottom-right.
+function vasarelyPhaseBanya(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Dark ground.
+  ctx.fillStyle = isBW ? '#0e0e0e' : '#0a0a14';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Grid dims scale with chord count.
+  const cols = cn<=8?8:cn<=24?12:cn<=60?16:cn<=140?20:24;
+  const rows = Math.max(6, Math.round(cols*CH/CW));
+  const cw = CW/cols, chh = CH/rows;
+  const total = cols*rows;
+  const vis = Math.max(2, Math.ceil(total*reveal));
+
+  let k=0;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(k >= vis) break;
+      const x0 = c*cw, y0 = r*chh;
+      const dir = (r+c) % 2;
+      const cTop = _picChord(chords, (k*2)%cn, gc, isBW).rgb;
+      const cBot = _picChord(chords, (k*2+1)%cn, gc, isBW).rgb;
+      // Top/upper triangle.
+      ctx.fillStyle = `rgb(${cTop[0]|0},${cTop[1]|0},${cTop[2]|0})`;
+      ctx.beginPath();
+      if(dir === 0){
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0+cw, y0);
+        ctx.lineTo(x0, y0+chh);
+      } else {
+        ctx.moveTo(x0+cw, y0);
+        ctx.lineTo(x0+cw, y0+chh);
+        ctx.lineTo(x0, y0);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // Bottom/lower triangle.
+      ctx.fillStyle = `rgb(${cBot[0]|0},${cBot[1]|0},${cBot[2]|0})`;
+      ctx.beginPath();
+      if(dir === 0){
+        ctx.moveTo(x0+cw, y0);
+        ctx.lineTo(x0+cw, y0+chh);
+        ctx.lineTo(x0, y0+chh);
+      } else {
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0+cw, y0+chh);
+        ctx.lineTo(x0, y0+chh);
+      }
+      ctx.closePath();
+      ctx.fill();
+      k++;
+    }
+    if(k >= vis) break;
   }
 }
 
