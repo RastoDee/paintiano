@@ -6142,17 +6142,26 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Wavy stripes / Concentric ripple (original body below, via waveVariant).
-  //  2 = B/W waves recoloured (vermilion/turquoise undulating bands).
-  //  3 = Cataract (warm/cold colour ribbons).  4 = Diagonal lozenges.
-  //  5 = Triangle grid recoloured.
+  //  0 = Classic Riley (Wavy stripes / Concentric ripple, seed-driven internal
+  //      pick — the two layouts read as one "wave Riley" identity so they
+  //      share a single Vary slot).
+  //  1 = Movement in Squares (1961, Riley's breakthrough optical bend).
+  //  2 = Late Morning vertical stripes (1967, pure colour signature).
+  //  3 = Cataract (1967, radiating petal wobble).
+  //  4 = Crest (1964, single S-curve gesture).
+  //  5 = Triangle tessellation.
+  //  Free (cap=2) sees Wavy/Ripple + Movement in Squares — wave Riley vs
+  //  square Riley is the strongest visual contrast in her catalogue.
   {
     const _pn=_capN(6); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_rpick===2){ rileyPhaseBWWaves(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===1){ rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===2){ rileyPhaseStripes(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===3){ rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_rpick===4){ rileyPhaseLozenge(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===4){ rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===5){ rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original wavy-stripes/ripple body (variant 0/1)
+    // else fall through to original wavy-stripes/ripple body (variant 0; the
+    // stripes vs ripple sub-pick within is seed-driven, kept as natural
+    // micro-variation rather than its own Vary slot).
   }
   const darkC = chordCol(0, 0.5);
   const liteC = chordCol(Math.floor(cn/2), 1.25);
@@ -6374,6 +6383,169 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       ctx.lineTo(x0+tw,y0); ctx.closePath(); ctx.fill();
       k++;
     }
+  }
+}
+
+// ── Riley G: Movement in Squares (1961) — Riley's breakthrough painting.
+// Black + cream grid of squares that compress horizontally toward a vertical
+// band — creates an optical bend illusion. Subtle chord-coloured tint overlay
+// per row preserves the optical effect while staying palette-driven.
+function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(34001, ss, 0, 0); sR(); sR();
+
+  // Cream ground.
+  ctx.fillStyle = isBW ? '#e8e8e4' : '#f0ece2';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Grid dimensions — scale with chord count.
+  const rows = cn<=8?8:cn<=24?10:cn<=60?12:14;
+  const cols = cn<=8?14:cn<=24?18:cn<=60?22:24;
+  const cellH = CH/rows;
+  // Compression centre — varies per painting via seed.
+  const centerX = CW * (0.45 + sR()*0.30);
+
+  // Compute column widths — symmetric compression toward centerX.
+  const widths = [];
+  let totalW = 0;
+  for(let c=0;c<cols;c++){
+    const t = c/cols;
+    const x = t*CW;
+    const dist = Math.abs(x - centerX) / CW;
+    const w = (CW/cols) * (0.25 + Math.pow(dist, 0.7) * 1.0);
+    widths.push(w);
+    totalW += w;
+  }
+  const scale = CW/totalW;
+  for(let i=0;i<widths.length;i++) widths[i] *= scale;
+
+  // Reveal-based: rows appear top-to-bottom.
+  const visRows = Math.max(1, Math.ceil(rows*reveal));
+  const dark = isBW ? '#1a1a1a' : '#1a1a1a';
+  const light = isBW ? '#e8e8e4' : '#f0ece2';
+
+  // Draw checkerboard.
+  let x = 0;
+  for(let c=0;c<cols;c++){
+    const w = widths[c];
+    for(let r=0;r<visRows;r++){
+      const y = r*cellH;
+      const k = (r+c) % 2;
+      ctx.fillStyle = k ? dark : light;
+      ctx.fillRect(x, y, w, cellH);
+    }
+    x += w;
+  }
+
+  // Subtle chord-coloured tint overlay per row — preserves optical effect.
+  for(let r=0;r<visRows;r++){
+    const {rgb} = _picChord(chords, Math.floor(r/rows * cn)%cn, gc, isBW);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.04)`;
+    ctx.fillRect(0, r*cellH, CW, cellH);
+  }
+}
+
+// ── Riley H: Late Morning / Vertical stripes (1967, Achaean 1981) — Riley's
+// post-1967 colour signature. Pure vertical stripes of chord colours, no
+// waves, no patterns. Stripe count scales with song length; reveal sweeps
+// left-to-right.
+function rileyPhaseStripes(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Stripe count grows with chord density.
+  const stripes = cn<=8?16:cn<=24?28:cn<=60?42:cn<=120?56:cn<=240?72:cn<=400?96:120;
+  const stripeW = CW/stripes;
+  // Reveal-based: stripes appear left-to-right.
+  const visStripes = Math.max(1, Math.ceil(stripes*reveal));
+
+  // Light ground for un-revealed area.
+  ctx.fillStyle = isBW ? '#e8e8e4' : '#f0ece2';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Slight saturation boost so colours pop as pure bands.
+  for(let i=0;i<visStripes;i++){
+    const t = i/stripes;
+    const {rgb} = _picChord(chords, Math.floor(t * cn)%cn, gc, isBW);
+    const r = Math.min(255, rgb[0]*1.05);
+    const g = Math.min(255, rgb[1]*1.05);
+    const b = Math.min(255, rgb[2]*1.05);
+    ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+    ctx.fillRect(i*stripeW, 0, stripeW+1, CH);
+  }
+}
+
+// ── Riley I: Crest (1964) — single-gesture Riley. 24 parallel S-curve
+// bands sweeping horizontally — all share the same sinusoid so the painting
+// reads as one curved form rather than many. Black + cream alternating
+// stripes with chord-coloured overlay tints. Reveal scales band visibility.
+function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(35001, ss, 0, 0); sR(); sR();
+
+  // White ground.
+  ctx.fillStyle = isBW ? '#ececea' : '#f8f6f0';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Curve parameters — slight variation per painting.
+  const phase = sR()*Math.PI*2;
+  const freq = 1.2 + sR()*0.6; // gentle S-curve, 1-2 wavelengths
+  const ampScale = 0.08 + sR()*0.06;
+
+  // Band count.
+  const bands = cn<=8?12:cn<=24?18:cn<=60?22:cn<=120?26:30;
+  const visBands = Math.max(2, Math.ceil(bands*reveal));
+  const bandH = (CH*0.70)/bands;
+  const yStart = CH*0.15;
+
+  // First pass: B/W alternating bands following the shared curve.
+  for(let i=0;i<visBands;i++){
+    const yBase = yStart + i*bandH;
+    const col = (i%2) ? (isBW ? '#1a1a1a' : '#1a1a1a') : (isBW ? '#e8e8e4' : '#f0ece2');
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    const segs = 50;
+    for(let s=0;s<=segs;s++){
+      const x = (s/segs)*CW;
+      const w = Math.sin(x/CW*Math.PI*freq + phase) * CH*ampScale;
+      const y = yBase + w;
+      if(s===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    for(let s=segs;s>=0;s--){
+      const x = (s/segs)*CW;
+      const w = Math.sin(x/CW*Math.PI*freq + phase) * CH*ampScale;
+      const y = yBase + w + bandH;
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Second pass: chord-coloured overlay tints (one per ~4 bands).
+  const tintCount = Math.max(2, Math.ceil(visBands/4));
+  for(let i=0;i<tintCount;i++){
+    const t = i/Math.max(1, tintCount-1);
+    const yBase = yStart + t*(visBands*bandH - bandH*4);
+    const {rgb} = _picChord(chords, Math.floor(t*cn)%cn, gc, isBW);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.25)`;
+    ctx.beginPath();
+    const segs = 50;
+    for(let s=0;s<=segs;s++){
+      const x = (s/segs)*CW;
+      const w = Math.sin(x/CW*Math.PI*freq + phase) * CH*ampScale;
+      const y = yBase + w;
+      if(s===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    for(let s=segs;s>=0;s--){
+      const x = (s/segs)*CW;
+      const w = Math.sin(x/CW*Math.PI*freq + phase) * CH*ampScale;
+      const y = yBase + w + bandH*4;
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
   }
 }
 
