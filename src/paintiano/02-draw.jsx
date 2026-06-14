@@ -5290,16 +5290,26 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   const css = (c,a)=> a===undefined ? `rgb(${c[0]|0},${c[1]|0},${c[2]|0})` : `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Ornament grid / Frieze bands (original body below, via goldVariant).
-  //  2 = Tree of Life (spiral branches).  3 = Mosaic squares/spirals/eyes.
-  //  4 = Floral meadow.  5 = Water Serpents (flowing scales).
+  //  0 = Classic Klimt (Ornament grid vs Frieze bands, seed-driven internal
+  //      pick — the two layouts read as one "gold ornament" identity so they
+  //      share a single Vary slot).
+  //  1 = The Kiss (figuratíve pair embrace, iconic motif).
+  //  2 = Tree of Life (Stoclet Frieze 1909, proper Klimt curl vocabulary).
+  //  3 = Danaë (golden shower, dramatic figurative, only non-gold ground).
+  //  4 = Floral meadow.
+  //  5 = Water Serpents.
+  //  Free (cap=2) sees Ornament + The Kiss — abstract ornament vs figurative
+  //  embrace is the strongest art-historical contrast Klimt offers.
   {
     const _pn=_capN(6); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_gpick===1){ klimtPhaseKiss(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===2){ klimtPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_gpick===3){ klimtPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_gpick===3){ klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===4){ klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===5){ klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original ornament-grid/frieze body (variant 0/1)
+    // else fall through to original ornament-grid/frieze body (variant 0; the
+    // grid vs frieze sub-pick within is seed-driven, kept as natural
+    // micro-variation rather than its own Vary slot).
   }
   const gg = ctx.createLinearGradient(0, 0, CW, CH);
   gg.addColorStop(0, '#b8902f');
@@ -5463,27 +5473,94 @@ function _klimtGround(ctx,CW,CH){
 }
 
 // ── Klimt C: Tree of Life — golden spiralling branches from a central trunk. ──
+// ── Klimt C: Tree of Life — proper Klimt vocabulary (Stoclet Frieze 1909).
+// Gold ground + 20 spiralling branches radiating from a central trunk, each
+// ending in a tight Klimt curl with a chord-coloured jewel at its center.
+// Falling eye-leaves (chord-coloured) drift across the canvas. Reveal scales
+// branch + leaf count so the painting builds progressively.
 function klimtPhaseTree(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  if(isBW){ctx.fillStyle='#2a2a2a';ctx.fillRect(0,0,CW,CH);}else _klimtGround(ctx,CW,CH);
-  const branches=Math.max(4,Math.min(48,Math.round(cn/2)));
-  const vis=Math.max(1,Math.ceil(N/cn*branches));
-  const baseX=CW/2,baseY=CH*0.95;
-  ctx.lineCap='round';
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+4700,ss,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/branches)),gc,isBW);
-    const side=(i%2)?1:-1;
-    const ang=-Math.PI/2+side*(0.2+rnd()*1.0);
-    const len=Math.min(CW,CH)*(0.2+rnd()*0.4);
-    ctx.strokeStyle=isBW?'rgba(220,220,210,0.85)':'rgba(40,30,10,0.85)';
-    ctx.lineWidth=Math.max(1.5,Math.min(CW,CH)*0.006);
-    // spiralling branch
-    ctx.beginPath();let x=baseX+side*rnd()*CW*0.1,y=baseY-rnd()*CH*0.3;ctx.moveTo(x,y);
-    let a=ang;for(let s=0;s<14;s++){a+=side*0.18;x+=Math.cos(a)*len/14;y+=Math.sin(a)*len/14;ctx.lineTo(x,y);}
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Gold ground (or dark grey in B/W).
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  const cx = CW*0.50, cy = CH*0.55;
+
+  // Branches — count scales with chord density (target 20 at high cn).
+  const branchTarget = Math.max(6, Math.min(24, Math.round(cn/8) + 8));
+  const branches = Math.max(3, Math.ceil(branchTarget * reveal));
+
+  ctx.strokeStyle = isBW ? '#1a1a1a' : '#2a1f0a';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+
+  for(let i=0;i<branches;i++){
+    const rnd = _seedRnd(i+31500,ss,0,0);
+    const startAng = (i/branchTarget)*Math.PI*2;
+    let x = cx + Math.cos(startAng)*CW*0.02;
+    let y = cy + Math.sin(startAng)*CH*0.02;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    let a = startAng;
+    const swirlDir = (i%2)?1:-1;
+    const len = Math.min(CW,CH)*(0.30+rnd()*0.22);
+    const segs = 24;
+    for(let s=0;s<segs;s++){
+      a += swirlDir * 0.22;
+      x += Math.cos(a)*len/segs;
+      y += Math.sin(a)*len/segs;
+      ctx.lineTo(x, y);
+    }
     ctx.stroke();
-    // jewel at tip
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.beginPath();ctx.arc(x,y,Math.min(CW,CH)*0.018,0,Math.PI*2);ctx.fill();
+    // Tight Klimt curl at the tip — signature spiral.
+    const sx = x, sy = y;
+    ctx.beginPath();
+    let sa = a;
+    for(let t=0; t<22; t++){
+      const r = t * 1.6;
+      sa += swirlDir * 0.55;
+      const px = sx + Math.cos(sa)*r;
+      const py = sy + Math.sin(sa)*r;
+      if(t===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    // Chord-coloured jewel at spiral center.
+    const {rgb} = _picChord(chords, Math.floor(i*(cn/branchTarget))%cn, gc, isBW);
+    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 7+i%3*2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = isBW ? '#1a1a1a' : '#2a1f0a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.lineWidth = 3;
+  }
+
+  // Central trunk — dark brown anchor.
+  ctx.fillStyle = isBW ? '#4a4844' : '#5a3a18';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + CH*0.30, CW*0.04, CH*0.20, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = isBW ? '#1a1a1a' : '#2a1f0a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Falling Klimt eye-leaves — chord-coloured ellipses with dark pupil dots.
+  const leafCount = Math.max(10, Math.ceil(30*reveal));
+  for(let i=0;i<leafCount;i++){
+    const rnd = _seedRnd(i+32000,ss,0,0);
+    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    const x = rnd()*CW, y = rnd()*CH;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 4+rnd()*5, 8+rnd()*5, rnd()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = isBW ? 'rgba(20,20,20,0.85)' : 'rgba(40,28,6,0.85)';
+    ctx.beginPath();
+    ctx.arc(x, y, 1.5, 0, Math.PI*2);
+    ctx.fill();
   }
 }
 
@@ -5546,6 +5623,213 @@ function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     // golden scales along the stream
     ctx.fillStyle=isBW?'rgba(220,216,200,0.7)':'rgba(216,176,60,0.7)';
     for(let x=CW*0.1;x<CW;x+=CW*0.12){const sy=y0+Math.sin(x/CW*Math.PI*3+i)*CH*0.12;ctx.beginPath();ctx.ellipse(x,sy,CW*0.012,CH*0.008,0,0,Math.PI*2);ctx.fill();}
+  }
+}
+
+// ── Klimt G: The Kiss (1907-08) — Klimt's most iconic painting. Pair embrace
+// silhouette on golden ground; left side (man) filled with black + chord-coloured
+// rectangles; right side (woman) filled with chord-coloured ovals/circles. Two
+// faces at top: man behind (dark hair), woman tilted forward with flowers in
+// hair. Falling chord-coloured petals at the bottom. Reveal scales detail count.
+function klimtPhaseKiss(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Gold ground (or dark grey in B/W).
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  // Subtle gold flecks.
+  for(let i=0;i<60;i++){
+    const rnd=_seedRnd(i+30100,ss,0,0);
+    ctx.fillStyle = isBW
+      ? (rnd()>0.5 ? 'rgba(220,216,210,0.10)' : 'rgba(80,80,80,0.10)')
+      : (rnd()>0.5 ? 'rgba(255,240,180,0.10)' : 'rgba(120,86,20,0.10)');
+    ctx.beginPath(); ctx.arc(rnd()*CW, rnd()*CH, 4+rnd()*16, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Embracing pair silhouette.
+  const cx = CW*0.50, cy = CH*0.55;
+  const cloakW = CW*0.55, cloakH = CH*0.85;
+  // Outer cloak.
+  ctx.fillStyle = isBW ? '#aaa49a' : '#dab040';
+  ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(80,55,15,0.7)';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(cx - cloakW*0.40, CH);
+  ctx.bezierCurveTo(cx - cloakW*0.55, cy + cloakH*0.20, cx - cloakW*0.50, cy - cloakH*0.30, cx - cloakW*0.20, cy - cloakH*0.40);
+  ctx.bezierCurveTo(cx - cloakW*0.05, cy - cloakH*0.50, cx + cloakW*0.20, cy - cloakH*0.50, cx + cloakW*0.30, cy - cloakH*0.42);
+  ctx.bezierCurveTo(cx + cloakW*0.50, cy - cloakH*0.35, cx + cloakW*0.55, cy + cloakH*0.20, cx + cloakW*0.40, CH);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  // LEFT (man) — rectangles/squares in ink + chord-coloured.
+  const leftCount = Math.max(8, Math.ceil(60*reveal));
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx - cloakW*0.40, CH);
+  ctx.bezierCurveTo(cx - cloakW*0.55, cy + cloakH*0.20, cx - cloakW*0.50, cy - cloakH*0.30, cx - cloakW*0.20, cy - cloakH*0.40);
+  ctx.lineTo(cx, cy - cloakH*0.40);
+  ctx.lineTo(cx, CH);
+  ctx.closePath();
+  ctx.clip();
+  for(let i=0;i<leftCount;i++){
+    const rnd=_seedRnd(i+30200,ss,0,0);
+    const x = cx - cloakW*0.45 + rnd()*cloakW*0.45;
+    const y = cy - cloakH*0.40 + rnd()*cloakH*0.85;
+    const w = 12+rnd()*22, h = 8+rnd()*16;
+    const k = rnd();
+    if(k < 0.40){
+      ctx.fillStyle = isBW ? '#1a1a1a' : '#1a1208';
+    } else {
+      const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    }
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.restore();
+
+  // RIGHT (woman) — ovals/circles in chord colours.
+  const rightCount = Math.max(8, Math.ceil(70*reveal));
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx, CH);
+  ctx.lineTo(cx, cy - cloakH*0.40);
+  ctx.bezierCurveTo(cx + cloakW*0.05, cy - cloakH*0.50, cx + cloakW*0.20, cy - cloakH*0.50, cx + cloakW*0.30, cy - cloakH*0.42);
+  ctx.bezierCurveTo(cx + cloakW*0.50, cy - cloakH*0.35, cx + cloakW*0.55, cy + cloakH*0.20, cx + cloakW*0.40, CH);
+  ctx.closePath();
+  ctx.clip();
+  for(let i=0;i<rightCount;i++){
+    const rnd=_seedRnd(i+30300,ss,0,0);
+    const x = cx + rnd()*cloakW*0.50;
+    const y = cy - cloakH*0.40 + rnd()*cloakH*0.85;
+    const r = 6+rnd()*14;
+    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = isBW ? 'rgba(40,40,40,0.5)' : 'rgba(60,40,20,0.5)';
+    ctx.beginPath(); ctx.arc(x, y, r*0.3, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+
+  // Two heads at top — man behind, woman tilted.
+  ctx.fillStyle = isBW ? '#cccac4' : '#e8c894';
+  ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.8)' : 'rgba(80,55,15,0.8)';
+  ctx.lineWidth = 3;
+  // Man head
+  ctx.beginPath();
+  ctx.ellipse(cx - cloakW*0.06, cy - cloakH*0.36, cloakW*0.10, cloakW*0.13, -0.1, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Man dark hair
+  ctx.fillStyle = isBW ? '#222' : '#1a1208';
+  ctx.beginPath();
+  ctx.ellipse(cx - cloakW*0.06, cy - cloakH*0.42, cloakW*0.11, cloakW*0.08, -0.1, 0, Math.PI*2);
+  ctx.fill();
+  // Woman head — tilted
+  ctx.fillStyle = isBW ? '#d8d6d0' : '#f4d8b8';
+  ctx.beginPath();
+  ctx.ellipse(cx + cloakW*0.08, cy - cloakH*0.30, cloakW*0.09, cloakW*0.11, 0.4, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Woman flowers in hair.
+  for(let i=0;i<5;i++){
+    const {rgb} = _picChord(chords, Math.floor((20+i*15)*(cn/120))%cn, gc, isBW);
+    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    const fx = cx + cloakW*0.04 + i*cloakW*0.025;
+    const fy = cy - cloakH*0.35;
+    ctx.beginPath(); ctx.arc(fx, fy, 5, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Falling petals/sparkles at bottom (reveal-based count).
+  const petals = Math.max(5, Math.ceil(25*reveal));
+  for(let i=0;i<petals;i++){
+    const rnd=_seedRnd(i+30400,ss,0,0);
+    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
+    const x = rnd()*CW;
+    const y = CH*0.65 + rnd()*CH*0.30;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 3+rnd()*4, 6+rnd()*5, rnd()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ── Klimt H: Danaë (1907-08) — golden shower. Rich maroon radial ground +
+// curled female nude silhouette (right side) + diagonal cascade of golden
+// coins/discs interspersed with chord-coloured ornaments. Klimt's most
+// dramatic figurative work; the only non-gold-ground variant.
+function klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Rich maroon-red radial ground (or dark grey in B/W).
+  const grad = ctx.createRadialGradient(CW*0.7, CH*0.5, 50, CW*0.7, CH*0.5, Math.max(CW,CH)*0.9);
+  if(isBW){
+    grad.addColorStop(0, '#5a5856');
+    grad.addColorStop(0.5, '#3a3836');
+    grad.addColorStop(1, '#1a1816');
+  } else {
+    grad.addColorStop(0, '#8a3020');
+    grad.addColorStop(0.5, '#5a1a14');
+    grad.addColorStop(1, '#2a0810');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Curled female silhouette (right side).
+  const cx = CW*0.65, cy = CH*0.55;
+  const figureSize = CW*0.30;
+  ctx.fillStyle = isBW ? '#b8b6b0' : '#dab098';
+  ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(80,40,20,0.7)';
+  ctx.lineWidth = 3;
+  // Body curled — fetal-like position.
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, figureSize, figureSize*0.85, 0.2, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Knee.
+  ctx.beginPath();
+  ctx.ellipse(cx + figureSize*0.3, cy + figureSize*0.3, figureSize*0.45, figureSize*0.30, 0.4, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Head.
+  ctx.beginPath();
+  ctx.ellipse(cx + figureSize*0.5, cy - figureSize*0.5, figureSize*0.18, figureSize*0.20, 0.5, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Red hair (or grey).
+  ctx.fillStyle = isBW ? '#4a4848' : '#a83020';
+  ctx.beginPath();
+  ctx.ellipse(cx + figureSize*0.55, cy - figureSize*0.55, figureSize*0.22, figureSize*0.16, 0.3, 0, Math.PI*2);
+  ctx.fill();
+
+  // Golden coin/disc shower — diagonal cascade from upper-left. Reveal-based count.
+  const showerCount = Math.max(20, Math.ceil(140*reveal));
+  for(let i=0;i<showerCount;i++){
+    const rnd=_seedRnd(i+31000,ss,0,0);
+    const t = rnd();
+    // Bias toward upper-left to lower-center cascade.
+    const x = CW * (0.05 + (1-t)*0.55 + rnd()*0.15);
+    const y = CH * (0.05 + t*0.85 + rnd()*0.10);
+    const r = 4 + rnd()*10;
+    const k = rnd();
+    if(k < 0.50){
+      // Solid gold disc.
+      ctx.fillStyle = isBW ? '#c8c4b8' : '#e8c862';
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(80,55,15,0.7)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if(k < 0.75){
+      // Larger pale gold.
+      ctx.fillStyle = isBW ? 'rgba(220,218,210,0.85)' : 'rgba(244,224,128,0.85)';
+      ctx.beginPath(); ctx.arc(x, y, r*1.3, 0, Math.PI*2); ctx.fill();
+    } else if(k < 0.92){
+      // Chord-coloured ornament disc.
+      const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.75)`;
+      ctx.beginPath(); ctx.arc(x, y, r*0.7, 0, Math.PI*2); ctx.fill();
+    } else {
+      // Square ornament.
+      ctx.fillStyle = isBW ? '#a8a4a0' : '#d4ab3e';
+      ctx.fillRect(x-r*0.7, y-r*0.7, r*1.4, r*1.4);
+    }
   }
 }
 

@@ -1976,17 +1976,27 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   const cn=chords.length;
-  // ── 7-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1/2 = stacked / row / grid layouts (original body below).
-  //  3 = Multiform (free blurred patches).  4 = Seagram (dark portal).
-  //  5 = Black on Grey (recoloured: blue over ochre).  6 = Incandescent (glowing warm fields).
+  // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
+  //  0 = Classic Rothko (Stacked / Row / Grid, seed-driven internal layout
+  //      pick — the three layouts read as one "stacked colour-field" identity
+  //      so they share a single Vary slot).
+  //  1 = Pastel / Light period (cream ground + pale fields, high luminosity).
+  //  2 = Multiform (early 1948, free blurred patches).
+  //  3 = Seagram (dark portal frames 1958-59).
+  //  4 = Chapel (Houston, 1964-67, triptych ultra-dark monochrome).
+  //  5 = Incandescent (warm glowing 1955-58).
+  //  Free (cap=2) sees Stacked + Pastel — dark saturated vs light luminous
+  //  is the strongest art-historical contrast in Rothko's late career.
   {
-    const _pn=_capN(7); const _ropick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_ropick===3){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===4){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===5){ rothkoPhaseBlackGrey(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===6){ rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original stacked/row/grid body (variant 0/1/2)
+    const _pn=_capN(6); const _ropick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_ropick===1){ rothkoPhasePastel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===2){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===3){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===4){ rothkoPhaseChapel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===5){ rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    // else fall through to original stacked/row/grid body (variant 0; the
+    // layout sub-pick within is seed-driven, kept as natural micro-variation
+    // rather than its own Vary slot).
   }
   // Rothko is intentionally minimal — even 12 fields is at the high end of his
   // late stacked compositions, so we cap there rather than chasing density.
@@ -2238,6 +2248,104 @@ function rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const b=isBW?r:Math.round(20+rgb[2]*0.3);
     _rothkoField(ctx,marginX,innerY+i*(fh+gap),innerW,fh,r,g,b,0.9);
   }
+}
+
+// ── Rothko H: Pastel / Light period — soft pinks, pale neutrals, high
+// luminosity. The opposite of Seagram/Chapel: cream ground + 3 stacked pale
+// fields. Each field's chord colour is pushed toward pastel (chord*0.35 + 175)
+// so saturation stays low and brightness stays high. The "happy" Rothko.
+function rothkoPhasePastel(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Warm cream ground (or pale grey in B/W).
+  ctx.fillStyle = isBW ? '#e0dcd2' : '#f0e2d6';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Canvas grain noise — palette-independent.
+  for(let i=0;i<800;i++){
+    const rnd = _seedRnd(i+10000, ss, 0, 0);
+    const tone = isBW ? '200,200,200' : '220,200,180';
+    ctx.fillStyle = `rgba(${tone},${(0.1+rnd()*0.15).toFixed(2)})`;
+    ctx.fillRect(rnd()*CW, rnd()*CH, 1+rnd()*2, 1+rnd()*2);
+  }
+
+  // 3 stacked pale fields with low saturation, high luminosity.
+  const fields = 3;
+  const marginX = CW*0.08, marginY = CH*0.08;
+  const fieldGap = CH*0.025;
+  const availH = CH - 2*marginY - (fields-1)*fieldGap;
+  const fh = availH/fields;
+  const vis = Math.max(1, Math.ceil(fields*reveal));
+
+  for(let i=0;i<vis;i++){
+    const ci = Math.floor((i+0.5)/fields * cn);
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+    // Push toward pastel: high lightness, low saturation
+    const r = isBW
+      ? Math.min(255, Math.round(rgb[0]*0.35 + 175))
+      : Math.min(255, Math.round(rgb[0]*0.35 + 175));
+    const g = isBW
+      ? r
+      : Math.min(255, Math.round(rgb[1]*0.35 + 160));
+    const b = isBW
+      ? r
+      : Math.min(255, Math.round(rgb[2]*0.40 + 170));
+    const y = marginY + i*(fh + fieldGap);
+    _rothkoField(ctx, marginX, y, CW - 2*marginX, fh, r, g, b, 0.92);
+  }
+}
+
+// ── Rothko I: Chapel — Houston Rothko Chapel (1964-67). Triptych of three
+// ultra-dark monochromatic panels (deep plum-maroon-blackish range). Chord
+// saturation pushed down ~90%, brightness pushed down. Subtle vertical light
+// gradient simulates the chapel skylight. Pure meditation, no contrast.
+function rothkoPhaseChapel(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Pure dark plum-black ground (or near-black grey in B/W).
+  ctx.fillStyle = isBW ? '#15131a' : '#1a0d12';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Triptych: 3 vertical panels.
+  const margins = CW*0.05;
+  const gap = CW*0.015;
+  const panelW = (CW - 2*margins - 2*gap)/3;
+  const panelY = CH*0.08;
+  const panelH = CH*0.84;
+  const vis = Math.max(1, Math.ceil(3*reveal));
+
+  for(let p=0;p<vis;p++){
+    const x = margins + p*(panelW+gap);
+    const ci = Math.floor((p+0.5)/3 * cn);
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+    // Very dark, low saturation
+    const r = isBW
+      ? Math.round((rgb[0]+rgb[1]+rgb[2])/3 * 0.18 + 22)
+      : Math.round(rgb[0]*0.12 + 18);
+    const g = isBW
+      ? r
+      : Math.round(rgb[1]*0.05 + 5);
+    const b = isBW
+      ? r
+      : Math.round(rgb[2]*0.10 + 10);
+    _rothkoField(ctx, x, panelY, panelW, panelH, r, g, b, 0.92);
+  }
+
+  // Subtle vertical light gradient overlay — simulates chapel skylight.
+  const grad = ctx.createLinearGradient(0,0,0,CH);
+  if(isBW){
+    grad.addColorStop(0, 'rgba(245,245,245,0.06)');
+    grad.addColorStop(0.5, 'rgba(245,245,245,0.0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.15)');
+  } else {
+    grad.addColorStop(0, 'rgba(255,240,210,0.07)');
+    grad.addColorStop(0.5, 'rgba(255,240,210,0.0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.15)');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
 }
 
 // Matisse canvas-wide overlay. Like Mondrian's Classic/Boogie split, Matisse
