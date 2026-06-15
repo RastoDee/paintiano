@@ -8025,46 +8025,112 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const sR=_seedRnd(33001,ss,0,0); sR(); sR();
   ctx.fillStyle=isBW?'#f0f0ec':'#f4f4ee'; ctx.fillRect(0,0,CW,CH);
+  // Clip everything to canvas — guarantees no triangle bleeds past edges.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0,0,CW,CH);
+  ctx.clip();
   const nCols=5+((sR()*10)|0);
   const tw=CW/nCols;
   const th=tw*Math.sqrt(3)/2;
-  const nRows=Math.floor(CH/th)+1;
+  const nRows=Math.ceil(CH/th);
   const total=nCols*nRows*2;
   const vis=Math.max(1,Math.ceil(N/cn*total*2.5));
+
+  // ── Riley aesthetic: limited palette + smooth color flow ────────────────
+  // Riley's triangle paintings (Bagatelle, Cantus Firmus) use 4-5 colours
+  // sampled across the canvas, not the full 12-tone chord palette. We
+  // sample 5 chord positions evenly across the song to get the painting's
+  // signature palette — staying chord-driven while looking like Riley.
+  const PALETTE_SIZE = 5;
+  const palette = [];
+  for(let i=0;i<PALETTE_SIZE;i++){
+    const idx = Math.floor((i/(PALETTE_SIZE-1)) * (cn-1));
+    palette.push(_picChord(chords, idx, gc, isBW).rgb);
+  }
+  // Per-song flow direction: horizontal (0), vertical (1), or diagonal (2).
+  const flowKind = Math.floor(sR()*3);
+  // Per-song up/down offset — shifts down triangles vs up so they form
+  // alternating pattern stripes rather than the same colour pair.
+  const updownShift = 0.10 + sR()*0.15;
+
+  function triColour(col, row, isUp){
+    const cx = col / Math.max(1, nCols-1);    // 0..1 horizontal
+    const cy = row / Math.max(1, nRows-1);    // 0..1 vertical
+    let t;
+    if(flowKind === 0) t = cx;                // horizontal flow
+    else if(flowKind === 1) t = cy;           // vertical flow
+    else t = (cx + cy*0.6) / 1.6;             // diagonal flow
+    // Down triangles get shift — creates Riley's alternating-pair feel.
+    if(!isUp) t = (t + updownShift) % 1;
+    // Sample palette via lerp.
+    const seg = Math.max(0, Math.min(PALETTE_SIZE-1.001, t * (PALETTE_SIZE-1)));
+    const i0 = Math.floor(seg);
+    const i1 = Math.min(PALETTE_SIZE-1, i0+1);
+    const f = seg - i0;
+    const a = palette[i0], b = palette[i1];
+    return [
+      Math.round(a[0] + (b[0]-a[0])*f),
+      Math.round(a[1] + (b[1]-a[1])*f),
+      Math.round(a[2] + (b[2]-a[2])*f),
+    ];
+  }
+
   let k=0;
   for(let ry=0;ry<nRows;ry++)for(let cx=0;cx<nCols;cx++){
     if(k>=vis) break;
     const x0=cx*tw, y0=ry*th;
     // up triangle
     if(k<vis){
-      const {rgb}=_picChord(chords,k%cn,gc,isBW);
-      ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      const [r,g,b]=triColour(cx, ry, true);
+      ctx.fillStyle=`rgb(${r},${g},${b})`;
       ctx.beginPath(); ctx.moveTo(x0,y0+th); ctx.lineTo(x0+tw,y0+th);
       ctx.lineTo(x0+tw/2,y0); ctx.closePath(); ctx.fill();
       k++;
     }
     // down triangle
     if(k<vis && x0+tw*1.5<=CW){
-      const {rgb}=_picChord(chords,k%cn,gc,isBW);
-      ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      const [r,g,b]=triColour(cx, ry, false);
+      ctx.fillStyle=`rgb(${r},${g},${b})`;
       ctx.beginPath(); ctx.moveTo(x0+tw/2,y0+th); ctx.lineTo(x0+tw*1.5,y0+th);
       ctx.lineTo(x0+tw,y0); ctx.closePath(); ctx.fill();
       k++;
     }
   }
+  ctx.restore();
 }
 
 // ── Riley G: Movement in Squares (1961) — Riley's breakthrough painting.
-// Black + cream grid of squares that compress horizontally toward a vertical
-// band — creates an optical bend illusion. Subtle chord-coloured tint overlay
-// per row preserves the optical effect while staying palette-driven.
+// Compression-toward-center grid creates optical bend illusion. The cells
+// use a CHORD-DRIVEN dark/light pair (Option A) — the song's dominant
+// chord defines the colour duo, preserving Riley's high-contrast optical
+// effect while making each painting carry the song's signature palette.
 function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal = Math.max(0, Math.min(1, N/cn));
   const sR = _seedRnd(34001, ss, 0, 0); sR(); sR();
 
-  // Cream ground.
-  ctx.fillStyle = isBW ? '#e8e8e4' : '#f0ece2';
+  // ── Pick the song's most-saturated chord as the dominant palette anchor ──
+  // Up to the current reveal point so the painting evolves as the song plays.
+  let domR=80, domG=80, domB=110, domSat=-1;
+  const upto = Math.min(cn, Math.max(1, lim));
+  for(let i=0;i<upto;i++){
+    const {rgb} = _picChord(chords, i, gc, isBW);
+    const sat = Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2]);
+    if(sat > domSat){ domSat = sat; domR = rgb[0]; domG = rgb[1]; domB = rgb[2]; }
+  }
+
+  // Dark/light pair derived from the dominant chord.
+  // BW mode keeps Riley's pure black/cream as fallback.
+  const dark  = isBW
+    ? '#1a1a1a'
+    : `rgb(${Math.round(domR*0.18)},${Math.round(domG*0.15)},${Math.round(domB*0.22)})`;
+  const light = isBW
+    ? '#e8e8e4'
+    : `rgb(${Math.min(255, Math.round(domR*0.40 + 175))},${Math.min(255, Math.round(domG*0.40 + 170))},${Math.min(255, Math.round(domB*0.40 + 155))})`;
+
+  // Ground = light pair colour so the un-revealed area matches the painting.
+  ctx.fillStyle = light;
   ctx.fillRect(0,0,CW,CH);
 
   // Grid dimensions — scale with chord count.
@@ -8090,10 +8156,8 @@ function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
   // Reveal-based: rows appear top-to-bottom.
   const visRows = Math.max(1, Math.ceil(rows*reveal));
-  const dark = isBW ? '#1a1a1a' : '#1a1a1a';
-  const light = isBW ? '#e8e8e4' : '#f0ece2';
 
-  // Draw checkerboard.
+  // Draw checkerboard with chord-derived dark/light pair.
   let x = 0;
   for(let c=0;c<cols;c++){
     const w = widths[c];
@@ -8104,13 +8168,6 @@ function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       ctx.fillRect(x, y, w, cellH);
     }
     x += w;
-  }
-
-  // Subtle chord-coloured tint overlay per row — preserves optical effect.
-  for(let r=0;r<visRows;r++){
-    const {rgb} = _picChord(chords, Math.floor(r/rows * cn)%cn, gc, isBW);
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.04)`;
-    ctx.fillRect(0, r*cellH, CW, cellH);
   }
 }
 
@@ -10739,6 +10796,34 @@ function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.fill();
     ctx.strokeStyle = HOKUSAI_PRUSSIAN;
     ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  // ── Chord-coloured rain streaks ────────────────────────────────────────
+  // Drawn after the clouds and before the lightning so the bolts remain the
+  // dominant foreground while the rain carries the song's chord palette
+  // across the whole storm. Diagonal -60°, dense, chord-driven colour.
+  const rainCount = Math.min(300, Math.max(120, lim * 4));
+  for(let i = 0; i < rainCount; i++){
+    const ci = i % lim;
+    const rChord = chords[ci] || chords[0];
+    const rNotes = rChord && (rChord.n || rChord.notes) || [{m:60,v:80}];
+    const rNote = rNotes[0];
+    const rm = rNote.m !== undefined ? rNote.m : rNote;
+    const rv = rNote.v !== undefined ? rNote.v : 80;
+    const [rr, rg, rb] = gc(rm, rv);
+    // Span x slightly beyond canvas so the diagonal angle doesn't leave
+    // an empty band on the right edge.
+    const rx = rnd() * CW * 1.3 - CW * 0.15;
+    const ry = rnd() * CH * 0.82;        // above the land silhouette
+    const rlen = 15 + rnd() * 30;
+    const rangle = -Math.PI / 3;
+    ctx.strokeStyle = `rgba(${rr},${rg},${rb},${(0.55 + rnd() * 0.20).toFixed(2)})`;
+    ctx.lineWidth = 0.8 + rnd() * 0.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.lineTo(rx + Math.cos(rangle) * rlen, ry + Math.sin(rangle) * rlen);
     ctx.stroke();
   }
 
