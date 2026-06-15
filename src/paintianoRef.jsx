@@ -5400,6 +5400,10 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   ctx.fillStyle = `rgb(${(bgC[0]*0.18)|0},${(bgC[1]*0.18)|0},${(bgC[2]*0.18)|0})`;
   ctx.fillRect(0, 0, CW, CH);
 
+  // Per-song bulge intensity (0.6-1.0). Re-uses the same _seedRnd that drove
+  // sphere positions earlier so the intensity is stable per painting.
+  const bulgeIntensity = 0.6 + rnd() * 0.4;
+
   // Lens warp: for a point, find the strongest sphere influence and push the
   // point radially outward + scale it up (classic fish-eye bulge).
   function warp(px, py){
@@ -5409,8 +5413,10 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
       const dist = Math.hypot(dx, dy);
       if(dist < sp.r && dist > 0.0001){
         const t = dist / sp.r;            // 0 centre … 1 rim
-        // Smooth bulge profile — magnify centre, ease to 1 at rim.
-        const mag = 1 + (1 - t*t) * 0.9;  // up to ~1.9× at centre
+        // Smooth bulge profile — magnify centre, ease to 1 at rim. Per-song
+        // intensity variance (0.6-1.0) so each painting has a different
+        // bulge strength.
+        const mag = 1 + (1 - t*t) * bulgeIntensity;
         if(mag > bestScale){
           bestScale = mag;
           ox = sp.cx + dx * mag;
@@ -5505,20 +5511,24 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
 // wavy-stripe styles: this is a hard square grid with inscribed discs. ──
 function vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sR = _seedRnd(91, ss, 0, 25); sR(); sR();
   ctx.fillStyle=isBW?'#1a1a1a':'#14121c';ctx.fillRect(0,0,CW,CH);
   const cols=Math.max(6,Math.min(28,Math.round(Math.sqrt(cn)*1.8))),rows=Math.max(4,Math.round(cols*CH/CW));
   const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
   const cw=CW/cols,chh=CH/rows;
-  // central bulge: cells near centre get a bigger disc + brighter contrast
-  const bcx=CW/2,bcy=CH/2,bR=Math.min(CW,CH)*0.5;
+  // Per-song bulge centre offset + intensity + checker phase.
+  const bcx=CW*(0.40+sR()*0.20),bcy=CH*(0.40+sR()*0.20);
+  const bR=Math.min(CW,CH)*(0.40+sR()*0.20);
+  const checkerPhase = Math.floor(sR()*2);                 // 0 or 1
+  const intensityMul = 0.85 + sR()*0.30;                   // 0.85-1.15
   let k=0;
   for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
     const {rgb}=_picChord(chords,Math.floor(k*(cn/total)),gc,isBW);
     const x=c*cw,y=r*chh,ccx=x+cw/2,ccy=y+chh/2;
     const d=Math.hypot(ccx-bcx,ccy-bcy);
-    const swell=Math.max(0,1-d/bR); // 1 at centre → 0 at rim
+    const swell=Math.max(0,1-d/bR)*intensityMul; // 1 at centre → 0 at rim, scaled
     // alternating cell ground: dark / light checker so discs pop (op-art read)
-    const checker=((r+c)&1);
+    const checker=((r+c+checkerPhase)&1);
     const groundCol=isBW
       ? (checker?'#2a2a2a':'#0e0e0e')
       : `rgb(${Math.round(rgb[0]*0.25)},${Math.round(rgb[1]*0.25)},${Math.round(rgb[2]*0.3)})`;
@@ -5539,10 +5549,12 @@ function vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Vasarely D: Vega — colour deformed checkerboard with central bulge. ──
 function vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sR = _seedRnd(91, ss, 0, 22); sR(); sR();
   ctx.fillStyle=isBW?'#1a1a1a':'#14141e';ctx.fillRect(0,0,CW,CH);
   const cols=Math.max(6,Math.min(28,Math.round(Math.sqrt(cn)*2))),rows=Math.round(cols*CH/CW);
   const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
-  const cx=CW/2,cy=CH/2,bulgeR=Math.min(CW,CH)*0.45;
+  // Per-song bulge centre offset + radius variance.
+  const cx=CW*(0.40+sR()*0.20),cy=CH*(0.40+sR()*0.20),bulgeR=Math.min(CW,CH)*(0.40+sR()*0.20);
   const warp=(x,y)=>{const dx=x-cx,dy=y-cy,d=Math.hypot(dx,dy);if(d<bulgeR&&d>0.001){const t=d/bulgeR,mag=1+(1-t*t)*0.7;return[cx+dx*mag,cy+dy*mag];}return[x,y];};
   let k=0;
   for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
@@ -5559,21 +5571,28 @@ function vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Vasarely E: Hexagon cubes — isometric tumbling-block illusion. ──
 function vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sR = _seedRnd(91, ss, 0, 23); sR(); sR();
   ctx.fillStyle=isBW?'#2a2a2a':'#1c1a26';ctx.fillRect(0,0,CW,CH);
-  const size=Math.min(CW,CH)/Math.max(5,Math.min(14,Math.round(Math.sqrt(cn))));
+  // Per-song size variance (±20%) + light/right shading swap.
+  const sizeMul = 0.85 + sR()*0.35;
+  const size=Math.min(CW,CH)/Math.max(5,Math.min(14,Math.round(Math.sqrt(cn))))*sizeMul;
+  // Per-song offset shift so columns start at different y phase.
+  const offsetShift = sR()*size*0.5;
+  // Per-song shading flip (left vs right brightness swap).
+  const flipShading = sR()<0.5;
+  const lShade = flipShading?0.8:0.55, rShade = flipShading?0.55:0.8;
   const cols=Math.ceil(CW/(size*1.5))+1,rows=Math.ceil(CH/(size*0.87))+1;
   const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
   let k=0;
   for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
     const {rgb}=_picChord(chords,Math.floor(k*(cn/total)),gc,isBW);
-    const x=c*size*1.5,y=r*size*0.87+(c%2?size*0.43:0);
+    const x=c*size*1.5,y=r*size*0.87+(c%2?size*0.43:0)+offsetShift;
     // three rhombus faces (top, left, right) shaded for 3D cube
-    const faces=[[1.0,'top'],[0.6,'left'],[0.8,'right']];
     const h=size*0.5;
     const top=[[x,y-h],[x+size*0.5,y-h*0.5],[x,y],[x-size*0.5,y-h*0.5]];
     const left=[[x-size*0.5,y-h*0.5],[x,y],[x,y+h],[x-size*0.5,y+h*0.5]];
     const right=[[x,y],[x+size*0.5,y-h*0.5],[x+size*0.5,y+h*0.5],[x,y+h]];
-    [[top,1.0],[left,0.55],[right,0.8]].forEach(([poly,sh])=>{
+    [[top,1.0],[left,lShade],[right,rShade]].forEach(([poly,sh])=>{
       ctx.fillStyle=`rgb(${Math.round(rgb[0]*sh)},${Math.round(rgb[1]*sh)},${Math.round(rgb[2]*sh)})`;
       ctx.beginPath();ctx.moveTo(poly[0][0],poly[0][1]);for(let p=1;p<poly.length;p++)ctx.lineTo(poly[p][0],poly[p][1]);ctx.closePath();ctx.fill();
     });
@@ -5605,21 +5624,25 @@ function vasarelyPhaseInterval(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(91, ss, 0, 21); sR(); sR();
 
   // Dark ground.
   ctx.fillStyle = isBW ? '#0e0e0e' : '#0a0a14';
   ctx.fillRect(0,0,CW,CH);
 
-  const cx = CW/2, cy = CH/2;
-  const R = Math.min(CW,CH) * 0.32;
-
-  // 48 radiating rays.
-  const rays = 48;
+  // Per-song variance: centre offset, R, ray count, bright pattern.
+  const cx = CW * (0.40 + sR()*0.20);
+  const cy = CH * (0.40 + sR()*0.20);
+  const R = Math.min(CW,CH) * (0.25 + sR()*0.15);
+  const rays = 32 + Math.floor(sR()*32);                  // 32-64
+  const brightOffset = Math.floor(sR()*7);                // shifts which rays are bright
   const visRays = Math.max(8, Math.ceil(rays*reveal));
   for(let i=0;i<visRays;i++){
     const ang = (i/rays)*Math.PI*2;
     const {rgb} = _picChord(chords, (i*2)%cn, gc, isBW);
-    const mul = (i%2) ? 1 : 0.55;
+    // Irregular bright/dim pattern — based on (i + brightOffset) % 3.
+    const isBright = ((i + brightOffset) % 3) !== 0;
+    const mul = isBright ? 1 : 0.55;
     ctx.fillStyle = `rgb(${Math.min(255,rgb[0]*mul)|0},${Math.min(255,rgb[1]*mul)|0},${Math.min(255,rgb[2]*mul)|0})`;
     ctx.beginPath();
     const inner = R;
@@ -5655,24 +5678,35 @@ function vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function vasarelyPhaseBanya(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(91, ss, 0, 24); sR(); sR();
 
   // Dark ground.
   ctx.fillStyle = isBW ? '#0e0e0e' : '#0a0a14';
   ctx.fillRect(0,0,CW,CH);
 
-  // Grid dims scale with chord count.
-  const cols = cn<=8?8:cn<=24?12:cn<=60?16:cn<=140?20:24;
+  // Per-song variance: cell count ±25% + diagonal direction pattern.
+  const sizeMul = 0.75 + sR()*0.5;
+  const colsBase = cn<=8?8:cn<=24?12:cn<=60?16:cn<=140?20:24;
+  const cols = Math.max(6, Math.round(colsBase * sizeMul));
   const rows = Math.max(6, Math.round(cols*CH/CW));
   const cw = CW/cols, chh = CH/rows;
   const total = cols*rows;
   const vis = Math.max(2, Math.ceil(total*reveal));
+  // Per-song diagonal pattern: 0=(r+c)%2, 1=r%2, 2=c%2, 3=(r+c)%3<2.
+  const patternKind = Math.floor(sR()*4);
+  const dirFor = (r,c) => {
+    if(patternKind === 1) return r % 2;
+    if(patternKind === 2) return c % 2;
+    if(patternKind === 3) return ((r+c) % 3) < 2 ? 1 : 0;
+    return (r+c) % 2;
+  };
 
   let k=0;
   for(let r=0;r<rows;r++){
     for(let c=0;c<cols;c++){
       if(k >= vis) break;
       const x0 = c*cw, y0 = r*chh;
-      const dir = (r+c) % 2;
+      const dir = dirFor(r, c);
       const cTop = _picChord(chords, (k*2)%cn, gc, isBW).rgb;
       const cBot = _picChord(chords, (k*2+1)%cn, gc, isBW).rgb;
       // Top/upper triangle.
@@ -6355,10 +6389,13 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
 
   if(mandala){
     // ── Mandala: big segmented disc + ray crown + descending column ──────────
-    const cx = CW*0.5, cy = CH*0.32;
-    const R = Math.min(CW, CH) * 0.30;
+    // Per-song variance — off-centre + R + ray count multiplier.
+    const cx = CW * (0.45 + rnd()*0.10);
+    const cy = CH * (0.28 + rnd()*0.10);
+    const R = Math.min(CW, CH) * (0.26 + rnd()*0.10);
     // Ray crown — count grows for very long pieces (was fixed at 36).
-    const rays = cn<=120 ? 36 : cn<=300 ? 48 : cn<=600 ? 60 : 72;
+    const raysBase = cn<=120 ? 36 : cn<=300 ? 48 : cn<=600 ? 60 : 72;
+    const rays = Math.max(24, Math.round(raysBase * (0.85 + rnd()*0.30)));
     const visRays = Math.ceil(revealFrac * rays);
     for(let i=0; i<visRays; i++){
       const ang = (i/rays)*Math.PI*2 - Math.PI/2;
@@ -6448,55 +6485,173 @@ function klintPhaseTen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const rnd=_seedRnd(i+4500,ss,0,0);
     const {rgb,energy}=_picChord(chords,Math.floor(i*(cn/forms)),gc,isBW);
     const x=rnd()*CW,y=rnd()*CH,R=Math.min(CW,CH)*(0.05+energy*0.10);
-    // ovoid
+    // Per-form shape kind (oval / circle / hexagon).
+    const shapeKind = Math.floor(rnd()*3);
+    // Per-form inner pattern kind (spiral / concentric rings / radiating).
+    const innerKind = Math.floor(rnd()*3);
+
     ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
-    ctx.beginPath();ctx.ellipse(x,y,R*0.8,R,0,0,Math.PI*2);ctx.fill();
-    // inner spiral
-    ctx.strokeStyle=`rgba(${255-rgb[0]},${255-rgb[1]},${255-rgb[2]},0.7)`;ctx.lineWidth=Math.max(1.5,R*0.08);
-    ctx.beginPath();let pr=0,pa=0;for(let t=0;t<24;t++){pa=t*0.5;pr=R*0.7*(t/24);const px=x+Math.cos(pa)*pr,py=y+Math.sin(pa)*pr;t?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.stroke();
+    if(shapeKind === 0){
+      // Ovoid (original).
+      ctx.beginPath();ctx.ellipse(x,y,R*0.8,R,0,0,Math.PI*2);ctx.fill();
+    } else if(shapeKind === 1){
+      // Circle.
+      ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();
+    } else {
+      // Hexagon.
+      ctx.beginPath();
+      for(let h=0;h<6;h++){
+        const a = (h/6)*Math.PI*2;
+        const hx = x + Math.cos(a)*R, hy = y + Math.sin(a)*R;
+        if(h===0) ctx.moveTo(hx,hy); else ctx.lineTo(hx,hy);
+      }
+      ctx.closePath();ctx.fill();
+    }
+
+    ctx.strokeStyle=`rgba(${255-rgb[0]},${255-rgb[1]},${255-rgb[2]},0.7)`;
+    ctx.lineWidth=Math.max(1.5,R*0.08);
+    if(innerKind === 0){
+      // Inner snail spiral (original).
+      ctx.beginPath();let pr=0,pa=0;
+      for(let t=0;t<24;t++){pa=t*0.5;pr=R*0.7*(t/24);const px=x+Math.cos(pa)*pr,py=y+Math.sin(pa)*pr;t?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+      ctx.stroke();
+    } else if(innerKind === 1){
+      // Concentric rings.
+      for(let ring=1;ring<=3;ring++){
+        ctx.beginPath();
+        ctx.arc(x, y, R*ring/4, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    } else {
+      // Radiating rays.
+      for(let ray=0;ray<6;ray++){
+        const a = (ray/6)*Math.PI*2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x+Math.cos(a)*R*0.7, y+Math.sin(a)*R*0.7);
+        ctx.stroke();
+      }
+    }
   }
 }
 
-// ── af Klint D: The Swan — split field with two opposed swan forms (recoloured). ──
+// ── af Klint D: Swan abstract — split colour field with paired ovoid forms.
+// Replaces the original literal swan silhouettes. Duality (light/dark, upper/
+// lower) is preserved via the colour split + opposed ovoids; companion forms
+// scatter around each main ovoid like Klint's Ten Largest vocabulary.
 function klintPhaseSwan(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal=Math.max(0,Math.min(1,N/cn));
-  // split field: top light, bottom deep colour (recoloured from B/W)
-  const top=_picChord(chords,0,gc,isBW).rgb;
-  const bot=_picChord(chords,Math.floor(cn/2),gc,isBW).rgb;
-  ctx.fillStyle=isBW?'#e8e4dc':`rgb(${Math.min(255,top[0]+60)},${Math.min(255,top[1]+60)},${Math.min(255,top[2]+60)})`;ctx.fillRect(0,0,CW,CH*0.5);
-  ctx.fillStyle=isBW?'#2a2e3a':`rgb(${Math.round(bot[0]*0.4)},${Math.round(bot[1]*0.4)},${Math.round(bot[2]*0.5+40)})`;ctx.fillRect(0,CH*0.5,CW,CH*0.5);
-  // two swans (upper light, lower dark) drawn with reveal
-  const swan=(cx,cy,s,col,flip)=>{
-    ctx.fillStyle=col;ctx.save();ctx.translate(cx,cy);if(flip)ctx.scale(1,-1);
+  const sR = _seedRnd(91, ss, 0, 31); sR(); sR();
+
+  // Per-song decisions.
+  const splitLine = 0.45 + sR()*0.10;                  // 45-55% horizon
+  const upperX = 0.40 + sR()*0.20;                     // ovoid x offset
+  const lowerX = 0.40 + sR()*0.20;
+  const mainR = Math.min(CW,CH) * (0.16 + sR()*0.06);  // 16-22%
+  const companionsPerSide = 4 + Math.floor(sR()*4);    // 4-7 each
+  const withSpiral = sR() < 0.7;                       // inner spiral most songs
+
+  // Split colour field — top light, bottom dark (duality).
+  const top = _picChord(chords, 0, gc, isBW).rgb;
+  const bot = _picChord(chords, Math.floor(cn/2)%cn, gc, isBW).rgb;
+  ctx.fillStyle = isBW
+    ? '#e8e4dc'
+    : `rgb(${Math.min(255,top[0]+60)},${Math.min(255,top[1]+60)},${Math.min(255,top[2]+60)})`;
+  ctx.fillRect(0, 0, CW, CH*splitLine);
+  ctx.fillStyle = isBW
+    ? '#2a2e3a'
+    : `rgb(${Math.round(bot[0]*0.4)},${Math.round(bot[1]*0.4)},${Math.round(bot[2]*0.5+40)})`;
+  ctx.fillRect(0, CH*splitLine, CW, CH*(1-splitLine));
+  // Horizon line.
+  ctx.strokeStyle = 'rgba(40,30,40,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, CH*splitLine);
+  ctx.lineTo(CW, CH*splitLine);
+  ctx.stroke();
+
+  // Draw one ovoid with optional inner spiral.
+  function drawOvoid(cx, cy, R, fillCol, strokeCol){
+    ctx.fillStyle = fillCol;
     ctx.beginPath();
-    ctx.moveTo(0,s*0.5);
-    ctx.quadraticCurveTo(-s*0.9,s*0.4,-s*0.6,-s*0.3); // body
-    ctx.quadraticCurveTo(-s*0.4,-s*0.9,-s*0.1,-s*0.6); // neck up
-    ctx.quadraticCurveTo(s*0.1,-s*0.5,s*0.3,-s*0.7); // head
-    ctx.quadraticCurveTo(s*0.6,-s*0.3,s*0.8,s*0.1);
-    ctx.quadraticCurveTo(s*0.6,s*0.6,0,s*0.5);
-    ctx.closePath();ctx.fill();ctx.restore();
-  };
-  const cR=Math.min(CW,CH)*0.22*reveal;
-  if(reveal>0.1){
-    const c1=isBW?[230,228,222]:[Math.min(255,top[0]+40),Math.min(255,top[1]+30),Math.min(255,top[2]+20)];
-    swan(CW*0.5,CH*0.32,cR,`rgb(${c1[0]},${c1[1]},${c1[2]})`,false);
+    ctx.ellipse(cx, cy, R*0.85, R, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = strokeCol;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    if(withSpiral){
+      ctx.strokeStyle = strokeCol;
+      ctx.lineWidth = Math.max(1.5, R*0.06);
+      ctx.beginPath();
+      for(let t=0;t<32;t++){
+        const pa = t*0.4;
+        const pr = R*0.65*(t/32);
+        const px = cx+Math.cos(pa)*pr;
+        const py = cy+Math.sin(pa)*pr*1.15;
+        if(t===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    }
   }
-  if(reveal>0.5){
-    const c2=isBW?[40,42,52]:[Math.round(bot[0]*0.5+30),Math.round(bot[1]*0.4),Math.round(bot[2]*0.4)];
-    swan(CW*0.5,CH*0.68,cR,`rgb(${c2[0]},${c2[1]},${c2[2]})`,true);
+
+  // Upper bright ovoid (appears first with reveal).
+  if(reveal > 0.1){
+    const upR = mainR * Math.min(1, reveal*1.5);
+    const upY = CH * splitLine * 0.65;
+    drawOvoid(CW * upperX, upY, upR,
+      `rgba(${Math.min(255,top[0]+90)|0},${Math.min(255,top[1]+85)|0},${Math.min(255,top[2]+70)|0},0.85)`,
+      `rgba(${Math.round(bot[0]*0.3)},${Math.round(bot[1]*0.3)},${Math.round(bot[2]*0.4)},0.85)`);
+  }
+  // Lower dark ovoid (appears after upper).
+  if(reveal > 0.4){
+    const downR = mainR * Math.min(1, (reveal-0.3)*1.5);
+    const downY = CH * splitLine + (CH * (1-splitLine)) * 0.5;
+    drawOvoid(CW * lowerX, downY, downR,
+      `rgba(${Math.round(bot[0]*0.5)},${Math.round(bot[1]*0.5)},${Math.round(bot[2]*0.6)},0.9)`,
+      `rgba(${Math.min(255,top[0]+80)|0},${Math.min(255,top[1]+80)|0},${Math.min(255,top[2]+80)|0},0.85)`);
+  }
+
+  // Companion forms — small ovoids/circles scattered around each main one.
+  // Count grows with reveal; chord-coloured.
+  const visCompPerSide = Math.ceil(companionsPerSide * reveal);
+  for(let side=0; side<2; side++){
+    const mainCX = CW * (side===0 ? upperX : lowerX);
+    const mainCY = side===0 ? CH*splitLine*0.65 : CH*splitLine + CH*(1-splitLine)*0.5;
+    const isUpper = side === 0;
+    for(let i=0;i<visCompPerSide;i++){
+      const ang = (i/companionsPerSide)*Math.PI*2 + (side*Math.PI/6);
+      const compR = mainR * (0.18 + (i%3)*0.04);
+      const compX = mainCX + Math.cos(ang) * mainR * (1.5 + (i%2)*0.3);
+      const compY = mainCY + Math.sin(ang) * mainR * 0.7;
+      const {rgb} = _picChord(chords, (i + side*3 + 7)%cn, gc, isBW);
+      const lift = isUpper ? 60 : -30;
+      const cr = Math.max(0,Math.min(255, rgb[0]+lift));
+      const cg = Math.max(0,Math.min(255, rgb[1]+lift));
+      const cb = Math.max(0,Math.min(255, rgb[2]+lift));
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},0.7)`;
+      ctx.beginPath();
+      ctx.arc(compX, compY, compR, 0, Math.PI*2);
+      ctx.fill();
+    }
   }
 }
 
 // ── af Klint E: Altarpiece pyramid — triangle ascending to a disc on dark. ──
 function klintPhaseAltar(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sR = _seedRnd(91, ss, 0, 32); sR(); sR();
   ctx.fillStyle=isBW?'#1c1c22':'#16121e';ctx.fillRect(0,0,CW,CH);
   const reveal=Math.max(0,Math.min(1,N/cn));
-  const apex=[CW*0.5,CH*0.12], bl=[CW*0.2,CH*0.9], br=[CW*0.8,CH*0.9];
-  // stepped colour bands up the triangle
-  const steps=Math.max(4,Math.min(24,Math.round(cn/4)));
+  // Per-song variance: apex position, base width, disc size, step count.
+  const apexX = CW * (0.42 + sR()*0.16);
+  const apexY = CH * (0.08 + sR()*0.08);
+  const baseHalfWidth = CW * (0.27 + sR()*0.08);
+  const apex=[apexX, apexY];
+  const bl=[CW*0.5-baseHalfWidth, CH*0.9];
+  const br=[CW*0.5+baseHalfWidth, CH*0.9];
+  const stepsBase = Math.max(4,Math.min(24,Math.round(cn/4)));
+  const steps = Math.max(4, Math.round(stepsBase * (0.85 + sR()*0.30)));
   const vis=Math.max(1,Math.ceil(reveal*steps));
   for(let i=vis-1;i>=0;i--){
     const t=i/steps;
@@ -6506,35 +6661,64 @@ function klintPhaseAltar(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
     ctx.beginPath();ctx.moveTo(apex[0],apex[1]);ctx.lineTo(lx,ly);ctx.lineTo(rx,ry);ctx.closePath();ctx.fill();
   }
-  // golden disc at apex
-  if(reveal>0.2){ctx.fillStyle=isBW?'#d8d4c8':'#e8c84a';ctx.beginPath();ctx.arc(apex[0],apex[1],Math.min(CW,CH)*0.06,0,Math.PI*2);ctx.fill();}
+  // Golden disc — variable size.
+  if(reveal>0.2){
+    const discR = Math.min(CW,CH) * (0.04 + sR()*0.04);
+    ctx.fillStyle=isBW?'#d8d4c8':'#e8c84a';
+    ctx.beginPath();ctx.arc(apex[0],apex[1],discR,0,Math.PI*2);ctx.fill();
+  }
 }
 
 // ── af Klint F: Botanical — symmetric plant/diagram chart on pale ground. ──
 function klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sRoot = _seedRnd(91, ss, 0, 33); sRoot(); sRoot();
   ctx.fillStyle=isBW?'#e4e0d6':'#f0ead8';ctx.fillRect(0,0,CW,CH);
-  const stems=Math.max(2,Math.min(12,Math.round(cn/12)));
+  // Per-song stem count variance ±25%.
+  const stemsBase=Math.max(2,Math.min(12,Math.round(cn/12)));
+  const stems = Math.max(2, Math.round(stemsBase * (0.85 + sRoot()*0.30)));
   const vis=Math.max(1,Math.ceil(N/cn*stems));
   const sw=CW/Math.max(1,stems);
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+4600,ss,0,0);
     const {rgb}=_picChord(chords,Math.floor(i*(cn/stems)),gc,isBW);
-    const cx=i*sw+sw/2;
+    // Per-stem horizontal offset.
+    const cx=i*sw+sw/2+(rnd()-0.5)*sw*0.25;
     // central stem
     ctx.strokeStyle=isBW?'rgba(80,90,70,0.8)':'rgba(60,110,70,0.8)';ctx.lineWidth=Math.max(1.5,sw*0.03);
     ctx.beginPath();ctx.moveTo(cx,CH*0.9);ctx.lineTo(cx,CH*0.2);ctx.stroke();
-    // symmetric leaf/flower pairs
-    const nodes=3+((rnd()*4)|0);
+    // Per-stem node count + leaf angle.
+    const nodes=3+((rnd()*5)|0);
+    const leafAngle = 0.30 + rnd()*0.40;
     for(let nd=0;nd<nodes;nd++){
       const y=CH*0.85-nd/(nodes)*CH*0.6;
       const r=sw*0.28*(1-nd/nodes*0.4);
       ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.8)`;
-      ctx.beginPath();ctx.ellipse(cx-sw*0.25,y,r,r*0.5,-0.5,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.ellipse(cx+sw*0.25,y,r,r*0.5,0.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(cx-sw*0.25,y,r,r*0.5,-leafAngle,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(cx+sw*0.25,y,r,r*0.5,leafAngle,0,Math.PI*2);ctx.fill();
     }
-    // top bloom
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.beginPath();ctx.arc(cx,CH*0.2,sw*0.16,0,Math.PI*2);ctx.fill();
+    // Top bloom — kind variance (disc / 6-petal / hexagon).
+    const bloomKind = Math.floor(rnd()*3);
+    const bx = cx, by = CH*0.2, bR = sw*0.16;
+    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    if(bloomKind === 0){
+      ctx.beginPath();ctx.arc(bx, by, bR, 0, Math.PI*2);ctx.fill();
+    } else if(bloomKind === 1){
+      for(let p=0;p<6;p++){
+        const pa = (p/6)*Math.PI*2;
+        ctx.beginPath();
+        ctx.arc(bx+Math.cos(pa)*bR*0.6, by+Math.sin(pa)*bR*0.6, bR*0.5, 0, Math.PI*2);
+        ctx.fill();
+      }
+    } else {
+      ctx.beginPath();
+      for(let h=0;h<6;h++){
+        const a = (h/6)*Math.PI*2;
+        const hx = bx + Math.cos(a)*bR, hy = by + Math.sin(a)*bR;
+        if(h===0) ctx.moveTo(hx,hy); else ctx.lineTo(hx,hy);
+      }
+      ctx.closePath();ctx.fill();
+    }
   }
 }
 
