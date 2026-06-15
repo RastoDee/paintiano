@@ -8032,8 +8032,11 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.clip();
   const nCols=5+((sR()*10)|0);
   const tw=CW/nCols;
-  const th=tw*Math.sqrt(3)/2;
-  const nRows=Math.ceil(CH/th);
+  // Compute row count from ideal equilateral height, then adjust th so the
+  // rows fit canvas EXACTLY — otherwise the bottom row gets clipped in half.
+  const idealTh=tw*Math.sqrt(3)/2;
+  const nRows=Math.max(1, Math.floor(CH/idealTh));
+  const th=CH/nRows;  // adjusted so nRows*th == CH (triangles slightly non-equilateral)
   const total=nCols*nRows*2;
   const vis=Math.max(1,Math.ceil(N/cn*total*2.5));
 
@@ -22708,7 +22711,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
-        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: LENGTH — keep it SHORT, 20-35 seconds total at the chosen tempo (the LAST note\'s startBeat+duration MUST stay under tempo/2 beats — i.e. under 30 seconds at tempo 90); 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+        const prompt='Look at this image. First, in one word, decide its dominant EMOTION (e.g. joyful, calm, dramatic, melancholic, tense, eerie, tender, triumphant). Then compose a short solo piano piece whose MUSICAL CHOICES are DRIVEN BY that emotion — do NOT use neutral defaults.\nMap the emotion to the music (choose to fit the SPECIFIC emotion, never fall back to a neutral middle):\n- KEY: bright/happy/triumphant/playful → a MAJOR key; sad/melancholic/eerie/tense/yearning → a MINOR key. Pick a SPECIFIC key and vary it across pieces (do not default to C).\n- TEMPO: calm/tender/melancholic → slow (50-75); joyful/playful → medium-fast (95-130); dramatic/tense/triumphant → driving (110-150); eerie → free and slow (55-80).\n- REGISTER & DENSITY: intimate/calm → sparse, mid-low register, lots of space; energetic/triumphant → fuller chords, wider range, more notes.\n- DYNAMICS: tender → soft (velocity 35-65); triumphant/dramatic → loud (75-115); tense → uneven and accented.\n- ARTICULATION/RHYTHM: playful → staccato and syncopated; melancholic → legato and long notes; tense → repeated ostinato figures.\nTwo DIFFERENT emotions MUST yield audibly DIFFERENT pieces — different key colour, tempo, density and dynamics.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":<derived from emotion>,"key":"<derived from emotion>","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: LENGTH — keep it SHORT, 20-35 seconds total at the chosen tempo (the LAST note\'s startBeat+duration MUST stay under tempo/2 beats); 52-80 notes; include a bass line (octaves 2-3, at least 12 notes) and a melody (octaves 4-6) with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity per the dynamics above; pitches sharps only (C#4 not Db4).';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
