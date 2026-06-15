@@ -41,6 +41,10 @@ const PRICE_ID_PRO_AI = process.env.PADDLE_PRICE_ID_PRO_AI || null;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;     // for emailing the license
 const EMAIL_FROM = 'Paintiano <hello@paintiano.app>';  // verified Resend sender
 const EMAIL_REPLY_TO = 'hello@paintiano.app';
+// BCC copy of every license email to the founder for archive + customer-service
+// visibility. Override via env (comma-separated) if recipients change.
+const EMAIL_BCC = (process.env.EMAIL_BCC || 'drasto69@gmail.com')
+  .split(',').map(s => s.trim()).filter(Boolean);
 const PADDLE_API_KEY = process.env.PADDLE_API_KEY;     // server-side, for fetching customer email
 const PADDLE_API_BASE = 'https://api.paddle.com';
 
@@ -314,6 +318,7 @@ async function sendLicenseEmail({ to, licenseKey, tier, amount, currency, orderI
       body: JSON.stringify({
         from: EMAIL_FROM,
         to: [to],
+        bcc: EMAIL_BCC,
         reply_to: EMAIL_REPLY_TO,
         subject: `Your Paintiano ${tierName} license`,
         html: buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }),
