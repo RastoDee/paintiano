@@ -3756,19 +3756,20 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   // ── PHASE CHOOSER: commit to ONE of Picasso's modes per painting ──
-  // Stable from session seed, re-rolls on Vary/Random. Six phases:
+  // Stable from session seed, re-rolls on Vary/Random. Six abstract phases:
   //  A = Analytic Cubism (angular faceted shards, pencil-grain hatching).
-  //  B = Synthetic Cubism collage (large rounded "cut-paper" shapes).
-  //  C = Three Musicians (random 1-4 figures, 6 instruments, scattered or row).
-  //  D = Harlequin Mosaic (random rows/cols, 3 orientations, skip gaps).
-  //  E = Cubist Mask (random 1-2 masks, 4 face shapes, varied features).
-  //  F = Cubist Dove (random 1-3 doves, 3 poses, optional olive branch).
+  //  B = Synthetic Cubism collage (large abstract "cut-paper" shapes).
+  //  Blue = Blue Atmosphere (cool palette cubist shards, no figures).
+  //  Rose = Rose Atmosphere (warm palette cubist shards, no figures).
+  //  Mask → FacetedField (full-canvas dense angular shards, no subject).
+  //  Glass → StillLife (overlapping geometric shapes, vase/fruit implied only).
+  // Free (cap=2) sees Analytic + Faceted Field — subtle vs dense shards contrast.
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ picassoPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===2){ picassoPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===3){ picassoPhaseRose(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===4){ picassoPhaseMask(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===5){ picassoPhaseGlass(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===2){ picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===3){ picassoPhaseRoseAtmo(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===4){ picassoPhaseFacetedField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===5){ picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   picassoPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -3911,11 +3912,15 @@ function picassoPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
         ctx.arc(0,0,rad,a0,a0+Math.PI);
         ctx.closePath();
       } else {
-        // Guitar-body curve: two stacked lobes (the recurring Picasso instrument motif).
-        const rad=sz*0.34;
-        ctx.arc(0,-rad*0.7,rad,0,Math.PI*2);
-        ctx.moveTo(rad*1.15,rad*0.7);
-        ctx.arc(0,rad*0.7,rad*1.15,0,Math.PI*2);
+        // Abstract polygon (5-7 sides) — pure cubist cut-paper shape.
+        const sides = 5 + Math.floor(rnd()*3);
+        for(let s=0;s<sides;s++){
+          const a = (s/sides)*Math.PI*2 + rnd()*0.2;
+          const rr = sz*0.45*(0.75+rnd()*0.5);
+          const px = Math.cos(a)*rr, py = Math.sin(a)*rr;
+          if(s===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
       }
     };
 
@@ -4528,6 +4533,331 @@ function picassoPhaseGlass(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     }
     cIdxOff+=48;
   }
+}
+
+
+// ── Picasso Blue Atmosphere: cool blue cubist mood via palette shift, no
+// figures. Cool gradient ground + dense overlapping shards in blue-biased
+// chord palette + diagonal pencil hatching. Blue Period melancholy via colour,
+// not via drawing sad people.
+function picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(8201,ss,0,12); sR(); sR();
+
+  // Per-song layout decisions.
+  const shardCountFull = 70 + Math.floor(sR()*40);          // 70-110 shards
+  const hatchCountFull = 250 + Math.floor(sR()*120);        // 250-370 hatches
+  const hatchAngleBase = -Math.PI/3 + (sR()-0.5)*0.4;       // per-song hatch direction
+
+  // Cool blue ground (palette-independent so the mood reads as Blue Period).
+  const grad = ctx.createLinearGradient(0,0,CW,CH);
+  if(isBW){
+    grad.addColorStop(0, '#28282c');
+    grad.addColorStop(0.5, '#3a3a40');
+    grad.addColorStop(1, '#22222a');
+  } else {
+    grad.addColorStop(0, '#1a2438');
+    grad.addColorStop(0.5, '#2a3e58');
+    grad.addColorStop(1, '#1a2230');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Cubist shards — count grows with reveal.
+  const visShards = Math.max(8, Math.ceil(shardCountFull * reveal));
+  for(let i=0;i<visShards;i++){
+    const r1 = _seedRnd(i+8300,ss,0,0); r1(); r1();
+    const cx = r1()*CW;
+    const cy = r1()*CH;
+    const sz = 25 + r1()*120;
+    const rot = r1()*Math.PI*2;
+    const sides = 3 + Math.floor(r1()*3);
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    // Bias toward blue.
+    const cr = isBW ? Math.round(rgb[0]*0.5+40) : Math.round(rgb[0]*0.35 + 25);
+    const cg = isBW ? Math.round(rgb[1]*0.5+45) : Math.round(rgb[1]*0.45 + 35);
+    const cb = isBW ? Math.round(rgb[2]*0.5+55) : Math.round(rgb[2]*0.75 + 60);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for(let s=0;s<sides;s++){
+      const a = (s/sides)*Math.PI*2;
+      const r = sz * (0.65 + r1()*0.70);
+      const px = Math.cos(a)*r, py = Math.sin(a)*r;
+      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.55 + r1()*0.35).toFixed(2)})`;
+    ctx.fill();
+    ctx.strokeStyle = isBW ? 'rgba(15,15,18,0.7)' : 'rgba(8,12,22,0.7)';
+    ctx.lineWidth = 1 + r1();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Pencil-grain hatching — analytic cubism signature, scale with reveal.
+  const visHatches = Math.ceil(hatchCountFull * reveal);
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = isBW ? 'rgba(15,15,18,0.9)' : 'rgba(15,20,30,0.9)';
+  ctx.lineWidth = 0.5;
+  for(let k=0;k<visHatches;k++){
+    const hR = _seedRnd(k+8400,ss,0,0); hR();
+    const sx = hR()*CW, sy = hR()*CH;
+    const len = 8 + hR()*20;
+    const a = hatchAngleBase + (hR()-0.5)*0.2;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Picasso Rose Atmosphere: warm palette cubist mood, no figures. Same
+// structure as Blue Atmo but with warm pink/ochre bias. Rose Period warmth
+// via colour, not via harlequin figures.
+function picassoPhaseRoseAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(8501,ss,0,13); sR(); sR();
+
+  const shardCountFull = 70 + Math.floor(sR()*40);
+  const hatchCountFull = 250 + Math.floor(sR()*120);
+  const hatchAngleBase = Math.PI/4 + (sR()-0.5)*0.4;
+
+  // Warm pink/ochre ground.
+  const grad = ctx.createLinearGradient(0,0,CW,CH);
+  if(isBW){
+    grad.addColorStop(0, '#4a4038');
+    grad.addColorStop(0.5, '#6a5848');
+    grad.addColorStop(1, '#4a4038');
+  } else {
+    grad.addColorStop(0, '#7a3830');
+    grad.addColorStop(0.5, '#a05848');
+    grad.addColorStop(1, '#7a4030');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  const visShards = Math.max(8, Math.ceil(shardCountFull * reveal));
+  for(let i=0;i<visShards;i++){
+    const r1 = _seedRnd(i+8600,ss,0,0); r1(); r1();
+    const cx = r1()*CW, cy = r1()*CH;
+    const sz = 25 + r1()*120;
+    const rot = r1()*Math.PI*2;
+    const sides = 3 + Math.floor(r1()*3);
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    // Bias toward warm.
+    const cr = isBW ? Math.round(rgb[0]*0.55+55) : Math.round(rgb[0]*0.70 + 55);
+    const cg = isBW ? Math.round(rgb[1]*0.55+45) : Math.round(rgb[1]*0.50 + 35);
+    const cb = isBW ? Math.round(rgb[2]*0.55+35) : Math.round(rgb[2]*0.35 + 30);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for(let s=0;s<sides;s++){
+      const a = (s/sides)*Math.PI*2;
+      const r = sz * (0.65 + r1()*0.70);
+      const px = Math.cos(a)*r, py = Math.sin(a)*r;
+      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.55 + r1()*0.35).toFixed(2)})`;
+    ctx.fill();
+    ctx.strokeStyle = isBW ? 'rgba(20,15,12,0.7)' : 'rgba(25,8,8,0.7)';
+    ctx.lineWidth = 1 + r1();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const visHatches = Math.ceil(hatchCountFull * reveal);
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = isBW ? 'rgba(20,15,12,0.9)' : 'rgba(30,15,12,0.9)';
+  ctx.lineWidth = 0.5;
+  for(let k=0;k<visHatches;k++){
+    const hR = _seedRnd(k+8700,ss,0,0); hR();
+    const sx = hR()*CW, sy = hR()*CH;
+    const len = 8 + hR()*20;
+    const a = hatchAngleBase + (hR()-0.5)*0.2;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Picasso Faceted Field: full-canvas dense angular shards, no subject.
+// Maximum-density analytic cubism with strong pencil-grain texture.
+function picassoPhaseFacetedField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(8801,ss,0,14); sR(); sR();
+
+  const facetCountFull = 140 + Math.floor(sR()*80);          // 140-220 facets
+  const hatchCountFull = 400 + Math.floor(sR()*200);         // 400-600 hatches
+
+  // Muted analytic ground.
+  ctx.fillStyle = isBW ? '#3a3834' : '#4a4438';
+  ctx.fillRect(0,0,CW,CH);
+
+  const visFacets = Math.max(12, Math.ceil(facetCountFull * reveal));
+  for(let i=0;i<visFacets;i++){
+    const r1 = _seedRnd(i+8900,ss,0,0); r1(); r1();
+    const cx = r1()*CW, cy = r1()*CH;
+    const sz = 30 + r1()*100;
+    const rot = r1()*Math.PI*2;
+    const sides = 3 + Math.floor(r1()*2);                    // triangles + quads
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    const cr = isBW ? Math.round(rgb[0]*0.6+30) : Math.round(rgb[0]*0.65 + 25);
+    const cg = isBW ? Math.round(rgb[1]*0.6+25) : Math.round(rgb[1]*0.60 + 20);
+    const cb = isBW ? Math.round(rgb[2]*0.6+20) : Math.round(rgb[2]*0.55 + 20);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for(let s=0;s<sides;s++){
+      const a = (s/sides)*Math.PI*2;
+      const r = sz * (0.60 + r1()*0.80);
+      const px = Math.cos(a)*r, py = Math.sin(a)*r;
+      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.65 + r1()*0.30).toFixed(2)})`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(15,10,8,0.65)';
+    ctx.lineWidth = 1 + r1()*1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Strong pencil-grain hatching crossing the canvas, scale with reveal.
+  const visHatches = Math.ceil(hatchCountFull * reveal);
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = 'rgba(20,15,10,0.95)';
+  ctx.lineWidth = 0.5;
+  for(let k=0;k<visHatches;k++){
+    const hR = _seedRnd(k+9000,ss,0,0); hR();
+    const sx = hR()*CW, sy = hR()*CH;
+    const len = 6 + hR()*15;
+    const a = (hR()<0.5 ? -Math.PI/4 : Math.PI/4) + (hR()-0.5)*0.3;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Picasso Geometric Still-Life: synthetic cubism still-life via geometry
+// placement only. Earth-tone ground + table-edge gradient + chord-coloured
+// rectangles/ovals/trapezoids/hexagons with cubist splits. Vase/fruit implied
+// by composition (vertical-ish shapes near centre, horizontal table line)
+// without any literal outlines.
+function picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(9101,ss,0,15); sR(); sR();
+
+  const shapeCountFull = 30 + Math.floor(sR()*20);           // 30-50 shapes
+  const tableY = CH * (0.45 + sR()*0.15);                    // 45-60% table edge
+
+  // Earth-tone ground.
+  ctx.fillStyle = isBW ? '#8a8478' : '#c0a880';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Table-plane gradient.
+  const tableGrad = ctx.createLinearGradient(0, tableY, 0, CH);
+  if(isBW){
+    tableGrad.addColorStop(0, 'rgba(50,45,40,0)');
+    tableGrad.addColorStop(0.3, 'rgba(50,45,40,0.5)');
+    tableGrad.addColorStop(1, 'rgba(35,30,25,0.85)');
+  } else {
+    tableGrad.addColorStop(0, 'rgba(80,50,30,0)');
+    tableGrad.addColorStop(0.3, 'rgba(80,50,30,0.5)');
+    tableGrad.addColorStop(1, 'rgba(60,35,20,0.85)');
+  }
+  ctx.fillStyle = tableGrad;
+  ctx.fillRect(0, tableY, CW, CH-tableY);
+
+  // Generate shapes upfront so we can z-sort.
+  const shapes = [];
+  for(let i=0;i<shapeCountFull;i++){
+    const r1 = _seedRnd(i+9200,ss,0,0); r1(); r1();
+    const cx = CW * (0.15 + r1()*0.70);
+    const cy = CH * (0.20 + r1()*0.65);
+    const w = 30 + r1()*180;
+    const h = 30 + r1()*180;
+    const kind = (r1()*4)|0;
+    const splitChance = r1();
+    const sliceLift = r1();
+    shapes.push({cx, cy, w, h, kind, i, splitChance, sliceLift});
+  }
+  shapes.sort((a,b)=>(b.w*b.h) - (a.w*a.h));
+
+  const visShapes = Math.max(2, Math.ceil(shapeCountFull * reveal));
+  let drawn = 0;
+  for(const sh of shapes){
+    if(drawn >= visShapes) break;
+    drawn++;
+    const {rgb} = _picChord(chords, sh.i%cn, gc, isBW);
+    const cr = Math.round(rgb[0]*0.75 + 25);
+    const cg = Math.round(rgb[1]*0.65 + 20);
+    const cb = Math.round(rgb[2]*0.50 + 15);
+    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.75 + sh.splitChance*0.20).toFixed(2)})`;
+    ctx.strokeStyle = 'rgba(15,8,5,0.85)';
+    ctx.lineWidth = 1.5 + sh.sliceLift;
+    if(sh.kind === 0){
+      ctx.fillRect(sh.cx - sh.w/2, sh.cy - sh.h/2, sh.w, sh.h);
+      ctx.strokeRect(sh.cx - sh.w/2, sh.cy - sh.h/2, sh.w, sh.h);
+    } else if(sh.kind === 1){
+      ctx.beginPath();
+      ctx.ellipse(sh.cx, sh.cy, sh.w/2, sh.h/2, 0, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+    } else if(sh.kind === 2){
+      ctx.beginPath();
+      ctx.moveTo(sh.cx-sh.w/2, sh.cy+sh.h/2);
+      ctx.lineTo(sh.cx+sh.w/2, sh.cy+sh.h/2);
+      ctx.lineTo(sh.cx+sh.w/4, sh.cy-sh.h/2);
+      ctx.lineTo(sh.cx-sh.w/4, sh.cy-sh.h/2);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath();
+      for(let s=0;s<6;s++){
+        const a = (s/6)*Math.PI*2;
+        const px = sh.cx + Math.cos(a)*sh.w/2;
+        const py = sh.cy + Math.sin(a)*sh.h/2;
+        if(s===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+    // Cubist split — light bias on right half for larger shapes.
+    if(sh.w > 80 && sh.splitChance < 0.4){
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(sh.cx - sh.w/2, sh.cy - sh.h/2, sh.w, sh.h);
+      ctx.clip();
+      ctx.fillStyle = isBW ? 'rgba(220,210,190,0.25)' : 'rgba(255,220,180,0.25)';
+      ctx.fillRect(sh.cx, sh.cy - sh.h, sh.w, sh.h*2);
+      ctx.restore();
+    }
+  }
+
+  // Faint table-edge perspective line.
+  ctx.strokeStyle = isBW ? 'rgba(15,15,12,0.4)' : 'rgba(20,10,5,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, tableY + CH*0.05);
+  ctx.lineTo(CW, tableY);
+  ctx.stroke();
 }
 
 // Mondrian canvas-wide overlay. The per-cell drawMondrian goes pixely on long

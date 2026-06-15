@@ -10749,28 +10749,73 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.stroke();
   }
 
-  // Reeds at water edges — using chord notes.
-  const reedCount = Math.min(60, Math.max(15, lim));
+  // Reeds at water edges + middle scatter — chord-driven height, thickness,
+  // bend direction, and seedheads. Concept is realised here: every chord
+  // contributes one visible reed with a chord-coloured tip.
+  const reedCount = Math.min(180, Math.max(30, lim * 3));
   for(let i = 0; i < reedCount; i++){
     const ci = i % lim;
     const chord = chords[ci] || chords[0];
     const notes = chord && (chord.n || chord.notes) || [];
     const note = notes[0] || {m:60,v:80};
-    const m = note.m!==undefined?note.m:note;
-    const [r, g, b] = gc(m, 100);
-    // Side: alternate left/right of bridge, near banks.
-    const side = i % 2;
-    const rx = side === 0 ? rnd() * CW * 0.18 : CW - rnd() * CW * 0.18;
-    const ry = CH * 0.55 + rnd() * CH * 0.05;
-    const rh = 25 + rnd() * 40;
-    // Reed = thin tall blade.
-    ctx.strokeStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
-    ctx.lineWidth = 1.8;
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 80;
+    const [r, g, b] = gc(m, v);
+    // Position: 60% in side clusters, 40% scattered along full water edge.
+    const zoneRoll = rnd();
+    let rx;
+    if(zoneRoll < 0.40){
+      // Left cluster — denser near bank, falls off with quadratic bias.
+      rx = Math.pow(rnd(), 1.5) * CW * 0.30;
+    } else if(zoneRoll < 0.80){
+      // Right cluster.
+      rx = CW - Math.pow(rnd(), 1.5) * CW * 0.30;
+    } else {
+      // Sparse middle scatter along full water edge.
+      rx = CW * 0.10 + rnd() * CW * 0.80;
+    }
+    const ry = CH * 0.55 + rnd() * CH * 0.08;
+    // Chord-driven height — pitch + velocity each contribute.
+    const pitchNorm = Math.max(0, Math.min(1, (m - 40) / 40));
+    const velNorm   = Math.max(0, Math.min(1, v / 110));
+    const rh = 40 + pitchNorm * 80 + velNorm * 30;
+    // Chord-driven thickness — more notes in chord = thicker reed.
+    const lw = 2.0 + Math.min(notes.length, 4) / 4 * 1.5;
+    // Less muted (was 0.45/0.7 — barely visible).
+    const reedColor = _hokusaiMute(r, g, b, 0.20, 0.92);
+    // Bend direction from pitch parity, amount from velocity.
+    const bendDir = (m % 2 === 0 ? 1 : -1);
+    const bendAmt = 5 + velNorm * 10;
+    ctx.strokeStyle = reedColor;
+    ctx.lineWidth = lw;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(rx, ry);
-    ctx.quadraticCurveTo(rx + (rnd() - 0.5) * 8, ry - rh * 0.5, rx + (rnd() - 0.5) * 6, ry - rh);
+    const tipX = rx + bendDir * bendAmt * 1.5;
+    const tipY = ry - rh;
+    ctx.quadraticCurveTo(
+      rx + bendDir * bendAmt,
+      ry - rh * 0.5,
+      tipX, tipY
+    );
     ctx.stroke();
+    // Seedhead — chord-coloured dab at top, brighter than the stem.
+    const seedSz = 1.5 + Math.min(notes.length, 4) / 4 * 1.5;
+    ctx.fillStyle = _hokusaiMute(r, g, b, 0.10, 1.0);
+    ctx.beginPath();
+    ctx.ellipse(tipX, tipY, seedSz, seedSz * 1.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Secondary seedhead for multi-note chords — uses the second note's colour.
+    if(notes.length > 1){
+      const n2 = notes[1];
+      const m2 = n2.m !== undefined ? n2.m : n2;
+      const v2 = n2.v !== undefined ? n2.v : 80;
+      const [r2, g2, b2] = gc(m2, v2);
+      ctx.fillStyle = _hokusaiMute(r2, g2, b2, 0.15, 0.95);
+      ctx.beginPath();
+      ctx.ellipse(tipX + bendDir * 3, tipY - 3, seedSz * 0.7, seedSz * 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   // Water ripples — horizontal short strokes.
