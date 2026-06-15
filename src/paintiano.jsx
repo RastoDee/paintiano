@@ -11023,8 +11023,10 @@ function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex
   // ── PHASE CHOOSER: commit to ONE of Kusama's signature modes per painting ──
   // Determined by phaseIndex (modulo phase count). The Next button cycles it.
   //  A = Polka dots on color blocks — original.  B = Dot field — original.
-  //  C = Infinity Nets (looping mesh).  D = Dotted Spheres (floating dot orbs).
-  //  E = Accumulation (layered dot masses).  F = Tendril nets (light on colour).
+  //  C = Infinity Nets (interlocking crescent mesh — true Kusama).
+  //  D = Dotted Spheres (floating dot orbs).
+  //  E = Iconic Infinity Dots (saturated ground + black dots + chord accents).
+  //  F = Tendril nets (light on colour).
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ kusamaPhaseB(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===2){ kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,ss); return; }
@@ -11214,22 +11216,55 @@ function _kusChord(chords,idx,gc){
 
 // ── Kusama C: Infinity Nets — looping mesh of arcs over a chord-lit ground. ──
 function kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,sessionSeed){
+  // Kusama Infinity Nets — interlocking crescent mesh on saturated ground.
+  // Rewritten from the original horizontal undulating rows (which read as
+  // waves rather than nets). Hex-offset grid of crescent arcs, each cell
+  // chord-tinted, with subtle inner shadows for depth.
   const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const base=_kusChord(chords,0,gc).rgb;
-  ctx.fillStyle=`rgb(${Math.round(base[0]*0.6)},${Math.round(base[1]*0.6)},${Math.round(base[2]*0.6)})`;ctx.fillRect(0,0,CW,CH);
-  const rows=Math.max(6,Math.min(40,Math.round(cn/3)));
-  const visRows=Math.max(1,Math.ceil(N/cn*rows));
-  const rh=CH/rows, cellW=Math.max(14,CW/22);
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const dom = _kusChord(chords, 0, gc).rgb;
+  // Saturated chord ground — slightly desaturated so cream arcs pop.
+  ctx.fillStyle = `rgb(${Math.round(dom[0]*0.55)},${Math.round(dom[1]*0.45)},${Math.round(dom[2]*0.55)})`;
+  ctx.fillRect(0, 0, CW, CH);
+  // Honeycomb-offset crescent mesh.
+  const cellSize = Math.max(18, Math.min(CW, CH) / 26);
+  const cols = Math.ceil(CW/cellSize) + 2;
+  const rows = Math.ceil(CH/cellSize) + 2;
+  const visRows = Math.max(1, Math.ceil(rows * reveal));
   for(let r=0;r<visRows;r++){
-    const {rgb}=_kusChord(chords,Math.floor(r*(cn/rows)),gc);
-    const y=r*rh+rh*0.5, dir=r%2?1:-1;
-    ctx.strokeStyle=`rgba(${Math.min(255,rgb[0]+90)},${Math.min(255,rgb[1]+90)},${Math.min(255,rgb[2]+90)},0.9)`;
-    ctx.lineWidth=Math.max(1.5,rh*0.18);
-    ctx.beginPath();
-    for(let x=-cellW;x<=CW+cellW;x+=cellW){
-      ctx.moveTo(x,y); ctx.quadraticCurveTo(x+cellW*0.5,y+dir*rh*0.5,x+cellW,y);
+    const offset = (r % 2) ? cellSize*0.5 : 0;
+    for(let c=0;c<cols;c++){
+      const cx = c*cellSize - cellSize*0.5 + offset;
+      const cy = r*cellSize - cellSize*0.5;
+      const cellRnd = _seedRnd(r*cols+c+5000, ss, 0, 0);
+      const sk = cellRnd();
+      // Skip ~8% cells for organic feel.
+      if(sk < 0.08) continue;
+      // Inner shadow crescent (~50% of cells) — gives depth.
+      if(cellRnd() < 0.50){
+        ctx.strokeStyle = `rgba(${Math.round(dom[0]*0.30)},${Math.round(dom[1]*0.25)},${Math.round(dom[2]*0.30)},0.40)`;
+        ctx.lineWidth = Math.max(1, cellSize*0.08);
+        ctx.beginPath();
+        ctx.arc(cx + cellSize*0.05, cy + cellSize*0.05, cellSize*0.30, Math.PI*0.10, Math.PI*1.00);
+        ctx.stroke();
+      }
+      // Bright crescent arc — chord-tinted cream/white.
+      const ci = (r*cols + c) % cn;
+      const {rgb} = _kusChord(chords, ci, gc);
+      const tintR = Math.min(255, Math.round(rgb[0]*0.20 + 220));
+      const tintG = Math.min(255, Math.round(rgb[1]*0.20 + 215));
+      const tintB = Math.min(255, Math.round(rgb[2]*0.20 + 200));
+      const alpha = 0.85 + cellRnd()*0.15;
+      ctx.strokeStyle = `rgba(${tintR},${tintG},${tintB},${alpha.toFixed(2)})`;
+      ctx.lineWidth = Math.max(1.5, cellSize*0.18);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      const radius = cellSize * (0.42 + cellRnd()*0.08);
+      const startA = -Math.PI*0.25 + (cellRnd()-0.5)*0.40;
+      const endA = Math.PI*1.25 + (cellRnd()-0.5)*0.40;
+      ctx.arc(cx, cy, radius, startA, endA);
+      ctx.stroke();
     }
-    ctx.stroke();
   }
 }
 
@@ -11272,21 +11307,58 @@ function kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,sessionSeed){
   }
 }
 
-// ── Kusama E: Accumulation — layered translucent dot masses. ──
+// ── Kusama E: Iconic Infinity Dots — saturated ground, obsessive dots. ──
+// Rewritten from the original "Accumulation" (which read too similar to
+// X-3 Dotted Spheres). Classic Kusama Infinity Dot painting: dominant
+// chord = saturated ground, 700 black/cream dots in size gradient,
+// 15 large chord-coloured accent dots with black inner ring.
+// Function name preserved to avoid touching the phase dispatcher.
 function kusamaPhaseAccum(ctx,CW,CH,chords,lim,gc,sessionSeed){
   const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle='#101018';ctx.fillRect(0,0,CW,CH);
-  const masses=Math.max(4,Math.min(40,Math.round(cn/4)));
-  const vis=Math.max(1,Math.ceil(N/cn*masses));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+202,ss,0,0);
-    const {rgb,energy}=_kusChord(chords,Math.floor(i*(cn/masses)),gc);
-    const x=rnd()*CW, y=rnd()*CH, R=Math.min(CW,CH)*(0.08+energy*0.16+rnd()*0.05);
-    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.55)`;
-    ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();
-    // white dots on top
-    const dn=4+Math.floor(energy*8);
-    for(let d=0;d<dn;d++){const a=rnd()*Math.PI*2,rr=rnd()*R*0.8;ctx.fillStyle='rgba(255,255,255,0.85)';ctx.beginPath();ctx.arc(x+Math.cos(a)*rr,y+Math.sin(a)*rr,Math.max(1.5,R*0.08),0,Math.PI*2);ctx.fill();}
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  // Dominant (most-saturated) chord = ground colour.
+  let domR=80,domG=80,domB=110,domSat=-1;
+  const upto = Math.min(cn, Math.max(1, lim));
+  for(let i=0;i<upto;i++){
+    const {rgb} = _kusChord(chords, i, gc);
+    const sat = Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2]);
+    if(sat > domSat){ domSat = sat; domR = rgb[0]; domG = rgb[1]; domB = rgb[2]; }
+  }
+  ctx.fillStyle = `rgb(${domR|0},${domG|0},${domB|0})`;
+  ctx.fillRect(0, 0, CW, CH);
+  // Black/cream dot field — scales with reveal.
+  const totalDots = 700;
+  const visDots = Math.max(50, Math.ceil(totalDots * reveal));
+  for(let i=0;i<visDots;i++){
+    const rnd = _seedRnd(i+6000, ss, 0, 0);
+    const x = rnd() * CW;
+    const y = rnd() * CH;
+    // Size gradient — Math.pow(rnd, 3) gives obsessive small-dominant feel.
+    const R = 2 + Math.pow(rnd(), 3) * 16;
+    // 85% black (signature), 15% cream highlight.
+    ctx.fillStyle = (rnd() < 0.85) ? '#080808' : '#f8c8b0';
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, Math.PI*2);
+    ctx.fill();
+  }
+  // 15 large chord-coloured accent dots — each with black inner ring.
+  const accents = 15;
+  const visAccents = Math.max(2, Math.ceil(accents * reveal));
+  for(let i=0;i<visAccents;i++){
+    const rnd = _seedRnd(i+7000, ss, 0, 0);
+    const {rgb} = _kusChord(chords, (i*5)%cn, gc);
+    const x = rnd() * CW;
+    const y = rnd() * CH;
+    const R = 18 + rnd() * 22;
+    ctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, Math.PI*2);
+    ctx.fill();
+    // Black inner ring — signature Kusama accent.
+    ctx.fillStyle = '#080808';
+    ctx.beginPath();
+    ctx.arc(x, y, R*0.3, 0, Math.PI*2);
+    ctx.fill();
   }
 }
 
