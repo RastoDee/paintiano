@@ -8906,16 +8906,24 @@ function monetPhasePoppyField(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const isBW = mode === 'bw';
   const rnd = _seedRnd(91, ss, 0, 6);
+  // ── Reveal: 0→1 as music plays. Painting builds progressively. ──
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
 
   // ── Per-song layout decisions (stable per painting, re-roll on Vary) ──
   const horizonY = CH * (0.28 + rnd()*0.25);              // 28-53% sky/meadow
-  const cloudCount = 4 + Math.floor(rnd()*12);            // 4-16 clouds
+  const cloudCountFull = 4 + Math.floor(rnd()*12);        // 4-16 clouds total
   const treeLineActive = rnd() < 0.7;                     // 70% chance tree-line
   const treeLineH = CH * (0.025 + rnd()*0.04);
   const clusterMode = rnd() < 0.5;                        // uniform vs clustered
   const clusterCount = 3 + Math.floor(rnd()*5);           // 3-7 clusters if cluster
-  const flowerTotal = Math.min(900, Math.max(300, lim * 6));
-  const grassCount = 80 + Math.floor(rnd()*150);
+  const flowerTotalFull = 600 + Math.floor(rnd()*400);    // 600-1000 flowers when full
+  const grassCountFull = 80 + Math.floor(rnd()*150);
+
+  // Reveal-scaled visible counts.
+  const cloudCount = Math.ceil(cloudCountFull * Math.min(1, reveal*1.5));
+  const flowerTotal = Math.ceil(flowerTotalFull * reveal);
+  const grassCount = Math.ceil(grassCountFull * reveal);
+  const treeLineAppear = treeLineActive && reveal > 0.15;
 
   function chordCol(t){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
@@ -8967,8 +8975,8 @@ function monetPhasePoppyField(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle = field;
   ctx.fillRect(0, horizonY, CW, CH-horizonY);
 
-  // Tree-line (seed-decided present/absent)
-  if(treeLineActive){
+  // Tree-line (seed-decided present/absent; appears after 15% reveal)
+  if(treeLineAppear){
     ctx.globalAlpha = 0.5;
     const [horR,horG,horB] = chordCol(0.30);
     ctx.fillStyle = `rgb(${Math.round(horR*0.30+20)},${Math.round(horG*0.55+30)},${Math.round(horB*0.25+15)})`;
@@ -9045,14 +9053,22 @@ function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const isBW = mode === 'bw';
   const rnd = _seedRnd(91, ss, 0, 7);
+  // ── Reveal: 0→1 as music plays. Progressively materialises the painting. ──
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
 
   // ── Per-song layout decisions ──
-  const poplarCount = 5 + Math.floor(rnd()*8);            // 5-12 poplars
+  const poplarCount = 5 + Math.floor(rnd()*8);            // 5-12 poplars total
   const waterLine = CH * (0.42 + rnd()*0.28);             // 42-70% sky/water
   const spacingIrregular = rnd() < 0.5;
   const foliageBase = 50 + Math.floor(rnd()*60);
   const tiltActive = rnd() < 0.6;
   const reflectionDepth = 0.5 + rnd()*0.5;
+
+  // Reveal-scaled visible counts.
+  const visPoplars = Math.max(1, Math.ceil(poplarCount * reveal));
+  const visRipples = Math.ceil(60 * reveal);
+  const foliageDensityScale = 0.25 + reveal*0.75;          // 25% at first note → 100%
+  const reflectionAppear = Math.max(0, Math.min(1, (reveal-0.3) / 0.7)); // starts at 30% reveal
 
   function chordCol(t){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
@@ -9093,9 +9109,9 @@ function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle = water;
   ctx.fillRect(0, waterLine, CW, CH-waterLine);
 
-  // Water ripples
+  // Water ripples — count grows with reveal.
   ctx.globalAlpha = 0.3;
-  for(let i=0;i<60;i++){
+  for(let i=0;i<visRipples;i++){
     const y = waterLine + rnd()*(CH-waterLine);
     const w = CW*(0.3+rnd()*0.5);
     const x = (rnd()-0.3)*CW;
@@ -9105,7 +9121,7 @@ function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
   ctx.globalAlpha = 1;
 
-  // Poplar x-positions — uniform OR irregular
+  // Poplar x-positions — uniform OR irregular (FULL set, but only visPoplars drawn).
   const xs = [];
   if(spacingIrregular){
     for(let i=0;i<poplarCount;i++) xs.push(CW*(0.06 + rnd()*0.88));
@@ -9114,14 +9130,15 @@ function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
     for(let i=0;i<poplarCount;i++) xs.push(CW*(0.05 + (i/(poplarCount-1))*0.90));
   }
 
-  // Draw each poplar + reflection
-  for(let p=0;p<poplarCount;p++){
+  // Draw poplars progressively — left-to-right, one per reveal step.
+  for(let p=0;p<visPoplars;p++){
     const px = xs[p];
     const treeTopY = CH*(0.04 + rnd()*0.08);
     const treeH = waterLine - treeTopY;
     const [tR,tG,tB] = chordColIdx(p*8);
     const tilt = tiltActive ? (rnd()-0.5)*8 : 0;
-    const foliageDabs = foliageBase + Math.floor(rnd()*30);
+    const foliageDabsFull = foliageBase + Math.floor(rnd()*30);
+    const foliageDabs = Math.max(8, Math.ceil(foliageDabsFull * foliageDensityScale));
 
     // Trunk
     ctx.strokeStyle = `rgba(${Math.round(tR*0.20+10)},${Math.round(tG*0.20+15)},${Math.round(tB*0.20+5)},0.95)`;
@@ -9131,7 +9148,7 @@ function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.lineTo(px+tilt, treeTopY+5);
     ctx.stroke();
 
-    // Foliage column
+    // Foliage column — count scales with reveal.
     for(let f=0;f<foliageDabs;f++){
       const fy = treeTopY + (f/foliageDabs)*treeH;
       const offset = (rnd()-0.5)*9 + tilt*(f/foliageDabs);
@@ -9146,31 +9163,33 @@ function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
       ctx.fill();
     }
 
-    // Reflection
-    ctx.globalAlpha = 0.55;
-    const refTop = waterLine;
-    const refBase = refTop + treeH*reflectionDepth;
-    ctx.strokeStyle = `rgba(${Math.round(tR*0.25+15)},${Math.round(tG*0.25+20)},${Math.round(tB*0.25+10)},0.7)`;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(px, refTop);
-    ctx.lineTo(px+(rnd()-0.5)*4, refBase);
-    ctx.stroke();
-    const refDabs = Math.floor(foliageDabs*0.6);
-    for(let f=0;f<refDabs;f++){
-      const fy = refTop + (f/refDabs)*(refBase-refTop);
-      const offset = (rnd()-0.5)*10;
-      const tt = f/refDabs;
-      const lift = tt*25;
-      const fR = Math.round(tR*0.40 + lift);
-      const fG = Math.round(tG*0.65 + lift);
-      const fB = Math.round(tB*0.35 + lift);
-      ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,fR))},${Math.max(0,Math.min(255,fG))},${Math.max(0,Math.min(255,fB))},0.55)`;
+    // Reflection — only appears after 30% reveal, then grows.
+    if(reflectionAppear > 0){
+      ctx.globalAlpha = 0.55 * reflectionAppear;
+      const refTop = waterLine;
+      const refBase = refTop + treeH * reflectionDepth * reflectionAppear;
+      ctx.strokeStyle = `rgba(${Math.round(tR*0.25+15)},${Math.round(tG*0.25+20)},${Math.round(tB*0.25+10)},0.7)`;
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.ellipse(px+offset, fy, 3+rnd()*3, 1.5+rnd()*1.5, 0, 0, Math.PI*2);
-      ctx.fill();
+      ctx.moveTo(px, refTop);
+      ctx.lineTo(px+(rnd()-0.5)*4, refBase);
+      ctx.stroke();
+      const refDabs = Math.floor(foliageDabs*0.6);
+      for(let f=0;f<refDabs;f++){
+        const fy = refTop + (f/refDabs)*(refBase-refTop);
+        const offset = (rnd()-0.5)*10;
+        const tt = f/refDabs;
+        const lift = tt*25;
+        const fR = Math.round(tR*0.40 + lift);
+        const fG = Math.round(tG*0.65 + lift);
+        const fB = Math.round(tB*0.35 + lift);
+        ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,fR))},${Math.max(0,Math.min(255,fG))},${Math.max(0,Math.min(255,fB))},0.55)`;
+        ctx.beginPath();
+        ctx.ellipse(px+offset, fy, 3+rnd()*3, 1.5+rnd()*1.5, 0, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
   }
 
   // Horizon line
