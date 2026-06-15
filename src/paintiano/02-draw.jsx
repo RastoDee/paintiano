@@ -1267,17 +1267,27 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   const cn=chords.length;
-  // ── 7-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1/2 = stacked / row / grid layouts (original body below).
-  //  3 = Multiform (free blurred patches).  4 = Seagram (dark portal).
-  //  5 = Black on Grey (recoloured: blue over ochre).  6 = Incandescent (glowing warm fields).
+  // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
+  //  0 = Classic Rothko (Stacked / Row / Grid, seed-driven internal layout
+  //      pick — the three layouts read as one "stacked colour-field" identity
+  //      so they share a single Vary slot).
+  //  1 = Pastel / Light period (cream ground + pale fields, high luminosity).
+  //  2 = Multiform (early 1948, free blurred patches).
+  //  3 = Seagram (dark portal frames 1958-59).
+  //  4 = Chapel (Houston, 1964-67, triptych ultra-dark monochrome).
+  //  5 = Incandescent (warm glowing 1955-58).
+  //  Free (cap=2) sees Stacked + Pastel — dark saturated vs light luminous
+  //  is the strongest art-historical contrast in Rothko's late career.
   {
-    const _pn=_capN(7); const _ropick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_ropick===3){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===4){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===5){ rothkoPhaseBlackGrey(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===6){ rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original stacked/row/grid body (variant 0/1/2)
+    const _pn=_capN(6); const _ropick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_ropick===1){ rothkoPhasePastel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===2){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===3){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===4){ rothkoPhaseChapel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===5){ rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    // else fall through to original stacked/row/grid body (variant 0; the
+    // layout sub-pick within is seed-driven, kept as natural micro-variation
+    // rather than its own Vary slot).
   }
   // Rothko is intentionally minimal — even 12 fields is at the high end of his
   // late stacked compositions, so we cap there rather than chasing density.
@@ -1529,6 +1539,104 @@ function rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const b=isBW?r:Math.round(20+rgb[2]*0.3);
     _rothkoField(ctx,marginX,innerY+i*(fh+gap),innerW,fh,r,g,b,0.9);
   }
+}
+
+// ── Rothko H: Pastel / Light period — soft pinks, pale neutrals, high
+// luminosity. The opposite of Seagram/Chapel: cream ground + 3 stacked pale
+// fields. Each field's chord colour is pushed toward pastel (chord*0.35 + 175)
+// so saturation stays low and brightness stays high. The "happy" Rothko.
+function rothkoPhasePastel(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Warm cream ground (or pale grey in B/W).
+  ctx.fillStyle = isBW ? '#e0dcd2' : '#f0e2d6';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Canvas grain noise — palette-independent.
+  for(let i=0;i<800;i++){
+    const rnd = _seedRnd(i+10000, ss, 0, 0);
+    const tone = isBW ? '200,200,200' : '220,200,180';
+    ctx.fillStyle = `rgba(${tone},${(0.1+rnd()*0.15).toFixed(2)})`;
+    ctx.fillRect(rnd()*CW, rnd()*CH, 1+rnd()*2, 1+rnd()*2);
+  }
+
+  // 3 stacked pale fields with low saturation, high luminosity.
+  const fields = 3;
+  const marginX = CW*0.08, marginY = CH*0.08;
+  const fieldGap = CH*0.025;
+  const availH = CH - 2*marginY - (fields-1)*fieldGap;
+  const fh = availH/fields;
+  const vis = Math.max(1, Math.ceil(fields*reveal));
+
+  for(let i=0;i<vis;i++){
+    const ci = Math.floor((i+0.5)/fields * cn);
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+    // Push toward pastel: high lightness, low saturation
+    const r = isBW
+      ? Math.min(255, Math.round(rgb[0]*0.35 + 175))
+      : Math.min(255, Math.round(rgb[0]*0.35 + 175));
+    const g = isBW
+      ? r
+      : Math.min(255, Math.round(rgb[1]*0.35 + 160));
+    const b = isBW
+      ? r
+      : Math.min(255, Math.round(rgb[2]*0.40 + 170));
+    const y = marginY + i*(fh + fieldGap);
+    _rothkoField(ctx, marginX, y, CW - 2*marginX, fh, r, g, b, 0.92);
+  }
+}
+
+// ── Rothko I: Chapel — Houston Rothko Chapel (1964-67). Triptych of three
+// ultra-dark monochromatic panels (deep plum-maroon-blackish range). Chord
+// saturation pushed down ~90%, brightness pushed down. Subtle vertical light
+// gradient simulates the chapel skylight. Pure meditation, no contrast.
+function rothkoPhaseChapel(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Pure dark plum-black ground (or near-black grey in B/W).
+  ctx.fillStyle = isBW ? '#15131a' : '#1a0d12';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Triptych: 3 vertical panels.
+  const margins = CW*0.05;
+  const gap = CW*0.015;
+  const panelW = (CW - 2*margins - 2*gap)/3;
+  const panelY = CH*0.08;
+  const panelH = CH*0.84;
+  const vis = Math.max(1, Math.ceil(3*reveal));
+
+  for(let p=0;p<vis;p++){
+    const x = margins + p*(panelW+gap);
+    const ci = Math.floor((p+0.5)/3 * cn);
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+    // Very dark, low saturation
+    const r = isBW
+      ? Math.round((rgb[0]+rgb[1]+rgb[2])/3 * 0.18 + 22)
+      : Math.round(rgb[0]*0.12 + 18);
+    const g = isBW
+      ? r
+      : Math.round(rgb[1]*0.05 + 5);
+    const b = isBW
+      ? r
+      : Math.round(rgb[2]*0.10 + 10);
+    _rothkoField(ctx, x, panelY, panelW, panelH, r, g, b, 0.92);
+  }
+
+  // Subtle vertical light gradient overlay — simulates chapel skylight.
+  const grad = ctx.createLinearGradient(0,0,0,CH);
+  if(isBW){
+    grad.addColorStop(0, 'rgba(245,245,245,0.06)');
+    grad.addColorStop(0.5, 'rgba(245,245,245,0.0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.15)');
+  } else {
+    grad.addColorStop(0, 'rgba(255,240,210,0.07)');
+    grad.addColorStop(0.5, 'rgba(255,240,210,0.0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.15)');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
 }
 
 // Matisse canvas-wide overlay. Like Mondrian's Classic/Boogie split, Matisse
@@ -1949,23 +2057,31 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const isBW = mode==='bw';
   const toGrey = (r,g,b) => { const v=Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; };
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Dense all-over / Wider sparser (original body below, via pollVariant).
-  //  2 = Black pourings.  3 = Totemic figuration.  4 = Handprints+drip.  5 = Blue Poles.
-  //  Free (cap=2) sees Dense + Blue Poles — those two are visually farthest
-  //  apart so the two-variant preview actually shows different paintings.
+  //  0 = Classic drip (Dense/Sparser, seed-driven internal pick — see body).
+  //  1 = Stenographic Figure (pre-drip 1942, totemic figures + symbols).
+  //  2 = Black pourings / theme colour pour.
+  //  3 = Lavender Mist / Totem atmospheric.
+  //  4 = White Light (post-drip 1954, INVERTED palette on dark ground).
+  //  5 = Blue Poles.
+  //  Free (cap=2) sees Dense + Stenographic — drip vs pre-drip is the most
+  //  dramatic art-historical contrast Pollock offers, so the two-variant
+  //  preview reads as "two different painters".
   {
     const _pn=_capN(6); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_variantCap === 2){
-      // Free: 0 = Dense (fall through), 1 = Blue Poles.
-      if(_ppick===1){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      // Free: 0 = Dense (fall through), 1 = Stenographic.
+      if(_ppick===1){ pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     } else {
       // Pro+: full ladder.
+      if(_ppick===1){ pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
       if(_ppick===2){ pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
       if(_ppick===3){ pollockPhaseTotem(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(_ppick===4){ pollockPhaseHands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+      if(_ppick===4){ pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
       if(_ppick===5){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     }
-    // else fall through to original dense/wider body (variant 0/1)
+    // else fall through to original dense/wider body (variant 0; the
+    // Dense vs Sparser choice within is seed-driven, kept as natural
+    // micro-variation rather than its own Vary slot).
   }
 
   // Palette weights rebalanced for chromatic painting: ink dropped from 0.28
@@ -2617,6 +2733,287 @@ function pollockPhasePoles(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+// ── Pollock G: Stenographic Figure — pre-drip (1942) era. Three totemic
+// vertical figures with eyes, horns, body segments, on a warm cream-yellow
+// ground; floating chord-coloured symbols (eyes, arrows, triangles, squiggles)
+// surround them; a black scribble line connects them across the top. Reveal
+// progress scales figure count + symbol count, so short songs show one figure,
+// long songs build the full composition.
+function pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const progress = N/Math.max(1,cn);
+
+  // Warm cream-yellow ground gradient.
+  const grad = ctx.createLinearGradient(0,0,0,CH);
+  grad.addColorStop(0, isBW?'#cfc5b2':'#e6d18a');
+  grad.addColorStop(1, isBW?'#a89e8a':'#caa55a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Horizontal brush-stroked grain — texture, no chord dependence.
+  const grainCount = 60;
+  for(let i=0;i<grainCount;i++){
+    const rnd = _seedRnd(i+7100, ss, 0, 0);
+    const r = 200+rnd()*30, g = 160+rnd()*30, b = isBW?180:(80+rnd()*30);
+    ctx.strokeStyle = `rgba(${r|0},${g|0},${b|0},${(0.15+rnd()*0.15).toFixed(2)})`;
+    ctx.lineWidth = 8+rnd()*20;
+    ctx.beginPath();
+    const y = rnd()*CH;
+    ctx.moveTo(rnd()*CW*0.3, y);
+    ctx.lineTo(CW*0.7+rnd()*CW*0.3, y+(rnd()-0.5)*30);
+    ctx.stroke();
+  }
+
+  // Figure count scales with progress: 1 → 3 over the piece.
+  const figureSlots = [
+    { x: CW*0.22, y: CH*0.55, scale: 0.85, chordPos: 0.10 },
+    { x: CW*0.50, y: CH*0.50, scale: 1.00, chordPos: 0.50 },
+    { x: CW*0.78, y: CH*0.60, scale: 0.78, chordPos: 0.90 },
+  ];
+  const visFigures = Math.max(1, Math.min(3, Math.ceil(progress * 3)));
+
+  for(let fi=0;fi<visFigures;fi++){
+    const f = figureSlots[fi];
+    const ci = Math.min(cn-1, Math.floor(f.chordPos * cn));
+    const chord = chords[ci];
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+    const W = CW*0.13*f.scale, H = CH*0.55*f.scale;
+    ctx.save();
+    ctx.translate(f.x, f.y);
+
+    // Head — elongated oval.
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
+    ctx.beginPath();
+    ctx.ellipse(0, -H*0.32, W*0.45, H*0.18, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = isBW?'#222':'#0e0a08'; ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Body — vertical totem trapezoid.
+    ctx.beginPath();
+    ctx.moveTo(-W*0.40, -H*0.20);
+    ctx.lineTo(+W*0.40, -H*0.20);
+    ctx.lineTo(+W*0.48, +H*0.30);
+    ctx.lineTo(-W*0.48, +H*0.30);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // Body segments (3 horizontal divisions).
+    for(let i=1;i<4;i++){
+      ctx.beginPath();
+      ctx.moveTo(-W*0.45, -H*0.20 + i*(H*0.50/4));
+      ctx.lineTo(+W*0.45, -H*0.20 + i*(H*0.50/4));
+      ctx.stroke();
+    }
+
+    // Eyes — two black-on-cream tribal eyes on the head.
+    ctx.fillStyle = isBW?'#1a1a1a':'#0e0a08';
+    ctx.beginPath(); ctx.arc(-W*0.15, -H*0.32, W*0.06, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(+W*0.15, -H*0.32, W*0.06, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#f0e8d0';
+    ctx.beginPath(); ctx.arc(-W*0.15+W*0.025, -H*0.34, W*0.025, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(+W*0.15+W*0.025, -H*0.34, W*0.025, 0, Math.PI*2); ctx.fill();
+
+    // Mouth — single horizontal line.
+    ctx.strokeStyle = isBW?'#1a1a1a':'#0e0a08'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-W*0.08, -H*0.22); ctx.lineTo(+W*0.08, -H*0.22); ctx.stroke();
+
+    // Top horns triangle.
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
+    ctx.beginPath();
+    ctx.moveTo(-W*0.30, -H*0.45);
+    ctx.lineTo(0, -H*0.55);
+    ctx.lineTo(+W*0.30, -H*0.45);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // Base / legs.
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-W*0.25, H*0.30); ctx.lineTo(-W*0.20, H*0.45);
+    ctx.moveTo(+W*0.25, H*0.30); ctx.lineTo(+W*0.20, H*0.45);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Floating symbols — chord-coloured, count scales with progress.
+  const symbolsMax = Math.max(8, Math.min(28, Math.round(cn*0.5)));
+  const visSymbols = Math.max(2, Math.ceil(symbolsMax*progress));
+  for(let i=0;i<visSymbols;i++){
+    const rnd = _seedRnd(i+7800, ss, 0, 0);
+    const ci = Math.floor(i*(cn/Math.max(1,symbolsMax)));
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+    const x = rnd()*CW, y = rnd()*CH;
+    const kind = i%4;
+    ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
+    ctx.lineWidth = 2.5;
+    if(kind===0){
+      // floating eye
+      ctx.beginPath();
+      ctx.ellipse(x, y, Math.min(CW,CH)*0.018, Math.min(CW,CH)*0.009, 0, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.fillStyle = isBW?'#1a1a1a':'#0e0a08';
+      ctx.beginPath(); ctx.arc(x, y, Math.min(CW,CH)*0.005, 0, Math.PI*2); ctx.fill();
+    } else if(kind===1){
+      // arrow
+      const L = Math.min(CW,CH)*0.018;
+      ctx.beginPath();
+      ctx.moveTo(x-L, y); ctx.lineTo(x+L, y);
+      ctx.moveTo(x+L*0.6, y-L*0.4); ctx.lineTo(x+L, y); ctx.lineTo(x+L*0.6, y+L*0.4);
+      ctx.stroke();
+    } else if(kind===2){
+      // triangle
+      const L = Math.min(CW,CH)*0.012;
+      ctx.beginPath();
+      ctx.moveTo(x, y-L); ctx.lineTo(x-L*0.9, y+L*0.6); ctx.lineTo(x+L*0.9, y+L*0.6);
+      ctx.closePath(); ctx.fill();
+    } else {
+      // squiggle
+      const L = Math.min(CW,CH)*0.016;
+      ctx.beginPath();
+      ctx.moveTo(x-L, y);
+      ctx.quadraticCurveTo(x-L*0.5, y-L*0.7, x, y);
+      ctx.quadraticCurveTo(x+L*0.5, y+L*0.7, x+L, y);
+      ctx.stroke();
+    }
+  }
+
+  // Black scribble connector across the top — appears late in the painting
+  // (after 60% progress) as a unifying line linking the figures.
+  if(progress > 0.6){
+    ctx.strokeStyle = isBW?'rgba(20,20,24,0.8)':'rgba(14,10,8,0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(CW*0.10, CH*0.20);
+    ctx.bezierCurveTo(CW*0.30, CH*0.10, CW*0.45, CH*0.30, CW*0.55, CH*0.15);
+    ctx.bezierCurveTo(CW*0.70, CH*0.05, CW*0.85, CH*0.25, CW*0.92, CH*0.20);
+    ctx.stroke();
+  }
+}
+
+// ── Pollock H: White Light — late-period (1954). Dark maroon-brown ground;
+// drip field with reversed proportions — 60% white/cream drips, 40% chord-
+// driven colour accents, 2% ink. Mirrors classic drip mechanics but inverts
+// the figure/ground relationship. Only Pollock variant with a dark canvas.
+function pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const progress = N/Math.max(1,cn);
+
+  // Deep maroon-brown ground (or dark grey in B/W).
+  const grad = ctx.createLinearGradient(0,0,CW,CH);
+  if(isBW){
+    grad.addColorStop(0, '#2a2622');
+    grad.addColorStop(1, '#1a1816');
+  } else {
+    grad.addColorStop(0, '#3a1c1c');
+    grad.addColorStop(1, '#2a1410');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Subtle dark grain noise — paint-rich texture, palette-independent.
+  for(let i=0;i<800;i++){
+    const rnd = _seedRnd(i+9100, ss, 0, 0);
+    const tone = isBW?60:80;
+    ctx.fillStyle = `rgba(${tone},${tone*0.5|0},${tone*0.4|0},${(0.1+rnd()*0.2).toFixed(2)})`;
+    ctx.fillRect(rnd()*CW, rnd()*CH, 1+rnd()*2, 1+rnd()*2);
+  }
+
+  // Drip count scales with chord count (~0.7×); reveal progress controls
+  // visible-pass count so painting builds up gradually as song plays.
+  const passes = Math.max(8, Math.min(220, Math.round(cn*0.7)));
+  const vis = Math.max(1, Math.ceil(passes*progress));
+
+  for(let i=0;i<vis;i++){
+    const rnd = _seedRnd(i+9500, ss, 0, 0);
+    const ci = Math.floor(i*(cn/Math.max(1,passes)));
+    const {rgb} = _picChord(chords, ci, gc, isBW);
+
+    // 45% cream, 15% pure white, 38% chord-driven accent, 2% rare ink.
+    const pick = rnd();
+    let col;
+    if(pick < 0.45)      col = isBW?[230,230,230]:[245,240,228];  // cream
+    else if(pick < 0.60) col = [255,255,255];                       // pure white
+    else if(pick < 0.98) col = rgb;                                 // chord accent
+    else                 col = [15,12,18];                          // rare ink
+
+    // Drip from edge to edge with optional loopy (15%).
+    const padding = Math.max(CW,CH)*0.3;
+    const loopy = rnd() < 0.15;
+    let x0,y0,x1,y1;
+    if(loopy){
+      const cx=rnd()*CW, cy=rnd()*CH;
+      const reach=Math.min(CW,CH)*(0.25+rnd()*0.3);
+      const a1=rnd()*Math.PI*2, a2=a1+Math.PI+(rnd()-0.5)*1.5;
+      x0=cx+Math.cos(a1)*reach; y0=cy+Math.sin(a1)*reach;
+      x1=cx+Math.cos(a2)*reach; y1=cy+Math.sin(a2)*reach;
+    } else {
+      const side=(rnd()*4)|0;
+      if(side===0){x0=rnd()*CW;y0=-padding;x1=rnd()*CW;y1=CH+padding;}
+      else if(side===1){x0=CW+padding;y0=rnd()*CH;x1=-padding;y1=rnd()*CH;}
+      else if(side===2){x0=rnd()*CW;y0=CH+padding;x1=rnd()*CW;y1=-padding;}
+      else {x0=-padding;y0=rnd()*CH;x1=CW+padding;y1=rnd()*CH;}
+    }
+
+    // Polyline wobble (mirrors main body).
+    const segs = loopy ? 12+((rnd()*6)|0) : 8+((rnd()*5)|0);
+    const dx=x1-x0, dy=y1-y0;
+    const len=Math.sqrt(dx*dx+dy*dy)||1;
+    const px=-dy/len, py=dx/len;
+    const wobScale = loopy ? 0.32 : (rnd()<0.4 ? 0.14 : 0.20);
+    const pts=[];
+    for(let s=0;s<=segs;s++){
+      const t=s/segs;
+      const lx=x0+dx*t, ly=y0+dy*t;
+      const amp=Math.sin(t*Math.PI)*Math.min(CW,CH)*wobScale;
+      const wob=(rnd()-0.5)*2*amp;
+      pts.push({x:lx+px*wob, y:ly+py*wob});
+    }
+
+    // White/cream get slightly lower alpha so they don't completely flatten;
+    // colour accents and ink get full opacity for punch against the dark.
+    const isLight = col[0]>200 && col[1]>200;
+    const lineW = Math.min(CW,CH)*(0.003+rnd()*0.015);
+    const alpha = isLight ? (0.55+rnd()*0.30) : (0.75+rnd()*0.20);
+    ctx.strokeStyle = `rgba(${col[0]|0},${col[1]|0},${col[2]|0},${alpha.toFixed(2)})`;
+    ctx.lineWidth = lineW;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let k=1;k<pts.length-1;k++){
+      const m={x:(pts[k].x+pts[k+1].x)/2, y:(pts[k].y+pts[k+1].y)/2};
+      ctx.quadraticCurveTo(pts[k].x, pts[k].y, m.x, m.y);
+    }
+    ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+    ctx.stroke();
+
+    // Beads + occasional satellite splatter.
+    const colStr = `rgba(${col[0]|0},${col[1]|0},${col[2]|0},${alpha.toFixed(2)})`;
+    const beads = 2+Math.floor(rnd()*4);
+    for(let b=0;b<beads;b++){
+      const idx = Math.floor(rnd()*pts.length);
+      const p = pts[idx];
+      ctx.fillStyle = colStr;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, lineW*0.55 + rnd()*lineW*0.6, 0, Math.PI*2);
+      ctx.fill();
+    }
+    if(rnd()<0.5){
+      for(let b=0;b<3+Math.floor(rnd()*5);b++){
+        const idx = Math.floor(rnd()*pts.length);
+        const p = pts[idx];
+        const sx = p.x + (rnd()-0.5)*lineW*8;
+        const sy = p.y + (rnd()-0.5)*lineW*8;
+        ctx.fillStyle = colStr;
+        ctx.beginPath();
+        ctx.arc(sx, sy, lineW*0.15 + rnd()*lineW*0.4, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
 // Kandinsky canvas-wide CONTOUR overlay. Layered on top of the per-cell
 // Kandinsky composition. Draws large geometric shapes as OUTLINES ONLY
 // (no fills) in varied Kandinsky-palette colors, crossing cell boundaries
@@ -2650,19 +3047,20 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   // ── PHASE CHOOSER: commit to ONE of Picasso's modes per painting ──
-  // Stable from session seed, re-rolls on Vary/Random. Six phases:
+  // Stable from session seed, re-rolls on Vary/Random. Six abstract phases:
   //  A = Analytic Cubism (angular faceted shards, pencil-grain hatching).
-  //  B = Synthetic Cubism collage (large rounded "cut-paper" shapes).
-  //  C = Three Musicians (random 1-4 figures, 6 instruments, scattered or row).
-  //  D = Harlequin Mosaic (random rows/cols, 3 orientations, skip gaps).
-  //  E = Cubist Mask (random 1-2 masks, 4 face shapes, varied features).
-  //  F = Cubist Dove (random 1-3 doves, 3 poses, optional olive branch).
+  //  B = Synthetic Cubism collage (large abstract "cut-paper" shapes).
+  //  Blue = Blue Atmosphere (cool palette cubist shards, no figures).
+  //  Rose = Rose Atmosphere (warm palette cubist shards, no figures).
+  //  Mask → FacetedField (full-canvas dense angular shards, no subject).
+  //  Glass → StillLife (overlapping geometric shapes, vase/fruit implied only).
+  // Free (cap=2) sees Analytic + Faceted Field — subtle vs dense shards contrast.
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ picassoPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===2){ picassoPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===3){ picassoPhaseRose(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===4){ picassoPhaseMask(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===5){ picassoPhaseGlass(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===2){ picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===3){ picassoPhaseRoseAtmo(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===4){ picassoPhaseFacetedField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===5){ picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   picassoPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -2805,11 +3203,15 @@ function picassoPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
         ctx.arc(0,0,rad,a0,a0+Math.PI);
         ctx.closePath();
       } else {
-        // Guitar-body curve: two stacked lobes (the recurring Picasso instrument motif).
-        const rad=sz*0.34;
-        ctx.arc(0,-rad*0.7,rad,0,Math.PI*2);
-        ctx.moveTo(rad*1.15,rad*0.7);
-        ctx.arc(0,rad*0.7,rad*1.15,0,Math.PI*2);
+        // Abstract polygon (5-7 sides) — pure cubist cut-paper shape.
+        const sides = 5 + Math.floor(rnd()*3);
+        for(let s=0;s<sides;s++){
+          const a = (s/sides)*Math.PI*2 + rnd()*0.2;
+          const rr = sz*0.45*(0.75+rnd()*0.5);
+          const px = Math.cos(a)*rr, py = Math.sin(a)*rr;
+          if(s===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
       }
     };
 
@@ -3424,6 +3826,331 @@ function picassoPhaseGlass(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+
+// ── Picasso Blue Atmosphere: cool blue cubist mood via palette shift, no
+// figures. Cool gradient ground + dense overlapping shards in blue-biased
+// chord palette + diagonal pencil hatching. Blue Period melancholy via colour,
+// not via drawing sad people.
+function picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(8201,ss,0,12); sR(); sR();
+
+  // Per-song layout decisions.
+  const shardCountFull = 70 + Math.floor(sR()*40);          // 70-110 shards
+  const hatchCountFull = 250 + Math.floor(sR()*120);        // 250-370 hatches
+  const hatchAngleBase = -Math.PI/3 + (sR()-0.5)*0.4;       // per-song hatch direction
+
+  // Cool blue ground (palette-independent so the mood reads as Blue Period).
+  const grad = ctx.createLinearGradient(0,0,CW,CH);
+  if(isBW){
+    grad.addColorStop(0, '#28282c');
+    grad.addColorStop(0.5, '#3a3a40');
+    grad.addColorStop(1, '#22222a');
+  } else {
+    grad.addColorStop(0, '#1a2438');
+    grad.addColorStop(0.5, '#2a3e58');
+    grad.addColorStop(1, '#1a2230');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Cubist shards — count grows with reveal.
+  const visShards = Math.max(8, Math.ceil(shardCountFull * reveal));
+  for(let i=0;i<visShards;i++){
+    const r1 = _seedRnd(i+8300,ss,0,0); r1(); r1();
+    const cx = r1()*CW;
+    const cy = r1()*CH;
+    const sz = 25 + r1()*120;
+    const rot = r1()*Math.PI*2;
+    const sides = 3 + Math.floor(r1()*3);
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    // Bias toward blue.
+    const cr = isBW ? Math.round(rgb[0]*0.5+40) : Math.round(rgb[0]*0.35 + 25);
+    const cg = isBW ? Math.round(rgb[1]*0.5+45) : Math.round(rgb[1]*0.45 + 35);
+    const cb = isBW ? Math.round(rgb[2]*0.5+55) : Math.round(rgb[2]*0.75 + 60);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for(let s=0;s<sides;s++){
+      const a = (s/sides)*Math.PI*2;
+      const r = sz * (0.65 + r1()*0.70);
+      const px = Math.cos(a)*r, py = Math.sin(a)*r;
+      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.55 + r1()*0.35).toFixed(2)})`;
+    ctx.fill();
+    ctx.strokeStyle = isBW ? 'rgba(15,15,18,0.7)' : 'rgba(8,12,22,0.7)';
+    ctx.lineWidth = 1 + r1();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Pencil-grain hatching — analytic cubism signature, scale with reveal.
+  const visHatches = Math.ceil(hatchCountFull * reveal);
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = isBW ? 'rgba(15,15,18,0.9)' : 'rgba(15,20,30,0.9)';
+  ctx.lineWidth = 0.5;
+  for(let k=0;k<visHatches;k++){
+    const hR = _seedRnd(k+8400,ss,0,0); hR();
+    const sx = hR()*CW, sy = hR()*CH;
+    const len = 8 + hR()*20;
+    const a = hatchAngleBase + (hR()-0.5)*0.2;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Picasso Rose Atmosphere: warm palette cubist mood, no figures. Same
+// structure as Blue Atmo but with warm pink/ochre bias. Rose Period warmth
+// via colour, not via harlequin figures.
+function picassoPhaseRoseAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(8501,ss,0,13); sR(); sR();
+
+  const shardCountFull = 70 + Math.floor(sR()*40);
+  const hatchCountFull = 250 + Math.floor(sR()*120);
+  const hatchAngleBase = Math.PI/4 + (sR()-0.5)*0.4;
+
+  // Warm pink/ochre ground.
+  const grad = ctx.createLinearGradient(0,0,CW,CH);
+  if(isBW){
+    grad.addColorStop(0, '#4a4038');
+    grad.addColorStop(0.5, '#6a5848');
+    grad.addColorStop(1, '#4a4038');
+  } else {
+    grad.addColorStop(0, '#7a3830');
+    grad.addColorStop(0.5, '#a05848');
+    grad.addColorStop(1, '#7a4030');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  const visShards = Math.max(8, Math.ceil(shardCountFull * reveal));
+  for(let i=0;i<visShards;i++){
+    const r1 = _seedRnd(i+8600,ss,0,0); r1(); r1();
+    const cx = r1()*CW, cy = r1()*CH;
+    const sz = 25 + r1()*120;
+    const rot = r1()*Math.PI*2;
+    const sides = 3 + Math.floor(r1()*3);
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    // Bias toward warm.
+    const cr = isBW ? Math.round(rgb[0]*0.55+55) : Math.round(rgb[0]*0.70 + 55);
+    const cg = isBW ? Math.round(rgb[1]*0.55+45) : Math.round(rgb[1]*0.50 + 35);
+    const cb = isBW ? Math.round(rgb[2]*0.55+35) : Math.round(rgb[2]*0.35 + 30);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for(let s=0;s<sides;s++){
+      const a = (s/sides)*Math.PI*2;
+      const r = sz * (0.65 + r1()*0.70);
+      const px = Math.cos(a)*r, py = Math.sin(a)*r;
+      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.55 + r1()*0.35).toFixed(2)})`;
+    ctx.fill();
+    ctx.strokeStyle = isBW ? 'rgba(20,15,12,0.7)' : 'rgba(25,8,8,0.7)';
+    ctx.lineWidth = 1 + r1();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const visHatches = Math.ceil(hatchCountFull * reveal);
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = isBW ? 'rgba(20,15,12,0.9)' : 'rgba(30,15,12,0.9)';
+  ctx.lineWidth = 0.5;
+  for(let k=0;k<visHatches;k++){
+    const hR = _seedRnd(k+8700,ss,0,0); hR();
+    const sx = hR()*CW, sy = hR()*CH;
+    const len = 8 + hR()*20;
+    const a = hatchAngleBase + (hR()-0.5)*0.2;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Picasso Faceted Field: full-canvas dense angular shards, no subject.
+// Maximum-density analytic cubism with strong pencil-grain texture.
+function picassoPhaseFacetedField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(8801,ss,0,14); sR(); sR();
+
+  const facetCountFull = 140 + Math.floor(sR()*80);          // 140-220 facets
+  const hatchCountFull = 400 + Math.floor(sR()*200);         // 400-600 hatches
+
+  // Muted analytic ground.
+  ctx.fillStyle = isBW ? '#3a3834' : '#4a4438';
+  ctx.fillRect(0,0,CW,CH);
+
+  const visFacets = Math.max(12, Math.ceil(facetCountFull * reveal));
+  for(let i=0;i<visFacets;i++){
+    const r1 = _seedRnd(i+8900,ss,0,0); r1(); r1();
+    const cx = r1()*CW, cy = r1()*CH;
+    const sz = 30 + r1()*100;
+    const rot = r1()*Math.PI*2;
+    const sides = 3 + Math.floor(r1()*2);                    // triangles + quads
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    const cr = isBW ? Math.round(rgb[0]*0.6+30) : Math.round(rgb[0]*0.65 + 25);
+    const cg = isBW ? Math.round(rgb[1]*0.6+25) : Math.round(rgb[1]*0.60 + 20);
+    const cb = isBW ? Math.round(rgb[2]*0.6+20) : Math.round(rgb[2]*0.55 + 20);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for(let s=0;s<sides;s++){
+      const a = (s/sides)*Math.PI*2;
+      const r = sz * (0.60 + r1()*0.80);
+      const px = Math.cos(a)*r, py = Math.sin(a)*r;
+      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.65 + r1()*0.30).toFixed(2)})`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(15,10,8,0.65)';
+    ctx.lineWidth = 1 + r1()*1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Strong pencil-grain hatching crossing the canvas, scale with reveal.
+  const visHatches = Math.ceil(hatchCountFull * reveal);
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = 'rgba(20,15,10,0.95)';
+  ctx.lineWidth = 0.5;
+  for(let k=0;k<visHatches;k++){
+    const hR = _seedRnd(k+9000,ss,0,0); hR();
+    const sx = hR()*CW, sy = hR()*CH;
+    const len = 6 + hR()*15;
+    const a = (hR()<0.5 ? -Math.PI/4 : Math.PI/4) + (hR()-0.5)*0.3;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Picasso Geometric Still-Life: synthetic cubism still-life via geometry
+// placement only. Earth-tone ground + table-edge gradient + chord-coloured
+// rectangles/ovals/trapezoids/hexagons with cubist splits. Vase/fruit implied
+// by composition (vertical-ish shapes near centre, horizontal table line)
+// without any literal outlines.
+function picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(9101,ss,0,15); sR(); sR();
+
+  const shapeCountFull = 30 + Math.floor(sR()*20);           // 30-50 shapes
+  const tableY = CH * (0.45 + sR()*0.15);                    // 45-60% table edge
+
+  // Earth-tone ground.
+  ctx.fillStyle = isBW ? '#8a8478' : '#c0a880';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Table-plane gradient.
+  const tableGrad = ctx.createLinearGradient(0, tableY, 0, CH);
+  if(isBW){
+    tableGrad.addColorStop(0, 'rgba(50,45,40,0)');
+    tableGrad.addColorStop(0.3, 'rgba(50,45,40,0.5)');
+    tableGrad.addColorStop(1, 'rgba(35,30,25,0.85)');
+  } else {
+    tableGrad.addColorStop(0, 'rgba(80,50,30,0)');
+    tableGrad.addColorStop(0.3, 'rgba(80,50,30,0.5)');
+    tableGrad.addColorStop(1, 'rgba(60,35,20,0.85)');
+  }
+  ctx.fillStyle = tableGrad;
+  ctx.fillRect(0, tableY, CW, CH-tableY);
+
+  // Generate shapes upfront so we can z-sort.
+  const shapes = [];
+  for(let i=0;i<shapeCountFull;i++){
+    const r1 = _seedRnd(i+9200,ss,0,0); r1(); r1();
+    const cx = CW * (0.15 + r1()*0.70);
+    const cy = CH * (0.20 + r1()*0.65);
+    const w = 30 + r1()*180;
+    const h = 30 + r1()*180;
+    const kind = (r1()*4)|0;
+    const splitChance = r1();
+    const sliceLift = r1();
+    shapes.push({cx, cy, w, h, kind, i, splitChance, sliceLift});
+  }
+  shapes.sort((a,b)=>(b.w*b.h) - (a.w*a.h));
+
+  const visShapes = Math.max(2, Math.ceil(shapeCountFull * reveal));
+  let drawn = 0;
+  for(const sh of shapes){
+    if(drawn >= visShapes) break;
+    drawn++;
+    const {rgb} = _picChord(chords, sh.i%cn, gc, isBW);
+    const cr = Math.round(rgb[0]*0.75 + 25);
+    const cg = Math.round(rgb[1]*0.65 + 20);
+    const cb = Math.round(rgb[2]*0.50 + 15);
+    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.75 + sh.splitChance*0.20).toFixed(2)})`;
+    ctx.strokeStyle = 'rgba(15,8,5,0.85)';
+    ctx.lineWidth = 1.5 + sh.sliceLift;
+    if(sh.kind === 0){
+      ctx.fillRect(sh.cx - sh.w/2, sh.cy - sh.h/2, sh.w, sh.h);
+      ctx.strokeRect(sh.cx - sh.w/2, sh.cy - sh.h/2, sh.w, sh.h);
+    } else if(sh.kind === 1){
+      ctx.beginPath();
+      ctx.ellipse(sh.cx, sh.cy, sh.w/2, sh.h/2, 0, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+    } else if(sh.kind === 2){
+      ctx.beginPath();
+      ctx.moveTo(sh.cx-sh.w/2, sh.cy+sh.h/2);
+      ctx.lineTo(sh.cx+sh.w/2, sh.cy+sh.h/2);
+      ctx.lineTo(sh.cx+sh.w/4, sh.cy-sh.h/2);
+      ctx.lineTo(sh.cx-sh.w/4, sh.cy-sh.h/2);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath();
+      for(let s=0;s<6;s++){
+        const a = (s/6)*Math.PI*2;
+        const px = sh.cx + Math.cos(a)*sh.w/2;
+        const py = sh.cy + Math.sin(a)*sh.h/2;
+        if(s===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+    // Cubist split — light bias on right half for larger shapes.
+    if(sh.w > 80 && sh.splitChance < 0.4){
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(sh.cx - sh.w/2, sh.cy - sh.h/2, sh.w, sh.h);
+      ctx.clip();
+      ctx.fillStyle = isBW ? 'rgba(220,210,190,0.25)' : 'rgba(255,220,180,0.25)';
+      ctx.fillRect(sh.cx, sh.cy - sh.h, sh.w, sh.h*2);
+      ctx.restore();
+    }
+  }
+
+  // Faint table-edge perspective line.
+  ctx.strokeStyle = isBW ? 'rgba(15,15,12,0.4)' : 'rgba(20,10,5,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, tableY + CH*0.05);
+  ctx.lineTo(CW, tableY);
+  ctx.stroke();
+}
+
 // Mondrian canvas-wide overlay. The per-cell drawMondrian goes pixely on long
 // songs because each chord's grid cell shrinks to a few px. Here we render ONE
 // De Stijl composition across the whole canvas on the capped recursive
@@ -3915,17 +4642,25 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const cn = chords.length;
   const rnd = _seedRnd(53, ss, 0, 0);
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Sphere swell / Cube grid (original body below, via useCubes).
-  //  2 = Plastic-unit cells (square cells each holding a sized circle, op-art bulge).
-  //  3 = Vega (colour deformed checkerboard).
-  //  4 = Hexagon cubes (isometric).    5 = Colour interval grid.
+  //  0 = Classic bulge (Sphere swell / Cube grid, seed-driven internal pick —
+  //      the two layouts read as one "bulge" identity so they share a slot).
+  //  1 = Vonal — sphere with radiating rays (1968, centrifugal motion).
+  //  2 = Vega — colour deformed checkerboard with central bulge.
+  //  3 = Banya — diagonal split cells (1964, zigzag color rhythm).
+  //  4 = Hexagon cubes — isometric tumbling block (3D).
+  //  5 = Plastic-unit cells — discs in cells with central bulge.
+  //  Free (cap=2) sees Sphere/Cube + Vonal — grid-warp vs ray-radiate is the
+  //  strongest op-art contrast Vasarely\'s catalogue offers.
   {
     const _pn=_capN(6); const _vpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_vpick===2){ vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_vpick===3){ vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===1){ vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===2){ vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===3){ vasarelyPhaseBanya(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===4){ vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_vpick===5){ vasarelyPhaseInterval(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original sphere/cube body (variant 0/1)
+    if(_vpick===5){ vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    // else fall through to original sphere/cube body (variant 0; the sphere
+    // vs cube sub-pick within is seed-driven, kept as natural micro-variation
+    // rather than its own Vary slot).
   }
   const COLS = cn<=8 ? 10 : cn<=24 ? 14 : cn<=60 ? 18 : cn<=140 ? 24 : cn<=300 ? 32 : cn<=600 ? 40 : 48;
   const ROWS = Math.max(6, Math.round(COLS * (CH / CW)));
@@ -3956,6 +4691,10 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   ctx.fillStyle = `rgb(${(bgC[0]*0.18)|0},${(bgC[1]*0.18)|0},${(bgC[2]*0.18)|0})`;
   ctx.fillRect(0, 0, CW, CH);
 
+  // Per-song bulge intensity (0.6-1.0). Re-uses the same _seedRnd that drove
+  // sphere positions earlier so the intensity is stable per painting.
+  const bulgeIntensity = 0.6 + rnd() * 0.4;
+
   // Lens warp: for a point, find the strongest sphere influence and push the
   // point radially outward + scale it up (classic fish-eye bulge).
   function warp(px, py){
@@ -3965,8 +4704,10 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
       const dist = Math.hypot(dx, dy);
       if(dist < sp.r && dist > 0.0001){
         const t = dist / sp.r;            // 0 centre … 1 rim
-        // Smooth bulge profile — magnify centre, ease to 1 at rim.
-        const mag = 1 + (1 - t*t) * 0.9;  // up to ~1.9× at centre
+        // Smooth bulge profile — magnify centre, ease to 1 at rim. Per-song
+        // intensity variance (0.6-1.0) so each painting has a different
+        // bulge strength.
+        const mag = 1 + (1 - t*t) * bulgeIntensity;
         if(mag > bestScale){
           bestScale = mag;
           ox = sp.cx + dx * mag;
@@ -4061,20 +4802,24 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
 // wavy-stripe styles: this is a hard square grid with inscribed discs. ──
 function vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sR = _seedRnd(91, ss, 0, 25); sR(); sR();
   ctx.fillStyle=isBW?'#1a1a1a':'#14121c';ctx.fillRect(0,0,CW,CH);
   const cols=Math.max(6,Math.min(28,Math.round(Math.sqrt(cn)*1.8))),rows=Math.max(4,Math.round(cols*CH/CW));
   const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
   const cw=CW/cols,chh=CH/rows;
-  // central bulge: cells near centre get a bigger disc + brighter contrast
-  const bcx=CW/2,bcy=CH/2,bR=Math.min(CW,CH)*0.5;
+  // Per-song bulge centre offset + intensity + checker phase.
+  const bcx=CW*(0.40+sR()*0.20),bcy=CH*(0.40+sR()*0.20);
+  const bR=Math.min(CW,CH)*(0.40+sR()*0.20);
+  const checkerPhase = Math.floor(sR()*2);                 // 0 or 1
+  const intensityMul = 0.85 + sR()*0.30;                   // 0.85-1.15
   let k=0;
   for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
     const {rgb}=_picChord(chords,Math.floor(k*(cn/total)),gc,isBW);
     const x=c*cw,y=r*chh,ccx=x+cw/2,ccy=y+chh/2;
     const d=Math.hypot(ccx-bcx,ccy-bcy);
-    const swell=Math.max(0,1-d/bR); // 1 at centre → 0 at rim
+    const swell=Math.max(0,1-d/bR)*intensityMul; // 1 at centre → 0 at rim, scaled
     // alternating cell ground: dark / light checker so discs pop (op-art read)
-    const checker=((r+c)&1);
+    const checker=((r+c+checkerPhase)&1);
     const groundCol=isBW
       ? (checker?'#2a2a2a':'#0e0e0e')
       : `rgb(${Math.round(rgb[0]*0.25)},${Math.round(rgb[1]*0.25)},${Math.round(rgb[2]*0.3)})`;
@@ -4095,10 +4840,12 @@ function vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Vasarely D: Vega — colour deformed checkerboard with central bulge. ──
 function vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sR = _seedRnd(91, ss, 0, 22); sR(); sR();
   ctx.fillStyle=isBW?'#1a1a1a':'#14141e';ctx.fillRect(0,0,CW,CH);
   const cols=Math.max(6,Math.min(28,Math.round(Math.sqrt(cn)*2))),rows=Math.round(cols*CH/CW);
   const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
-  const cx=CW/2,cy=CH/2,bulgeR=Math.min(CW,CH)*0.45;
+  // Per-song bulge centre offset + radius variance.
+  const cx=CW*(0.40+sR()*0.20),cy=CH*(0.40+sR()*0.20),bulgeR=Math.min(CW,CH)*(0.40+sR()*0.20);
   const warp=(x,y)=>{const dx=x-cx,dy=y-cy,d=Math.hypot(dx,dy);if(d<bulgeR&&d>0.001){const t=d/bulgeR,mag=1+(1-t*t)*0.7;return[cx+dx*mag,cy+dy*mag];}return[x,y];};
   let k=0;
   for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
@@ -4115,21 +4862,28 @@ function vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Vasarely E: Hexagon cubes — isometric tumbling-block illusion. ──
 function vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sR = _seedRnd(91, ss, 0, 23); sR(); sR();
   ctx.fillStyle=isBW?'#2a2a2a':'#1c1a26';ctx.fillRect(0,0,CW,CH);
-  const size=Math.min(CW,CH)/Math.max(5,Math.min(14,Math.round(Math.sqrt(cn))));
+  // Per-song size variance (±20%) + light/right shading swap.
+  const sizeMul = 0.85 + sR()*0.35;
+  const size=Math.min(CW,CH)/Math.max(5,Math.min(14,Math.round(Math.sqrt(cn))))*sizeMul;
+  // Per-song offset shift so columns start at different y phase.
+  const offsetShift = sR()*size*0.5;
+  // Per-song shading flip (left vs right brightness swap).
+  const flipShading = sR()<0.5;
+  const lShade = flipShading?0.8:0.55, rShade = flipShading?0.55:0.8;
   const cols=Math.ceil(CW/(size*1.5))+1,rows=Math.ceil(CH/(size*0.87))+1;
   const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
   let k=0;
   for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
     const {rgb}=_picChord(chords,Math.floor(k*(cn/total)),gc,isBW);
-    const x=c*size*1.5,y=r*size*0.87+(c%2?size*0.43:0);
+    const x=c*size*1.5,y=r*size*0.87+(c%2?size*0.43:0)+offsetShift;
     // three rhombus faces (top, left, right) shaded for 3D cube
-    const faces=[[1.0,'top'],[0.6,'left'],[0.8,'right']];
     const h=size*0.5;
     const top=[[x,y-h],[x+size*0.5,y-h*0.5],[x,y],[x-size*0.5,y-h*0.5]];
     const left=[[x-size*0.5,y-h*0.5],[x,y],[x,y+h],[x-size*0.5,y+h*0.5]];
     const right=[[x,y],[x+size*0.5,y-h*0.5],[x+size*0.5,y+h*0.5],[x,y+h]];
-    [[top,1.0],[left,0.55],[right,0.8]].forEach(([poly,sh])=>{
+    [[top,1.0],[left,lShade],[right,rShade]].forEach(([poly,sh])=>{
       ctx.fillStyle=`rgb(${Math.round(rgb[0]*sh)},${Math.round(rgb[1]*sh)},${Math.round(rgb[2]*sh)})`;
       ctx.beginPath();ctx.moveTo(poly[0][0],poly[0][1]);for(let p=1;p<poly.length;p++)ctx.lineTo(poly[p][0],poly[p][1]);ctx.closePath();ctx.fill();
     });
@@ -4151,6 +4905,132 @@ function vasarelyPhaseInterval(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const cr2=[Math.round(rgb[0]*(0.6+t*0.4)),Math.round(rgb[1]*(0.6+t*0.4)),Math.round(rgb[2]*(0.6+t*0.4))];
     ctx.fillStyle=`rgb(${cr2[0]},${cr2[1]},${cr2[2]})`;
     ctx.fillRect(c*cw+cw*0.06,r*chh+chh*0.06,cw*0.88,chh*0.88);
+  }
+}
+
+// ── Vasarely G: Vonal — sphere with radiating rays (1968 series). Central
+// chord-gradient sphere + 48 chord-coloured wedge rays radiating outward,
+// alternating bright/dark. Strong centrifugal motion. Reveal scales ray
+// visibility (sphere shows throughout).
+function vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(91, ss, 0, 21); sR(); sR();
+
+  // Dark ground.
+  ctx.fillStyle = isBW ? '#0e0e0e' : '#0a0a14';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Per-song variance: centre offset, R, ray count, bright pattern.
+  const cx = CW * (0.40 + sR()*0.20);
+  const cy = CH * (0.40 + sR()*0.20);
+  const R = Math.min(CW,CH) * (0.25 + sR()*0.15);
+  const rays = 32 + Math.floor(sR()*32);                  // 32-64
+  const brightOffset = Math.floor(sR()*7);                // shifts which rays are bright
+  const visRays = Math.max(8, Math.ceil(rays*reveal));
+  for(let i=0;i<visRays;i++){
+    const ang = (i/rays)*Math.PI*2;
+    const {rgb} = _picChord(chords, (i*2)%cn, gc, isBW);
+    // Irregular bright/dim pattern — based on (i + brightOffset) % 3.
+    const isBright = ((i + brightOffset) % 3) !== 0;
+    const mul = isBright ? 1 : 0.55;
+    ctx.fillStyle = `rgb(${Math.min(255,rgb[0]*mul)|0},${Math.min(255,rgb[1]*mul)|0},${Math.min(255,rgb[2]*mul)|0})`;
+    ctx.beginPath();
+    const inner = R;
+    const outer = Math.hypot(CW,CH);
+    const halfAng = Math.PI/rays;
+    ctx.moveTo(cx + Math.cos(ang-halfAng)*inner, cy + Math.sin(ang-halfAng)*inner);
+    ctx.lineTo(cx + Math.cos(ang-halfAng)*outer, cy + Math.sin(ang-halfAng)*outer);
+    ctx.lineTo(cx + Math.cos(ang+halfAng)*outer, cy + Math.sin(ang+halfAng)*outer);
+    ctx.lineTo(cx + Math.cos(ang+halfAng)*inner, cy + Math.sin(ang+halfAng)*inner);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Central sphere with chord gradient.
+  const gc1 = _picChord(chords, 0, gc, isBW).rgb;
+  const gc2 = _picChord(chords, Math.floor(cn/2)%cn, gc, isBW).rgb;
+  const grad = ctx.createRadialGradient(cx - R*0.3, cy - R*0.3, R*0.1, cx, cy, R);
+  grad.addColorStop(0, `rgb(${Math.min(255,gc1[0]+80)|0},${Math.min(255,gc1[1]+80)|0},${Math.min(255,gc1[2]+80)|0})`);
+  grad.addColorStop(1, `rgb(${gc2[0]|0},${gc2[1]|0},${gc2[2]|0})`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = isBW ? '#0e0e0e' : '#0a0a14';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+}
+
+// ── Vasarely H: Banya — diagonal split cells (1964 · Yapocsa series).
+// Grid of squares, each split diagonally into 2 chord-coloured triangles.
+// Diagonal direction alternates per cell creating zigzag visual rhythm.
+// Reveal sweeps top-left → bottom-right.
+function vasarelyPhaseBanya(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(91, ss, 0, 24); sR(); sR();
+
+  // Dark ground.
+  ctx.fillStyle = isBW ? '#0e0e0e' : '#0a0a14';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Per-song variance: cell count ±25% + diagonal direction pattern.
+  const sizeMul = 0.75 + sR()*0.5;
+  const colsBase = cn<=8?8:cn<=24?12:cn<=60?16:cn<=140?20:24;
+  const cols = Math.max(6, Math.round(colsBase * sizeMul));
+  const rows = Math.max(6, Math.round(cols*CH/CW));
+  const cw = CW/cols, chh = CH/rows;
+  const total = cols*rows;
+  const vis = Math.max(2, Math.ceil(total*reveal));
+  // Per-song diagonal pattern: 0=(r+c)%2, 1=r%2, 2=c%2, 3=(r+c)%3<2.
+  const patternKind = Math.floor(sR()*4);
+  const dirFor = (r,c) => {
+    if(patternKind === 1) return r % 2;
+    if(patternKind === 2) return c % 2;
+    if(patternKind === 3) return ((r+c) % 3) < 2 ? 1 : 0;
+    return (r+c) % 2;
+  };
+
+  let k=0;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(k >= vis) break;
+      const x0 = c*cw, y0 = r*chh;
+      const dir = dirFor(r, c);
+      const cTop = _picChord(chords, (k*2)%cn, gc, isBW).rgb;
+      const cBot = _picChord(chords, (k*2+1)%cn, gc, isBW).rgb;
+      // Top/upper triangle.
+      ctx.fillStyle = `rgb(${cTop[0]|0},${cTop[1]|0},${cTop[2]|0})`;
+      ctx.beginPath();
+      if(dir === 0){
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0+cw, y0);
+        ctx.lineTo(x0, y0+chh);
+      } else {
+        ctx.moveTo(x0+cw, y0);
+        ctx.lineTo(x0+cw, y0+chh);
+        ctx.lineTo(x0, y0);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // Bottom/lower triangle.
+      ctx.fillStyle = `rgb(${cBot[0]|0},${cBot[1]|0},${cBot[2]|0})`;
+      ctx.beginPath();
+      if(dir === 0){
+        ctx.moveTo(x0+cw, y0);
+        ctx.lineTo(x0+cw, y0+chh);
+        ctx.lineTo(x0, y0+chh);
+      } else {
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0+cw, y0+chh);
+        ctx.lineTo(x0, y0+chh);
+      }
+      ctx.closePath();
+      ctx.fill();
+      k++;
+    }
+    if(k >= vis) break;
   }
 }
 
@@ -4382,15 +5262,26 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   ctx.fillStyle = '#f7f5ef';
   ctx.fillRect(0, 0, CW, CH);
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Bloom blots / Edge (original body below, via bloomVariant).
-  //  2 = Clustered masses.  3 = Blue Balls.  4 = Grid/lattice.  5 = Big Red mural.
+  //  0 = Classic Sam Francis (Bloom blots / Edge, seed-driven internal pick —
+  //      the two layouts read as one "white-ground bloom" identity so they
+  //      share a single Vary slot).
+  //  1 = Mandala (1970s concentric/spiritual phase).
+  //  2 = Clustered masses (centre).
+  //  3 = Blue Balls (blue dominant).
+  //  4 = Towards Disappearance (1957-58, minimal sparse marks).
+  //  5 = Big Red mural (red field + edge incursions).
+  //  Free (cap=2) sees Bloom + Mandala — dense organic vs ordered concentric
+  //  is the strongest visual contrast in Sam Francis's catalogue.
   {
     const _pn=_capN(6); const _fpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_fpick===1){ francisPhaseMandala(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===2){ francisPhaseCluster(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===3){ francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_fpick===4){ francisPhaseGrid(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_fpick===4){ francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===5){ francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original bloom/edge body (variant 0/1)
+    // else fall through to original bloom/edge body (variant 0; the bloom vs
+    // edge sub-pick within is seed-driven, kept as natural micro-variation
+    // rather than its own Vary slot).
   }
 
   // Blot count auto-scales: short = airy, long = crowded. Curve grows past
@@ -4589,6 +5480,112 @@ function francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+// ── Sam Francis G: Mandala (1970s series). White ground + 10 concentric
+// chord-coloured rings + 24 petal spokes radiating outward + white centre
+// dot. Sam Francis's late spiritual phase — ordered, centred, mystical.
+function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  ctx.fillStyle = isBW ? '#f4f2ee' : '#f7f5ef';
+  ctx.fillRect(0,0,CW,CH);
+
+  const cx = CW/2, cy = CH/2;
+  const maxR = Math.min(CW,CH)*0.45;
+  const rings = 10;
+  const visRings = Math.max(1, Math.ceil(rings*reveal));
+
+  // Concentric rings outer→inner (so inner sits on top).
+  for(let r=visRings;r>=1;r--){
+    const radius = maxR * (r/rings);
+    const {rgb} = _picChord(chords, Math.floor(r/rings * cn)%cn, gc, isBW);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.55 + (r%2)*0.15).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Petal spokes radiating.
+  const spokes = 24;
+  const visSpokes = Math.max(2, Math.ceil(spokes*reveal));
+  for(let s=0;s<visSpokes;s++){
+    const ang = (s/spokes)*Math.PI*2;
+    const {rgb} = _picChord(chords, (s*5)%cn, gc, isBW);
+    const rnd = _seedRnd(s+5000, ss, 0, 0);
+    const inner = maxR*0.35;
+    const outer = maxR*(0.9+rnd()*0.15);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.65)`;
+    ctx.beginPath();
+    const ax = cx + Math.cos(ang)*inner;
+    const ay = cy + Math.sin(ang)*inner;
+    const bx = cx + Math.cos(ang+0.06)*outer;
+    const by = cy + Math.sin(ang+0.06)*outer;
+    const cxx = cx + Math.cos(ang-0.06)*outer;
+    const cyy = cy + Math.sin(ang-0.06)*outer;
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.lineTo(cxx, cyy);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // White centre dot — the still point.
+  ctx.fillStyle = isBW ? '#f4f2ee' : '#f7f5ef';
+  ctx.beginPath();
+  ctx.arc(cx, cy, maxR*0.12, 0, Math.PI*2);
+  ctx.fill();
+}
+
+// ── Sam Francis H: Towards Disappearance (1957-58). Ultra-minimal: only
+// 8-12 sparse, faint chord-coloured marks scattered across canvas + canvas
+// grain. Each mark is a soft low-opacity bloom + occasional tiny dot.
+// The "quiet" Sam Francis — opposite of Bloom field's density.
+function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  ctx.fillStyle = isBW ? '#f6f4f0' : '#f9f7f1';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Faint canvas grain.
+  for(let i=0;i<400;i++){
+    const rnd = _seedRnd(i+6000, ss, 0, 0);
+    const tone = isBW ? '195,195,195' : '200,195,180';
+    ctx.fillStyle = `rgba(${tone},${(0.06+rnd()*0.10).toFixed(2)})`;
+    ctx.fillRect(rnd()*CW, rnd()*CH, 1+rnd()*2, 1+rnd()*2);
+  }
+
+  // Sparse marks — count scales gently with chord count but stays minimal.
+  const marks = Math.max(4, Math.min(14, Math.round(cn/12) + 6));
+  const vis = Math.max(2, Math.ceil(marks*reveal));
+
+  for(let i=0;i<vis;i++){
+    const rnd = _seedRnd(i+6100, ss, 0, 0);
+    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+    const x = CW*0.1 + rnd()*CW*0.8;
+    const y = CH*0.1 + rnd()*CH*0.8;
+    const r = Math.min(CW,CH) * (0.04+rnd()*0.06);
+
+    // Very faint bloom — low opacity gradient.
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.35)`);
+    g.addColorStop(0.6, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.15)`);
+    g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fill();
+
+    // Occasional tiny dot/spatter near the bloom.
+    if(rnd() > 0.5){
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.5)`;
+      ctx.beginPath();
+      ctx.arc(x + (rnd()-0.5)*r*1.5, y + (rnd()-0.5)*r*1.5, 1.5+rnd()*2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
 // ── Spiral (Hilma af Klint) ──────────────────────────────────────────────────
 // Spiritual / symbolist abstraction: floating flowers, concentric circles and
 // snail-spirals on a warm field, OR a radiant mandala with segmented rings and
@@ -4683,10 +5680,13 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
 
   if(mandala){
     // ── Mandala: big segmented disc + ray crown + descending column ──────────
-    const cx = CW*0.5, cy = CH*0.32;
-    const R = Math.min(CW, CH) * 0.30;
+    // Per-song variance — off-centre + R + ray count multiplier.
+    const cx = CW * (0.45 + rnd()*0.10);
+    const cy = CH * (0.28 + rnd()*0.10);
+    const R = Math.min(CW, CH) * (0.26 + rnd()*0.10);
     // Ray crown — count grows for very long pieces (was fixed at 36).
-    const rays = cn<=120 ? 36 : cn<=300 ? 48 : cn<=600 ? 60 : 72;
+    const raysBase = cn<=120 ? 36 : cn<=300 ? 48 : cn<=600 ? 60 : 72;
+    const rays = Math.max(24, Math.round(raysBase * (0.85 + rnd()*0.30)));
     const visRays = Math.ceil(revealFrac * rays);
     for(let i=0; i<visRays; i++){
       const ang = (i/rays)*Math.PI*2 - Math.PI/2;
@@ -4776,55 +5776,173 @@ function klintPhaseTen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const rnd=_seedRnd(i+4500,ss,0,0);
     const {rgb,energy}=_picChord(chords,Math.floor(i*(cn/forms)),gc,isBW);
     const x=rnd()*CW,y=rnd()*CH,R=Math.min(CW,CH)*(0.05+energy*0.10);
-    // ovoid
+    // Per-form shape kind (oval / circle / hexagon).
+    const shapeKind = Math.floor(rnd()*3);
+    // Per-form inner pattern kind (spiral / concentric rings / radiating).
+    const innerKind = Math.floor(rnd()*3);
+
     ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
-    ctx.beginPath();ctx.ellipse(x,y,R*0.8,R,0,0,Math.PI*2);ctx.fill();
-    // inner spiral
-    ctx.strokeStyle=`rgba(${255-rgb[0]},${255-rgb[1]},${255-rgb[2]},0.7)`;ctx.lineWidth=Math.max(1.5,R*0.08);
-    ctx.beginPath();let pr=0,pa=0;for(let t=0;t<24;t++){pa=t*0.5;pr=R*0.7*(t/24);const px=x+Math.cos(pa)*pr,py=y+Math.sin(pa)*pr;t?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.stroke();
+    if(shapeKind === 0){
+      // Ovoid (original).
+      ctx.beginPath();ctx.ellipse(x,y,R*0.8,R,0,0,Math.PI*2);ctx.fill();
+    } else if(shapeKind === 1){
+      // Circle.
+      ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();
+    } else {
+      // Hexagon.
+      ctx.beginPath();
+      for(let h=0;h<6;h++){
+        const a = (h/6)*Math.PI*2;
+        const hx = x + Math.cos(a)*R, hy = y + Math.sin(a)*R;
+        if(h===0) ctx.moveTo(hx,hy); else ctx.lineTo(hx,hy);
+      }
+      ctx.closePath();ctx.fill();
+    }
+
+    ctx.strokeStyle=`rgba(${255-rgb[0]},${255-rgb[1]},${255-rgb[2]},0.7)`;
+    ctx.lineWidth=Math.max(1.5,R*0.08);
+    if(innerKind === 0){
+      // Inner snail spiral (original).
+      ctx.beginPath();let pr=0,pa=0;
+      for(let t=0;t<24;t++){pa=t*0.5;pr=R*0.7*(t/24);const px=x+Math.cos(pa)*pr,py=y+Math.sin(pa)*pr;t?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+      ctx.stroke();
+    } else if(innerKind === 1){
+      // Concentric rings.
+      for(let ring=1;ring<=3;ring++){
+        ctx.beginPath();
+        ctx.arc(x, y, R*ring/4, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    } else {
+      // Radiating rays.
+      for(let ray=0;ray<6;ray++){
+        const a = (ray/6)*Math.PI*2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x+Math.cos(a)*R*0.7, y+Math.sin(a)*R*0.7);
+        ctx.stroke();
+      }
+    }
   }
 }
 
-// ── af Klint D: The Swan — split field with two opposed swan forms (recoloured). ──
+// ── af Klint D: Swan abstract — split colour field with paired ovoid forms.
+// Replaces the original literal swan silhouettes. Duality (light/dark, upper/
+// lower) is preserved via the colour split + opposed ovoids; companion forms
+// scatter around each main ovoid like Klint's Ten Largest vocabulary.
 function klintPhaseSwan(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal=Math.max(0,Math.min(1,N/cn));
-  // split field: top light, bottom deep colour (recoloured from B/W)
-  const top=_picChord(chords,0,gc,isBW).rgb;
-  const bot=_picChord(chords,Math.floor(cn/2),gc,isBW).rgb;
-  ctx.fillStyle=isBW?'#e8e4dc':`rgb(${Math.min(255,top[0]+60)},${Math.min(255,top[1]+60)},${Math.min(255,top[2]+60)})`;ctx.fillRect(0,0,CW,CH*0.5);
-  ctx.fillStyle=isBW?'#2a2e3a':`rgb(${Math.round(bot[0]*0.4)},${Math.round(bot[1]*0.4)},${Math.round(bot[2]*0.5+40)})`;ctx.fillRect(0,CH*0.5,CW,CH*0.5);
-  // two swans (upper light, lower dark) drawn with reveal
-  const swan=(cx,cy,s,col,flip)=>{
-    ctx.fillStyle=col;ctx.save();ctx.translate(cx,cy);if(flip)ctx.scale(1,-1);
+  const sR = _seedRnd(91, ss, 0, 31); sR(); sR();
+
+  // Per-song decisions.
+  const splitLine = 0.45 + sR()*0.10;                  // 45-55% horizon
+  const upperX = 0.40 + sR()*0.20;                     // ovoid x offset
+  const lowerX = 0.40 + sR()*0.20;
+  const mainR = Math.min(CW,CH) * (0.16 + sR()*0.06);  // 16-22%
+  const companionsPerSide = 4 + Math.floor(sR()*4);    // 4-7 each
+  const withSpiral = sR() < 0.7;                       // inner spiral most songs
+
+  // Split colour field — top light, bottom dark (duality).
+  const top = _picChord(chords, 0, gc, isBW).rgb;
+  const bot = _picChord(chords, Math.floor(cn/2)%cn, gc, isBW).rgb;
+  ctx.fillStyle = isBW
+    ? '#e8e4dc'
+    : `rgb(${Math.min(255,top[0]+60)},${Math.min(255,top[1]+60)},${Math.min(255,top[2]+60)})`;
+  ctx.fillRect(0, 0, CW, CH*splitLine);
+  ctx.fillStyle = isBW
+    ? '#2a2e3a'
+    : `rgb(${Math.round(bot[0]*0.4)},${Math.round(bot[1]*0.4)},${Math.round(bot[2]*0.5+40)})`;
+  ctx.fillRect(0, CH*splitLine, CW, CH*(1-splitLine));
+  // Horizon line.
+  ctx.strokeStyle = 'rgba(40,30,40,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, CH*splitLine);
+  ctx.lineTo(CW, CH*splitLine);
+  ctx.stroke();
+
+  // Draw one ovoid with optional inner spiral.
+  function drawOvoid(cx, cy, R, fillCol, strokeCol){
+    ctx.fillStyle = fillCol;
     ctx.beginPath();
-    ctx.moveTo(0,s*0.5);
-    ctx.quadraticCurveTo(-s*0.9,s*0.4,-s*0.6,-s*0.3); // body
-    ctx.quadraticCurveTo(-s*0.4,-s*0.9,-s*0.1,-s*0.6); // neck up
-    ctx.quadraticCurveTo(s*0.1,-s*0.5,s*0.3,-s*0.7); // head
-    ctx.quadraticCurveTo(s*0.6,-s*0.3,s*0.8,s*0.1);
-    ctx.quadraticCurveTo(s*0.6,s*0.6,0,s*0.5);
-    ctx.closePath();ctx.fill();ctx.restore();
-  };
-  const cR=Math.min(CW,CH)*0.22*reveal;
-  if(reveal>0.1){
-    const c1=isBW?[230,228,222]:[Math.min(255,top[0]+40),Math.min(255,top[1]+30),Math.min(255,top[2]+20)];
-    swan(CW*0.5,CH*0.32,cR,`rgb(${c1[0]},${c1[1]},${c1[2]})`,false);
+    ctx.ellipse(cx, cy, R*0.85, R, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = strokeCol;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    if(withSpiral){
+      ctx.strokeStyle = strokeCol;
+      ctx.lineWidth = Math.max(1.5, R*0.06);
+      ctx.beginPath();
+      for(let t=0;t<32;t++){
+        const pa = t*0.4;
+        const pr = R*0.65*(t/32);
+        const px = cx+Math.cos(pa)*pr;
+        const py = cy+Math.sin(pa)*pr*1.15;
+        if(t===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    }
   }
-  if(reveal>0.5){
-    const c2=isBW?[40,42,52]:[Math.round(bot[0]*0.5+30),Math.round(bot[1]*0.4),Math.round(bot[2]*0.4)];
-    swan(CW*0.5,CH*0.68,cR,`rgb(${c2[0]},${c2[1]},${c2[2]})`,true);
+
+  // Upper bright ovoid (appears first with reveal).
+  if(reveal > 0.1){
+    const upR = mainR * Math.min(1, reveal*1.5);
+    const upY = CH * splitLine * 0.65;
+    drawOvoid(CW * upperX, upY, upR,
+      `rgba(${Math.min(255,top[0]+90)|0},${Math.min(255,top[1]+85)|0},${Math.min(255,top[2]+70)|0},0.85)`,
+      `rgba(${Math.round(bot[0]*0.3)},${Math.round(bot[1]*0.3)},${Math.round(bot[2]*0.4)},0.85)`);
+  }
+  // Lower dark ovoid (appears after upper).
+  if(reveal > 0.4){
+    const downR = mainR * Math.min(1, (reveal-0.3)*1.5);
+    const downY = CH * splitLine + (CH * (1-splitLine)) * 0.5;
+    drawOvoid(CW * lowerX, downY, downR,
+      `rgba(${Math.round(bot[0]*0.5)},${Math.round(bot[1]*0.5)},${Math.round(bot[2]*0.6)},0.9)`,
+      `rgba(${Math.min(255,top[0]+80)|0},${Math.min(255,top[1]+80)|0},${Math.min(255,top[2]+80)|0},0.85)`);
+  }
+
+  // Companion forms — small ovoids/circles scattered around each main one.
+  // Count grows with reveal; chord-coloured.
+  const visCompPerSide = Math.ceil(companionsPerSide * reveal);
+  for(let side=0; side<2; side++){
+    const mainCX = CW * (side===0 ? upperX : lowerX);
+    const mainCY = side===0 ? CH*splitLine*0.65 : CH*splitLine + CH*(1-splitLine)*0.5;
+    const isUpper = side === 0;
+    for(let i=0;i<visCompPerSide;i++){
+      const ang = (i/companionsPerSide)*Math.PI*2 + (side*Math.PI/6);
+      const compR = mainR * (0.18 + (i%3)*0.04);
+      const compX = mainCX + Math.cos(ang) * mainR * (1.5 + (i%2)*0.3);
+      const compY = mainCY + Math.sin(ang) * mainR * 0.7;
+      const {rgb} = _picChord(chords, (i + side*3 + 7)%cn, gc, isBW);
+      const lift = isUpper ? 60 : -30;
+      const cr = Math.max(0,Math.min(255, rgb[0]+lift));
+      const cg = Math.max(0,Math.min(255, rgb[1]+lift));
+      const cb = Math.max(0,Math.min(255, rgb[2]+lift));
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},0.7)`;
+      ctx.beginPath();
+      ctx.arc(compX, compY, compR, 0, Math.PI*2);
+      ctx.fill();
+    }
   }
 }
 
 // ── af Klint E: Altarpiece pyramid — triangle ascending to a disc on dark. ──
 function klintPhaseAltar(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sR = _seedRnd(91, ss, 0, 32); sR(); sR();
   ctx.fillStyle=isBW?'#1c1c22':'#16121e';ctx.fillRect(0,0,CW,CH);
   const reveal=Math.max(0,Math.min(1,N/cn));
-  const apex=[CW*0.5,CH*0.12], bl=[CW*0.2,CH*0.9], br=[CW*0.8,CH*0.9];
-  // stepped colour bands up the triangle
-  const steps=Math.max(4,Math.min(24,Math.round(cn/4)));
+  // Per-song variance: apex position, base width, disc size, step count.
+  const apexX = CW * (0.42 + sR()*0.16);
+  const apexY = CH * (0.08 + sR()*0.08);
+  const baseHalfWidth = CW * (0.27 + sR()*0.08);
+  const apex=[apexX, apexY];
+  const bl=[CW*0.5-baseHalfWidth, CH*0.9];
+  const br=[CW*0.5+baseHalfWidth, CH*0.9];
+  const stepsBase = Math.max(4,Math.min(24,Math.round(cn/4)));
+  const steps = Math.max(4, Math.round(stepsBase * (0.85 + sR()*0.30)));
   const vis=Math.max(1,Math.ceil(reveal*steps));
   for(let i=vis-1;i>=0;i--){
     const t=i/steps;
@@ -4834,35 +5952,64 @@ function klintPhaseAltar(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
     ctx.beginPath();ctx.moveTo(apex[0],apex[1]);ctx.lineTo(lx,ly);ctx.lineTo(rx,ry);ctx.closePath();ctx.fill();
   }
-  // golden disc at apex
-  if(reveal>0.2){ctx.fillStyle=isBW?'#d8d4c8':'#e8c84a';ctx.beginPath();ctx.arc(apex[0],apex[1],Math.min(CW,CH)*0.06,0,Math.PI*2);ctx.fill();}
+  // Golden disc — variable size.
+  if(reveal>0.2){
+    const discR = Math.min(CW,CH) * (0.04 + sR()*0.04);
+    ctx.fillStyle=isBW?'#d8d4c8':'#e8c84a';
+    ctx.beginPath();ctx.arc(apex[0],apex[1],discR,0,Math.PI*2);ctx.fill();
+  }
 }
 
 // ── af Klint F: Botanical — symmetric plant/diagram chart on pale ground. ──
 function klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const sRoot = _seedRnd(91, ss, 0, 33); sRoot(); sRoot();
   ctx.fillStyle=isBW?'#e4e0d6':'#f0ead8';ctx.fillRect(0,0,CW,CH);
-  const stems=Math.max(2,Math.min(12,Math.round(cn/12)));
+  // Per-song stem count variance ±25%.
+  const stemsBase=Math.max(2,Math.min(12,Math.round(cn/12)));
+  const stems = Math.max(2, Math.round(stemsBase * (0.85 + sRoot()*0.30)));
   const vis=Math.max(1,Math.ceil(N/cn*stems));
   const sw=CW/Math.max(1,stems);
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+4600,ss,0,0);
     const {rgb}=_picChord(chords,Math.floor(i*(cn/stems)),gc,isBW);
-    const cx=i*sw+sw/2;
+    // Per-stem horizontal offset.
+    const cx=i*sw+sw/2+(rnd()-0.5)*sw*0.25;
     // central stem
     ctx.strokeStyle=isBW?'rgba(80,90,70,0.8)':'rgba(60,110,70,0.8)';ctx.lineWidth=Math.max(1.5,sw*0.03);
     ctx.beginPath();ctx.moveTo(cx,CH*0.9);ctx.lineTo(cx,CH*0.2);ctx.stroke();
-    // symmetric leaf/flower pairs
-    const nodes=3+((rnd()*4)|0);
+    // Per-stem node count + leaf angle.
+    const nodes=3+((rnd()*5)|0);
+    const leafAngle = 0.30 + rnd()*0.40;
     for(let nd=0;nd<nodes;nd++){
       const y=CH*0.85-nd/(nodes)*CH*0.6;
       const r=sw*0.28*(1-nd/nodes*0.4);
       ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.8)`;
-      ctx.beginPath();ctx.ellipse(cx-sw*0.25,y,r,r*0.5,-0.5,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.ellipse(cx+sw*0.25,y,r,r*0.5,0.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(cx-sw*0.25,y,r,r*0.5,-leafAngle,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(cx+sw*0.25,y,r,r*0.5,leafAngle,0,Math.PI*2);ctx.fill();
     }
-    // top bloom
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.beginPath();ctx.arc(cx,CH*0.2,sw*0.16,0,Math.PI*2);ctx.fill();
+    // Top bloom — kind variance (disc / 6-petal / hexagon).
+    const bloomKind = Math.floor(rnd()*3);
+    const bx = cx, by = CH*0.2, bR = sw*0.16;
+    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    if(bloomKind === 0){
+      ctx.beginPath();ctx.arc(bx, by, bR, 0, Math.PI*2);ctx.fill();
+    } else if(bloomKind === 1){
+      for(let p=0;p<6;p++){
+        const pa = (p/6)*Math.PI*2;
+        ctx.beginPath();
+        ctx.arc(bx+Math.cos(pa)*bR*0.6, by+Math.sin(pa)*bR*0.6, bR*0.5, 0, Math.PI*2);
+        ctx.fill();
+      }
+    } else {
+      ctx.beginPath();
+      for(let h=0;h<6;h++){
+        const a = (h/6)*Math.PI*2;
+        const hx = bx + Math.cos(a)*bR, hy = by + Math.sin(a)*bR;
+        if(h===0) ctx.moveTo(hx,hy); else ctx.lineTo(hx,hy);
+      }
+      ctx.closePath();ctx.fill();
+    }
   }
 }
 
@@ -4893,16 +6040,27 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   const css = (c,a)=> a===undefined ? `rgb(${c[0]|0},${c[1]|0},${c[2]|0})` : `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Ornament grid / Frieze bands (original body below, via goldVariant).
-  //  2 = Tree of Life (spiral branches).  3 = Mosaic squares/spirals/eyes.
-  //  4 = Floral meadow.  5 = Water Serpents (flowing scales).
+  //  0 = Classic Klimt — Ornament tile grid (body) vs Pattern Frieze (vertical
+  //      columns of stacked chord patterns), seed-driven internal pick. Both
+  //      read as "gold ornament" identity so they share one Vary slot.
+  //  1 = Spiral Field — 30-60 scattered Klimt curls with chord jewels.
+  //  2 = Mosaic Field — chord-tile cluster patches on gold ground.
+  //  3 = Danaë (golden shower, dramatic figurative, only non-gold ground).
+  //  4 = Floral meadow.
+  //  5 = Water Serpents.
+  //  Free (cap=2) sees Ornament/Frieze + Spiral Field — gold tile grid vs
+  //  abstract spiral field is the strongest decorative contrast.
   {
     const _pn=_capN(6); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_gpick===2){ klimtPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_gpick===3){ klimtPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_gpick===1){ klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_gpick===2){ klimtPhaseMosaicField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_gpick===3){ klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===4){ klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===5){ klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original ornament-grid/frieze body (variant 0/1)
+    // Slot 0: seed-driven pick between Ornament tile grid (body below) and
+    // Pattern Frieze (vertical columns). Both share gold-ornament identity.
+    if(((ss>>>5) & 1) === 1){ klimtPhasePatternFrieze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    // else fall through to original ornament-grid/frieze body.
   }
   const gg = ctx.createLinearGradient(0, 0, CW, CH);
   gg.addColorStop(0, '#b8902f');
@@ -5066,27 +6224,94 @@ function _klimtGround(ctx,CW,CH){
 }
 
 // ── Klimt C: Tree of Life — golden spiralling branches from a central trunk. ──
+// ── Klimt C: Tree of Life — proper Klimt vocabulary (Stoclet Frieze 1909).
+// Gold ground + 20 spiralling branches radiating from a central trunk, each
+// ending in a tight Klimt curl with a chord-coloured jewel at its center.
+// Falling eye-leaves (chord-coloured) drift across the canvas. Reveal scales
+// branch + leaf count so the painting builds progressively.
 function klimtPhaseTree(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  if(isBW){ctx.fillStyle='#2a2a2a';ctx.fillRect(0,0,CW,CH);}else _klimtGround(ctx,CW,CH);
-  const branches=Math.max(4,Math.min(48,Math.round(cn/2)));
-  const vis=Math.max(1,Math.ceil(N/cn*branches));
-  const baseX=CW/2,baseY=CH*0.95;
-  ctx.lineCap='round';
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+4700,ss,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/branches)),gc,isBW);
-    const side=(i%2)?1:-1;
-    const ang=-Math.PI/2+side*(0.2+rnd()*1.0);
-    const len=Math.min(CW,CH)*(0.2+rnd()*0.4);
-    ctx.strokeStyle=isBW?'rgba(220,220,210,0.85)':'rgba(40,30,10,0.85)';
-    ctx.lineWidth=Math.max(1.5,Math.min(CW,CH)*0.006);
-    // spiralling branch
-    ctx.beginPath();let x=baseX+side*rnd()*CW*0.1,y=baseY-rnd()*CH*0.3;ctx.moveTo(x,y);
-    let a=ang;for(let s=0;s<14;s++){a+=side*0.18;x+=Math.cos(a)*len/14;y+=Math.sin(a)*len/14;ctx.lineTo(x,y);}
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Gold ground (or dark grey in B/W).
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  const cx = CW*0.50, cy = CH*0.55;
+
+  // Branches — count scales with chord density (target 20 at high cn).
+  const branchTarget = Math.max(6, Math.min(24, Math.round(cn/8) + 8));
+  const branches = Math.max(3, Math.ceil(branchTarget * reveal));
+
+  ctx.strokeStyle = isBW ? '#1a1a1a' : '#2a1f0a';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+
+  for(let i=0;i<branches;i++){
+    const rnd = _seedRnd(i+31500,ss,0,0);
+    const startAng = (i/branchTarget)*Math.PI*2;
+    let x = cx + Math.cos(startAng)*CW*0.02;
+    let y = cy + Math.sin(startAng)*CH*0.02;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    let a = startAng;
+    const swirlDir = (i%2)?1:-1;
+    const len = Math.min(CW,CH)*(0.30+rnd()*0.22);
+    const segs = 24;
+    for(let s=0;s<segs;s++){
+      a += swirlDir * 0.22;
+      x += Math.cos(a)*len/segs;
+      y += Math.sin(a)*len/segs;
+      ctx.lineTo(x, y);
+    }
     ctx.stroke();
-    // jewel at tip
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.beginPath();ctx.arc(x,y,Math.min(CW,CH)*0.018,0,Math.PI*2);ctx.fill();
+    // Tight Klimt curl at the tip — signature spiral.
+    const sx = x, sy = y;
+    ctx.beginPath();
+    let sa = a;
+    for(let t=0; t<22; t++){
+      const r = t * 1.6;
+      sa += swirlDir * 0.55;
+      const px = sx + Math.cos(sa)*r;
+      const py = sy + Math.sin(sa)*r;
+      if(t===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    // Chord-coloured jewel at spiral center.
+    const {rgb} = _picChord(chords, Math.floor(i*(cn/branchTarget))%cn, gc, isBW);
+    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 7+i%3*2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = isBW ? '#1a1a1a' : '#2a1f0a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.lineWidth = 3;
+  }
+
+  // Central trunk — dark brown anchor.
+  ctx.fillStyle = isBW ? '#4a4844' : '#5a3a18';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + CH*0.30, CW*0.04, CH*0.20, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = isBW ? '#1a1a1a' : '#2a1f0a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Falling Klimt eye-leaves — chord-coloured ellipses with dark pupil dots.
+  const leafCount = Math.max(10, Math.ceil(30*reveal));
+  for(let i=0;i<leafCount;i++){
+    const rnd = _seedRnd(i+32000,ss,0,0);
+    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    const x = rnd()*CW, y = rnd()*CH;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 4+rnd()*5, 8+rnd()*5, rnd()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = isBW ? 'rgba(20,20,20,0.85)' : 'rgba(40,28,6,0.85)';
+    ctx.beginPath();
+    ctx.arc(x, y, 1.5, 0, Math.PI*2);
+    ctx.fill();
   }
 }
 
@@ -5150,6 +6375,421 @@ function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.fillStyle=isBW?'rgba(220,216,200,0.7)':'rgba(216,176,60,0.7)';
     for(let x=CW*0.1;x<CW;x+=CW*0.12){const sy=y0+Math.sin(x/CW*Math.PI*3+i)*CH*0.12;ctx.beginPath();ctx.ellipse(x,sy,CW*0.012,CH*0.008,0,0,Math.PI*2);ctx.fill();}
   }
+}
+
+// ── Klimt G: The Kiss (1907-08) — Klimt's most iconic painting. Pair embrace
+// silhouette on golden ground; left side (man) filled with black + chord-coloured
+// rectangles; right side (woman) filled with chord-coloured ovals/circles. Two
+// faces at top: man behind (dark hair), woman tilted forward with flowers in
+// hair. Falling chord-coloured petals at the bottom. Reveal scales detail count.
+function klimtPhaseKiss(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Gold ground (or dark grey in B/W).
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  // Subtle gold flecks.
+  for(let i=0;i<60;i++){
+    const rnd=_seedRnd(i+30100,ss,0,0);
+    ctx.fillStyle = isBW
+      ? (rnd()>0.5 ? 'rgba(220,216,210,0.10)' : 'rgba(80,80,80,0.10)')
+      : (rnd()>0.5 ? 'rgba(255,240,180,0.10)' : 'rgba(120,86,20,0.10)');
+    ctx.beginPath(); ctx.arc(rnd()*CW, rnd()*CH, 4+rnd()*16, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Embracing pair silhouette.
+  const cx = CW*0.50, cy = CH*0.55;
+  const cloakW = CW*0.55, cloakH = CH*0.85;
+  // Outer cloak.
+  ctx.fillStyle = isBW ? '#aaa49a' : '#dab040';
+  ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(80,55,15,0.7)';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(cx - cloakW*0.40, CH);
+  ctx.bezierCurveTo(cx - cloakW*0.55, cy + cloakH*0.20, cx - cloakW*0.50, cy - cloakH*0.30, cx - cloakW*0.20, cy - cloakH*0.40);
+  ctx.bezierCurveTo(cx - cloakW*0.05, cy - cloakH*0.50, cx + cloakW*0.20, cy - cloakH*0.50, cx + cloakW*0.30, cy - cloakH*0.42);
+  ctx.bezierCurveTo(cx + cloakW*0.50, cy - cloakH*0.35, cx + cloakW*0.55, cy + cloakH*0.20, cx + cloakW*0.40, CH);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  // LEFT (man) — rectangles/squares in ink + chord-coloured.
+  const leftCount = Math.max(8, Math.ceil(60*reveal));
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx - cloakW*0.40, CH);
+  ctx.bezierCurveTo(cx - cloakW*0.55, cy + cloakH*0.20, cx - cloakW*0.50, cy - cloakH*0.30, cx - cloakW*0.20, cy - cloakH*0.40);
+  ctx.lineTo(cx, cy - cloakH*0.40);
+  ctx.lineTo(cx, CH);
+  ctx.closePath();
+  ctx.clip();
+  for(let i=0;i<leftCount;i++){
+    const rnd=_seedRnd(i+30200,ss,0,0);
+    const x = cx - cloakW*0.45 + rnd()*cloakW*0.45;
+    const y = cy - cloakH*0.40 + rnd()*cloakH*0.85;
+    const w = 12+rnd()*22, h = 8+rnd()*16;
+    const k = rnd();
+    if(k < 0.40){
+      ctx.fillStyle = isBW ? '#1a1a1a' : '#1a1208';
+    } else {
+      const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    }
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.restore();
+
+  // RIGHT (woman) — ovals/circles in chord colours.
+  const rightCount = Math.max(8, Math.ceil(70*reveal));
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx, CH);
+  ctx.lineTo(cx, cy - cloakH*0.40);
+  ctx.bezierCurveTo(cx + cloakW*0.05, cy - cloakH*0.50, cx + cloakW*0.20, cy - cloakH*0.50, cx + cloakW*0.30, cy - cloakH*0.42);
+  ctx.bezierCurveTo(cx + cloakW*0.50, cy - cloakH*0.35, cx + cloakW*0.55, cy + cloakH*0.20, cx + cloakW*0.40, CH);
+  ctx.closePath();
+  ctx.clip();
+  for(let i=0;i<rightCount;i++){
+    const rnd=_seedRnd(i+30300,ss,0,0);
+    const x = cx + rnd()*cloakW*0.50;
+    const y = cy - cloakH*0.40 + rnd()*cloakH*0.85;
+    const r = 6+rnd()*14;
+    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = isBW ? 'rgba(40,40,40,0.5)' : 'rgba(60,40,20,0.5)';
+    ctx.beginPath(); ctx.arc(x, y, r*0.3, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+
+  // Two heads at top — man behind, woman tilted.
+  ctx.fillStyle = isBW ? '#cccac4' : '#e8c894';
+  ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.8)' : 'rgba(80,55,15,0.8)';
+  ctx.lineWidth = 3;
+  // Man head
+  ctx.beginPath();
+  ctx.ellipse(cx - cloakW*0.06, cy - cloakH*0.36, cloakW*0.10, cloakW*0.13, -0.1, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Man dark hair
+  ctx.fillStyle = isBW ? '#222' : '#1a1208';
+  ctx.beginPath();
+  ctx.ellipse(cx - cloakW*0.06, cy - cloakH*0.42, cloakW*0.11, cloakW*0.08, -0.1, 0, Math.PI*2);
+  ctx.fill();
+  // Woman head — tilted
+  ctx.fillStyle = isBW ? '#d8d6d0' : '#f4d8b8';
+  ctx.beginPath();
+  ctx.ellipse(cx + cloakW*0.08, cy - cloakH*0.30, cloakW*0.09, cloakW*0.11, 0.4, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Woman flowers in hair.
+  for(let i=0;i<5;i++){
+    const {rgb} = _picChord(chords, Math.floor((20+i*15)*(cn/120))%cn, gc, isBW);
+    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    const fx = cx + cloakW*0.04 + i*cloakW*0.025;
+    const fy = cy - cloakH*0.35;
+    ctx.beginPath(); ctx.arc(fx, fy, 5, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Falling petals/sparkles at bottom (reveal-based count).
+  const petals = Math.max(5, Math.ceil(25*reveal));
+  for(let i=0;i<petals;i++){
+    const rnd=_seedRnd(i+30400,ss,0,0);
+    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
+    const x = rnd()*CW;
+    const y = CH*0.65 + rnd()*CH*0.30;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 3+rnd()*4, 6+rnd()*5, rnd()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ── Klimt H: Danaë (1907-08) — golden shower. Rich maroon radial ground +
+// curled female nude silhouette (right side) + diagonal cascade of golden
+// coins/discs interspersed with chord-coloured ornaments. Klimt's most
+// dramatic figurative work; the only non-gold-ground variant.
+function klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Rich maroon-red radial ground (or dark grey in B/W).
+  const grad = ctx.createRadialGradient(CW*0.7, CH*0.5, 50, CW*0.7, CH*0.5, Math.max(CW,CH)*0.9);
+  if(isBW){
+    grad.addColorStop(0, '#5a5856');
+    grad.addColorStop(0.5, '#3a3836');
+    grad.addColorStop(1, '#1a1816');
+  } else {
+    grad.addColorStop(0, '#8a3020');
+    grad.addColorStop(0.5, '#5a1a14');
+    grad.addColorStop(1, '#2a0810');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Curled female silhouette (right side).
+  const cx = CW*0.65, cy = CH*0.55;
+  const figureSize = CW*0.30;
+  ctx.fillStyle = isBW ? '#b8b6b0' : '#dab098';
+  ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(80,40,20,0.7)';
+  ctx.lineWidth = 3;
+  // Body curled — fetal-like position.
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, figureSize, figureSize*0.85, 0.2, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Knee.
+  ctx.beginPath();
+  ctx.ellipse(cx + figureSize*0.3, cy + figureSize*0.3, figureSize*0.45, figureSize*0.30, 0.4, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Head.
+  ctx.beginPath();
+  ctx.ellipse(cx + figureSize*0.5, cy - figureSize*0.5, figureSize*0.18, figureSize*0.20, 0.5, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Red hair (or grey).
+  ctx.fillStyle = isBW ? '#4a4848' : '#a83020';
+  ctx.beginPath();
+  ctx.ellipse(cx + figureSize*0.55, cy - figureSize*0.55, figureSize*0.22, figureSize*0.16, 0.3, 0, Math.PI*2);
+  ctx.fill();
+
+  // Golden coin/disc shower — diagonal cascade from upper-left. Reveal-based count.
+  const showerCount = Math.max(20, Math.ceil(140*reveal));
+  for(let i=0;i<showerCount;i++){
+    const rnd=_seedRnd(i+31000,ss,0,0);
+    const t = rnd();
+    // Bias toward upper-left to lower-center cascade.
+    const x = CW * (0.05 + (1-t)*0.55 + rnd()*0.15);
+    const y = CH * (0.05 + t*0.85 + rnd()*0.10);
+    const r = 4 + rnd()*10;
+    const k = rnd();
+    if(k < 0.50){
+      // Solid gold disc.
+      ctx.fillStyle = isBW ? '#c8c4b8' : '#e8c862';
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(80,55,15,0.7)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if(k < 0.75){
+      // Larger pale gold.
+      ctx.fillStyle = isBW ? 'rgba(220,218,210,0.85)' : 'rgba(244,224,128,0.85)';
+      ctx.beginPath(); ctx.arc(x, y, r*1.3, 0, Math.PI*2); ctx.fill();
+    } else if(k < 0.92){
+      // Chord-coloured ornament disc.
+      const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.75)`;
+      ctx.beginPath(); ctx.arc(x, y, r*0.7, 0, Math.PI*2); ctx.fill();
+    } else {
+      // Square ornament.
+      ctx.fillStyle = isBW ? '#a8a4a0' : '#d4ab3e';
+      ctx.fillRect(x-r*0.7, y-r*0.7, r*1.4, r*1.4);
+    }
+  }
+}
+
+
+// ── Klimt I: Pattern Frieze (Beethoven Frieze, 1902) — vertical ornamental
+// columns. 5-9 chord-coloured columns, each filled with a stack of pattern
+// motifs (eyes, triangles, diamonds) in seed-picked chord colours. Slot 0
+// seed-pair with Ornament body — same gold tile identity, different rhythm.
+function klimtPhasePatternFrieze(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const rnd = _seedRnd(91, ss, 0, 16);
+
+  // Per-song layout decisions.
+  const cols = 5 + Math.floor(rnd()*5);                   // 5-9 columns
+  const colW = CW / cols;
+
+  // Gold ground (or dark grey in B/W).
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  // Subtle gold flecks.
+  for(let i=0;i<60;i++){
+    const r2 = _seedRnd(i+39100, ss, 0, 0);
+    ctx.fillStyle = isBW
+      ? (r2()>0.5 ? 'rgba(220,216,210,0.10)' : 'rgba(80,80,80,0.10)')
+      : (r2()>0.5 ? 'rgba(255,240,180,0.10)' : 'rgba(120,86,20,0.10)');
+    ctx.beginPath(); ctx.arc(r2()*CW, r2()*CH, 4+r2()*16, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Columns appear progressively — left to right as reveal advances.
+  const visCols = Math.max(1, Math.ceil(cols * reveal));
+  for(let c=0;c<visCols;c++){
+    const cx = c*colW + colW/2;
+    const {rgb:colRgb} = _picChord(chords, (c*5)%cn, gc, isBW);
+    // Light chord overlay strip
+    ctx.fillStyle = `rgba(${colRgb[0]|0},${colRgb[1]|0},${colRgb[2]|0},0.30)`;
+    ctx.fillRect(c*colW + colW*0.15, 0, colW*0.7, CH);
+
+    const stackFull = 8 + Math.floor(rnd()*4);
+    const visStacks = Math.max(2, Math.ceil(stackFull * reveal));
+    const stackH = CH / stackFull;
+    for(let s=0;s<visStacks;s++){
+      const sy = s*stackH + stackH/2;
+      const {rgb:sRgb} = _picChord(chords, (c*8+s)%cn, gc, isBW);
+      const kind = s % 3;
+      if(kind === 0){
+        // Eye motif
+        ctx.fillStyle = `rgb(${sRgb[0]|0},${sRgb[1]|0},${sRgb[2]|0})`;
+        ctx.beginPath();
+        ctx.ellipse(cx, sy, colW*0.30, stackH*0.30, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = `rgb(${Math.round(sRgb[0]*0.3)},${Math.round(sRgb[1]*0.3)},${Math.round(sRgb[2]*0.3)})`;
+        ctx.beginPath();
+        ctx.arc(cx, sy, colW*0.08, 0, Math.PI*2);
+        ctx.fill();
+      } else if(kind === 1){
+        // Triangle
+        ctx.fillStyle = `rgb(${sRgb[0]|0},${sRgb[1]|0},${sRgb[2]|0})`;
+        ctx.beginPath();
+        ctx.moveTo(cx-colW*0.30, sy+stackH*0.30);
+        ctx.lineTo(cx+colW*0.30, sy+stackH*0.30);
+        ctx.lineTo(cx, sy-stackH*0.30);
+        ctx.closePath(); ctx.fill();
+      } else {
+        // Diamond
+        ctx.fillStyle = `rgb(${sRgb[0]|0},${sRgb[1]|0},${sRgb[2]|0})`;
+        ctx.beginPath();
+        ctx.moveTo(cx, sy-stackH*0.30);
+        ctx.lineTo(cx+colW*0.25, sy);
+        ctx.lineTo(cx, sy+stackH*0.30);
+        ctx.lineTo(cx-colW*0.25, sy);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    // Gold separator between columns
+    if(c < cols-1){
+      ctx.strokeStyle = isBW ? 'rgba(80,80,80,0.6)' : 'rgba(120,86,20,0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo((c+1)*colW, 0);
+      ctx.lineTo((c+1)*colW, CH);
+      ctx.stroke();
+    }
+  }
+}
+
+// ── Klimt J: Spiral Field — Klimt's signature curls distributed across canvas.
+// 30-60 chord-coloured spirals (Tree of Life motif extracted, no central trunk).
+// Each spiral has a chord jewel at centre with inner highlight.
+function klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const rnd = _seedRnd(91, ss, 0, 17);
+
+  // Per-song layout.
+  const spiralCountFull = 30 + Math.floor(rnd()*30);      // 30-60 spirals
+
+  // Gold ground.
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  // Gold flecks.
+  for(let i=0;i<60;i++){
+    const r2 = _seedRnd(i+39200, ss, 0, 0);
+    ctx.fillStyle = isBW
+      ? (r2()>0.5 ? 'rgba(220,216,210,0.10)' : 'rgba(80,80,80,0.10)')
+      : (r2()>0.5 ? 'rgba(255,240,180,0.10)' : 'rgba(120,86,20,0.10)');
+    ctx.beginPath(); ctx.arc(r2()*CW, r2()*CH, 4+r2()*16, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Spirals appear progressively.
+  const visSpirals = Math.max(2, Math.ceil(spiralCountFull * reveal));
+  for(let i=0;i<visSpirals;i++){
+    const cx = rnd()*CW;
+    const cy = rnd()*CH;
+    const size = 12 + rnd()*40;
+    const dir = rnd()<0.5 ? 1 : -1;
+    const turns = 14 + Math.floor(rnd()*10);
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+
+    // Spiral line (slightly darkened chord)
+    ctx.strokeStyle = `rgba(${Math.round(rgb[0]*0.7+40)},${Math.round(rgb[1]*0.6+30)},${Math.round(rgb[2]*0.4+10)},0.85)`;
+    ctx.lineWidth = 2 + rnd()*1.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    let sx = cx, sy = cy, sa = rnd()*Math.PI*2;
+    ctx.moveTo(sx, sy);
+    for(let t=0;t<turns;t++){
+      const r = (t/turns) * size;
+      sa += dir * 0.55;
+      sx = cx + Math.cos(sa)*r;
+      sy = cy + Math.sin(sa)*r;
+      ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+
+    // Jewel at centre — full chord colour
+    ctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3+rnd()*4, 0, Math.PI*2);
+    ctx.fill();
+    // Inner highlight
+    ctx.fillStyle = `rgb(${Math.min(255,rgb[0]+80)|0},${Math.min(255,rgb[1]+80)|0},${Math.min(255,rgb[2]+80)|0})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 1.5+rnd()*1.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ── Klimt K: Mosaic Field — irregular chord-tile patches with gold borders.
+// 25-45 clusters of small tiles + bright highlight specks + final gold dust
+// overlay. Klimt mosaic technique (Stoclet) without central subject.
+function klimtPhaseMosaicField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const rnd = _seedRnd(91, ss, 0, 18);
+
+  // Per-song layout.
+  const clusterCountFull = 25 + Math.floor(rnd()*20);      // 25-45 clusters
+  const highlightCountFull = 40 + Math.floor(rnd()*20);    // 40-60 highlights
+
+  // Gold ground.
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  // Clusters appear progressively.
+  const visClusters = Math.max(1, Math.ceil(clusterCountFull * reveal));
+  for(let c=0;c<visClusters;c++){
+    const cx = rnd()*CW;
+    const cy = rnd()*CH;
+    const tileSize = 8 + rnd()*16;
+    const tilesInCluster = 4 + Math.floor(rnd()*8);
+    for(let t=0;t<tilesInCluster;t++){
+      const tx = cx + (rnd()-0.5)*tileSize*3;
+      const ty = cy + (rnd()-0.5)*tileSize*3;
+      const sz = tileSize*(0.7+rnd()*0.6);
+      const {rgb} = _picChord(chords, (c*10+t)%cn, gc, isBW);
+      // Tile chord colour
+      ctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+      ctx.fillRect(tx, ty, sz, sz*(0.7+rnd()*0.5));
+      // Dark border
+      ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(60,40,15,0.7)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tx, ty, sz, sz*(0.7+rnd()*0.5));
+    }
+  }
+
+  // Bright highlight specks — scale with reveal.
+  const visHighlights = Math.ceil(highlightCountFull * reveal);
+  for(let i=0;i<visHighlights;i++){
+    const x = rnd()*CW, y = rnd()*CH;
+    const {rgb} = _picChord(chords, (i+200)%cn, gc, isBW);
+    ctx.fillStyle = `rgba(${Math.min(255,rgb[0]+60)|0},${Math.min(255,rgb[1]+60)|0},${Math.min(255,rgb[2]+70)|0},0.75)`;
+    ctx.beginPath();
+    ctx.arc(x, y, 2+rnd()*3, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Gold dust overlay (final).
+  ctx.globalAlpha = 0.2;
+  for(let i=0;i<100;i++){
+    const r3 = _seedRnd(i+39300, ss, 0, 0);
+    ctx.fillStyle = isBW ? '#d0d0c8' : '#ffe0a0';
+    ctx.beginPath();
+    ctx.arc(r3()*CW, r3()*CH, 1+r3()*2, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 // ── Pop (Keith Haring) ───────────────────────────────────────────────────────
@@ -5461,17 +7101,26 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Wavy stripes / Concentric ripple (original body below, via waveVariant).
-  //  2 = B/W waves recoloured (vermilion/turquoise undulating bands).
-  //  3 = Cataract (warm/cold colour ribbons).  4 = Diagonal lozenges.
-  //  5 = Triangle grid recoloured.
+  //  0 = Classic Riley (Wavy stripes / Concentric ripple, seed-driven internal
+  //      pick — the two layouts read as one "wave Riley" identity so they
+  //      share a single Vary slot).
+  //  1 = Movement in Squares (1961, Riley's breakthrough optical bend).
+  //  2 = Late Morning vertical stripes (1967, pure colour signature).
+  //  3 = Cataract (1967, radiating petal wobble).
+  //  4 = Crest (1964, single S-curve gesture).
+  //  5 = Triangle tessellation.
+  //  Free (cap=2) sees Wavy/Ripple + Movement in Squares — wave Riley vs
+  //  square Riley is the strongest visual contrast in her catalogue.
   {
     const _pn=_capN(6); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_rpick===2){ rileyPhaseBWWaves(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===1){ rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===2){ rileyPhaseStripes(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===3){ rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_rpick===4){ rileyPhaseLozenge(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===4){ rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===5){ rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original wavy-stripes/ripple body (variant 0/1)
+    // else fall through to original wavy-stripes/ripple body (variant 0; the
+    // stripes vs ripple sub-pick within is seed-driven, kept as natural
+    // micro-variation rather than its own Vary slot).
   }
   const darkC = chordCol(0, 0.5);
   const liteC = chordCol(Math.floor(cn/2), 1.25);
@@ -5696,6 +7345,169 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+// ── Riley G: Movement in Squares (1961) — Riley's breakthrough painting.
+// Black + cream grid of squares that compress horizontally toward a vertical
+// band — creates an optical bend illusion. Subtle chord-coloured tint overlay
+// per row preserves the optical effect while staying palette-driven.
+function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(34001, ss, 0, 0); sR(); sR();
+
+  // Cream ground.
+  ctx.fillStyle = isBW ? '#e8e8e4' : '#f0ece2';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Grid dimensions — scale with chord count.
+  const rows = cn<=8?8:cn<=24?10:cn<=60?12:14;
+  const cols = cn<=8?14:cn<=24?18:cn<=60?22:24;
+  const cellH = CH/rows;
+  // Compression centre — varies per painting via seed.
+  const centerX = CW * (0.45 + sR()*0.30);
+
+  // Compute column widths — symmetric compression toward centerX.
+  const widths = [];
+  let totalW = 0;
+  for(let c=0;c<cols;c++){
+    const t = c/cols;
+    const x = t*CW;
+    const dist = Math.abs(x - centerX) / CW;
+    const w = (CW/cols) * (0.25 + Math.pow(dist, 0.7) * 1.0);
+    widths.push(w);
+    totalW += w;
+  }
+  const scale = CW/totalW;
+  for(let i=0;i<widths.length;i++) widths[i] *= scale;
+
+  // Reveal-based: rows appear top-to-bottom.
+  const visRows = Math.max(1, Math.ceil(rows*reveal));
+  const dark = isBW ? '#1a1a1a' : '#1a1a1a';
+  const light = isBW ? '#e8e8e4' : '#f0ece2';
+
+  // Draw checkerboard.
+  let x = 0;
+  for(let c=0;c<cols;c++){
+    const w = widths[c];
+    for(let r=0;r<visRows;r++){
+      const y = r*cellH;
+      const k = (r+c) % 2;
+      ctx.fillStyle = k ? dark : light;
+      ctx.fillRect(x, y, w, cellH);
+    }
+    x += w;
+  }
+
+  // Subtle chord-coloured tint overlay per row — preserves optical effect.
+  for(let r=0;r<visRows;r++){
+    const {rgb} = _picChord(chords, Math.floor(r/rows * cn)%cn, gc, isBW);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.04)`;
+    ctx.fillRect(0, r*cellH, CW, cellH);
+  }
+}
+
+// ── Riley H: Late Morning / Vertical stripes (1967, Achaean 1981) — Riley's
+// post-1967 colour signature. Pure vertical stripes of chord colours, no
+// waves, no patterns. Stripe count scales with song length; reveal sweeps
+// left-to-right.
+function rileyPhaseStripes(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+
+  // Stripe count grows with chord density.
+  const stripes = cn<=8?16:cn<=24?28:cn<=60?42:cn<=120?56:cn<=240?72:cn<=400?96:120;
+  const stripeW = CW/stripes;
+  // Reveal-based: stripes appear left-to-right.
+  const visStripes = Math.max(1, Math.ceil(stripes*reveal));
+
+  // Light ground for un-revealed area.
+  ctx.fillStyle = isBW ? '#e8e8e4' : '#f0ece2';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Slight saturation boost so colours pop as pure bands.
+  for(let i=0;i<visStripes;i++){
+    const t = i/stripes;
+    const {rgb} = _picChord(chords, Math.floor(t * cn)%cn, gc, isBW);
+    const r = Math.min(255, rgb[0]*1.05);
+    const g = Math.min(255, rgb[1]*1.05);
+    const b = Math.min(255, rgb[2]*1.05);
+    ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+    ctx.fillRect(i*stripeW, 0, stripeW+1, CH);
+  }
+}
+
+// ── Riley I: Crest (1964) — single-gesture Riley. 24 parallel S-curve
+// bands sweeping horizontally — all share the same sinusoid so the painting
+// reads as one curved form rather than many. Black + cream alternating
+// stripes with chord-coloured overlay tints. Reveal scales band visibility.
+function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const sR = _seedRnd(35001, ss, 0, 0); sR(); sR();
+
+  // White ground.
+  ctx.fillStyle = isBW ? '#ececea' : '#f8f6f0';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Curve parameters — slight variation per painting.
+  const phase = sR()*Math.PI*2;
+  const freq = 1.2 + sR()*0.6; // gentle S-curve, 1-2 wavelengths
+  const ampScale = 0.08 + sR()*0.06;
+
+  // Band count.
+  const bands = cn<=8?12:cn<=24?18:cn<=60?22:cn<=120?26:30;
+  const visBands = Math.max(2, Math.ceil(bands*reveal));
+  const bandH = (CH*0.70)/bands;
+  const yStart = CH*0.15;
+
+  // First pass: B/W alternating bands following the shared curve.
+  for(let i=0;i<visBands;i++){
+    const yBase = yStart + i*bandH;
+    const col = (i%2) ? (isBW ? '#1a1a1a' : '#1a1a1a') : (isBW ? '#e8e8e4' : '#f0ece2');
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    const segs = 50;
+    for(let s=0;s<=segs;s++){
+      const x = (s/segs)*CW;
+      const w = Math.sin(x/CW*Math.PI*freq + phase) * CH*ampScale;
+      const y = yBase + w;
+      if(s===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    for(let s=segs;s>=0;s--){
+      const x = (s/segs)*CW;
+      const w = Math.sin(x/CW*Math.PI*freq + phase) * CH*ampScale;
+      const y = yBase + w + bandH;
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Second pass: chord-coloured overlay tints (one per ~4 bands).
+  const tintCount = Math.max(2, Math.ceil(visBands/4));
+  for(let i=0;i<tintCount;i++){
+    const t = i/Math.max(1, tintCount-1);
+    const yBase = yStart + t*(visBands*bandH - bandH*4);
+    const {rgb} = _picChord(chords, Math.floor(t*cn)%cn, gc, isBW);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.25)`;
+    ctx.beginPath();
+    const segs = 50;
+    for(let s=0;s<=segs;s++){
+      const x = (s/segs)*CW;
+      const w = Math.sin(x/CW*Math.PI*freq + phase) * CH*ampScale;
+      const y = yBase + w;
+      if(s===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    for(let s=segs;s>=0;s--){
+      const x = (s/segs)*CW;
+      const w = Math.sin(x/CW*Math.PI*freq + phase) * CH*ampScale;
+      const y = yBase + w + bandH*4;
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
 // ── Comic (Roy Lichtenstein) ─────────────────────────────────────────────────
 // Pop / comic-book language: flat primary-colour panels overlaid with Ben-Day
 // halftone dots, heavy black outlines, and the occasional starburst. Each panel
@@ -5725,15 +7537,26 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
   const BLACK = '#0a0a0a';
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Panel grid / Single big panel (original body below, via comicVariant).
-  //  2 = Ben-Day full field.  3 = Brushstrokes.  4 = Dot landscape.  5 = Speech bubble.
+  //  0 = Classic comic frame (Panel grid vs Single big panel, seed-driven
+  //      internal pick — see body below). The two sub-modes read as one
+  //      "comic" identity, so they share a single Vary slot.
+  //  1 = Closeup face (Crying Girl / Drowning Girl figuratíve).
+  //  2 = Ben-Day regions.
+  //  3 = Whaam! explosion (kinetic 1963 motif).
+  //  4 = Pop landscape (Mountain Village / Sunrise).
+  //  5 = Speech bubble + bursts (Drowning Girl / M-Maybe).
+  //  Free (cap=2) sees Panel/Single + Closeup — comic abstraction vs comic
+  //  figuration is Lichtenstein's most dramatic art-historical contrast.
   {
     const _pn=_capN(6); const _cpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_cpick===1){ comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===2){ comicPhaseBenDay(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_cpick===3){ comicPhaseBrush(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_cpick===3){ comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===4){ comicPhaseLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===5){ comicPhaseBubble(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original panel-grid/single-panel body (variant 0/1)
+    // else fall through to original panel-grid/single-panel body (variant 0;
+    // the Panel vs Single sub-pick within is seed-driven, kept as natural
+    // micro-variation rather than its own Vary slot).
   }
   function halftone(x0, y0, w, h, dotCol, spacing, rad){
     ctx.fillStyle = css(dotCol);
@@ -6094,6 +7917,242 @@ function comicPhaseBubble(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+// ── Lichtenstein G: Closeup face — the iconic Lichtenstein woman from
+// Crying Girl / Drowning Girl. Chord-pink halftone skin + chord-yellow hair
+// with black strokes + huge eye with chord-coloured iris + lashes + chord-blue
+// tear + chord-red lips + speech bubble at top-right with reveal-based text
+// lines. Seven chord-driven elements at different points in the song.
+function comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const progress = N/Math.max(1,cn);
+  const INK='#0a0a0a';
+  const sR=_seedRnd(26001,ss,0,0); sR(); sR();
+
+  // Skin tone — pink, biased by an early chord.
+  const skinChord=_picChord(chords,Math.floor(cn*0.05)%cn,gc,isBW).rgb;
+  const skin=isBW
+    ? [Math.round(skinChord[0]*0.3+200),Math.round(skinChord[0]*0.3+200),Math.round(skinChord[0]*0.3+200)]
+    : [Math.min(255,skinChord[0]*0.3+220),Math.min(255,skinChord[1]*0.3+170),Math.min(255,skinChord[2]*0.3+170)];
+  ctx.fillStyle=`rgb(${skin[0]|0},${skin[1]|0},${skin[2]|0})`;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Halftone over the face area (below hairline, above lips).
+  const sp=Math.max(8,Math.min(CW,CH)*0.025);
+  const skinDot=[Math.round(skin[0]*0.6),Math.round(skin[1]*0.5),Math.round(skin[2]*0.5)];
+  _benDay(ctx,0,CH*0.15,CW,CH*0.60,`rgba(${skinDot[0]},${skinDot[1]},${skinDot[2]},0.65)`,sp,sp*0.30);
+
+  // Hair — chord-yellow band across the top.
+  const hairChord=_picChord(chords,Math.floor(cn*0.15)%cn,gc,isBW).rgb;
+  const hair=isBW
+    ? [220,220,220]
+    : [Math.min(255,hairChord[0]*0.3+230),Math.min(255,hairChord[1]*0.5+180),Math.min(255,hairChord[2]*0.2+60)];
+  ctx.fillStyle=`rgb(${hair[0]|0},${hair[1]|0},${hair[2]|0})`;
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(CW,0); ctx.lineTo(CW,CH*0.25);
+  ctx.bezierCurveTo(CW*0.7,CH*0.15,CW*0.3,CH*0.15,0,CH*0.25);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.stroke();
+  // Hair strands — count scales with reveal.
+  ctx.lineWidth=3;
+  const strands=Math.max(3,Math.ceil(10*progress));
+  for(let i=0;i<strands;i++){
+    const x=CW*(0.05+i*0.10);
+    ctx.beginPath();
+    ctx.moveTo(x,0);
+    ctx.lineTo(x+(sR()-0.5)*30,CH*0.20);
+    ctx.stroke();
+  }
+
+  // Eye — large, with chord-coloured iris.
+  const eyeX=CW*0.42, eyeY=CH*0.40;
+  const eyeW=CW*0.16, eyeH=CH*0.10;
+  // Eye white
+  ctx.fillStyle=isBW?'#e8e8e8':'#fafafa';
+  ctx.beginPath();
+  ctx.ellipse(eyeX,eyeY,eyeW/2,eyeH/2,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle=INK; ctx.lineWidth=3.5; ctx.stroke();
+  // Iris (chord-coloured)
+  const iris=_picChord(chords,Math.floor(cn*0.50)%cn,gc,isBW).rgb;
+  ctx.fillStyle=`rgb(${iris[0]|0},${iris[1]|0},${iris[2]|0})`;
+  ctx.beginPath();
+  ctx.arc(eyeX,eyeY,eyeH/2*0.85,0,Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Pupil
+  ctx.fillStyle=INK;
+  ctx.beginPath(); ctx.arc(eyeX,eyeY,eyeH/2*0.4,0,Math.PI*2); ctx.fill();
+  // Highlight
+  ctx.fillStyle='#fff';
+  ctx.beginPath();
+  ctx.arc(eyeX-eyeW*0.08,eyeY-eyeH*0.15,eyeW*0.04,0,Math.PI*2);
+  ctx.fill();
+  // Eyelashes
+  ctx.strokeStyle=INK; ctx.lineWidth=3;
+  for(let i=-3;i<=3;i++){
+    const t=i/3;
+    const x=eyeX+t*eyeW/2;
+    const y=eyeY-eyeH/2;
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineTo(x-t*8,y-18);
+    ctx.stroke();
+  }
+  // Eyebrow
+  ctx.lineWidth=5;
+  ctx.beginPath();
+  ctx.moveTo(eyeX-eyeW*0.6,eyeY-eyeH*1.5);
+  ctx.quadraticCurveTo(eyeX,eyeY-eyeH*1.9,eyeX+eyeW*0.6,eyeY-eyeH*1.3);
+  ctx.stroke();
+
+  // Tear — chord-blue droplet, only appears after ~40% progress.
+  if(progress>0.4){
+    const tearChord=_picChord(chords,Math.floor(cn*0.70)%cn,gc,isBW).rgb;
+    const tear=isBW
+      ? [180,180,180]
+      : [Math.round(tearChord[0]*0.3+80),Math.round(tearChord[1]*0.4+140),Math.round(tearChord[2]*0.5+170)];
+    ctx.fillStyle=`rgb(${tear[0]},${tear[1]},${tear[2]})`;
+    ctx.strokeStyle=INK; ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.moveTo(eyeX+eyeW*0.45,eyeY+eyeH*0.4);
+    ctx.bezierCurveTo(eyeX+eyeW*0.55,eyeY+eyeH*1.0,eyeX+eyeW*0.30,eyeY+eyeH*2.5,eyeX+eyeW*0.40,eyeY+eyeH*3.0);
+    ctx.bezierCurveTo(eyeX+eyeW*0.55,eyeY+eyeH*2.8,eyeX+eyeW*0.60,eyeY+eyeH*1.5,eyeX+eyeW*0.50,eyeY+eyeH*0.6);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+
+  // Lips — chord-red.
+  const lipChord=_picChord(chords,Math.floor(cn*0.85)%cn,gc,isBW).rgb;
+  const lip=isBW
+    ? [110,110,110]
+    : [Math.min(255,lipChord[0]*0.7+80),Math.round(lipChord[1]*0.3+30),Math.round(lipChord[2]*0.3+40)];
+  ctx.fillStyle=`rgb(${lip[0]|0},${lip[1]|0},${lip[2]|0})`;
+  ctx.strokeStyle=INK; ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(CW*0.38,CH*0.65);
+  ctx.quadraticCurveTo(CW*0.50,CH*0.62,CW*0.62,CH*0.65);
+  ctx.quadraticCurveTo(CW*0.50,CH*0.72,CW*0.38,CH*0.65);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Lip parting line
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(CW*0.40,CH*0.67); ctx.lineTo(CW*0.60,CH*0.67);
+  ctx.stroke();
+
+  // Speech bubble at top-right with text lines (lines count grows with reveal).
+  const bx=CW*0.62, by=CH*0.05, bw=CW*0.35, bh=CH*0.20;
+  ctx.fillStyle=isBW?'#f0f0f0':'#fafafa';
+  ctx.strokeStyle=INK; ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.ellipse(bx+bw/2,by+bh/2,bw/2,bh/2,0,0,Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // Tail
+  ctx.beginPath();
+  ctx.moveTo(bx+bw*0.20,by+bh-2);
+  ctx.lineTo(bx+bw*0.05,by+bh+bh*0.5);
+  ctx.lineTo(bx+bw*0.40,by+bh-2);
+  ctx.closePath();
+  ctx.fillStyle=isBW?'#f0f0f0':'#fafafa'; ctx.fill(); ctx.stroke();
+  // Text lines — reveal-based count
+  ctx.strokeStyle='rgba(20,20,20,0.7)'; ctx.lineWidth=2;
+  const textLines=Math.max(1,Math.ceil(3*progress));
+  for(let i=0;i<textLines;i++){
+    const y=by+bh*0.30+i*bh*0.20;
+    ctx.beginPath();
+    ctx.moveTo(bx+bw*0.12,y);
+    ctx.lineTo(bx+bw*(0.55-i*0.05),y);
+    ctx.stroke();
+  }
+}
+
+// ── Lichtenstein H: Whaam! explosion — the iconic 1963 painting. Yellow
+// chord-driven sky with halftone wash + 3-layer jagged starburst (chord-red
+// outer + white middle + chord-yellow inner core) + 24 black motion lines
+// radiating + heavy black panel frame. Most kinetic Lichtenstein motif.
+function comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const progress = N/Math.max(1,cn);
+  const INK='#0a0a0a';
+
+  // Yellow sky background — chord-driven hue.
+  const skyChord=_picChord(chords,Math.floor(cn*0.10)%cn,gc,isBW).rgb;
+  const sky=isBW
+    ? [220,220,220]
+    : [Math.min(255,skyChord[0]*0.3+220),Math.min(255,skyChord[1]*0.3+200),Math.min(255,skyChord[2]*0.2+50)];
+  ctx.fillStyle=`rgb(${sky[0]|0},${sky[1]|0},${sky[2]|0})`;
+  ctx.fillRect(0,0,CW,CH);
+  // Halftone wash over sky.
+  const skySp=Math.max(8,Math.min(CW,CH)*0.022);
+  _benDay(ctx,0,0,CW,CH,
+    isBW?'rgba(120,120,120,0.55)':`rgba(${Math.round(sky[0]*0.6)},${Math.round(sky[1]*0.5)},${Math.round(sky[2]*0.3)},0.55)`,
+    skySp,skySp*0.28);
+
+  // Centre point of the explosion.
+  const cx=CW*0.52, cy=CH*0.50;
+
+  // OUTER LAYER — chord-red jagged starburst (24-point).
+  const explChord=_picChord(chords,Math.floor(cn*0.30)%cn,gc,isBW).rgb;
+  const exp=isBW
+    ? [180,180,180]
+    : [Math.min(255,explChord[0]*0.7+80),Math.round(explChord[1]*0.3+30),Math.round(explChord[2]*0.3+30)];
+  ctx.fillStyle=`rgb(${exp[0]|0},${exp[1]|0},${exp[2]|0})`;
+  ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.lineJoin='round';
+  ctx.beginPath();
+  const pts1=24;
+  for(let i=0;i<pts1;i++){
+    const a=(i/pts1)*Math.PI*2-Math.PI/2;
+    const r=Math.min(CW,CH)*((i%2===0)?0.42:0.30)*(0.85+0.15*Math.sin(i*0.8));
+    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // MIDDLE LAYER — white starburst (16-point), smaller.
+  ctx.fillStyle=isBW?'#f0f0f0':'#fafafa';
+  ctx.beginPath();
+  const pts2=16;
+  for(let i=0;i<pts2;i++){
+    const a=(i/pts2)*Math.PI*2-Math.PI/2;
+    const r=Math.min(CW,CH)*((i%2===0)?0.25:0.16);
+    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // INNER CORE — chord-yellow small starburst (10-point).
+  const innerChord=_picChord(chords,Math.floor(cn*0.60)%cn,gc,isBW).rgb;
+  const inner=isBW
+    ? [200,200,200]
+    : [Math.min(255,innerChord[0]*0.5+170),Math.min(255,innerChord[1]*0.5+160),Math.round(innerChord[2]*0.3+50)];
+  ctx.fillStyle=`rgb(${inner[0]|0},${inner[1]|0},${inner[2]|0})`;
+  ctx.beginPath();
+  const pts3=10;
+  for(let i=0;i<pts3;i++){
+    const a=(i/pts3)*Math.PI*2-Math.PI/2;
+    const r=Math.min(CW,CH)*((i%2===0)?0.13:0.08);
+    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // 24 motion lines — count scales with reveal so they appear during the song.
+  ctx.strokeStyle=INK; ctx.lineWidth=4;
+  const lineCount=Math.max(4,Math.ceil(24*progress));
+  for(let i=0;i<lineCount;i++){
+    const a=(i/24)*Math.PI*2;
+    const r0=Math.min(CW,CH)*0.45;
+    const r1=Math.min(CW,CH)*0.55;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);
+    ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+    ctx.stroke();
+  }
+
+  // Heavy black panel frame around the canvas.
+  ctx.lineWidth=Math.max(6,Math.min(CW,CH)*0.02);
+  ctx.strokeRect(ctx.lineWidth/2,ctx.lineWidth/2,CW-ctx.lineWidth,CH-ctx.lineWidth);
+}
+
 // ─── Monet (Light) — 6 variants ─────────────────────────────────────────────
 // All explore light, atmosphere, plein-air painting. Outlines forbidden.
 //  0/Garden: edge-to-edge comma-stroke carpet (Givernyho záhrada)
@@ -6107,12 +8166,22 @@ function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const ss = sessionSeed | 0;
   const _pn = _capN(6);
   const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
-  if(_fpick === 1){ monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  // 6-variant abstract ladder — atmosphere + suggestion only, no literal shapes.
+  //  0 = Tulip Fields — Holland (1886), horizontal chord-coloured bands.
+  //  1 = Reflections — water surface, vertical chord streaks + ripple highlights.
+  //  2 = Cathedral — Rouen series (1892-94), chord gradient + faint silhouette.
+  //  3 = Bridge in Mist — Charing Cross (1899-1904), long horizontal silhouette.
+  //  4 = Wisteria Cascade — Wisteria (1917-19), abstract vertical chord drips.
+  //  5 = Mist — Morning on Seine, pastel horizontal atmosphere.
+  // Free preview (cap=2): Tulip Fields + Reflections — horizontal bands vs water.
+  // Every phase is atmospheric and chord-driven; subjects are suggested only
+  // through dabs, strokes, and faint silhouettes — never literal geometry.
+  if(_fpick === 1){ monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
   if(_fpick === 2){ monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  if(_fpick === 3){ monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  if(_fpick === 4){ monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 3){ monetPhaseBridgeMist(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 4){ monetPhaseWisteria(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
   if(_fpick === 5){ monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode);
+  monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode);
 }
 
 // Variant 0 — Garden: perspective path receding to vanishing point with
@@ -6246,13 +8315,18 @@ function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   const rnd = _seedRnd(91, ss, lim, 1);
 
+  // ── Per-song layout decisions ──
+  const bands = 60 + Math.floor(rnd()*40);        // 60-100 reflection bands
+  const willowSide = Math.floor(rnd()*3);          // 0=right, 1=left, 2=both
+  const lilyGroups = 3 + Math.floor(rnd()*4);      // 3-6 lily clusters
+  const shadowCount = 20 + Math.floor(rnd()*20);   // 20-40 dark shadows
+
   // Dark teal pond base — physical element, palette-independent.
   ctx.fillStyle = '#1F3B45';
   ctx.fillRect(0, 0, CW, CH);
 
   // Vertical sky reflection bands — bright lifted chord colour (sky surface
-  // catches light → high lightness boost).
-  const bands = 80;
+  // catches light → high lightness boost). Count varies per song.
   const bw = CW / bands;
   ctx.globalAlpha = 0.78;
   for(let i = 0; i < bands; i++){
@@ -6275,9 +8349,9 @@ function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.fillStyle = `rgb(${sr|0},${sg|0},${sb|0})`;
     ctx.fillRect(x, yStart, sw, len);
   }
-  // Dark reflective shadows — chord colour darkened heavily.
+  // Dark reflective shadows — chord colour darkened heavily. Count varies.
   ctx.globalAlpha = 0.5;
-  for(let i = 0; i < 30; i++){
+  for(let i = 0; i < shadowCount; i++){
     const x = rnd() * CW;
     const w = CW * 0.04 + rnd() * CW * 0.08;
     const y = rnd() * CH;
@@ -6295,34 +8369,40 @@ function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.globalAlpha = 1;
 
   // Willow trailing from top — chord colour, tilted green for foliage feel.
-  for(let i = 0; i < 40; i++){
-    const x = CW * 0.7 + rnd() * CW * 0.3;
-    const len = CH * (0.25 + rnd() * 0.35);
-    const chord = chords[i % Math.max(1, cn)];
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) continue;
-    const note = notes[0];
-    const m = note.m !== undefined ? note.m : note;
-    const [r, g, b] = gc(m, 100);
-    // Green tilt without flattening hue.
-    const wr = Math.round(r * 0.45);
-    const wg = Math.round(g * 0.95 + 25);
-    const wb = Math.round(b * 0.45);
-    const a = 0.55 + rnd() * 0.35;
-    ctx.strokeStyle = `rgba(${Math.max(0,Math.min(255,wr))},${Math.max(0,Math.min(255,wg))},${Math.max(0,Math.min(255,wb))},${a.toFixed(2)})`;
-    ctx.lineWidth = 1 + rnd() * 1.5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.quadraticCurveTo(x + (rnd() - 0.5) * 30, len * 0.5, x + (rnd() - 0.5) * 20, len);
-    ctx.stroke();
+  // Side (right / left / both) varies per song.
+  function willowAt(xBase, xRange, count){
+    for(let i = 0; i < count; i++){
+      const x = xBase + rnd() * xRange;
+      const len = CH * (0.25 + rnd() * 0.35);
+      const chord = chords[i % Math.max(1, cn)];
+      const notes = chord && (chord.n || chord.notes);
+      if(!notes || !notes.length) continue;
+      const note = notes[0];
+      const m = note.m !== undefined ? note.m : note;
+      const [r, g, b] = gc(m, 100);
+      const wr = Math.round(r * 0.45);
+      const wg = Math.round(g * 0.95 + 25);
+      const wb = Math.round(b * 0.45);
+      const a = 0.55 + rnd() * 0.35;
+      ctx.strokeStyle = `rgba(${Math.max(0,Math.min(255,wr))},${Math.max(0,Math.min(255,wg))},${Math.max(0,Math.min(255,wb))},${a.toFixed(2)})`;
+      ctx.lineWidth = 1 + rnd() * 1.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.quadraticCurveTo(x + (rnd() - 0.5) * 30, len * 0.5, x + (rnd() - 0.5) * 20, len);
+      ctx.stroke();
+    }
   }
+  if(willowSide === 0){ willowAt(CW*0.7, CW*0.3, 40); }
+  else if(willowSide === 1){ willowAt(0, CW*0.3, 40); }
+  else { willowAt(CW*0.7, CW*0.3, 25); willowAt(0, CW*0.3, 25); }
 
   // Lily pads + blossoms. Pad uses chord colour with green tilt (leaf);
   // blossom uses the chord colour directly with a bright lift (flower).
-  const groups = 4;
+  // Cluster count varies per song.
+  const groups = lilyGroups;
   for(let g = 0; g < groups; g++){
-    const cx = CW * (0.15 + g * 0.22 + rnd() * 0.05);
+    const cx = CW * (0.10 + (g/groups) * 0.78 + rnd() * 0.08);
     const cy = CH * (0.35 + rnd() * 0.5);
     const padsInGroup = 4 + Math.floor(rnd() * 4);
     for(let p = 0; p < padsInGroup; p++){
@@ -6389,13 +8469,16 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillRect(0, 0, CW, CH);
 
   // Cathedral silhouette — dark transparent shadow, palette-independent
-  // physical element.
-  const towerCX = CW * 0.5;
-  const towerW = CW * 0.42;
+  // physical element. Position (left/centre/right) and width vary per song.
+  const cathedralPos = Math.floor(rnd()*3);      // 0=left, 1=centre, 2=right
+  const towerXFrac = cathedralPos===0 ? 0.32 : cathedralPos===1 ? 0.50 : 0.68;
+  const towerCX = CW * towerXFrac;
+  const towerWFrac = 0.34 + rnd()*0.14;          // 0.34-0.48 width
+  const towerW = CW * towerWFrac;
   const towerLeft = towerCX - towerW / 2;
   const towerRight = towerCX + towerW / 2;
   const towerBase = CH * 0.95;
-  const towerTopFlat = CH * 0.18;
+  const towerTopFlat = CH * (0.16 + rnd()*0.06); // 0.16-0.22 top
   const spireTop = CH * 0.04;
 
   ctx.fillStyle = 'rgba(30, 22, 38, 0.35)';
@@ -6498,29 +8581,50 @@ function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fill();
 
   // Haystack dome — mid-chord colour, dim warm-shifted.
+  // Stack count (1-3), position(s), and size vary per song.
   const [stackR, stackG, stackB] = chordColor(0.55);
   ctx.fillStyle = `rgb(${Math.round(stackR * 0.6 + 30)},${Math.round(stackG * 0.45)},${Math.round(stackB * 0.35)})`;
-  const hx = CW * 0.52;
-  const hyBase = CH * 0.7;
-  const hw = CW * 0.34;
-  const hh = CH * 0.32;
-  ctx.beginPath();
-  ctx.moveTo(hx - hw / 2, hyBase);
-  ctx.bezierCurveTo(hx - hw * 0.55, hyBase - hh * 0.6, hx - hw * 0.2, hyBase - hh, hx, hyBase - hh);
-  ctx.bezierCurveTo(hx + hw * 0.2, hyBase - hh, hx + hw * 0.55, hyBase - hh * 0.6, hx + hw / 2, hyBase);
-  ctx.closePath();
-  ctx.fill();
+
+  const stackCount = 1 + Math.floor(rnd()*3);     // 1-3 haystacks
+  const stacks = [];
+  for(let s=0;s<stackCount;s++){
+    const tFrac = stackCount===1 ? 0.40 + rnd()*0.30
+                                 : 0.15 + (s/(stackCount-1))*0.70 + (rnd()-0.5)*0.08;
+    const scale = stackCount===1 ? 1.0 : 0.55 + rnd()*0.40;
+    stacks.push({
+      hx: CW*tFrac,
+      hyBase: CH*0.7,
+      hw: CW*0.34*scale,
+      hh: CH*0.32*scale,
+    });
+  }
+  // Draw each dome (back to front by scale so larger stacks overlay smaller).
+  stacks.sort((a,b)=>a.hw-b.hw);
+  for(const st of stacks){
+    ctx.beginPath();
+    ctx.moveTo(st.hx - st.hw / 2, st.hyBase);
+    ctx.bezierCurveTo(st.hx - st.hw*0.55, st.hyBase - st.hh*0.6, st.hx - st.hw*0.2, st.hyBase - st.hh, st.hx, st.hyBase - st.hh);
+    ctx.bezierCurveTo(st.hx + st.hw*0.2, st.hyBase - st.hh, st.hx + st.hw*0.55, st.hyBase - st.hh*0.6, st.hx + st.hw/2, st.hyBase);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Primary stack reference (for stroke loop below) — use largest.
+  const primary = stacks[stacks.length-1];
+  const hx = primary.hx, hyBase = primary.hyBase, hw = primary.hw, hh = primary.hh;
 
   // Painterly strokes on the haystack — chord colour, lit (left) vs. shadow
   // (right) side via lightness multiplier only. Hue stays chord-driven.
+  // Strokes distributed across all stacks proportionally to stack area.
   const STACK = Math.min(900, Math.max(300, lim * 14));
   for(let k = 0; k < STACK; k++){
+    // Pick stack weighted by area (larger gets more strokes).
+    const st = stacks[k % stackCount];
     const ang = Math.PI + rnd() * Math.PI;
     const radR = Math.pow(rnd(), 0.5);
-    const dx = Math.cos(ang) * (hw / 2) * radR;
-    const dy = Math.sin(ang) * hh * radR;
-    const px = hx + dx;
-    const py = hyBase + dy;
+    const dx = Math.cos(ang) * (st.hw / 2) * radR;
+    const dy = Math.sin(ang) * st.hh * radR;
+    const px = st.hx + dx;
+    const py = st.hyBase + dy;
     const ci = k % Math.max(1, cn);
     const chord = chords[ci];
     const notes = chord && (chord.n || chord.notes);
@@ -6702,27 +8806,30 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
     return gc(m, 100);
   }
 
+  // ── Per-song layout: sky/water ratio varies (40-60%) ──
+  const horizon = CH * (0.40 + rnd()*0.20);
+
   // Sky — lifted version of first-third chord. Wash is 50/50 (chord + light
   // pastel) rather than 80/20 toward white, so the palette is clearly
   // present.
   const [skyR, skyG, skyB] = chordColor(0.12);
-  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.5);
+  const sky = ctx.createLinearGradient(0, 0, 0, horizon);
   sky.addColorStop(0,
     `rgb(${Math.round(skyR * 0.5 + 130)},${Math.round(skyG * 0.5 + 130)},${Math.round(skyB * 0.5 + 140)})`);
   sky.addColorStop(1,
     `rgb(${Math.round(skyR * 0.55 + 100)},${Math.round(skyG * 0.55 + 105)},${Math.round(skyB * 0.55 + 120)})`);
   ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, CW, CH * 0.5);
+  ctx.fillRect(0, 0, CW, horizon);
 
   // Water — mirror of sky, mid-chord based, slightly darker.
   const [watR, watG, watB] = chordColor(0.55);
-  const water = ctx.createLinearGradient(0, CH * 0.5, 0, CH);
+  const water = ctx.createLinearGradient(0, horizon, 0, CH);
   water.addColorStop(0,
     `rgb(${Math.round(watR * 0.55 + 90)},${Math.round(watG * 0.55 + 95)},${Math.round(watB * 0.55 + 110)})`);
   water.addColorStop(1,
     `rgb(${Math.round(watR * 0.6 + 60)},${Math.round(watG * 0.6 + 65)},${Math.round(watB * 0.6 + 85)})`);
   ctx.fillStyle = water;
-  ctx.fillRect(0, CH * 0.5, CW, CH * 0.5);
+  ctx.fillRect(0, horizon, CW, CH - horizon);
 
   // Faint tree-line at horizon — mid-chord darkened.
   ctx.globalAlpha = 0.35;
@@ -6730,22 +8837,22 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle =
     `rgb(${Math.round(hrR * 0.5 + 40)},${Math.round(hrG * 0.5 + 45)},${Math.round(hrB * 0.55 + 55)})`;
   ctx.beginPath();
-  ctx.moveTo(0, CH * 0.5);
+  ctx.moveTo(0, horizon);
   for(let x = 0; x <= CW; x += CW / 40){
-    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 - CH * 0.015);
+    ctx.lineTo(x, horizon + (rnd() - 0.5) * CH * 0.04 - CH * 0.015);
   }
-  ctx.lineTo(CW, CH * 0.5);
+  ctx.lineTo(CW, horizon);
   ctx.closePath();
   ctx.fill();
 
   // Mirrored into water (paler).
   ctx.globalAlpha = 0.22;
   ctx.beginPath();
-  ctx.moveTo(0, CH * 0.5);
+  ctx.moveTo(0, horizon);
   for(let x = 0; x <= CW; x += CW / 40){
-    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * CH * 0.04 + CH * 0.015);
+    ctx.lineTo(x, horizon + (rnd() - 0.5) * CH * 0.04 + CH * 0.015);
   }
-  ctx.lineTo(CW, CH * 0.5);
+  ctx.lineTo(CW, horizon);
   ctx.closePath();
   ctx.fill();
   ctx.globalAlpha = 1;
@@ -6778,7 +8885,7 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Water ripple short strokes — water chord colour with a slight lift.
   ctx.globalAlpha = 0.55;
   for(let k = 0; k < 200; k++){
-    const y = CH * 0.5 + rnd() * CH * 0.5;
+    const y = horizon + rnd() * (CH - horizon);
     const x = rnd() * CW;
     const len = 6 + rnd() * 16;
     const rr = Math.min(255, Math.round(watR * 0.5 + 110));
@@ -6796,11 +8903,727 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
 
   // Soft sun glow near horizon centre — physical highlight (warm regardless
   // of palette, like a real sun). Kept low so the chord palette still reads.
-  const glowGrad = ctx.createRadialGradient(CW * 0.5, CH * 0.5, 4, CW * 0.5, CH * 0.5, CW * 0.16);
+  const glowGrad = ctx.createRadialGradient(CW * 0.5, horizon, 4, CW * 0.5, horizon, CW * 0.16);
   glowGrad.addColorStop(0, 'rgba(255,230,200,0.45)');
   glowGrad.addColorStop(1, 'rgba(255,230,200,0)');
   ctx.fillStyle = glowGrad;
-  ctx.fillRect(0, CH * 0.35, CW, CH * 0.3);
+  ctx.fillRect(0, horizon - CH * 0.15, CW, CH * 0.3);
+}
+
+// Variant 6 — Poppy Field (Coquelicots, 1873): horizontal landscape with sky,
+// clouds, optional tree-line, and chord-coloured poppy dabs scattered over
+// green meadow. Layout VERSATILITY: horizon height, cloud count, tree-line
+// presence, poppy distribution (uniform vs clustered), cluster centres all
+// re-rolled per session seed — different songs produce different compositions,
+// not just different colours.
+function monetPhasePoppyField(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 6);
+  // ── Reveal: 0→1 as music plays. Painting builds progressively. ──
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // ── Per-song layout decisions (stable per painting, re-roll on Vary) ──
+  const horizonY = CH * (0.28 + rnd()*0.25);              // 28-53% sky/meadow
+  const cloudCountFull = 4 + Math.floor(rnd()*12);        // 4-16 clouds total
+  const treeLineActive = rnd() < 0.7;                     // 70% chance tree-line
+  const treeLineH = CH * (0.025 + rnd()*0.04);
+  const clusterMode = rnd() < 0.5;                        // uniform vs clustered
+  const clusterCount = 3 + Math.floor(rnd()*5);           // 3-7 clusters if cluster
+  const flowerTotalFull = 600 + Math.floor(rnd()*400);    // 600-1000 flowers when full
+  const grassCountFull = 80 + Math.floor(rnd()*150);
+
+  // Reveal-scaled visible counts.
+  const cloudCount = Math.ceil(cloudCountFull * Math.min(1, reveal*1.5));
+  const flowerTotal = Math.ceil(flowerTotalFull * reveal);
+  const grassCount = Math.ceil(grassCountFull * reveal);
+  const treeLineAppear = treeLineActive && reveal > 0.15;
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky
+  const [skyR,skyG,skyB] = chordCol(0.08);
+  const sky = ctx.createLinearGradient(0,0,0,horizonY);
+  sky.addColorStop(0, `rgb(${Math.min(255,skyR+100)},${Math.min(255,skyG+100)},${Math.min(255,skyB+110)})`);
+  sky.addColorStop(1, `rgb(${Math.min(255,skyR+70)},${Math.min(255,skyG+75)},${Math.min(255,skyB+95)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, horizonY);
+
+  // Clouds (seed-driven count + positions)
+  ctx.globalAlpha = 0.7;
+  for(let i=0;i<cloudCount;i++){
+    const cx = rnd()*CW;
+    const cy = rnd()*horizonY*0.85;
+    ctx.fillStyle = isBW ? '#d8d4cc' : '#f0e8d8';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 25+rnd()*45, 8+rnd()*10, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Meadow
+  const [fldR,fldG,fldB] = chordCol(0.55);
+  const field = ctx.createLinearGradient(0, horizonY, 0, CH);
+  field.addColorStop(0, `rgb(${Math.round(fldR*0.40+50)},${Math.round(fldG*0.75+50)},${Math.round(fldB*0.30+30)})`);
+  field.addColorStop(1, `rgb(${Math.round(fldR*0.30+30)},${Math.round(fldG*0.65+40)},${Math.round(fldB*0.25+20)})`);
+  ctx.fillStyle = field;
+  ctx.fillRect(0, horizonY, CW, CH-horizonY);
+
+  // Tree-line (seed-decided present/absent; appears after 15% reveal)
+  if(treeLineAppear){
+    ctx.globalAlpha = 0.5;
+    const [horR,horG,horB] = chordCol(0.30);
+    ctx.fillStyle = `rgb(${Math.round(horR*0.30+20)},${Math.round(horG*0.55+30)},${Math.round(horB*0.25+15)})`;
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY);
+    for(let x=0;x<=CW;x+=CW/30) ctx.lineTo(x, horizonY + (rnd()-0.5)*CH*0.025 - treeLineH*0.5);
+    ctx.lineTo(CW, horizonY + treeLineH*0.5);
+    ctx.lineTo(0, horizonY + treeLineH*0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Cluster centres (if cluster mode)
+  let clusters = null;
+  if(clusterMode){
+    clusters = [];
+    for(let c=0;c<clusterCount;c++){
+      clusters.push({
+        cx: CW*(0.1 + rnd()*0.8),
+        cy: horizonY + rnd()*(CH-horizonY),
+        r: CW*(0.10 + rnd()*0.18),
+      });
+    }
+  }
+
+  // Poppies — seed-driven distribution
+  for(let i=0;i<flowerTotal;i++){
+    let x, y;
+    if(clusterMode){
+      const cl = clusters[Math.floor(rnd()*clusterCount)];
+      const ang = rnd()*Math.PI*2;
+      const dist = rnd()*cl.r;
+      x = cl.cx + Math.cos(ang)*dist;
+      y = cl.cy + Math.sin(ang)*dist;
+    } else {
+      const t = Math.pow(rnd(), 0.5);
+      x = rnd()*CW;
+      y = horizonY + t*(CH-horizonY);
+    }
+    if(x<0||x>CW||y<horizonY+2||y>CH) continue;
+    const [r,g,b] = chordColIdx(i);
+    const jr = Math.max(0,Math.min(255, r+30+(rnd()-0.5)*40));
+    const jg = Math.max(0,Math.min(255, g+30+(rnd()-0.5)*40));
+    const jb = Math.max(0,Math.min(255, b+30+(rnd()-0.5)*40));
+    const t = (y-horizonY)/(CH-horizonY);
+    const sz = 1.5 + rnd()*3*(0.4+t);
+    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, sz, sz*0.7, rnd()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Grass strokes
+  ctx.globalAlpha = 0.55;
+  for(let i=0;i<grassCount;i++){
+    const x = rnd()*CW;
+    const y = horizonY + rnd()*(CH-horizonY);
+    ctx.strokeStyle = `rgba(${Math.round(fldR*0.30+30)},${Math.round(fldG*0.55+30)},${Math.round(fldB*0.25+15)},0.7)`;
+    ctx.lineWidth = 1+rnd()*1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x+(rnd()-0.5)*4, y-3-rnd()*5);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Variant 7 — Poplars (1891): vertical row of poplars + mirrored reflection.
+// Layout VERSATILITY: poplar count (5-12), spacing (uniform vs irregular),
+// water line height (42-70%), foliage density per tree, tilt active/inactive,
+// reflection depth — all re-rolled per session seed.
+function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 7);
+  // ── Reveal: 0→1 as music plays. Progressively materialises the painting. ──
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // ── Per-song layout decisions ──
+  const poplarCount = 5 + Math.floor(rnd()*8);            // 5-12 poplars total
+  const waterLine = CH * (0.42 + rnd()*0.28);             // 42-70% sky/water
+  const spacingIrregular = rnd() < 0.5;
+  const foliageBase = 50 + Math.floor(rnd()*60);
+  const tiltActive = rnd() < 0.6;
+  const reflectionDepth = 0.5 + rnd()*0.5;
+
+  // Reveal-scaled visible counts.
+  const visPoplars = Math.max(1, Math.ceil(poplarCount * reveal));
+  const visRipples = Math.ceil(60 * reveal);
+  const foliageDensityScale = 0.25 + reveal*0.75;          // 25% at first note → 100%
+  const reflectionAppear = Math.max(0, Math.min(1, (reveal-0.3) / 0.7)); // starts at 30% reveal
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky
+  const [skyTopR,skyTopG,skyTopB] = chordCol(0.05);
+  const [skyMidR,skyMidG,skyMidB] = chordCol(0.25);
+  const sky = ctx.createLinearGradient(0, 0, 0, waterLine);
+  sky.addColorStop(0, `rgb(${Math.min(255,skyTopR+90)},${Math.min(255,skyTopG+90)},${Math.min(255,skyTopB+95)})`);
+  sky.addColorStop(1, `rgb(${Math.min(255,skyMidR+50)},${Math.min(255,skyMidG+50)},${Math.min(255,skyMidB+60)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, waterLine);
+
+  // Water
+  const [watR,watG,watB] = chordCol(0.55);
+  const water = ctx.createLinearGradient(0, waterLine, 0, CH);
+  water.addColorStop(0, `rgb(${Math.round(watR*0.6+50)},${Math.round(watG*0.6+60)},${Math.round(watB*0.6+80)})`);
+  water.addColorStop(1, `rgb(${Math.round(watR*0.5+30)},${Math.round(watG*0.5+40)},${Math.round(watB*0.55+60)})`);
+  ctx.fillStyle = water;
+  ctx.fillRect(0, waterLine, CW, CH-waterLine);
+
+  // Water ripples — count grows with reveal.
+  ctx.globalAlpha = 0.3;
+  for(let i=0;i<visRipples;i++){
+    const y = waterLine + rnd()*(CH-waterLine);
+    const w = CW*(0.3+rnd()*0.5);
+    const x = (rnd()-0.3)*CW;
+    const [r,g,b] = chordColIdx(i+10);
+    ctx.fillStyle = `rgb(${Math.min(255,r+30)|0},${Math.min(255,g+30)|0},${Math.min(255,b+50)|0})`;
+    ctx.fillRect(x, y, w, 1+rnd()*2);
+  }
+  ctx.globalAlpha = 1;
+
+  // Poplar x-positions — uniform OR irregular (FULL set, but only visPoplars drawn).
+  const xs = [];
+  if(spacingIrregular){
+    for(let i=0;i<poplarCount;i++) xs.push(CW*(0.06 + rnd()*0.88));
+    xs.sort((a,b) => a-b);
+  } else {
+    for(let i=0;i<poplarCount;i++) xs.push(CW*(0.05 + (i/(poplarCount-1))*0.90));
+  }
+
+  // Draw poplars progressively — left-to-right, one per reveal step.
+  for(let p=0;p<visPoplars;p++){
+    const px = xs[p];
+    const treeTopY = CH*(0.04 + rnd()*0.08);
+    const treeH = waterLine - treeTopY;
+    const [tR,tG,tB] = chordColIdx(p*8);
+    const tilt = tiltActive ? (rnd()-0.5)*8 : 0;
+    const foliageDabsFull = foliageBase + Math.floor(rnd()*30);
+    const foliageDabs = Math.max(8, Math.ceil(foliageDabsFull * foliageDensityScale));
+
+    // Trunk
+    ctx.strokeStyle = `rgba(${Math.round(tR*0.20+10)},${Math.round(tG*0.20+15)},${Math.round(tB*0.20+5)},0.95)`;
+    ctx.lineWidth = 3 + rnd()*2;
+    ctx.beginPath();
+    ctx.moveTo(px, waterLine);
+    ctx.lineTo(px+tilt, treeTopY+5);
+    ctx.stroke();
+
+    // Foliage column — count scales with reveal.
+    for(let f=0;f<foliageDabs;f++){
+      const fy = treeTopY + (f/foliageDabs)*treeH;
+      const offset = (rnd()-0.5)*9 + tilt*(f/foliageDabs);
+      const tt = f/foliageDabs;
+      const lift = (1-tt)*30;
+      const fR = Math.round(tR*0.45 + lift);
+      const fG = Math.round(tG*0.75 + lift);
+      const fB = Math.round(tB*0.40 + lift);
+      ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,fR))},${Math.max(0,Math.min(255,fG))},${Math.max(0,Math.min(255,fB))})`;
+      ctx.beginPath();
+      ctx.ellipse(px+offset, fy, 4+rnd()*3, 2+rnd()*2, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Reflection — only appears after 30% reveal, then grows.
+    if(reflectionAppear > 0){
+      ctx.globalAlpha = 0.55 * reflectionAppear;
+      const refTop = waterLine;
+      const refBase = refTop + treeH * reflectionDepth * reflectionAppear;
+      ctx.strokeStyle = `rgba(${Math.round(tR*0.25+15)},${Math.round(tG*0.25+20)},${Math.round(tB*0.25+10)},0.7)`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(px, refTop);
+      ctx.lineTo(px+(rnd()-0.5)*4, refBase);
+      ctx.stroke();
+      const refDabs = Math.floor(foliageDabs*0.6);
+      for(let f=0;f<refDabs;f++){
+        const fy = refTop + (f/refDabs)*(refBase-refTop);
+        const offset = (rnd()-0.5)*10;
+        const tt = f/refDabs;
+        const lift = tt*25;
+        const fR = Math.round(tR*0.40 + lift);
+        const fG = Math.round(tG*0.65 + lift);
+        const fB = Math.round(tB*0.35 + lift);
+        ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,fR))},${Math.max(0,Math.min(255,fG))},${Math.max(0,Math.min(255,fB))},0.55)`;
+        ctx.beginPath();
+        ctx.ellipse(px+offset, fy, 3+rnd()*3, 1.5+rnd()*1.5, 0, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Horizon line
+  ctx.fillStyle = 'rgba(40,30,20,0.3)';
+  ctx.fillRect(0, waterLine-1, CW, 1.5);
+}
+
+
+// ── Variant abstract 0 — Tulip Fields (Holland 1886): horizontal chord-coloured
+// bands suggesting tulip plantings. Sky gradient + soft veils + 5-9 horizontal
+// bands of pure chord colour, each band with internal painterly stroke
+// texture. NO individual flowers — colour is the subject. Reveal scales band
+// count and stroke density.
+function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 8);
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // Per-song layout decisions.
+  const bandCountFull = 5 + Math.floor(rnd()*5);          // 5-9 bands at full
+  const skyHeight = CH * (0.30 + rnd()*0.20);              // 30-50%
+  const treeLineActive = rnd() < 0.7;
+  const veilCount = 15 + Math.floor(rnd()*20);
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky gradient
+  const [skyR,skyG,skyB] = chordCol(0.05);
+  const sky = ctx.createLinearGradient(0,0,0,skyHeight);
+  sky.addColorStop(0, `rgb(${Math.min(255,skyR+95)},${Math.min(255,skyG+100)},${Math.min(255,skyB+110)})`);
+  sky.addColorStop(1, `rgb(${Math.min(255,skyR+60)},${Math.min(255,skyG+65)},${Math.min(255,skyB+80)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,CW,skyHeight);
+
+  // Sky veils (soft chord clouds) — scale with reveal.
+  const visVeils = Math.ceil(veilCount * Math.min(1, reveal*1.5));
+  ctx.globalAlpha = 0.25;
+  for(let i=0;i<visVeils;i++){
+    const y = rnd()*skyHeight;
+    const w = CW*(0.4+rnd()*0.5);
+    const x = (rnd()-0.3)*CW;
+    const [r,g,b] = chordColIdx(i);
+    ctx.fillStyle = `rgb(${Math.min(255,r+60)|0},${Math.min(255,g+60)|0},${Math.min(255,b+70)|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x+w/2, y, w/2, CH*0.018, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Tree-line at horizon (optional, appears after 15% reveal).
+  if(treeLineActive && reveal > 0.15){
+    ctx.globalAlpha = 0.30;
+    const [hrR,hrG,hrB] = chordCol(0.25);
+    ctx.fillStyle = `rgb(${Math.round(hrR*0.35+15)},${Math.round(hrG*0.4+30)},${Math.round(hrB*0.30+10)})`;
+    ctx.beginPath();
+    ctx.moveTo(0, skyHeight);
+    for(let x=0;x<=CW;x+=CW/30) ctx.lineTo(x, skyHeight + (rnd()-0.5)*CH*0.022 - CH*0.008);
+    ctx.lineTo(CW, skyHeight);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Horizontal tulip bands — count grows with reveal.
+  const fieldStart = skyHeight;
+  const fieldH = CH - fieldStart;
+  const visBands = Math.max(1, Math.ceil(bandCountFull * reveal));
+  for(let b=0;b<visBands;b++){
+    const t = b/bandCountFull;
+    const yStart = fieldStart + t*fieldH;
+    const yH = fieldH/bandCountFull * (0.8 + rnd()*0.4);
+    const [r,g,gb] = chordCol(0.3 + t*0.65);
+    ctx.fillStyle = `rgb(${r|0},${g|0},${gb|0})`;
+    ctx.fillRect(0, yStart, CW, yH);
+    // Painterly strokes inside band.
+    const strokesFull = 200 + Math.floor(rnd()*150);
+    const visStrokes = Math.ceil(strokesFull * reveal);
+    for(let k=0;k<visStrokes;k++){
+      const sx = rnd()*CW;
+      const sy = yStart + rnd()*yH;
+      const len = 4 + rnd()*12;
+      const [sr,sg,sb] = chordColIdx(b*30 + k);
+      const lift = (rnd()-0.5)*60;
+      const jr = Math.max(0,Math.min(255, sr + lift));
+      const jg = Math.max(0,Math.min(255, sg + lift));
+      const jb = Math.max(0,Math.min(255, sb + lift));
+      ctx.strokeStyle = `rgba(${jr|0},${jg|0},${jb|0},0.75)`;
+      ctx.lineWidth = 1+rnd()*1.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx+len, sy+(rnd()-0.5)*1.5);
+      ctx.stroke();
+    }
+  }
+}
+
+// ── Variant abstract 1 — Reflections: pond surface with chord streaks and
+// ripple highlights. Dark teal water base + vertical sky-reflection streaks
+// + dark reflective patches + horizontal ripple highlights + small floating
+// chord spots. No lily pads, no willow. Pure abstract surface.
+function monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 9);
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // Per-song layout decisions.
+  const streakCountFull = 50 + Math.floor(rnd()*25);       // 50-75 streaks
+  const patchCount = 25 + Math.floor(rnd()*20);            // 25-45 dark patches
+  const rippleCountFull = 150 + Math.floor(rnd()*120);     // 150-270 ripples
+  const spotCount = 30 + Math.floor(rnd()*25);             // 30-55 highlights
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Deep teal-ish water base (palette-independent).
+  ctx.fillStyle = isBW ? '#1c1c20' : '#1a2d35';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Vertical sky reflection streaks — scale with reveal.
+  const visStreaks = Math.ceil(streakCountFull * reveal);
+  ctx.globalAlpha = 0.72;
+  for(let i=0;i<visStreaks;i++){
+    const x = (i/streakCountFull)*CW + (rnd()-0.5)*CW*0.02;
+    const sw = CW/streakCountFull*(1.5+rnd()*1.0);
+    const yStart = rnd()*CH*0.4;
+    const len = CH*(0.45+rnd()*0.50);
+    const [r,g,b] = chordCol(i/streakCountFull);
+    ctx.fillStyle = `rgb(${Math.min(255,r+70)|0},${Math.min(255,g+70)|0},${Math.min(255,b+85)|0})`;
+    ctx.fillRect(x, yStart, sw, len);
+  }
+  ctx.globalAlpha = 1;
+
+  // Dark reflective patches (chord darkened) — appear with reveal.
+  const visPatches = Math.ceil(patchCount * reveal);
+  ctx.globalAlpha = 0.55;
+  for(let i=0;i<visPatches;i++){
+    const x = rnd()*CW;
+    const w = CW*(0.05+rnd()*0.10);
+    const y = rnd()*CH;
+    const h = CH*(0.15+rnd()*0.35);
+    const [r,g,b] = chordColIdx(i);
+    ctx.fillStyle = `rgb(${Math.round(r*0.25)},${Math.round(g*0.30+15)},${Math.round(b*0.30+10)})`;
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.globalAlpha = 1;
+
+  // Horizontal ripple highlights — scale with reveal.
+  const visRipples = Math.ceil(rippleCountFull * reveal);
+  ctx.globalAlpha = 0.65;
+  for(let k=0;k<visRipples;k++){
+    const y = rnd()*CH;
+    const x = rnd()*CW;
+    const len = 8+rnd()*22;
+    const [r,g,b] = chordColIdx(k+300);
+    const lift = 50 + rnd()*30;
+    ctx.strokeStyle = `rgba(${Math.min(255,r+lift)|0},${Math.min(255,g+lift)|0},${Math.min(255,b+lift)|0},0.6)`;
+    ctx.lineWidth = 0.8+rnd()*1.2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x+len, y+(rnd()-0.5)*1.5);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Floating chord-colour highlights — small dabs scattered.
+  const visSpots = Math.ceil(spotCount * reveal);
+  for(let i=0;i<visSpots;i++){
+    const x = rnd()*CW;
+    const y = rnd()*CH;
+    const [r,g,b] = chordColIdx(i+500);
+    const lift = 60;
+    ctx.fillStyle = `rgba(${Math.min(255,r+lift)|0},${Math.min(255,g+lift)|0},${Math.min(255,b+lift)|0},0.75)`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 3+rnd()*5, 2+rnd()*3, rnd()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ── Variant abstract 3 — Bridge in Mist (Charing Cross 1899-1904): atmospheric
+// chord wash + long horizontal bridge silhouette with multiple soft arches +
+// vertical water reflection streaks below + horizontal mist veils. Bridge is
+// the only literal element — and it's a soft dark mass spanning the canvas.
+function monetPhaseBridgeMist(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 10);
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // Per-song layout decisions.
+  const bridgeY = CH * (0.42 + rnd()*0.14);                // 42-56% bridge height
+  const archCount = 4 + Math.floor(rnd()*3);               // 4-6 arches
+  const streakCountFull = 40 + Math.floor(rnd()*20);
+  const veilCountFull = 50 + Math.floor(rnd()*20);
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky gradient — atmospheric chord wash.
+  const [skyR,skyG,skyB] = chordCol(0.08);
+  const sky = ctx.createLinearGradient(0,0,0,bridgeY);
+  sky.addColorStop(0, `rgb(${Math.min(255,skyR+95)},${Math.min(255,skyG+95)},${Math.min(255,skyB+110)})`);
+  sky.addColorStop(1, `rgb(${Math.min(255,skyR+65)},${Math.min(255,skyG+70)},${Math.min(255,skyB+90)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,CW,bridgeY);
+
+  // Water below bridge — mid-chord based.
+  const [watR,watG,watB] = chordCol(0.55);
+  const water = ctx.createLinearGradient(0,bridgeY,0,CH);
+  water.addColorStop(0, `rgb(${Math.round(watR*0.50+85)},${Math.round(watG*0.50+90)},${Math.round(watB*0.55+105)})`);
+  water.addColorStop(1, `rgb(${Math.round(watR*0.55+55)},${Math.round(watG*0.55+60)},${Math.round(watB*0.60+80)})`);
+  ctx.fillStyle = water;
+  ctx.fillRect(0, bridgeY, CW, CH-bridgeY);
+
+  // Vertical reflection streaks in water — scale with reveal.
+  const visStreaks = Math.ceil(streakCountFull * reveal);
+  ctx.globalAlpha = 0.45;
+  for(let i=0;i<visStreaks;i++){
+    const x = (i/streakCountFull)*CW + (rnd()-0.5)*CW*0.02;
+    const sw = CW/streakCountFull*(0.8+rnd()*0.8);
+    const len = (CH-bridgeY)*(0.50+rnd()*0.45);
+    const [r,g,b] = chordCol(i/streakCountFull);
+    ctx.fillStyle = `rgb(${Math.min(255,r+80)|0},${Math.min(255,g+80)|0},${Math.min(255,b+95)|0})`;
+    ctx.fillRect(x, bridgeY, sw, len);
+  }
+  ctx.globalAlpha = 1;
+
+  // Horizontal mist veils across entire canvas — scale with reveal.
+  const visVeils = Math.ceil(veilCountFull * Math.min(1, reveal*1.3));
+  ctx.globalAlpha = 0.30;
+  for(let i=0;i<visVeils;i++){
+    const y = rnd()*CH;
+    const w = CW*(0.4+rnd()*0.5);
+    const x = (rnd()-0.3)*CW;
+    const [r,g,b] = chordColIdx(i);
+    ctx.fillStyle = `rgb(${Math.min(255,r+50)|0},${Math.min(255,g+50)|0},${Math.min(255,b+60)|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x+w/2, y, w/2, CH*0.02, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Bridge silhouette — appears after 20% reveal, builds opacity.
+  if(reveal > 0.2){
+    const bridgeAlpha = Math.min(1, (reveal - 0.2) / 0.5);
+    const bridgeH = CH*0.07;
+    ctx.fillStyle = `rgba(35,30,45,${(0.55*bridgeAlpha).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.moveTo(0, bridgeY+bridgeH*0.4);
+    for(let a=0;a<archCount;a++){
+      const x0 = (a/archCount)*CW;
+      const x1 = ((a+1)/archCount)*CW;
+      const cxA = (x0+x1)/2;
+      ctx.lineTo(x0+CW*0.02, bridgeY+bridgeH*0.4);
+      ctx.quadraticCurveTo(cxA, bridgeY+bridgeH*1.4, x1-CW*0.02, bridgeY+bridgeH*0.4);
+    }
+    ctx.lineTo(CW, bridgeY);
+    ctx.lineTo(0, bridgeY);
+    ctx.closePath();
+    ctx.fill();
+    // Bridge reflection thin line in water
+    ctx.globalAlpha = 0.30 * bridgeAlpha;
+    ctx.fillStyle = 'rgba(35,30,45,0.45)';
+    ctx.fillRect(0, bridgeY+(CH-bridgeY)*0.02, CW, CH*0.02);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ── Variant abstract 4 — Wisteria Cascade (Wisteria 1917-19): vertical
+// streams of small chord-coloured dabs cascading from top, with bright
+// highlight specks. NO trunks, NO branches — pure abstract drip. The most
+// abstract late-period Monet.
+function monetPhaseWisteria(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 11);
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // Per-song layout decisions.
+  const cascadeCountFull = 60 + Math.floor(rnd()*40);      // 60-100 cascades
+  const highlightCountFull = 80 + Math.floor(rnd()*60);    // 80-140 highlights
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky band (upper 18%).
+  const [skyR,skyG,skyB] = chordCol(0.08);
+  ctx.fillStyle = `rgb(${Math.min(255,skyR+90)},${Math.min(255,skyG+95)},${Math.min(255,skyB+105)})`;
+  ctx.fillRect(0,0,CW,CH*0.18);
+
+  // Main wisteria chord band (middle 67%).
+  const [mainR,mainG,mainB] = chordCol(0.40);
+  const mid = ctx.createLinearGradient(0,CH*0.18,0,CH*0.85);
+  mid.addColorStop(0, `rgb(${Math.round(mainR*0.55+70)},${Math.round(mainG*0.55+70)},${Math.round(mainB*0.65+85)})`);
+  mid.addColorStop(1, `rgb(${Math.round(mainR*0.55+45)},${Math.round(mainG*0.55+45)},${Math.round(mainB*0.65+55)})`);
+  ctx.fillStyle = mid;
+  ctx.fillRect(0,CH*0.18,CW,CH*0.67);
+
+  // Bottom darker band (15%).
+  const [botR,botG,botB] = chordCol(0.75);
+  ctx.fillStyle = `rgb(${Math.round(botR*0.45+30)},${Math.round(botG*0.50+40)},${Math.round(botB*0.55+50)})`;
+  ctx.fillRect(0, CH*0.85, CW, CH*0.15);
+
+  // Cascading dabs — count grows with reveal.
+  const visCascades = Math.ceil(cascadeCountFull * reveal);
+  for(let c=0;c<visCascades;c++){
+    const x = (c/cascadeCountFull)*CW + (rnd()-0.5)*CW*0.025;
+    const startY = CH*0.06 + rnd()*CH*0.10;
+    const length = CH*(0.55 + rnd()*0.35);
+    const dabsFull = 18 + Math.floor(rnd()*15);
+    // Per-cascade dabs also scale slightly with reveal (denser as more chords arrive).
+    const dabs = Math.max(6, Math.ceil(dabsFull * (0.4 + reveal*0.6)));
+    for(let d=0;d<dabs;d++){
+      const t = d/dabs;
+      const y = startY + t*length;
+      const dx = (rnd()-0.5)*7;
+      const [r,g,b] = chordColIdx(c*3 + d);
+      // Shift toward violet without flattening palette.
+      const jr = Math.round(r*0.65 + 30);
+      const jg = Math.round(g*0.45 + 20);
+      const jb = Math.round(b*0.85 + 60);
+      const a = 0.65 + rnd()*0.25;
+      ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,jr))},${Math.max(0,Math.min(255,jg))},${Math.max(0,Math.min(255,jb))},${a.toFixed(2)})`;
+      const sz = 2 + rnd()*3;
+      ctx.beginPath();
+      ctx.ellipse(x+dx, y, sz, sz*0.85, rnd()*Math.PI, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // Bright highlight specks scattered — scale with reveal.
+  const visHighlights = Math.ceil(highlightCountFull * reveal);
+  for(let i=0;i<visHighlights;i++){
+    const x = rnd()*CW;
+    const y = CH*0.20 + rnd()*CH*0.60;
+    const [r,g,b] = chordColIdx(i+200);
+    const lift = 80;
+    ctx.fillStyle = `rgba(${Math.min(255,r+lift)|0},${Math.min(255,g+lift)|0},${Math.min(255,b+lift)|0},0.70)`;
+    ctx.beginPath();
+    ctx.arc(x, y, 1.2+rnd()*1.4, 0, Math.PI*2);
+    ctx.fill();
+  }
 }
 
 // ─── Hokusai (Woodblock) — 6 variants ───────────────────────────────────────
@@ -7401,28 +10224,73 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.stroke();
   }
 
-  // Reeds at water edges — using chord notes.
-  const reedCount = Math.min(60, Math.max(15, lim));
+  // Reeds at water edges + middle scatter — chord-driven height, thickness,
+  // bend direction, and seedheads. Concept is realised here: every chord
+  // contributes one visible reed with a chord-coloured tip.
+  const reedCount = Math.min(180, Math.max(30, lim * 3));
   for(let i = 0; i < reedCount; i++){
     const ci = i % lim;
     const chord = chords[ci] || chords[0];
     const notes = chord && (chord.n || chord.notes) || [];
     const note = notes[0] || {m:60,v:80};
-    const m = note.m!==undefined?note.m:note;
-    const [r, g, b] = gc(m, 100);
-    // Side: alternate left/right of bridge, near banks.
-    const side = i % 2;
-    const rx = side === 0 ? rnd() * CW * 0.18 : CW - rnd() * CW * 0.18;
-    const ry = CH * 0.55 + rnd() * CH * 0.05;
-    const rh = 25 + rnd() * 40;
-    // Reed = thin tall blade.
-    ctx.strokeStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
-    ctx.lineWidth = 1.8;
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 80;
+    const [r, g, b] = gc(m, v);
+    // Position: 60% in side clusters, 40% scattered along full water edge.
+    const zoneRoll = rnd();
+    let rx;
+    if(zoneRoll < 0.40){
+      // Left cluster — denser near bank, falls off with quadratic bias.
+      rx = Math.pow(rnd(), 1.5) * CW * 0.30;
+    } else if(zoneRoll < 0.80){
+      // Right cluster.
+      rx = CW - Math.pow(rnd(), 1.5) * CW * 0.30;
+    } else {
+      // Sparse middle scatter along full water edge.
+      rx = CW * 0.10 + rnd() * CW * 0.80;
+    }
+    const ry = CH * 0.55 + rnd() * CH * 0.08;
+    // Chord-driven height — pitch + velocity each contribute.
+    const pitchNorm = Math.max(0, Math.min(1, (m - 40) / 40));
+    const velNorm   = Math.max(0, Math.min(1, v / 110));
+    const rh = 40 + pitchNorm * 80 + velNorm * 30;
+    // Chord-driven thickness — more notes in chord = thicker reed.
+    const lw = 2.0 + Math.min(notes.length, 4) / 4 * 1.5;
+    // Less muted (was 0.45/0.7 — barely visible).
+    const reedColor = _hokusaiMute(r, g, b, 0.20, 0.92);
+    // Bend direction from pitch parity, amount from velocity.
+    const bendDir = (m % 2 === 0 ? 1 : -1);
+    const bendAmt = 5 + velNorm * 10;
+    ctx.strokeStyle = reedColor;
+    ctx.lineWidth = lw;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(rx, ry);
-    ctx.quadraticCurveTo(rx + (rnd() - 0.5) * 8, ry - rh * 0.5, rx + (rnd() - 0.5) * 6, ry - rh);
+    const tipX = rx + bendDir * bendAmt * 1.5;
+    const tipY = ry - rh;
+    ctx.quadraticCurveTo(
+      rx + bendDir * bendAmt,
+      ry - rh * 0.5,
+      tipX, tipY
+    );
     ctx.stroke();
+    // Seedhead — chord-coloured dab at top, brighter than the stem.
+    const seedSz = 1.5 + Math.min(notes.length, 4) / 4 * 1.5;
+    ctx.fillStyle = _hokusaiMute(r, g, b, 0.10, 1.0);
+    ctx.beginPath();
+    ctx.ellipse(tipX, tipY, seedSz, seedSz * 1.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Secondary seedhead for multi-note chords — uses the second note's colour.
+    if(notes.length > 1){
+      const n2 = notes[1];
+      const m2 = n2.m !== undefined ? n2.m : n2;
+      const v2 = n2.v !== undefined ? n2.v : 80;
+      const [r2, g2, b2] = gc(m2, v2);
+      ctx.fillStyle = _hokusaiMute(r2, g2, b2, 0.15, 0.95);
+      ctx.beginPath();
+      ctx.ellipse(tipX + bendDir * 3, tipY - 3, seedSz * 0.7, seedSz * 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   // Water ripples — horizontal short strokes.
