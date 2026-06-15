@@ -6235,26 +6235,27 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   const css = (c,a)=> a===undefined ? `rgb(${c[0]|0},${c[1]|0},${c[2]|0})` : `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Classic Klimt (Ornament grid vs Frieze bands, seed-driven internal
-  //      pick — the two layouts read as one "gold ornament" identity so they
-  //      share a single Vary slot).
-  //  1 = The Kiss (figuratíve pair embrace, iconic motif).
-  //  2 = Tree of Life (Stoclet Frieze 1909, proper Klimt curl vocabulary).
+  //  0 = Classic Klimt — Ornament tile grid (body) vs Pattern Frieze (vertical
+  //      columns of stacked chord patterns), seed-driven internal pick. Both
+  //      read as "gold ornament" identity so they share one Vary slot.
+  //  1 = Spiral Field — 30-60 scattered Klimt curls with chord jewels.
+  //  2 = Mosaic Field — chord-tile cluster patches on gold ground.
   //  3 = Danaë (golden shower, dramatic figurative, only non-gold ground).
   //  4 = Floral meadow.
   //  5 = Water Serpents.
-  //  Free (cap=2) sees Ornament + The Kiss — abstract ornament vs figurative
-  //  embrace is the strongest art-historical contrast Klimt offers.
+  //  Free (cap=2) sees Ornament/Frieze + Spiral Field — gold tile grid vs
+  //  abstract spiral field is the strongest decorative contrast.
   {
     const _pn=_capN(6); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_gpick===1){ klimtPhaseKiss(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_gpick===2){ klimtPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_gpick===1){ klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_gpick===2){ klimtPhaseMosaicField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===3){ klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===4){ klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===5){ klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original ornament-grid/frieze body (variant 0; the
-    // grid vs frieze sub-pick within is seed-driven, kept as natural
-    // micro-variation rather than its own Vary slot).
+    // Slot 0: seed-driven pick between Ornament tile grid (body below) and
+    // Pattern Frieze (vertical columns). Both share gold-ornament identity.
+    if(((ss>>>5) & 1) === 1){ klimtPhasePatternFrieze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    // else fall through to original ornament-grid/frieze body.
   }
   const gg = ctx.createLinearGradient(0, 0, CW, CH);
   gg.addColorStop(0, '#b8902f');
@@ -6776,6 +6777,214 @@ function klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       ctx.fillRect(x-r*0.7, y-r*0.7, r*1.4, r*1.4);
     }
   }
+}
+
+
+// ── Klimt I: Pattern Frieze (Beethoven Frieze, 1902) — vertical ornamental
+// columns. 5-9 chord-coloured columns, each filled with a stack of pattern
+// motifs (eyes, triangles, diamonds) in seed-picked chord colours. Slot 0
+// seed-pair with Ornament body — same gold tile identity, different rhythm.
+function klimtPhasePatternFrieze(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const rnd = _seedRnd(91, ss, 0, 16);
+
+  // Per-song layout decisions.
+  const cols = 5 + Math.floor(rnd()*5);                   // 5-9 columns
+  const colW = CW / cols;
+
+  // Gold ground (or dark grey in B/W).
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  // Subtle gold flecks.
+  for(let i=0;i<60;i++){
+    const r2 = _seedRnd(i+39100, ss, 0, 0);
+    ctx.fillStyle = isBW
+      ? (r2()>0.5 ? 'rgba(220,216,210,0.10)' : 'rgba(80,80,80,0.10)')
+      : (r2()>0.5 ? 'rgba(255,240,180,0.10)' : 'rgba(120,86,20,0.10)');
+    ctx.beginPath(); ctx.arc(r2()*CW, r2()*CH, 4+r2()*16, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Columns appear progressively — left to right as reveal advances.
+  const visCols = Math.max(1, Math.ceil(cols * reveal));
+  for(let c=0;c<visCols;c++){
+    const cx = c*colW + colW/2;
+    const {rgb:colRgb} = _picChord(chords, (c*5)%cn, gc, isBW);
+    // Light chord overlay strip
+    ctx.fillStyle = `rgba(${colRgb[0]|0},${colRgb[1]|0},${colRgb[2]|0},0.30)`;
+    ctx.fillRect(c*colW + colW*0.15, 0, colW*0.7, CH);
+
+    const stackFull = 8 + Math.floor(rnd()*4);
+    const visStacks = Math.max(2, Math.ceil(stackFull * reveal));
+    const stackH = CH / stackFull;
+    for(let s=0;s<visStacks;s++){
+      const sy = s*stackH + stackH/2;
+      const {rgb:sRgb} = _picChord(chords, (c*8+s)%cn, gc, isBW);
+      const kind = s % 3;
+      if(kind === 0){
+        // Eye motif
+        ctx.fillStyle = `rgb(${sRgb[0]|0},${sRgb[1]|0},${sRgb[2]|0})`;
+        ctx.beginPath();
+        ctx.ellipse(cx, sy, colW*0.30, stackH*0.30, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = `rgb(${Math.round(sRgb[0]*0.3)},${Math.round(sRgb[1]*0.3)},${Math.round(sRgb[2]*0.3)})`;
+        ctx.beginPath();
+        ctx.arc(cx, sy, colW*0.08, 0, Math.PI*2);
+        ctx.fill();
+      } else if(kind === 1){
+        // Triangle
+        ctx.fillStyle = `rgb(${sRgb[0]|0},${sRgb[1]|0},${sRgb[2]|0})`;
+        ctx.beginPath();
+        ctx.moveTo(cx-colW*0.30, sy+stackH*0.30);
+        ctx.lineTo(cx+colW*0.30, sy+stackH*0.30);
+        ctx.lineTo(cx, sy-stackH*0.30);
+        ctx.closePath(); ctx.fill();
+      } else {
+        // Diamond
+        ctx.fillStyle = `rgb(${sRgb[0]|0},${sRgb[1]|0},${sRgb[2]|0})`;
+        ctx.beginPath();
+        ctx.moveTo(cx, sy-stackH*0.30);
+        ctx.lineTo(cx+colW*0.25, sy);
+        ctx.lineTo(cx, sy+stackH*0.30);
+        ctx.lineTo(cx-colW*0.25, sy);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    // Gold separator between columns
+    if(c < cols-1){
+      ctx.strokeStyle = isBW ? 'rgba(80,80,80,0.6)' : 'rgba(120,86,20,0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo((c+1)*colW, 0);
+      ctx.lineTo((c+1)*colW, CH);
+      ctx.stroke();
+    }
+  }
+}
+
+// ── Klimt J: Spiral Field — Klimt's signature curls distributed across canvas.
+// 30-60 chord-coloured spirals (Tree of Life motif extracted, no central trunk).
+// Each spiral has a chord jewel at centre with inner highlight.
+function klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const rnd = _seedRnd(91, ss, 0, 17);
+
+  // Per-song layout.
+  const spiralCountFull = 30 + Math.floor(rnd()*30);      // 30-60 spirals
+
+  // Gold ground.
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  // Gold flecks.
+  for(let i=0;i<60;i++){
+    const r2 = _seedRnd(i+39200, ss, 0, 0);
+    ctx.fillStyle = isBW
+      ? (r2()>0.5 ? 'rgba(220,216,210,0.10)' : 'rgba(80,80,80,0.10)')
+      : (r2()>0.5 ? 'rgba(255,240,180,0.10)' : 'rgba(120,86,20,0.10)');
+    ctx.beginPath(); ctx.arc(r2()*CW, r2()*CH, 4+r2()*16, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Spirals appear progressively.
+  const visSpirals = Math.max(2, Math.ceil(spiralCountFull * reveal));
+  for(let i=0;i<visSpirals;i++){
+    const cx = rnd()*CW;
+    const cy = rnd()*CH;
+    const size = 12 + rnd()*40;
+    const dir = rnd()<0.5 ? 1 : -1;
+    const turns = 14 + Math.floor(rnd()*10);
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+
+    // Spiral line (slightly darkened chord)
+    ctx.strokeStyle = `rgba(${Math.round(rgb[0]*0.7+40)},${Math.round(rgb[1]*0.6+30)},${Math.round(rgb[2]*0.4+10)},0.85)`;
+    ctx.lineWidth = 2 + rnd()*1.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    let sx = cx, sy = cy, sa = rnd()*Math.PI*2;
+    ctx.moveTo(sx, sy);
+    for(let t=0;t<turns;t++){
+      const r = (t/turns) * size;
+      sa += dir * 0.55;
+      sx = cx + Math.cos(sa)*r;
+      sy = cy + Math.sin(sa)*r;
+      ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+
+    // Jewel at centre — full chord colour
+    ctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3+rnd()*4, 0, Math.PI*2);
+    ctx.fill();
+    // Inner highlight
+    ctx.fillStyle = `rgb(${Math.min(255,rgb[0]+80)|0},${Math.min(255,rgb[1]+80)|0},${Math.min(255,rgb[2]+80)|0})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 1.5+rnd()*1.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ── Klimt K: Mosaic Field — irregular chord-tile patches with gold borders.
+// 25-45 clusters of small tiles + bright highlight specks + final gold dust
+// overlay. Klimt mosaic technique (Stoclet) without central subject.
+function klimtPhaseMosaicField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal = Math.max(0, Math.min(1, N/cn));
+  const rnd = _seedRnd(91, ss, 0, 18);
+
+  // Per-song layout.
+  const clusterCountFull = 25 + Math.floor(rnd()*20);      // 25-45 clusters
+  const highlightCountFull = 40 + Math.floor(rnd()*20);    // 40-60 highlights
+
+  // Gold ground.
+  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
+  else _klimtGround(ctx,CW,CH);
+
+  // Clusters appear progressively.
+  const visClusters = Math.max(1, Math.ceil(clusterCountFull * reveal));
+  for(let c=0;c<visClusters;c++){
+    const cx = rnd()*CW;
+    const cy = rnd()*CH;
+    const tileSize = 8 + rnd()*16;
+    const tilesInCluster = 4 + Math.floor(rnd()*8);
+    for(let t=0;t<tilesInCluster;t++){
+      const tx = cx + (rnd()-0.5)*tileSize*3;
+      const ty = cy + (rnd()-0.5)*tileSize*3;
+      const sz = tileSize*(0.7+rnd()*0.6);
+      const {rgb} = _picChord(chords, (c*10+t)%cn, gc, isBW);
+      // Tile chord colour
+      ctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+      ctx.fillRect(tx, ty, sz, sz*(0.7+rnd()*0.5));
+      // Dark border
+      ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(60,40,15,0.7)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tx, ty, sz, sz*(0.7+rnd()*0.5));
+    }
+  }
+
+  // Bright highlight specks — scale with reveal.
+  const visHighlights = Math.ceil(highlightCountFull * reveal);
+  for(let i=0;i<visHighlights;i++){
+    const x = rnd()*CW, y = rnd()*CH;
+    const {rgb} = _picChord(chords, (i+200)%cn, gc, isBW);
+    ctx.fillStyle = `rgba(${Math.min(255,rgb[0]+60)|0},${Math.min(255,rgb[1]+60)|0},${Math.min(255,rgb[2]+70)|0},0.75)`;
+    ctx.beginPath();
+    ctx.arc(x, y, 2+rnd()*3, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Gold dust overlay (final).
+  ctx.globalAlpha = 0.2;
+  for(let i=0;i<100;i++){
+    const r3 = _seedRnd(i+39300, ss, 0, 0);
+    ctx.fillStyle = isBW ? '#d0d0c8' : '#ffe0a0';
+    ctx.beginPath();
+    ctx.arc(r3()*CW, r3()*CH, 1+r3()*2, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 // ── Pop (Keith Haring) ───────────────────────────────────────────────────────
@@ -8152,22 +8361,22 @@ function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const ss = sessionSeed | 0;
   const _pn = _capN(6);
   const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
-  // 6-variant ladder (each slot a dedicated phase, no seed-driven collision):
-  //  0 = Poppy Field — Coquelicots (1873), horizontal landscape.
-  //  1 = Pond — Water Lilies (1899-1926).
-  //  2 = Cathedral — Rouen series (1892-94).
-  //  3 = Haystack — Wheatstacks (1890-91).
-  //  4 = Poplars — Poplars series (1891), vertical rhythm + reflection.
-  //  5 = Mist — Morning on the Seine / Impression Sunrise mood.
-  // Free preview (cap=2): Poppy Field + Pond — poppy field vs water lilies.
-  // Every phase has seed-driven layout (positions, counts, sub-modes) so
-  // different songs produce different compositions, not just different colours.
-  if(_fpick === 1){ monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  // 6-variant abstract ladder — atmosphere + suggestion only, no literal shapes.
+  //  0 = Tulip Fields — Holland (1886), horizontal chord-coloured bands.
+  //  1 = Reflections — water surface, vertical chord streaks + ripple highlights.
+  //  2 = Cathedral — Rouen series (1892-94), chord gradient + faint silhouette.
+  //  3 = Bridge in Mist — Charing Cross (1899-1904), long horizontal silhouette.
+  //  4 = Wisteria Cascade — Wisteria (1917-19), abstract vertical chord drips.
+  //  5 = Mist — Morning on Seine, pastel horizontal atmosphere.
+  // Free preview (cap=2): Tulip Fields + Reflections — horizontal bands vs water.
+  // Every phase is atmospheric and chord-driven; subjects are suggested only
+  // through dabs, strokes, and faint silhouettes — never literal geometry.
+  if(_fpick === 1){ monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
   if(_fpick === 2){ monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  if(_fpick === 3){ monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  if(_fpick === 4){ monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 3){ monetPhaseBridgeMist(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
+  if(_fpick === 4){ monetPhaseWisteria(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
   if(_fpick === 5){ monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  monetPhasePoppyField(ctx, CW, CH, chords, lim, gc, ss, mode);
+  monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode);
 }
 
 // Variant 0 — Garden: perspective path receding to vanishing point with
@@ -9195,6 +9404,421 @@ function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Horizon line
   ctx.fillStyle = 'rgba(40,30,20,0.3)';
   ctx.fillRect(0, waterLine-1, CW, 1.5);
+}
+
+
+// ── Variant abstract 0 — Tulip Fields (Holland 1886): horizontal chord-coloured
+// bands suggesting tulip plantings. Sky gradient + soft veils + 5-9 horizontal
+// bands of pure chord colour, each band with internal painterly stroke
+// texture. NO individual flowers — colour is the subject. Reveal scales band
+// count and stroke density.
+function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 8);
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // Per-song layout decisions.
+  const bandCountFull = 5 + Math.floor(rnd()*5);          // 5-9 bands at full
+  const skyHeight = CH * (0.30 + rnd()*0.20);              // 30-50%
+  const treeLineActive = rnd() < 0.7;
+  const veilCount = 15 + Math.floor(rnd()*20);
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky gradient
+  const [skyR,skyG,skyB] = chordCol(0.05);
+  const sky = ctx.createLinearGradient(0,0,0,skyHeight);
+  sky.addColorStop(0, `rgb(${Math.min(255,skyR+95)},${Math.min(255,skyG+100)},${Math.min(255,skyB+110)})`);
+  sky.addColorStop(1, `rgb(${Math.min(255,skyR+60)},${Math.min(255,skyG+65)},${Math.min(255,skyB+80)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,CW,skyHeight);
+
+  // Sky veils (soft chord clouds) — scale with reveal.
+  const visVeils = Math.ceil(veilCount * Math.min(1, reveal*1.5));
+  ctx.globalAlpha = 0.25;
+  for(let i=0;i<visVeils;i++){
+    const y = rnd()*skyHeight;
+    const w = CW*(0.4+rnd()*0.5);
+    const x = (rnd()-0.3)*CW;
+    const [r,g,b] = chordColIdx(i);
+    ctx.fillStyle = `rgb(${Math.min(255,r+60)|0},${Math.min(255,g+60)|0},${Math.min(255,b+70)|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x+w/2, y, w/2, CH*0.018, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Tree-line at horizon (optional, appears after 15% reveal).
+  if(treeLineActive && reveal > 0.15){
+    ctx.globalAlpha = 0.30;
+    const [hrR,hrG,hrB] = chordCol(0.25);
+    ctx.fillStyle = `rgb(${Math.round(hrR*0.35+15)},${Math.round(hrG*0.4+30)},${Math.round(hrB*0.30+10)})`;
+    ctx.beginPath();
+    ctx.moveTo(0, skyHeight);
+    for(let x=0;x<=CW;x+=CW/30) ctx.lineTo(x, skyHeight + (rnd()-0.5)*CH*0.022 - CH*0.008);
+    ctx.lineTo(CW, skyHeight);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Horizontal tulip bands — count grows with reveal.
+  const fieldStart = skyHeight;
+  const fieldH = CH - fieldStart;
+  const visBands = Math.max(1, Math.ceil(bandCountFull * reveal));
+  for(let b=0;b<visBands;b++){
+    const t = b/bandCountFull;
+    const yStart = fieldStart + t*fieldH;
+    const yH = fieldH/bandCountFull * (0.8 + rnd()*0.4);
+    const [r,g,gb] = chordCol(0.3 + t*0.65);
+    ctx.fillStyle = `rgb(${r|0},${g|0},${gb|0})`;
+    ctx.fillRect(0, yStart, CW, yH);
+    // Painterly strokes inside band.
+    const strokesFull = 200 + Math.floor(rnd()*150);
+    const visStrokes = Math.ceil(strokesFull * reveal);
+    for(let k=0;k<visStrokes;k++){
+      const sx = rnd()*CW;
+      const sy = yStart + rnd()*yH;
+      const len = 4 + rnd()*12;
+      const [sr,sg,sb] = chordColIdx(b*30 + k);
+      const lift = (rnd()-0.5)*60;
+      const jr = Math.max(0,Math.min(255, sr + lift));
+      const jg = Math.max(0,Math.min(255, sg + lift));
+      const jb = Math.max(0,Math.min(255, sb + lift));
+      ctx.strokeStyle = `rgba(${jr|0},${jg|0},${jb|0},0.75)`;
+      ctx.lineWidth = 1+rnd()*1.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx+len, sy+(rnd()-0.5)*1.5);
+      ctx.stroke();
+    }
+  }
+}
+
+// ── Variant abstract 1 — Reflections: pond surface with chord streaks and
+// ripple highlights. Dark teal water base + vertical sky-reflection streaks
+// + dark reflective patches + horizontal ripple highlights + small floating
+// chord spots. No lily pads, no willow. Pure abstract surface.
+function monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 9);
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // Per-song layout decisions.
+  const streakCountFull = 50 + Math.floor(rnd()*25);       // 50-75 streaks
+  const patchCount = 25 + Math.floor(rnd()*20);            // 25-45 dark patches
+  const rippleCountFull = 150 + Math.floor(rnd()*120);     // 150-270 ripples
+  const spotCount = 30 + Math.floor(rnd()*25);             // 30-55 highlights
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Deep teal-ish water base (palette-independent).
+  ctx.fillStyle = isBW ? '#1c1c20' : '#1a2d35';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Vertical sky reflection streaks — scale with reveal.
+  const visStreaks = Math.ceil(streakCountFull * reveal);
+  ctx.globalAlpha = 0.72;
+  for(let i=0;i<visStreaks;i++){
+    const x = (i/streakCountFull)*CW + (rnd()-0.5)*CW*0.02;
+    const sw = CW/streakCountFull*(1.5+rnd()*1.0);
+    const yStart = rnd()*CH*0.4;
+    const len = CH*(0.45+rnd()*0.50);
+    const [r,g,b] = chordCol(i/streakCountFull);
+    ctx.fillStyle = `rgb(${Math.min(255,r+70)|0},${Math.min(255,g+70)|0},${Math.min(255,b+85)|0})`;
+    ctx.fillRect(x, yStart, sw, len);
+  }
+  ctx.globalAlpha = 1;
+
+  // Dark reflective patches (chord darkened) — appear with reveal.
+  const visPatches = Math.ceil(patchCount * reveal);
+  ctx.globalAlpha = 0.55;
+  for(let i=0;i<visPatches;i++){
+    const x = rnd()*CW;
+    const w = CW*(0.05+rnd()*0.10);
+    const y = rnd()*CH;
+    const h = CH*(0.15+rnd()*0.35);
+    const [r,g,b] = chordColIdx(i);
+    ctx.fillStyle = `rgb(${Math.round(r*0.25)},${Math.round(g*0.30+15)},${Math.round(b*0.30+10)})`;
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.globalAlpha = 1;
+
+  // Horizontal ripple highlights — scale with reveal.
+  const visRipples = Math.ceil(rippleCountFull * reveal);
+  ctx.globalAlpha = 0.65;
+  for(let k=0;k<visRipples;k++){
+    const y = rnd()*CH;
+    const x = rnd()*CW;
+    const len = 8+rnd()*22;
+    const [r,g,b] = chordColIdx(k+300);
+    const lift = 50 + rnd()*30;
+    ctx.strokeStyle = `rgba(${Math.min(255,r+lift)|0},${Math.min(255,g+lift)|0},${Math.min(255,b+lift)|0},0.6)`;
+    ctx.lineWidth = 0.8+rnd()*1.2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x+len, y+(rnd()-0.5)*1.5);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Floating chord-colour highlights — small dabs scattered.
+  const visSpots = Math.ceil(spotCount * reveal);
+  for(let i=0;i<visSpots;i++){
+    const x = rnd()*CW;
+    const y = rnd()*CH;
+    const [r,g,b] = chordColIdx(i+500);
+    const lift = 60;
+    ctx.fillStyle = `rgba(${Math.min(255,r+lift)|0},${Math.min(255,g+lift)|0},${Math.min(255,b+lift)|0},0.75)`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 3+rnd()*5, 2+rnd()*3, rnd()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ── Variant abstract 3 — Bridge in Mist (Charing Cross 1899-1904): atmospheric
+// chord wash + long horizontal bridge silhouette with multiple soft arches +
+// vertical water reflection streaks below + horizontal mist veils. Bridge is
+// the only literal element — and it's a soft dark mass spanning the canvas.
+function monetPhaseBridgeMist(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 10);
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // Per-song layout decisions.
+  const bridgeY = CH * (0.42 + rnd()*0.14);                // 42-56% bridge height
+  const archCount = 4 + Math.floor(rnd()*3);               // 4-6 arches
+  const streakCountFull = 40 + Math.floor(rnd()*20);
+  const veilCountFull = 50 + Math.floor(rnd()*20);
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky gradient — atmospheric chord wash.
+  const [skyR,skyG,skyB] = chordCol(0.08);
+  const sky = ctx.createLinearGradient(0,0,0,bridgeY);
+  sky.addColorStop(0, `rgb(${Math.min(255,skyR+95)},${Math.min(255,skyG+95)},${Math.min(255,skyB+110)})`);
+  sky.addColorStop(1, `rgb(${Math.min(255,skyR+65)},${Math.min(255,skyG+70)},${Math.min(255,skyB+90)})`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,CW,bridgeY);
+
+  // Water below bridge — mid-chord based.
+  const [watR,watG,watB] = chordCol(0.55);
+  const water = ctx.createLinearGradient(0,bridgeY,0,CH);
+  water.addColorStop(0, `rgb(${Math.round(watR*0.50+85)},${Math.round(watG*0.50+90)},${Math.round(watB*0.55+105)})`);
+  water.addColorStop(1, `rgb(${Math.round(watR*0.55+55)},${Math.round(watG*0.55+60)},${Math.round(watB*0.60+80)})`);
+  ctx.fillStyle = water;
+  ctx.fillRect(0, bridgeY, CW, CH-bridgeY);
+
+  // Vertical reflection streaks in water — scale with reveal.
+  const visStreaks = Math.ceil(streakCountFull * reveal);
+  ctx.globalAlpha = 0.45;
+  for(let i=0;i<visStreaks;i++){
+    const x = (i/streakCountFull)*CW + (rnd()-0.5)*CW*0.02;
+    const sw = CW/streakCountFull*(0.8+rnd()*0.8);
+    const len = (CH-bridgeY)*(0.50+rnd()*0.45);
+    const [r,g,b] = chordCol(i/streakCountFull);
+    ctx.fillStyle = `rgb(${Math.min(255,r+80)|0},${Math.min(255,g+80)|0},${Math.min(255,b+95)|0})`;
+    ctx.fillRect(x, bridgeY, sw, len);
+  }
+  ctx.globalAlpha = 1;
+
+  // Horizontal mist veils across entire canvas — scale with reveal.
+  const visVeils = Math.ceil(veilCountFull * Math.min(1, reveal*1.3));
+  ctx.globalAlpha = 0.30;
+  for(let i=0;i<visVeils;i++){
+    const y = rnd()*CH;
+    const w = CW*(0.4+rnd()*0.5);
+    const x = (rnd()-0.3)*CW;
+    const [r,g,b] = chordColIdx(i);
+    ctx.fillStyle = `rgb(${Math.min(255,r+50)|0},${Math.min(255,g+50)|0},${Math.min(255,b+60)|0})`;
+    ctx.beginPath();
+    ctx.ellipse(x+w/2, y, w/2, CH*0.02, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Bridge silhouette — appears after 20% reveal, builds opacity.
+  if(reveal > 0.2){
+    const bridgeAlpha = Math.min(1, (reveal - 0.2) / 0.5);
+    const bridgeH = CH*0.07;
+    ctx.fillStyle = `rgba(35,30,45,${(0.55*bridgeAlpha).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.moveTo(0, bridgeY+bridgeH*0.4);
+    for(let a=0;a<archCount;a++){
+      const x0 = (a/archCount)*CW;
+      const x1 = ((a+1)/archCount)*CW;
+      const cxA = (x0+x1)/2;
+      ctx.lineTo(x0+CW*0.02, bridgeY+bridgeH*0.4);
+      ctx.quadraticCurveTo(cxA, bridgeY+bridgeH*1.4, x1-CW*0.02, bridgeY+bridgeH*0.4);
+    }
+    ctx.lineTo(CW, bridgeY);
+    ctx.lineTo(0, bridgeY);
+    ctx.closePath();
+    ctx.fill();
+    // Bridge reflection thin line in water
+    ctx.globalAlpha = 0.30 * bridgeAlpha;
+    ctx.fillStyle = 'rgba(35,30,45,0.45)';
+    ctx.fillRect(0, bridgeY+(CH-bridgeY)*0.02, CW, CH*0.02);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ── Variant abstract 4 — Wisteria Cascade (Wisteria 1917-19): vertical
+// streams of small chord-coloured dabs cascading from top, with bright
+// highlight specks. NO trunks, NO branches — pure abstract drip. The most
+// abstract late-period Monet.
+function monetPhaseWisteria(ctx, CW, CH, chords, lim, gc, ss, mode){
+  const cn = chords.length;
+  const isBW = mode === 'bw';
+  const rnd = _seedRnd(91, ss, 0, 11);
+  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
+
+  // Per-song layout decisions.
+  const cascadeCountFull = 60 + Math.floor(rnd()*40);      // 60-100 cascades
+  const highlightCountFull = 80 + Math.floor(rnd()*60);    // 80-140 highlights
+
+  function chordCol(t){
+    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[0];
+    const m = note.m !== undefined ? note.m : note;
+    const [r,g,b] = gc(m, 100);
+    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
+    return [r,g,b];
+  }
+  function chordColIdx(i){
+    const ci = Math.min(cn-1, Math.max(0, i%cn));
+    const chord = chords[ci];
+    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
+    const note = notes[i % notes.length];
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 100;
+    const [r,g,b] = gc(m, v);
+    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
+    return [r,g,b];
+  }
+
+  // Sky band (upper 18%).
+  const [skyR,skyG,skyB] = chordCol(0.08);
+  ctx.fillStyle = `rgb(${Math.min(255,skyR+90)},${Math.min(255,skyG+95)},${Math.min(255,skyB+105)})`;
+  ctx.fillRect(0,0,CW,CH*0.18);
+
+  // Main wisteria chord band (middle 67%).
+  const [mainR,mainG,mainB] = chordCol(0.40);
+  const mid = ctx.createLinearGradient(0,CH*0.18,0,CH*0.85);
+  mid.addColorStop(0, `rgb(${Math.round(mainR*0.55+70)},${Math.round(mainG*0.55+70)},${Math.round(mainB*0.65+85)})`);
+  mid.addColorStop(1, `rgb(${Math.round(mainR*0.55+45)},${Math.round(mainG*0.55+45)},${Math.round(mainB*0.65+55)})`);
+  ctx.fillStyle = mid;
+  ctx.fillRect(0,CH*0.18,CW,CH*0.67);
+
+  // Bottom darker band (15%).
+  const [botR,botG,botB] = chordCol(0.75);
+  ctx.fillStyle = `rgb(${Math.round(botR*0.45+30)},${Math.round(botG*0.50+40)},${Math.round(botB*0.55+50)})`;
+  ctx.fillRect(0, CH*0.85, CW, CH*0.15);
+
+  // Cascading dabs — count grows with reveal.
+  const visCascades = Math.ceil(cascadeCountFull * reveal);
+  for(let c=0;c<visCascades;c++){
+    const x = (c/cascadeCountFull)*CW + (rnd()-0.5)*CW*0.025;
+    const startY = CH*0.06 + rnd()*CH*0.10;
+    const length = CH*(0.55 + rnd()*0.35);
+    const dabsFull = 18 + Math.floor(rnd()*15);
+    // Per-cascade dabs also scale slightly with reveal (denser as more chords arrive).
+    const dabs = Math.max(6, Math.ceil(dabsFull * (0.4 + reveal*0.6)));
+    for(let d=0;d<dabs;d++){
+      const t = d/dabs;
+      const y = startY + t*length;
+      const dx = (rnd()-0.5)*7;
+      const [r,g,b] = chordColIdx(c*3 + d);
+      // Shift toward violet without flattening palette.
+      const jr = Math.round(r*0.65 + 30);
+      const jg = Math.round(g*0.45 + 20);
+      const jb = Math.round(b*0.85 + 60);
+      const a = 0.65 + rnd()*0.25;
+      ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,jr))},${Math.max(0,Math.min(255,jg))},${Math.max(0,Math.min(255,jb))},${a.toFixed(2)})`;
+      const sz = 2 + rnd()*3;
+      ctx.beginPath();
+      ctx.ellipse(x+dx, y, sz, sz*0.85, rnd()*Math.PI, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // Bright highlight specks scattered — scale with reveal.
+  const visHighlights = Math.ceil(highlightCountFull * reveal);
+  for(let i=0;i<visHighlights;i++){
+    const x = rnd()*CW;
+    const y = CH*0.20 + rnd()*CH*0.60;
+    const [r,g,b] = chordColIdx(i+200);
+    const lift = 80;
+    ctx.fillStyle = `rgba(${Math.min(255,r+lift)|0},${Math.min(255,g+lift)|0},${Math.min(255,b+lift)|0},0.70)`;
+    ctx.beginPath();
+    ctx.arc(x, y, 1.2+rnd()*1.4, 0, Math.PI*2);
+    ctx.fill();
+  }
 }
 
 // ─── Hokusai (Woodblock) — 6 variants ───────────────────────────────────────
