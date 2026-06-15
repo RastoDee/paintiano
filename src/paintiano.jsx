@@ -8037,43 +8037,20 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const total=nCols*nRows*2;
   const vis=Math.max(1,Math.ceil(N/cn*total*2.5));
 
-  // ── Riley aesthetic: limited palette + smooth color flow ────────────────
-  // Riley's triangle paintings (Bagatelle, Cantus Firmus) use 4-5 colours
-  // sampled across the canvas, not the full 12-tone chord palette. We
-  // sample 5 chord positions evenly across the song to get the painting's
-  // signature palette — staying chord-driven while looking like Riley.
-  const PALETTE_SIZE = 5;
-  const palette = [];
-  for(let i=0;i<PALETTE_SIZE;i++){
-    const idx = Math.floor((i/(PALETTE_SIZE-1)) * (cn-1));
-    palette.push(_picChord(chords, idx, gc, isBW).rgb);
-  }
-  // Per-song flow direction: horizontal (0), vertical (1), or diagonal (2).
-  const flowKind = Math.floor(sR()*3);
-  // Per-song up/down offset — shifts down triangles vs up so they form
-  // alternating pattern stripes rather than the same colour pair.
-  const updownShift = 0.10 + sR()*0.15;
+  // ── BW mode keeps the original sequential pattern (k%cn) ─────────────────
+  // The high-contrast monochrome looked best with simple top-to-bottom fill.
+  // Colour mode uses the diagonal chord-index pattern (each triangle = own
+  // chord) so adjacent triangles never share colour, producing Riley
+  // Bagatelle-style alternating interlock.
+  const altRowMul = 1 + Math.floor(sR()*5);                              // 1..5 diagonal slope per song
+  const upDownOffset = Math.max(1, Math.floor(cn * (0.20 + sR()*0.30))); // 20-50% palette shift
 
-  function triColour(col, row, isUp){
-    const cx = col / Math.max(1, nCols-1);    // 0..1 horizontal
-    const cy = row / Math.max(1, nRows-1);    // 0..1 vertical
-    let t;
-    if(flowKind === 0) t = cx;                // horizontal flow
-    else if(flowKind === 1) t = cy;           // vertical flow
-    else t = (cx + cy*0.6) / 1.6;             // diagonal flow
-    // Down triangles get shift — creates Riley's alternating-pair feel.
-    if(!isUp) t = (t + updownShift) % 1;
-    // Sample palette via lerp.
-    const seg = Math.max(0, Math.min(PALETTE_SIZE-1.001, t * (PALETTE_SIZE-1)));
-    const i0 = Math.floor(seg);
-    const i1 = Math.min(PALETTE_SIZE-1, i0+1);
-    const f = seg - i0;
-    const a = palette[i0], b = palette[i1];
-    return [
-      Math.round(a[0] + (b[0]-a[0])*f),
-      Math.round(a[1] + (b[1]-a[1])*f),
-      Math.round(a[2] + (b[2]-a[2])*f),
-    ];
+  function triColour(col, row, isUp, k){
+    if(isBW){
+      return _picChord(chords, k%cn, gc, isBW).rgb;
+    }
+    const pos = col + row * altRowMul + (isUp ? 0 : upDownOffset);
+    return _picChord(chords, ((pos % cn) + cn) % cn, gc, isBW).rgb;
   }
 
   let k=0;
@@ -8082,7 +8059,7 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const x0=cx*tw, y0=ry*th;
     // up triangle
     if(k<vis){
-      const [r,g,b]=triColour(cx, ry, true);
+      const [r,g,b]=triColour(cx, ry, true, k);
       ctx.fillStyle=`rgb(${r},${g},${b})`;
       ctx.beginPath(); ctx.moveTo(x0,y0+th); ctx.lineTo(x0+tw,y0+th);
       ctx.lineTo(x0+tw/2,y0); ctx.closePath(); ctx.fill();
@@ -8090,7 +8067,7 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     }
     // down triangle
     if(k<vis && x0+tw*1.5<=CW){
-      const [r,g,b]=triColour(cx, ry, false);
+      const [r,g,b]=triColour(cx, ry, false, k);
       ctx.fillStyle=`rgb(${r},${g},${b})`;
       ctx.beginPath(); ctx.moveTo(x0+tw/2,y0+th); ctx.lineTo(x0+tw*1.5,y0+th);
       ctx.lineTo(x0+tw,y0); ctx.closePath(); ctx.fill();
@@ -8101,36 +8078,16 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ── Riley G: Movement in Squares (1961) — Riley's breakthrough painting.
-// Compression-toward-center grid creates optical bend illusion. The cells
-// use a CHORD-DRIVEN dark/light pair (Option A) — the song's dominant
-// chord defines the colour duo, preserving Riley's high-contrast optical
-// effect while making each painting carry the song's signature palette.
+// Black + cream grid of squares that compress horizontally toward a vertical
+// band — creates an optical bend illusion. Subtle chord-coloured tint overlay
+// per row preserves the optical effect while staying palette-driven.
 function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal = Math.max(0, Math.min(1, N/cn));
   const sR = _seedRnd(34001, ss, 0, 0); sR(); sR();
 
-  // ── Pick the song's most-saturated chord as the dominant palette anchor ──
-  // Up to the current reveal point so the painting evolves as the song plays.
-  let domR=80, domG=80, domB=110, domSat=-1;
-  const upto = Math.min(cn, Math.max(1, lim));
-  for(let i=0;i<upto;i++){
-    const {rgb} = _picChord(chords, i, gc, isBW);
-    const sat = Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2]);
-    if(sat > domSat){ domSat = sat; domR = rgb[0]; domG = rgb[1]; domB = rgb[2]; }
-  }
-
-  // Dark/light pair derived from the dominant chord.
-  // BW mode keeps Riley's pure black/cream as fallback.
-  const dark  = isBW
-    ? '#1a1a1a'
-    : `rgb(${Math.round(domR*0.18)},${Math.round(domG*0.15)},${Math.round(domB*0.22)})`;
-  const light = isBW
-    ? '#e8e8e4'
-    : `rgb(${Math.min(255, Math.round(domR*0.40 + 175))},${Math.min(255, Math.round(domG*0.40 + 170))},${Math.min(255, Math.round(domB*0.40 + 155))})`;
-
-  // Ground = light pair colour so the un-revealed area matches the painting.
-  ctx.fillStyle = light;
+  // Cream ground.
+  ctx.fillStyle = isBW ? '#e8e8e4' : '#f0ece2';
   ctx.fillRect(0,0,CW,CH);
 
   // Grid dimensions — scale with chord count.
@@ -8156,8 +8113,10 @@ function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
   // Reveal-based: rows appear top-to-bottom.
   const visRows = Math.max(1, Math.ceil(rows*reveal));
+  const dark = isBW ? '#1a1a1a' : '#1a1a1a';
+  const light = isBW ? '#e8e8e4' : '#f0ece2';
 
-  // Draw checkerboard with chord-derived dark/light pair.
+  // Draw checkerboard.
   let x = 0;
   for(let c=0;c<cols;c++){
     const w = widths[c];
@@ -8168,6 +8127,13 @@ function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       ctx.fillRect(x, y, w, cellH);
     }
     x += w;
+  }
+
+  // Subtle chord-coloured tint overlay per row — preserves optical effect.
+  for(let r=0;r<visRows;r++){
+    const {rgb} = _picChord(chords, Math.floor(r/rows * cn)%cn, gc, isBW);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.04)`;
+    ctx.fillRect(0, r*cellH, CW, cellH);
   }
 }
 
