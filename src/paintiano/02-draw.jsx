@@ -7323,8 +7323,11 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.clip();
   const nCols=5+((sR()*10)|0);
   const tw=CW/nCols;
-  const th=tw*Math.sqrt(3)/2;
-  const nRows=Math.ceil(CH/th);
+  // Compute row count from ideal equilateral height, then adjust th so the
+  // rows fit canvas EXACTLY — otherwise the bottom row gets clipped in half.
+  const idealTh=tw*Math.sqrt(3)/2;
+  const nRows=Math.max(1, Math.floor(CH/idealTh));
+  const th=CH/nRows;  // adjusted so nRows*th == CH (triangles slightly non-equilateral)
   const total=nCols*nRows*2;
   const vis=Math.max(1,Math.ceil(N/cn*total*2.5));
 
