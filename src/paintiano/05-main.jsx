@@ -7204,6 +7204,7 @@ Composition rules:
       <div style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible'}}>
         <nav style={{display:'flex',gap:14,flexWrap:'wrap',rowGap:6,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('concept')}</span>
+          <span onClick={()=>{setGuideReturnCardId('book');setShowGuide(true);}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setGuideReturnCardId('book');setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{ts('gcat_book','Book')}</span>
           {/* DEMO nav item — TEMPORARILY HIDDEN. Kept here (commented) so the
               feature can be restored in one paste; do not delete. The arming
               logic, demoArmRef timeout, demoPlay() and demoReelStop() are all
@@ -9466,13 +9467,7 @@ Composition rules:
       )}
       </div>
       )}
-      <div style={{textAlign:'center',padding:'14px 0 14px'}}>
-        <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{display:'inline-flex',alignItems:'center',gap:8,color:'rgba(201,168,76,.85)',textDecoration:'none',fontFamily:'"Cormorant Garamond", Georgia, serif',fontSize:(.92*effScale)+'rem',letterSpacing:'.01em',borderBottom:'1px solid rgba(201,168,76,.3)',paddingBottom:2}}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          {t('bookTitle')}
-        </a>
-      </div>
-      <footer style={{textAlign:'center',padding:'0 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
+      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
       <div style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
