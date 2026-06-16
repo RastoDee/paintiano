@@ -1,101 +1,191 @@
 Paintiano — delivery manifest
-Generated: 2026-06-10T21:15:00Z
+Generated: 2026-06-16T08:30:00Z
 Footer: v2.0 (unchanged)
-Changed: 03-i18n.jsx, 04-songs.jsx, 05-main.jsx
+Production commit at audit: 9b70cc9 (main) — MFI mood prompt + shuffle determinism + oneM fix
 
-CHANGE LOG (this delivery):
-  · NEW Setup picker — top-menu item between Guide and Pro. Opens a modal
-    with two checklist sections: palettes (5) and artists (16 + Mosaic family).
-    Choice persists in localStorage. Min 1 + 1 required. Free tier sees Pro
-    artists with 🔒 — checking saves the preference, paint still hits paywall.
-  · Setup-picker filters propagate through the canvas pickers:
-      - Palette tab pickers (image + non-image) — only show selected modes,
-        grid columns auto-fit (was hard-coded 4-col / 5-col).
-      - cycleColorFs (FS palette button) — cycles only through selected modes.
-      - Artist tile pairs — pair hidden if neither side selected; when only
-        ONE side selected, pair behaves as a single-toggle (no A↔B flip).
-      - Mosaic chip — hidden when Mosaic family not selected.
-      - SHUFFLE_POOL — filtered to selected artists; MOSAIC_FAMILY included
-        only if Mosaic family selected. Lock mode a no-op if family disabled.
-  · Active-mode safety: if user disables the currently-active palette/artist,
-    falls back gracefully (palette → Harmony or first available; artist → null).
-  · Demo nav item TEMPORARILY HIDDEN — kept in source as a JSX comment so it
-    can be restored in one paste. demoArmed/demoPlay/demoReelStop logic is
-    fully untouched, only the nav entry hidden.
+This manifest was regenerated from a full read of every fragment (not an
+incremental diff). It supersedes the 2026-06-10 manifest, which had drifted:
+language count (8→9, Japanese added), PALETTE_VERSION (6→7), file sizes, and
+several feature markers were stale.
 
-=== FILE SIZES (line counts) ===
-01-core-head.jsx:  712   (unchanged from prior delivery)
-02-draw.jsx:      8661   (unchanged)
-03-i18n.jsx:      1385   (unchanged line count; 8x7 setup labels inline)
-04-songs.jsx:     1893   (was 1877; +16 for 8 setup Concept blocks)
-05-main.jsx:      9547   (was 9389; +158 for state + effects + filters + modal)
-06-demo-reel.jsx:  227   (unchanged)
-07-pro.jsx:        884   (unchanged)
+=== ARCHITECTURE (how the app is built) ===
+  Modular source in src/paintiano/ — 7 fragments stitched by
+  `node build-paintiano.js` into src/paintiano.jsx (main) and
+  src/paintianoRef.jsx (frozen one version behind). Vite + Vercel.
+  Repo: paintiano-pwa. Branches: dev (preview) → main (paintiano.app prod).
+  Validation before every delivery: @babel/parser JSX parse + bracket
+  balance check (Ref === Main). Footer version bumped ONLY on explicit 'y'.
 
-=== KEY FEATURE MARKERS ===
+  Fragment roles:
+    01-core-head.jsx  imports, constants, 6 colour-mode fns, MIDI/MusicXML
+                      parsers, paint-scale utils, computeGrid.
+    02-draw.jsx       the visual engine — all per-cell block renderers and
+                      all 19 artist overlay dispatchers + their phase fns,
+                      plus image→music pipeline (pixelsToImageEvents).
+    03-i18n.jsx       UI strings, I18N table in 9 languages.
+    04-songs.jsx      audio analysis (FFT/chroma/chord detect), MIDI/WAV/
+                      MusicXML encoders, SONG_LIBRARY, MOODS, Concept + Guide
+                      content in 9 languages.
+    05-main.jsx       the React component — state, all handlers, source modes
+                      (Score / Image / Compose / Mic), AI flows, shuffle,
+                      Setup modal, playback, export, demo-reel orchestration.
+    06-demo-reel.jsx  pure data + copy for the ~60s self-playing trailer
+                      (orchestration lives in 05-main). Nav entry hidden.
+    07-pro.jsx        monetization — Paddle checkout, Supabase license keys,
+                      AI trial, watermark, useEntitlements hook.
 
-[03-i18n.jsx]
-  setupPickerLabel (8 langs):     8   (must be 8)        [NEW]
-  setupPalettesTitle (8 langs):   8   (must be 8)        [NEW]
-  setupArtistsTitle (8 langs):    8   (must be 8)        [NEW]
-  setupMosaicFamily (8 langs):    8   (must be 8)        [NEW]
-  setupSave (8 langs):            8   (must be 8)        [NEW]
-  setupMinError (8 langs):        8   (must be 8)        [NEW]
-  proLockTitle (8 langs):         8   (must be 8)        [NEW]
-  kontra label (8 langs):         8   (must be 8)
-  phi label (8 langs):            8   (must be 8)
-  oneMStyle label (8 langs):      8   (must be 8)
+=== FILE SIZES (line counts, current) ===
+  01-core-head.jsx:   709
+  02-draw.jsx:      13001
+  03-i18n.jsx:       1624
+  04-songs.jsx:      2173
+  05-main.jsx:       9957
+  06-demo-reel.jsx:   239
+  07-pro.jsx:         884
 
-[04-songs.jsx]
-  Concept id:'setup' blocks:      8   (must be 8)        [NEW]
-  modes block "Kontra vs Custom": 8   (must be 8)
-  Scriabin/Skriabin in Concept:   14  (must be >=8)
+=== LANGUAGES (9 — was 8; Japanese added) ===
+  EN, DE, FR, ES, SK, zh, zhTW, PT, ja
+  I18N strings   : ~165 keys per language (EN 166).
+  Concept blocks : 27 ids per language (×9).
+  Guide          : full Guide + Guide cards per language (×9).
+  RULE: any change to UI or behaviour auto-updates Concept + Guide in all 9.
 
-[05-main.jsx]
-  ALL_PALETTE_KEYS:               1   (must be 1)        [NEW]
-  ALL_ARTIST_KEYS:                1   (must be 1)        [NEW]
-  setupPalettes refs:             15  (must be >=8)      [NEW]
-  setupArtists refs:              17  (must be >=8)      [NEW]
-  showSetupModal:                 2   (must be 2)        [NEW]
-  setShowSetupModal refs:         5   (must be >=3)      [NEW]
-  Demo nav HIDDEN marker:         1   (must be 1)        [NEW — kept for restore]
-  setupPickerLabel use:           3   (must be >=2)      [NEW]
-  forcedSide pair single-toggle:  3   (must be >=1)      [NEW]
-  shuffleStyle filter setupArtists: 2 (must be >=1)      [NEW]
-  Mosaic chip family-only guard:  1   (must be 1)        [NEW]
-  PALETTE_VERSION='6':            1   (must be 1)
-  KONTRA_HUE refs:                3   (must be 3)
-  CUSTOM_DEFAULT_HUE refs:        4   (must be 4)
-  CUSTOM_DEFAULT_SAT refs:        6   (must be >=3)
-  kontra mode in gc():            3   (must be >=1)
-  Tab picker auto-fit grid:       2   (must be 2)        [CHANGED]
-  mosaicShuffleLock state:        5   (must be >=3)
-  MOSAIC_FAMILY shuffle:          3   (must be >=2)
-  Fisher-Yates pool note:         1   (must be 1)
-  STYLE_INSPIRED has One Million: 1   (must be 1)
-  FS header bare-label branch:    1   (must be 1)
-  oneM in canAppend exclusion:    1   (must be 1)
-  oneMMode state:                 1   (must be 1)
-  effectiveStyle uses:            23  (must be >=10)
-  drawOneMOverlay dispatch:       3   (must be 3)
-  bw->harmony useEffect:          1   (must be 1)
-  Mic blob (listenBlobRef):       8   (must be >=5)
-  iOS wakeAudio:                  8   (must be >=2)
+=== COLOUR MODES (6, defined in 01-core-head) ===
+  harmCol   Harmony  — circle-of-fifths hue mapping (COF[]).
+  specCol   Spectral — 30° chromatic hue steps (SPEC_HUE[]).
+  phiCol    φ Phi    — golden-angle hue spacing (PHI_HUE, 137.50776°).
+  kontraCol Kontra   — inverse/counter hue table (KONTRA_HUE[]).
+  customCol Custom   — editable palette; default = Scriabin/Prometheus.
+                       PALETTE_VERSION='7' (was 6). Stored per-user.
+  bwCol     B/W      — luminance ramp (BW_LIGHT[]).
+
+=== ARTISTS / STYLES (18 artist styles + 3 specials) ===
+  Each artist overlay is dispatched by `phaseIndex % _capN(N)` and has N
+  visual variants ("phases"). Free tier _variantCap=2 (sees first 2);
+  Pro tier = full N. Variant counts as implemented:
+
+    key       inspired by              phase fns   _capN
+    picasso   Picasso                    10          6
+    matisse   Matisse                     6          6
+    pollock   Pollock                     6          6
+    bloom     Sam Francis                 6          6
+    kusama    Kusama                      6          6
+    miro      Miró                        6          6
+    mondrian  Mondrian                    4          8*
+    kandinsky Kandinsky                   6          6
+    gold      Gustav Klimt                9          6
+    rothko    Rothko                      6          6
+    bulge     Vasarely                    6          6
+    wave      Bridget Riley               7          6
+    spiral    Hilma af Klint              4          6
+    arcs      Frank Stella                4          6
+    pop       Keith Haring                5          6
+    comic     Roy Lichtenstein            6          6
+    monet     Claude Monet               12          6
+    hokusai   Katsushika Hokusai          6          6
+    (* Mondrian dispatch caps at 8 but maps onto its 4 phase fns.)
+
+  Specials (NOT artist overlays — default per-cell renderers):
+    mosaic    plain colour reading (drawBlockMosaic) — deterministic from
+              song only; no seed, no phaseIndex, no randomness.
+    notes     note-name reading (drawBlockNotes) — same determinism as mosaic.
+    oneM      One Million Dollar Page ($oneM$) — guillotine partition +
+              Vogel-spiral chaos shapes. Fully deterministic PRNG seeded from
+              sessionSeed; phaseIndex is FORCED to 0 at all 3 call sites so the
+              image depends on the SONG ONLY (ignores dice/variant).
+
+  STYLE_INSPIRED map (05-main): 18 artists + mosaic/notes/oneM = 21 labels.
+  ALL_ARTIST_KEYS (Setup): 18 artists + 'mosaicFamily' = 19 checkboxes.
+
+=== SHUFFLE / DETERMINISM (current behaviour — post 9b70cc9) ===
+  A painting's identity is the 4-tuple (song, artist, style-variant). The
+  SAME tuple ALWAYS renders the identical painting; the dice only chooses
+  WHICH tuple to jump to next, never how a tuple looks.
+    · pollockSessionSeed — deterministic hash of the song's chords.
+    · paintPhase — the variant index fed INTO drawing. Pure read:
+        explicit artist → phaseIndex (Next cycles that artist's styles);
+        shuffle         → shufVariant (set by the dice roll).
+    · _diceRoll() — on Next/Play with Dice ON: picks a RANDOM next tuple.
+        full shuffle → random artist (shuffleArtistIndex += random) + random
+        style (shufVariant); manual artist → random style of that artist.
+        Range respects tier variant cap (free 2 / pro 6).
+    · No Math.random() ever reaches the painted output — re-landing on the
+      same tuple repaints identically.
+  Concept block 'random' documents this ("same combo, same painting").
+
+=== SOURCE MODES (05-main) ===
+  Score   MIDI / MusicXML / audio (mp3/wav/m4a) upload → transcribe → paint.
+  Image   ◫ drop a painting → two AI paths:
+            - MFI (Mood From Image): composeFromImage() → short piece from the
+              image's MOOD. Prompt is mood-DRIVEN (key/tempo/register/dynamics
+              derived from the named emotion; no fixed C-major/tempo-90
+              default) so different photos yield audibly different music.
+              Content-hash cached (_imgMoodCache).
+            - AI Compose (Image): aiComposeFromImage() → longer piece that
+              also honours colour + colour→tone mapping (mat.palette/energy/
+              arc/mood). Content-hash cached (_imgComposeCache).
+  Compose ✦ live on-screen piano; chord-name recognition; golden-ratio frame.
+  Mic     🎙 sing/listen; dual stores (listenBlobRef); ambient → painting.
+  Plus: Morph (blend two moods), Vary (same painting, new key/tonality),
+        Atmosphere, Recently Played (Compose + Mic).
+
+=== MONETIZATION (07-pro) ===
+  Tiers: free / pro / pro_ai.
+    free    — watermark on export, AI on trial only.
+    pro     — full tool, NO unlimited AI (AI still on trial).
+    pro_ai  — unlimited AI.
+  Provider: Paddle (MoR). Client token live_3ab34fef52eea1baa3656517dec.
+    Price Pro    : pri_01kt6s053namfk25tvvdw2eaey (€9.99 one-time).
+    Price Pro AI : pri_01ktkmf6ghq0kk3vkg2dtnjd7q (now exists).
+  AI trial: PRO_CFG.trialMax = 3 heavy AI compositions (was 5 in old notes).
+  Licenses provisioned via /api/paddle-webhook → Supabase (PAINT-XXXX format).
+  api/compose.js — server proxy to Anthropic (model claude-sonnet-4-6,
+  origin check, rate limit, max_tokens cap). The app's prompts are built
+  client-side and forwarded as messages; the proxy adds no mood logic.
+
+=== iOS AUDIO (resolved) ===
+  wakeAudio() suspend→resume cycle on Resume/Play tap when AudioContext is
+  'running' (iOS-18 dead-device bug), else plain resume(), plus silent kick.
+  8 references in 05-main.
+
+=== SETUP PICKER (top nav, between Guide and Pro) ===
+  Modal: palette checklist (6 modes) + artist checklist (18 + Mosaic family).
+  Persisted in localStorage (paintiano_setup_palettes / _setup_artists),
+  default "all selected". Filters propagate to canvas pickers, FS palette
+  cycle, artist tile pairs (single-toggle when one side off), Mosaic chip,
+  and SHUFFLE_POOL. Free tier shows Pro artists with a 🔒 (paint still gated).
+  Demo nav entry is hidden (kept in source as a comment for one-paste restore).
+
+=== KEY MARKERS (spot-verify after build) ===
+  [01] ONBOARDING_V3=1, KONTRA_HUE=2, PHI_HUE=2, CUSTOM_DEFAULT=3
+  [02] artist overlays=19, pixelsToImageEvents=1
+  [03] languages=9, setupPickerLabel=9
+  [04] Concept id refs=378 (27 ids ×9 + Guide), MOODS=97, SONG_LIBRARY=97
+  [05] PALETTE_VERSION='7', ALL_ARTIST_KEYS=18+mosaicFamily, effectiveStyle=24,
+       drawOneMOverlay=3 (all phaseIndex forced 0), oneMMode=5, mosaicShuffleLock=5,
+       paintPhase=59, shufVariant=4, _diceRoll=7, MFI 'derived from emotion'=1,
+       wakeAudio=8, listenBlobRef=11, SHUFFLE_POOL=6
+  [07] trialMax=3, paddlePriceIdProAI set
+
+=== RECENT FIXES IN PRODUCTION (this session) ===
+  1. MFI mood-driven prompt — 3 different photos → 3 audibly different songs.
+  2. Shuffle determinism — dice Next jumps to a RANDOM tuple, but the same
+     (song, artist, style) tuple always repaints identically.
+  3. oneM (One Million) — image now depends on SONG ONLY (phaseIndex=0),
+     ignores dice/variant. Mosaic + Notes were already song-only deterministic.
 
 === HOW TO VERIFY AFTER DEPLOY ===
-Spot-check after deploy:
-  - Demo is NOT in the top nav
-  - Setup IS in the top nav (between Guide and Pro)
-  - Open Setup -> 5 palette checkboxes + 17 artist checkboxes
-    (1 Mosaic family + 16 artists)
-  - Uncheck a palette -> that tab disappears from canvas pickers
-  - Uncheck an artist -> its pair tile collapses to single-toggle or hides
-  - Uncheck Mosaic family -> Mosaic chip disappears from canvas
-  - Free tier sees Pro artists with the lock indicator
+  - Setup IS in top nav (between Guide and Pro); Demo is NOT.
+  - Setup → 6 palette checkboxes + 19 artist checkboxes (18 + Mosaic family).
+  - Uncheck a palette → that tab vanishes from canvas pickers.
+  - Uncheck an artist → its pair tile collapses to single-toggle or hides.
+  - Uncheck Mosaic family → Mosaic chip disappears.
+  - Free tier sees Pro artists with the lock indicator.
+  - MFI: 3 different photos → 3 audibly different pieces.
+  - Dice ON + Next: jumps around; re-landing on the same combo = same painting.
+  - oneM + Dice ON: same song always the same painting.
 
 === ROLLOUT NOTE ===
-No PALETTE_VERSION bump in this delivery — Custom palette default stays at
-Scriabin (v6). Setup picker uses its own localStorage keys
-(paintiano_setup_palettes, paintiano_setup_artists) that default to "all
-selected" on first read, so existing users see no behaviour change until
-they open Setup.
+  No footer bump (stays v2.0). No PALETTE_VERSION bump in the fix session
+  (stays '7'). Setup picker localStorage keys default to "all selected" on
+  first read, so existing users see no behaviour change until they open Setup.
