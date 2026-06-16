@@ -8505,6 +8505,17 @@ Composition rules:
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
       {immersive && <div onClick={wakeControls} onPointerMove={wakeControls} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {/* Exit-fullscreen button — rendered OUTSIDE the canvas wrap. The wrap uses
+          transform:translate(-50%,-50%) in immersive, and a position:fixed child
+          of a transformed element anchors to that element, not the viewport — so
+          an exit button placed inside the wrap flew off-screen with tall images.
+          Here it's a sibling of the wrap, truly fixed to the viewport corner,
+          always reachable regardless of the painting's size or aspect ratio. */}
+      {immersive && (
+        <button onClick={(e)=>{e.stopPropagation(); setImmersive(false);}} aria-label="exit fullscreen" title="Exit fullscreen" className="pf-fs-btn pf-fs-btn-immersive" style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',right:'max(12px, env(safe-area-inset-right))',zIndex:10002,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',background:'rgba(6,6,12,.6)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'rgba(201,168,76,.9)',padding:0,WebkitTapHighlightColor:'transparent',transition:'opacity .4s ease'}}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+        </button>
+      )}
       {/* Fullscreen artist attribution — fixed near the viewport top so it sits
           in the black letterbox ABOVE the canvas. The user prefers it high (even
           close to the URL bar) over ever landing on the painting. Shows the
@@ -8577,9 +8588,9 @@ Composition rules:
           }
         }}
       >
-        <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label={immersive?'exit fullscreen':'fullscreen'} title={immersive?'Exit fullscreen':'Fullscreen'} className={'pf-fs-btn'+(immersive?' pf-fs-btn-immersive':'')} style={{...(immersive?{position:'fixed',top:'max(12px, env(safe-area-inset-top))',right:'max(12px, env(safe-area-inset-right))',zIndex:10001}:{position:'absolute',top:8,right:8,zIndex:12}),width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:immersive||controlsAwake?1:0,pointerEvents:immersive||controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{immersive?<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>:<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>}</svg>
-        </button>
+        {!immersive && <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label="fullscreen" title="Fullscreen" className="pf-fs-btn" style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>}
         {/* Fullscreen CTA row — Next (shuffle: jump to a new variation, works
             while playing too) and Save (when the piece is complete & still). Each
             appears by its own condition; they can show together. Fades with the
