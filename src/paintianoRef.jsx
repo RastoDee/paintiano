@@ -16687,6 +16687,19 @@ export default function Paintiano() {
   useEffect(() => {
     try { localStorage.setItem('paintiano_setup_artists', JSON.stringify(setupArtists)); } catch(_) {}
   }, [setupArtists]);
+  // Landing-page deep link: /play?upgrade=pro|proai opens the paywall straight
+  // away on the matching tier. 'pro' → reason 'settings' (Pro card on top);
+  // 'proai' → reason 'ai_trial' (Pro AI card on top, recommended). Runs once on
+  // mount, then strips the param so a refresh doesn't reopen it.
+  useEffect(() => {
+    try {
+      const u = new URLSearchParams(window.location.search);
+      const up = u.get('upgrade');
+      if (up === 'pro') setPaywallReason('settings');
+      else if (up === 'proai') setPaywallReason('ai_trial');
+      if (up) { u.delete('upgrade'); const qs = u.toString(); window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash); }
+    } catch(_) {}
+  }, []);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [setupReturnTo, setSetupReturnTo] = useState(null);
   const [guideReturnCardId, setGuideReturnCardId] = useState(null);
