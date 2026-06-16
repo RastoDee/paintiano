@@ -698,7 +698,7 @@ export default function Paintiano() {
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);
-  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
   // Variation history for Random mode prev/next navigation. saltHistory holds
   // the sequence of random salts that have been shown; saltIdxRef points at the
   // current one. Play-from-start and Loop append+advance (fresh variation);
@@ -1203,24 +1203,36 @@ export default function Paintiano() {
   // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
   // it only needs note MIDI + the colour fn, which every source provides.
   const effectiveStyle = style || (shuffleStyle==='mosaic' ? null : shuffleStyle) || (oneMMode ? 'oneM' : notesMode ? 'notes' : null);
-  // DETERMINISTIC PAINT PHASE — the variant selector that goes INTO drawing.
-  // The painting is f(pollockSessionSeed, phaseIndex). pollockSessionSeed is
-  // already deterministic from the song's chords; phaseIndex picks the artist
-  // variant (e.g. Hokusai → Storm/Wave/Bridge via `phaseIndex % nVariants`).
-  // RULE: the triple (song, artist, style) must ALWAYS yield the identical
-  // painting — AND shuffle/Next must be able to walk through BOTH different
-  // artists AND different styles of the same artist.
-  //  • Explicit artist picked → Next bumps phaseIndex (1,2,3…) to cycle that
-  //    artist's styles. Honour it directly.
-  //  • Shuffle (no manual artist, Dice on) → Next bumps shuffleArtistIndex, a
-  //    pure deterministic counter. We feed THAT as the phase, so each step
-  //    advances the artist AND the within-artist variant — but the value is a
-  //    counter, never Math.random(). Landing on the same step of the same song
-  //    reproduces the same artist+variant → identical painting (3-combo rule).
-  const paintPhase = useMemo(() => {
-    if (style) return phaseIndex|0;            // explicit artist: keep Next's style cycle
-    return shuffleArtistIndex|0;               // shuffle: deterministic counter drives variant
-  }, [style, phaseIndex, shuffleArtistIndex]);
+  // DETERMINISTIC PAINT PHASE — the variant index that goes INTO drawing.
+  // A painting's "address" is (song, artist, style). Same address → same
+  // painting, ALWAYS. The dice only chooses WHICH address to jump to next; it
+  // must never change how a given address looks.
+  //  • Explicit artist (no shuffle): Next cycles that artist's styles via
+  //    phaseIndex — honour it.
+  //  • Shuffle (Dice on, no manual artist): the artist comes from
+  //    shuffleArtistIndex (see shuffleStyle), the style/variant comes from
+  //    shufVariant. Both are set by the dice roll on Next/Play, but here we
+  //    only READ them — drawing is a pure function of (seed, artist, variant),
+  //    so re-landing on the same address repaints identically.
+  const paintPhase = (style ? phaseIndex : shufVariant) | 0;
+  // Effective number of style-variants per artist for the current tier
+  // (free users only see 2 of 6). The dice picks a variant in this range.
+  const _effVariants = () => (proStatus==='free' ? 2 : 6);
+  // Dice roll for Next/Play. The roll only CHOOSES the next address — the
+  // painting at that address is still a pure function of (seed, artist,
+  // variant), so re-landing on the same address looks identical.
+  //  • shuffle (no manual artist): jump to a random artist AND a random style.
+  //  • manual artist + dice: jump to a random style of that one artist.
+  const _diceRoll = () => {
+    if(style){
+      setPhaseIndex(() => (Math.random()*_effVariants())|0);
+    } else {
+      // step the artist by a random non-zero amount so a new artist shows,
+      // and pick a random style for it
+      setShuffleArtistIndex(prev => prev + 1 + ((Math.random()*997)|0));
+      setShufVariant(() => (Math.random()*_effVariants())|0);
+    }
+  };
   // Pick a fresh random phaseIndex whenever the song OR the active artist
   // changes — that triggers a new "style" for that (song, artist) pair on the
   // first Play. Stays stable across repeated Plays of the same (song, artist).
@@ -1256,12 +1268,12 @@ export default function Paintiano() {
       // user has picked a specific variant (or the deterministic default) and
       // expects ONE painting for the whole song — Mic capture in particular
       // would otherwise flicker through variants on every recorded chord.
-      // NOTE: in shuffle the painted variant is now DERIVED deterministically
-      // via `paintPhase` from (seed, artist) — so we must NOT roll a random
-      // phaseIndex here. Doing so would re-introduce the non-determinism this
-      // whole path was built to avoid (same triple → different painting). The
-      // shuffle "surprise" comes from WHICH artist shows next (shuffleArtistIndex),
-      // not from a random variant. So this branch is intentionally gone now.
+      // Use the same dice helper as Next/Play so shuffle picks via shufVariant
+      // (the painted variant index) rather than a raw phaseIndex that the
+      // shuffle path no longer reads.
+      if((seed !== 0 || art) && randomMode){
+        _diceRoll();
+      }
     }
   }, [pollockSessionSeed, effectiveStyle, randomMode]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
@@ -4102,7 +4114,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
-        const prompt='Look at this image and work out the EMOTION / atmosphere of the scene (e.g. joyful, calm, dramatic, melancholic, tense, eerie). Then compose a short solo piano piece that musically expresses that emotion.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: LENGTH — keep it SHORT, 20-35 seconds total at the chosen tempo (the LAST note\'s startBeat+duration MUST stay under tempo/2 beats — i.e. under 30 seconds at tempo 90); 52-80 notes; bass octaves 2-3 (at least 12 notes); melody octaves 4-6 with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity 40-115; pitches sharps only (C#4 not Db4).';
+        const prompt='Look at this image. First, in one word, decide its dominant EMOTION (e.g. joyful, calm, dramatic, melancholic, tense, eerie, tender, triumphant). Then compose a short solo piano piece whose MUSICAL CHOICES are DRIVEN BY that emotion — do NOT use neutral defaults.\nMap the emotion to the music (choose to fit the SPECIFIC emotion, never fall back to a neutral middle):\n- KEY: bright/happy/triumphant/playful → a MAJOR key; sad/melancholic/eerie/tense/yearning → a MINOR key. Pick a SPECIFIC key and vary it across pieces (do not default to C).\n- TEMPO: calm/tender/melancholic → slow (50-75); joyful/playful → medium-fast (95-130); dramatic/tense/triumphant → driving (110-150); eerie → free and slow (55-80).\n- REGISTER & DENSITY: intimate/calm → sparse, mid-low register, lots of space; energetic/triumphant → fuller chords, wider range, more notes.\n- DYNAMICS: tender → soft (velocity 35-65); triumphant/dramatic → loud (75-115); tense → uneven and accented.\n- ARTICULATION/RHYTHM: playful → staccato and syncopated; melancholic → legato and long notes; tense → repeated ostinato figures.\nTwo DIFFERENT emotions MUST yield audibly DIFFERENT pieces — different key colour, tempo, density and dynamics.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":<derived from emotion>,"key":"<derived from emotion>","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: LENGTH — keep it SHORT, 20-35 seconds total at the chosen tempo (the LAST note\'s startBeat+duration MUST stay under tempo/2 beats); 52-80 notes; include a bass line (octaves 2-3, at least 12 notes) and a melody (octaves 4-6) with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity per the dynamics above; pitches sharps only (C#4 not Db4).';
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -5081,11 +5093,10 @@ Composition rules:
         setStructureSeedLock(null);
         nextRollInProgressRef.current = true;
         // Manual artist → rotate style. Shuffle (no manual artist) → rotate
-        // artist only; the painted variant is DERIVED deterministically by
-        // paintPhase from (seed, artist), so no random roll here — that keeps
-        // every (song, artist, style) triple repainting identically.
-        if(style){ setPhaseIndex(prev=>prev+1); }
-        else { setShuffleArtistIndex(prev=>prev+1); }
+        // artist + roll a fresh random style for that new artist.
+        if(style){ _diceRoll(); }
+        else { _diceRoll(); }
+        // (both branches roll the dice; _diceRoll handles manual-artist vs shuffle)
       }
       else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
     }
@@ -8540,7 +8551,7 @@ Composition rules:
                 </button>
               )}
               {showNextFs && (
-                <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else if(randomMode){ setShuffleArtistIndex(prev=>prev+1); } wakeControls(); }} className="pf-lift" aria-label="next painting"
+                <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   next ›
                 </button>
@@ -9263,7 +9274,7 @@ Composition rules:
           const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
           if(!randomMode) return null;
           return (
-            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; if(style){ setPhaseIndex(prev=>prev+1); } else { setShuffleArtistIndex(prev=>prev+1); } }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
+            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
