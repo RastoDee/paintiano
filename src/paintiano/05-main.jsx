@@ -134,10 +134,6 @@ const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setRea
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
         <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:14,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
         <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(201,168,76,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
-        <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,margin:'0 auto 22px',maxWidth:420,padding:'12px 18px',background:'rgba(201,168,76,.08)',color:'rgba(201,168,76,.95)',border:'1px solid rgba(201,168,76,.45)',borderRadius:8,textDecoration:'none',fontFamily:'inherit',fontSize:(.86*readScale)+'rem',letterSpacing:'.02em',fontStyle:'italic'}}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          {t('bookTitle')}
-        </a>
         <style>{`#pf-concept-body{font-size:${(0.78*readScale).toFixed(3)}rem;}
 #pf-concept-body h3{font-size:${(1.02*readScale).toFixed(3)}rem !important;font-weight:600 !important;letter-spacing:.02em !important;border-bottom:none !important;padding:0 0 0 14px !important;margin:26px 0 12px !important;position:relative;line-height:1.25 !important;}
 #pf-concept-body h3:first-of-type{margin-top:0 !important;}
@@ -9471,7 +9467,7 @@ Composition rules:
       </div>
       )}
       <div style={{textAlign:'center',padding:'14px 0 14px'}}>
-        <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{display:'inline-flex',alignItems:'center',gap:8,color:'rgba(201,168,76,.85)',textDecoration:'none',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',fontSize:(.92*effScale)+'rem',letterSpacing:'.01em',borderBottom:'1px solid rgba(201,168,76,.3)',paddingBottom:2}}>
+        <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{display:'inline-flex',alignItems:'center',gap:8,color:'rgba(201,168,76,.85)',textDecoration:'none',fontFamily:'"Cormorant Garamond", Georgia, serif',fontSize:(.92*effScale)+'rem',letterSpacing:'.01em',borderBottom:'1px solid rgba(201,168,76,.3)',paddingBottom:2}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           {t('bookTitle')}
         </a>
