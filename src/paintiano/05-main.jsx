@@ -260,7 +260,6 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
     {key:'tools',   label:t('gcat_tools')!=='gcat_tools'?t('gcat_tools'):'Tools'},
     {key:'save',    label:t('gcat_save')!=='gcat_save'?t('gcat_save'):'Save'},
     {key:'pro',     label:t('gcat_pro')!=='gcat_pro'?t('gcat_pro'):'Pro'},
-    {key:'book',    label:t('gcat_book')!=='gcat_book'?t('gcat_book'):'Book'},
   ];
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.96)',zIndex:100000,backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',display:'flex',justifyContent:'center'}}>
