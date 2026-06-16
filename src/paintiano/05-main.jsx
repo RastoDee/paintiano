@@ -799,6 +799,7 @@ export default function Paintiano() {
   const langRef = useRef(lang);
   useEffect(()=>{ langRef.current = lang; }, [lang]);
   const [langOpen, setLangOpen] = useState(false);
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
   // Bulletproof fallback wrapper: t() returns the key string itself when no
   // translation exists in either the active language or EN, which means
@@ -3083,6 +3084,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(showMorphMenu){e.preventDefault();setShowMorphMenu(false);setMorphSel([]);return;}
       if(showMoodMenu){e.preventDefault();setShowMoodMenu(false);return;}
       if(showSizePicker){e.preventDefault();setShowSizePicker(false);return;}
+      if(navMenuOpen){e.preventDefault();setNavMenuOpen(false);return;}
       if(showGuide){e.preventDefault();setShowGuide(false);setGuideQuery('');return;}
       if(showAbout){e.preventDefault();setShowAbout(false);return;}
       if(showBook){e.preventDefault();setShowBook(false);return;}
@@ -7239,98 +7241,96 @@ Composition rules:
           </div>
         );
       })()}
-      <div style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible'}}>
-        <nav style={{display:'flex',gap:14,flexWrap:'wrap',rowGap:6,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
-          <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('concept')}</span>
-          <span onClick={()=>setShowBook(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowBook(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{ts('gcat_book','Book')}</span>
-          {/* DEMO nav item — TEMPORARILY HIDDEN. Kept here (commented) so the
-              feature can be restored in one paste; do not delete. The arming
-              logic, demoArmRef timeout, demoPlay() and demoReelStop() are all
-              still in scope and untouched — only the nav entry is removed.
-          <span onClick={()=>{
-            if(demoReelOn){ demoReelStop(); return; }
-            if(busy)return;
-            if(demoArmed){
-              if(demoArmRef.current){clearTimeout(demoArmRef.current);demoArmRef.current=null;}
-              setDemoArmed(false);
-              demoPlay();
-            }else if(!chords.length){
-              demoPlay();
-            }else{
-              setDemoArmed(true);
-              demoArmRef.current=setTimeout(()=>{setDemoArmed(false);demoArmRef.current=null;},3000);
-            }
-          }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
-          */}
-          <span onClick={()=>{setGuideReturnCardId(null);setShowGuide(true);}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setGuideReturnCardId(null);setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
-          <span onClick={()=>{setSetupReturnTo(null);setShowSetupModal(true);}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setSetupReturnTo(null);setShowSetupModal(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{ts('setupPickerLabel','Setup')}</span>
-          {/* Tier-adaptive PRO tab — Free sees gold "PRO" (upgrade to Pro);
-              plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI users
-              see nothing — they're already at the top tier and the badge
-              under the Paintiano title is enough. Keeps the nav row compact
-              at higher A/A zoom levels where the language picker would
-              otherwise get pushed off-screen. */}
-          {!isPro && (
-            <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.5)',color:'rgba(201,168,76,.9)',fontWeight:600}}>{t('proBadge')}</span>
-          )}
-          {isPro && !isProAI && (
-            <span onClick={()=>setPaywallReason('settings')} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setPaywallReason('settings');}}} role="button" tabIndex={0} title={maskedEmail||''} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(220,150,255,.55)',color:'#dcb4ff',fontWeight:600}}>{t('proAiBadge')||'PRO AI'}</span>
-          )}
-        </nav>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{padding:'4px 10px',background:readScale>1?'rgba(201,168,76,.12)':PF.faint,color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'1px solid '+(readScale>1?'rgba(201,168,76,.4)':'rgba(242,238,232,.15)'),borderRadius:20,cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:5,fontWeight:600}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>
+      <div style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible',padding:'9px 6px',borderBottom:'1px solid rgba(201,168,76,.14)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
+        {/* ── V2 nav: hamburger (left) opens a glass menu panel; zoom + language
+            sit together in a segmented control (right). The five destinations
+            (Concept · Book · Guide · Setup · Pro) moved out of the always-on
+            text row into the dropdown — same handlers, just relocated. ── */}
         <div style={{position:'relative'}}>
-          {(() => {
-            const LANG_META = {
-              EN:{code:'EN',name:'English'},
-              DE:{code:'DE',name:'Deutsch'},
-              FR:{code:'FR',name:'Français'},
-              ES:{code:'ES',name:'Español'},
-              PT:{code:'PT',name:'Português'},
-              SK:{code:'SK',name:'Slovenčina'},
-              zh:{code:'ZH',name:'中文'},
-              zhTW:{code:'ZH-TW',name:'繁體中文'},
-              ja:{code:'JA',name:'日本語'},
-            };
-            const meta = LANG_META[lang] || {code:lang,name:lang};
-            const pill = (code, active=false) => ({
-              display:'inline-flex',alignItems:'center',justifyContent:'center',
-              minWidth: code.length>2 ? 38 : 26, height:20,
-              padding:'0 6px', borderRadius:4,
-              background: active ? 'rgba(201,168,76,.18)' : 'rgba(242,238,232,.08)',
-              border: active ? '1px solid rgba(201,168,76,.45)' : '1px solid rgba(242,238,232,.12)',
-              color: active ? 'rgba(220,180,90,.95)' : 'rgba(207,197,168,.78)',
-              fontSize:(.58*effScale)+'rem', fontWeight:600, letterSpacing:'.08em', fontFamily:'inherit',
-            });
-            return (
-              <>
-                <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{padding:'4px 8px 4px 4px',background:PF.faint,color:PF.muted,border:'1px solid rgba(242,238,232,.15)',borderRadius:20,cursor:'pointer',fontSize:(.62*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:5}}><span style={pill(meta.code,true)}>{meta.code}</span><span style={{fontSize:(.55*effScale)+'rem',opacity:.6}}>▾</span></button>
-                {langOpen && (
-                  <>
-                    <div onClick={()=>setLangOpen(false)} style={{position:'fixed',inset:0,zIndex:50}}/>
-                    <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,minWidth:200,background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'6px 0',boxShadow:'0 12px 30px rgba(0,0,0,.6)',zIndex:51,backdropFilter:'blur(8px)'}}>
-                      {LANGS.map(l => {
-                        const m = LANG_META[l] || {code:l,name:l};
-                        const active = l === lang;
-                        return (
-                          <div key={l} role="button" tabIndex={0}
-                            onClick={()=>{changeLang(l);setLangOpen(false);}}
-                            onKeyDown={(e)=>{if(e.key==='Enter'||e.key==='\u0020'){e.preventDefault();changeLang(l);setLangOpen(false);}}}
-                            style={{padding:'8px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:11,fontSize:(.72*effScale)+'rem',color:active?'rgba(220,180,90,.95)':'rgba(242,238,232,.85)',background:active?'rgba(201,168,76,.06)':'transparent',fontWeight:active?500:400,letterSpacing:'.02em'}}>
-                            <span style={pill(m.code,active)}>{m.code}</span>
-                            <span style={{flex:1}}>{m.name}</span>
-                            {active && <span style={{color:'rgba(201,168,76,.9)',fontSize:(.7*effScale)+'rem'}}>✓</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </>
-            );
-          })()}
+          <button onClick={()=>setNavMenuOpen(v=>!v)} aria-label="menu" aria-expanded={navMenuOpen} title="menu" style={{width:38,height:38,display:'inline-flex',alignItems:'center',justifyContent:'center',background:navMenuOpen?'rgba(201,168,76,.12)':'rgba(255,255,255,.03)',border:'1px solid '+(navMenuOpen?'rgba(201,168,76,.45)':'rgba(201,168,76,.26)'),borderRadius:19,cursor:'pointer',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'background .18s,border-color .18s'}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(201,168,76,.92)" strokeWidth="1.7" strokeLinecap="round">
+              {navMenuOpen
+                ? (<><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></>)
+                : (<><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></>)}
+            </svg>
+          </button>
+          {navMenuOpen && (
+            <>
+              <div onClick={()=>setNavMenuOpen(false)} style={{position:'fixed',inset:0,zIndex:50}}/>
+              <div role="menu" style={{position:'absolute',top:'calc(100% + 8px)',left:0,minWidth:210,zIndex:51,border:'1px solid rgba(201,168,76,.26)',borderRadius:18,overflow:'hidden',background:'linear-gradient(180deg,rgba(22,16,32,.9),rgba(16,12,24,.95))',WebkitBackdropFilter:'blur(18px)',backdropFilter:'blur(18px)',boxShadow:'0 14px 44px rgba(0,0,0,.5)'}}>
+                {[
+                  {key:'concept', label:t('concept'),                          onClick:()=>{setNavMenuOpen(false);setShowAbout(true);}},
+                  {key:'book',    label:ts('gcat_book','Book'),                onClick:()=>{setNavMenuOpen(false);setShowBook(true);}},
+                  {key:'guide',   label:t('guide'),                           onClick:()=>{setNavMenuOpen(false);setGuideReturnCardId(null);setShowGuide(true);}},
+                  {key:'setup',   label:ts('setupPickerLabel','Setup'),        onClick:()=>{setNavMenuOpen(false);setSetupReturnTo(null);setShowSetupModal(true);}},
+                  (!isPro)            ? {key:'pro',  label:t('proBadge'),                   pro:'gold',   onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
+                  : (!isProAI)        ? {key:'proai',label:t('proAiBadge')||'PRO AI',       pro:'purple', onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
+                  : null,
+                ].filter(Boolean).map((it,i,arr)=>(
+                  <div key={it.key} role="menuitem" tabIndex={0}
+                    onClick={it.onClick}
+                    onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();it.onClick();}}}
+                    style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px',cursor:'pointer',color:it.pro==='purple'?'#dcb4ff':it.pro==='gold'?'#f0d98a':'rgba(201,168,76,.9)',fontWeight:it.pro?700:500,fontSize:(.72*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontFamily:'inherit',borderBottom:i<arr.length-1?'1px solid rgba(201,168,76,.09)':'none',WebkitTapHighlightColor:'transparent'}}>
+                    <span>{it.label}</span>
+                    <span style={{opacity:it.pro?.6:.35,fontSize:(.8*effScale)+'rem'}}>→</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-        </div>
+
+        {/* segmented control — text size + language */}
+        {(() => {
+          const LANG_META = {
+            EN:{code:'EN',name:'English'},
+            DE:{code:'DE',name:'Deutsch'},
+            FR:{code:'FR',name:'Français'},
+            ES:{code:'ES',name:'Español'},
+            PT:{code:'PT',name:'Português'},
+            SK:{code:'SK',name:'Slovenčina'},
+            zh:{code:'ZH',name:'中文'},
+            zhTW:{code:'ZH-TW',name:'繁體中文'},
+            ja:{code:'JA',name:'日本語'},
+          };
+          const meta = LANG_META[lang] || {code:lang,name:lang};
+          const pill = (code, active=false) => ({
+            display:'inline-flex',alignItems:'center',justifyContent:'center',
+            minWidth: code.length>2 ? 38 : 26, height:20,
+            padding:'0 6px', borderRadius:4,
+            background: active ? 'rgba(201,168,76,.18)' : 'rgba(242,238,232,.08)',
+            border: active ? '1px solid rgba(201,168,76,.45)' : '1px solid rgba(242,238,232,.12)',
+            color: active ? 'rgba(220,180,90,.95)' : 'rgba(207,197,168,.78)',
+            fontSize:(.58*effScale)+'rem', fontWeight:600, letterSpacing:'.08em', fontFamily:'inherit',
+          });
+          return (
+            <div style={{position:'relative',display:'inline-flex',alignItems:'stretch',border:'1px solid rgba(201,168,76,.26)',borderRadius:20,overflow:'hidden',background:'rgba(255,255,255,.03)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)'}}>
+              <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{height:38,padding:'0 12px',background:readScale>1?'rgba(201,168,76,.12)':'transparent',color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'none',borderRight:'1px solid rgba(201,168,76,.16)',cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:4,fontWeight:600,WebkitTapHighlightColor:'transparent'}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>
+              <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{height:38,padding:'0 10px',background:'transparent',color:PF.muted,border:'none',cursor:'pointer',fontSize:(.62*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:5,WebkitTapHighlightColor:'transparent'}}><span style={pill(meta.code,true)}>{meta.code}</span><span style={{fontSize:(.55*effScale)+'rem',opacity:.6}}>▾</span></button>
+              {langOpen && (
+                <>
+                  <div onClick={()=>setLangOpen(false)} style={{position:'fixed',inset:0,zIndex:50}}/>
+                  <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,minWidth:200,background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'6px 0',boxShadow:'0 12px 30px rgba(0,0,0,.6)',zIndex:51,backdropFilter:'blur(8px)'}}>
+                    {LANGS.map(l => {
+                      const m = LANG_META[l] || {code:l,name:l};
+                      const active = l === lang;
+                      return (
+                        <div key={l} role="button" tabIndex={0}
+                          onClick={()=>{changeLang(l);setLangOpen(false);}}
+                          onKeyDown={(e)=>{if(e.key==='Enter'||e.key==='\u0020'){e.preventDefault();changeLang(l);setLangOpen(false);}}}
+                          style={{padding:'8px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:11,fontSize:(.72*effScale)+'rem',color:active?'rgba(220,180,90,.95)':'rgba(242,238,232,.85)',background:active?'rgba(201,168,76,.06)':'transparent',fontWeight:active?500:400,letterSpacing:'.02em'}}>
+                          <span style={pill(m.code,active)}>{m.code}</span>
+                          <span style={{flex:1}}>{m.name}</span>
+                          {active && <span style={{color:'rgba(201,168,76,.9)',fontSize:(.7*effScale)+'rem'}}>✓</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
       </div>
       <header style={{textAlign:'center',marginBottom:isActiveView?8:(isDesktop?8:18)}}>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':(isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(3rem,15vw,4.5rem)'),fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
