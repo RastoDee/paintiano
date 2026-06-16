@@ -20574,7 +20574,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='monet') drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='hokusai') drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, 0);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -20641,7 +20641,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='oneM' && lim>0){
-        drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, 0);
       }
       if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='monet'&&style!=='hokusai'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
@@ -25250,7 +25250,7 @@ Composition rules:
           drawHokusaiOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='oneM' && chords.length>0){
-          drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
         }
       }
       // Watermark policy: stamp "paintiano.app" unless we KNOW the user is
