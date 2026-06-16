@@ -152,6 +152,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
   const [searchOpen, setSearchOpen] = useState(false);
   const [category, setCategory] = useState('all');
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [expandedId, setExpandedId] = useState(null);
   const cards = useMemo(()=>{
     const all = getGuideCards(lang);
     return all.filter(c => (category==='all' || c.cat===category) && guideCardMatch(c, guideQuery));
@@ -160,6 +161,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
   useEffect(()=>{
     if(deckRef.current) deckRef.current.scrollTop = 0;
     setCurrentIdx(0);
+    setExpandedId(null);
   }, [category, guideQuery]);
   // Track current card via IntersectionObserver on the deck cards
   useEffect(()=>{
@@ -204,6 +206,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
     {key:'colors',  label:t('gcat_colors')!=='gcat_colors'?t('gcat_colors'):'Colors'},
     {key:'style',   label:t('gcat_style')!=='gcat_style'?t('gcat_style'):'Style'},
     {key:'music',   label:t('gcat_music')!=='gcat_music'?t('gcat_music'):'Music'},
+    {key:'tools',   label:t('gcat_tools')!=='gcat_tools'?t('gcat_tools'):'Tools'},
     {key:'save',    label:t('gcat_save')!=='gcat_save'?t('gcat_save'):'Save'},
     {key:'pro',     label:t('gcat_pro')!=='gcat_pro'?t('gcat_pro'):'Pro'},
   ];
@@ -264,6 +267,15 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
                   <div style={{fontSize:'5rem',lineHeight:1,color:PF.gold2,marginBottom:6,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>{card.glyph}</div>
                   <div style={{fontSize:(1.6*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{card.title}</div>
                   <div style={{fontSize:(.92*readScale)+'rem',lineHeight:1.55,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{card.body}</div>
+                  {card.more && expandedId!==card.id && (
+                    <button onClick={()=>setExpandedId(card.id)} style={{marginTop:2,padding:'7px 18px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.4)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.58*readScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>{(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'} ↓</button>
+                  )}
+                  {card.more && expandedId===card.id && (
+                    <>
+                      <div className="pf-guide-card-inner" style={{fontSize:(.82*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.78)',fontFamily:'inherit',letterSpacing:'.01em',textAlign:'left',maxWidth:480}}>{card.more}</div>
+                      <button onClick={()=>setExpandedId(null)} style={{marginTop:2,padding:'7px 18px',background:'transparent',color:'rgba(201,168,76,.6)',border:'1px solid rgba(201,168,76,.3)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.58*readScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>{(t('guideLess')&&t('guideLess')!=='guideLess')?t('guideLess'):'Less'} ↑</button>
+                    </>
+                  )}
                   {card.cta && (
                     <button onClick={()=>{ onClose(); }} style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{card.cta} →</button>
                   )}
