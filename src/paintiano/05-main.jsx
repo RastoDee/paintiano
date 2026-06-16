@@ -785,7 +785,7 @@ export default function Paintiano() {
   // "↻ Show" chip. Tapping it auto-advances the painting every SHOW_INTERVAL ms
   // (as if Next were pressed on a timer); Next is disabled while Show runs. A
   // second tap toggles it off; the timer is also torn down when playback stops.
-  const SHOW_INTERVAL_MS = 4000;
+  const SHOW_INTERVAL_MS = 8000;
   const [showMode,setShowMode]=useState(false);
   const showTimerRef=useRef(null);
   const showDiceRef=useRef(null); // holds the latest _diceRoll so the interval calls a fresh closure
