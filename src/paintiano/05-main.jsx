@@ -145,7 +145,7 @@ const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setRea
 // during playback would reconcile its full subtree (input + filtered details
 // list) on every 5-15Hz `disp` tick. Now it only reconciles when one of its
 // actual props changes (query, focus, lang, t, onClose).
-const GuideModal = memo(function GuideModal({onClose, onOpenSetup, t, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale}){
+const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale}){
   const panelRef = useRef(null);
   const deckRef = useRef(null);
   useModalFocusTrap(panelRef);
@@ -200,6 +200,20 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, t, lang, guid
     const target = deckRef.current.querySelector(`[data-card-idx="${idx}"]`);
     if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
   };
+  // On open, if a starting card id was passed (e.g. returning from Setup),
+  // jump straight to that card instead of the first one. Runs once on mount.
+  useEffect(()=>{
+    if(!initialCardId || !deckRef.current) return;
+    const idx = cards.findIndex(c=>c.id===initialCardId);
+    if(idx<0) return;
+    const go = ()=>{
+      const target = deckRef.current && deckRef.current.querySelector(`[data-card-idx="${idx}"]`);
+      if(target){ target.scrollIntoView({block:'start'}); setCurrentIdx(idx); }
+    };
+    const r = requestAnimationFrame(go);
+    return ()=>cancelAnimationFrame(r);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const CATS = [
     {key:'all',     label:t('gcat_all')!=='gcat_all'?t('gcat_all'):'All'},
     {key:'start',   label:t('gcat_start')!=='gcat_start'?t('gcat_start'):'Start'},
@@ -277,7 +291,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, t, lang, guid
                     </>
                   )}
                   {card.cta && (
-                    <button onClick={()=>{ if(onOpenSetup) onOpenSetup(); else onClose(); }} style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{card.cta} →</button>
+                    <button onClick={()=>{ if(onOpenSetup) onOpenSetup(card.id); else onClose(); }} style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{card.cta} →</button>
                   )}
                 </div>
               </div>
@@ -683,6 +697,7 @@ export default function Paintiano() {
   }, [setupArtists]);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [setupReturnTo, setSetupReturnTo] = useState(null);
+  const [guideReturnCardId, setGuideReturnCardId] = useState(null);
   // Setup-picker fallback effects live further down, AFTER `style`/`setStyle`
   // are declared (around line 930) — referencing them here would hit a
   // temporal dead zone on first render.
@@ -1417,10 +1432,10 @@ export default function Paintiano() {
   const [guideQuery, setGuideQuery] = useState('');
   // Stable composite-close callback for GuideModal (same memo rationale as
   // closeAbout). Closes the modal and clears the search query in one action.
-  const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');},[]);
+  const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');setGuideReturnCardId(null);},[]);
   // Setup can be opened from the top menu or from the Guide's "Open Setup" card.
   // Remember the origin so Setup's Done/✕ returns the user where they came from.
-  const openSetupFromGuide = useCallback(()=>{ setShowGuide(false); setGuideQuery(''); setSetupReturnTo('guide'); setShowSetupModal(true); },[]);
+  const openSetupFromGuide = useCallback((cardId)=>{ setShowGuide(false); setGuideQuery(''); setSetupReturnTo('guide'); setGuideReturnCardId(cardId||null); setShowSetupModal(true); },[]);
   const closeSetup = useCallback(()=>{ setShowSetupModal(false); if(setupReturnTo==='guide'){ setShowGuide(true); } setSetupReturnTo(null); },[setupReturnTo]);
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [morphSel, setMorphSel] = useState([]); // ordered target moods for chain-morph (max 3)
@@ -7278,7 +7293,7 @@ Composition rules:
             }
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
           */}
-          <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
+          <span onClick={()=>{setGuideReturnCardId(null);setShowGuide(true);}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setGuideReturnCardId(null);setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
           <span onClick={()=>{setSetupReturnTo(null);setShowSetupModal(true);}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setSetupReturnTo(null);setShowSetupModal(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{ts('setupPickerLabel','Setup')}</span>
           {/* Tier-adaptive PRO tab — Free sees gold "PRO" (upgrade to Pro);
               plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI users
@@ -8908,6 +8923,7 @@ Composition rules:
         <GuideModal
           onClose={closeGuide}
           onOpenSetup={openSetupFromGuide}
+          initialCardId={guideReturnCardId}
           t={t}
           lang={lang}
           guideQuery={guideQuery}
