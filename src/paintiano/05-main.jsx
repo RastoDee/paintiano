@@ -486,8 +486,6 @@ export default function Paintiano() {
   const stripWrapRef = useRef(null); // wrapper around the Color·Style strip — scroll target on Play in mood-from-image so the strip + source thumbnail stay framed
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
-  const audioStartTimeRef = useRef(0); // AudioContext time when playback started
-  const audioOffsetRef = useRef(0);    // offset into the audio buffer
   const samplerRef   = useRef(null);
   const samplerOk    = useRef(false);
   // True once we've attached the AudioContext 'statechange' listener so we
@@ -3444,25 +3442,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);setAudioRowOpen(false);
   },[stopAll]);
 
-  // Guard switching away from a CREATION canvas (Compose/MIC) — content the user
-  // hand-made and can't reload. A loaded source (MIDI/Audio/Score/Image/mood) is
-  // NOT guarded (reloadable) and switches immediately. Detection uses persistent
-  // refs (composedModeRef + a creation draftOwner + chords) which survive the
-  // "← Setup" transition that turns composeMode/micPainting off. First tap arms
-  // the tile ("clean canvas?"), second tap of the same tile within 3s runs it.
-  const armSwitch = useCallback((key, run)=>{
-    const owner = draftOwnerRef.current;
-    const isCreation = owner==='compose' || owner==='sing' || owner==='listen';
-    const atRisk = composedModeRef.current && isCreation && chordsRef.current.length>0;
-    if(!atRisk){ run(); return; }
-    if(switchArmRef.current){ clearTimeout(switchArmRef.current); switchArmRef.current=null; }
-    setSwitchArmed(prev=>{
-      if(prev===key){ run(); return null; }
-      switchArmRef.current=setTimeout(()=>{ setSwitchArmed(null); switchArmRef.current=null; },3000);
-      return key;
-    });
-  },[]);
-
   const applyEvents = useCallback((events,title)=>{
     if(!events.length)return;
     setImgReturnUrl(null); setImgMoodThumb(null);
@@ -5004,55 +4983,7 @@ Composition rules:
     finally{ setAtmoBusy(false); }
   },[atmoBusy,originalImgUrl,lang,t,isPro,gateAI]);
 
-  const paintSong=()=>{
-    const q=songQ.trim().toLowerCase();if(!q||busy)return;
-    let best=null,bs=0;
-    for(const s of SONGS)for(const k of s.keys){
-      const sc=q===k?100:q.includes(k)?90:k.includes(q)?80:k.split(' ').some(w=>w.length>3&&q.includes(w))?50:q.split(' ').some(w=>w.length>3&&k.includes(w))?40:0;
-      if(sc>bs){bs=sc;best=s;}
-    }
-    if(!best||bs<30){setErr(t('errs').notInLibrary);setErrInfo(true);return;}
-    setErr('');
-    const sorted=[...best.n].sort((a,b)=>a[1]-b[1]);
-    const evts=[];let i=0;
-    while(i<sorted.length){const bt=sorted[i][1],g=[];while(i<sorted.length&&sorted[i][1]-bt<=CWIN)g.push({m:sorted[i][0],v:sorted[i][3]||80,durMs:sorted[i][2]||300}),i++;if(g.length){const md=Math.max(...g.map(n=>n.durMs));evts.push({n:g,startMs:bt,durQ:snapDurQ(md/500)});}}
-    const wi=evts.map((c,j)=>({...c,idx:j})),g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
-    stopAll();applyEvents(wi.map(c=>({n:c.n,startMs:c.startMs})),best.title+' · '+best.artist);
-  };
 
-  const startAnimate=useCallback(()=>{
-    if(busy||!chords.length)return;stopAll();setDisp(0);setAnim(true);
-    if(viewMode==='image'&&pixelRef.current){
-      const{nc,nr,px}=pixelRef.current,{BW,BH,CW,CH}=grid,cv=canvasRef.current,ctx=cv?.getContext('2d'),gen=genRef.current;
-      if(ctx){ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);}
-      let i=0;
-      const CHORD_SIZE=6;
-      const colStep=pixelRef.current.colStep||1;
-      const effCols=Math.ceil(nc/colStep);
-      const step=()=>{
-        if(genRef.current!==gen)return;
-        if(i>=chords.length){setAnim(false);setDisp(chords.length);return;}
-        const _ev=chords[i]||{};
-        const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
-        const cg=_ev.cg!=null?_ev.cg:i%effCols;
-        const colStart=cg*colStep;
-        if(ctx){
-          for(let sk=0;sk<colStep;sk++){
-            const col=colStart+sk; if(col>=nc) break;
-            for(let j=0;j<CHORD_SIZE;j++){
-              const row=band*CHORD_SIZE+j; if(row>=nr) break;
-              const pidx=row*nc+col,p=px[pidx];
-              ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
-              ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
-            }
-          }
-        }
-        i++;
-        timers.current.push(setTimeout(step,6));
-      };
-      step();
-    }else{let i=0;const step=()=>{if(i>chords.length){setAnim(false);return;}setDisp(i++);timers.current.push(setTimeout(step,i<20?0:18));};step();}
-  },[busy,chords,viewMode,grid,stopAll]);
 
   const lastStartPlayRef = useRef(0);
   const startPlay=useCallback(async ()=>{
@@ -6899,21 +6830,6 @@ Composition rules:
     }catch(e){setErr('Print: '+e.message);setErrInfo(false);}
   };
 
-  const sharePreview=async()=>{
-    if(!preview)return;
-    setPreviewMsg({tone:'wait',text:'opening iOS share sheet…'});
-    try{
-      if(!navigator.share){throw new Error('navigator.share unavailable in this iframe');}
-      if(navigator.canShare&&!navigator.canShare({files:[preview.file]})){
-        throw new Error('canShare returned false (sandbox blocks file share)');
-      }
-      await navigator.share({files:[preview.file],title:'Paintiano painting'});
-      setPreviewMsg({tone:'ok',text:'shared — saved if you tapped Save Image'});
-    }catch(e){
-      if(e&&e.name==='AbortError'){setPreviewMsg({tone:'ok',text:'share cancelled'});return;}
-      setPreviewMsg({tone:'err',text:'Share blocked by sandbox: '+(e.message||e.name||'unknown')+'. Long-press the image below instead.'});
-    }
-  };
 
   const copyPreview=async()=>{
     if(!preview)return;

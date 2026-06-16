@@ -1,5 +1,5 @@
 Paintiano — delivery manifest
-Generated: 2026-06-16T08:30:00Z
+Generated: 2026-06-16T08:30:00Z (rev. post dead-code audit)
 Footer: v2.0 (unchanged)
 Production commit at audit: 9b70cc9 (main) — MFI mood prompt + shuffle determinism + oneM fix
 
@@ -34,14 +34,14 @@ several feature markers were stale.
     07-pro.jsx        monetization — Paddle checkout, Supabase license keys,
                       AI trial, watermark, useEntitlements hook.
 
-=== FILE SIZES (line counts, current) ===
-  01-core-head.jsx:   709
-  02-draw.jsx:      13001
-  03-i18n.jsx:       1624
-  04-songs.jsx:      2173
-  05-main.jsx:       9957
-  06-demo-reel.jsx:   239
-  07-pro.jsx:         884
+=== FILE SIZES (line counts, current — post dead-code audit) ===
+  01-core-head.jsx:    683
+  02-draw.jsx:       11153
+  03-i18n.jsx:        1308
+  04-songs.jsx:       1666
+  05-main.jsx:        9907
+  06-demo-reel.jsx:    239
+  07-pro.jsx:          884
 
 === LANGUAGES (9 — was 8; Japanese added) ===
   EN, DE, FR, ES, SK, zh, zhTW, PT, ja
@@ -65,25 +65,31 @@ several feature markers were stale.
   Pro tier = full N. Variant counts as implemented:
 
     key       inspired by              phase fns   _capN
-    picasso   Picasso                    10          6
+    picasso   Picasso                     6          6
     matisse   Matisse                     6          6
-    pollock   Pollock                     6          6
-    bloom     Sam Francis                 6          6
+    pollock   Pollock                     5+1†       6
+    bloom     Sam Francis                 5+1†       6
     kusama    Kusama                      6          6
     miro      Miró                        6          6
     mondrian  Mondrian                    4          8*
-    kandinsky Kandinsky                   6          6
-    gold      Gustav Klimt                9          6
-    rothko    Rothko                      6          6
-    bulge     Vasarely                    6          6
-    wave      Bridget Riley               7          6
-    spiral    Hilma af Klint              4          6
-    arcs      Frank Stella                4          6
-    pop       Keith Haring                5          6
-    comic     Roy Lichtenstein            6          6
-    monet     Claude Monet               12          6
+    kandinsky Kandinsky                   5+1†       6
+    gold      Gustav Klimt                6          6
+    rothko    Rothko                      5+1†       6
+    bulge     Vasarely                    5+1†       6
+    wave      Bridget Riley               5+1†       6
+    spiral    Hilma af Klint              4‡         6
+    arcs      Frank Stella                4‡         6
+    pop       Keith Haring                5+1†       6
+    comic     Roy Lichtenstein            5+1†       6
+    monet     Claude Monet                6          6
     hokusai   Katsushika Hokusai          6          6
     (* Mondrian dispatch caps at 8 but maps onto its 4 phase fns.)
+    († variant 0 rendered inline in the dispatcher body, not a named fn.)
+    (‡ uses a non-PhaseN naming scheme; full cap still reached.)
+    NOTE: counts are LIVE (post-audit). The 2026-06-10 manifest listed
+    DEFINED fns incl. unreachable leftovers (picasso 10, gold 9, wave 7,
+    monet 12, +others); the dead-code audit removed 20 dead phase fns,
+    3 dead mosaic variants, and LEGEND from 02-draw.
 
   Specials (NOT artist overlays — default per-cell renderers):
     mosaic    plain colour reading (drawBlockMosaic) — deterministic from
@@ -166,6 +172,33 @@ several feature markers were stale.
        paintPhase=59, shufVariant=4, _diceRoll=7, MFI 'derived from emotion'=1,
        wakeAudio=8, listenBlobRef=11, SHUFFLE_POOL=6
   [07] trialMax=3, paddlePriceIdProAI set
+
+=== DEAD-CODE AUDIT (2026-06-16, staged — NOT yet deployed) ===
+  Hyper-diligent pass. Findings & removals (all parse-OK, behaviour-neutral):
+   · 02-draw  — removed 20 unreachable artist phase fns (picasso 4, monet 6,
+                gold/klimt 3, wave/riley 2, pollock/bloom/rothko/bulge/comic 1
+                each) + 3 dead mosaic variants (Dim/Pebble/Fuzzy) + LEGEND.
+                13001 → 11153 lines.
+   · 03-i18n  — removed 45 orphan gsec_* keys (leftover from the deleted
+                GUIDE_ORDER) and 324 dead old Pro-about/paywall/value/tier
+                keys (37 keys × 9 langs; superseded by the '…3'-suffixed set).
+                1624 → 1308 lines. (base64 samples NOT yet touched — see below.)
+   · 04-songs — corrected the style Guide card in all 9 langs: dropped the
+                wrong "Monet has twelve" variant count (Monet is 6, not 12).
+   · 05-main  — removed 4 dead nested handlers (armSwitch, paintSong,
+                startAnimate, sharePreview) + 2 dead refs (audioStartTimeRef,
+                audioOffsetRef) + orphaned comments. 9991 → 9907 lines.
+   · 01-core  — removed 6 dead utils (m2f, wlToRgb, _rgbStr, rgbToHex,
+                PAINT_DURS, PAINT_VELS). 709 → 683 lines.
+  Audit also CONFIRMED healthy: 0 duplicate top-level decls, 0 missing
+  phase-fn refs (no crash risk), i18n complete for all 226 used keys × 9 langs,
+  0 console.log in render paths, 0 TODO/debugger.
+  DEFERRED (own round, needs dev test): base64 samples inline in 03-i18n
+  (~2.1 MB: SAMPLE_AUDIO/IMAGE/IMAGE_MFI/SCORE/MIDI). Plan = move to /public
+  as real assets + lazy fetch (drops them from the initial bundle, removes the
+  ~33% base64 inflation). Requires 5 call-site rewrites in 05-main.
+  SKIPPED (intentional): write-only useState (midiName/scoreName/moodFocused/
+  exportPick — harmless); ~43 other non-Pro orphan i18n keys (left for later).
 
 === RECENT FIXES IN PRODUCTION (this session) ===
   1. MFI mood-driven prompt — 3 different photos → 3 audibly different songs.

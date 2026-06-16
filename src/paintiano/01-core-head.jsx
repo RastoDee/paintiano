@@ -182,16 +182,7 @@ const SAMPLE_IMGMOOD = { hash: 0, result: {"title":"A Dream In Crimson","tempo":
 const S_BASE = "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/salamander/";
 const S_URLS = {"A0":"A0.mp3","C1":"C1.mp3","D#1":"Ds1.mp3","F#1":"Fs1.mp3","A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3","A5":"A5.mp3","C6":"C6.mp3","D#6":"Ds6.mp3","F#6":"Fs6.mp3","A6":"A6.mp3","C7":"C7.mp3","D#7":"Ds7.mp3","F#7":"Fs7.mp3","A7":"A7.mp3","C8":"C8.mp3"};
 
-const m2f = m => 440 * Math.pow(2, (m - 69) / 12);
 
-const wlToRgb = wl => {
-  let r=0,g=0,b=0;
-  if(wl>=380&&wl<440){r=(440-wl)/60;b=1}else if(wl>=440&&wl<490){g=(wl-440)/50;b=1}
-  else if(wl>=490&&wl<510){g=1;b=(510-wl)/20}else if(wl>=510&&wl<580){r=(wl-510)/70;g=1}
-  else if(wl>=580&&wl<645){r=1;g=(645-wl)/65}else if(wl>=645&&wl<=780){r=1}
-  const f=wl<380||wl>780?0:wl<420?0.3+0.7*(wl-380)/40:wl<=700?1:Math.max(0,0.3+0.7*(780-wl)/80);
-  return [Math.round(255*Math.pow(Math.max(0,r*f),.8)),Math.round(255*Math.pow(Math.max(0,g*f),.8)),Math.round(255*Math.pow(Math.max(0,b*f),.8))];
-};
 const octL = m => 12 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*76;
 const toHsl = (r,g,b) => {
   r/=255;g/=255;b/=255;
@@ -253,7 +244,6 @@ const _rgbaStr=(r,g,b,a)=>{
   else if(A<0) A=0; else if(A>1) A=1;
   return `rgba(${r|0},${g|0},${b|0},${A})`;
 };
-const _rgbStr=(r,g,b)=>`rgb(${r|0},${g|0},${b|0})`;
 const hexToRgb=(hex)=>{
   if(typeof hex!=='string')return[128,128,128];
   let h=hex.replace('#','');
@@ -261,8 +251,6 @@ const hexToRgb=(hex)=>{
   if(!/^[0-9a-f]{6}$/i.test(h))return[128,128,128];
   return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
 };
-// Convert [r,g,b] (0-255) into '#rrggbb' lowercase hex string.
-const rgbToHex=([r,g,b])=>'#'+[r,g,b].map(x=>Math.round(Math.max(0,Math.min(255,x))).toString(16).padStart(2,'0')).join('');
 
 // Custom mode color: anchor on user's picked color per pitch class, then apply
 // subtle octave modulation (±15% lightness vs the default ±36% of Harmony/
@@ -378,20 +366,6 @@ function toChords(raw,div,temps){
   return groupToEvents(flat,quarterMs);
 }
 
-// Paint-mode setting tables
-const PAINT_DURS = [
-  {ms:125, label:'1/16'},
-  {ms:250, label:'1/8'},
-  {ms:500, label:'1/4'},
-  {ms:1000, label:'1/2'},
-  {ms:2000, label:'1'},
-];
-const PAINT_VELS = [
-  {v:55, label:'p'},
-  {v:78, label:'mp'},
-  {v:95, label:'mf'},
-  {v:115, label:'f'},
-];
 const PAINT_SCALES = {
   off:  {label:'free',  root:0, scale:null},
   cmaj: {label:'C maj', root:0, scale:[0,2,4,5,7,9,11]},

@@ -182,16 +182,7 @@ const SAMPLE_IMGMOOD = { hash: 0, result: {"title":"A Dream In Crimson","tempo":
 const S_BASE = "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/salamander/";
 const S_URLS = {"A0":"A0.mp3","C1":"C1.mp3","D#1":"Ds1.mp3","F#1":"Fs1.mp3","A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3","A5":"A5.mp3","C6":"C6.mp3","D#6":"Ds6.mp3","F#6":"Fs6.mp3","A6":"A6.mp3","C7":"C7.mp3","D#7":"Ds7.mp3","F#7":"Fs7.mp3","A7":"A7.mp3","C8":"C8.mp3"};
 
-const m2f = m => 440 * Math.pow(2, (m - 69) / 12);
 
-const wlToRgb = wl => {
-  let r=0,g=0,b=0;
-  if(wl>=380&&wl<440){r=(440-wl)/60;b=1}else if(wl>=440&&wl<490){g=(wl-440)/50;b=1}
-  else if(wl>=490&&wl<510){g=1;b=(510-wl)/20}else if(wl>=510&&wl<580){r=(wl-510)/70;g=1}
-  else if(wl>=580&&wl<645){r=1;g=(645-wl)/65}else if(wl>=645&&wl<=780){r=1}
-  const f=wl<380||wl>780?0:wl<420?0.3+0.7*(wl-380)/40:wl<=700?1:Math.max(0,0.3+0.7*(780-wl)/80);
-  return [Math.round(255*Math.pow(Math.max(0,r*f),.8)),Math.round(255*Math.pow(Math.max(0,g*f),.8)),Math.round(255*Math.pow(Math.max(0,b*f),.8))];
-};
 const octL = m => 12 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*76;
 const toHsl = (r,g,b) => {
   r/=255;g/=255;b/=255;
@@ -253,7 +244,6 @@ const _rgbaStr=(r,g,b,a)=>{
   else if(A<0) A=0; else if(A>1) A=1;
   return `rgba(${r|0},${g|0},${b|0},${A})`;
 };
-const _rgbStr=(r,g,b)=>`rgb(${r|0},${g|0},${b|0})`;
 const hexToRgb=(hex)=>{
   if(typeof hex!=='string')return[128,128,128];
   let h=hex.replace('#','');
@@ -261,8 +251,6 @@ const hexToRgb=(hex)=>{
   if(!/^[0-9a-f]{6}$/i.test(h))return[128,128,128];
   return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
 };
-// Convert [r,g,b] (0-255) into '#rrggbb' lowercase hex string.
-const rgbToHex=([r,g,b])=>'#'+[r,g,b].map(x=>Math.round(Math.max(0,Math.min(255,x))).toString(16).padStart(2,'0')).join('');
 
 // Custom mode color: anchor on user's picked color per pitch class, then apply
 // subtle octave modulation (±15% lightness vs the default ±36% of Harmony/
@@ -378,20 +366,6 @@ function toChords(raw,div,temps){
   return groupToEvents(flat,quarterMs);
 }
 
-// Paint-mode setting tables
-const PAINT_DURS = [
-  {ms:125, label:'1/16'},
-  {ms:250, label:'1/8'},
-  {ms:500, label:'1/4'},
-  {ms:1000, label:'1/2'},
-  {ms:2000, label:'1'},
-];
-const PAINT_VELS = [
-  {v:55, label:'p'},
-  {v:78, label:'mp'},
-  {v:95, label:'mf'},
-  {v:115, label:'f'},
-];
 const PAINT_SCALES = {
   off:  {label:'free',  root:0, scale:null},
   cmaj: {label:'C maj', root:0, scale:[0,2,4,5,7,9,11]},
@@ -850,95 +824,12 @@ function drawBlockNotes(ctx,bx,by,notes,gc,BW,BH){
 // painted at reduced alpha (~50%) so colors are visible but subdued. Used
 // as the Pollock substrate: the mosaic provides color context underneath
 // without competing with the drip lines on top.
-function drawBlockMosaicDim(ctx,bx,by,notes,gc,BW,BH){
-  const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
-  const n=sorted.length,bh=BH/n;
-  for(let i=0;i<n;i++){
-    const note=sorted[i];
-    const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;
-    ctx.fillStyle=_rgbaStr(r,g,b,a*0.10);
-    ctx.fillRect(bx-2,y-2,BW+4,bh+4);
-    ctx.fillStyle=_rgbaStr(r,g,b,a*0.50);
-    ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);
-  }
-  if(n>1){
-    ctx.fillStyle='rgba(4,4,10,0.50)';
-    for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);
-  }
-}
 
 // Pebble mosaic — authentic Byzantine/cobblestone substrate. Each voice slice
 // is packed with many small irregular rounded tile-fragments on a hex-offset
 // grid. Each pebble is a 5-7 vertex rounded polygon with slight color drift,
 // outlined in dark grout. Used as the Pollock substrate so the painting has
 // the dense colorful tessellation seen in real mosaic+Pollock pieces.
-function drawBlockMosaicPebble(ctx,bx,by,notes,gc,BW,BH){
-  const sorted=[...notes].sort((a,b)=>b.m-a.m), n=sorted.length, bh=BH/n;
-  const rnd = _seedRnd(bx, by, BW, BH);
-
-  sorted.forEach((note,vi)=>{
-    const[r,g,b,a] = gc(note.m, note.v);
-    const yOff = by + vi*bh;
-
-    // Soft halo for ambient color edge
-    ctx.fillStyle = `rgba(${r},${g},${b},${(a*0.18).toFixed(3)})`;
-    ctx.fillRect(bx-2, yOff-2, BW+4, bh+4);
-
-    // Tile size — small relative to the cell, scales with cell dim
-    const tileSize = Math.max(2.5, Math.min(BW, bh) * 0.08);
-    // Hex-offset grid for organic packing
-    const cols = Math.max(5, Math.ceil(BW / tileSize));
-    const rows = Math.max(5, Math.ceil(bh / (tileSize * 0.86))); // √3/2 hex spacing
-    const cellW = BW / cols;
-    const cellH = bh / rows;
-
-    for(let row=0; row<rows; row++){
-      const yRowOffset = (row % 2) * cellW * 0.5; // hex offset alternating rows
-      for(let col=0; col<cols; col++){
-        // Pebble center with jitter
-        const cx = bx + col*cellW + cellW*0.5 + yRowOffset + (rnd()-0.5)*cellW*0.35;
-        const cy = yOff + row*cellH + cellH*0.5 + (rnd()-0.5)*cellH*0.35;
-        // Pebble radius — size variation
-        const sizeRoll = rnd();
-        const radX = (sizeRoll < 0.15 ? tileSize*0.65
-                    : sizeRoll < 0.85 ? tileSize*0.92
-                    : tileSize*1.20)
-                    * (0.9 + rnd()*0.25);
-        const radY = radX * (0.7 + rnd()*0.55);
-        const tileRot = rnd()*Math.PI;
-
-        // Per-tile color drift — hue + luminosity variation per pebble
-        const lumShift = (rnd()-0.5) * 35;
-        const hueShift = (rnd()-0.5) * 30;
-        const tR = Math.max(0,Math.min(255, Math.round(r + lumShift + hueShift)));
-        const tG = Math.max(0,Math.min(255, Math.round(g + lumShift)));
-        const tB = Math.max(0,Math.min(255, Math.round(b + lumShift - hueShift)));
-
-        // 5-7 vertex irregular pebble polygon
-        const vertCount = 5 + Math.floor(rnd()*3);
-        ctx.beginPath();
-        for(let v=0; v<vertCount; v++){
-          const t = v/vertCount;
-          const angle = t * Math.PI * 2 + tileRot;
-          const rPerturb = 0.78 + rnd()*0.30;
-          const lx = Math.cos(angle) * radX * rPerturb;
-          const ly = Math.sin(angle) * radY * rPerturb;
-          const x = cx + lx;
-          const y = cy + ly;
-          if(v===0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fillStyle = `rgba(${tR},${tG},${tB},${a.toFixed(3)})`;
-        ctx.fill();
-        // Dark grout outline between pebbles
-        ctx.strokeStyle = `rgba(4,2,8,${(a*0.72).toFixed(3)})`;
-        ctx.lineWidth = 0.5 + rnd()*0.3;
-        ctx.stroke();
-      }
-    }
-  });
-}
 
 // Fuzzy mosaic — softened version of the default mosaic substrate, used UNDER
 // the Pollock drip overlay. The original mosaic tile structure is suggested
@@ -946,29 +837,6 @@ function drawBlockMosaicPebble(ctx,bx,by,notes,gc,BW,BH){
 // blob centered on its voice slice, bleeding past cell boundaries into
 // neighbors. Adjacent colors composite optically — no sharp tile edges,
 // no grout grid. Reads as the original mosaic seen through frosted glass.
-function drawBlockMosaicFuzzy(ctx,bx,by,notes,gc,BW,BH){
-  const sorted=[...notes].sort((a,b)=>b.m-a.m), n=sorted.length, bh=BH/n;
-
-  sorted.forEach((note,vi)=>{
-    const[r,g,b,a] = gc(note.m, note.v);
-    const yOff = by + vi*bh;
-    const cx = bx + BW * 0.5;
-    const cy = yOff + bh * 0.5;
-    // Blob radius — large enough to bleed well past cell boundaries.
-    // Uses max(BW, bh) so even narrow cells get full coverage.
-    const radius = Math.max(BW, bh) * 0.85;
-
-    // Soft radial: opaque core at center, fully transparent at the bleed edge
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    grad.addColorStop(0,    `rgba(${r},${g},${b},${(a*0.98).toFixed(3)})`);
-    grad.addColorStop(0.35, `rgba(${r},${g},${b},${(a*0.78).toFixed(3)})`);
-    grad.addColorStop(0.70, `rgba(${r},${g},${b},${(a*0.32).toFixed(3)})`);
-    grad.addColorStop(1,    `rgba(${r},${g},${b},0)`);
-    ctx.fillStyle = grad;
-    // Paint across the cell with margin for bleed
-    ctx.fillRect(bx - BW*0.3, yOff - bh*0.3, BW*1.6, bh*1.6);
-  });
-}
 
 // Pollock raw-canvas substrate — cream/off-white background that simulates the
 // raw unprimed canvas Pollock dripped onto. Each cell paints solid cream over
@@ -2214,21 +2082,6 @@ function rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ── Rothko F: Black on Grey recoloured — blue field over warm ochre. ──
-function rothkoPhaseBlackGrey(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  const top=_picChord(chords,0,gc,isBW).rgb;
-  const bot=_picChord(chords,Math.floor(cn/2),gc,isBW).rgb;
-  // recoloured: top deep blue, bottom warm ochre (was black/grey)
-  const tr=isBW?30:Math.round(top[0]*0.2+20),tg=isBW?30:Math.round(top[1]*0.2+30),tb=isBW?40:Math.min(255,top[2]*0.4+90);
-  const br=isBW?150:Math.min(255,bot[0]*0.4+150),bg2=isBW?146:Math.round(bot[1]*0.4+110),bb=isBW?138:Math.round(bot[2]*0.3+50);
-  ctx.fillStyle=`rgb(${br},${bg2},${bb})`;ctx.fillRect(0,0,CW,CH); // ochre ground
-  // top field reveals
-  if(reveal>0.05) _rothkoField(ctx,CW*0.06,CH*0.06,CW*0.88,CH*0.46*Math.min(1,reveal*1.5),tr,tg,tb,0.95);
-  // sharp horizon line
-  ctx.fillStyle=`rgba(${Math.round((tr+br)/2)},${Math.round((tg+bg2)/2)},${Math.round((tb+bb)/2)},0.6)`;
-  ctx.fillRect(CW*0.06,CH*0.52,CW*0.88,Math.max(2,CH*0.01));
-}
 
 // ── Rothko G: Incandescent — glowing orange/red/yellow stacked fields. ──
 function rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
@@ -3398,29 +3251,6 @@ function pollockPhaseTotem(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ── Pollock E: Handprints + drip — hand stamps along the edges + drip field. ──
-function pollockPhaseHands(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#c2b8a0':'#cabb96';ctx.fillRect(0,0,CW,CH);
-  // drips first
-  const passes=Math.max(4,Math.min(120,Math.round(cn*0.5)));
-  const visP=Math.max(1,Math.ceil(N/cn*passes));
-  for(let i=0;i<visP;i++){const rnd=_seedRnd(i+3400,ss,0,0);const {rgb}=_picChord(chords,Math.floor(i*(cn/passes)),gc,isBW);_pollDrip(ctx,rnd()*CW,rnd()*CH,rnd()*CW,rnd()*CH,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.6)`,Math.max(1,CW*0.005),ss,i+3450);}
-  // handprints around edges
-  const hands=Math.max(2,Math.min(20,Math.round(cn/8)));
-  const visH=Math.max(1,Math.ceil(N/cn*hands));
-  for(let i=0;i<visH;i++){
-    const rnd=_seedRnd(i+3500,ss,0,0);const {rgb}=_picChord(chords,Math.floor(i*(cn/hands)),gc,isBW);
-    const edge=(i%4),m=Math.min(CW,CH)*0.08;
-    const x=edge===0?m+rnd()*CW*0.2:edge===1?CW-m-rnd()*CW*0.2:rnd()*CW;
-    const y=edge===2?m+rnd()*CH*0.2:edge===3?CH-m-rnd()*CH*0.2:rnd()*CH;
-    const s=Math.min(CW,CH)*0.05;
-    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.8)`;
-    // palm
-    ctx.beginPath();ctx.ellipse(x,y,s*0.6,s*0.75,0,0,Math.PI*2);ctx.fill();
-    // fingers
-    for(let f=-2;f<=2;f++){ctx.beginPath();ctx.ellipse(x+f*s*0.28,y-s*0.9,s*0.13,s*0.4,f*0.12,0,Math.PI*2);ctx.fill();}
-  }
-}
 
 // ── Pollock F: Blue Poles — vertical pole bars over the drip field. ──
 function pollockPhasePoles(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
@@ -3985,555 +3815,15 @@ function _picChord(chords,idx,gc,isBW){
 // ── Picasso phase C: Three Musicians v4. Each session: random figure count (1-4),
 // random positions (scattered or row), 6 instrument types, 3 head shapes, 4 arm
 // poses. Chord-driven colours per shard. ──
-function picassoPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(8001,ss,0,0); sR(); sR();
-  // Ground tone choice
-  const GROUNDS=isBW?[[195,195,195]]:[[220,205,178],[200,180,150],[215,200,205],[190,200,210]];
-  const bg0=chords[0]&&_picChord(chords,0,gc,isBW).rgb||[120,100,80];
-  const g0=GROUNDS[(sR()*GROUNDS.length)|0];
-  const bgR=Math.round(bg0[0]*0.20+g0[0]*0.80),bgG=Math.round(bg0[1]*0.20+g0[1]*0.80),bgB=Math.round(bg0[2]*0.20+g0[2]*0.80);
-  ctx.fillStyle=`rgb(${bgR},${bgG},${bgB})`; ctx.fillRect(0,0,CW,CH);
-  const INK=isBW?'rgba(20,20,20,1)':'rgba(15,8,18,1)';
-  const floorY=CH*(0.78+sR()*0.10);
-  ctx.fillStyle=isBW?'#5c5852':`rgb(${(80+sR()*60)|0},${(50+sR()*40)|0},${(35+sR()*30)|0})`;
-  ctx.fillRect(0,floorY,CW,CH-floorY);
-  ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,floorY); ctx.lineTo(CW,floorY); ctx.stroke();
-  // Structural choices
-  const figCount=1+((sR()*3.99)|0);
-  const scattered=sR()<0.4;
-  const positions=[];
-  if(scattered){ for(let i=0;i<figCount;i++) positions.push(CW*(0.15+sR()*0.70)); }
-  else { for(let i=0;i<figCount;i++){ let fx=CW*((i+0.5)/figCount); fx+=(sR()-0.5)*CW*0.08; positions.push(fx); } }
-  positions.sort((a,b)=>a-b);
-  const figWBase=CW/Math.max(2,figCount+0.5);
-  const PPF=12, total=figCount*PPF;
-  const revealParts=Math.max(1,Math.ceil(N/cn*total*2.5));
-  for(let fi=0;fi<figCount;fi++){
-    const fR=_seedRnd(fi+700,ss,Math.floor(positions[fi]),0); fR(); fR();
-    const cx=positions[fi];
-    const figW=figWBase*(0.80+fR()*0.35);
-    const slim=fR()<0.5;
-    const bodyW=figW*(slim?0.40:0.62), headW=figW*(slim?0.28:0.38);
-    const headTop=CH*(0.08+fR()*0.06), headBot=headTop+headW*1.1;
-    const shoulderY=headBot+CH*0.02;
-    const waistY=shoulderY+CH*(0.20+fR()*0.06);
-    const feetY=floorY-4;
-    const midY=(shoulderY+waistY)/2;
-    const headShape=(fR()*3)|0;
-    const instType=(fR()*6)|0;
-    const armPose=(fR()*4)|0;
-    const armThick=figW*0.13;
-    const headCX=cx, headCY=(headTop+headBot)/2;
-    const shards=[];
-    // HEAD facets
-    if(headShape===0){ // round
-      for(let q=0;q<4;q++){
-        const a1=q*Math.PI/2+Math.PI/4, a2=(q+1)*Math.PI/2+Math.PI/4;
-        const pts=[[headCX,headCY]];
-        for(let st=0;st<7;st++){ const t=st/6, a=a1+(a2-a1)*t; pts.push([headCX+Math.cos(a)*headW*0.5,headCY+Math.sin(a)*headW*0.55]); }
-        shards.push(pts);
-      }
-    } else if(headShape===1){ // square
-      const ht=headW*0.5;
-      const corners=[[headCX-ht,headTop],[headCX+ht,headTop],[headCX+ht,headBot],[headCX-ht,headBot]];
-      for(let i=0;i<4;i++) shards.push([[headCX,headCY],corners[i],corners[(i+1)%4]]);
-    } else { // wedge
-      const top=[headCX,headTop], bl=[headCX-headW*0.5,headBot], br=[headCX+headW*0.5,headBot];
-      const mid=[headCX,headCY+headW*0.1];
-      shards.push([top,bl,mid]); shards.push([top,mid,br]);
-      shards.push([mid,bl,br]); shards.push([mid,br,[headCX,headBot]]);
-    }
-    // TORSO 4 shards
-    const torsoTopW=bodyW*(0.85+(fR()-0.5)*0.20);
-    const torsoBotW=bodyW*(0.95+(fR()-0.5)*0.30);
-    const tlTop=cx-torsoTopW/2, trTop=cx+torsoTopW/2;
-    const tlBot=cx-torsoBotW/2, trBot=cx+torsoBotW/2;
-    const diag=(fR()-0.5)*bodyW*0.30;
-    shards.push([[tlTop,shoulderY],[cx+diag,shoulderY+5],[cx+diag*0.6,midY],[tlTop-bodyW*0.03,midY-5]]);
-    shards.push([[cx+diag,shoulderY+5],[trTop,shoulderY],[trTop+bodyW*0.03,midY],[cx+diag*0.6,midY]]);
-    shards.push([[tlTop-bodyW*0.03,midY-5],[cx+diag*0.6,midY],[cx+diag*0.3,waistY],[tlBot-bodyW*0.02,waistY-2]]);
-    shards.push([[cx+diag*0.6,midY],[trTop+bodyW*0.03,midY],[trBot,waistY],[cx+diag*0.3,waistY+2]]);
-    // ARMS
-    let la, ra;
-    if(armPose===0){
-      la=[[tlTop,shoulderY+3],[tlTop+armThick*0.7,shoulderY+armThick*0.4],[cx-bodyW*0.30,midY+bodyW*0.18],[cx-bodyW*0.55,midY+bodyW*0.25]];
-      ra=[[trTop,shoulderY+3],[trTop-armThick*0.7,shoulderY+armThick*0.4],[cx+bodyW*0.30,midY+bodyW*0.18],[cx+bodyW*0.55,midY+bodyW*0.25]];
-    } else if(armPose===1){
-      la=[[tlTop,shoulderY+3],[tlTop-armThick*0.6,shoulderY-armThick*0.3],[cx-bodyW*0.40,shoulderY-bodyW*0.30],[cx-bodyW*0.20,shoulderY-bodyW*0.10]];
-      ra=[[trTop,shoulderY+3],[trTop-armThick*0.7,shoulderY+armThick*0.4],[cx+bodyW*0.30,midY+bodyW*0.18],[cx+bodyW*0.55,midY+bodyW*0.25]];
-    } else if(armPose===2){
-      la=[[tlTop,shoulderY+3],[tlTop+armThick*0.7,shoulderY+armThick*0.4],[cx-bodyW*0.30,midY+bodyW*0.18],[cx-bodyW*0.55,midY+bodyW*0.25]];
-      ra=[[trTop,shoulderY+3],[trTop+armThick*0.6,shoulderY-armThick*0.3],[cx+bodyW*0.40,shoulderY-bodyW*0.30],[cx+bodyW*0.20,shoulderY-bodyW*0.10]];
-    } else {
-      la=[[tlTop,shoulderY+3],[tlTop+armThick,shoulderY+armThick*0.5],[cx-bodyW*0.10,midY+bodyW*0.10],[cx-bodyW*0.25,midY+bodyW*0.18]];
-      ra=[[trTop,shoulderY+3],[trTop-armThick,shoulderY+armThick*0.5],[cx+bodyW*0.10,midY+bodyW*0.10],[cx+bodyW*0.25,midY+bodyW*0.18]];
-    }
-    shards.push(la); shards.push(ra);
-    // LEGS
-    const legI=bodyW*0.08;
-    shards.push([[tlBot+legI,waistY],[cx-legI,waistY+5],[cx-legI*0.5,feetY],[cx-bodyW*0.30-bodyW*0.05,feetY-2]]);
-    shards.push([[cx-legI,waistY+5],[trBot-legI,waistY],[cx+bodyW*0.30+bodyW*0.05,feetY-2],[cx+legI*0.5,feetY]]);
-    // Render shards
-    shards.forEach((poly,si)=>{
-      const cIdx=fi*PPF+si;
-      const played=cIdx<=revealParts;
-      const {rgb}=_picChord(chords,cIdx%cn,gc,isBW);
-      const a=played?0.90:0.37;
-      ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
-      ctx.beginPath(); ctx.moveTo(poly[0][0],poly[0][1]);
-      for(let p=1;p<poly.length;p++) ctx.lineTo(poly[p][0],poly[p][1]);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle=isBW?`rgba(20,20,20,${a})`:`rgba(15,8,18,${a})`;
-      ctx.lineWidth=2; ctx.stroke();
-    });
-    // Eyes
-    const eyeA=(fi*PPF<=revealParts)?0.94:0.40;
-    const ey=headTop+(headBot-headTop)*0.42, er=headW*0.07;
-    ctx.fillStyle=`rgba(15,8,18,${eyeA})`;
-    ctx.beginPath(); ctx.arc(headCX-headW*0.22,ey,er,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(headCX+headW*0.10,ey,er,0,Math.PI*2); ctx.fill();
-    // INSTRUMENT
-    const instIdx=fi*PPF+10;
-    const instPlayed=instIdx<=revealParts;
-    const instA=instPlayed?0.94:0.37;
-    const {rgb:iC}=_picChord(chords,instIdx%cn,gc,isBW);
-    const {rgb:iC2}=_picChord(chords,(instIdx+1)%cn,gc,isBW);
-    const inkA=`rgba(${isBW?'20,20,20':'15,8,18'},${instA})`;
-    if(instType===0){ // GUITAR
-      const gx=cx+bodyW*0.10, gy=waistY-bodyW*0.25, gw=figW*0.40, gh=figW*0.48;
-      ctx.fillStyle=`rgba(${iC[0]},${iC[1]},${iC[2]},${instA})`;
-      ctx.beginPath(); ctx.ellipse(gx,gy+gh*0.15,gw*0.5,gh*0.35,0,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle=inkA; ctx.lineWidth=3; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(gx,gy-gh*0.175,gw*0.4,gh*0.275,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle=inkA; ctx.beginPath(); ctx.arc(gx,gy+gh*0.05,gw*0.10,0,Math.PI*2); ctx.fill();
-      // Neck
-      ctx.fillStyle=`rgba(165,115,75,${instA})`;
-      ctx.beginPath(); ctx.moveTo(gx+gw*0.05,gy-gh*0.30); ctx.lineTo(gx-gw*0.40,gy-gh*0.95);
-      ctx.lineTo(gx-gw*0.30,gy-gh*1.05); ctx.lineTo(gx+gw*0.15,gy-gh*0.40); ctx.closePath();
-      ctx.fill(); ctx.strokeStyle=inkA; ctx.stroke();
-    } else if(instType===1){ // CLARINET
-      const mx=cx+headW*0.10, my=headBot+8;
-      ctx.fillStyle=`rgba(30,20,20,${instA})`;
-      ctx.beginPath(); ctx.moveTo(mx-4,my); ctx.lineTo(mx+4,my-2);
-      ctx.lineTo(cx+bodyW*0.20,waistY+bodyW*0.20); ctx.lineTo(cx+bodyW*0.12,waistY+bodyW*0.25);
-      ctx.closePath(); ctx.fill(); ctx.strokeStyle=inkA; ctx.lineWidth=3; ctx.stroke();
-      const bX=cx+bodyW*0.16, bY=waistY+bodyW*0.30, br=figW*0.12;
-      ctx.fillStyle=`rgba(${iC[0]},${iC[1]},${iC[2]},${instA})`;
-      ctx.beginPath(); ctx.moveTo(bX-br*0.6,bY-br*0.7); ctx.lineTo(bX+br*0.6,bY-br*0.6);
-      ctx.lineTo(bX+br,bY+br*0.2); ctx.lineTo(bX-br*0.8,bY+br*0.3); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-    } else if(instType===2){ // SHEET MUSIC
-      const sw=figW*0.45, sh=figW*0.30, sx=cx, sy=midY+bodyW*0.10;
-      ctx.fillStyle=`rgba(${iC[0]},${iC[1]},${iC[2]},${instA})`;
-      ctx.beginPath(); ctx.moveTo(sx-sw/2,sy-sh*0.4); ctx.lineTo(sx-3,sy-sh*0.5);
-      ctx.lineTo(sx-3,sy+sh*0.5); ctx.lineTo(sx-sw/2+5,sy+sh*0.42); ctx.closePath();
-      ctx.fill(); ctx.strokeStyle=inkA; ctx.lineWidth=3; ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(sx+3,sy-sh*0.5); ctx.lineTo(sx+sw/2,sy-sh*0.4);
-      ctx.lineTo(sx+sw/2-5,sy+sh*0.42); ctx.lineTo(sx+3,sy+sh*0.5); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-      ctx.strokeStyle=inkA; ctx.lineWidth=2;
-      for(let pg=-1;pg<=1;pg+=2)for(let ln=0;ln<3;ln++){
-        const y=sy-sh*0.25+ln*sh*0.25;
-        ctx.beginPath(); ctx.moveTo(sx+pg*8,y); ctx.lineTo(sx+pg*(sw/2-4),y); ctx.stroke();
-      }
-    } else if(instType===3){ // DRUM
-      const dx=cx, dy=midY+bodyW*0.18, dw=figW*0.42, dh=figW*0.28;
-      ctx.fillStyle=`rgba(${iC[0]},${iC[1]},${iC[2]},${instA})`;
-      ctx.beginPath(); ctx.ellipse(dx,dy-dh*0.35,dw/2,dh*0.15,0,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle=inkA; ctx.lineWidth=3; ctx.stroke();
-      ctx.fillRect(dx-dw/2,dy-dh*0.35,dw,dh*0.95);
-      ctx.strokeRect(dx-dw/2,dy-dh*0.35,dw,dh*0.95);
-      ctx.strokeStyle=`rgba(${iC2[0]},${iC2[1]},${iC2[2]},${instA})`;
-      for(let s=0;s<3;s++){ const y=dy-dh*0.20+s*dh*0.30; ctx.beginPath(); ctx.moveTo(dx-dw*0.40,y); ctx.lineTo(dx+dw*0.40,y); ctx.stroke(); }
-      ctx.strokeStyle=`rgba(140,90,50,${instA})`; ctx.lineWidth=4;
-      ctx.beginPath(); ctx.moveTo(dx-dw*0.5,dy-dh*0.7); ctx.lineTo(dx+dw*0.2,dy-dh*0.4); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(dx+dw*0.5,dy-dh*0.7); ctx.lineTo(dx-dw*0.2,dy-dh*0.4); ctx.stroke();
-    } else if(instType===4){ // VIOLIN
-      const vx=cx+bodyW*0.05, vy=midY, vw=figW*0.18, vh=figW*0.42;
-      ctx.fillStyle=`rgba(${iC[0]},${iC[1]},${iC[2]},${instA})`;
-      ctx.beginPath(); ctx.ellipse(vx,vy+vh*0.15,vw*0.6,vh*0.35,0,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle=inkA; ctx.lineWidth=3; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(vx,vy-vh*0.225,vw*0.5,vh*0.275,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle=inkA; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(vx-vw*0.25,vy-vh*0.1); ctx.lineTo(vx-vw*0.25,vy+vh*0.25); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(vx+vw*0.25,vy-vh*0.1); ctx.lineTo(vx+vw*0.25,vy+vh*0.25); ctx.stroke();
-      ctx.fillStyle=`rgba(160,110,70,${instA})`;
-      ctx.beginPath(); ctx.moveTo(vx,vy-vh*0.4); ctx.lineTo(vx-vw*0.4,vy-vh*0.95);
-      ctx.lineTo(vx-vw*0.3,vy-vh*1.05); ctx.lineTo(vx+vw*0.15,vy-vh*0.45); ctx.closePath();
-      ctx.fill(); ctx.strokeStyle=inkA; ctx.lineWidth=3; ctx.stroke();
-      ctx.strokeStyle=`rgba(200,180,120,${instA})`; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.moveTo(vx-vw*1.2,vy); ctx.lineTo(vx+vw*1.2,vy); ctx.stroke();
-    } else { // FLUTE
-      const fx0=cx-bodyW*0.15, fy0=midY+bodyW*0.02, fw=figW*0.55, fh=figW*0.08;
-      ctx.fillStyle=`rgba(${iC[0]},${iC[1]},${iC[2]},${instA})`;
-      ctx.fillRect(fx0,fy0,fw,fh);
-      ctx.strokeStyle=inkA; ctx.lineWidth=3; ctx.strokeRect(fx0,fy0,fw,fh);
-      ctx.fillStyle=`rgba(${iC2[0]},${iC2[1]},${iC2[2]},${instA})`;
-      ctx.beginPath(); ctx.ellipse(fx0,fy0+fh/2,fh*0.3,fh/2,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle=inkA;
-      for(let ki=0;ki<6;ki++){ const kx=fx0+fw*(0.20+ki*0.12); ctx.beginPath(); ctx.arc(kx,fy0+fh*0.5,fh*0.15,0,Math.PI*2); ctx.fill(); }
-    }
-  }
-}
 
 // ── Picasso phase D: Harlequin Mosaic v2. Random grid dims, 3 orientations,
 // skip probability for gaps, per-cell size jitter. ──
-function picassoPhaseRose(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(9001,ss,0,0); sR(); sR();
-  const GROUNDS=isBW?[[28,28,28]]:[[38,22,26],[28,30,42],[42,32,18],[22,32,28],[40,30,42]];
-  const bg=GROUNDS[(sR()*GROUNDS.length)|0];
-  ctx.fillStyle=`rgb(${bg[0]},${bg[1]},${bg[2]})`; ctx.fillRect(0,0,CW,CH);
-  const cols=5+((sR()*7)|0), rows=7+((sR()*8)|0);
-  const orient=(sR()*3)|0;
-  const total=cols*rows;
-  const vis=Math.max(1,Math.ceil(N/cn*total*2.5));
-  const dw=CW/cols, dh=CH/rows;
-  const sizeFactor=0.65+sR()*0.40;
-  const skipProb=sR()*0.18;
-  let k=0;
-  for(let ry=0;ry<rows;ry++)for(let cx=0;cx<cols;cx++){
-    const cR=_seedRnd(k+12000,ss,0,0); cR();
-    if(cR()<skipProb){ k++; continue; }
-    const played=k<=vis;
-    const {rgb}=_picChord(chords,k%cn,gc,isBW);
-    const ccx=cx*dw+dw/2, ccy=ry*dh+dh/2;
-    const localSize=sizeFactor*(0.85+cR()*0.30);
-    const hwB=dw*0.5*0.85*localSize, hhB=dh*0.5*0.85*localSize;
-    let shape;
-    if(orient===0) shape=[[ccx,ccy-hhB],[ccx+hwB,ccy],[ccx,ccy+hhB],[ccx-hwB,ccy]];
-    else if(orient===1) shape=[[ccx-hwB*0.85,ccy-hhB*0.85],[ccx+hwB*0.85,ccy-hhB*0.85],[ccx+hwB*0.85,ccy+hhB*0.85],[ccx-hwB*0.85,ccy+hhB*0.85]];
-    else shape=[[ccx,ccy-hhB*1.35],[ccx+hwB*0.65,ccy],[ccx,ccy+hhB*1.35],[ccx-hwB*0.65,ccy]];
-    const a=played?0.90:0.31;
-    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
-    ctx.beginPath(); ctx.moveTo(shape[0][0],shape[0][1]);
-    for(let p=1;p<shape.length;p++) ctx.lineTo(shape[p][0],shape[p][1]);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=isBW?'rgba(80,80,80,0.55)':'rgba(120,50,40,0.55)'; ctx.lineWidth=1; ctx.stroke();
-    k++;
-  }
-}
 
 // ── Picasso phase E: Cubist Mask v3. Random 1-2 masks, 4 face aspects, 4 eye
 // styles, 3 nose styles, 3 mouth styles, tilt. ──
-function picassoPhaseMask(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(10001,ss,0,0); sR(); sR();
-  const BG=isBW?[[30,30,30]]:[[30,28,22],[22,20,28],[32,24,20],[18,24,22],[28,22,26]];
-  const bg0=chords[0]&&_picChord(chords,0,gc,isBW).rgb||[120,100,80];
-  const bgB=BG[(sR()*BG.length)|0];
-  const bgR=Math.round(bg0[0]*0.18+bgB[0]*0.82),bgG=Math.round(bg0[1]*0.18+bgB[1]*0.82),bgB2=Math.round(bg0[2]*0.18+bgB[2]*0.82);
-  ctx.fillStyle=`rgb(${bgR},${bgG},${bgB2})`; ctx.fillRect(0,0,CW,CH);
-  const INK=isBW?'rgba(20,20,20,1)':'rgba(15,8,18,1)';
-  function woodTint(c){ if(isBW) return c; return [Math.min(255,Math.round(c[0]*0.55+95)),Math.min(255,Math.round(c[1]*0.50+75)),Math.min(255,Math.round(c[2]*0.40+45))]; }
-  const maskCount=sR()<0.65?1:2;
-  const totalParts=maskCount*13;
-  const revealParts=Math.max(1,Math.ceil(N/cn*totalParts*2.5));
-  let cIdxOff=0;
-  for(let mi=0;mi<maskCount;mi++){
-    const mR=_seedRnd(mi+11000,ss,0,0); mR(); mR();
-    const cx=maskCount===1?CW*0.50:CW*(0.28+mi*0.44);
-    const cy=CH*0.50;
-    const scale=maskCount===1?1.0:0.62;
-    const mwBase=CW*0.74*scale, mhBase=CH*0.84*scale;
-    const aspect=(mR()*4)|0;
-    let mw,mh;
-    if(aspect===0){ mw=mwBase; mh=mhBase; }
-    else if(aspect===1){ mw=mwBase*0.70; mh=mhBase*1.10; }
-    else if(aspect===2){ mw=mwBase*1.20; mh=mhBase*0.80; }
-    else { mw=mwBase*0.85; mh=mhBase; }
-    const tilt=(mR()-0.5)*0.12;
-    const eyeStyle=(mR()*4)|0, noseStyle=(mR()*3)|0, mouthStyle=(mR()*3)|0;
-    const ct=Math.cos(tilt), st=Math.sin(tilt);
-    const tilt_pt=(x,y)=>{ const dx=x-cx, dy=y-cy; return [cx+dx*ct-dy*st, cy+dx*st+dy*ct]; };
-    const topY=cy-mh*0.50, botY=cy+mh*0.50;
-    // Silhouette
-    let sil;
-    if(aspect===3){
-      sil=[[cx-mw*0.50,topY+mh*0.05],[cx-mw*0.30,topY],[cx+mw*0.30,topY],[cx+mw*0.50,topY+mh*0.05],
-           [cx+mw*0.45,cy+mh*0.10],[cx,botY],[cx-mw*0.45,cy+mh*0.10]].map(p=>tilt_pt(p[0],p[1]));
-    } else {
-      sil=[[cx-mw*0.42,topY+mh*0.04],[cx-mw*0.05,topY],[cx+mw*0.05,topY],[cx+mw*0.42,topY+mh*0.04],
-           [cx+mw*0.50,cy-mh*0.10],[cx+mw*0.45,cy+mh*0.20],[cx+mw*0.20,cy+mh*0.42],
-           [cx,botY],[cx-mw*0.20,cy+mh*0.42],[cx-mw*0.45,cy+mh*0.20],[cx-mw*0.50,cy-mh*0.10]].map(p=>tilt_pt(p[0],p[1]));
-    }
-    const baseTone=woodTint(_picChord(chords,0,gc,isBW).rgb);
-    ctx.fillStyle=`rgb(${baseTone[0]},${baseTone[1]},${baseTone[2]})`;
-    ctx.beginPath(); ctx.moveTo(sil[0][0],sil[0][1]);
-    for(let p=1;p<sil.length;p++) ctx.lineTo(sil[p][0],sil[p][1]);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=INK; ctx.lineWidth=3; ctx.stroke();
-    // Facets
-    const drawFacet=(pts,idx)=>{
-      const played=idx<=revealParts;
-      const {rgb}=_picChord(chords,idx%cn,gc,isBW);
-      const c=woodTint(rgb);
-      const a=played?0.90:0.43;
-      ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${a})`;
-      ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
-      for(let p=1;p<pts.length;p++) ctx.lineTo(pts[p][0],pts[p][1]);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle=`rgba(15,8,18,${a})`; ctx.lineWidth=2; ctx.stroke();
-    };
-    drawFacet([tilt_pt(cx-mw*0.38,topY+mh*0.06),tilt_pt(cx+mw*0.38,topY+mh*0.06),tilt_pt(cx+mw*0.18,cy-mh*0.18),tilt_pt(cx-mw*0.18,cy-mh*0.18)],cIdxOff+0);
-    drawFacet([tilt_pt(cx-mw*0.42,topY+mh*0.04),tilt_pt(cx-mw*0.18,cy-mh*0.18),tilt_pt(cx-mw*0.28,cy+mh*0.10),tilt_pt(cx-mw*0.50,cy-mh*0.10)],cIdxOff+1);
-    drawFacet([tilt_pt(cx+mw*0.18,cy-mh*0.18),tilt_pt(cx+mw*0.42,topY+mh*0.04),tilt_pt(cx+mw*0.50,cy-mh*0.10),tilt_pt(cx+mw*0.28,cy+mh*0.10)],cIdxOff+2);
-    // EYES
-    const ehY=cy-mh*0.05;
-    if(eyeStyle===3){
-      const ew=mw*0.20;
-      const ep=[tilt_pt(cx,ehY-mh*0.10),tilt_pt(cx+ew,ehY),tilt_pt(cx,ehY+mh*0.10),tilt_pt(cx-ew,ehY)];
-      const played=(cIdxOff+3)<=revealParts;
-      const a=played?0.94:0.43;
-      ctx.fillStyle=`rgba(15,8,22,${a})`;
-      ctx.beginPath(); ctx.moveTo(ep[0][0],ep[0][1]);
-      for(let p=1;p<ep.length;p++) ctx.lineTo(ep[p][0],ep[p][1]);
-      ctx.closePath(); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke();
-      if(played){
-        const {rgb:pc}=_picChord(chords,(cIdxOff+3)%cn,gc,isBW);
-        ctx.fillStyle=`rgb(${pc[0]},${pc[1]},${pc[2]})`;
-        ctx.beginPath(); ctx.arc(cx,ehY,mw*0.025,0,Math.PI*2); ctx.fill();
-      }
-    } else {
-      const eOff=mw*0.18;
-      for(let side=0;side<2;side++){
-        const sgn=side===0?-1:1;
-        const ex=cx+sgn*eOff;
-        let ep;
-        if(eyeStyle===0){
-          const ew=mw*0.13, eh=mh*0.10;
-          ep=[tilt_pt(ex,ehY-eh),tilt_pt(ex+ew,ehY),tilt_pt(ex,ehY+eh),tilt_pt(ex-ew,ehY)];
-        } else if(eyeStyle===1){
-          const er=mw*0.09;
-          ep=[]; for(let ti=0;ti<16;ti++){ const t=ti/16*Math.PI*2; ep.push(tilt_pt(ex+Math.cos(t)*er,ehY+Math.sin(t)*er*0.8)); }
-        } else {
-          const ew=mw*0.12, eh=mh*0.025;
-          ep=[tilt_pt(ex-ew,ehY-eh),tilt_pt(ex+ew,ehY-eh),tilt_pt(ex+ew,ehY+eh),tilt_pt(ex-ew,ehY+eh)];
-        }
-        const played=(cIdxOff+3+side)<=revealParts;
-        const a=played?0.94:0.43;
-        ctx.fillStyle=`rgba(15,8,22,${a})`;
-        ctx.beginPath(); ctx.moveTo(ep[0][0],ep[0][1]);
-        for(let p=1;p<ep.length;p++) ctx.lineTo(ep[p][0],ep[p][1]);
-        ctx.closePath(); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke();
-        if(played && eyeStyle<2){
-          const {rgb:pc}=_picChord(chords,(cIdxOff+3+side)%cn,gc,isBW);
-          ctx.fillStyle=`rgb(${pc[0]},${pc[1]},${pc[2]})`;
-          ctx.beginPath(); ctx.arc(ex,ehY,mw*0.018,0,Math.PI*2); ctx.fill();
-        }
-      }
-    }
-    // NOSE
-    let np;
-    if(noseStyle===0) np=[tilt_pt(cx,cy-mh*0.13),tilt_pt(cx+mw*0.07,cy+mh*0.18),tilt_pt(cx-mw*0.07,cy+mh*0.18)];
-    else if(noseStyle===1) np=[tilt_pt(cx-mw*0.06,cy-mh*0.08),tilt_pt(cx+mw*0.06,cy-mh*0.08),tilt_pt(cx+mw*0.12,cy+mh*0.17),tilt_pt(cx-mw*0.12,cy+mh*0.17)];
-    else np=[tilt_pt(cx-mw*0.025,cy-mh*0.16),tilt_pt(cx+mw*0.025,cy-mh*0.16),tilt_pt(cx+mw*0.04,cy+mh*0.22),tilt_pt(cx-mw*0.04,cy+mh*0.22)];
-    drawFacet(np,cIdxOff+5);
-    // MOUTH
-    const my=cy+mh*0.28;
-    if(mouthStyle===0){
-      const mw2=mw*0.20, mh2=mh*0.05;
-      const mp=[tilt_pt(cx-mw2,my-mh2),tilt_pt(cx+mw2,my-mh2),tilt_pt(cx+mw2,my+mh2),tilt_pt(cx-mw2,my+mh2)];
-      const played=(cIdxOff+6)<=revealParts;
-      const a=played?0.94:0.43;
-      ctx.fillStyle=`rgba(15,8,22,${a})`;
-      ctx.beginPath(); ctx.moveTo(mp[0][0],mp[0][1]);
-      for(let p=1;p<mp.length;p++) ctx.lineTo(mp[p][0],mp[p][1]);
-      ctx.closePath(); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke();
-      if(played){
-        const {rgb:tc}=_picChord(chords,(cIdxOff+11)%cn,gc,isBW);
-        ctx.strokeStyle=`rgba(${tc[0]},${tc[1]},${tc[2]},0.85)`; ctx.lineWidth=2;
-        for(let ti=0;ti<4;ti++){
-          const tx=cx-mw2+(ti+1)*(2*mw2/5);
-          const p1=tilt_pt(tx,my-mh2*0.7), p2=tilt_pt(tx,my+mh2*0.7);
-          ctx.beginPath(); ctx.moveTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.stroke();
-        }
-      }
-    } else if(mouthStyle===1){
-      const mw2=mw*0.15;
-      const mp=[tilt_pt(cx-mw2,my-mw2*0.7),tilt_pt(cx+mw2,my-mw2*0.7),tilt_pt(cx+mw2,my+mw2*0.7),tilt_pt(cx-mw2,my+mw2*0.7)];
-      const played=(cIdxOff+6)<=revealParts;
-      const a=played?0.94:0.43;
-      ctx.fillStyle=`rgba(15,8,22,${a})`;
-      ctx.beginPath(); ctx.moveTo(mp[0][0],mp[0][1]);
-      for(let p=1;p<mp.length;p++) ctx.lineTo(mp[p][0],mp[p][1]);
-      ctx.closePath(); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=3; ctx.stroke();
-      if(played){
-        const inner=mw*0.10;
-        const {rgb:lc}=_picChord(chords,(cIdxOff+13)%cn,gc,isBW);
-        const lp=[tilt_pt(cx-inner,my-inner*0.5),tilt_pt(cx+inner,my-inner*0.5),tilt_pt(cx+inner,my+inner*0.5),tilt_pt(cx-inner,my+inner*0.5)];
-        ctx.fillStyle=`rgb(${lc[0]},${lc[1]},${lc[2]})`;
-        ctx.beginPath(); ctx.moveTo(lp[0][0],lp[0][1]);
-        for(let p=1;p<lp.length;p++) ctx.lineTo(lp[p][0],lp[p][1]);
-        ctx.closePath(); ctx.fill();
-      }
-    } else {
-      const mw2=mw*0.25, mh2=mh*0.02;
-      const mp=[tilt_pt(cx-mw2,my-mh2),tilt_pt(cx-mw2*0.3,my-mh2*2),tilt_pt(cx+mw2*0.3,my-mh2*2),
-                tilt_pt(cx+mw2,my-mh2),tilt_pt(cx+mw2,my+mh2*1.5),tilt_pt(cx-mw2,my+mh2*1.5)];
-      const played=(cIdxOff+6)<=revealParts;
-      const a=played?0.94:0.43;
-      ctx.fillStyle=`rgba(15,8,22,${a})`;
-      ctx.beginPath(); ctx.moveTo(mp[0][0],mp[0][1]);
-      for(let p=1;p<mp.length;p++) ctx.lineTo(mp[p][0],mp[p][1]);
-      ctx.closePath(); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke();
-    }
-    // JAW + CHIN
-    for(let side=0;side<2;side++){
-      const sgn=side===0?-1:1;
-      const jp=[tilt_pt(cx+sgn*mw*0.30,cy+mh*0.10),tilt_pt(cx+sgn*mw*0.08,my+mh*0.06),
-                tilt_pt(cx+sgn*mw*0.10,cy+mh*0.45),tilt_pt(cx+sgn*mw*0.20,cy+mh*0.42),
-                tilt_pt(cx+sgn*mw*0.45,cy+mh*0.20)];
-      drawFacet(jp,cIdxOff+7+side);
-    }
-    const chinP=[tilt_pt(cx-mw*0.14,my+mh*0.06),tilt_pt(cx+mw*0.14,my+mh*0.06),
-                 tilt_pt(cx+mw*0.10,cy+mh*0.45),tilt_pt(cx,botY),tilt_pt(cx-mw*0.10,cy+mh*0.45)];
-    drawFacet(chinP,cIdxOff+9);
-    // Neck band — only single mask + 60% chance
-    if(maskCount===1 && mR()<0.6){
-      const np2=[tilt_pt(cx-mw*0.30,botY+8),tilt_pt(cx+mw*0.30,botY+8),
-                 tilt_pt(cx+mw*0.18,botY+8+CH*0.05),tilt_pt(cx-mw*0.18,botY+8+CH*0.05)];
-      const {rgb:nc}=_picChord(chords,(cIdxOff+10)%cn,gc,isBW);
-      const nct=woodTint(nc);
-      ctx.fillStyle=`rgb(${nct[0]},${nct[1]},${nct[2]})`;
-      ctx.beginPath(); ctx.moveTo(np2[0][0],np2[0][1]);
-      for(let p=1;p<np2.length;p++) ctx.lineTo(np2[p][0],np2[p][1]);
-      ctx.closePath(); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke();
-    }
-    // Final silhouette outline
-    ctx.strokeStyle=INK; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.moveTo(sil[0][0],sil[0][1]);
-    for(let p=1;p<sil.length;p++) ctx.lineTo(sil[p][0],sil[p][1]);
-    ctx.closePath(); ctx.stroke();
-    cIdxOff+=13;
-  }
-}
 
 // ── Picasso phase F: Cubist Dove v3. Random 1-3 doves, 3 poses (standing,
 // flying, looking-back), mirror, optional olive branch. ──
-function picassoPhaseGlass(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(13001,ss,0,0); sR(); sR();
-  const SKIES=isBW?[[210,210,210]]:[[220,215,200],[210,220,225],[225,210,200],[200,210,220],[215,200,210]];
-  const bg0=chords[0]&&_picChord(chords,0,gc,isBW).rgb||[120,100,80];
-  const sky=SKIES[(sR()*SKIES.length)|0];
-  const bgR=Math.round(bg0[0]*0.30+sky[0]*0.70),bgG=Math.round(bg0[1]*0.30+sky[1]*0.70),bgB=Math.round(bg0[2]*0.30+sky[2]*0.70);
-  ctx.fillStyle=`rgb(${bgR},${bgG},${bgB})`; ctx.fillRect(0,0,CW,CH);
-  const INK=isBW?'rgba(20,20,20,1)':'rgba(15,8,18,1)';
-  const r=sR();
-  const doveCount=r<0.60?1:(r<0.95?2:3);
-  let positions;
-  if(doveCount===1) positions=[[CW*0.5,CH*0.5,1.0]];
-  else if(doveCount===2) positions=[[CW*0.32,CH*(0.40+sR()*0.15),0.65],[CW*0.68,CH*(0.55+sR()*0.15),0.65]];
-  else positions=[[CW*0.22,CH*0.30,0.45],[CW*0.55,CH*0.55,0.55],[CW*0.80,CH*0.35,0.40]];
-  const totalParts=doveCount*48;
-  const revealParts=Math.max(1,Math.ceil(N/cn*totalParts*2.5));
-  let cIdxOff=0;
-  for(let di=0;di<doveCount;di++){
-    const [cx,cy,scale]=positions[di];
-    const dR=_seedRnd(di+14000,ss,0,0); dR(); dR();
-    const pose=(dR()*3)|0;
-    const mirror=dR()<0.5;
-    const m=mirror?-1:1;
-    const rot=(dR()-0.5)*0.35;
-    const bw=CW*0.50*scale, bh=CH*0.30*scale;
-    const ct=Math.cos(rot), st=Math.sin(rot);
-    const transform=(pts)=>pts.map(p=>{ const pxm=m*p[0]; return [cx+pxm*ct-p[1]*st, cy+pxm*st+p[1]*ct]; });
-    // Body relative points
-    const bodyRel=[];
-    for(let i=0;i<48;i++){
-      const t=i/48*Math.PI*2;
-      let rx,ry;
-      if(pose===0){ rx=bw*0.5*(1.0+0.05*Math.cos(t)); ry=bh*0.5; }
-      else if(pose===1){ rx=bw*0.55*(1.0+0.08*Math.cos(t-Math.PI*0.3)); ry=bh*0.40; }
-      else { rx=bw*0.5; ry=bh*0.55; }
-      bodyRel.push([Math.cos(t)*rx,Math.sin(t)*ry]);
-    }
-    // Head
-    const hOffX=bw*0.42*(pose!==2?1:-0.42), hOffY=-bh*0.10, hR=bh*0.30;
-    const headRel=[];
-    for(let i=0;i<24;i++){ const t=i/24*Math.PI*2; headRel.push([hOffX+Math.cos(t)*hR,hOffY+Math.sin(t)*hR]); }
-    // Wing
-    let wingRel;
-    if(pose===1){
-      wingRel=[[-bw*0.10,-bh*0.20],[-bw*0.40,-bh*1.20],[bw*0.05,-bh*1.40],
-               [bw*0.35,-bh*1.10],[bw*0.30,-bh*0.30],[bw*0.10,-bh*0.10]];
-    } else {
-      wingRel=[[-bw*0.10,-bh*0.20],[-bw*0.30,-bh*0.80],[-bw*0.05,-bh*1.10],
-               [bw*0.25,-bh*0.90],[bw*0.30,-bh*0.40],[bw*0.15,-bh*0.15]];
-    }
-    const tailRel=[[-bw*0.42,bh*0.05],[-bw*0.78,-bh*0.10],[-bw*0.84,bh*0.10],
-                   [-bw*0.80,bh*0.30],[-bw*0.50,bh*0.30]];
-    const lwingRel=[[-bw*0.05,bh*0.15],[-bw*0.25,bh*0.45],[-bw*0.05,bh*0.50],
-                    [bw*0.20,bh*0.40],[bw*0.25,bh*0.20]];
-    const cubistFill=(poly,baseIdx)=>{
-      let cxp=0, cyp=0; poly.forEach(p=>{ cxp+=p[0]; cyp+=p[1]; });
-      cxp/=poly.length; cyp/=poly.length;
-      const n=poly.length;
-      for(let i=0;i<n;i++){
-        const p1=poly[i], p2=poly[(i+1)%n];
-        const cIdx=baseIdx+i;
-        const played=cIdx<=revealParts;
-        const {rgb}=_picChord(chords,cIdx%cn,gc,isBW);
-        const a=played?0.90:0.43;
-        ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
-        ctx.beginPath(); ctx.moveTo(cxp,cyp); ctx.lineTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.closePath();
-        ctx.fill();
-      }
-    };
-    const tail=transform(tailRel);  cubistFill(tail,cIdxOff+0);
-    ctx.strokeStyle=`rgba(15,8,18,0.86)`; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(tail[0][0],tail[0][1]); for(let p=1;p<tail.length;p++) ctx.lineTo(tail[p][0],tail[p][1]); ctx.closePath(); ctx.stroke();
-    if(pose!==1){
-      const lw=transform(lwingRel); cubistFill(lw,cIdxOff+6);
-      ctx.beginPath(); ctx.moveTo(lw[0][0],lw[0][1]); for(let p=1;p<lw.length;p++) ctx.lineTo(lw[p][0],lw[p][1]); ctx.closePath(); ctx.stroke();
-    }
-    const body=transform(bodyRel); cubistFill(body,cIdxOff+12);
-    ctx.strokeStyle=INK; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(body[0][0],body[0][1]); for(let p=1;p<body.length;p++) ctx.lineTo(body[p][0],body[p][1]); ctx.closePath(); ctx.stroke();
-    const wing=transform(wingRel); cubistFill(wing,cIdxOff+36);
-    ctx.beginPath(); ctx.moveTo(wing[0][0],wing[0][1]); for(let p=1;p<wing.length;p++) ctx.lineTo(wing[p][0],wing[p][1]); ctx.closePath(); ctx.stroke();
-    const head=transform(headRel); cubistFill(head,cIdxOff+42);
-    ctx.beginPath(); ctx.moveTo(head[0][0],head[0][1]); for(let p=1;p<head.length;p++) ctx.lineTo(head[p][0],head[p][1]); ctx.closePath(); ctx.stroke();
-    // Beak
-    if(pose!==2){
-      const beak=transform([[hOffX+hR*0.85,hOffY-hR*0.10],[hOffX+hR*1.20,hOffY],[hOffX+hR*0.85,hOffY+hR*0.10]]);
-      ctx.fillStyle=isBW?'rgba(180,180,140,0.94)':'rgba(235,195,80,0.94)';
-      ctx.beginPath(); ctx.moveTo(beak[0][0],beak[0][1]); ctx.lineTo(beak[1][0],beak[1][1]); ctx.lineTo(beak[2][0],beak[2][1]); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke();
-    }
-    // Eye
-    const eX=hOffX+hR*0.25*(pose!==2?1:-1), eY=hOffY-hR*0.10;
-    const eye=transform([[eX-hR*0.10,eY-hR*0.07],[eX+hR*0.10,eY-hR*0.07],[eX+hR*0.10,eY+hR*0.07],[eX-hR*0.10,eY+hR*0.07]]);
-    ctx.fillStyle=INK;
-    ctx.beginPath(); ctx.moveTo(eye[0][0],eye[0][1]);
-    for(let p=1;p<eye.length;p++) ctx.lineTo(eye[p][0],eye[p][1]);
-    ctx.closePath(); ctx.fill();
-    // Olive branch — single dove, 60% chance, facing forward
-    if(doveCount===1 && dR()<0.60 && pose!==2){
-      const bt=[hOffX+hR*1.10,hOffY];
-      const br=[bt,[bt[0]+CW*0.10/scale,bt[1]-CH*0.04/scale],[bt[0]+CW*0.22/scale,bt[1]-CH*0.08/scale]];
-      const brT=transform(br);
-      ctx.strokeStyle=isBW?'rgba(80,80,80,0.90)':'rgba(60,120,50,0.90)'; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.moveTo(brT[0][0],brT[0][1]); ctx.lineTo(brT[1][0],brT[1][1]); ctx.lineTo(brT[2][0],brT[2][1]); ctx.stroke();
-      const leafPos=[br[1],[(br[1][0]+br[2][0])/2,(br[1][1]+br[2][1])/2],br[2]];
-      for(let li=0;li<3;li++){
-        const lpp=leafPos[li];
-        const leaf=transform([[lpp[0]-15,lpp[1]+5],[lpp[0]+8,lpp[1]-12],[lpp[0]+18,lpp[1]-2]]);
-        const lc=isBW?[150-li*10,150-li*5,150]:[60+li*20,140+li*5,60];
-        ctx.fillStyle=`rgb(${lc[0]},${lc[1]},${lc[2]})`;
-        ctx.beginPath(); ctx.moveTo(leaf[0][0],leaf[0][1]); ctx.lineTo(leaf[1][0],leaf[1][1]); ctx.lineTo(leaf[2][0],leaf[2][1]); ctx.closePath();
-        ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke();
-      }
-    }
-    cIdxOff+=48;
-  }
-}
 
 
 // ── Picasso Blue Atmosphere: cool blue cubist mood via palette shift, no
@@ -5600,22 +4890,6 @@ function vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ── Vasarely F: Colour interval grid — flat grid of graded colour squares. ──
-function vasarelyPhaseInterval(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#0d0d0d':'#0a0a0a';ctx.fillRect(0,0,CW,CH);
-  const cols=Math.max(5,Math.min(24,Math.round(Math.sqrt(cn)*1.6))),rows=Math.round(cols*CH/CW);
-  const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
-  const cw=CW/cols,chh=CH/rows;
-  let k=0;
-  for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
-    const {rgb}=_picChord(chords,Math.floor(k*(cn/total)),gc,isBW);
-    // gentle interval gradient across the grid
-    const t=(c/cols+r/rows)/2;
-    const cr2=[Math.round(rgb[0]*(0.6+t*0.4)),Math.round(rgb[1]*(0.6+t*0.4)),Math.round(rgb[2]*(0.6+t*0.4))];
-    ctx.fillStyle=`rgb(${cr2[0]},${cr2[1]},${cr2[2]})`;
-    ctx.fillRect(c*cw+cw*0.06,r*chh+chh*0.06,cw*0.88,chh*0.88);
-  }
-}
 
 // ── Vasarely G: Vonal — sphere with radiating rays (1968 series). Central
 // chord-gradient sphere + 48 chord-coloured wedge rays radiating outward,
@@ -6139,26 +5413,6 @@ function francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ── Sam Francis E: Grid/lattice — colour blots seated in an open white grid. ──
-function francisPhaseGrid(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
-  const cells=Math.max(4,Math.min(36,Math.round(cn/4)));
-  const cols=Math.ceil(Math.sqrt(cells)),rows=Math.ceil(cells/cols);
-  const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
-  const cw=CW/cols,chh=CH/rows;
-  // thin grey lattice lines
-  ctx.strokeStyle=isBW?'rgba(80,80,80,0.4)':'rgba(60,80,120,0.35)';ctx.lineWidth=Math.max(1,Math.min(CW,CH)*0.004);
-  for(let c=1;c<cols;c++){ctx.beginPath();ctx.moveTo(c*cw,0);ctx.lineTo(c*cw,CH);ctx.stroke();}
-  for(let r=1;r<rows;r++){ctx.beginPath();ctx.moveTo(0,r*chh);ctx.lineTo(CW,r*chh);ctx.stroke();}
-  let k=0;
-  for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
-    const rnd=_seedRnd(k+4000,ss,0,0);
-    const {rgb,energy}=_picChord(chords,Math.floor(k*(cn/total)),gc,isBW);
-    const x=c*cw+cw/2,y=r*chh+chh/2,R=Math.min(cw,chh)*0.4*(0.6+energy*0.5);
-    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.55+rnd()*0.3).toFixed(2)})`;
-    ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();
-  }
-}
 
 // ── Sam Francis F: Big Red mural — a dominant red field with edge incursions. ──
 function francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
@@ -6938,117 +6192,8 @@ function _klimtGround(ctx,CW,CH){
 // ending in a tight Klimt curl with a chord-coloured jewel at its center.
 // Falling eye-leaves (chord-coloured) drift across the canvas. Reveal scales
 // branch + leaf count so the painting builds progressively.
-function klimtPhaseTree(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-
-  // Gold ground (or dark grey in B/W).
-  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
-  else _klimtGround(ctx,CW,CH);
-
-  const cx = CW*0.50, cy = CH*0.55;
-
-  // Branches — count scales with chord density (target 20 at high cn).
-  const branchTarget = Math.max(6, Math.min(24, Math.round(cn/8) + 8));
-  const branches = Math.max(3, Math.ceil(branchTarget * reveal));
-
-  ctx.strokeStyle = isBW ? '#1a1a1a' : '#2a1f0a';
-  ctx.lineWidth = 3;
-  ctx.lineCap = 'round';
-
-  for(let i=0;i<branches;i++){
-    const rnd = _seedRnd(i+31500,ss,0,0);
-    const startAng = (i/branchTarget)*Math.PI*2;
-    let x = cx + Math.cos(startAng)*CW*0.02;
-    let y = cy + Math.sin(startAng)*CH*0.02;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    let a = startAng;
-    const swirlDir = (i%2)?1:-1;
-    const len = Math.min(CW,CH)*(0.30+rnd()*0.22);
-    const segs = 24;
-    for(let s=0;s<segs;s++){
-      a += swirlDir * 0.22;
-      x += Math.cos(a)*len/segs;
-      y += Math.sin(a)*len/segs;
-      ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    // Tight Klimt curl at the tip — signature spiral.
-    const sx = x, sy = y;
-    ctx.beginPath();
-    let sa = a;
-    for(let t=0; t<22; t++){
-      const r = t * 1.6;
-      sa += swirlDir * 0.55;
-      const px = sx + Math.cos(sa)*r;
-      const py = sy + Math.sin(sa)*r;
-      if(t===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-    }
-    ctx.stroke();
-    // Chord-coloured jewel at spiral center.
-    const {rgb} = _picChord(chords, Math.floor(i*(cn/branchTarget))%cn, gc, isBW);
-    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    ctx.beginPath();
-    ctx.arc(sx, sy, 7+i%3*2, 0, Math.PI*2);
-    ctx.fill();
-    ctx.strokeStyle = isBW ? '#1a1a1a' : '#2a1f0a';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.lineWidth = 3;
-  }
-
-  // Central trunk — dark brown anchor.
-  ctx.fillStyle = isBW ? '#4a4844' : '#5a3a18';
-  ctx.beginPath();
-  ctx.ellipse(cx, cy + CH*0.30, CW*0.04, CH*0.20, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle = isBW ? '#1a1a1a' : '#2a1f0a';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Falling Klimt eye-leaves — chord-coloured ellipses with dark pupil dots.
-  const leafCount = Math.max(10, Math.ceil(30*reveal));
-  for(let i=0;i<leafCount;i++){
-    const rnd = _seedRnd(i+32000,ss,0,0);
-    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
-    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    const x = rnd()*CW, y = rnd()*CH;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 4+rnd()*5, 8+rnd()*5, rnd()*Math.PI, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = isBW ? 'rgba(20,20,20,0.85)' : 'rgba(40,28,6,0.85)';
-    ctx.beginPath();
-    ctx.arc(x, y, 1.5, 0, Math.PI*2);
-    ctx.fill();
-  }
-}
 
 // ── Klimt D: Mosaic — squares, spirals, eyes, triangles (Adele/Kiss). ──
-function klimtPhaseMosaic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  if(isBW){ctx.fillStyle='#2c2c2c';ctx.fillRect(0,0,CW,CH);}else _klimtGround(ctx,CW,CH);
-  const cells=Math.max(12,Math.min(300,cn*3));
-  const vis=Math.max(1,Math.ceil(N/cn*cells));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+4800,ss,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/cells)),gc,isBW);
-    const x=rnd()*CW,y=rnd()*CH,s=Math.min(CW,CH)*(0.015+rnd()*0.03);
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    ctx.strokeStyle='rgba(40,30,8,0.5)';ctx.lineWidth=1;
-    const k=(rnd()*4)|0;
-    if(k===0){ctx.fillRect(x-s,y-s,s*2,s*2);ctx.strokeRect(x-s,y-s,s*2,s*2);}
-    else if(k===1){ // spiral
-      ctx.strokeStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.lineWidth=Math.max(1.5,s*0.3);
-      ctx.beginPath();let pr=0,pa=0;for(let t=0;t<16;t++){pa=t*0.6;pr=s*(t/16);ctx.lineTo(x+Math.cos(pa)*pr,y+Math.sin(pa)*pr);}ctx.stroke();
-    } else if(k===2){ // eye
-      ctx.beginPath();ctx.ellipse(x,y,s*1.2,s*0.6,0,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='rgba(20,15,5,0.9)';ctx.beginPath();ctx.arc(x,y,s*0.35,0,Math.PI*2);ctx.fill();
-    } else { // triangle
-      ctx.beginPath();ctx.moveTo(x,y-s);ctx.lineTo(x+s,y+s);ctx.lineTo(x-s,y+s);ctx.closePath();ctx.fill();
-    }
-  }
-}
 
 // ── Klimt E: Floral meadow — dense flower dots over a green field. ──
 function klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
@@ -7091,127 +6236,6 @@ function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // rectangles; right side (woman) filled with chord-coloured ovals/circles. Two
 // faces at top: man behind (dark hair), woman tilted forward with flowers in
 // hair. Falling chord-coloured petals at the bottom. Reveal scales detail count.
-function klimtPhaseKiss(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-
-  // Gold ground (or dark grey in B/W).
-  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
-  else _klimtGround(ctx,CW,CH);
-
-  // Subtle gold flecks.
-  for(let i=0;i<60;i++){
-    const rnd=_seedRnd(i+30100,ss,0,0);
-    ctx.fillStyle = isBW
-      ? (rnd()>0.5 ? 'rgba(220,216,210,0.10)' : 'rgba(80,80,80,0.10)')
-      : (rnd()>0.5 ? 'rgba(255,240,180,0.10)' : 'rgba(120,86,20,0.10)');
-    ctx.beginPath(); ctx.arc(rnd()*CW, rnd()*CH, 4+rnd()*16, 0, Math.PI*2); ctx.fill();
-  }
-
-  // Embracing pair silhouette.
-  const cx = CW*0.50, cy = CH*0.55;
-  const cloakW = CW*0.55, cloakH = CH*0.85;
-  // Outer cloak.
-  ctx.fillStyle = isBW ? '#aaa49a' : '#dab040';
-  ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(80,55,15,0.7)';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(cx - cloakW*0.40, CH);
-  ctx.bezierCurveTo(cx - cloakW*0.55, cy + cloakH*0.20, cx - cloakW*0.50, cy - cloakH*0.30, cx - cloakW*0.20, cy - cloakH*0.40);
-  ctx.bezierCurveTo(cx - cloakW*0.05, cy - cloakH*0.50, cx + cloakW*0.20, cy - cloakH*0.50, cx + cloakW*0.30, cy - cloakH*0.42);
-  ctx.bezierCurveTo(cx + cloakW*0.50, cy - cloakH*0.35, cx + cloakW*0.55, cy + cloakH*0.20, cx + cloakW*0.40, CH);
-  ctx.closePath();
-  ctx.fill(); ctx.stroke();
-
-  // LEFT (man) — rectangles/squares in ink + chord-coloured.
-  const leftCount = Math.max(8, Math.ceil(60*reveal));
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(cx - cloakW*0.40, CH);
-  ctx.bezierCurveTo(cx - cloakW*0.55, cy + cloakH*0.20, cx - cloakW*0.50, cy - cloakH*0.30, cx - cloakW*0.20, cy - cloakH*0.40);
-  ctx.lineTo(cx, cy - cloakH*0.40);
-  ctx.lineTo(cx, CH);
-  ctx.closePath();
-  ctx.clip();
-  for(let i=0;i<leftCount;i++){
-    const rnd=_seedRnd(i+30200,ss,0,0);
-    const x = cx - cloakW*0.45 + rnd()*cloakW*0.45;
-    const y = cy - cloakH*0.40 + rnd()*cloakH*0.85;
-    const w = 12+rnd()*22, h = 8+rnd()*16;
-    const k = rnd();
-    if(k < 0.40){
-      ctx.fillStyle = isBW ? '#1a1a1a' : '#1a1208';
-    } else {
-      const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
-      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    }
-    ctx.fillRect(x, y, w, h);
-  }
-  ctx.restore();
-
-  // RIGHT (woman) — ovals/circles in chord colours.
-  const rightCount = Math.max(8, Math.ceil(70*reveal));
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(cx, CH);
-  ctx.lineTo(cx, cy - cloakH*0.40);
-  ctx.bezierCurveTo(cx + cloakW*0.05, cy - cloakH*0.50, cx + cloakW*0.20, cy - cloakH*0.50, cx + cloakW*0.30, cy - cloakH*0.42);
-  ctx.bezierCurveTo(cx + cloakW*0.50, cy - cloakH*0.35, cx + cloakW*0.55, cy + cloakH*0.20, cx + cloakW*0.40, CH);
-  ctx.closePath();
-  ctx.clip();
-  for(let i=0;i<rightCount;i++){
-    const rnd=_seedRnd(i+30300,ss,0,0);
-    const x = cx + rnd()*cloakW*0.50;
-    const y = cy - cloakH*0.40 + rnd()*cloakH*0.85;
-    const r = 6+rnd()*14;
-    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
-    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = isBW ? 'rgba(40,40,40,0.5)' : 'rgba(60,40,20,0.5)';
-    ctx.beginPath(); ctx.arc(x, y, r*0.3, 0, Math.PI*2); ctx.fill();
-  }
-  ctx.restore();
-
-  // Two heads at top — man behind, woman tilted.
-  ctx.fillStyle = isBW ? '#cccac4' : '#e8c894';
-  ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.8)' : 'rgba(80,55,15,0.8)';
-  ctx.lineWidth = 3;
-  // Man head
-  ctx.beginPath();
-  ctx.ellipse(cx - cloakW*0.06, cy - cloakH*0.36, cloakW*0.10, cloakW*0.13, -0.1, 0, Math.PI*2);
-  ctx.fill(); ctx.stroke();
-  // Man dark hair
-  ctx.fillStyle = isBW ? '#222' : '#1a1208';
-  ctx.beginPath();
-  ctx.ellipse(cx - cloakW*0.06, cy - cloakH*0.42, cloakW*0.11, cloakW*0.08, -0.1, 0, Math.PI*2);
-  ctx.fill();
-  // Woman head — tilted
-  ctx.fillStyle = isBW ? '#d8d6d0' : '#f4d8b8';
-  ctx.beginPath();
-  ctx.ellipse(cx + cloakW*0.08, cy - cloakH*0.30, cloakW*0.09, cloakW*0.11, 0.4, 0, Math.PI*2);
-  ctx.fill(); ctx.stroke();
-  // Woman flowers in hair.
-  for(let i=0;i<5;i++){
-    const {rgb} = _picChord(chords, Math.floor((20+i*15)*(cn/120))%cn, gc, isBW);
-    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    const fx = cx + cloakW*0.04 + i*cloakW*0.025;
-    const fy = cy - cloakH*0.35;
-    ctx.beginPath(); ctx.arc(fx, fy, 5, 0, Math.PI*2); ctx.fill();
-  }
-
-  // Falling petals/sparkles at bottom (reveal-based count).
-  const petals = Math.max(5, Math.ceil(25*reveal));
-  for(let i=0;i<petals;i++){
-    const rnd=_seedRnd(i+30400,ss,0,0);
-    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
-    const x = rnd()*CW;
-    const y = CH*0.65 + rnd()*CH*0.30;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 3+rnd()*4, 6+rnd()*5, rnd()*Math.PI, 0, Math.PI*2);
-    ctx.fill();
-  }
-}
 
 // ── Klimt H: Danaë (1907-08) — golden shower. Rich maroon radial ground +
 // curled female nude silhouette (right side) + diagonal cascade of golden
@@ -7920,53 +6944,6 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
 // ── Riley C: B/W waves recoloured — vermilion/turquoise undulating bands. ──
 // ── Riley C: Wavy stripes v2. Random orientation (h/v/diag/anti-diag), random
 // count 12-40, wavelength, amplitude. Both colours chord-derived per painting. ──
-function rileyPhaseBWWaves(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(30001,ss,0,0); sR(); sR();
-  ctx.fillStyle=isBW?'#f0f0ec':'#f4f0e6'; ctx.fillRect(0,0,CW,CH);
-  const orient=(sR()*4)|0;
-  const nStripes=12+((sR()*29)|0);
-  const wavelength=0.15+sR()*0.85;
-  const ampScale=0.5+sR()*1.5;
-  const vis=Math.max(1,Math.ceil(N/cn*nStripes*2.5));
-  if(orient<2){
-    const sH=(orient===0?CH:CW)/nStripes;
-    for(let i=0;i<Math.min(nStripes,vis);i++){
-      const {rgb}=_picChord(chords,Math.floor(i*(cn/nStripes))%cn,gc,isBW);
-      const base=i*sH;
-      ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-      ctx.beginPath();
-      if(orient===0){
-        ctx.moveTo(0,base);
-        for(let x=0;x<=CW;x+=Math.max(1,CW/40)){ const ph=x/CW*Math.PI*2*wavelength; const a=sH*0.35*ampScale*Math.sin(ph+i*0.4); ctx.lineTo(x,base+a); }
-        for(let x=CW;x>=0;x-=Math.max(1,CW/40)){ const ph=x/CW*Math.PI*2*wavelength; const a=sH*0.35*ampScale*Math.sin(ph+i*0.4); ctx.lineTo(x,base+sH+a); }
-      } else {
-        ctx.moveTo(base,0);
-        for(let y=0;y<=CH;y+=Math.max(1,CH/40)){ const ph=y/CH*Math.PI*2*wavelength; const a=sH*0.35*ampScale*Math.sin(ph+i*0.4); ctx.lineTo(base+a,y); }
-        for(let y=CH;y>=0;y-=Math.max(1,CH/40)){ const ph=y/CH*Math.PI*2*wavelength; const a=sH*0.35*ampScale*Math.sin(ph+i*0.4); ctx.lineTo(base+sH+a,y); }
-      }
-      ctx.closePath(); ctx.fill();
-    }
-  } else {
-    // Diagonal: rotate around centre, draw stripes as oriented strips
-    ctx.save();
-    ctx.translate(CW/2,CH/2);
-    ctx.rotate(orient===2?Math.PI/6:-Math.PI/6);
-    const big=Math.max(CW,CH)*1.5;
-    const sH=big/nStripes;
-    for(let i=0;i<Math.min(nStripes,vis);i++){
-      const {rgb}=_picChord(chords,Math.floor(i*(cn/nStripes))%cn,gc,isBW);
-      const base=i*sH-big/2;
-      ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-      ctx.beginPath();
-      ctx.moveTo(-big/2,base);
-      for(let x=-big/2;x<=big/2;x+=big/40){ const ph=(x+big/2)/big*Math.PI*2*wavelength; const a=sH*0.35*ampScale*Math.sin(ph+i*0.4); ctx.lineTo(x,base+a); }
-      for(let x=big/2;x>=-big/2;x-=big/40){ const ph=(x+big/2)/big*Math.PI*2*wavelength; const a=sH*0.35*ampScale*Math.sin(ph+i*0.4); ctx.lineTo(x,base+sH+a); }
-      ctx.closePath(); ctx.fill();
-    }
-    ctx.restore();
-  }
-}
 
 // ── Riley D: Concentric ripple v2. Off-centre, random count + petals. ──
 function rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
@@ -7998,27 +6975,6 @@ function rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ── Riley E: Lozenge grid v2 — random cols/rows + skew. ──
-function rileyPhaseLozenge(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(32001,ss,0,0); sR(); sR();
-  ctx.fillStyle=isBW?'#eceae2':'#f2f0e8'; ctx.fillRect(0,0,CW,CH);
-  const cols=4+((sR()*8)|0), rows=6+((sR()*8)|0);
-  const dw=CW/cols, dh=CH/rows;
-  const skew=(sR()-0.5)*0.4;
-  const total=cols*rows;
-  const vis=Math.max(1,Math.ceil(N/cn*total*2.5));
-  let k=0;
-  for(let ry=0;ry<rows;ry++)for(let cx2=0;cx2<cols;cx2++,k++){
-    if(k>=vis) break;
-    const {rgb}=_picChord(chords,k%cn,gc,isBW);
-    const ccx=cx2*dw+dw/2+skew*dw*ry;
-    const ccy=ry*dh+dh/2;
-    const hw=dw*0.5*0.85, hh=dh*0.5*0.85;
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    ctx.beginPath(); ctx.moveTo(ccx,ccy-hh); ctx.lineTo(ccx+hw,ccy);
-    ctx.lineTo(ccx,ccy+hh); ctx.lineTo(ccx-hw,ccy); ctx.closePath(); ctx.fill();
-  }
-}
 
 // ── Riley F: Triangle tessellation v2 — random density. ──
 function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
@@ -8469,51 +7425,6 @@ function comicPhaseBenDay(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ── Lichtenstein D: Brushstrokes v2 with orientation variation. ──
-function comicPhaseBrush(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(22001,ss,0,0); sR(); sR();
-  const BG=isBW?[[232,228,216]]:[[240,232,74],[250,245,225],[220,235,235],[245,225,225]];
-  const bg=BG[(sR()*BG.length)|0];
-  ctx.fillStyle=`rgb(${bg[0]},${bg[1]},${bg[2]})`; ctx.fillRect(0,0,CW,CH);
-  const INK='#0a0a0a';
-  const nStrokes=2+((sR()*7)|0);
-  const orient=(sR()*4)|0;
-  const vis=Math.max(1,Math.ceil(N/cn*nStrokes*2.5));
-  for(let i=0;i<Math.min(nStrokes,vis);i++){
-    const rR=_seedRnd(i+5500+ss,0,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/nStrokes))%cn,gc,isBW);
-    const thick=CH*(0.06+rR()*0.12);
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    ctx.strokeStyle=INK; ctx.lineWidth=2;
-    if(orient===0){
-      const y=rR()*CH;
-      ctx.beginPath(); ctx.moveTo(0,y);
-      for(let x=0;x<=CW;x+=CW/10) ctx.lineTo(x,y+Math.sin(x/CW*Math.PI*2+i)*thick*0.5);
-      for(let x=CW;x>=0;x-=CW/10) ctx.lineTo(x,y+thick+Math.sin(x/CW*Math.PI*2+i)*thick*0.5);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-      for(let d=0;d<3;d++){ const dx=rR()*CW; ctx.fillRect(dx,y+thick,thick*0.15,thick*(0.4+rR())); }
-    } else if(orient===1){
-      const x=rR()*CW;
-      ctx.beginPath(); ctx.moveTo(x,0);
-      for(let y=0;y<=CH;y+=CH/10) ctx.lineTo(x+Math.sin(y/CH*Math.PI*2+i)*thick*0.5,y);
-      for(let y=CH;y>=0;y-=CH/10) ctx.lineTo(x+thick+Math.sin(y/CH*Math.PI*2+i)*thick*0.5,y);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    } else {
-      const cx=CW*(0.2+rR()*0.6), cy=CH*(0.2+rR()*0.6);
-      const length=Math.max(CW,CH)*(orient===2?(0.6+rR()*0.4):(0.4+rR()*0.5));
-      const ang=orient===2?((rR()*0.6-0.3)*Math.PI+Math.PI/4):(rR()*Math.PI*2);
-      const dx=Math.cos(ang), dy=Math.sin(ang);
-      const px=-dy, py=dx;
-      ctx.beginPath();
-      ctx.moveTo(cx-dx*length/2+px*thick/2, cy-dy*length/2+py*thick/2);
-      ctx.lineTo(cx+dx*length/2+px*thick/2, cy+dy*length/2+py*thick/2);
-      ctx.lineTo(cx+dx*length/2-px*thick/2, cy+dy*length/2-py*thick/2);
-      ctx.lineTo(cx-dx*length/2-px*thick/2, cy-dy*length/2-py*thick/2);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
-  }
-}
 
 // ── Lichtenstein E: Pop landscape v2 — varied sun position + 3 sun styles +
 // random band count (3-8) and types per band. ──
@@ -8923,253 +7834,11 @@ function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
 // flanking flower beds. Composition (path + horizon + canopy) is variant
 // scaffolding; every coloured stroke comes from gc() so the painting still
 // follows the user's palette and the chord at that depth.
-function monetPhaseGarden(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const cn = chords.length;
-  const rnd = _seedRnd(91, ss, lim, 0);
-
-  // Warm sunlit paper base (physical canvas — neutral across palettes).
-  ctx.fillStyle = '#EAE7D9';
-  ctx.fillRect(0, 0, CW, CH);
-
-  // Vanishing point near top centre, path widens toward viewer.
-  const vpx = CW * 0.5;
-  const vpy = CH * 0.22;
-  const pathBase = CH * 0.95;
-  const pathHalfBase = CW * 0.18;
-
-  // Light sandy path (triangle widening to viewer).
-  ctx.fillStyle = '#D9CFAF';
-  ctx.beginPath();
-  ctx.moveTo(CW * 0.5 - 4, vpy);
-  ctx.lineTo(CW * 0.5 + 4, vpy);
-  ctx.lineTo(vpx + pathHalfBase, pathBase);
-  ctx.lineTo(vpx - pathHalfBase, pathBase);
-  ctx.closePath();
-  ctx.fill();
-
-  // Distant tree mass at horizon — chord-derived but heavily darkened so it
-  // reads as backlit foliage. Picks an early chord (background depth).
-  const bgChord = chords[0];
-  const bgNotes = bgChord && (bgChord.n || bgChord.notes);
-  if(bgNotes && bgNotes.length){
-    const bn = bgNotes[0];
-    const bm = bn.m !== undefined ? bn.m : bn;
-    const [br, bgc, bb] = gc(bm, 100);
-    // Darken to 25% lightness — feels like trees at dusk regardless of palette.
-    ctx.fillStyle = `rgb(${Math.round(br*0.25)},${Math.round(bgc*0.25+30)},${Math.round(bb*0.25)})`;
-    ctx.fillRect(0, vpy - CH * 0.04, CW, CH * 0.06);
-  }
-
-  // Flower beds — primary chord colour drives every stroke. The bed itself
-  // is a fan of comma-strokes; chord at each depth picks its own colour, so
-  // the painting "ripens" through the piece exactly as it does in other
-  // styles.
-  const STROKES = Math.min(2200, Math.max(800, lim * 35));
-  ctx.globalAlpha = 0.85;
-  for(let k = 0; k < STROKES; k++){
-    const side = rnd() < 0.5 ? -1 : 1;
-    const t = Math.pow(rnd(), 0.6);  // bias toward back (depth)
-    const py = vpy + t * (pathBase - vpy);
-    const pathHere = pathHalfBase * t;
-    const offX = pathHere + rnd() * CW * 0.42 * (0.4 + t * 0.6);
-    const x = vpx + side * offX;
-    if(x < 0 || x > CW) continue;
-    const y = py + (rnd() - 0.5) * CH * 0.10;
-    if(y < vpy + CH * 0.02 || y > CH) continue;
-
-    const ci = Math.floor(t * Math.min(lim, cn));
-    const chord = chords[Math.min(cn - 1, Math.max(0, ci))];
-    if(!chord) continue;
-    const notes = chord.n || chord.notes;
-    if(!notes || !notes.length) continue;
-    const note = notes[Math.floor(rnd() * notes.length)];
-    const m = note.m !== undefined ? note.m : note;
-    const v = note.v !== undefined ? note.v : 100;
-    const [r, g, b] = gc(m, v);
-    // Slight lightness lift to brighten flowers vs. the dim canopy; chord
-    // hue is preserved.
-    const lift = 18;
-    const jr = Math.max(0, Math.min(255, r + lift + (rnd() - 0.5) * 50));
-    const jg = Math.max(0, Math.min(255, g + lift + (rnd() - 0.5) * 50));
-    const jb = Math.max(0, Math.min(255, b + lift + (rnd() - 0.5) * 50));
-
-    const sz = 1.5 + rnd() * 3 * (0.5 + t);
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rnd() * Math.PI);
-    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, sz * 1.4, sz * 0.5, 0, 0, 6.2832);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // Canopy strokes — chord colour gently tilted toward the green channel so
-  // foliage reads as foliage no matter the palette, without flattening the
-  // chord-driven hue.
-  const CANOPY = Math.min(500, Math.max(180, lim * 8));
-  ctx.globalAlpha = 0.75;
-  for(let k = 0; k < CANOPY; k++){
-    const side = rnd() < 0.5 ? -1 : 1;
-    const t = Math.pow(rnd(), 0.5);
-    const py = vpy + t * (pathBase - vpy);
-    const pathHere = pathHalfBase * t;
-    const offX = pathHere + rnd() * CW * 0.45 * (0.4 + t * 0.6);
-    const x = vpx + side * offX;
-    const y = py + (rnd() - 0.5) * CH * 0.12 - CH * 0.04;
-
-    const chord = chords[k % Math.max(1, cn)];
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) continue;
-    const note = notes[k % notes.length];
-    const m = note.m !== undefined ? note.m : note;
-    const v = note.v !== undefined ? note.v : 100;
-    const [r, g, b] = gc(m, v);
-    // Tilt toward green channel: dim R+B, lift G — keeps chord identity but
-    // suggests leafy depth.
-    const fr = Math.round(r * 0.5);
-    const fg = Math.round(g * 1.0 + 30);
-    const fb = Math.round(b * 0.5);
-    ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,fr))},${Math.max(0,Math.min(255,fg))},${Math.max(0,Math.min(255,fb))})`;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rnd() * Math.PI);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 3 + rnd() * 3, 1.2 + rnd() * 1.2, 0, 0, 6.2832);
-    ctx.fill();
-    ctx.restore();
-  }
-  ctx.globalAlpha = 1;
-}
 
 // Variant 1 — Pond: vertical sky-reflection bands + lily clusters + willow
 // trails. Sky reflections, willows, pads, and blossoms all draw from gc().
 // Substrate is a dark teal "deep water" so the palette colours read as
 // reflections on a pond rather than as a coloured floor.
-function monetPhasePond(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const cn = chords.length;
-  const rnd = _seedRnd(91, ss, lim, 1);
-
-  // ── Per-song layout decisions ──
-  const bands = 60 + Math.floor(rnd()*40);        // 60-100 reflection bands
-  const willowSide = Math.floor(rnd()*3);          // 0=right, 1=left, 2=both
-  const lilyGroups = 3 + Math.floor(rnd()*4);      // 3-6 lily clusters
-  const shadowCount = 20 + Math.floor(rnd()*20);   // 20-40 dark shadows
-
-  // Dark teal pond base — physical element, palette-independent.
-  ctx.fillStyle = '#1F3B45';
-  ctx.fillRect(0, 0, CW, CH);
-
-  // Vertical sky reflection bands — bright lifted chord colour (sky surface
-  // catches light → high lightness boost). Count varies per song.
-  const bw = CW / bands;
-  ctx.globalAlpha = 0.78;
-  for(let i = 0; i < bands; i++){
-    const x = i * bw;
-    const sw = bw + rnd() * bw * 0.4;
-    const yStart = rnd() * CH * 0.3;
-    const len = CH * (0.4 + rnd() * 0.55);
-    const ci = Math.floor((i / bands) * Math.min(lim, cn));
-    const chord = chords[Math.min(cn - 1, Math.max(0, ci))];
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) continue;
-    const note = notes[i % notes.length];
-    const m = note.m !== undefined ? note.m : note;
-    const v = note.v !== undefined ? note.v : 100;
-    const [r, g, b] = gc(m, v);
-    // Lift each channel by 80 — bright reflections without losing hue.
-    const sr = Math.min(255, r + 80);
-    const sg = Math.min(255, g + 80);
-    const sb = Math.min(255, b + 90);
-    ctx.fillStyle = `rgb(${sr|0},${sg|0},${sb|0})`;
-    ctx.fillRect(x, yStart, sw, len);
-  }
-  // Dark reflective shadows — chord colour darkened heavily. Count varies.
-  ctx.globalAlpha = 0.5;
-  for(let i = 0; i < shadowCount; i++){
-    const x = rnd() * CW;
-    const w = CW * 0.04 + rnd() * CW * 0.08;
-    const y = rnd() * CH;
-    const h = CH * 0.2 + rnd() * CH * 0.4;
-    const chord = chords[i % Math.max(1, cn)];
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) continue;
-    const note = notes[0];
-    const m = note.m !== undefined ? note.m : note;
-    const [r, g, b] = gc(m, 100);
-    // Darken to ~25% for shadow.
-    ctx.fillStyle = `rgb(${Math.round(r*0.25)},${Math.round(g*0.3+15)},${Math.round(b*0.3+10)})`;
-    ctx.fillRect(x, y, w, h);
-  }
-  ctx.globalAlpha = 1;
-
-  // Willow trailing from top — chord colour, tilted green for foliage feel.
-  // Side (right / left / both) varies per song.
-  function willowAt(xBase, xRange, count){
-    for(let i = 0; i < count; i++){
-      const x = xBase + rnd() * xRange;
-      const len = CH * (0.25 + rnd() * 0.35);
-      const chord = chords[i % Math.max(1, cn)];
-      const notes = chord && (chord.n || chord.notes);
-      if(!notes || !notes.length) continue;
-      const note = notes[0];
-      const m = note.m !== undefined ? note.m : note;
-      const [r, g, b] = gc(m, 100);
-      const wr = Math.round(r * 0.45);
-      const wg = Math.round(g * 0.95 + 25);
-      const wb = Math.round(b * 0.45);
-      const a = 0.55 + rnd() * 0.35;
-      ctx.strokeStyle = `rgba(${Math.max(0,Math.min(255,wr))},${Math.max(0,Math.min(255,wg))},${Math.max(0,Math.min(255,wb))},${a.toFixed(2)})`;
-      ctx.lineWidth = 1 + rnd() * 1.5;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.quadraticCurveTo(x + (rnd() - 0.5) * 30, len * 0.5, x + (rnd() - 0.5) * 20, len);
-      ctx.stroke();
-    }
-  }
-  if(willowSide === 0){ willowAt(CW*0.7, CW*0.3, 40); }
-  else if(willowSide === 1){ willowAt(0, CW*0.3, 40); }
-  else { willowAt(CW*0.7, CW*0.3, 25); willowAt(0, CW*0.3, 25); }
-
-  // Lily pads + blossoms. Pad uses chord colour with green tilt (leaf);
-  // blossom uses the chord colour directly with a bright lift (flower).
-  // Cluster count varies per song.
-  const groups = lilyGroups;
-  for(let g = 0; g < groups; g++){
-    const cx = CW * (0.10 + (g/groups) * 0.78 + rnd() * 0.08);
-    const cy = CH * (0.35 + rnd() * 0.5);
-    const padsInGroup = 4 + Math.floor(rnd() * 4);
-    for(let p = 0; p < padsInGroup; p++){
-      const px = cx + (rnd() - 0.5) * CW * 0.13;
-      const py = cy + (rnd() - 0.5) * CH * 0.12;
-      const pr = 8 + rnd() * 16;
-      const idx = (g * padsInGroup + p) % Math.max(1, cn);
-      const chord = chords[idx];
-      const notes = chord && (chord.n || chord.notes);
-      if(!notes || !notes.length) continue;
-      const note = notes[0];
-      const m = note.m !== undefined ? note.m : note;
-      const [r, gn, b] = gc(m, 100);
-      // Pad: green-tilted chord colour.
-      const padR = Math.round(r * 0.5);
-      const padG = Math.round(gn * 1.0 + 30);
-      const padB = Math.round(b * 0.5);
-      ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,padR))},${Math.max(0,Math.min(255,padG))},${Math.max(0,Math.min(255,padB))})`;
-      ctx.beginPath();
-      ctx.ellipse(px, py, pr, pr * 0.55, (rnd() - 0.5) * 0.6, 0, 6.2832);
-      ctx.fill();
-      // Blossom: pure chord colour, lifted to bright bloom.
-      const bloomR = Math.min(255, r + 50);
-      const bloomG = Math.min(255, gn + 40);
-      const bloomB = Math.min(255, b + 50);
-      ctx.fillStyle = `rgb(${bloomR},${bloomG},${bloomB})`;
-      ctx.beginPath();
-      ctx.arc(px + (rnd() - 0.5) * pr * 0.3, py + (rnd() - 0.5) * pr * 0.3, pr * 0.28, 0, 6.2832);
-      ctx.fill();
-    }
-  }
-}
 
 // Variant 2 — Cathedral: vertical light wash. The wash itself is built from
 // the chord sequence (top chord → top colour, mid → mid, bottom → bottom),
@@ -9265,264 +7934,11 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
 // chord colour (cool ground from mid chords), dome uses mid-chord colour.
 // Strokes follow chord directly with a per-side lightness modulation
 // (lit / shadow), no hardcoded warm/cool anchor.
-function monetPhaseHaystack(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const cn = chords.length;
-  const rnd = _seedRnd(91, ss, lim, 3);
-
-  function chordColor(t){
-    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
-    const chord = chords[ci];
-    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
-    const note = notes[0];
-    const m = note.m !== undefined ? note.m : note;
-    return gc(m, 100);
-  }
-
-  // Sky gradient — bright lifted version of the first quarter of the piece.
-  const [skyTopR, skyTopG, skyTopB] = chordColor(0.05);
-  const [skyMidR, skyMidG, skyMidB] = chordColor(0.20);
-  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.7);
-  sky.addColorStop(0,
-    `rgb(${Math.min(255, skyTopR + 70)},${Math.min(255, skyTopG + 70)},${Math.min(255, skyTopB + 70)})`);
-  sky.addColorStop(0.6,
-    `rgb(${Math.min(255, skyMidR + 40)},${Math.min(255, skyMidG + 30)},${Math.min(255, skyMidB + 30)})`);
-  const [horR, horG, horB] = chordColor(0.50);
-  sky.addColorStop(1,
-    `rgb(${Math.min(255, horR + 10)},${Math.min(255, horG)},${Math.min(255, horB - 10)})`);
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, CW, CH * 0.7);
-
-  // Field gradient — darkened later-chord colour.
-  const [fldTopR, fldTopG, fldTopB] = chordColor(0.70);
-  const [fldBotR, fldBotG, fldBotB] = chordColor(0.95);
-  const field = ctx.createLinearGradient(0, CH * 0.65, 0, CH);
-  field.addColorStop(0,
-    `rgb(${Math.round(fldTopR * 0.45)},${Math.round(fldTopG * 0.45)},${Math.round(fldTopB * 0.55 + 20)})`);
-  field.addColorStop(1,
-    `rgb(${Math.round(fldBotR * 0.25)},${Math.round(fldBotG * 0.25)},${Math.round(fldBotB * 0.35 + 10)})`);
-  ctx.fillStyle = field;
-  ctx.fillRect(0, CH * 0.65, CW, CH * 0.35);
-
-  // Distant tree line — very dark chord colour.
-  ctx.fillStyle = `rgb(${Math.round(horR * 0.3)},${Math.round(horG * 0.3)},${Math.round(horB * 0.4 + 20)})`;
-  ctx.beginPath();
-  ctx.moveTo(0, CH * 0.65);
-  for(let x = 0; x <= CW; x += CW / 30){
-    ctx.lineTo(x, CH * 0.65 + (rnd() - 0.5) * CH * 0.025 - CH * 0.01);
-  }
-  ctx.lineTo(CW, CH * 0.7);
-  ctx.lineTo(0, CH * 0.7);
-  ctx.closePath();
-  ctx.fill();
-
-  // Haystack dome — mid-chord colour, dim warm-shifted.
-  // Stack count (1-3), position(s), and size vary per song.
-  const [stackR, stackG, stackB] = chordColor(0.55);
-  ctx.fillStyle = `rgb(${Math.round(stackR * 0.6 + 30)},${Math.round(stackG * 0.45)},${Math.round(stackB * 0.35)})`;
-
-  const stackCount = 1 + Math.floor(rnd()*3);     // 1-3 haystacks
-  const stacks = [];
-  for(let s=0;s<stackCount;s++){
-    const tFrac = stackCount===1 ? 0.40 + rnd()*0.30
-                                 : 0.15 + (s/(stackCount-1))*0.70 + (rnd()-0.5)*0.08;
-    const scale = stackCount===1 ? 1.0 : 0.55 + rnd()*0.40;
-    stacks.push({
-      hx: CW*tFrac,
-      hyBase: CH*0.7,
-      hw: CW*0.34*scale,
-      hh: CH*0.32*scale,
-    });
-  }
-  // Draw each dome (back to front by scale so larger stacks overlay smaller).
-  stacks.sort((a,b)=>a.hw-b.hw);
-  for(const st of stacks){
-    ctx.beginPath();
-    ctx.moveTo(st.hx - st.hw / 2, st.hyBase);
-    ctx.bezierCurveTo(st.hx - st.hw*0.55, st.hyBase - st.hh*0.6, st.hx - st.hw*0.2, st.hyBase - st.hh, st.hx, st.hyBase - st.hh);
-    ctx.bezierCurveTo(st.hx + st.hw*0.2, st.hyBase - st.hh, st.hx + st.hw*0.55, st.hyBase - st.hh*0.6, st.hx + st.hw/2, st.hyBase);
-    ctx.closePath();
-    ctx.fill();
-  }
-  // Primary stack reference (for stroke loop below) — use largest.
-  const primary = stacks[stacks.length-1];
-  const hx = primary.hx, hyBase = primary.hyBase, hw = primary.hw, hh = primary.hh;
-
-  // Painterly strokes on the haystack — chord colour, lit (left) vs. shadow
-  // (right) side via lightness multiplier only. Hue stays chord-driven.
-  // Strokes distributed across all stacks proportionally to stack area.
-  const STACK = Math.min(900, Math.max(300, lim * 14));
-  for(let k = 0; k < STACK; k++){
-    // Pick stack weighted by area (larger gets more strokes).
-    const st = stacks[k % stackCount];
-    const ang = Math.PI + rnd() * Math.PI;
-    const radR = Math.pow(rnd(), 0.5);
-    const dx = Math.cos(ang) * (st.hw / 2) * radR;
-    const dy = Math.sin(ang) * st.hh * radR;
-    const px = st.hx + dx;
-    const py = st.hyBase + dy;
-    const ci = k % Math.max(1, cn);
-    const chord = chords[ci];
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) continue;
-    const note = notes[k % notes.length];
-    const m = note.m !== undefined ? note.m : note;
-    const v = note.v !== undefined ? note.v : 100;
-    const [r, g, b] = gc(m, v);
-    // Lit side ~85% brightness, shadow side ~40% — hue preserved.
-    const lightness = (dx < 0 ? 0.95 : 0.5) + (1 - radR) * 0.15;
-    const finalR = Math.round(r * lightness);
-    const finalG = Math.round(g * lightness);
-    const finalB = Math.round(b * lightness);
-    ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,finalR))},${Math.max(0,Math.min(255,finalG))},${Math.max(0,Math.min(255,finalB))})`;
-    ctx.lineWidth = 1.5 + rnd() * 1.5;
-    ctx.lineCap = 'round';
-    const slen = 3 + rnd() * 5;
-    const sang = ang + Math.PI / 2 + (rnd() - 0.5) * 0.5;
-    ctx.beginPath();
-    ctx.moveTo(px, py);
-    ctx.lineTo(px + Math.cos(sang) * slen, py + Math.sin(sang) * slen);
-    ctx.stroke();
-  }
-
-  // Field strokes — chord colour darkened to ~50% so the field reads as
-  // cool ground while still reflecting the palette.
-  const FIELD = Math.min(1200, Math.max(400, lim * 18));
-  for(let k = 0; k < FIELD; k++){
-    const y = CH * 0.7 + rnd() * CH * 0.3;
-    const x = rnd() * CW;
-    const len = 6 + rnd() * 16;
-    const note = chords[Math.floor(rnd() * cn) % Math.max(1, cn)];
-    const ns = note && (note.n || note.notes);
-    if(!ns || !ns.length) continue;
-    const nt = ns[0];
-    const m = nt.m !== undefined ? nt.m : nt;
-    const v = nt.v !== undefined ? nt.v : 100;
-    const [r, g, b] = gc(m, v);
-    ctx.strokeStyle = `rgb(${Math.round(r*0.45)},${Math.round(g*0.45)},${Math.round(b*0.55 + 30)})`;
-    ctx.lineWidth = 1.5 + rnd() * 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + len, y + (rnd() - 0.5) * 2);
-    ctx.stroke();
-  }
-}
 
 // Variant 4 — Snow: chord-driven cool sky + tinted snow + dark conifers.
 // The sky and snow both carry a subtle chord tint so the palette is visible
 // even in a "white" scene; drift shadows and tree flickers use chord colour
 // directly.
-function monetPhaseSnow(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const cn = chords.length;
-  const rnd = _seedRnd(91, ss, lim, 4);
-
-  function chordColor(t){
-    const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
-    const chord = chords[ci];
-    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
-    const note = notes[0];
-    const m = note.m !== undefined ? note.m : note;
-    return gc(m, 100);
-  }
-
-  // Sky — light desaturated wash carrying a chord tint.
-  const [skyR, skyG, skyB] = chordColor(0.10);
-  const sky = ctx.createLinearGradient(0, 0, 0, CH * 0.6);
-  sky.addColorStop(0,
-    `rgb(${Math.round(skyR * 0.25 + 180)},${Math.round(skyG * 0.25 + 185)},${Math.round(skyB * 0.25 + 195)})`);
-  sky.addColorStop(1,
-    `rgb(${Math.round(skyR * 0.3 + 155)},${Math.round(skyG * 0.3 + 160)},${Math.round(skyB * 0.3 + 175)})`);
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, CW, CH * 0.6);
-
-  // Snow ground — chord-tinted off-white.
-  const [grndR, grndG, grndB] = chordColor(0.55);
-  ctx.fillStyle =
-    `rgb(${Math.round(grndR * 0.12 + 220)},${Math.round(grndG * 0.12 + 225)},${Math.round(grndB * 0.12 + 230)})`;
-  ctx.fillRect(0, CH * 0.6, CW, CH * 0.4);
-
-  // Drift shadows — chord colour, darkened ~40% so cool palettes give cool
-  // shadows, warm palettes give warm shadows.
-  ctx.globalAlpha = 0.55;
-  for(let k = 0; k < 280; k++){
-    const x = rnd() * CW;
-    const y = CH * 0.62 + rnd() * CH * 0.36;
-    const w = 20 + rnd() * 60;
-    const h = 3 + rnd() * 8;
-    const chord = chords[k % Math.max(1, cn)];
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) continue;
-    const note = notes[k % notes.length];
-    const m = note.m !== undefined ? note.m : note;
-    const [r, g, b] = gc(m, 100);
-    const sr = Math.round(r * 0.4 + 30);
-    const sg = Math.round(g * 0.4 + 40);
-    const sb = Math.round(b * 0.45 + 60);
-    const a = 0.35 + rnd() * 0.4;
-    ctx.fillStyle = `rgba(${sr},${sg},${sb},${a.toFixed(2)})`;
-    ctx.beginPath();
-    ctx.ellipse(x, y, w / 2, h / 2, 0, 0, 6.2832);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Dark conifer tree silhouettes — heavily darkened mid-chord, palette
-  // visible only as a tinted shadow.
-  const [trR, trG, trB] = chordColor(0.40);
-  const trees = 8;
-  for(let t = 0; t < trees; t++){
-    const tx = (t / trees) * CW + rnd() * CW * 0.06;
-    const th = CH * (0.10 + rnd() * 0.20);
-    const tw = CW * (0.015 + rnd() * 0.025);
-    ctx.fillStyle =
-      `rgb(${Math.round(trR * 0.18 + 12)},${Math.round(trG * 0.18 + 18)},${Math.round(trB * 0.22 + 18)})`;
-    ctx.fillRect(tx - tw * 0.2, CH * 0.6 - th, tw * 0.4, th);
-    ctx.beginPath();
-    ctx.moveTo(tx - tw,     CH * 0.6 - th * 0.3);
-    ctx.lineTo(tx + tw,     CH * 0.6 - th * 0.3);
-    ctx.lineTo(tx,          CH * 0.6 - th * 1.4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(tx - tw * 1.4, CH * 0.6 - th * 0.05);
-    ctx.lineTo(tx + tw * 1.4, CH * 0.6 - th * 0.05);
-    ctx.lineTo(tx,            CH * 0.6 - th * 0.9);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // Chord-driven flickers on the snow — softly lifted (snow reflects) but
-  // hue intact, so palette colours speckle visibly across the white field.
-  const FLICKS = Math.min(900, Math.max(300, lim * 14));
-  ctx.globalAlpha = 0.6;
-  for(let k = 0; k < FLICKS; k++){
-    const x = rnd() * CW;
-    const y = CH * 0.6 + rnd() * CH * 0.4;
-    const chord = chords[k % Math.max(1, cn)];
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) continue;
-    const note = notes[k % notes.length];
-    const m = note.m !== undefined ? note.m : note;
-    const v = note.v !== undefined ? note.v : 100;
-    const [r, g, b] = gc(m, v);
-    // Lift by 50 — bright but not white-washed; hue still readable.
-    const wr = Math.min(255, r + 50);
-    const wg = Math.min(255, g + 50);
-    const wb = Math.min(255, b + 60);
-    ctx.fillStyle = `rgb(${wr|0},${wg|0},${wb|0})`;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 1.5 + rnd() * 3, 0.8 + rnd() * 1.5, rnd() * Math.PI, 0, 6.2832);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Light snowflakes — physical white particles.
-  ctx.fillStyle = '#fff';
-  for(let f = 0; f < 80; f++){
-    ctx.beginPath();
-    ctx.arc(rnd() * CW, rnd() * CH * 0.65, 0.6 + rnd() * 1.4, 0, 6.2832);
-    ctx.fill();
-  }
-}
 
 // Variant 5 — Mist: pastel horizontal bands. Sky and water both carry a
 // strong chord tint; tree-line silhouette and veils all chord-driven.
@@ -9651,300 +8067,11 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
 // presence, poppy distribution (uniform vs clustered), cluster centres all
 // re-rolled per session seed — different songs produce different compositions,
 // not just different colours.
-function monetPhasePoppyField(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const cn = chords.length;
-  const isBW = mode === 'bw';
-  const rnd = _seedRnd(91, ss, 0, 6);
-  // ── Reveal: 0→1 as music plays. Painting builds progressively. ──
-  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
-
-  // ── Per-song layout decisions (stable per painting, re-roll on Vary) ──
-  const horizonY = CH * (0.28 + rnd()*0.25);              // 28-53% sky/meadow
-  const cloudCountFull = 4 + Math.floor(rnd()*12);        // 4-16 clouds total
-  const treeLineActive = rnd() < 0.7;                     // 70% chance tree-line
-  const treeLineH = CH * (0.025 + rnd()*0.04);
-  const clusterMode = rnd() < 0.5;                        // uniform vs clustered
-  const clusterCount = 3 + Math.floor(rnd()*5);           // 3-7 clusters if cluster
-  const flowerTotalFull = 600 + Math.floor(rnd()*400);    // 600-1000 flowers when full
-  const grassCountFull = 80 + Math.floor(rnd()*150);
-
-  // Reveal-scaled visible counts.
-  const cloudCount = Math.ceil(cloudCountFull * Math.min(1, reveal*1.5));
-  const flowerTotal = Math.ceil(flowerTotalFull * reveal);
-  const grassCount = Math.ceil(grassCountFull * reveal);
-  const treeLineAppear = treeLineActive && reveal > 0.15;
-
-  function chordCol(t){
-    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
-    const chord = chords[ci];
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[0];
-    const m = note.m !== undefined ? note.m : note;
-    const [r,g,b] = gc(m, 100);
-    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
-    return [r,g,b];
-  }
-  function chordColIdx(i){
-    const ci = Math.min(cn-1, Math.max(0, i%cn));
-    const chord = chords[ci];
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[i % notes.length];
-    const m = note.m !== undefined ? note.m : note;
-    const v = note.v !== undefined ? note.v : 100;
-    const [r,g,b] = gc(m, v);
-    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
-    return [r,g,b];
-  }
-
-  // Sky
-  const [skyR,skyG,skyB] = chordCol(0.08);
-  const sky = ctx.createLinearGradient(0,0,0,horizonY);
-  sky.addColorStop(0, `rgb(${Math.min(255,skyR+100)},${Math.min(255,skyG+100)},${Math.min(255,skyB+110)})`);
-  sky.addColorStop(1, `rgb(${Math.min(255,skyR+70)},${Math.min(255,skyG+75)},${Math.min(255,skyB+95)})`);
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, CW, horizonY);
-
-  // Clouds (seed-driven count + positions)
-  ctx.globalAlpha = 0.7;
-  for(let i=0;i<cloudCount;i++){
-    const cx = rnd()*CW;
-    const cy = rnd()*horizonY*0.85;
-    ctx.fillStyle = isBW ? '#d8d4cc' : '#f0e8d8';
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 25+rnd()*45, 8+rnd()*10, 0, 0, Math.PI*2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Meadow
-  const [fldR,fldG,fldB] = chordCol(0.55);
-  const field = ctx.createLinearGradient(0, horizonY, 0, CH);
-  field.addColorStop(0, `rgb(${Math.round(fldR*0.40+50)},${Math.round(fldG*0.75+50)},${Math.round(fldB*0.30+30)})`);
-  field.addColorStop(1, `rgb(${Math.round(fldR*0.30+30)},${Math.round(fldG*0.65+40)},${Math.round(fldB*0.25+20)})`);
-  ctx.fillStyle = field;
-  ctx.fillRect(0, horizonY, CW, CH-horizonY);
-
-  // Tree-line (seed-decided present/absent; appears after 15% reveal)
-  if(treeLineAppear){
-    ctx.globalAlpha = 0.5;
-    const [horR,horG,horB] = chordCol(0.30);
-    ctx.fillStyle = `rgb(${Math.round(horR*0.30+20)},${Math.round(horG*0.55+30)},${Math.round(horB*0.25+15)})`;
-    ctx.beginPath();
-    ctx.moveTo(0, horizonY);
-    for(let x=0;x<=CW;x+=CW/30) ctx.lineTo(x, horizonY + (rnd()-0.5)*CH*0.025 - treeLineH*0.5);
-    ctx.lineTo(CW, horizonY + treeLineH*0.5);
-    ctx.lineTo(0, horizonY + treeLineH*0.5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-
-  // Cluster centres (if cluster mode)
-  let clusters = null;
-  if(clusterMode){
-    clusters = [];
-    for(let c=0;c<clusterCount;c++){
-      clusters.push({
-        cx: CW*(0.1 + rnd()*0.8),
-        cy: horizonY + rnd()*(CH-horizonY),
-        r: CW*(0.10 + rnd()*0.18),
-      });
-    }
-  }
-
-  // Poppies — seed-driven distribution
-  for(let i=0;i<flowerTotal;i++){
-    let x, y;
-    if(clusterMode){
-      const cl = clusters[Math.floor(rnd()*clusterCount)];
-      const ang = rnd()*Math.PI*2;
-      const dist = rnd()*cl.r;
-      x = cl.cx + Math.cos(ang)*dist;
-      y = cl.cy + Math.sin(ang)*dist;
-    } else {
-      const t = Math.pow(rnd(), 0.5);
-      x = rnd()*CW;
-      y = horizonY + t*(CH-horizonY);
-    }
-    if(x<0||x>CW||y<horizonY+2||y>CH) continue;
-    const [r,g,b] = chordColIdx(i);
-    const jr = Math.max(0,Math.min(255, r+30+(rnd()-0.5)*40));
-    const jg = Math.max(0,Math.min(255, g+30+(rnd()-0.5)*40));
-    const jb = Math.max(0,Math.min(255, b+30+(rnd()-0.5)*40));
-    const t = (y-horizonY)/(CH-horizonY);
-    const sz = 1.5 + rnd()*3*(0.4+t);
-    ctx.fillStyle = `rgb(${jr|0},${jg|0},${jb|0})`;
-    ctx.beginPath();
-    ctx.ellipse(x, y, sz, sz*0.7, rnd()*Math.PI, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  // Grass strokes
-  ctx.globalAlpha = 0.55;
-  for(let i=0;i<grassCount;i++){
-    const x = rnd()*CW;
-    const y = horizonY + rnd()*(CH-horizonY);
-    ctx.strokeStyle = `rgba(${Math.round(fldR*0.30+30)},${Math.round(fldG*0.55+30)},${Math.round(fldB*0.25+15)},0.7)`;
-    ctx.lineWidth = 1+rnd()*1.5;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x+(rnd()-0.5)*4, y-3-rnd()*5);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-}
 
 // Variant 7 — Poplars (1891): vertical row of poplars + mirrored reflection.
 // Layout VERSATILITY: poplar count (5-12), spacing (uniform vs irregular),
 // water line height (42-70%), foliage density per tree, tilt active/inactive,
 // reflection depth — all re-rolled per session seed.
-function monetPhasePoplars(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const cn = chords.length;
-  const isBW = mode === 'bw';
-  const rnd = _seedRnd(91, ss, 0, 7);
-  // ── Reveal: 0→1 as music plays. Progressively materialises the painting. ──
-  const reveal = Math.max(0, Math.min(1, lim / Math.max(1, cn)));
-
-  // ── Per-song layout decisions ──
-  const poplarCount = 5 + Math.floor(rnd()*8);            // 5-12 poplars total
-  const waterLine = CH * (0.42 + rnd()*0.28);             // 42-70% sky/water
-  const spacingIrregular = rnd() < 0.5;
-  const foliageBase = 50 + Math.floor(rnd()*60);
-  const tiltActive = rnd() < 0.6;
-  const reflectionDepth = 0.5 + rnd()*0.5;
-
-  // Reveal-scaled visible counts.
-  const visPoplars = Math.max(1, Math.ceil(poplarCount * reveal));
-  const visRipples = Math.ceil(60 * reveal);
-  const foliageDensityScale = 0.25 + reveal*0.75;          // 25% at first note → 100%
-  const reflectionAppear = Math.max(0, Math.min(1, (reveal-0.3) / 0.7)); // starts at 30% reveal
-
-  function chordCol(t){
-    const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
-    const chord = chords[ci];
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[0];
-    const m = note.m !== undefined ? note.m : note;
-    const [r,g,b] = gc(m, 100);
-    if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
-    return [r,g,b];
-  }
-  function chordColIdx(i){
-    const ci = Math.min(cn-1, Math.max(0, i%cn));
-    const chord = chords[ci];
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[i % notes.length];
-    const m = note.m !== undefined ? note.m : note;
-    const v = note.v !== undefined ? note.v : 100;
-    const [r,g,b] = gc(m, v);
-    if(isBW){ const vv = Math.round(r*0.299+g*0.587+b*0.114); return [vv,vv,vv]; }
-    return [r,g,b];
-  }
-
-  // Sky
-  const [skyTopR,skyTopG,skyTopB] = chordCol(0.05);
-  const [skyMidR,skyMidG,skyMidB] = chordCol(0.25);
-  const sky = ctx.createLinearGradient(0, 0, 0, waterLine);
-  sky.addColorStop(0, `rgb(${Math.min(255,skyTopR+90)},${Math.min(255,skyTopG+90)},${Math.min(255,skyTopB+95)})`);
-  sky.addColorStop(1, `rgb(${Math.min(255,skyMidR+50)},${Math.min(255,skyMidG+50)},${Math.min(255,skyMidB+60)})`);
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, CW, waterLine);
-
-  // Water
-  const [watR,watG,watB] = chordCol(0.55);
-  const water = ctx.createLinearGradient(0, waterLine, 0, CH);
-  water.addColorStop(0, `rgb(${Math.round(watR*0.6+50)},${Math.round(watG*0.6+60)},${Math.round(watB*0.6+80)})`);
-  water.addColorStop(1, `rgb(${Math.round(watR*0.5+30)},${Math.round(watG*0.5+40)},${Math.round(watB*0.55+60)})`);
-  ctx.fillStyle = water;
-  ctx.fillRect(0, waterLine, CW, CH-waterLine);
-
-  // Water ripples — count grows with reveal.
-  ctx.globalAlpha = 0.3;
-  for(let i=0;i<visRipples;i++){
-    const y = waterLine + rnd()*(CH-waterLine);
-    const w = CW*(0.3+rnd()*0.5);
-    const x = (rnd()-0.3)*CW;
-    const [r,g,b] = chordColIdx(i+10);
-    ctx.fillStyle = `rgb(${Math.min(255,r+30)|0},${Math.min(255,g+30)|0},${Math.min(255,b+50)|0})`;
-    ctx.fillRect(x, y, w, 1+rnd()*2);
-  }
-  ctx.globalAlpha = 1;
-
-  // Poplar x-positions — uniform OR irregular (FULL set, but only visPoplars drawn).
-  const xs = [];
-  if(spacingIrregular){
-    for(let i=0;i<poplarCount;i++) xs.push(CW*(0.06 + rnd()*0.88));
-    xs.sort((a,b) => a-b);
-  } else {
-    for(let i=0;i<poplarCount;i++) xs.push(CW*(0.05 + (i/(poplarCount-1))*0.90));
-  }
-
-  // Draw poplars progressively — left-to-right, one per reveal step.
-  for(let p=0;p<visPoplars;p++){
-    const px = xs[p];
-    const treeTopY = CH*(0.04 + rnd()*0.08);
-    const treeH = waterLine - treeTopY;
-    const [tR,tG,tB] = chordColIdx(p*8);
-    const tilt = tiltActive ? (rnd()-0.5)*8 : 0;
-    const foliageDabsFull = foliageBase + Math.floor(rnd()*30);
-    const foliageDabs = Math.max(8, Math.ceil(foliageDabsFull * foliageDensityScale));
-
-    // Trunk
-    ctx.strokeStyle = `rgba(${Math.round(tR*0.20+10)},${Math.round(tG*0.20+15)},${Math.round(tB*0.20+5)},0.95)`;
-    ctx.lineWidth = 3 + rnd()*2;
-    ctx.beginPath();
-    ctx.moveTo(px, waterLine);
-    ctx.lineTo(px+tilt, treeTopY+5);
-    ctx.stroke();
-
-    // Foliage column — count scales with reveal.
-    for(let f=0;f<foliageDabs;f++){
-      const fy = treeTopY + (f/foliageDabs)*treeH;
-      const offset = (rnd()-0.5)*9 + tilt*(f/foliageDabs);
-      const tt = f/foliageDabs;
-      const lift = (1-tt)*30;
-      const fR = Math.round(tR*0.45 + lift);
-      const fG = Math.round(tG*0.75 + lift);
-      const fB = Math.round(tB*0.40 + lift);
-      ctx.fillStyle = `rgb(${Math.max(0,Math.min(255,fR))},${Math.max(0,Math.min(255,fG))},${Math.max(0,Math.min(255,fB))})`;
-      ctx.beginPath();
-      ctx.ellipse(px+offset, fy, 4+rnd()*3, 2+rnd()*2, 0, 0, Math.PI*2);
-      ctx.fill();
-    }
-
-    // Reflection — only appears after 30% reveal, then grows.
-    if(reflectionAppear > 0){
-      ctx.globalAlpha = 0.55 * reflectionAppear;
-      const refTop = waterLine;
-      const refBase = refTop + treeH * reflectionDepth * reflectionAppear;
-      ctx.strokeStyle = `rgba(${Math.round(tR*0.25+15)},${Math.round(tG*0.25+20)},${Math.round(tB*0.25+10)},0.7)`;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(px, refTop);
-      ctx.lineTo(px+(rnd()-0.5)*4, refBase);
-      ctx.stroke();
-      const refDabs = Math.floor(foliageDabs*0.6);
-      for(let f=0;f<refDabs;f++){
-        const fy = refTop + (f/refDabs)*(refBase-refTop);
-        const offset = (rnd()-0.5)*10;
-        const tt = f/refDabs;
-        const lift = tt*25;
-        const fR = Math.round(tR*0.40 + lift);
-        const fG = Math.round(tG*0.65 + lift);
-        const fB = Math.round(tB*0.35 + lift);
-        ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,fR))},${Math.max(0,Math.min(255,fG))},${Math.max(0,Math.min(255,fB))},0.55)`;
-        ctx.beginPath();
-        ctx.ellipse(px+offset, fy, 3+rnd()*3, 1.5+rnd()*1.5, 0, 0, Math.PI*2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  // Horizon line
-  ctx.fillStyle = 'rgba(40,30,20,0.3)';
-  ctx.fillRect(0, waterLine-1, CW, 1.5);
-}
 
 
 // ── Variant abstract 0 — Tulip Fields (Holland 1886): horizontal chord-coloured
@@ -13705,7 +11832,6 @@ const noteName = (m) => NOTE_PCS[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1
 // Pre-built lookup tables: O(1) for both directions across the full MIDI range.
 const _midiToName = Array.from({length:128},(_,i)=>noteName(i));
 const _nameToMidi = Object.fromEntries(_midiToName.map((n,i)=>[n,i]));
-const LEGEND=[{n:'C',pc:0},{n:'G',pc:7},{n:'D',pc:2},{n:'A',pc:9},{n:'E',pc:4},{n:'B',pc:11},{n:'F#',pc:6},{n:'D♭',pc:1},{n:'A♭',pc:8},{n:'E♭',pc:3},{n:'B♭',pc:10},{n:'F',pc:5}];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §4  I18N — UI STRINGS, CONCEPT TEXT, GUIDE TEXT
@@ -13746,7 +11872,7 @@ const I18N = {
     recUnsupported:'Recording not supported in this browser.',
     recTooShort:'Recording was too short — hold rec for at least a second.',
     searchGuide:'search the guide…', noMatches:'No matches for',
-    guideTitle:'guide', conceptTitle:'concept', gsec_start:'getting started', gsec_sources:'sources', gsec_playing:'while playing', gsec_output:'save & share', gsec_more:'more', fsNormal:'A', fsLarge:'A+', fsLabel:'text size', legalPricing:'Pricing', legalTerms:'Terms', legalPrivacy:'Privacy', legalRefunds:'Refunds',
+    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'text size', legalPricing:'Pricing', legalTerms:'Terms', legalPrivacy:'Privacy', legalRefunds:'Refunds',
     pickMoodFirst:'pick a mood first', morphInto:'morph current mood into another', morphTitle:'morph {mood} into…', morphHint:'pick up to 3 — in order', morphGo:'morph',
     reroll:'reroll: a fresh take',
     demoMode:'demo mode — clear to play again', demoSkip:'tap canvas to skip',
@@ -13771,9 +11897,6 @@ const I18N = {
     morphAiUnavailable:'Morph for AI generated mood unavailable',
     proPaywallTitle:'Unlock the full Paintiano',
     proPaywallTitleAi:'You’ve used your free AI compositions',
-    proPaywallBody:'Unlock unlimited AI compositions, remove the watermark from exports, and support an independent art project.',
-    proPaywallCta:'Get Paintiano Pro — €9.99 lifetime',
-    proAiPaywallCta:'Get Paintiano Pro AI — €19.99 lifetime',
     proPaywallFooter:'One-time payment · No subscription · VAT included',
     proEarlyBird:'Early-bird prices · first 50 supporters',
     proPaywallSubtitle:'Pay once. Keep forever.',
@@ -13816,9 +11939,6 @@ const I18N = {
     tierRowPalette:'Custom palette',
     tierRowDpi:'300 DPI export',
     tierRowWmark:'Watermark',
-    tierRowAiText:'AI text moods',
-    tierRowAiImg:'AI image compose',
-    tierRowAiAtmo:'AI atmosphere',
     tierRowAi:'AI features',
     tier3Credits:'3 credits',
     tierAiCreditsNote:'AI text & image compose = 1 credit · Atmosphere = 0.5 credit',
@@ -13837,37 +11957,7 @@ const I18N = {
     proTierPriceShort:'€9.99',
     proAiTierPriceShort:'€19.99',
     tierFootnote:'One-time payment · Lifetime access',
-    proValue1:'Unlimited AI compositions',
-    proValue1Sub:'Generate as many paintings as you wish',
-    proValue2:'Export without watermark',
-    proValue2Sub:'Clean images, ready to share or print',
-    proValue3:'Lifetime access',
-    proValue3Sub:'One payment, yours forever',
-    proValue4:'Support a solo art project',
-    proValue4Sub:'Keep Paintiano independent',
     proLearnMore:'Learn more about Pro',
-    proAboutTitle:'Paintiano Pro',
-    proAboutLead:'Everything in Free, without limits.',
-    proAboutWhatYouGet:'What you get with Pro',
-    proAboutCompareTitle:'Free vs Pro',
-    proAboutCompareFeature:'Feature',
-    proAboutCompareFree:'Free',
-    proAboutComparePro:'Pro',
-    proAboutCmp1:'All manual modes (keyboard, mic, audio)',
-    proAboutCmp2:'All visual styles & moods',
-    proAboutCmp3:'AI compositions',
-    proAboutCmp3Free:'5 trial',
-    proAboutCmp3Pro:'Unlimited',
-    proAboutCmp4:'Watermark on exports',
-    proAboutCmp4Free:'Yes',
-    proAboutCmp4Pro:'None',
-    proAboutCmp5:'Lifetime access',
-    proAboutHonestTitle:'Honest about what Pro isn’t',
-    proAboutHonest1:'Pro keeps the same Paintiano you already use — it just removes the limits. No hidden new features behind a wall.',
-    proAboutHonest2:'Pro doesn’t sync between devices automatically. Your license key works on up to 5 devices.',
-    proAboutHonest3:'Pro doesn’t include cloud storage. You save your paintings to your own files.',
-    proAboutFinalCta:'Get Paintiano Pro — €9.99 lifetime',
-    proAiAboutFinalCta:'Get Paintiano Pro AI — €19.99 lifetime',
     proHaveKey:'I already have a key',
     proEnterKey:'Enter your license key',
     proActivate:'Activate',
@@ -13875,7 +11965,7 @@ const I18N = {
     proInvalidKey:'This key is not valid. Check your email for the correct key.',
     proWelcomeTitle:'Welcome to Pro',
     proWelcomeBody:'All features unlocked on this device.',
-    proManageActive:'Pro',    partnerIsPro:'{a} · {b} is Pro',
+    partnerIsPro:'{a} · {b} is Pro',
       tapReturnShuffle:'tap to return to shuffle',    noNotesGeneric:'No notes.',
     transcribingAudio:'transcribing audio',
     transcribingAudioLong:'transcribing audio · this may take a minute',
@@ -13919,7 +12009,7 @@ const I18N = {
     recUnsupported:'Aufnahme wird nicht unterstützt.',
     recTooShort:'Aufnahme zu kurz — mindestens eine Sekunde halten.',
     searchGuide:'anleitung durchsuchen…', noMatches:'Keine Treffer für',
-    guideTitle:'anleitung', conceptTitle:'konzept', gsec_start:'erste schritte', gsec_sources:'quellen', gsec_playing:'beim abspielen', gsec_output:'speichern & teilen', gsec_more:'mehr', fsNormal:'A', fsLarge:'A+', fsLabel:'schriftgröße', legalPricing:'Preise', legalTerms:'Bedingungen', legalPrivacy:'Datenschutz', legalRefunds:'Erstattungen',
+    guideTitle:'anleitung', conceptTitle:'konzept', fsNormal:'A', fsLarge:'A+', fsLabel:'schriftgröße', legalPricing:'Preise', legalTerms:'Bedingungen', legalPrivacy:'Datenschutz', legalRefunds:'Erstattungen',
     pickMoodFirst:'zuerst stimmung wählen', morphInto:'aktuelle stimmung transformieren', morphTitle:'{mood} verwandeln in…', morphHint:'bis zu 3 wählen — der Reihe nach', morphGo:'verwandeln',
     reroll:'neu würfeln',
     demoMode:'demo-modus — löschen zum erneuten spielen', demoSkip:'auf canvas tippen zum überspringen',
@@ -13944,9 +12034,6 @@ const I18N = {
     morphAiUnavailable:'Morph für KI-generierte Stimmung nicht verfügbar',
     proPaywallTitle:'Schalte das ganze Paintiano frei',
     proPaywallTitleAi:'Du hast deine kostenlosen KI-Kompositionen aufgebraucht',
-    proPaywallBody:'Schalte unbegrenzte KI-Kompositionen frei, entferne das Wasserzeichen aus Exporten und unterstütze ein unabhängiges Kunstprojekt.',
-    proPaywallCta:'Paintiano Pro holen — 9,99 € lebenslang',
-    proAiPaywallCta:'Paintiano Pro KI holen — 19,99 € lebenslang',
     proPaywallFooter:'Einmalige Zahlung · Kein Abo · inkl. MwSt.',
     proEarlyBird:'Early-Bird-Preise · erste 50 Unterstützer',
     proPaywallSubtitle:'Einmal zahlen. Für immer behalten.',
@@ -13987,9 +12074,6 @@ const I18N = {
     tierRowPalette:'Eigene Palette',
     tierRowDpi:'300-DPI-Export',
     tierRowWmark:'Wasserzeichen',
-    tierRowAiText:'KI Text-Stimmungen',
-    tierRowAiImg:'KI Bild-Komposition',
-    tierRowAiAtmo:'KI Atmosphäre',
     tierRowAi:'KI-Funktionen',
     tier3Credits:'3 Credits',
     tierAiCreditsNote:'KI Text & Bild = 1 Credit · Atmosphäre = 0,5 Credit',
@@ -14008,36 +12092,7 @@ const I18N = {
     proTierPriceShort:'9,99 €',
     proAiTierPriceShort:'19,99 €',
     tierFootnote:'Einmalige Zahlung · Lebenslanger Zugang',
-    proValue1:'Unbegrenzte KI-Kompositionen',
-    proValue1Sub:'Erstelle so viele Bilder, wie du möchtest',
-    proValue2:'Export ohne Wasserzeichen',
-    proValue2Sub:'Saubere Bilder, bereit zum Teilen oder Drucken',
-    proValue3:'Lebenslanger Zugang',
-    proValue3Sub:'Eine Zahlung, für immer dein',
-    proValue4:'Unterstütze ein unabhängiges Kunstprojekt',
-    proValue4Sub:'Halte Paintiano unabhängig',
     proLearnMore:'Mehr über Pro erfahren',
-    proAboutTitle:'Paintiano Pro',
-    proAboutLead:'Alles aus Free — ohne Grenzen.',
-    proAboutWhatYouGet:'Das bekommst du mit Pro',
-    proAboutCompareTitle:'Free vs. Pro',
-    proAboutCompareFeature:'Funktion',
-    proAboutCompareFree:'Free',
-    proAboutComparePro:'Pro',
-    proAboutCmp1:'Alle manuellen Modi (Tastatur, Mikro, Audio)',
-    proAboutCmp2:'Alle visuellen Stile & Stimmungen',
-    proAboutCmp3:'KI-Kompositionen',
-    proAboutCmp3Free:'5 Test',
-    proAboutCmp3Pro:'Unbegrenzt',
-    proAboutCmp4:'Wasserzeichen beim Export',
-    proAboutCmp4Free:'Ja',
-    proAboutCmp4Pro:'Keins',
-    proAboutCmp5:'Lebenslanger Zugang',
-    proAboutHonestTitle:'Ehrlich: Das ist Pro NICHT',
-    proAboutHonest1:'Pro behält das gleiche Paintiano, das du kennst — es entfernt nur die Grenzen. Keine versteckten neuen Funktionen hinter einer Wand.',
-    proAboutHonest2:'Pro synchronisiert nicht automatisch zwischen Geräten. Dein Lizenzschlüssel funktioniert auf bis zu 5 Geräten.',
-    proAboutHonest3:'Pro beinhaltet keinen Cloud-Speicher. Du speicherst deine Bilder in deine eigenen Dateien.',
-    proAboutFinalCta:'Paintiano Pro holen — 9,99 € einmalig',
     proHaveKey:'Ich habe bereits einen Schlüssel',
     proEnterKey:'Lizenzschlüssel eingeben',
     proActivate:'Aktivieren',
@@ -14045,7 +12100,7 @@ const I18N = {
     proInvalidKey:'Dieser Schlüssel ist ungültig. Bitte prüfe deine E-Mail.',
     proWelcomeTitle:'Willkommen bei Pro',
     proWelcomeBody:'Alle Funktionen auf diesem Gerät freigeschaltet.',
-    proManageActive:'Pro',    partnerIsPro:'{a} · {b} ist Pro',
+    partnerIsPro:'{a} · {b} ist Pro',
       tapReturnShuffle:'tippe, um zum Shuffle zurückzukehren',    noNotesGeneric:'Keine Noten.',
     transcribingAudio:'transkribiere Audio',
     transcribingAudioLong:'transkribiere Audio · das kann eine Minute dauern',
@@ -14089,7 +12144,7 @@ const I18N = {
     recUnsupported:'Enregistrement non supporté.',
     recTooShort:'Enregistrement trop court — tenir au moins une seconde.',
     searchGuide:'rechercher dans le guide…', noMatches:'Aucun résultat pour',
-    guideTitle:'guide', conceptTitle:'concept', gsec_start:'pour commencer', gsec_sources:'sources', gsec_playing:'pendant la lecture', gsec_output:'enregistrer & partager', gsec_more:'plus', fsNormal:'A', fsLarge:'A+', fsLabel:'taille du texte', legalPricing:'Tarifs', legalTerms:'Conditions', legalPrivacy:'Confidentialité', legalRefunds:'Remboursements',
+    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'taille du texte', legalPricing:'Tarifs', legalTerms:'Conditions', legalPrivacy:'Confidentialité', legalRefunds:'Remboursements',
     pickMoodFirst:'choisir d\'abord une humeur', morphInto:'transformer l\'humeur actuelle', morphTitle:'transformer {mood} en…', morphHint:'choisir jusqu’à 3 — dans l’ordre', morphGo:'transformer',
     reroll:'relancer',
     demoMode:'mode démo — effacer pour rejouer', demoSkip:'toucher la toile pour passer',
@@ -14114,9 +12169,6 @@ const I18N = {
     morphAiUnavailable:'Morph indisponible pour les ambiances IA',
     proPaywallTitle:'Débloquez tout Paintiano',
     proPaywallTitleAi:'Vous avez utilisé vos compositions IA gratuites',
-    proPaywallBody:'Débloquez les compositions IA illimitées, supprimez le filigrane des exports et soutenez un projet artistique indépendant.',
-    proPaywallCta:'Obtenir Paintiano Pro — 9,99 € à vie',
-    proAiPaywallCta:'Obtenir Paintiano Pro IA — 19,99 € à vie',
     proPaywallFooter:'Paiement unique · Sans abonnement · TVA incluse',
     proEarlyBird:'Tarif early-bird · 50 premiers soutiens',
     proPaywallSubtitle:'Payer une fois. Garder pour toujours.',
@@ -14157,9 +12209,6 @@ const I18N = {
     tierRowPalette:'Palette perso.',
     tierRowDpi:'Export 300 DPI',
     tierRowWmark:'Filigrane',
-    tierRowAiText:'IA ambiances texte',
-    tierRowAiImg:'IA compose image',
-    tierRowAiAtmo:'IA atmosphère',
     tierRowAi:'Fonctions IA',
     tier3Credits:'3 crédits',
     tierAiCreditsNote:'IA texte & image = 1 crédit · Atmosphère = 0,5 crédit',
@@ -14178,36 +12227,7 @@ const I18N = {
     proTierPriceShort:'9,99 €',
     proAiTierPriceShort:'19,99 €',
     tierFootnote:'Paiement unique · Accès à vie',
-    proValue1:'Compositions IA illimitées',
-    proValue1Sub:'Génère autant de peintures que tu veux',
-    proValue2:'Export sans filigrane',
-    proValue2Sub:'Images nettes, prêtes à partager ou imprimer',
-    proValue3:'Accès à vie',
-    proValue3Sub:'Un paiement, à toi pour toujours',
-    proValue4:'Soutiens un projet d’art indépendant',
-    proValue4Sub:'Garde Paintiano indépendant',
     proLearnMore:'En savoir plus sur Pro',
-    proAboutTitle:'Paintiano Pro',
-    proAboutLead:'Tout ce qu’il y a dans Free, sans limites.',
-    proAboutWhatYouGet:'Ce que tu obtiens avec Pro',
-    proAboutCompareTitle:'Free vs Pro',
-    proAboutCompareFeature:'Fonction',
-    proAboutCompareFree:'Free',
-    proAboutComparePro:'Pro',
-    proAboutCmp1:'Tous les modes manuels (clavier, micro, audio)',
-    proAboutCmp2:'Tous les styles & ambiances',
-    proAboutCmp3:'Compositions IA',
-    proAboutCmp3Free:'5 essais',
-    proAboutCmp3Pro:'Illimité',
-    proAboutCmp4:'Filigrane sur les exports',
-    proAboutCmp4Free:'Oui',
-    proAboutCmp4Pro:'Aucun',
-    proAboutCmp5:'Accès à vie',
-    proAboutHonestTitle:'Honnêteté : ce que Pro n’est pas',
-    proAboutHonest1:'Pro garde le même Paintiano que tu utilises déjà — il enlève simplement les limites. Aucune fonction cachée derrière un mur.',
-    proAboutHonest2:'Pro ne synchronise pas automatiquement entre appareils. Ta clé fonctionne sur 5 appareils max.',
-    proAboutHonest3:'Pro n’inclut pas le stockage cloud. Tu sauvegardes tes peintures dans tes propres fichiers.',
-    proAboutFinalCta:'Obtenir Paintiano Pro — 9,99 € à vie',
     proHaveKey:'J’ai déjà une clé',
     proEnterKey:'Saisir votre clé de licence',
     proActivate:'Activer',
@@ -14215,7 +12235,7 @@ const I18N = {
     proInvalidKey:'Cette clé n’est pas valide. Vérifiez votre e-mail.',
     proWelcomeTitle:'Bienvenue dans Pro',
     proWelcomeBody:'Toutes les fonctions débloquées sur cet appareil.',
-    proManageActive:'Pro',    partnerIsPro:'{a} · {b} est Pro',
+    partnerIsPro:'{a} · {b} est Pro',
       tapReturnShuffle:'touche pour revenir au shuffle',    noNotesGeneric:'Aucune note.',
     transcribingAudio:'transcription audio',
     transcribingAudioLong:'transcription audio · cela peut prendre une minute',
@@ -14259,7 +12279,7 @@ const I18N = {
     recUnsupported:'Grabación no compatible.',
     recTooShort:'Grabación demasiado corta — mantener al menos un segundo.',
     searchGuide:'buscar en la guía…', noMatches:'Sin resultados para',
-    guideTitle:'guía', conceptTitle:'concepto', gsec_start:'primeros pasos', gsec_sources:'fuentes', gsec_playing:'durante la reproducción', gsec_output:'guardar & compartir', gsec_more:'más', fsNormal:'A', fsLarge:'A+', fsLabel:'tamaño del texto', legalPricing:'Precios', legalTerms:'Términos', legalPrivacy:'Privacidad', legalRefunds:'Reembolsos',
+    guideTitle:'guía', conceptTitle:'concepto', fsNormal:'A', fsLarge:'A+', fsLabel:'tamaño del texto', legalPricing:'Precios', legalTerms:'Términos', legalPrivacy:'Privacidad', legalRefunds:'Reembolsos',
     pickMoodFirst:'primero elegir un estado', morphInto:'transformar el estado actual', morphTitle:'transformar {mood} en…', morphHint:'elige hasta 3 — en orden', morphGo:'transformar',
     reroll:'relanzar',
     demoMode:'modo demo — borrar para volver a tocar', demoSkip:'toca el lienzo para saltar',
@@ -14284,9 +12304,6 @@ const I18N = {
     morphAiUnavailable:'Morph no disponible para mood generado por IA',
     proPaywallTitle:'Desbloquea todo Paintiano',
     proPaywallTitleAi:'Has usado tus composiciones de IA gratuitas',
-    proPaywallBody:'Desbloquea composiciones de IA ilimitadas, elimina la marca de agua de las exportaciones y apoya un proyecto artístico independiente.',
-    proPaywallCta:'Obtener Paintiano Pro — 9,99 € de por vida',
-    proAiPaywallCta:'Obtener Paintiano Pro IA — 19,99 € de por vida',
     proPaywallFooter:'Pago único · Sin suscripción · IVA incluido',
     proEarlyBird:'Precios early-bird · primeros 50 apoyos',
     proPaywallSubtitle:'Paga una vez. Guarda para siempre.',
@@ -14327,9 +12344,6 @@ const I18N = {
     tierRowPalette:'Paleta person.',
     tierRowDpi:'Export 300 DPI',
     tierRowWmark:'Marca de agua',
-    tierRowAiText:'IA mood texto',
-    tierRowAiImg:'IA compone imagen',
-    tierRowAiAtmo:'IA atmósfera',
     tierRowAi:'Funciones IA',
     tier3Credits:'3 créditos',
     tierAiCreditsNote:'IA texto e imagen = 1 crédito · Atmósfera = 0,5 crédito',
@@ -14348,36 +12362,7 @@ const I18N = {
     proTierPriceShort:'9,99 €',
     proAiTierPriceShort:'19,99 €',
     tierFootnote:'Pago único · Acceso de por vida',
-    proValue1:'Composiciones de IA ilimitadas',
-    proValue1Sub:'Genera tantas pinturas como quieras',
-    proValue2:'Exporta sin marca de agua',
-    proValue2Sub:'Imágenes limpias, listas para compartir o imprimir',
-    proValue3:'Acceso de por vida',
-    proValue3Sub:'Un pago, tuyo para siempre',
-    proValue4:'Apoya un proyecto artístico independiente',
-    proValue4Sub:'Mantén Paintiano independiente',
     proLearnMore:'Más información sobre Pro',
-    proAboutTitle:'Paintiano Pro',
-    proAboutLead:'Todo lo de Free, sin límites.',
-    proAboutWhatYouGet:'Lo que obtienes con Pro',
-    proAboutCompareTitle:'Free vs Pro',
-    proAboutCompareFeature:'Función',
-    proAboutCompareFree:'Free',
-    proAboutComparePro:'Pro',
-    proAboutCmp1:'Todos los modos manuales (teclado, micro, audio)',
-    proAboutCmp2:'Todos los estilos y ambientes',
-    proAboutCmp3:'Composiciones de IA',
-    proAboutCmp3Free:'5 de prueba',
-    proAboutCmp3Pro:'Ilimitadas',
-    proAboutCmp4:'Marca de agua en exportaciones',
-    proAboutCmp4Free:'Sí',
-    proAboutCmp4Pro:'Ninguna',
-    proAboutCmp5:'Acceso de por vida',
-    proAboutHonestTitle:'Sinceros: lo que Pro NO es',
-    proAboutHonest1:'Pro mantiene el mismo Paintiano que ya usas — solo quita los límites. Sin funciones nuevas escondidas tras un muro.',
-    proAboutHonest2:'Pro no sincroniza automáticamente entre dispositivos. Tu clave funciona en hasta 5 dispositivos.',
-    proAboutHonest3:'Pro no incluye almacenamiento en la nube. Guardas tus pinturas en tus propios archivos.',
-    proAboutFinalCta:'Obtener Paintiano Pro — 9,99 € de por vida',
     proHaveKey:'Ya tengo una clave',
     proEnterKey:'Introduce tu clave de licencia',
     proActivate:'Activar',
@@ -14385,7 +12370,7 @@ const I18N = {
     proInvalidKey:'Esta clave no es válida. Revisa tu correo electrónico.',
     proWelcomeTitle:'Bienvenido a Pro',
     proWelcomeBody:'Todas las funciones desbloqueadas en este dispositivo.',
-    proManageActive:'Pro',    partnerIsPro:'{a} · {b} es Pro',
+    partnerIsPro:'{a} · {b} es Pro',
       tapReturnShuffle:'toca para volver al shuffle',    noNotesGeneric:'Sin notas.',
     transcribingAudio:'transcribiendo audio',
     transcribingAudioLong:'transcribiendo audio · puede tardar un minuto',
@@ -14429,7 +12414,7 @@ const I18N = {
     recUnsupported:'Nahrávanie nie je v tomto prehliadači podporované.',
     recTooShort:'Nahrávka bola príliš krátka — podrž rec aspoň sekundu.',
     searchGuide:'hľadať v príručke…', noMatches:'Žiadne výsledky pre',
-    guideTitle:'príručka', conceptTitle:'koncept', gsec_start:'začíname', gsec_sources:'zdroje', gsec_playing:'počas prehrávania', gsec_output:'uložiť & zdieľať', gsec_more:'viac', fsNormal:'A', fsLarge:'A+', fsLabel:'veľkosť textu', legalPricing:'Cenník', legalTerms:'Podmienky', legalPrivacy:'Súkromie', legalRefunds:'Vrátenie',
+    guideTitle:'príručka', conceptTitle:'koncept', fsNormal:'A', fsLarge:'A+', fsLabel:'veľkosť textu', legalPricing:'Cenník', legalTerms:'Podmienky', legalPrivacy:'Súkromie', legalRefunds:'Vrátenie',
     pickMoodFirst:'najprv vyber náladu', morphInto:'morfovať súčasnú náladu do inej', morphTitle:'plynule prejdi z {mood} do…', morphHint:'vyber max 3 — v poradí', morphGo:'morfovať',
     reroll:'prehodiť: čerstvé prevedenie',
     demoMode:'režim demo — vyčisti pre nové prehratie', demoSkip:'klikni na plátno pre preskočenie',
@@ -14454,9 +12439,6 @@ const I18N = {
     morphAiUnavailable:'Morph nedostupný pre AI generovaný mood',
     proPaywallTitle:'Odomkni celé Paintiano',
     proPaywallTitleAi:'Využil si svoje bezplatné AI kompozície',
-    proPaywallBody:'Odomkni neobmedzené AI kompozície, odstráň vodoznak z exportov a podpor nezávislý umelecký projekt.',
-    proPaywallCta:'Získať Paintiano Pro — 9,99 € navždy',
-    proAiPaywallCta:'Získať Paintiano Pro AI — 19,99 € navždy',
     proPaywallFooter:'Jednorazová platba · Bez predplatného · DPH v cene',
     proEarlyBird:'Early-bird ceny · prvých 50 podporovateľov',
     proPaywallSubtitle:'Zaplať raz. Maj navždy.',
@@ -14497,9 +12479,6 @@ const I18N = {
     tierRowPalette:'Vlastná paleta',
     tierRowDpi:'300 DPI export',
     tierRowWmark:'Vodoznak',
-    tierRowAiText:'AI textový mood',
-    tierRowAiImg:'AI obrázok',
-    tierRowAiAtmo:'AI atmosféra',
     tierRowAi:'AI funkcie',
     tier3Credits:'3 kredity',
     tierAiCreditsNote:'AI text a obrázok = 1 kredit · Atmosféra = 0,5 kreditu',
@@ -14518,36 +12497,7 @@ const I18N = {
     proTierPriceShort:'9,99 €',
     proAiTierPriceShort:'19,99 €',
     tierFootnote:'Jednorazová platba · Doživotný prístup',
-    proValue1:'Neobmedzené AI kompozície',
-    proValue1Sub:'Vytváraj toľko malieb, koľko chceš',
-    proValue2:'Export bez vodoznaku',
-    proValue2Sub:'Čisté obrazy, pripravené na zdieľanie alebo tlač',
-    proValue3:'Doživotný prístup',
-    proValue3Sub:'Jedna platba, navždy tvoje',
-    proValue4:'Podpor nezávislý umelecký projekt',
-    proValue4Sub:'Udrž Paintiano nezávislé',
     proLearnMore:'Viac o Pro',
-    proAboutTitle:'Paintiano Pro',
-    proAboutLead:'Všetko z Free, bez obmedzení.',
-    proAboutWhatYouGet:'Čo dostaneš s Pro',
-    proAboutCompareTitle:'Free vs Pro',
-    proAboutCompareFeature:'Funkcia',
-    proAboutCompareFree:'Free',
-    proAboutComparePro:'Pro',
-    proAboutCmp1:'Všetky manuálne režimy (klávesnica, mikrofón, zvuk)',
-    proAboutCmp2:'Všetky vizuálne štýly a nálady',
-    proAboutCmp3:'AI kompozície',
-    proAboutCmp3Free:'5 skúšobne',
-    proAboutCmp3Pro:'Neobmedzene',
-    proAboutCmp4:'Vodoznak na exportoch',
-    proAboutCmp4Free:'Áno',
-    proAboutCmp4Pro:'Žiadny',
-    proAboutCmp5:'Doživotný prístup',
-    proAboutHonestTitle:'Čestne: čo Pro NIE je',
-    proAboutHonest1:'Pro nechá Paintiano také, aké ho už používaš — len odoberie obmedzenia. Žiadne skryté nové funkcie za stenou.',
-    proAboutHonest2:'Pro nesynchronizuje medzi zariadeniami automaticky. Tvoj kľúč funguje na max 5 zariadeniach.',
-    proAboutHonest3:'Pro nezahŕňa cloudové úložisko. Maľby si ukladáš do vlastných súborov.',
-    proAboutFinalCta:'Získať Paintiano Pro — 9,99 € navždy',
     proHaveKey:'Už mám kľúč',
     proEnterKey:'Zadaj licenčný kľúč',
     proActivate:'Aktivovať',
@@ -14555,7 +12505,7 @@ const I18N = {
     proInvalidKey:'Tento kľúč nie je platný. Skontroluj svoj e-mail.',
     proWelcomeTitle:'Vitaj v Pro',
     proWelcomeBody:'Všetky funkcie odomknuté na tomto zariadení.',
-    proManageActive:'Pro',    partnerIsPro:'{a} · {b} je Pro',
+    partnerIsPro:'{a} · {b} je Pro',
       tapReturnShuffle:'klikni pre návrat na shuffle',    noNotesGeneric:'Žiadne noty.',
     transcribingAudio:'prepisujem audio',
     transcribingAudioLong:'prepisujem audio · môže to chvíľu trvať',
@@ -14599,7 +12549,7 @@ const I18N = {
     recUnsupported:'此浏览器不支持录音。',
     recTooShort:'录音过短 — 请按住录制至少一秒。',
     searchGuide:'搜索指南…', noMatches:'未找到匹配项',
-    guideTitle:'指南', conceptTitle:'理念', gsec_start:'入门', gsec_sources:'来源', gsec_playing:'演奏中', gsec_output:'保存与分享', gsec_more:'更多', fsNormal:'A', fsLarge:'A+', fsLabel:'字号', legalPricing:'价格', legalTerms:'条款', legalPrivacy:'隐私', legalRefunds:'退款',
+    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字号', legalPricing:'价格', legalTerms:'条款', legalPrivacy:'隐私', legalRefunds:'退款',
     pickMoodFirst:'请先选择情绪', morphInto:'将当前情绪变形为另一种', morphTitle:'将 {mood} 变形为…', morphHint:'最多选 3 种 — 按顺序', morphGo:'变形',
     reroll:'重掷:换一种诠释',
     demoMode:'演示模式 — 清空以重新播放', demoSkip:'点击画布跳过',
@@ -14630,9 +12580,6 @@ const I18N = {
     morphAiUnavailable:'AI 生成的情緒不支援 Morph',
     proPaywallTitle:'解锁完整的 Paintiano',
     proPaywallTitleAi:'您已用完免费的 AI 作曲次数',
-    proPaywallBody:'解锁无限 AI 作曲、移除导出图像的水印,并支持一个独立的艺术项目。',
-    proPaywallCta:'获取 Paintiano Pro — 终身 €9.99',
-    proAiPaywallCta:'获取 Paintiano Pro AI — 终身 €19.99',
     proPaywallFooter:'一次性付款 · 无订阅 · 含增值税',
     proEarlyBird:'早鸟价 · 前 50 位支持者',
     proPaywallSubtitle:'一次付款。永久使用。',
@@ -14673,9 +12620,6 @@ const I18N = {
     tierRowPalette:'自定义调色板',
     tierRowDpi:'300 DPI 导出',
     tierRowWmark:'水印',
-    tierRowAiText:'AI 文字情绪',
-    tierRowAiImg:'AI 图片作曲',
-    tierRowAiAtmo:'AI 氛围',
     tierRowAi:'AI 功能',
     tier3Credits:'3 个额度',
     tierAiCreditsNote:'AI 文字与图片 = 1 个额度 · 氛围 = 0.5 个额度',
@@ -14694,36 +12638,7 @@ const I18N = {
     proTierPriceShort:'€9.99',
     proAiTierPriceShort:'€19.99',
     tierFootnote:'一次性付款 · 终身访问',
-    proValue1:'无限 AI 作曲',
-    proValue1Sub:'想画多少幅画都可以',
-    proValue2:'导出无水印',
-    proValue2Sub:'干净的图像,可直接分享或打印',
-    proValue3:'终身访问',
-    proValue3Sub:'一次付款,永久拥有',
-    proValue4:'支持独立艺术项目',
-    proValue4Sub:'让 Paintiano 保持独立',
     proLearnMore:'了解更多关于 Pro',
-    proAboutTitle:'Paintiano Pro',
-    proAboutLead:'Free 版的一切,没有限制。',
-    proAboutWhatYouGet:'Pro 版包含',
-    proAboutCompareTitle:'Free 与 Pro 对比',
-    proAboutCompareFeature:'功能',
-    proAboutCompareFree:'Free',
-    proAboutComparePro:'Pro',
-    proAboutCmp1:'所有手动模式(键盘、麦克风、音频)',
-    proAboutCmp2:'所有视觉风格与情绪',
-    proAboutCmp3:'AI 作曲',
-    proAboutCmp3Free:'5 次试用',
-    proAboutCmp3Pro:'无限',
-    proAboutCmp4:'导出水印',
-    proAboutCmp4Free:'有',
-    proAboutCmp4Pro:'无',
-    proAboutCmp5:'终身访问',
-    proAboutHonestTitle:'Pro 不是什么',
-    proAboutHonest1:'Pro 保留了您已经在使用的 Paintiano — 只是移除了限制。没有隐藏在付费墙后的新功能。',
-    proAboutHonest2:'Pro 不会在设备之间自动同步。您的许可密钥最多可用于 5 台设备。',
-    proAboutHonest3:'Pro 不包含云存储。您将作品保存到自己的文件中。',
-    proAboutFinalCta:'获取 Paintiano Pro — 终身 €9.99',
     proHaveKey:'我已有密钥',
     proEnterKey:'输入许可密钥',
     proActivate:'激活',
@@ -14731,7 +12646,7 @@ const I18N = {
     proInvalidKey:'此密钥无效。请检查您的电子邮件。',
     proWelcomeTitle:'欢迎使用 Pro',
     proWelcomeBody:'此设备上所有功能已解锁。',
-    proManageActive:'Pro',    partnerIsPro:'{a} · {b} 是 Pro',
+    partnerIsPro:'{a} · {b} 是 Pro',
       tapReturnShuffle:'点击返回随机',    noNotesGeneric:'没有音符。',
     transcribingAudio:'正在转录音频',
     transcribingAudioLong:'正在转录音频 · 可能需要一分钟',
@@ -14775,7 +12690,7 @@ const I18N = {
     recUnsupported:'此瀏覽器不支援錄音。',
     recTooShort:'錄音過短 — 請按住錄製至少一秒。',
     searchGuide:'搜尋指南…', noMatches:'未找到符合項目',
-    guideTitle:'指南', conceptTitle:'理念', gsec_start:'入門', gsec_sources:'來源', gsec_playing:'演奏中', gsec_output:'儲存與分享', gsec_more:'更多', fsNormal:'A', fsLarge:'A+', fsLabel:'字級', legalPricing:'價格', legalTerms:'條款', legalPrivacy:'隱私', legalRefunds:'退款',
+    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字級', legalPricing:'價格', legalTerms:'條款', legalPrivacy:'隱私', legalRefunds:'退款',
     pickMoodFirst:'請先選擇情緒', morphInto:'將目前情緒變形為另一種', morphTitle:'將 {mood} 變形為…', morphHint:'最多選 3 種 — 按順序', morphGo:'變形',
     reroll:'重擲：換一種詮釋',
     demoMode:'示範模式 — 清空以重新播放', demoSkip:'點擊畫布跳過',
@@ -14794,9 +12709,6 @@ const I18N = {
     mfiRecent:'最近',
     proPaywallTitle:'解鎖完整的 Paintiano',
     proPaywallTitleAi:'您已用完免費的 AI 作曲次數',
-    proPaywallBody:'解鎖無限 AI 作曲、移除匯出圖像的浮水印，並支持一個獨立的藝術專案。',
-    proPaywallCta:'取得 Paintiano Pro — 終身 €9.99',
-    proAiPaywallCta:'取得 Paintiano Pro AI — 終身 €19.99',
     proPaywallFooter:'一次性付款 · 無訂閱 · 含加值稅',
     proEarlyBird:'早鳥價 · 前 50 位支持者',
     proPaywallSubtitle:'一次付款。永久使用。',
@@ -14837,9 +12749,6 @@ const I18N = {
     tierRowPalette:'自訂調色盤',
     tierRowDpi:'300 DPI 匯出',
     tierRowWmark:'浮水印',
-    tierRowAiText:'AI 文字情緒',
-    tierRowAiImg:'AI 圖片作曲',
-    tierRowAiAtmo:'AI 氛圍',
     tierRowAi:'AI 功能',
     tier3Credits:'3 個額度',
     tierAiCreditsNote:'AI 文字與圖片 = 1 個額度 · 氛圍 = 0.5 個額度',
@@ -14858,36 +12767,7 @@ const I18N = {
     proTierPriceShort:'€9.99',
     proAiTierPriceShort:'€19.99',
     tierFootnote:'一次性付款 · 終身存取',
-    proValue1:'無限 AI 作曲',
-    proValue1Sub:'想畫多少幅畫都可以',
-    proValue2:'匯出無浮水印',
-    proValue2Sub:'乾淨的圖像，可直接分享或列印',
-    proValue3:'終身存取',
-    proValue3Sub:'一次付款，永久擁有',
-    proValue4:'支持獨立藝術專案',
-    proValue4Sub:'讓 Paintiano 保持獨立',
     proLearnMore:'瞭解更多關於 Pro',
-    proAboutTitle:'Paintiano Pro',
-    proAboutLead:'Free 版的一切，沒有限制。',
-    proAboutWhatYouGet:'Pro 版包含',
-    proAboutCompareTitle:'Free 與 Pro 比較',
-    proAboutCompareFeature:'功能',
-    proAboutCompareFree:'Free',
-    proAboutComparePro:'Pro',
-    proAboutCmp1:'所有手動模式（鍵盤、麥克風、音訊）',
-    proAboutCmp2:'所有視覺風格與情緒',
-    proAboutCmp3:'AI 作曲',
-    proAboutCmp3Free:'5 次試用',
-    proAboutCmp3Pro:'無限',
-    proAboutCmp4:'匯出浮水印',
-    proAboutCmp4Free:'有',
-    proAboutCmp4Pro:'無',
-    proAboutCmp5:'終身存取',
-    proAboutHonestTitle:'Pro 不是什麼',
-    proAboutHonest1:'Pro 保留了您已經在使用的 Paintiano — 只是移除了限制。沒有隱藏在付費牆後的新功能。',
-    proAboutHonest2:'Pro 不會在裝置之間自動同步。您的授權金鑰最多可用於 5 台裝置。',
-    proAboutHonest3:'Pro 不包含雲端儲存。您將作品儲存到自己的檔案中。',
-    proAboutFinalCta:'取得 Paintiano Pro — 終身 €9.99',
     proHaveKey:'我已有金鑰',
     proEnterKey:'輸入授權金鑰',
     proActivate:'啟用',
@@ -14895,7 +12775,6 @@ const I18N = {
     proInvalidKey:'此金鑰無效。請檢查您的電子郵件。',
     proWelcomeTitle:'歡迎使用 Pro',
     proWelcomeBody:'此裝置上所有功能已解鎖。',
-    proManageActive:'Pro',
     morphAiUnavailable:'AI 生成的情緒不支援 Morph',
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
@@ -14945,7 +12824,7 @@ const I18N = {
     recUnsupported:'Gravação não suportada neste navegador.',
     recTooShort:'Gravação muito curta — segure rec por pelo menos um segundo.',
     searchGuide:'buscar no guia…', noMatches:'Nenhum resultado para',
-    guideTitle:'guia', conceptTitle:'conceito', gsec_start:'começando', gsec_sources:'fontes', gsec_playing:'durante a reprodução', gsec_output:'salvar & compartilhar', gsec_more:'mais', fsNormal:'A', fsLarge:'A+', fsLabel:'tamanho do texto', legalPricing:'Preços', legalTerms:'Termos', legalPrivacy:'Privacidade', legalRefunds:'Reembolsos',
+    guideTitle:'guia', conceptTitle:'conceito', fsNormal:'A', fsLarge:'A+', fsLabel:'tamanho do texto', legalPricing:'Preços', legalTerms:'Termos', legalPrivacy:'Privacidade', legalRefunds:'Reembolsos',
     pickMoodFirst:'escolha um humor primeiro', morphInto:'transformar o humor atual em outro', morphTitle:'transformar {mood} em…', morphHint:'escolha até 3 — em ordem', morphGo:'transformar',
     reroll:'rerrolar: uma nova versão',
     demoMode:'modo demo — limpe para tocar novamente', demoSkip:'toque a tela para pular',
@@ -14970,9 +12849,6 @@ const I18N = {
     morphAiUnavailable:'Morph indisponível para mood gerado por IA',
     proPaywallTitle:'Desbloqueie todo o Paintiano',
     proPaywallTitleAi:'Você usou suas composições de IA gratuitas',
-    proPaywallBody:'Desbloqueie composições de IA ilimitadas, remova a marca d\'água das exportações e apoie um projeto de arte independente.',
-    proPaywallCta:'Obter Paintiano Pro — €9.99 vitalício',
-    proAiPaywallCta:'Obter Paintiano Pro IA — €19.99 vitalício',
     proPaywallFooter:'Pagamento único · Sem assinatura · IVA incluído',
     proEarlyBird:'Preços early-bird · primeiros 50 apoiadores',
     proPaywallSubtitle:'Pague uma vez. Mantenha para sempre.',
@@ -15013,9 +12889,6 @@ const I18N = {
     tierRowPalette:'Paleta person.',
     tierRowDpi:'Export 300 DPI',
     tierRowWmark:'Marca d\'água',
-    tierRowAiText:'IA mood texto',
-    tierRowAiImg:'IA compõe imagem',
-    tierRowAiAtmo:'IA atmosfera',
     tierRowAi:'Recursos de IA',
     tier3Credits:'3 créditos',
     tierAiCreditsNote:'IA texto e imagem = 1 crédito · Atmosfera = 0,5 crédito',
@@ -15034,36 +12907,7 @@ const I18N = {
     proTierPriceShort:'€9.99',
     proAiTierPriceShort:'€19.99',
     tierFootnote:'Pagamento único · Acesso vitalício',
-    proValue1:'Composições de IA ilimitadas',
-    proValue1Sub:'Gere quantas pinturas desejar',
-    proValue2:'Exportar sem marca d\'água',
-    proValue2Sub:'Imagens limpas, prontas para compartilhar ou imprimir',
-    proValue3:'Acesso vitalício',
-    proValue3Sub:'Um pagamento, seu para sempre',
-    proValue4:'Apoie um projeto de arte solo',
-    proValue4Sub:'Mantenha o Paintiano independente',
     proLearnMore:'Saiba mais sobre o Pro',
-    proAboutTitle:'Paintiano Pro',
-    proAboutLead:'Tudo do Free, sem limites.',
-    proAboutWhatYouGet:'O que você recebe com o Pro',
-    proAboutCompareTitle:'Free vs Pro',
-    proAboutCompareFeature:'Recurso',
-    proAboutCompareFree:'Free',
-    proAboutComparePro:'Pro',
-    proAboutCmp1:'Todos os modos manuais (teclado, mic, áudio)',
-    proAboutCmp2:'Todos os estilos visuais e humores',
-    proAboutCmp3:'Composições de IA',
-    proAboutCmp3Free:'5 teste',
-    proAboutCmp3Pro:'Ilimitadas',
-    proAboutCmp4:'Marca d\'água nas exportações',
-    proAboutCmp4Free:'Sim',
-    proAboutCmp4Pro:'Nenhuma',
-    proAboutCmp5:'Acesso vitalício',
-    proAboutHonestTitle:'Sinceros: o que o Pro NÃO é',
-    proAboutHonest1:'O Pro mantém o mesmo Paintiano que você já usa — apenas remove os limites. Sem recursos novos escondidos atrás de um paywall.',
-    proAboutHonest2:'O Pro não sincroniza entre dispositivos automaticamente. Sua chave funciona em até 5 dispositivos.',
-    proAboutHonest3:'O Pro não inclui armazenamento na nuvem. Você salva suas pinturas em seus próprios arquivos.',
-    proAboutFinalCta:'Obter Paintiano Pro — €9.99 vitalício',
     proHaveKey:'Já tenho uma chave',
     proEnterKey:'Digite a chave de licença',
     proActivate:'Ativar',
@@ -15071,7 +12915,7 @@ const I18N = {
     proInvalidKey:'Esta chave não é válida. Verifique seu e-mail.',
     proWelcomeTitle:'Bem-vindo ao Pro',
     proWelcomeBody:'Todos os recursos desbloqueados neste dispositivo.',
-    proManageActive:'Pro',    partnerIsPro:'{a} · {b} é Pro',
+    partnerIsPro:'{a} · {b} é Pro',
       tapReturnShuffle:'toca para voltar ao shuffle',    noNotesGeneric:'Sem notas.',
     transcribingAudio:'a transcrever áudio',
     transcribingAudioLong:'a transcrever áudio · pode demorar um minuto',
@@ -15115,7 +12959,7 @@ const I18N = {
     recUnsupported:'このブラウザでは録音がサポートされていません。',
     recTooShort:'録音が短すぎました — rec を 1 秒以上押し続けてください。',
     searchGuide:'ガイドを検索…', noMatches:'一致なし:',
-    guideTitle:'ガイド', conceptTitle:'コンセプト', gsec_start:'始め方', gsec_sources:'ソース', gsec_playing:'再生中', gsec_output:'保存 & シェア', gsec_more:'もっと', fsNormal:'A', fsLarge:'A+', fsLabel:'文字サイズ', legalPricing:'料金', legalTerms:'利用規約', legalPrivacy:'プライバシー', legalRefunds:'返金',
+    guideTitle:'ガイド', conceptTitle:'コンセプト', fsNormal:'A', fsLarge:'A+', fsLabel:'文字サイズ', legalPricing:'料金', legalTerms:'利用規約', legalPrivacy:'プライバシー', legalRefunds:'返金',
     pickMoodFirst:'まずムードを選んでください', morphInto:'現在のムードを別のムードに morph', morphTitle:'{mood} を…に morph', morphHint:'最大 3 つを選ぶ — 順番に', morphGo:'モーフ',
     reroll:'振り直し:新しい解釈',
     demoMode:'デモモード — もう一度再生するにはクリア', demoSkip:'キャンバスをタップでスキップ',
@@ -15140,9 +12984,6 @@ const I18N = {
     morphAiUnavailable:'AI 生成のムードでは Morph は使えません',
     proPaywallTitle:'Paintiano をフル解放',
     proPaywallTitleAi:'無料 AI 作曲を使い切りました',
-    proPaywallBody:'無制限 AI 作曲を解放し、エクスポートのウォーターマークを取り除き、独立アートプロジェクトを応援。',
-    proPaywallCta:'Paintiano Pro を入手 — €9.99 永久',
-    proAiPaywallCta:'Paintiano Pro AI を入手 — €19.99 永久',
     proPaywallFooter:'一回払い · サブスクなし · VAT 込み',
     proEarlyBird:'アーリーバード価格 · 先着 50 名',
     proPaywallSubtitle:'一度払えば、永久に。',
@@ -15183,9 +13024,6 @@ const I18N = {
     tierRowPalette:'Custom パレット',
     tierRowDpi:'300 DPI エクスポート',
     tierRowWmark:'ウォーターマーク',
-    tierRowAiText:'AI テキスト mood',
-    tierRowAiImg:'AI 画像 compose',
-    tierRowAiAtmo:'AI 雰囲気',
     tierRowAi:'AI 機能',
     tier3Credits:'3 クレジット',
     tierAiCreditsNote:'AI テキスト & 画像 compose = 各 1 クレジット · Atmosphere = 0.5 クレジット',
@@ -15204,35 +13042,7 @@ const I18N = {
     proTierPriceShort:'€9.99',
     proAiTierPriceShort:'€19.99',
     tierFootnote:'一回払い · 永久アクセス',
-    proValue1:'無制限 AI 作曲',
-    proValue1Sub:'好きなだけ絵を生成',
-    proValue2:'ウォーターマークなしでエクスポート',
-    proValue2Sub:'クリーンな画像、共有や印刷の準備が整っている',
-    proValue3:'永久アクセス',
-    proValue3Sub:'一回払いで永久にあなたのもの',
-    proValue4:'独立アートプロジェクトを応援',
-    proValue4Sub:'Paintiano の独立性を守る',
     proLearnMore:'Pro について詳しく',
-    proAboutTitle:'Paintiano Pro',
-    proAboutLead:'Free のすべて、制限なし。',
-    proAboutWhatYouGet:'Pro で得られるもの',
-    proAboutCompareTitle:'Free 対 Pro',
-    proAboutCompareFeature:'機能',
-    proAboutCompareFree:'Free',
-    proAboutComparePro:'Pro',
-    proAboutCmp1:'すべての手動モード(キーボード、マイク、音声)',
-    proAboutCmp2:'すべての視覚スタイル & ムード',
-    proAboutCmp3:'AI 作曲',
-    proAboutCmp3Free:'5 回試用',
-    proAboutCmp3Pro:'無制限',
-    proAboutCmp4:'エクスポートのウォーターマーク',
-    proAboutCmp4Free:'あり',
-    proAboutCmp4Pro:'なし',
-    proAboutCmp5:'永久アクセス',
-    proAboutHonestTitle:'Pro でないものについて正直に',
-    proAboutHonest1:'Pro はすでに使っている Paintiano そのまま — 制限を取り除くだけ。ペイウォールの後ろに隠された新機能はない。',
-    proAboutHonest2:'Pro はデバイス間で自動同期しない。ライセンスキーは最大 5 台で動作。',
-    proAboutHonest3:'Pro はクラウドストレージを含まない。絵は自分のファイルに保存する。',
     proHaveKey:'すでにキーを持っている',
     proEnterKey:'ライセンスキーを入力',
     proActivate:'アクティベート',
@@ -15240,7 +13050,7 @@ const I18N = {
     proInvalidKey:'このキーは有効ではありません。正しいキーをメールで確認してください。',
     proWelcomeTitle:'Pro へようこそ',
     proWelcomeBody:'このデバイスのすべての機能が解放されました。',
-    proManageActive:'Pro',    partnerIsPro:'{a} · {b} は Pro 限定',    tapReturnShuffle:'タップでシャッフルに戻る',    noNotesGeneric:'音符なし。',
+    partnerIsPro:'{a} · {b} は Pro 限定',    tapReturnShuffle:'タップでシャッフルに戻る',    noNotesGeneric:'音符なし。',
     transcribingAudio:'オーディオを書き起こし中',
     transcribingAudioLong:'オーディオを書き起こし中 · 1 分ほどかかります',
     transcribingSample:'サンプルを書き起こし中',
@@ -16390,7 +14200,7 @@ const GUIDE_CARDS_I18N = {
     {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = golden angle`, body:`Each note's hue rotates by 137.5° — the same angle sunflowers use to pack seeds. Maximally scattered colours, no two ever crowding.`, more:`φ Phi rotates each successive pitch class by the golden angle, 137.5° — the same angle a sunflower uses to pack seeds without gaps and a pinecone to spiral. The result is maximal scattering: no two pitch classes ever land near each other on the wheel. Where Harmony clusters related keys, φ Phi spreads everything as far apart as mathematics allows. Nature's anti-clustering rule, applied to sound.`},
     {id:'custom', glyph:'🎨', cat:'colors', title:`Custom = Scriabin's map`, body:`Scriabin saw colours for tones. His 1910 mapping is your Custom default — C red, G orange-pink, D yellow, around the wheel. Pro edits every swatch.`, more:`Custom defaults to Scriabin's Prometheus mapping (1910) — the most famous synaesthete in history actually saw these colours for these pitches and wrote them into his orchestral score's "luce" part. C red, G orange-pink, D yellow, A green, E pearly blue, B blue, F♯ violet-blue, C♯ violet, G♯ purple, D♯/A♯ metallic-steel, F deep red — roughly the circle of fifths through a rainbow, a subjective ancestor of Harmony. Only colours in your palette make sound. Free sees it read-only; Pro and Pro AI let you recolour all 12 swatches.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: inverse harmony`, body:`Clashing chords clash on canvas. Clean intervals fly apart. The painter's reading — opposite of Harmony, sharper to the eye. Free for everyone.`, more:`Kontra inverts Harmony. Consonant intervals (P5, M3, m3, M6, m6, P4) get FAR-apart hues; dissonant ones (m2, M2, tritone, M7, m7) get CLOSE ones. So a clashing chord clashes on canvas and a clean one blooms apart — the opposite of how Harmony reads. It's the painter's eye rather than the musician's: tension you can see. Unlocked on every tier, free for everyone.`},
-    {id:'style', glyph:'🎨', cat:'style', title:`18 artists, 9 pairs`, body:`Mosaic is the default. Tap an artist tile and the same notes get rewritten in their hand. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 total.`, more:`Eighteen great painters, one canvas. Mosaic is the plain default. Tap any artist tile and the same notes get rewritten in their hand: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. When an artist is active the canvas shows "inspired by Picasso" — a quiet credit, never a costume. Each painter holds several variants of their own work: Monet has twelve, Mondrian eight, most have six. The variant is deterministic: same song + artist + key + variant → pixel-identical painting, every time. Turn on ↻ Shuffle and Next walks through an artist's variants.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`18 artists, 9 pairs`, body:`Mosaic is the default. Tap an artist tile and the same notes get rewritten in their hand. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 total.`, more:`Eighteen great painters, one canvas. Mosaic is the plain default. Tap any artist tile and the same notes get rewritten in their hand: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. When an artist is active the canvas shows "inspired by Picasso" — a quiet credit, never a costume. Each painter holds several variants of their own work. The variant is deterministic: same song + artist + key + variant → pixel-identical painting, every time. Turn on ↻ Shuffle and Next walks through an artist's variants.`},
     {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic family`, body:`Three modes, one chip. Tap to cycle: φ-grid → note labels → $1M$ chaos. The plain reading when no artist is on.`, more:`The Mosaic chip cycles three modes. ◆ Mosaic — the plain reading: clean φ-rectangles, one per chord, coloured by the current palette. ◆ Notes — same grid, but each block shows its note name; an instant learning tool for seeing which pitch is which colour. ◆ $1M$ — the Million-Dollar-Homepage overlay: tiles fill ~60% of the canvas, ten chaos shape-types fill the rest, structured-random. All three read the song the same deterministic way — same song always gives the same Mosaic, Notes or $1M$ image.`},
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Dice on = surprise`, body:`Same song = same painting, always. Roll the dice and every Next paints a different artist or Mosaic stop. Tap Mosaic with dice on to lock the cycle.`, more:`The deterministic rule: same song · tonality · artist · style → pixel-identical painting, always. The dice only chooses WHICH combination shows next, never how it looks. ◆ Turn on ↻ Shuffle and the Next button appears. ◆ With an artist picked: Next jumps to a random variant of that artist. ◆ Without an artist: Next picks both — a random artist plus a random variant. The pool also includes the three Mosaic-family stops, so shuffle can land on any of them. ◆ Tap Mosaic with Shuffle on to lock the cycle to just those three (Mosaic → Notes → $1M$). ◆ Re-landing on the same combination always repaints the identical picture.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Your live piano`, body:`Tap ♪ Compose. Tap a key for a stab, hold for a wider block. Chord names appear live. Backspace undo, Space play.`, more:`Tap ♪ COMPOSE (or hit Enter). The piano opens. Tap a key for a quick stab, hold for a wider block — longer hold, wider paint. Hardware keyboard works too: A–L white, W/E/T/Y/U/O/P black. Backspace = undo, Space = play/pause, Enter toggles the piano. Hold a chord and its name (C maj, A min, D7…) appears live. The canvas is a fixed golden-ratio frame — rows shrink as you add more, the painting densifies. ◆ Mobile: the full 88 keys are there — swipe horizontally to pan, C4 sits roughly centre. ◆ Scale snap: tap ⚙ to snap everything you play to a key (C maj, A min, G maj…); "Free" (default) stays fully chromatic.`},
@@ -16411,7 +14221,7 @@ const GUIDE_CARDS_I18N = {
     {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = goldener Winkel`, body:`Jeder Ton dreht um 137,5° — derselbe Winkel, mit dem Sonnenblumen Samen packen. Maximal gestreute Farben, nie drängeln sich zwei.`, more:`φ Phi dreht jede folgende Tonklasse um den goldenen Winkel, 137,5° — denselben Winkel, mit dem eine Sonnenblume Samen ohne Lücken packt und ein Tannenzapfen spiralt. Das Ergebnis ist maximale Streuung: keine zwei Tonklassen landen je nah beieinander auf dem Rad. Wo Harmonie verwandte Tonarten gruppiert, spreizt φ Phi alles so weit, wie die Mathematik erlaubt. Die Anti-Cluster-Regel der Natur, auf Klang angewandt.`},
     {id:'custom', glyph:'🎨', cat:'colors', title:`Custom = Skrjabins Karte`, body:`Skrjabin sah Farben für Töne. Seine Karte von 1910 ist dein Custom-Standard — C rot, G orange-rosa, D gelb, rundherum. Pro bearbeitet jede.`, more:`Custom hat als Standard Skrjabins Prometheus-Karte (1910) — der berühmteste Synästhet der Geschichte sah diese Farben tatsächlich für diese Töne und schrieb sie in den „luce"-Part seiner Orchesterpartitur. C rot, G orange-rosa, D gelb, A grün, E perlblau, H blau, F♯ violett-blau, C♯ violett, G♯ purpur, D♯/A♯ metallisch-stahl, F tiefrot — grob der Quintenzirkel durch einen Regenbogen, ein subjektiver Vorfahr der Harmonie. Nur Farben deiner Palette klingen. Free sieht es schreibgeschützt; Pro und Pro KI lassen dich alle 12 Farben neu setzen.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: inverse Harmonie`, body:`Schräge Akkorde knallen auf der Leinwand. Klare fliegen auseinander. Die Lesart des Malers — Gegenteil von Harmonie, schärfer fürs Auge. Für alle gratis.`, more:`Kontra invertiert Harmonie. Konsonante Intervalle (r5, gr3, kl3, gr6, kl6, r4) bekommen WEIT entfernte Farben; dissonante (kl2, gr2, Tritonus, gr7, kl7) bekommen NAHE. So knallt ein schräger Akkord auf der Leinwand und ein klarer blüht auseinander — das Gegenteil davon, wie Harmonie liest. Das Auge des Malers statt des Musikers: Spannung, die man sieht. Auf jeder Stufe freigeschaltet, für alle gratis.`},
-    {id:'style', glyph:'🎨', cat:'style', title:`18 Künstler, 9 Paare`, body:`Mosaik ist Standard. Künstler-Kachel antippen und dieselben Noten erscheinen in seiner Handschrift. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 gesamt.`, more:`Achtzehn große Maler, eine Leinwand. Mosaik ist der schlichte Standard. Tippe eine Künstler-Kachel und dieselben Noten erscheinen in seiner Handschrift: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Ist ein Künstler aktiv, zeigt die Leinwand „inspired by Picasso" — eine stille Würdigung, nie ein Kostüm. Jeder Maler hält mehrere Varianten seines Werks: Monet hat zwölf, Mondrian acht, die meisten sechs. Die Variante ist deterministisch: gleicher Song + Künstler + Tonart + Variante → pixel-identisches Bild. ↻ Shuffle an, und Weiter geht durch die Varianten des Künstlers.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`18 Künstler, 9 Paare`, body:`Mosaik ist Standard. Künstler-Kachel antippen und dieselben Noten erscheinen in seiner Handschrift. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 gesamt.`, more:`Achtzehn große Maler, eine Leinwand. Mosaik ist der schlichte Standard. Tippe eine Künstler-Kachel und dieselben Noten erscheinen in seiner Handschrift: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Ist ein Künstler aktiv, zeigt die Leinwand „inspired by Picasso" — eine stille Würdigung, nie ein Kostüm. Jeder Maler hält mehrere Varianten seines Werks. Die Variante ist deterministisch: gleicher Song + Künstler + Tonart + Variante → pixel-identisches Bild. ↻ Shuffle an, und Weiter geht durch die Varianten des Künstlers.`},
     {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaik-Familie`, body:`Drei Modi, eine Kachel. Tippen zum Zykeln: φ-Raster → Notennamen → $1M$-Chaos. Die schlichte Lesart, wenn kein Künstler an ist.`, more:`Die Mosaik-Kachel zykelt drei Modi. ◆ Mosaik — die schlichte Lesart: saubere φ-Rechtecke, eines pro Akkord, gefärbt von der aktuellen Palette. ◆ Noten — gleiches Raster, aber jeder Block zeigt seinen Notennamen; ein Sofort-Lerntool, um zu sehen, welche Tonhöhe welche Farbe ist. ◆ $1M$ — das Million-Dollar-Homepage-Overlay: Kacheln füllen ~60% der Leinwand, zehn Chaos-Formtypen den Rest, strukturiertes Chaos. Alle drei lesen den Song gleich deterministisch — gleicher Song gibt immer dasselbe Mosaik-, Noten- oder $1M$-Bild.`},
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Würfel an = Überraschung`, body:`Gleicher Song = gleiches Bild, immer. Würfle und jedes Weiter malt einen anderen Künstler oder Mosaik-Stopp. Mosaik mit Würfel antippen sperrt den Zyklus.`, more:`Die deterministische Regel: gleicher Song · Tonart · Künstler · Stil → pixel-identisches Bild, immer. Der Würfel wählt nur, WELCHE Kombination als nächstes kommt, nie wie sie aussieht. ◆ ↻ Shuffle an, und der Weiter-Knopf erscheint. ◆ Mit gewähltem Künstler: Weiter springt zu einer zufälligen Variante dieses Künstlers. ◆ Ohne Künstler: Weiter wählt beides — zufälligen Künstler plus zufällige Variante. Der Pool enthält auch die drei Mosaik-Stopps, also kann Shuffle auf jeden davon landen. ◆ Mosaik mit eingeschaltetem Shuffle antippen sperrt den Zyklus auf nur diese drei (Mosaik → Noten → $1M$). ◆ Wieder auf dieselbe Kombination zu landen malt stets dasselbe Bild.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Dein Live-Klavier`, body:`Tippe ♪ Compose. Taste antippen = Stoß, halten = breiterer Block. Akkordnamen live. Backspace zurück, Leertaste Play.`, more:`Tippe ♪ COMPOSE (oder Enter). Das Klavier öffnet sich. Taste antippen = kurzer Stoß, halten = breiterer Block — länger halten, breiter malen. Hardware-Tastatur geht auch: A–L weiß, W/E/T/Y/U/O/P schwarz. Backspace = rückgängig, Leertaste = Play/Pause, Enter schaltet das Klavier um. Halte einen Akkord und sein Name (C-Dur, a-Moll, D7…) erscheint live. Die Leinwand ist ein fester Rahmen im goldenen Schnitt — Reihen schrumpfen, je mehr du hinzufügst, das Bild verdichtet sich. ◆ Mobil: alle 88 Tasten — wische horizontal zum Schwenken, C4 sitzt etwa mittig. ◆ Scale Snap: tippe ⚙, um alles Gespielte auf eine Tonart zu rasten; „Free" (Standard) bleibt voll chromatisch.`},
@@ -16432,7 +14242,7 @@ const GUIDE_CARDS_I18N = {
     {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = angle d'or`, body:`Chaque note tourne de 137,5° — le même angle que les tournesols pour ranger leurs graines. Couleurs dispersées au maximum, jamais deux qui se serrent.`, more:`φ Phi tourne chaque classe de hauteur suivante de l'angle d'or, 137,5° — le même angle qu'un tournesol pour ranger ses graines sans vide et une pomme de pin pour spiraler. Le résultat est une dispersion maximale : jamais deux classes de hauteur ne tombent près l'une de l'autre sur la roue. Là où Harmonie groupe les tonalités proches, φ Phi écarte tout aussi loin que les maths le permettent. La règle anti-regroupement de la nature, appliquée au son.`},
     {id:'custom', glyph:'🎨', cat:'colors', title:`Custom = la carte de Scriabine`, body:`Scriabine voyait des couleurs pour les sons. Sa carte de 1910 est ton défaut Custom — Do rouge, Sol orange-rose, Ré jaune, tout autour. Pro édite chacune.`, more:`Custom prend par défaut la carte Prométhée de Scriabine (1910) — le synesthète le plus célèbre de l'histoire voyait réellement ces couleurs pour ces hauteurs et les a écrites dans la partie « luce » de sa partition orchestrale. Do rouge, Sol orange-rose, Ré jaune, La vert, Mi bleu nacré, Si bleu, Fa♯ bleu-violet, Do♯ violet, Sol♯ pourpre, Ré♯/La♯ acier métallique, Fa rouge profond — grosso modo le cycle des quintes à travers un arc-en-ciel, un ancêtre subjectif d'Harmonie. Seules les couleurs de ta palette sonnent. Free le voit en lecture seule ; Pro et Pro IA te laissent recolorer les 12 cases.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra : harmonie inverse`, body:`Les accords heurtés s'entrechoquent sur la toile. Les nets s'envolent. La lecture du peintre — l'opposé d'Harmonie, plus tranchée. Gratuit pour tous.`, more:`Kontra inverse Harmonie. Les intervalles consonants (5J, 3M, 3m, 6M, 6m, 4J) reçoivent des teintes LOINTAINES ; les dissonants (2m, 2M, triton, 7M, 7m) des PROCHES. Ainsi un accord heurté s'entrechoque sur la toile et un net éclôt à l'écart — l'inverse de la lecture d'Harmonie. L'œil du peintre plutôt que du musicien : la tension qu'on voit. Débloqué à tous les niveaux, gratuit pour tous.`},
-    {id:'style', glyph:'🎨', cat:'style', title:`18 artistes, 9 paires`, body:`Mosaïque par défaut. Tape une tuile d'artiste et les mêmes notes ressortent dans sa main. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 au total.`, more:`Dix-huit grands peintres, une toile. Mosaïque est le défaut sobre. Tape une tuile d'artiste et les mêmes notes ressortent dans sa main : Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Quand un artiste est actif, la toile affiche « inspired by Picasso » — un crédit discret, jamais un costume. Chaque peintre tient plusieurs variantes de son œuvre : Monet en a douze, Mondrian huit, la plupart six. La variante est déterministe : même morceau + artiste + tonalité + variante → peinture pixel-identique. Active ↻ Shuffle et Suivant parcourt les variantes de l'artiste.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`18 artistes, 9 paires`, body:`Mosaïque par défaut. Tape une tuile d'artiste et les mêmes notes ressortent dans sa main. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 au total.`, more:`Dix-huit grands peintres, une toile. Mosaïque est le défaut sobre. Tape une tuile d'artiste et les mêmes notes ressortent dans sa main : Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Quand un artiste est actif, la toile affiche « inspired by Picasso » — un crédit discret, jamais un costume. Chaque peintre tient plusieurs variantes de son œuvre. La variante est déterministe : même morceau + artiste + tonalité + variante → peinture pixel-identique. Active ↻ Shuffle et Suivant parcourt les variantes de l'artiste.`},
     {id:'mosaic', glyph:'◇', cat:'style', title:`Famille Mosaïque`, body:`Trois modes, une tuile. Tape pour cycler : grille φ → noms de notes → chaos $1M$. La lecture sobre quand aucun artiste n'est actif.`, more:`La tuile Mosaïque cycle trois modes. ◆ Mosaïque — la lecture sobre : des rectangles φ nets, un par accord, colorés par la palette en cours. ◆ Notes — même grille, mais chaque bloc montre son nom de note ; un outil d'apprentissage instantané pour voir quelle hauteur est quelle couleur. ◆ $1M$ — l'overlay Million Dollar Homepage : les tuiles remplissent ~60% de la toile, dix types de formes-chaos le reste, chaos structuré. Les trois lisent le morceau de la même façon déterministe — même morceau donne toujours la même image Mosaïque, Notes ou $1M$.`},
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Dés activés = surprise`, body:`Même morceau = même peinture, toujours. Lance les dés et chaque Suivant peint un autre artiste ou arrêt Mosaïque. Tape Mosaïque avec les dés pour verrouiller le cycle.`, more:`La règle déterministe : même morceau · tonalité · artiste · style → peinture pixel-identique, toujours. Les dés choisissent seulement QUELLE combinaison vient ensuite, jamais son apparence. ◆ Active ↻ Shuffle et le bouton Suivant apparaît. ◆ Avec un artiste choisi : Suivant saute à une variante aléatoire de cet artiste. ◆ Sans artiste : Suivant choisit les deux — artiste aléatoire plus variante aléatoire. Le pool inclut aussi les trois arrêts Mosaïque, donc shuffle peut tomber sur l'un d'eux. ◆ Tape Mosaïque avec Shuffle activé pour verrouiller le cycle à ces trois (Mosaïque → Notes → $1M$). ◆ Retomber sur la même combinaison repeint toujours l'image identique.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Ton piano en direct`, body:`Tape ♪ Compose. Tape une touche = coup, maintiens = bloc plus large. Noms d'accords en direct. Backspace annule, Espace joue.`, more:`Tape ♪ COMPOSE (ou Entrée). Le piano s'ouvre. Tape une touche = coup rapide, maintiens = bloc plus large — plus long maintien, plus large peinture. Le clavier matériel marche aussi : A–L blanches, W/E/T/Y/U/O/P noires. Backspace = annuler, Espace = play/pause, Entrée bascule le piano. Maintiens un accord et son nom (Do maj, La min, Ré7…) apparaît en direct. La toile est un cadre fixe au nombre d'or — les rangées rétrécissent à mesure que tu ajoutes, la peinture se densifie. ◆ Mobile : les 88 touches sont là — glisse horizontalement pour faire défiler, Do4 est à peu près au centre. ◆ Scale snap : tape ⚙ pour caler tout ce que tu joues sur une tonalité ; « Free » (défaut) reste pleinement chromatique.`},
@@ -16453,7 +14263,7 @@ const GUIDE_CARDS_I18N = {
     {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = ángulo áureo`, body:`Cada nota gira 137,5° — el mismo ángulo que usan los girasoles para empacar semillas. Colores dispersos al máximo, nunca dos apretándose.`, more:`φ Phi gira cada clase de altura siguiente por el ángulo áureo, 137,5° — el mismo ángulo con que un girasol empaca semillas sin huecos y una piña espirala. El resultado es dispersión máxima: nunca dos clases de altura caen cerca una de otra en la rueda. Donde Armonía agrupa tonalidades cercanas, φ Phi separa todo tan lejos como permiten las matemáticas. La regla anti-agrupamiento de la naturaleza, aplicada al sonido.`},
     {id:'custom', glyph:'🎨', cat:'colors', title:`Custom = el mapa de Scriabin`, body:`Scriabin veía colores para los tonos. Su mapa de 1910 es tu Custom por defecto — Do rojo, Sol naranja-rosa, Re amarillo, en círculo. Pro edita cada uno.`, more:`Custom usa por defecto el mapa Prometeo de Scriabin (1910) — el sinestésico más famoso de la historia veía realmente estos colores para estas alturas y los escribió en la parte «luce» de su partitura orquestal. Do rojo, Sol naranja-rosa, Re amarillo, La verde, Mi azul perla, Si azul, Fa♯ azul-violeta, Do♯ violeta, Sol♯ púrpura, Re♯/La♯ acero metálico, Fa rojo profundo — grosso modo el círculo de quintas por un arcoíris, un ancestro subjetivo de Armonía. Solo suenan los colores de tu paleta. Free lo ve de solo lectura; Pro y Pro IA te dejan recolorear las 12 muestras.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: armonía inversa`, body:`Los acordes ásperos chocan en el lienzo. Los limpios vuelan aparte. La lectura del pintor — lo opuesto a Armonía, más nítida. Gratis para todos.`, more:`Kontra invierte Armonía. Los intervalos consonantes (5J, 3M, 3m, 6M, 6m, 4J) reciben tonos LEJANOS; los disonantes (2m, 2M, tritono, 7M, 7m) reciben CERCANOS. Así un acorde áspero choca en el lienzo y uno limpio florece aparte — lo opuesto a cómo lee Armonía. El ojo del pintor en vez del músico: tensión que se ve. Desbloqueado en todos los niveles, gratis para todos.`},
-    {id:'style', glyph:'🎨', cat:'style', title:`18 artistas, 9 pares`, body:`Mosaico por defecto. Toca una baldosa de artista y las mismas notas salen en su mano. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 en total.`, more:`Dieciocho grandes pintores, un lienzo. Mosaico es el defecto sobrio. Toca cualquier baldosa de artista y las mismas notas salen en su mano: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Cuando un artista está activo, el lienzo muestra «inspired by Picasso» — un crédito discreto, nunca un disfraz. Cada pintor guarda varias variantes de su obra: Monet tiene doce, Mondrian ocho, la mayoría seis. La variante es determinista: misma canción + artista + tonalidad + variante → pintura idéntica al píxel. Activa ↻ Shuffle y Siguiente recorre las variantes del artista.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`18 artistas, 9 pares`, body:`Mosaico por defecto. Toca una baldosa de artista y las mismas notas salen en su mano. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 en total.`, more:`Dieciocho grandes pintores, un lienzo. Mosaico es el defecto sobrio. Toca cualquier baldosa de artista y las mismas notas salen en su mano: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Cuando un artista está activo, el lienzo muestra «inspired by Picasso» — un crédito discreto, nunca un disfraz. Cada pintor guarda varias variantes de su obra. La variante es determinista: misma canción + artista + tonalidad + variante → pintura idéntica al píxel. Activa ↻ Shuffle y Siguiente recorre las variantes del artista.`},
     {id:'mosaic', glyph:'◇', cat:'style', title:`Familia Mosaico`, body:`Tres modos, una baldosa. Toca para ciclar: rejilla φ → nombres de notas → caos $1M$. La lectura sobria cuando no hay artista activo.`, more:`La baldosa Mosaico cicla tres modos. ◆ Mosaico — la lectura sobria: rectángulos φ nítidos, uno por acorde, coloreados por la paleta actual. ◆ Notas — la misma rejilla, pero cada bloque muestra su nombre de nota; una herramienta de aprendizaje instantánea para ver qué altura es qué color. ◆ $1M$ — el overlay Million Dollar Homepage: las baldosas llenan ~60% del lienzo, diez tipos de formas-caos el resto, caos estructurado. Los tres leen la canción de la misma forma determinista — la misma canción siempre da la misma imagen Mosaico, Notas o $1M$.`},
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Dados activos = sorpresa`, body:`Misma canción = misma pintura, siempre. Tira los dados y cada Siguiente pinta otro artista o parada Mosaico. Toca Mosaico con dados para bloquear el ciclo.`, more:`La regla determinista: misma canción · tonalidad · artista · estilo → pintura idéntica al píxel, siempre. Los dados solo eligen QUÉ combinación viene después, nunca cómo se ve. ◆ Activa ↻ Shuffle y aparece el botón Siguiente. ◆ Con un artista elegido: Siguiente salta a una variante aleatoria de ese artista. ◆ Sin artista: Siguiente elige ambos — artista aleatorio más variante aleatoria. El pool incluye también las tres paradas Mosaico, así shuffle puede caer en cualquiera. ◆ Toca Mosaico con Shuffle activo para bloquear el ciclo solo a esas tres (Mosaico → Notas → $1M$). ◆ Volver a la misma combinación siempre repinta la imagen idéntica.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Tu piano en vivo`, body:`Toca ♪ Compose. Toca una tecla = golpe, mantén = bloque más ancho. Nombres de acordes en vivo. Backspace deshace, Espacio reproduce.`, more:`Toca ♪ COMPOSE (o Enter). Se abre el piano. Toca una tecla = golpe rápido, mantén = bloque más ancho — más tiempo, más ancha la pintura. El teclado físico también: A–L blancas, W/E/T/Y/U/O/P negras. Backspace = deshacer, Espacio = play/pausa, Enter alterna el piano. Mantén un acorde y su nombre (Do may, La min, Re7…) aparece en vivo. El lienzo es un marco fijo en proporción áurea — las filas encogen al añadir, la pintura se densifica. ◆ Móvil: las 88 teclas están ahí — desliza horizontal para desplazar, Do4 queda casi al centro. ◆ Scale snap: toca ⚙ para ajustar todo lo que tocas a una tonalidad; «Free» (defecto) sigue plenamente cromático.`},
@@ -16474,7 +14284,7 @@ const GUIDE_CARDS_I18N = {
     {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = zlatý uhol`, body:`Každý tón sa otáča o 137,5° — rovnaký uhol, ktorý slnečnice používajú na balenie semien. Maximálne rozptýlené farby, nikdy sa dve nezhlukujú.`, more:`φ Phi otáča každú nasledujúcu tónovú triedu o zlatý uhol 137,5° — rovnaký uhol, akým slnečnica balí semená bez medzier a šiška špiráluje. Výsledok je maximálny rozptyl: žiadne dve tónové triedy nikdy nepadnú blízko seba na kolese. Kde Harmónia zhlukuje príbuzné tóniny, φ Phi rozhadzuje všetko tak ďaleko, ako matematika dovolí. Pravidlo prírody proti zoskupovaniu, použité na zvuk.`},
     {id:'custom', glyph:'🎨', cat:'colors', title:`Custom = Skriabinova mapa`, body:`Skriabin videl farby pre tóny. Jeho mapa z 1910 je tvoj Custom default — C červená, G oranžovo-ružová, D žltá, dookola. Pro edituje každú.`, more:`Custom má default Skriabinovu Prometheus mapu (1910) — najznámejší synestet v histórii naozaj videl tieto farby pre tieto tóny a zapísal ich do „luce" partu svojej orchestrálnej partitúry. C červená, G oranžovo-ružová, D žltá, A zelená, E perlovo-modrá, H modrá, F♯ fialovo-modrá, C♯ fialová, G♯ purpurová, D♯/A♯ kovovo-oceľová, F tmavočervená — zhruba kvintový kruh cez dúhu, subjektívny predok Harmónie. Znejú len farby z tvojej palety. Free vidí len na čítanie; Pro a Pro AI dovolia premaľovať všetkých 12 farieb.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: obrátená harmónia`, body:`Drsné akordy sa hádajú aj na plátne. Čisté kvitnú od seba. Pohľad maliara — opak Harmónie, ostrejšie pre oko. Pre všetkých zadarmo.`, more:`Kontra obracia Harmóniu. Konsonantné intervaly (č5, v3, m3, v6, m6, č4) dostanú ĎALEKÉ odtiene; disonantné (m2, v2, tritón, v7, m7) BLÍZKE. Takže drsný akord sa háda na plátne a čistý kvitne od seba — opak toho, ako číta Harmónia. Je to oko maliara, nie hudobníka: napätie, ktoré vidíš. Odomknuté na každej úrovni, zadarmo pre všetkých.`},
-    {id:'style', glyph:'🎨', cat:'style', title:`18 umelcov, 9 párov`, body:`Mosaic je default. Klikni dlaždicu umelca a tie isté noty sa premaľujú v jeho rukopise. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 spolu.`, more:`Osemnásť veľkých maliarov, jedno plátno. Mosaic je holý default. Klikni dlaždicu umelca a tie isté noty sa premaľujú v jeho rukopise: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Keď je umelec aktívny, plátno ukáže „inspired by Picasso" — tichá pocta, nikdy kostým. Každý maliar drží viacero variantov svojho diela: Monet má dvanásť, Mondrian osem, väčšina šesť. Variant je deterministický: tá istá pieseň + umelec + tónina + variant → pixelovo identická maľba. Zapni ↻ Shuffle a Next prechádza variantmi umelca.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`18 umelcov, 9 párov`, body:`Mosaic je default. Klikni dlaždicu umelca a tie isté noty sa premaľujú v jeho rukopise. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 spolu.`, more:`Osemnásť veľkých maliarov, jedno plátno. Mosaic je holý default. Klikni dlaždicu umelca a tie isté noty sa premaľujú v jeho rukopise: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Keď je umelec aktívny, plátno ukáže „inspired by Picasso" — tichá pocta, nikdy kostým. Každý maliar drží viacero variantov svojho diela. Variant je deterministický: tá istá pieseň + umelec + tónina + variant → pixelovo identická maľba. Zapni ↻ Shuffle a Next prechádza variantmi umelca.`},
     {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic rodina`, body:`Tri módy, jedna dlaždica. Klik a krúži: φ-mriežka → noty → $1M$ chaos. Holé čítanie keď žiadny umelec nie je aktívny.`, more:`Dlaždica Mosaic krúži tri módy. ◆ Mosaic — holé čítanie: čisté φ-obdĺžniky, jeden na akord, vyfarbené aktuálnou paletou. ◆ Noty — tá istá mriežka, ale každý blok ukáže názov noty; okamžitý učebný nástroj na to, ktorý tón je ktorá farba. ◆ $1M$ — overlay Million-Dollar-Homepage: dlaždice zaberú ~60% plátna, desať typov chaos-tvarov zvyšok, štruktúrovaný chaos. Všetky tri čítajú pieseň rovnako deterministicky — tá istá pieseň vždy dá ten istý Mosaic, Noty či $1M$ obraz.`},
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Kocka on = prekvapenie`, body:`Tá istá pieseň = tá istá maľba, vždy. Hoď kocku a každý Next maľuje iného umelca alebo Mosaic stop. Klik na Mosaic s kockou uzamkne cyklus.`, more:`Deterministické pravidlo: tá istá pieseň · tónina · umelec · štýl → pixelovo identická maľba, vždy. Kocka len vyberá, KTORÁ kombinácia príde ďalšia, nikdy ako vyzerá. ◆ Zapni ↻ Shuffle a objaví sa tlačidlo Next. ◆ So zvoleným umelcom: Next skočí na náhodný variant toho umelca. ◆ Bez umelca: Next vyberie oboje — náhodného umelca aj náhodný variant. Pool zahŕňa aj tri Mosaic stopy, takže shuffle môže padnúť na ktorúkoľvek. ◆ Klik na Mosaic so zapnutým Shuffle uzamkne cyklus len na tie tri (Mosaic → Noty → $1M$). ◆ Návrat na tú istú kombináciu vždy prekreslí identický obraz.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Tvoj živý klavír`, body:`Klikni ♪ Compose. Klik na kláves = úder, podrž = širší blok. Názvy akordov naživo. Backspace späť, Space play.`, more:`Klikni ♪ COMPOSE (alebo Enter). Otvorí sa klavír. Klik na kláves = rýchly úder, podrž = širší blok — dlhšie držanie, širšia maľba. Funguje aj hardvérová klávesnica: A–L biele, W/E/T/Y/U/O/P čierne. Backspace = späť, Space = play/pause, Enter prepína klavír. Podrž akord a jeho názov (C dur, A mol, D7…) sa zjaví naživo. Plátno je pevný rám zlatého rezu — riadky sa zmenšujú, ako pridávaš, maľba hustne. ◆ Mobil: celých 88 klávesov — potiahni vodorovne na posun, C4 je zhruba v strede. ◆ Scale snap: klikni ⚙ a všetko, čo hráš, prichytíš na tóninu; „Free" (default) ostáva plne chromatický.`},
@@ -16495,7 +14305,7 @@ const GUIDE_CARDS_I18N = {
     {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = ângulo dourado`, body:`Cada nota gira 137,5° — o mesmo ângulo que os girassóis usam para empacar sementes. Cores dispersas ao máximo, nunca duas a apertar-se.`, more:`φ Phi gira cada classe de altura seguinte pelo ângulo dourado, 137,5° — o mesmo ângulo com que um girassol empaca sementes sem falhas e uma pinha espirala. O resultado é dispersão máxima: nunca duas classes de altura caem perto uma da outra na roda. Onde Harmonia agrupa tonalidades próximas, φ Phi espalha tudo tão longe quanto a matemática permite. A regra anti-agrupamento da natureza, aplicada ao som.`},
     {id:'custom', glyph:'🎨', cat:'colors', title:`Custom = o mapa de Scriabin`, body:`Scriabin via cores para os tons. O seu mapa de 1910 é o teu Custom por defeito — Dó vermelho, Sol laranja-rosa, Ré amarelo, à volta. Pro edita cada.`, more:`Custom usa por defeito o mapa Prometeu de Scriabin (1910) — o sinesteta mais famoso da história via mesmo estas cores para estas alturas e escreveu-as na parte «luce» da sua partitura orquestral. Dó vermelho, Sol laranja-rosa, Ré amarelo, Lá verde, Mi azul-pérola, Si azul, Fá♯ azul-violeta, Dó♯ violeta, Sol♯ púrpura, Ré♯/Lá♯ aço metálico, Fá vermelho profundo — grosso modo o círculo de quintas por um arco-íris, um antepassado subjetivo da Harmonia. Só as cores da tua paleta soam. Free vê só de leitura; Pro e Pro IA deixam-te recolorir as 12 amostras.`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`Kontra: harmonia inversa`, body:`Acordes ásperos chocam na tela. Os limpos voam à parte. A leitura do pintor — o oposto de Harmonia, mais nítida. Grátis para todos.`, more:`Kontra inverte Harmonia. Intervalos consonantes (5J, 3M, 3m, 6M, 6m, 4J) recebem tons LONGE; os dissonantes (2m, 2M, trítono, 7M, 7m) recebem PERTO. Assim um acorde áspero choca na tela e um limpo floresce à parte — o oposto de como Harmonia lê. O olho do pintor em vez do músico: tensão que se vê. Desbloqueado em todos os níveis, grátis para todos.`},
-    {id:'style', glyph:'🎨', cat:'style', title:`18 artistas, 9 pares`, body:`Mosaico por defeito. Toca um ladrilho de artista e as mesmas notas saem na mão dele. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 no total.`, more:`Dezoito grandes pintores, uma tela. Mosaico é o padrão sóbrio. Toca qualquer ladrilho de artista e as mesmas notas saem na mão dele: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Quando um artista está ativo, a tela mostra «inspired by Picasso» — um crédito discreto, nunca um disfarce. Cada pintor guarda várias variantes da sua obra: Monet tem doze, Mondrian oito, a maioria seis. A variante é determinística: mesma canção + artista + tonalidade + variante → pintura idêntica ao píxel. Liga ↻ Shuffle e Seguinte percorre as variantes do artista.`},
+    {id:'style', glyph:'🎨', cat:'style', title:`18 artistas, 9 pares`, body:`Mosaico por defeito. Toca um ladrilho de artista e as mesmas notas saem na mão dele. Picasso, Pollock, Kusama, Klimt, Riley, Monet, Hokusai — 18 no total.`, more:`Dezoito grandes pintores, uma tela. Mosaico é o padrão sóbrio. Toca qualquer ladrilho de artista e as mesmas notas saem na mão dele: Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Vasarely, Frank Stella, Sam Francis, Hilma af Klint, Klimt, Keith Haring, Bridget Riley, Roy Lichtenstein, Monet, Hokusai. Quando um artista está ativo, a tela mostra «inspired by Picasso» — um crédito discreto, nunca um disfarce. Cada pintor guarda várias variantes da sua obra. A variante é determinística: mesma canção + artista + tonalidade + variante → pintura idêntica ao píxel. Liga ↻ Shuffle e Seguinte percorre as variantes do artista.`},
     {id:'mosaic', glyph:'◇', cat:'style', title:`Família Mosaico`, body:`Três modos, um ladrilho. Toca para ciclar: grelha φ → nomes de notas → caos $1M$. A leitura sóbria quando não há artista ativo.`, more:`O ladrilho Mosaico cicla três modos. ◆ Mosaico — a leitura sóbria: retângulos φ limpos, um por acorde, coloridos pela paleta atual. ◆ Notas — a mesma grelha, mas cada bloco mostra o nome da nota; uma ferramenta de aprendizagem instantânea para ver que altura é que cor. ◆ $1M$ — a sobreposição Million Dollar Homepage: os ladrilhos enchem ~60% da tela, dez tipos de formas-caos o resto, caos estruturado. Os três leem a canção da mesma forma determinística — a mesma canção dá sempre a mesma imagem Mosaico, Notas ou $1M$.`},
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Dados ligados = surpresa`, body:`Mesma canção = mesma pintura, sempre. Lança os dados e cada Seguinte pinta outro artista ou paragem Mosaico. Toca Mosaico com dados para travar o ciclo.`, more:`A regra determinística: mesma canção · tonalidade · artista · estilo → pintura idêntica ao píxel, sempre. Os dados só escolhem QUE combinação vem a seguir, nunca como se vê. ◆ Liga ↻ Shuffle e aparece o botão Seguinte. ◆ Com um artista escolhido: Seguinte salta para uma variante aleatória desse artista. ◆ Sem artista: Seguinte escolhe ambos — artista aleatório mais variante aleatória. O pool inclui também as três paragens Mosaico, por isso o shuffle pode cair em qualquer uma. ◆ Toca Mosaico com Shuffle ligado para travar o ciclo só nessas três (Mosaico → Notas → $1M$). ◆ Voltar à mesma combinação repinta sempre a imagem idêntica.`},
     {id:'compose', glyph:'♪', cat:'music', title:`O teu piano ao vivo`, body:`Toca ♪ Compose. Toca uma tecla = batida, segura = bloco mais largo. Nomes de acordes ao vivo. Backspace desfaz, Espaço toca.`, more:`Toca ♪ COMPOSE (ou Enter). O piano abre. Toca uma tecla = batida rápida, segura = bloco mais largo — mais tempo, pintura mais larga. O teclado físico também funciona: A–L brancas, W/E/T/Y/U/O/P pretas. Backspace = desfazer, Espaço = play/pausa, Enter alterna o piano. Segura um acorde e o seu nome (Dó maior, Lá menor, Ré7…) aparece ao vivo. A tela é uma moldura fixa em proporção áurea — as linhas encolhem à medida que adicionas, a pintura adensa. ◆ Móvel: as 88 teclas estão lá — desliza horizontal para percorrer, Dó4 fica quase ao centro. ◆ Scale snap: toca ⚙ para encaixar tudo o que tocas numa tonalidade; «Free» (padrão) fica plenamente cromático.`},
@@ -16516,7 +14326,7 @@ const GUIDE_CARDS_I18N = {
     {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = 黄金角`, body:`每个音旋转 137.5°——和向日葵排列种子的角度相同。颜色最大程度散开,从不两两拥挤。`, more:`φ Phi 把每个后续音级旋转黄金角 137.5°——和向日葵无缝排列种子、松果螺旋的角度相同。结果是最大散布:轮盘上从不会有两个音级落在彼此附近。和声聚拢相关调,φ Phi 则把一切分得数学允许的那么远。大自然的反聚集法则,应用于声音。`},
     {id:'custom', glyph:'🎨', cat:'colors', title:`自定义 = 斯克里亚宾的图`, body:`斯克里亚宾为音看见颜色。他 1910 的映射是你的自定义默认——C 红、G 橙粉、D 黄,绕一圈。Pro 可编辑每个。`, more:`自定义默认采用斯克里亚宾的普罗米修斯映射(1910)——史上最著名的联觉者真的为这些音看见这些颜色,并写进他管弦乐谱的「luce」声部。C 红、G 橙粉、D 黄、A 绿、E 珠蓝、B 蓝、F♯ 蓝紫、C♯ 紫、G♯ 紫红、D♯/A♯ 金属钢色、F 深红——大致是五度圈穿过一道彩虹,和声的主观先祖。只有你调色板里的颜色发声。Free 只读;Pro 与 Pro AI 让你重新着色全部 12 格。`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`反向:反和声`, body:`刺耳和弦在画布上冲突。干净的飞散开。画家的读法——和声的反面,对眼睛更锋利。人人免费。`, more:`反向把和声反转。协和音程(纯五、大三、小三、大六、小六、纯四)得到「远」色相;不协和的(小二、大二、三全音、大七、小七)得到「近」的。于是刺耳和弦在画布上冲突,干净的彼此绽开——与和声的读法相反。是画家的眼而非音乐家的:看得见的张力。每个级别都解锁,人人免费。`},
-    {id:'style', glyph:'🎨', cat:'style', title:`18 位艺术家,9 对`, body:`马赛克为默认。点艺术家方块,同样的音符以他的手出现。毕加索、波洛克、草间、克里姆特、莱利、莫奈、北斋——共 18 位。`, more:`十八位伟大画家,一张画布。马赛克是朴素默认。点任一艺术家方块,同样的音符以他的手重写:毕加索、草间、波洛克、康定斯基、米罗、蒙德里安、罗斯科、马蒂斯、瓦萨雷里、弗兰克·斯特拉、山姆·弗朗西斯、希尔玛·阿夫·克林特、克里姆特、凯斯·哈林、布里奇特·莱利、罗伊·利希滕斯坦、莫奈、北斋。当某位艺术家激活时,画布显示「inspired by Picasso」——一份安静的署名,从不是戏服。每位画家持有自己作品的多个变体:莫奈有十二个,蒙德里安八个,多数六个。变体是确定性的:同一首歌 + 艺术家 + 调 + 变体 → 像素级相同的画。打开 ↻ Shuffle,Next 在该艺术家的变体间走。`},
+    {id:'style', glyph:'🎨', cat:'style', title:`18 位艺术家,9 对`, body:`马赛克为默认。点艺术家方块,同样的音符以他的手出现。毕加索、波洛克、草间、克里姆特、莱利、莫奈、北斋——共 18 位。`, more:`十八位伟大画家,一张画布。马赛克是朴素默认。点任一艺术家方块,同样的音符以他的手重写:毕加索、草间、波洛克、康定斯基、米罗、蒙德里安、罗斯科、马蒂斯、瓦萨雷里、弗兰克·斯特拉、山姆·弗朗西斯、希尔玛·阿夫·克林特、克里姆特、凯斯·哈林、布里奇特·莱利、罗伊·利希滕斯坦、莫奈、北斋。当某位艺术家激活时,画布显示「inspired by Picasso」——一份安静的署名,从不是戏服。每位画家持有自己作品的多个变体。变体是确定性的:同一首歌 + 艺术家 + 调 + 变体 → 像素级相同的画。打开 ↻ Shuffle,Next 在该艺术家的变体间走。`},
     {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic 家族`, body:`三种模式,一个方块。点击循环:φ 网格 → 音符名 → $1M$ 混乱。没有艺术家激活时的朴素读法。`, more:`马赛克方块循环三种模式。◆ 马赛克——朴素读法:干净的 φ 矩形,每个和弦一块,以当前调色板着色。◆ 音符——同样的网格,但每块显示音符名;一个即时学习工具,看哪个音高是哪个颜色。◆ $1M$——百万美元主页叠加:方块占画布约 60%,十种混乱形状占其余,结构化混乱。三者都以同样的确定性读这首歌——同一首歌总给同样的马赛克、音符或 $1M$ 图像。`},
     {id:'shuffle', glyph:'🎲', cat:'style', title:`骰子开 = 惊喜`, body:`同一首歌 = 同一幅画,始终。掷骰子,每个 Next 画出不同艺术家或马赛克站点。骰子开时点马赛克,把循环锁在那三站。`, more:`确定性法则:同一首歌 · 调性 · 艺术家 · 风格 → 像素级相同的画,始终。骰子只选「哪个」组合下一个出现,从不改变它的样子。◆ 打开 ↻ Shuffle,Next 按钮出现。◆ 选了艺术家:Next 跳到该艺术家的一个随机变体。◆ 没选艺术家:Next 两者都选——随机艺术家加随机变体。池子也含三个马赛克站点,所以 shuffle 可落在其中任一个。◆ Shuffle 开时点马赛克,把循环锁在那三个(马赛克 → 音符 → $1M$)。◆ 重新落到同一组合总会重绘相同的图。`},
     {id:'compose', glyph:'♪', cat:'music', title:`你的现场钢琴`, body:`点 ♪ Compose。点键 = 一击,按住 = 更宽的块。和弦名实时显示。Backspace 撤销,空格播放。`, more:`点 ♪ COMPOSE(或按 Enter)。钢琴打开。点键 = 快速一击,按住 = 更宽的块——按得越久,画得越宽。硬件键盘也行:A–L 白键,W/E/T/Y/U/O/P 黑键。Backspace = 撤销,空格 = 播放/暂停,Enter 切换钢琴。按住一个和弦,它的名字(C 大、A 小、D7…)实时出现。画布是固定的黄金比例框——添加越多,行越缩,画越密。◆ 移动端:全部 88 键都在——横向滑动来平移,C4 大致居中。◆ 音阶吸附:点 ⚙ 把你弹的一切吸附到某个调;「Free」(默认)保持完全半音。`},
@@ -16537,7 +14347,7 @@ const GUIDE_CARDS_I18N = {
     {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = 黃金角`, body:`每個音旋轉 137.5°——和向日葵排列種子的角度相同。顏色最大程度散開,從不兩兩擁擠。`, more:`φ Phi 把每個後續音級旋轉黃金角 137.5°——和向日葵無縫排列種子、松果螺旋的角度相同。結果是最大散布:輪盤上從不會有兩個音級落在彼此附近。和聲聚攏相關調,φ Phi 則把一切分得數學允許的那麼遠。大自然的反聚集法則,應用於聲音。`},
     {id:'custom', glyph:'🎨', cat:'colors', title:`自訂 = 斯克里亞賓的圖`, body:`斯克里亞賓為音看見顏色。他 1910 的映射是你的自訂預設——C 紅、G 橙粉、D 黃,繞一圈。Pro 可編輯每個。`, more:`自訂預設採用斯克里亞賓的普羅米修斯映射(1910)——史上最著名的聯覺者真的為這些音看見這些顏色,並寫進他管弦樂譜的「luce」聲部。C 紅、G 橙粉、D 黃、A 綠、E 珠藍、B 藍、F♯ 藍紫、C♯ 紫、G♯ 紫紅、D♯/A♯ 金屬鋼色、F 深紅——大致是五度圈穿過一道彩虹,和聲的主觀先祖。只有你調色盤裡的顏色發聲。Free 唯讀;Pro 與 Pro AI 讓你重新著色全部 12 格。`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`反向:反和聲`, body:`刺耳和弦在畫布上衝突。乾淨的飛散開。畫家的讀法——和聲的反面,對眼睛更鋒利。人人免費。`, more:`反向把和聲反轉。協和音程(純五、大三、小三、大六、小六、純四)得到「遠」色相;不協和的(小二、大二、三全音、大七、小七)得到「近」的。於是刺耳和弦在畫布上衝突,乾淨的彼此綻開——與和聲的讀法相反。是畫家的眼而非音樂家的:看得見的張力。每個級別都解鎖,人人免費。`},
-    {id:'style', glyph:'🎨', cat:'style', title:`18 位藝術家,9 對`, body:`馬賽克為預設。點藝術家方塊,同樣的音符以他的手出現。畢卡索、波洛克、草間、克林姆、萊利、莫內、北齋——共 18 位。`, more:`十八位偉大畫家,一張畫布。馬賽克是樸素預設。點任一藝術家方塊,同樣的音符以他的手重寫:畢卡索、草間、波洛克、康丁斯基、米羅、蒙德里安、羅斯科、馬蒂斯、瓦沙雷利、法蘭克·史帖拉、山姆·法蘭西斯、希爾瑪·阿夫·克林特、克林姆、凱斯·哈林、布麗姬·萊利、羅伊·李奇登斯坦、莫內、北齋。當某位藝術家啟用時,畫布顯示「inspired by Picasso」——一份安靜的署名,從不是戲服。每位畫家持有自己作品的多個變體:莫內有十二個,蒙德里安八個,多數六個。變體是確定性的:同一首歌 + 藝術家 + 調 + 變體 → 像素級相同的畫。打開 ↻ Shuffle,Next 在該藝術家的變體間走。`},
+    {id:'style', glyph:'🎨', cat:'style', title:`18 位藝術家,9 對`, body:`馬賽克為預設。點藝術家方塊,同樣的音符以他的手出現。畢卡索、波洛克、草間、克林姆、萊利、莫內、北齋——共 18 位。`, more:`十八位偉大畫家,一張畫布。馬賽克是樸素預設。點任一藝術家方塊,同樣的音符以他的手重寫:畢卡索、草間、波洛克、康丁斯基、米羅、蒙德里安、羅斯科、馬蒂斯、瓦沙雷利、法蘭克·史帖拉、山姆·法蘭西斯、希爾瑪·阿夫·克林特、克林姆、凱斯·哈林、布麗姬·萊利、羅伊·李奇登斯坦、莫內、北齋。當某位藝術家啟用時,畫布顯示「inspired by Picasso」——一份安靜的署名,從不是戲服。每位畫家持有自己作品的多個變體。變體是確定性的:同一首歌 + 藝術家 + 調 + 變體 → 像素級相同的畫。打開 ↻ Shuffle,Next 在該藝術家的變體間走。`},
     {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic 家族`, body:`三種模式,一個方塊。點擊循環:φ 網格 → 音符名 → $1M$ 混亂。沒有藝術家啟用時的樸素讀法。`, more:`馬賽克方塊循環三種模式。◆ 馬賽克——樸素讀法:乾淨的 φ 矩形,每個和弦一塊,以當前調色盤著色。◆ 音符——同樣的網格,但每塊顯示音符名;一個即時學習工具,看哪個音高是哪個顏色。◆ $1M$——百萬美元主頁疊加:方塊占畫布約 60%,十種混亂形狀占其餘,結構化混亂。三者都以同樣的確定性讀這首歌——同一首歌總給同樣的馬賽克、音符或 $1M$ 圖像。`},
     {id:'shuffle', glyph:'🎲', cat:'style', title:`骰子開 = 驚喜`, body:`同一首歌 = 同一幅畫,始終。擲骰子,每個 Next 畫出不同藝術家或馬賽克站點。骰子開時點馬賽克,把循環鎖在那三站。`, more:`確定性法則:同一首歌 · 調性 · 藝術家 · 風格 → 像素級相同的畫,始終。骰子只選「哪個」組合下一個出現,從不改變它的樣子。◆ 打開 ↻ Shuffle,Next 按鈕出現。◆ 選了藝術家:Next 跳到該藝術家的一個隨機變體。◆ 沒選藝術家:Next 兩者都選——隨機藝術家加隨機變體。池子也含三個馬賽克站點,所以 shuffle 可落在其中任一個。◆ Shuffle 開時點馬賽克,把循環鎖在那三個(馬賽克 → 音符 → $1M$)。◆ 重新落到同一組合總會重繪相同的圖。`},
     {id:'compose', glyph:'♪', cat:'music', title:`你的現場鋼琴`, body:`點 ♪ Compose。點鍵 = 一擊,按住 = 更寬的塊。和弦名即時顯示。Backspace 復原,空格播放。`, more:`點 ♪ COMPOSE(或按 Enter)。鋼琴打開。點鍵 = 快速一擊,按住 = 更寬的塊——按得越久,畫得越寬。硬體鍵盤也行:A–L 白鍵,W/E/T/Y/U/O/P 黑鍵。Backspace = 復原,空格 = 播放/暫停,Enter 切換鋼琴。按住一個和弦,它的名字(C 大、A 小、D7…)即時出現。畫布是固定的黃金比例框——添加越多,行越縮,畫越密。◆ 行動端:全部 88 鍵都在——橫向滑動來平移,C4 大致置中。◆ 音階吸附:點 ⚙ 把你彈的一切吸附到某個調;「Free」(預設)保持完全半音。`},
@@ -16558,7 +14368,7 @@ const GUIDE_CARDS_I18N = {
     {id:'phi', glyph:'φ', cat:'colors', title:`φ Phi = 黄金角`, body:`各音は 137.5° 回る——ひまわりが種を詰める角度と同じ。色は最大に散り、二つが混み合うことはない。`, more:`φ Phi は続く各音名を黄金角 137.5° 回す——ひまわりが隙間なく種を詰め、松ぼっくりが螺旋を描く角度と同じ。結果は最大の散布:輪の上で二つの音名が互いの近くに落ちることは決してない。ハーモニーが近い調を集めるのに対し、φ Phi は数学が許す限り遠くへ全てを広げる。自然の反集積の規則を、音に当てはめたもの。`},
     {id:'custom', glyph:'🎨', cat:'colors', title:`カスタム = スクリャービンの図`, body:`スクリャービンは音に色を見た。彼の 1910 の対応があなたのカスタム既定——C 赤、G 橙ピンク、D 黄、ぐるりと。Pro は各色を編集。`, more:`カスタムは既定でスクリャービンのプロメテウス対応(1910)——史上最も有名な共感覚者が実際にこれらの音にこれらの色を見、管弦楽譜の「luce」パートに書き込んだ。C 赤、G 橙ピンク、D 黄、A 緑、E 真珠青、B 青、F♯ 青紫、C♯ 紫、G♯ 紫紅、D♯/A♯ 金属鋼色、F 深紅——おおよそ五度圏が虹を貫く、ハーモニーの主観的祖先。あなたのパレットの色だけが鳴る。Free は読取専用で見る;Pro と Pro AI は 12 色すべてを塗り替えさせる。`},
     {id:'kontra', glyph:'⇄', cat:'colors', title:`反転:逆ハーモニー`, body:`ぶつかる和音はキャンバスでぶつかる。澄んだものは離れて飛ぶ。画家の読み——ハーモニーの逆、目に鋭い。皆に無料。`, more:`反転はハーモニーを裏返す。協和音程(完全5、長3、短3、長6、短6、完全4)は「遠い」色相を得る;不協和(短2、長2、三全音、長7、短7)は「近い」を得る。だからぶつかる和音はキャンバスでぶつかり、澄んだものは離れて咲く——ハーモニーの読みの逆。音楽家でなく画家の目:見える緊張。どの段階でも解放、皆に無料。`},
-    {id:'style', glyph:'🎨', cat:'style', title:`18 人のアーティスト、9 ペア`, body:`モザイクが既定。アーティストタイルをタップで、同じ音符が彼の手で現れる。ピカソ、ポロック、草間、クリムト、ライリー、モネ、北斎 — 計 18 人。`, more:`十八人の偉大な画家、一つのキャンバス。モザイクは素朴な既定。どのアーティストタイルもタップすれば、同じ音符が彼の手で書き直される:ピカソ、草間、ポロック、カンディンスキー、ミロ、モンドリアン、ロスコ、マティス、ヴァザルリ、フランク・ステラ、サム・フランシス、ヒルマ・アフ・クリント、クリムト、キース・ヘリング、ブリジット・ライリー、ロイ・リキテンスタイン、モネ、北斎。アーティストが有効なとき、キャンバスは「inspired by Picasso」と表示する——静かな署名、決して衣装ではない。各画家は自分の作品の複数のバリアントを持つ:モネは十二、モンドリアンは八、多くは六。バリアントは決定論的:同じ曲 + アーティスト + 調 + バリアント → ピクセル単位で同一の絵。↻ Shuffle をオンにすれば Next がそのアーティストのバリアントを巡る。`},
+    {id:'style', glyph:'🎨', cat:'style', title:`18 人のアーティスト、9 ペア`, body:`モザイクが既定。アーティストタイルをタップで、同じ音符が彼の手で現れる。ピカソ、ポロック、草間、クリムト、ライリー、モネ、北斎 — 計 18 人。`, more:`十八人の偉大な画家、一つのキャンバス。モザイクは素朴な既定。どのアーティストタイルもタップすれば、同じ音符が彼の手で書き直される:ピカソ、草間、ポロック、カンディンスキー、ミロ、モンドリアン、ロスコ、マティス、ヴァザルリ、フランク・ステラ、サム・フランシス、ヒルマ・アフ・クリント、クリムト、キース・ヘリング、ブリジット・ライリー、ロイ・リキテンスタイン、モネ、北斎。アーティストが有効なとき、キャンバスは「inspired by Picasso」と表示する——静かな署名、決して衣装ではない。各画家は自分の作品の複数のバリアントを持つ。バリアントは決定論的:同じ曲 + アーティスト + 調 + バリアント → ピクセル単位で同一の絵。↻ Shuffle をオンにすれば Next がそのアーティストのバリアントを巡る。`},
     {id:'mosaic', glyph:'◇', cat:'style', title:`Mosaic ファミリー`, body:`三モード、一タイル。タップで循環:φ グリッド → 音名 → $1M$ カオス。アーティストがオフのときの素朴な読み。`, more:`モザイクタイルは三モードを循環する。◆ モザイク——素朴な読み:きれいな φ 矩形、和音ごとに一つ、現在のパレットで着色。◆ 音符——同じグリッドだが各ブロックが音名を示す;どの音高がどの色かを見る即席の学習ツール。◆ $1M$——Million Dollar Homepage オーバーレイ:タイルがキャンバスの約 60% を埋め、十種のカオス形状が残りを、構造化されたカオス。三つとも同じ決定論的なやり方で曲を読む——同じ曲はいつも同じモザイク・音符・$1M$ 画像を与える。`},
     {id:'shuffle', glyph:'🎲', cat:'style', title:`サイコロ オン = 驚き`, body:`同じ曲 = 同じ絵、いつも。サイコロを振れば各 Next が別のアーティストかモザイク停留を描く。サイコロオンでモザイクをタップして循環をロック。`, more:`決定論的な規則:同じ曲 · 調性 · アーティスト · スタイル → ピクセル単位で同一の絵、いつも。サイコロは「どの」組み合わせが次に出るかだけを選び、見た目は決して変えない。◆ ↻ Shuffle をオンにすると Next ボタンが現れる。◆ アーティストを選んだ場合:Next はそのアーティストのランダムなバリアントへ飛ぶ。◆ アーティストなし:Next は両方を選ぶ——ランダムなアーティストとランダムなバリアント。プールには三つのモザイク停留も含まれ、shuffle はそのどれにも着地しうる。◆ Shuffle オンでモザイクをタップすれば循環をその三つだけにロック(モザイク → 音符 → $1M$)。◆ 同じ組み合わせに再着地すれば必ず同一の絵を描き直す。`},
     {id:'compose', glyph:'♪', cat:'music', title:`あなたのライブピアノ`, body:`♪ Compose をタップ。鍵をタップ = 一撃、長押し = より広いブロック。和音名がライブで。Backspace で取消、スペースで再生。`, more:`♪ COMPOSE をタップ(または Enter)。ピアノが開く。鍵をタップ = 素早い一撃、長押し = より広いブロック——長く押すほど広く描く。ハードウェアキーボードも:A–L 白鍵、W/E/T/Y/U/O/P 黒鍵。Backspace = 取消、スペース = 再生/停止、Enter でピアノ切替。和音を押さえるとその名(C メジャー、A マイナー、D7…)がライブで現れる。キャンバスは固定の黄金比フレーム——足すほど行が縮み、絵が密になる。◆ モバイル:88 鍵すべてある——横にスワイプしてパン、C4 はほぼ中央。◆ スケールスナップ:⚙ をタップで弾く全てを調にスナップ;「Free」(既定)は完全に半音のまま。`},
@@ -18609,8 +16419,6 @@ export default function Paintiano() {
   const stripWrapRef = useRef(null); // wrapper around the Color·Style strip — scroll target on Play in mood-from-image so the strip + source thumbnail stay framed
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
-  const audioStartTimeRef = useRef(0); // AudioContext time when playback started
-  const audioOffsetRef = useRef(0);    // offset into the audio buffer
   const samplerRef   = useRef(null);
   const samplerOk    = useRef(false);
   // True once we've attached the AudioContext 'statechange' listener so we
@@ -21567,25 +19375,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);setAudioRowOpen(false);
   },[stopAll]);
 
-  // Guard switching away from a CREATION canvas (Compose/MIC) — content the user
-  // hand-made and can't reload. A loaded source (MIDI/Audio/Score/Image/mood) is
-  // NOT guarded (reloadable) and switches immediately. Detection uses persistent
-  // refs (composedModeRef + a creation draftOwner + chords) which survive the
-  // "← Setup" transition that turns composeMode/micPainting off. First tap arms
-  // the tile ("clean canvas?"), second tap of the same tile within 3s runs it.
-  const armSwitch = useCallback((key, run)=>{
-    const owner = draftOwnerRef.current;
-    const isCreation = owner==='compose' || owner==='sing' || owner==='listen';
-    const atRisk = composedModeRef.current && isCreation && chordsRef.current.length>0;
-    if(!atRisk){ run(); return; }
-    if(switchArmRef.current){ clearTimeout(switchArmRef.current); switchArmRef.current=null; }
-    setSwitchArmed(prev=>{
-      if(prev===key){ run(); return null; }
-      switchArmRef.current=setTimeout(()=>{ setSwitchArmed(null); switchArmRef.current=null; },3000);
-      return key;
-    });
-  },[]);
-
   const applyEvents = useCallback((events,title)=>{
     if(!events.length)return;
     setImgReturnUrl(null); setImgMoodThumb(null);
@@ -23127,55 +20916,7 @@ Composition rules:
     finally{ setAtmoBusy(false); }
   },[atmoBusy,originalImgUrl,lang,t,isPro,gateAI]);
 
-  const paintSong=()=>{
-    const q=songQ.trim().toLowerCase();if(!q||busy)return;
-    let best=null,bs=0;
-    for(const s of SONGS)for(const k of s.keys){
-      const sc=q===k?100:q.includes(k)?90:k.includes(q)?80:k.split(' ').some(w=>w.length>3&&q.includes(w))?50:q.split(' ').some(w=>w.length>3&&k.includes(w))?40:0;
-      if(sc>bs){bs=sc;best=s;}
-    }
-    if(!best||bs<30){setErr(t('errs').notInLibrary);setErrInfo(true);return;}
-    setErr('');
-    const sorted=[...best.n].sort((a,b)=>a[1]-b[1]);
-    const evts=[];let i=0;
-    while(i<sorted.length){const bt=sorted[i][1],g=[];while(i<sorted.length&&sorted[i][1]-bt<=CWIN)g.push({m:sorted[i][0],v:sorted[i][3]||80,durMs:sorted[i][2]||300}),i++;if(g.length){const md=Math.max(...g.map(n=>n.durMs));evts.push({n:g,startMs:bt,durQ:snapDurQ(md/500)});}}
-    const wi=evts.map((c,j)=>({...c,idx:j})),g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
-    stopAll();applyEvents(wi.map(c=>({n:c.n,startMs:c.startMs})),best.title+' · '+best.artist);
-  };
 
-  const startAnimate=useCallback(()=>{
-    if(busy||!chords.length)return;stopAll();setDisp(0);setAnim(true);
-    if(viewMode==='image'&&pixelRef.current){
-      const{nc,nr,px}=pixelRef.current,{BW,BH,CW,CH}=grid,cv=canvasRef.current,ctx=cv?.getContext('2d'),gen=genRef.current;
-      if(ctx){ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);}
-      let i=0;
-      const CHORD_SIZE=6;
-      const colStep=pixelRef.current.colStep||1;
-      const effCols=Math.ceil(nc/colStep);
-      const step=()=>{
-        if(genRef.current!==gen)return;
-        if(i>=chords.length){setAnim(false);setDisp(chords.length);return;}
-        const _ev=chords[i]||{};
-        const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
-        const cg=_ev.cg!=null?_ev.cg:i%effCols;
-        const colStart=cg*colStep;
-        if(ctx){
-          for(let sk=0;sk<colStep;sk++){
-            const col=colStart+sk; if(col>=nc) break;
-            for(let j=0;j<CHORD_SIZE;j++){
-              const row=band*CHORD_SIZE+j; if(row>=nr) break;
-              const pidx=row*nc+col,p=px[pidx];
-              ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
-              ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
-            }
-          }
-        }
-        i++;
-        timers.current.push(setTimeout(step,6));
-      };
-      step();
-    }else{let i=0;const step=()=>{if(i>chords.length){setAnim(false);return;}setDisp(i++);timers.current.push(setTimeout(step,i<20?0:18));};step();}
-  },[busy,chords,viewMode,grid,stopAll]);
 
   const lastStartPlayRef = useRef(0);
   const startPlay=useCallback(async ()=>{
@@ -25022,21 +22763,6 @@ Composition rules:
     }catch(e){setErr('Print: '+e.message);setErrInfo(false);}
   };
 
-  const sharePreview=async()=>{
-    if(!preview)return;
-    setPreviewMsg({tone:'wait',text:'opening iOS share sheet…'});
-    try{
-      if(!navigator.share){throw new Error('navigator.share unavailable in this iframe');}
-      if(navigator.canShare&&!navigator.canShare({files:[preview.file]})){
-        throw new Error('canShare returned false (sandbox blocks file share)');
-      }
-      await navigator.share({files:[preview.file],title:'Paintiano painting'});
-      setPreviewMsg({tone:'ok',text:'shared — saved if you tapped Save Image'});
-    }catch(e){
-      if(e&&e.name==='AbortError'){setPreviewMsg({tone:'ok',text:'share cancelled'});return;}
-      setPreviewMsg({tone:'err',text:'Share blocked by sandbox: '+(e.message||e.name||'unknown')+'. Long-press the image below instead.'});
-    }
-  };
 
   const copyPreview=async()=>{
     if(!preview)return;
