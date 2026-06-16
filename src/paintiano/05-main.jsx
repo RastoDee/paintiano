@@ -125,27 +125,29 @@ function bookUrl(lang){
 // re-rendered on every Paintiano render including the 5-15Hz `disp` tick
 // during playback even when not visible. `React.memo` plus stable t/onClose
 // references from the parent skip reconciliation entirely.
-const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setReadScale}){
+const AboutModal = memo(function AboutModal({onClose, t, ts, lang, readScale, setReadScale}){
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
+  const cards = getConceptCards(lang);
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px',color:'rgba(207,197,168,.88)',fontSize:(.78*readScale)+'rem',lineHeight:1.65,fontFamily:'inherit',position:'relative'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px 30px',color:'rgba(207,197,168,.88)',fontFamily:'inherit',position:'relative'}}>
         <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
         <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:14,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
-        <div style={{display:'flex',justifyContent:'center',marginBottom:14}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(201,168,76,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
-        <style>{`#pf-concept-body{font-size:${(0.78*readScale).toFixed(3)}rem;}
-#pf-concept-body h3{font-size:${(1.02*readScale).toFixed(3)}rem !important;font-weight:600 !important;letter-spacing:.02em !important;border-bottom:none !important;padding:0 0 0 14px !important;margin:26px 0 12px !important;position:relative;line-height:1.25 !important;}
-#pf-concept-body h3:first-of-type{margin-top:0 !important;}
-#pf-concept-body h3::before{content:"";position:absolute;left:0;top:0.15em;bottom:0.15em;width:3px;border-radius:2px;background:currentColor;opacity:.65;}
-#pf-concept-body p,#pf-concept-body li{font-size:${(0.84*readScale).toFixed(3)}rem !important;line-height:1.7 !important;margin:0 0 14px !important;}
-#pf-concept-body p+p{margin-top:-2px !important;}
-#pf-concept-body strong,#pf-concept-body em{font-size:inherit !important;}
-#pf-concept-body p[style*="italic"]{padding:10px 14px !important;margin:4px 0 22px !important;background:rgba(255,255,255,0.025) !important;border-left:2px solid rgba(201,168,76,.45) !important;border-radius:0 8px 8px 0 !important;line-height:1.6 !important;}
-#pf-concept-body h3+p,#pf-concept-body h3+p+p{padding:12px 14px !important;margin-bottom:10px !important;background:rgba(255,255,255,0.018) !important;border:1px solid rgba(255,255,255,0.05) !important;border-radius:10px !important;}
-#pf-concept-body h3+p+p+p{padding:0 !important;background:transparent !important;border:none !important;margin-top:14px !important;}`}</style>
-        <div id="pf-concept-body">{getConcept(lang)}</div>
-        <button onClick={onClose} style={{display:'block',margin:'22px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
+        <div style={{display:'flex',justifyContent:'center',marginBottom:20}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(201,168,76,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
+        <div style={{display:'flex',flexDirection:'column',gap:18}}>
+          {cards.map((card, i) => (
+            <div key={card.id} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:14,textAlign:'center',padding:'24px 20px',borderRadius:18,background:'rgba(255,255,255,.018)',border:'1px solid rgba(201,168,76,.14)'}}>
+              <div style={{fontSize:(3.4*readScale)+'rem',lineHeight:1,color:PF.gold2,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>{card.glyph}</div>
+              <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{card.title}</div>
+              <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{card.body}</div>
+              {card.book && (
+                <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookCta','Read the book')} →</a>
+              )}
+            </div>
+          ))}
+        </div>
+        <button onClick={onClose} style={{display:'block',margin:'24px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
       </div>
     </div>
   );
@@ -8888,7 +8890,7 @@ Composition rules:
         />
       )}
 
-      {showAbout && <AboutModal onClose={closeAbout} t={t} lang={lang} readScale={effScale} setReadScale={setReadScale} />}
+      {showAbout && <AboutModal onClose={closeAbout} t={t} ts={ts} lang={lang} readScale={effScale} setReadScale={setReadScale} />}
       {showBook && <BookModal onClose={closeBook} t={t} lang={lang} ts={ts} readScale={effScale} />}
 
       {showGuide && (
