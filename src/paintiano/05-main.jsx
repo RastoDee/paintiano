@@ -180,18 +180,20 @@ const BookModal = memo(function BookModal({onClose, t, lang, ts, readScale}){
 // during playback would reconcile its full subtree (input + filtered details
 // list) on every 5-15Hz `disp` tick. Now it only reconciles when one of its
 // actual props changes (query, focus, lang, t, onClose).
-const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale}){
+const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, ts, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale, mode='guide'}){
   const panelRef = useRef(null);
   const deckRef = useRef(null);
   useModalFocusTrap(panelRef);
+  const isConcept = mode==='concept';
   const [searchOpen, setSearchOpen] = useState(false);
   const [category, setCategory] = useState('all');
   const [currentIdx, setCurrentIdx] = useState(0);
   const [expandedId, setExpandedId] = useState(null);
   const cards = useMemo(()=>{
+    if(isConcept) return getConceptCards(lang);
     const all = getGuideCards(lang);
     return all.filter(c => (category==='all' || c.cat===category) && guideCardMatch(c, guideQuery));
-  }, [lang, category, guideQuery]);
+  }, [lang, category, guideQuery, isConcept]);
   // Reset scroll to top when filter changes
   useEffect(()=>{
     if(deckRef.current) deckRef.current.scrollTop = 0;
@@ -273,8 +275,9 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         {/* Top bar */}
         <div style={{flexShrink:0,padding:'14px 16px 8px',display:'flex',alignItems:'center',gap:10,position:'relative',zIndex:2}}>
           <button onClick={onClose} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
-          <div id="paintiano-guide-title" style={{flex:1,textAlign:'center',letterSpacing:'.22em',color:'rgba(201,168,76,.85)',fontSize:(.65*readScale)+'rem',textTransform:'uppercase',fontWeight:600}}>{t('guideTitle')||'Guide'}</div>
-          <button onClick={()=>{ setSearchOpen(v=>{ const n=!v; if(!n) setGuideQuery(''); return n; }); }} aria-label="search" title="search" style={{background:searchOpen?'rgba(201,168,76,.18)':'rgba(28,24,40,.6)',border:'1px solid '+(searchOpen?'rgba(201,168,76,.55)':'rgba(242,238,232,.15)'),color:searchOpen?PF.gold2:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'.95rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>⌕</button>
+          <div id="paintiano-guide-title" style={{flex:1,textAlign:'center',letterSpacing:'.22em',color:'rgba(201,168,76,.85)',fontSize:(.65*readScale)+'rem',textTransform:'uppercase',fontWeight:600}}>{isConcept ? (t('conceptTitle')||'Concept') : (t('guideTitle')||'Guide')}</div>
+          {!isConcept && <button onClick={()=>{ setSearchOpen(v=>{ const n=!v; if(!n) setGuideQuery(''); return n; }); }} aria-label="search" title="search" style={{background:searchOpen?'rgba(201,168,76,.18)':'rgba(28,24,40,.6)',border:'1px solid '+(searchOpen?'rgba(201,168,76,.55)':'rgba(242,238,232,.15)'),color:searchOpen?PF.gold2:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'.95rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>⌕</button>}
+          {isConcept && <div style={{width:34,height:34}} aria-hidden="true" />}
         </div>
         {/* Search (expandable) */}
         {searchOpen && (
@@ -298,14 +301,14 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
           </div>
         )}
         {/* Category chips */}
-        <div style={{flexShrink:0,padding:'2px 8px 10px',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',position:'relative',zIndex:2}} className="pf-guide-deck">
+        {!isConcept && <div style={{flexShrink:0,padding:'2px 8px 10px',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',position:'relative',zIndex:2}} className="pf-guide-deck">
           {CATS.map(c=>{
             const on = category===c.key;
             return (
               <button key={c.key} onClick={()=>setCategory(c.key)} style={{flexShrink:0,padding:'7px 14px',borderRadius:18,background:on?'rgba(201,168,76,.18)':'rgba(28,24,40,.55)',color:on?PF.gold2:'rgba(230,222,196,.75)',border:'1px solid '+(on?'rgba(201,168,76,.55)':'rgba(242,238,232,.1)'),cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',transition:'all .15s'}}>{c.label}</button>
             );
           })}
-        </div>
+        </div>}
         {/* Swipe deck */}
         <div ref={deckRef} className="pf-guide-deck" style={{flex:1,overflowY:'auto',overflowX:'hidden',scrollSnapType:'y mandatory',scrollBehavior:'smooth',WebkitOverflowScrolling:'touch',position:'relative'}}>
           {cards.length===0 ? (
@@ -8890,7 +8893,22 @@ Composition rules:
         />
       )}
 
-      {showAbout && <AboutModal onClose={closeAbout} t={t} ts={ts} lang={lang} readScale={effScale} setReadScale={setReadScale} />}
+      {showAbout && (
+        <GuideModal
+          mode="concept"
+          onClose={closeAbout}
+          t={t}
+          ts={ts}
+          lang={lang}
+          guideQuery={guideQuery}
+          setGuideQuery={setGuideQuery}
+          focusedInput={focusedInput}
+          setFocusedInput={setFocusedInput}
+          inputFocus={inputFocus}
+          readScale={effScale}
+          setReadScale={setReadScale}
+        />
+      )}
       {showBook && <BookModal onClose={closeBook} t={t} lang={lang} ts={ts} readScale={effScale} />}
 
       {showGuide && (
@@ -8899,6 +8917,7 @@ Composition rules:
           onOpenSetup={openSetupFromGuide}
           initialCardId={guideReturnCardId}
           t={t}
+          ts={ts}
           lang={lang}
           guideQuery={guideQuery}
           setGuideQuery={setGuideQuery}

@@ -1025,7 +1025,7 @@ const CONCEPT_CARDS_I18N = {
     {id:'meet', glyph:'φ', title:`Where they meet`, body:`Music is mathematics the ear feels. Painting is mathematics the eye feels. Paintiano is about the place where they meet — one phenomenon, two surfaces, divisible only the way water divides from ice.`},
     {id:'determinism', glyph:'◆', title:`Determinism is honesty`, body:`Chance lowers responsibility. When the result is random, the maker never has to ask why. Paintiano is deterministic — same song, same painting, always. Your painting doesn't say "chance decided." It says "you decided." The beauty is that it happened precisely, because you meant it to.`},
     {id:'conceptual', glyph:'✦', title:`A conceptual work`, body:`Paintiano is a conceptual work by RafFel. The object is an app that paints; the idea is that music and image are one phenomenon. The proof isn't written in a treatise — it's shown in something you open and play. No curator needed. Press a key, and you'll understand it yourself.`},
-    {id:'remember', glyph:'◯', book:true, title:`We only forgot`, body:`Music has a colour. It always had. We only forgot. Paintiano is a way to remember. The whole story lives in the book — free, in your language.`}
+    {id:'remember', glyph:'◯', book:true, title:`We only forgot`, cta:`Read the book`, body:`Music has a colour. It always had. We only forgot. Paintiano is a way to remember. The whole story lives in the book — free, in your language.`}
   ]
 };
 function getConceptCards(lang){ return CONCEPT_CARDS_I18N[lang] || CONCEPT_CARDS_I18N.EN; }
