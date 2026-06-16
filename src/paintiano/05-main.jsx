@@ -780,6 +780,15 @@ export default function Paintiano() {
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);
   const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  // SHOW MODE (auto-shuffle slideshow): while a piece is playing AND dice is on
+  // (full shuffle, or dice + a selected artist), the Save chip is replaced by a
+  // "↻ Show" chip. Tapping it auto-advances the painting every SHOW_INTERVAL ms
+  // (as if Next were pressed on a timer); Next is disabled while Show runs. A
+  // second tap toggles it off; the timer is also torn down when playback stops.
+  const SHOW_INTERVAL_MS = 4000;
+  const [showMode,setShowMode]=useState(false);
+  const showTimerRef=useRef(null);
+  const showDiceRef=useRef(null); // holds the latest _diceRoll so the interval calls a fresh closure
   // Variation history for Random mode prev/next navigation. saltHistory holds
   // the sequence of random salts that have been shown; saltIdxRef points at the
   // current one. Play-from-start and Loop append+advance (fresh variation);
@@ -1315,6 +1324,33 @@ export default function Paintiano() {
       setShufVariant(() => (Math.random()*_effVariants())|0);
     }
   };
+  // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
+  useEffect(()=>{ showDiceRef.current=_diceRoll; });
+  // Tear down the Show timer.
+  const _stopShow = useCallback(()=>{
+    if(showTimerRef.current){ clearInterval(showTimerRef.current); showTimerRef.current=null; }
+  },[]);
+  // Toggle the auto-shuffle slideshow. ON → roll immediately, then every
+  // SHOW_INTERVAL_MS. OFF → clear the timer. Next is disabled while ON.
+  const toggleShow = useCallback(()=>{
+    setShowMode(prev=>{
+      const next=!prev;
+      _stopShow();
+      if(next){
+        try{ nextRollInProgressRef.current=true; showDiceRef.current && showDiceRef.current(); }catch(_){}
+        showTimerRef.current=setInterval(()=>{
+          try{ nextRollInProgressRef.current=true; showDiceRef.current && showDiceRef.current(); }catch(_){}
+        }, SHOW_INTERVAL_MS);
+      }
+      return next;
+    });
+  },[_stopShow]);
+  // Show only runs while playing — when the music stops (end, Stop, or the dice
+  // is turned off), turn Show off and the Save chip returns in its place.
+  useEffect(()=>{
+    if(showMode && (!playing || !randomMode)){ _stopShow(); setShowMode(false); }
+  },[playing, randomMode, showMode, _stopShow]);
+  useEffect(()=>()=>{ if(showTimerRef.current) clearInterval(showTimerRef.current); },[]);
   // Pick a fresh random phaseIndex whenever the song OR the active artist
   // changes — that triggers a new "style" for that (song, artist) pair on the
   // first Play. Stays stable across repeated Plays of the same (song, artist).
@@ -8553,10 +8589,11 @@ Composition rules:
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
-          const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
+          const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive && !showMode;
           const showNextFs = randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image' && canRollNextFs;
+          const showSlideFs = playing && randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image';
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
-          if(!exportReadyFs && !showNextFs && !showPaletteFs) return null;
+          if(!exportReadyFs && !showNextFs && !showPaletteFs && !showSlideFs) return null;
           return (
             <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showPaletteFs && (
@@ -8576,6 +8613,12 @@ Composition rules:
                   style={{display:'inline-flex',alignItems:'center',gap:8,padding:'11px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.35)',WebkitTapHighlightColor:'transparent'}}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
                   {t('shareStory')||'Story'}
+                </button>
+              )}
+              {showSlideFs && (
+                <button onClick={(e)=>{ e.stopPropagation(); toggleShow(); wakeControls(); }} className="pf-lift" aria-label="auto-shuffle paintings" aria-pressed={showMode}
+                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'11px 18px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:showMode?'#0a0a12':'rgba(201,168,76,.9)',background:showMode?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'rgba(6,6,12,.5)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid '+(showMode?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:showMode?'0 6px 22px rgba(240,192,64,.35)':'none',WebkitTapHighlightColor:'transparent'}}>
+                  ↻ {t('showLabel')!=='showLabel'?t('showLabel'):'Show'}
                 </button>
               )}
               {exportReadyFs && (
@@ -9320,10 +9363,10 @@ Composition rules:
           // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
           // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
           // with no randomMode).
-          const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
+          const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive && !showMode;
           if(!randomMode) return null;
           return (
-            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
+            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={showMode?'Show is auto-shuffling — tap Show to stop':(canRoll?'next painting — jump to a new variation':'wait for the current action to finish')} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
@@ -9333,6 +9376,20 @@ Composition rules:
             export a half-animated piece. Hidden in the image source view (its
             own controls live elsewhere). */}
         {viewMode!=='image' && (()=>{
+          // While a piece PLAYS and dice is on (full shuffle or dice+artist),
+          // the Save slot becomes a "↻ Show" auto-shuffle toggle. Tap → advance
+          // every 4s like Next on a timer; tap again to stop. When playback ends
+          // this condition drops and the normal Save chip returns.
+          const showAvail = playing && randomMode && (effectiveStyle||shuffleStyle) && chords.length>0;
+          if(showAvail){
+            return (
+              <button className="pf-lift" onClick={()=>toggleShow()} aria-label="auto-shuffle paintings" aria-pressed={showMode}
+                title={showMode?'auto-shuffle ON — tap to stop':'auto-shuffle — a new painting every few seconds'}
+                style={{padding:'8px 14px',background:showMode?'rgba(255,200,120,.18)':'transparent',color:showMode?'#ffd07a':'rgba(201,168,76,.7)',border:'1px solid '+(showMode?'rgba(255,200,120,.6)':'rgba(201,168,76,.35)'),borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',transition:'all .18s',boxShadow:showMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
+                ↻ {t('showLabel')!=='showLabel'?t('showLabel'):'Show'}
+              </button>
+            );
+          }
           // Save enables once there's something to save and nothing is
           // actively running. After Stop Live the LIVE pill is gone, micArmed
           // may be true with chords waiting — Save is fine in that state. Play
