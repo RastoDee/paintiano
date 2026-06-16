@@ -9715,6 +9715,7 @@ Composition rules:
           openCheckout={openCheckout}
           activateLicense={activateLicense}
           readScale={effScale}
+          isDesktop={isDesktop}
         />
       )}
       {/* ── FULLSCREEN DEMO REEL OVERLAY ───────────────────────────────────

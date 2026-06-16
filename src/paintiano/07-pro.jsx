@@ -391,7 +391,7 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
 
 // ─── ProPaywall — the modal ────────────────────────────────────────────────────
 // Props: { t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft }
-function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1 }) {
+function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false }) {
   const [view, setView] = useState('intro'); // 'intro'|'key'|'success'
   const [keyInput, setKeyInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -589,6 +589,20 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, textAlign: 'center', margin: '0 0 16px', letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
               {tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
             </p>
+            {isDesktop && (
+              <button
+                onClick={() => setView('key')}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 8, background: 'rgba(201,168,76,.10)', color: GOLD,
+                  border: `1px solid ${GOLD}`, borderRadius: 6, padding: '11px 14px',
+                  margin: '0 0 18px', fontSize: (.7*readScale)+'rem', fontWeight: 600,
+                  letterSpacing: '.04em', cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                <span aria-hidden="true" style={{ fontSize: (.82*readScale)+'rem', lineHeight: 1 }}>🔑</span>
+                {tr('proHaveKey', 'I already have a key')}
+              </button>
+            )}
             {PRO_CFG.checkoutDisabled ? (
               <>
                 <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
@@ -625,9 +639,11 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 </p>
               </>
             )}
-            <button style={btnGhost} onClick={() => setView('key')}>
-              {tr('proHaveKey', 'I already have a key')}
-            </button>
+            {!isDesktop && (
+              <button style={btnGhost} onClick={() => setView('key')}>
+                {tr('proHaveKey', 'I already have a key')}
+              </button>
+            )}
             <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
               <span onClick={() => setView('about')} role="button" tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('about'); } }}
