@@ -185,15 +185,17 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const deckRef = useRef(null);
   useModalFocusTrap(panelRef);
   const isConcept = mode==='concept';
+  const isBook = mode==='book';
   const [searchOpen, setSearchOpen] = useState(false);
   const [category, setCategory] = useState('all');
   const [currentIdx, setCurrentIdx] = useState(0);
   const [expandedId, setExpandedId] = useState(null);
   const cards = useMemo(()=>{
+    if(isBook) return [{id:'book', glyph:'📖', book:true, title:t('bookTitle')||'The Book', cta:ts('bookCta','Open the book'), body:ts('bookDesc','')}];
     if(isConcept) return getConceptCards(lang);
     const all = getGuideCards(lang);
     return all.filter(c => (category==='all' || c.cat===category) && guideCardMatch(c, guideQuery));
-  }, [lang, category, guideQuery, isConcept]);
+  }, [lang, category, guideQuery, isConcept, isBook, t, ts]);
   // Reset scroll to top when filter changes
   useEffect(()=>{
     if(deckRef.current) deckRef.current.scrollTop = 0;
@@ -274,9 +276,9 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         {/* Top bar */}
         <div style={{flexShrink:0,padding:'14px 16px 8px',display:'flex',alignItems:'center',gap:10,position:'relative',zIndex:2}}>
           <button onClick={onClose} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
-          <div id="paintiano-guide-title" style={{flex:1,textAlign:'center',letterSpacing:'.22em',color:'rgba(201,168,76,.85)',fontSize:(.65*readScale)+'rem',textTransform:'uppercase',fontWeight:600}}>{isConcept ? (t('conceptTitle')||'Concept') : (t('guideTitle')||'Guide')}</div>
-          {!isConcept && <button onClick={()=>{ setSearchOpen(v=>{ const n=!v; if(!n) setGuideQuery(''); return n; }); }} aria-label="search" title="search" style={{background:searchOpen?'rgba(201,168,76,.18)':'rgba(28,24,40,.6)',border:'1px solid '+(searchOpen?'rgba(201,168,76,.55)':'rgba(242,238,232,.15)'),color:searchOpen?PF.gold2:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'.95rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>⌕</button>}
-          {isConcept && <div style={{width:34,height:34}} aria-hidden="true" />}
+          <div id="paintiano-guide-title" style={{flex:1,textAlign:'center',letterSpacing:'.22em',color:'rgba(201,168,76,.85)',fontSize:(.65*readScale)+'rem',textTransform:'uppercase',fontWeight:600}}>{isBook ? ts('gcat_book','Book') : isConcept ? (t('conceptTitle')||'Concept') : (t('guideTitle')||'Guide')}</div>
+          {!isConcept && !isBook && <button onClick={()=>{ setSearchOpen(v=>{ const n=!v; if(!n) setGuideQuery(''); return n; }); }} aria-label="search" title="search" style={{background:searchOpen?'rgba(201,168,76,.18)':'rgba(28,24,40,.6)',border:'1px solid '+(searchOpen?'rgba(201,168,76,.55)':'rgba(242,238,232,.15)'),color:searchOpen?PF.gold2:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'.95rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>⌕</button>}
+          {(isConcept||isBook) && <div style={{width:34,height:34}} aria-hidden="true" />}
         </div>
         {/* Search (expandable) */}
         {searchOpen && (
@@ -300,7 +302,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
           </div>
         )}
         {/* Category chips */}
-        {!isConcept && <div style={{flexShrink:0,padding:'2px 8px 10px',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',position:'relative',zIndex:2}} className="pf-guide-deck">
+        {!isConcept && !isBook && <div style={{flexShrink:0,padding:'2px 8px 10px',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',position:'relative',zIndex:2}} className="pf-guide-deck">
           {CATS.map(c=>{
             const on = category===c.key;
             return (
@@ -8908,7 +8910,22 @@ Composition rules:
           setReadScale={setReadScale}
         />
       )}
-      {showBook && <BookModal onClose={closeBook} t={t} lang={lang} ts={ts} readScale={effScale} />}
+      {showBook && (
+        <GuideModal
+          mode="book"
+          onClose={closeBook}
+          t={t}
+          ts={ts}
+          lang={lang}
+          guideQuery={guideQuery}
+          setGuideQuery={setGuideQuery}
+          focusedInput={focusedInput}
+          setFocusedInput={setFocusedInput}
+          inputFocus={inputFocus}
+          readScale={effScale}
+          setReadScale={setReadScale}
+        />
+      )}
 
       {showGuide && (
         <GuideModal
