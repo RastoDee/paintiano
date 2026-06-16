@@ -151,6 +151,28 @@ const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setRea
   );
 });
 
+// Self-contained book modal — opened from the top nav "Book" item. Mirrors the
+// look of the Guide book card (glyph + localized title + description + CTA) but
+// stands alone, like AboutModal. The CTA opens /book/paintiano-<lang>.pdf.
+const BookModal = memo(function BookModal({onClose, t, lang, ts, readScale}){
+  const panelRef = useRef(null);
+  useModalFocusTrap(panelRef);
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-book-title" style={{maxWidth:480,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'30px 26px 34px',color:'rgba(207,197,168,.88)',fontFamily:'inherit',position:'relative'}}>
+        <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
+        <div id="paintiano-book-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{ts('gcat_book','Book')}</div>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:18,textAlign:'center'}}>
+          <div style={{fontSize:(4*readScale)+'rem',lineHeight:1,color:PF.gold2,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>📖</div>
+          <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{t('bookTitle')}</div>
+          <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.55,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{ts('bookDesc','')}</div>
+          <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookCta','Open the book')} →</a>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 // Self-contained searchable guide modal. Same memoization rationale as
 // AboutModal — without this lift, opening the guide and then leaving it open
 // during playback would reconcile its full subtree (input + filtered details
@@ -1406,6 +1428,8 @@ export default function Paintiano() {
   // would never hit because every parent render would pass a fresh () => …
   // function. Identity is stable since setShowAbout is a useState setter.
   const closeAbout = useCallback(()=>setShowAbout(false),[]);
+  const [showBook, setShowBook] = useState(false);
+  const closeBook = useCallback(()=>setShowBook(false),[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
   // Paint-mode Web/Print export toggle: when ON and a source image is on
   // hand (originalImgUrl for regular image, imgMoodThumb for MFI), overlay
@@ -3048,6 +3072,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(showSizePicker){e.preventDefault();setShowSizePicker(false);return;}
       if(showGuide){e.preventDefault();setShowGuide(false);setGuideQuery('');return;}
       if(showAbout){e.preventDefault();setShowAbout(false);return;}
+      if(showBook){e.preventDefault();setShowBook(false);return;}
       if(pickMode){e.preventDefault();setPickMode(null);return;}
     };
     window.addEventListener('keydown',onEsc);
@@ -7204,7 +7229,7 @@ Composition rules:
       <div style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible'}}>
         <nav style={{display:'flex',gap:14,flexWrap:'wrap',rowGap:6,fontSize:(0.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase'}}>
           <span onClick={()=>setShowAbout(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowAbout(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('concept')}</span>
-          <span onClick={()=>{setGuideReturnCardId('book');setShowGuide(true);}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setGuideReturnCardId('book');setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{ts('gcat_book','Book')}</span>
+          <span onClick={()=>setShowBook(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowBook(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{ts('gcat_book','Book')}</span>
           {/* DEMO nav item — TEMPORARILY HIDDEN. Kept here (commented) so the
               feature can be restored in one paste; do not delete. The arming
               logic, demoArmRef timeout, demoPlay() and demoReelStop() are all
@@ -8849,6 +8874,7 @@ Composition rules:
       )}
 
       {showAbout && <AboutModal onClose={closeAbout} t={t} lang={lang} readScale={effScale} setReadScale={setReadScale} />}
+      {showBook && <BookModal onClose={closeBook} t={t} lang={lang} ts={ts} readScale={effScale} />}
 
       {showGuide && (
         <GuideModal
