@@ -145,7 +145,7 @@ const AboutModal = memo(function AboutModal({onClose, t, lang, readScale, setRea
 // during playback would reconcile its full subtree (input + filtered details
 // list) on every 5-15Hz `disp` tick. Now it only reconciles when one of its
 // actual props changes (query, focus, lang, t, onClose).
-const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale}){
+const GuideModal = memo(function GuideModal({onClose, onOpenSetup, t, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale}){
   const panelRef = useRef(null);
   const deckRef = useRef(null);
   useModalFocusTrap(panelRef);
@@ -277,7 +277,7 @@ const GuideModal = memo(function GuideModal({onClose, t, lang, guideQuery, setGu
                     </>
                   )}
                   {card.cta && (
-                    <button onClick={()=>{ onClose(); }} style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{card.cta} →</button>
+                    <button onClick={()=>{ if(onOpenSetup) onOpenSetup(); else onClose(); }} style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{card.cta} →</button>
                   )}
                 </div>
               </div>
@@ -682,6 +682,7 @@ export default function Paintiano() {
     try { localStorage.setItem('paintiano_setup_artists', JSON.stringify(setupArtists)); } catch(_) {}
   }, [setupArtists]);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [setupReturnTo, setSetupReturnTo] = useState(null);
   // Setup-picker fallback effects live further down, AFTER `style`/`setStyle`
   // are declared (around line 930) — referencing them here would hit a
   // temporal dead zone on first render.
@@ -1417,6 +1418,10 @@ export default function Paintiano() {
   // Stable composite-close callback for GuideModal (same memo rationale as
   // closeAbout). Closes the modal and clears the search query in one action.
   const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');},[]);
+  // Setup can be opened from the top menu or from the Guide's "Open Setup" card.
+  // Remember the origin so Setup's Done/✕ returns the user where they came from.
+  const openSetupFromGuide = useCallback(()=>{ setShowGuide(false); setGuideQuery(''); setSetupReturnTo('guide'); setShowSetupModal(true); },[]);
+  const closeSetup = useCallback(()=>{ setShowSetupModal(false); if(setupReturnTo==='guide'){ setShowGuide(true); } setSetupReturnTo(null); },[setupReturnTo]);
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [morphSel, setMorphSel] = useState([]); // ordered target moods for chain-morph (max 3)
   const [morphPool, setMorphPool] = useState([]);
@@ -7274,7 +7279,7 @@ Composition rules:
           }} onKeyDown={e=>{if((e.key==='Enter'||e.key===' ')&&!busy){e.preventDefault();e.stopPropagation();e.currentTarget.click();}}} role="button" tabIndex={busy?-1:0} aria-disabled={busy} style={{cursor:busy?'default':'pointer',paddingBottom:2,borderBottom:'1px solid '+(demoArmed?'rgba(255,140,120,.9)':'rgba(201,168,76,.3)'),color:busy?'rgba(201,168,76,.25)':demoArmed?'rgba(255,140,120,.95)':'rgba(201,168,76,.8)',transition:'color .15s ease, border-color .15s ease'}}>{demoArmed?t('demoConfirm'):t('demo')}</span>
           */}
           <span onClick={()=>setShowGuide(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowGuide(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{t('guide')}</span>
-          <span onClick={()=>setShowSetupModal(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setShowSetupModal(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{ts('setupPickerLabel','Setup')}</span>
+          <span onClick={()=>{setSetupReturnTo(null);setShowSetupModal(true);}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setSetupReturnTo(null);setShowSetupModal(true);}}} role="button" tabIndex={0} style={{cursor:'pointer',paddingBottom:2,borderBottom:'1px solid rgba(201,168,76,.3)',color:'rgba(201,168,76,.8)'}}>{ts('setupPickerLabel','Setup')}</span>
           {/* Tier-adaptive PRO tab — Free sees gold "PRO" (upgrade to Pro);
               plain Pro sees purple "PRO AI" (upsell to AI tier); Pro AI users
               see nothing — they're already at the top tier and the badge
@@ -8902,6 +8907,7 @@ Composition rules:
       {showGuide && (
         <GuideModal
           onClose={closeGuide}
+          onOpenSetup={openSetupFromGuide}
           t={t}
           lang={lang}
           guideQuery={guideQuery}
@@ -9880,11 +9886,11 @@ Composition rules:
         const okMin = setupPalettes.length>=1 && setupArtists.length>=1;
         const isFree = proStatus==='free';
         return (
-        <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) setShowSetupModal(false); }} style={{position:'fixed',inset:0,zIndex:11000,background:'rgba(8,6,14,.78)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px'}}>
+        <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) closeSetup(); }} style={{position:'fixed',inset:0,zIndex:11000,background:'rgba(8,6,14,.78)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px'}}>
           <div style={{width:'100%',maxWidth:520,maxHeight:'92vh',display:'flex',flexDirection:'column',background:'rgba(20,16,28,.96)',border:'1px solid rgba(201,168,76,.4)',borderRadius:18,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
             <div style={{padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(242,238,232,.08)'}}>
               <span style={{fontSize:(.85*effScale)+'rem',fontWeight:600,letterSpacing:'.14em',color:PF.gold2,textTransform:'uppercase'}}>⚙ {ts('setupPickerLabel','Setup')}</span>
-              <button onClick={()=>{ if(okMin) setShowSetupModal(false); }} disabled={!okMin} aria-label="close" style={{background:'transparent',border:'none',color:okMin?'rgba(247,243,236,.8)':'rgba(247,243,236,.25)',fontSize:'1.5rem',cursor:okMin?'pointer':'default',padding:'4px 8px',fontFamily:'inherit'}}>✕</button>
+              <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} aria-label="close" style={{background:'transparent',border:'none',color:okMin?'rgba(247,243,236,.8)':'rgba(247,243,236,.25)',fontSize:'1.5rem',cursor:okMin?'pointer':'default',padding:'4px 8px',fontFamily:'inherit'}}>✕</button>
             </div>
             <div style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
               <div>
@@ -9958,7 +9964,7 @@ Composition rules:
               )}
             </div>
             <div style={{padding:'14px 20px',borderTop:'1px solid rgba(242,238,232,.08)',display:'flex',justifyContent:'flex-end',gap:8}}>
-              <button onClick={()=>{ if(okMin) setShowSetupModal(false); }} disabled={!okMin} style={{padding:'9px 22px',background:okMin?'rgba(201,168,76,.2)':'rgba(201,168,76,.06)',color:okMin?PF.gold2:'rgba(201,168,76,.35)',border:'1px solid '+(okMin?'rgba(201,168,76,.6)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase'}}>{ts('setupSave','Done')}</button>
+              <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'9px 22px',background:okMin?'rgba(201,168,76,.2)':'rgba(201,168,76,.06)',color:okMin?PF.gold2:'rgba(201,168,76,.35)',border:'1px solid '+(okMin?'rgba(201,168,76,.6)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase'}}>{ts('setupSave','Done')}</button>
             </div>
           </div>
         </div>
