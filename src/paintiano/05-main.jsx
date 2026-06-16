@@ -5267,7 +5267,13 @@ Composition rules:
         }
         setDisp(i+1);
         i++;
-        timers.current.push(setTimeout(step,Math.round(150/playbackSpeedRef.current)));
+        // Per-event step interval (agogics): tempo now breathes with the image —
+        // dark strips broaden, vivid strips lean, phrase-ends take a breath, and
+        // the piece eases to a close. Falls back to the old fixed 150 ms if a
+        // re-transcribe hasn't tagged this event yet. The manual speed slider
+        // still scales the whole thing (divides), so it composes on top.
+        const _stepMs = (liveChords[i-1] && liveChords[i-1]._stepMs) || 150;
+        timers.current.push(setTimeout(step,Math.round(_stepMs/playbackSpeedRef.current)));
       };
       step();
     }else{
