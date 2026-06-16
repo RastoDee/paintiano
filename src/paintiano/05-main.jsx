@@ -8512,7 +8512,7 @@ Composition rules:
           Here it's a sibling of the wrap, truly fixed to the viewport corner,
           always reachable regardless of the painting's size or aspect ratio. */}
       {immersive && (
-        <button onClick={(e)=>{e.stopPropagation(); setImmersive(false);}} aria-label="exit fullscreen" title="Exit fullscreen" className="pf-fs-btn pf-fs-btn-immersive" style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',right:'max(12px, env(safe-area-inset-right))',zIndex:10002,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',background:'rgba(6,6,12,.6)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'rgba(201,168,76,.9)',padding:0,WebkitTapHighlightColor:'transparent',transition:'opacity .4s ease'}}>
+        <button onClick={(e)=>{e.stopPropagation(); setImmersive(false);}} aria-label="exit fullscreen" title="Exit fullscreen" style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',right:'max(12px, env(safe-area-inset-right))',zIndex:10002,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',background:'rgba(6,6,12,.6)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'rgba(201,168,76,.9)',padding:0,WebkitTapHighlightColor:'transparent',transition:'opacity .4s ease'}}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
         </button>
       )}
