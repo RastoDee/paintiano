@@ -17075,7 +17075,9 @@ export default function Paintiano() {
   // only side effect and Strict Mode double-invoke is safe.
   const cycleColorFs = useCallback(()=>{
     const allCycle = viewModeRef.current==='image'
-      ? ['harmony','spectral','phi','kontra','bw','custom']
+      ? (appModeRef.current!=='bw'
+          ? ['harmony','spectral','phi','kontra','custom']  // colour image → 5 colour palettes (matches canvas tabs)
+          : ['bw','custom'])                                 // b/w image → only bw + custom (matches canvas tabs)
       : ['harmony','spectral','phi','kontra','custom'];
     // Filter to user-selected palettes (Setup picker). 'bw' is image-only and
     // always allowed (not in setupPalettes — it's not a user-toggleable mode).
