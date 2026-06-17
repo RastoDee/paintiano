@@ -24568,6 +24568,10 @@ Composition rules:
             tabIndex={chords.length?0:-1}
             onPointerDown={e=>{
               if(!chords.length)return;
+              // Lock seeking while recording — a tap/scrub would stopAll() (and
+              // thus the recorder), prematurely ending the take and surfacing
+              // Save mid-record. The bar is read-only during REC.
+              if(recording)return;
               e.preventDefault();
               // Capture so subsequent moves/up fire even if the pointer leaves
               // the track — matches native <input type=range> drag behaviour.
@@ -24584,6 +24588,7 @@ Composition rules:
               // Pointer-capture is the cross-browser way to detect "is this a
               // drag" without tracking mousedown state manually.
               if(!chords.length)return;
+              if(recording)return;
               if(!e.currentTarget.hasPointerCapture||!e.currentTarget.hasPointerCapture(e.pointerId))return;
               e.preventDefault();
               const rect=e.currentTarget.getBoundingClientRect();
@@ -24594,6 +24599,7 @@ Composition rules:
             }}
             onPointerUp={e=>{
               if(!chords.length)return;
+              if(recording)return;
               try{e.currentTarget.releasePointerCapture(e.pointerId);}catch(_){}
               const idx=resumeFromRef.current;
               startPlay();
@@ -24601,6 +24607,7 @@ Composition rules:
             }}
             onKeyDown={e=>{
               if(!chords.length)return;
+              if(recording)return;
               const cur=Math.min(disp,chords.length-1);
               const step=Math.max(1,Math.floor(chords.length/20)); // ~5% jumps for PgUp/PgDn
               let next=cur;
