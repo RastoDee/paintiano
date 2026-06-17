@@ -7901,7 +7901,11 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
   // x-position, with lightness modulated by its y (bright at top, shadowed
   // toward bottom). No blend toward a hardcoded gradient — the chord IS
   // the colour.
-  const STROKES = Math.min(2400, Math.max(900, lim * 40));
+  // Strokes scaled by playback PROGRESS (lim/cn) instead of a hard cap, so the
+  // cathedral keeps gaining impasto right to the last note (was saturating ~60).
+  const _ccn = cn > 0 ? cn : Math.max(1, lim);
+  const _revF = Math.max(0, Math.min(1, lim / _ccn));
+  const STROKES = Math.round(220 + _revF * (2400 - 220));
   ctx.globalAlpha = 0.65;
   for(let k = 0; k < STROKES; k++){
     const x = rnd() * CW;
