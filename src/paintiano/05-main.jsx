@@ -1379,7 +1379,7 @@ export default function Paintiano() {
   // (free users only see 2 of N). The dice picks a variant in this range.
   // Kandinsky has 7 phases (Cosmic/Bauhaus/Circles/Comp8/Paris/Geom/Dense);
   // every other style has 6.
-  const _effVariants = () => (proStatus==='free' ? 2 : (style==='kandinsky' ? 7 : 6));
+  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky'||style==='wave') ? 7 : 6));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.

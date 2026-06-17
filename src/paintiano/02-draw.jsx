@@ -6162,12 +6162,13 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  Free (cap=2) sees Wavy/Ripple + Movement in Squares — wave Riley vs
   //  square Riley is the strongest visual contrast in her catalogue.
   {
-    const _pn=_capN(6); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(7); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_rpick===1){ rileyPhaseWarp(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_rpick===2){ rileyPhaseStripes(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===2){ rileyPhaseBlaze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===3){ rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===4){ rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===5){ rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===6){ rileyPhaseFall(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     // else fall through to original wavy-stripes/ripple body (variant 0; the
     // stripes vs ripple sub-pick within is seed-driven, kept as natural
     // micro-variation rather than its own Vary slot).
@@ -6459,6 +6460,62 @@ function rileyPhaseWarp(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       ctx.fillRect(x,0,w+1,CH);
     }
     x+=w;
+  }
+}
+
+// ── Riley: Blaze (1962) — concentric bands twisted into a spinning vortex. ──
+// Colours from the chords; the twist (a per-ring angular shear) creates Riley's
+// dizzying rotational op-art. Bands reveal outward with progress (lim/cn).
+function rileyPhaseBlaze(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const sR=_seedRnd(73,ss,CW,CH);
+  ctx.fillStyle=isBW?'#101014':'#0c0a14'; ctx.fillRect(0,0,CW,CH);
+  const cx=CW*(0.42+sR()*0.16), cy=CH*(0.42+sR()*0.16);
+  const maxR=Math.hypot(CW,CH)*0.62;
+  const nBands=cn<=8?16:cn<=24?26:cn<=60?38:cn<=120?52:cn<=240?68:88;
+  const visBands=Math.max(1,Math.ceil(nBands*reveal));
+  const twist=2.0+sR()*1.6;            // how hard the vortex spins
+  for(let i=visBands;i>=1;i--){
+    const R=i/nBands*maxR;
+    const {rgb}=_picChord(chords, Math.floor(i/nBands*cn)%cn, gc, isBW);
+    ctx.strokeStyle=`rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+    ctx.lineWidth=Math.max(3, maxR/nBands*1.25);
+    ctx.globalAlpha=0.96;
+    ctx.beginPath();
+    for(let a=0;a<=Math.PI*2+0.12;a+=0.1){
+      const tw=a*twist + i*0.5;        // angular shear grows per ring → vortex
+      const rr=R*(1+Math.sin(tw)*0.12);
+      const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
+      a?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+}
+
+// ── Riley: Fall (1963) — dense HORIZONTAL wavy bands cascading top→bottom, the
+// wave sharpening toward one side. Chord colours; bands reveal top→bottom with
+// progress. Horizontal motion deliberately contrasts the vertical Stripes look.
+function rileyPhaseFall(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const sR=_seedRnd(74,ss,CW,CH);
+  ctx.fillStyle=isBW?'#101014':'#0c0a14'; ctx.fillRect(0,0,CW,CH);
+  const nBands=cn<=8?18:cn<=24?28:cn<=60?40:cn<=120?56:cn<=240?74:96;
+  const visBands=Math.max(1,Math.ceil(nBands*reveal));
+  const bh=CH/nBands;
+  const wl=22+sR()*22;                  // wavelength
+  const phase=sR()*Math.PI*2;
+  for(let i=0;i<visBands;i++){
+    const baseY=i*bh;
+    const amp=3+(i/nBands)*30;          // wave sharpens toward the bottom
+    const {rgb}=_picChord(chords, Math.floor(i/nBands*cn)%cn, gc, isBW);
+    ctx.fillStyle=`rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+    ctx.beginPath();
+    for(let x=0;x<=CW;x+=5){const y=baseY+Math.sin(x/wl+i*0.5+phase)*amp*(0.3+x/CW*0.7); x?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+    for(let x=CW;x>=0;x-=5){const y=baseY+bh+Math.sin(x/wl+i*0.5+phase)*amp*(0.3+x/CW*0.7); ctx.lineTo(x,y);}
+    ctx.closePath(); ctx.fill();
   }
 }
 
