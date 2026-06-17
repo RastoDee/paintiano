@@ -16587,6 +16587,65 @@ function IntroSplash({ onDone, tagline, skipLabel }){
 // ─────────────────────────────────────────────────────────────────────────────
 // §7  MAIN COMPONENT — Paintiano
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// §6b  TRANSPORT CONTROL SYSTEM — token styles + lucide-style icons
+//   One source of truth for every button in the bottom transport/tool row. The
+//   row differs per mode, but each button maps to a TOKEN whose colour carries
+//   meaning (see TRANSPORT-SYSTEM.md). txStyle(token, {effScale,on,disabled})
+//   returns the inline style; uniform geometry (h40 / r20, primary h44).
+//   TOKENS: primary green · neutral gold-glass · active gold-filled ·
+//   pink (navigation) · blue (audio source) · ai violet (Atmosphere) ·
+//   save gold · danger red · ghost (Clear idle).
+// ─────────────────────────────────────────────────────────────────────────────
+function txStyle(token, opts={}){
+  const { effScale=1, on=false, disabled=false, icon=false, primary=false } = opts;
+  const base = {
+    display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6,
+    height: primary?44:40, padding: icon?0 : (primary?'0 22px':'0 15px'), width: icon?40:undefined,
+    borderRadius:20, fontFamily:'inherit', fontSize:(( primary?.62:.56)*effScale)+'rem',
+    fontWeight:600, letterSpacing:'.08em', textTransform:'uppercase', whiteSpace:'nowrap',
+    cursor: disabled?'default':'pointer', transition:'all .16s',
+    WebkitBackdropFilter:'blur(10px)', backdropFilter:'blur(10px)', WebkitTapHighlightColor:'transparent',
+  };
+  const T = {
+    primary:{ border:'none', color:'#08120c', fontWeight:700,
+      background:'linear-gradient(135deg,#5fd99a,#37a96b)', boxShadow:'0 5px 18px rgba(78,203,141,.4)' },
+    neutral:{ border:'1px solid rgba(201,168,76,.28)', background:'rgba(255,255,255,.04)', color:'rgba(201,168,76,.85)' },
+    active:{ border:'1px solid #e8c766', background:'rgba(201,168,76,.18)', color:'#e8c766', boxShadow:'0 3px 10px rgba(201,168,76,.22)' },
+    pink:{ border:'1px solid rgba(232,85,122,.5)', background:'rgba(232,85,122,.14)', color:'#ff7a9c', fontWeight:700 },
+    blue:{ border:'1px solid rgba(120,160,255,.45)', background:'rgba(120,160,255,.12)', color:'#9bc0ff' },
+    ai:   on ? { border:'1px solid rgba(150,120,255,.6)', background:'rgba(150,120,255,.18)', color:'#c4b0ff', boxShadow:'0 3px 12px rgba(150,120,255,.25)' }
+             : { border:'1px solid rgba(150,120,255,.32)', background:'rgba(150,120,255,.07)', color:'rgba(180,160,255,.78)' },
+    save:{ border:'1px solid rgba(255,200,120,.55)', background:'rgba(255,200,120,.16)', color:'#ffd07a', fontWeight:700 },
+    danger: on ? { border:'1px solid rgba(255,90,90,.65)', background:'rgba(255,90,90,.16)', color:'#ff8a8a' }
+               : { border:'1px solid rgba(232,90,90,.45)', background:'rgba(232,90,90,.10)', color:'#e8857a' },
+    ghost:{ border:'1px solid rgba(201,168,76,.2)', background:'transparent', color:'rgba(201,168,76,.55)' },
+  };
+  const style = { ...base, ...(T[token]||T.neutral) };
+  if(disabled){ style.opacity = .42; }
+  return style;
+}
+// Lucide-style inline icons (stroked, no emoji). Keyed by name.
+const TxIcon = ({n, s=15}) => {
+  const P = { width:s, height:s, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:1.8, strokeLinecap:'round', strokeLinejoin:'round' };
+  switch(n){
+    case 'pause':   return <svg {...P}><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>;
+    case 'play':    return <svg {...P}><path d="M8 5v14l11-7z"/></svg>;
+    case 'mute':    return <svg {...P}><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m17 9 5 6M22 9l-5 6"/></svg>;
+    case 'sound':   return <svg {...P}><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg>;
+    case 'rec':     return <svg {...P}><circle cx="12" cy="12" r="6"/></svg>;
+    case 'stop':    return <svg {...P}><rect x="6" y="6" width="12" height="12" rx="2"/></svg>;
+    case 'next':    return <svg {...P}><path d="M5 12h14M13 6l6 6-6 6"/></svg>;
+    case 'restart': return <svg {...P}><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>;
+    case 'save':    return <svg {...P}><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg>;
+    case 'loop':    return <svg {...P}><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>;
+    case 'show':    return <svg {...P}><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>;
+    case 'sparkle': return <svg {...P}><path d="M12 3l1.6 4.8L18 9l-4.4 1.2L12 15l-1.6-4.8L6 9z"/></svg>;
+    case 'notes':   return <svg {...P}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>;
+    default:        return null;
+  }
+};
+
 export default function Paintiano() {
   const canvasRef    = useRef(null);
   const canvasWrapRef = useRef(null); // wrapper around the canvas — scrolled into view when the strip closes
@@ -17075,9 +17134,7 @@ export default function Paintiano() {
   // only side effect and Strict Mode double-invoke is safe.
   const cycleColorFs = useCallback(()=>{
     const allCycle = viewModeRef.current==='image'
-      ? (appModeRef.current!=='bw'
-          ? ['harmony','spectral','phi','kontra','custom']  // colour image → 5 colour palettes (matches canvas tabs)
-          : ['bw','custom'])                                 // b/w image → only bw + custom (matches canvas tabs)
+      ? ['harmony','spectral','bw','custom']
       : ['harmony','spectral','phi','kontra','custom'];
     // Filter to user-selected palettes (Setup picker). 'bw' is image-only and
     // always allowed (not in setupPalettes — it's not a user-toggleable mode).
@@ -25379,28 +25436,28 @@ Composition rules:
         </div>
       )}
       <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
-        <button onClick={()=>{if(paintScale!=='off'){setPaintScale('off');setShowAdvanced(false);}else setShowAdvanced(v=>!v);}} title="advanced: scale snap" style={{display:composeMode?'inline-block':'none',padding:'7px 10px',background:paintScale!=='off'?'rgba(140,255,180,.08)':'transparent',color:paintScale!=='off'?'rgba(140,255,180,.85)':showAdvanced?'rgba(201,168,76,.85)':'rgba(180,180,180,.5)',border:'1px solid '+(paintScale!=='off'?'rgba(140,255,180,.45)':showAdvanced?'rgba(201,168,76,.45)':'rgba(180,180,180,.25)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>
-          {t('scaleBtn')}
+        <button onClick={()=>{if(paintScale!=='off'){setPaintScale('off');setShowAdvanced(false);}else setShowAdvanced(v=>!v);}} title="advanced: scale snap" style={{...txStyle(paintScale!=='off'?'active':(showAdvanced?'neutral':'ghost'),{effScale}),display:composeMode?'inline-flex':'none'}}>
+          <TxIcon n="notes" s={13*effScale}/>{t('scaleBtn')}
         </button>
         <button
           className="pf-lift"
           onClick={handlePauseClick}
           disabled={demoReelOn||recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
           title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
-          style={{display:(viewMode==='image'&&(recording||!!recBlob))?'none':'inline-flex',padding:'9px 22px',borderRadius:22,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer',border:'none',color:'#0e120e',background:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'rgba(78,203,141,.18)':'linear-gradient(135deg,#5fd99a,#3aa86e)',boxShadow:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?'none':'0 4px 16px rgba(78,203,141,.35)',opacity:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))?.45:1,transition:'all .18s'}}>
-          {holdPaused?t('resume'):playing?t('pause'):t('play')}
+          style={{...txStyle('primary',{effScale,primary:true,disabled:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))}),display:(viewMode==='image'&&(recording||!!recBlob))?'none':'inline-flex',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer'}}>
+          <TxIcon n={playing&&!holdPaused?'pause':'play'} s={15*effScale}/>{holdPaused?t('resume'):playing?t('pause'):t('play')}
         </button>{/* MIC STOP / REC — in the transport row UNDER the canvas (not in
             the strip above it). Replaces the on-canvas STOP/REC buttons; the
             on-canvas voice/music toggle remains for live preset switching. */}
         {micActive && (
-          <button onClick={()=>{ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); }} className="pf-lift" title={t('micActive')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,40,40,.16)',color:'rgba(255,140,140,.95)',border:'1px solid rgba(255,120,120,.6)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
-            <span style={{width:8,height:8,borderRadius:2,background:'#ff5a5a',boxShadow:'0 0 6px #ff5a5a',display:'inline-block'}}/>⏹ {t('micActive').replace(/[^\p{L} ]/gu,'')}
+          <button onClick={()=>{ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); }} className="pf-lift" title={t('micActive')} style={txStyle('danger',{effScale,on:true})}>
+            <span style={{width:8,height:8,borderRadius:2,background:'#ff5a5a',boxShadow:'0 0 6px #ff5a5a',display:'inline-block'}}/><TxIcon n="stop" s={14*effScale}/>{t('micActive').replace(/[^\p{L} ]/gu,'')}
           </button>
         )}{/* After stop, the transport pill disappears entirely — Clear is the
             way to start a fresh song. The old "tap REC again" pill caused
-            confusion and let the user accidentally extend a finished take. */}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={{padding:'8px 11px',background:muted?'rgba(220,90,90,.14)':'rgba(28,24,40,.5)',color:muted?'rgba(255,120,120,.95)':'rgba(201,168,76,.8)',border:'1px solid '+(muted?'rgba(220,90,90,.5)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}}>{muted?'🔇':'🔊'}</button>
+            confusion and let the user accidentally extend a finished take. */}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
         {currentMood&&(
-          <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={{padding:'8px 14px',background:loopMode?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:recording?'rgba(201,168,76,.2)':loopMode?GOLD:'rgba(201,168,76,.65)',border:'1px solid '+(recording?'rgba(201,168,76,.1)':loopMode?'rgba(201,168,76,.55)':'rgba(201,168,76,.25)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:loopMode?'0 3px 10px rgba(201,168,76,.25)':'none'}}>{t('loop')}</button>
+          <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={txStyle(loopMode?'active':'neutral',{effScale,disabled:recording})}><TxIcon n="loop" s={14*effScale}/>{t('loop')}</button>
         )}
         {/* Original ⇄ Piano source toggle — appears once the mic session
             (Voice or Music) has a finalised audio blob and the mic is no
@@ -25410,8 +25467,8 @@ Composition rules:
         {hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') && (
           <button className="pf-lift" onClick={()=>setPlaySourceMic(p=>p==='original'?'piano':'original')}
             title={playSourceMic==='original'?'playback: original recording — tap to switch to piano cover':'playback: piano cover — tap to switch to original recording'}
-            style={{padding:'8px 14px',background:playSourceMic==='original'?'rgba(140,200,255,.16)':'rgba(201,168,76,.16)',color:playSourceMic==='original'?'#8accff':GOLD,border:'1px solid '+(playSourceMic==='original'?'rgba(100,180,255,.55)':'rgba(201,168,76,.55)'),borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',boxShadow:'0 3px 10px '+(playSourceMic==='original'?'rgba(100,180,255,.25)':'rgba(201,168,76,.25)')}}>
-            {playSourceMic==='original'?'🎵 orig':'🎹 piano'}
+            style={txStyle(playSourceMic==='original'?'blue':'active',{effScale})}>
+            <TxIcon n="notes" s={14*effScale}/>{playSourceMic==='original'?'orig':'piano'}
           </button>
         )}
         {/* Restart playback from chord 0 using the current source. Pairs with
@@ -25431,8 +25488,8 @@ Composition rules:
             }}
             title="restart from start"
             aria-label="restart from start"
-            style={{padding:'8px 12px',background:'rgba(232,85,122,.16)',color:'#ff7a9c',border:'1px solid rgba(232,85,122,.55)',borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',boxShadow:'0 3px 10px rgba(232,85,122,.25)'}}>
-            ↺
+            style={txStyle('pink',{effScale,icon:true})}>
+            <TxIcon n="restart" s={15*effScale}/>
           </button>
         )}
         {(effectiveStyle||shuffleStyle)&&chords.length>0&&!recording&&!micActive&&viewMode!=='image'&&(()=>{
@@ -25444,7 +25501,7 @@ Composition rules:
           const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive && !showMode;
           if(!randomMode) return null;
           return (
-            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={showMode?'Show is auto-shuffling — tap Show to stop':(canRoll?'next painting — jump to a new variation':'wait for the current action to finish')} aria-label="next painting" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 14px',background:canRoll?'rgba(232,85,122,.20)':'rgba(232,85,122,.08)',color:canRoll?'#ff7a9c':'rgba(232,85,122,.3)',border:'1px solid '+(canRoll?'rgba(232,85,122,.6)':'rgba(232,85,122,.15)'),borderRadius:22,cursor:canRoll?'pointer':'default',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase'}}>next ›</button>
+            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={showMode?'Show is auto-shuffling — tap Show to stop':(canRoll?'next painting — jump to a new variation':'wait for the current action to finish')} aria-label="next painting" style={txStyle('pink',{effScale,disabled:!canRoll})}><TxIcon n="next" s={14*effScale}/>{t('next')!=='next'?t('next'):'Next'}</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
@@ -25463,8 +25520,8 @@ Composition rules:
             return (
               <button className="pf-lift" onClick={()=>toggleShow()} aria-label="auto-shuffle paintings" aria-pressed={showMode}
                 title={showMode?'auto-shuffle ON — tap to stop':'auto-shuffle — a new painting every few seconds'}
-                style={showMode?{padding:'8px 14px',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',transition:'all .18s',boxShadow:'0 4px 14px rgba(240,192,64,.35)'}:{padding:'8px 14px',color:'#ffd07a',background:'rgba(255,200,120,.20)',border:'1px solid rgba(255,200,120,.6)',borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',transition:'all .18s'}}>
-                ↻ {t('showLabel')!=='showLabel'?t('showLabel'):'Show'}
+                style={txStyle(showMode?'active':'neutral',{effScale,on:showMode})}>
+                <TxIcon n="show" s={14*effScale}/>{t('showLabel')!=='showLabel'?t('showLabel'):'Show'}
               </button>
             );
           }
@@ -25478,14 +25535,14 @@ Composition rules:
           return (
             <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
               title={exportReady?t('save'):t('exportNeedsPlay')}
-              style={{padding:'8px 14px',background:exportReady?'rgba(255,200,120,.18)':'transparent',color:exportReady?'#ffd07a':'rgba(201,168,76,.28)',border:'1px solid '+(exportReady?'rgba(255,200,120,.55)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:exportReady?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:700,textTransform:'uppercase',transition:'all .18s'}}>
-              ↓ {t('save')}
+              style={txStyle('save',{effScale,disabled:!exportReady})}>
+              <TxIcon n="save" s={14*effScale}/>{t('save')}
             </button>
           );
         })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
-          <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{padding:'8px 14px',background:atmoOn?'rgba(120,180,255,.16)':'transparent',color:(aiLocked&&!atmoMood)?'rgba(180,205,245,.75)':(atmoBusy?'rgba(150,195,255,.6)':atmoOn?'rgba(185,218,255,.98)':'rgba(150,190,240,.75)'),border:'1px solid rgba(120,180,255,'+((aiLocked&&!atmoMood)?'.4':(atmoOn?'.55':'.3'))+')',borderRadius:22,cursor:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked))?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',opacity:(aiLocked&&!atmoMood)?.95:((!atmoMood&&!aiUsable)?.5:1),transition:'all .18s',display:'inline-flex',alignItems:'center',gap:4}}>
-            <span>{'✦ '+(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(aiLocked&&!atmoMood)?'—':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</span>
+          <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{...txStyle('ai',{effScale,on:atmoOn,disabled:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked))})}}>
+            <TxIcon n="sparkle" s={14*effScale}/><span>{(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(aiLocked&&!atmoMood)?'—':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</span>
             {aiLocked && !atmoMood && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
         )}
@@ -25505,8 +25562,8 @@ Composition rules:
           const showSave = !recording && !!recBlob;
           if(showSave){
             return (
-              <button onClick={()=>{ if(recBlob) setShowSizePicker(true); }} className="pf-lift" title={t('save')} style={{padding:'8px 14px',background:'rgba(140,180,255,.14)',color:'rgba(160,200,255,1)',border:'1px solid rgba(140,180,255,.55)',borderRadius:22,cursor:'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
-                ↓ {t('save')}
+              <button onClick={()=>{ if(recBlob) setShowSizePicker(true); }} className="pf-lift" title={t('save')} style={txStyle('save',{effScale})}>
+                <TxIcon n="save" s={14*effScale}/>{t('save')}
               </button>
             );
           }
@@ -25534,8 +25591,8 @@ Composition rules:
               } else {
                 startRecord();
               }
-            }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={{padding:'8px 14px',background:recording?'rgba(220,60,60,.16)':'transparent',color:recording?'rgba(255,90,90,.95)':canStart?'rgba(220,90,90,.7)':'rgba(220,90,90,.25)',border:'1px solid '+(recording?'rgba(255,90,90,.6)':canStart?'rgba(220,90,90,.35)':'rgba(220,90,90,.18)'),borderRadius:22,cursor:(recording||canStart)?'pointer':'default',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'all .18s'}}>
-              {recording?t('recStop'):t('recArm')}
+            }} disabled={!canStart && !recording} title={recording?'stop recording':(canStart?t('recArm'):t('exportNeedsPlay'))} style={txStyle('danger',{effScale,on:recording,disabled:(!canStart && !recording)})}>
+              <TxIcon n={recording?'stop':'rec'} s={14*effScale}/>{recording?t('recStop'):t('recArm')}
             </button>
           );
         })()}
@@ -25583,7 +25640,7 @@ Composition rules:
                 disabled={lockSpeed}
                 title={lockSpeed?t('stopRecFirst'):'playback speed — tap to reset to 1×, hold to change'}
                 aria-label="playback speed — tap to reset, hold to change"
-                style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4,padding:'5px 11px',minWidth:42,border:'1px solid '+(spd===1?'rgba(201,168,76,.2)':'rgba(201,168,76,.45)'),borderRadius:22,background:spd===1?'rgba(28,24,40,.4)':'rgba(201,168,76,.12)',color:spd===1?'rgba(201,168,76,.6)':GOLD,cursor:lockSpeed?'default':'pointer',fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',fontFamily:'inherit',fontWeight:600,opacity:lockSpeed?0.4:1,userSelect:'none',WebkitUserSelect:'none',touchAction:'none'}}>{label}</button>
+                style={{...txStyle(spd===1?'neutral':'active',{effScale,icon:true,disabled:lockSpeed}),width:undefined,minWidth:42,padding:'0 11px',fontSize:(.52*effScale)+'rem',textTransform:'none',userSelect:'none',WebkitUserSelect:'none',touchAction:'none'}}>{label}</button>
             </span>
           );
         })()}
@@ -25620,10 +25677,10 @@ Composition rules:
           className="pf-lift"
           disabled={recording}
           title={recording?t('stopRecFirst'):undefined}
-          style={{padding:'8px 14px',background:clearArmed?'rgba(220,90,90,.18)':'rgba(28,24,40,.5)',color:recording?'rgba(207,197,168,.2)':clearArmed?'rgba(255,140,120,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(recording?'rgba(207,197,168,.12)':clearArmed?'rgba(255,90,90,.55)':'rgba(207,197,168,.3)'),borderRadius:22,cursor:recording?'default':'pointer',letterSpacing:'.08em',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,textTransform:'uppercase',transition:'background .15s ease, color .15s ease, border-color .15s ease'}}>{clearArmed?t('clearConfirm'):t('clear')}</button>
+          style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
         {composeMode&&(
-          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{padding:'8px 13px',background:'rgba(28,24,40,.5)',color:chords.length&&!busy&&!recording?'rgba(207,197,168,.7)':'rgba(207,197,168,.2)',border:'1px solid '+(chords.length&&!busy&&!recording?'rgba(207,197,168,.3)':'rgba(207,197,168,.1)'),borderRadius:22,cursor:chords.length&&!busy&&!recording?'pointer':'default',letterSpacing:'.06em',fontFamily:'inherit',fontSize:(.6*effScale)+'rem'}}>↩</button>
+          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}>↩</button>
         )}
       </div>
       {composeMode && (
