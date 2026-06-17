@@ -1078,8 +1078,16 @@ export default function Paintiano() {
   // phi instead, since the picker tabs match). Uses refs so setMode is the
   // only side effect and Strict Mode double-invoke is safe.
   const cycleColorFs = useCallback(()=>{
+    // Mirror the canvas Color tabs exactly. In image mode the tab set depends
+    // on how the app READ the picture: a colourful image exposes the 5 colour
+    // palettes (no bw); a near-monochrome image exposes only bw + custom. Using
+    // appModeRef (the app's auto-pick) keeps the fullscreen chip identical to
+    // the canvas tabs — never offering bw on a colour image, or colours on a
+    // grayscale one.
     const allCycle = viewModeRef.current==='image'
-      ? ['harmony','spectral','bw','custom']
+      ? (appModeRef.current!=='bw'
+          ? ['harmony','spectral','phi','kontra','custom']
+          : ['bw','custom'])
       : ['harmony','spectral','phi','kontra','custom'];
     // Filter to user-selected palettes (Setup picker). 'bw' is image-only and
     // always allowed (not in setupPalettes — it's not a user-toggleable mode).
@@ -1376,9 +1384,7 @@ export default function Paintiano() {
   //    so re-landing on the same address repaints identically.
   const paintPhase = (style ? phaseIndex : shufVariant) | 0;
   // Effective number of style-variants per artist for the current tier
-  // (free users only see 2 of N). The dice picks a variant in this range.
-  // Kandinsky has 7 phases (Cosmic/Bauhaus/Circles/Comp8/Paris/Geom/Dense);
-  // every other style has 6.
+  // (free users only see 2 of 6). The dice picks a variant in this range.
   const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky'||style==='wave') ? 7 : 6));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
