@@ -11905,7 +11905,7 @@ const I18N = {
     listen:'🔊 LISTEN', listening:'🔊 LISTENING…',
     mic:'MIC', micActive:'LIVE',
     voicePreset:'🎤 voice', musicPreset:'🔊 music',
-    play:'▶ play', pause:'⏸ pause', resume:'▶ resume', mute:'mute audio', unmute:'unmute audio', randomOn:'random ON', randomOff:'random OFF',
+    play:'play', pause:'pause', resume:'resume', mute:'mute audio', unmute:'unmute audio', randomOn:'random ON', randomOff:'random OFF',
     print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', switchConfirm:'clean canvas?', loop:'⟳ loop', appChoseColour:'the app chose the colour reading', undo:'↩',
     recArm:'⏺ rec', recStop:'⏹ rec…',
     share:'share', save:'save', showLabel:'show', saving:'saving…', saved:'saved ✓', scoreExport:'score', scoreXmlHint:'opens in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exports the whole piece', exportScore:'score (xml)', exportScoreHint:'opens in MuseScore etc.', exportAudio:'audio', exportAudioHint:'plays & records the full piece', exportBoth:'both', exportBothHint:'score now, then records audio', exportNeedsPlay:'play first to export', rendering:'rendering audio…', renderFail:'audio render failed',
@@ -11931,7 +11931,7 @@ const I18N = {
     demoMode:'demo mode — clear to play again', demoSkip:'tap canvas to skip',
     stopRecFirst:'stop recording to use playback controls',
     stopListenFirst:'stop listening first', stopSingFirst:'stop singing first',
-    scaleBtn:'⚙ scale',
+    scaleBtn:'scale',
     midiInput:'♬ MIDI INPUT', musicInput:'♪ ADD MUSIC', audioInput:'♫ AUDIO INPUT', scoreInput:'𝄞 SCORE INPUT', imageInput:'🖼 IMAGE INPUT', micInput:'🎙 MIC INPUT',
     micVoiceHint:'sing, hum or whistle · snaps to C major · monophonic',
     micMusicHint:'play music from a nearby speaker · paints on chord changes',
@@ -12042,7 +12042,7 @@ const I18N = {
     listen:'🔊 LAUSCHEN', listening:'🔊 LAUSCHT…',
     mic:'MIKRO', micActive:'LIVE',
     voicePreset:'🎤 stimme', musicPreset:'🔊 musik',
-    play:'▶ spielen', pause:'⏸ pause', resume:'▶ weiter', mute:'ton aus', unmute:'ton an', randomOn:'zufall AN', randomOff:'zufall AUS',
+    play:'spielen', pause:'pause', resume:'weiter', mute:'ton aus', unmute:'ton an', randomOn:'zufall AN', randomOff:'zufall AUS',
     print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', switchConfirm:'leinwand leeren?', loop:'⟳ schleife', appChoseColour:'die App wählte die Farblesung', undo:'↩',
     recArm:'⏺ aufn.', recStop:'⏹ aufn.…',
     share:'teilen', save:'speichern', showLabel:'show', saving:'speichert…', saved:'gespeichert ✓', scoreExport:'noten', scoreXmlHint:'öffnet in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportiert das ganze Stück', exportScore:'noten (xml)', exportScoreHint:'öffnet in MuseScore usw.', exportAudio:'audio', exportAudioHint:'spielt & nimmt das Stück auf', exportBoth:'beides', exportBothHint:'noten jetzt, dann audio', exportNeedsPlay:'zuerst abspielen', rendering:'audio wird erzeugt…', renderFail:'audio-erzeugung fehlgeschlagen',
@@ -12068,7 +12068,7 @@ const I18N = {
     demoMode:'demo-modus — löschen zum erneuten spielen', demoSkip:'auf canvas tippen zum überspringen',
     stopRecFirst:'aufnahme stoppen für wiedergabe',
     stopListenFirst:'erst lauschen stoppen', stopSingFirst:'erst singen stoppen',
-    scaleBtn:'⚙ tonart',
+    scaleBtn:'tonart',
     midiInput:'♬ MIDI EINGABE', musicInput:'♪ MUSIK HINZUFÜGEN', audioInput:'♫ AUDIO EINGABE', scoreInput:'𝄞 PARTITUR EINGABE', imageInput:'🖼 BILD EINGABE', micInput:'🎙 MIKRO EINGABE',
     micVoiceHint:'singen, summen oder pfeifen · auf C-Dur eingerastet · monophon',
     micMusicHint:'musik aus nahem lautsprecher · malt bei akkordwechsel',
@@ -12177,7 +12177,7 @@ const I18N = {
     listen:'🔊 ÉCOUTER', listening:'🔊 ÉCOUTE…',
     mic:'MICRO', micActive:'LIVE',
     voicePreset:'🎤 voix', musicPreset:'🔊 musique',
-    play:'▶ jouer', pause:'⏸ pause', resume:'▶ reprendre', mute:'couper le son', unmute:'activer le son', randomOn:'aléatoire ON', randomOff:'aléatoire OFF',
+    play:'jouer', pause:'pause', resume:'reprendre', mute:'couper le son', unmute:'activer le son', randomOn:'aléatoire ON', randomOff:'aléatoire OFF',
     print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', switchConfirm:'vider la toile ?', loop:'⟳ boucle', appChoseColour:"l'app a choisi la lecture couleur", undo:'↩',
     recArm:'⏺ enreg.', recStop:'⏹ enreg.…',
     share:'partager', save:'enregistrer', showLabel:'diapo', saving:'enregistrement…', saved:'enregistré ✓', scoreExport:'partition', scoreXmlHint:'ouvre dans MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exporter', exportHint:'exporte tout le morceau', exportScore:'partition (xml)', exportScoreHint:'ouvre dans MuseScore etc.', exportAudio:'audio', exportAudioHint:'joue & enregistre le morceau', exportBoth:'les deux', exportBothHint:'partition puis audio', exportNeedsPlay:'jouez d\'abord', rendering:'rendu audio…', renderFail:'échec du rendu audio',
@@ -12203,7 +12203,7 @@ const I18N = {
     demoMode:'mode démo — effacer pour rejouer', demoSkip:'toucher la toile pour passer',
     stopRecFirst:'arrêter l\'enregistrement pour contrôler',
     stopListenFirst:'arrêter l\'écoute d\'abord', stopSingFirst:'arrêter le chant d\'abord',
-    scaleBtn:'⚙ gamme',
+    scaleBtn:'gamme',
     midiInput:'♬ ENTRÉE MIDI', musicInput:'♪ AJOUTER MUSIQUE', audioInput:'♫ ENTRÉE AUDIO', scoreInput:'𝄞 ENTRÉE PARTITION', imageInput:'🖼 ENTRÉE IMAGE', micInput:'🎙 ENTRÉE MICRO',
     micVoiceHint:'chanter, fredonner ou siffler · ancré en do majeur · monophonique',
     micMusicHint:'musique d\'un haut-parleur proche · peint aux changements d\'accord',
@@ -12312,7 +12312,7 @@ const I18N = {
     listen:'🔊 ESCUCHAR', listening:'🔊 ESCUCHANDO…',
     mic:'MICRO', micActive:'EN VIVO',
     voicePreset:'🎤 voz', musicPreset:'🔊 música',
-    play:'▶ tocar', pause:'⏸ pausa', resume:'▶ continuar', mute:'silenciar', unmute:'activar sonido', randomOn:'aleatorio ON', randomOff:'aleatorio OFF',
+    play:'tocar', pause:'pausa', resume:'continuar', mute:'silenciar', unmute:'activar sonido', randomOn:'aleatorio ON', randomOff:'aleatorio OFF',
     print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', switchConfirm:'¿limpiar lienzo?', loop:'⟳ bucle', appChoseColour:'la app eligió la lectura de color', undo:'↩',
     recArm:'⏺ grabar', recStop:'⏹ graba…',
     share:'compartir', save:'guardar', showLabel:'pase', saving:'guardando…', saved:'guardado ✓', scoreExport:'partitura', scoreXmlHint:'abre en MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exportar', exportHint:'exporta toda la pieza', exportScore:'partitura (xml)', exportScoreHint:'abre en MuseScore etc.', exportAudio:'audio', exportAudioHint:'reproduce y graba la pieza', exportBoth:'ambos', exportBothHint:'partitura y luego audio', exportNeedsPlay:'reproduce primero', rendering:'renderizando audio…', renderFail:'fallo al renderizar audio',
@@ -12338,7 +12338,7 @@ const I18N = {
     demoMode:'modo demo — borrar para volver a tocar', demoSkip:'toca el lienzo para saltar',
     stopRecFirst:'detener grabación para controlar',
     stopListenFirst:'detener escucha primero', stopSingFirst:'detener canto primero',
-    scaleBtn:'⚙ escala',
+    scaleBtn:'escala',
     midiInput:'♬ ENTRADA MIDI', musicInput:'♪ AÑADIR MÚSICA', audioInput:'♫ ENTRADA AUDIO', scoreInput:'𝄞 ENTRADA PARTITURA', imageInput:'🖼 ENTRADA IMAGEN', micInput:'🎙 ENTRADA MICRO',
     micVoiceHint:'canta, tararea o silba · ajustado a do mayor · monofónico',
     micMusicHint:'música de un altavoz cercano · pinta en cambios de acorde',
@@ -12447,7 +12447,7 @@ const I18N = {
     listen:'🔊 POČÚVAŤ', listening:'🔊 POČÚVAM…',
     mic:'MIKRO', micActive:'LIVE',
     voicePreset:'🎤 hlas', musicPreset:'🔊 hudba',
-    play:'▶ prehrať', pause:'⏸ pauza', resume:'▶ pokračovať', mute:'stlmiť zvuk', unmute:'zapnúť zvuk', randomOn:'náhoda ZAP', randomOff:'náhoda VYP',
+    play:'prehrať', pause:'pauza', resume:'pokračovať', mute:'stlmiť zvuk', unmute:'zapnúť zvuk', randomOn:'náhoda ZAP', randomOff:'náhoda VYP',
     print:'🖨 tlačiť', clear:'vyčistiť', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', switchConfirm:'vyčistiť plátno?', loop:'⟳ slučka', appChoseColour:'farbu určila aplikácia', undo:'↩',
     recArm:'⏺ nahrať', recStop:'⏹ nahr…',
     share:'zdieľať', save:'uložiť', showLabel:'pásmo', saving:'ukladám…', saved:'uložené ✓', scoreExport:'noty', scoreXmlHint:'otvorí v MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportuje celú skladbu', exportScore:'noty (xml)', exportScoreHint:'otvorí v MuseScore a pod.', exportAudio:'audio', exportAudioHint:'prehrá a nahrá celú skladbu', exportBoth:'oboje', exportBothHint:'noty hneď, potom audio', exportNeedsPlay:'najprv prehraj', rendering:'renderujem audio…', renderFail:'render audia zlyhal',
@@ -12473,7 +12473,7 @@ const I18N = {
     demoMode:'režim demo — vyčisti pre nové prehratie', demoSkip:'klikni na plátno pre preskočenie',
     stopRecFirst:'najprv zastav nahrávanie pre použitie ovládania',
     stopListenFirst:'najprv zastav počúvanie', stopSingFirst:'najprv zastav spievanie',
-    scaleBtn:'⚙ stupnica',
+    scaleBtn:'stupnica',
     midiInput:'♬ MIDI VSTUP', musicInput:'♪ PRIDAŤ HUDBU', audioInput:'♫ AUDIO VSTUP', scoreInput:'𝄞 VSTUP PARTITÚRY', imageInput:'🖼 OBRAZOVÝ VSTUP', micInput:'🎙 VSTUP MIKROFÓNU',
     micVoiceHint:'spievaj, hum alebo pískaj · prichytí na C dur · monofónne',
     micMusicHint:'pusti hudbu z blízkeho reproduktora · maľuje pri zmene akordu',
@@ -12582,7 +12582,7 @@ const I18N = {
     listen:'🔊 聆听', listening:'🔊 聆听中…',
     mic:'麦克风', micActive:'直播',
     voicePreset:'🎤 人声', musicPreset:'🔊 音乐',
-    play:'▶ 播放', pause:'⏸ 暂停', resume:'▶ 继续', mute:'静音', unmute:'取消静音', randomOn:'随机 开', randomOff:'随机 关',
+    play:'播放', pause:'暂停', resume:'继续', mute:'静音', unmute:'取消静音', randomOn:'随机 开', randomOff:'随机 关',
     print:'🖨 打印', clear:'清空', clearConfirm:'再次点击清空', demoConfirm:'替换当前?', switchConfirm:'清空画布?', loop:'⟳ 循环', appChoseColour:'颜色由应用选择', undo:'↩',
     recArm:'⏺ 录制', recStop:'⏹ 录制…',
     share:'分享', save:'保存', showLabel:'放映', saving:'保存中…', saved:'已保存 ✓', scoreExport:'乐谱', scoreXmlHint:'可在 MuseScore、Sibelius、Finale 中打开…', exportLabel:'导出', exportTitle:'导出', exportHint:'导出整首作品', exportScore:'乐谱 (xml)', exportScoreHint:'可在 MuseScore 等软件中打开', exportAudio:'音频', exportAudioHint:'播放并录制整首作品', exportBoth:'两者', exportBothHint:'先导出乐谱,再录制音频', exportNeedsPlay:'请先播放再导出', rendering:'渲染音频中…', renderFail:'音频渲染失败',
@@ -12608,7 +12608,7 @@ const I18N = {
     demoMode:'演示模式 — 清空以重新播放', demoSkip:'点击画布跳过',
     stopRecFirst:'请先停止录音以使用播放控制',
     stopListenFirst:'请先停止聆听', stopSingFirst:'请先停止演唱',
-    scaleBtn:'⚙ 音阶',
+    scaleBtn:'音阶',
     midiInput:'♬ MIDI 输入', musicInput:'♪ 添加音乐', audioInput:'♫ 音频输入', scoreInput:'𝄞 乐谱输入', imageInput:'🖼 图像输入', micInput:'🎙 麦克风输入',
     micVoiceHint:'唱、哼或吹口哨 · 自动对齐到 C 大调 · 单音',
     micMusicHint:'从附近的扬声器播放音乐 · 在和弦变化时绘制',
@@ -12723,7 +12723,7 @@ const I18N = {
     listen:'🔊 聆聽', listening:'🔊 聆聽中…',
     mic:'麥克風', micActive:'直播',
     voicePreset:'🎤 人聲', musicPreset:'🔊 音樂',
-    play:'▶ 播放', pause:'⏸ 暫停', resume:'▶ 繼續', mute:'靜音', unmute:'取消靜音', randomOn:'隨機 開', randomOff:'隨機 關',
+    play:'播放', pause:'暫停', resume:'繼續', mute:'靜音', unmute:'取消靜音', randomOn:'隨機 開', randomOff:'隨機 關',
     print:'🖨 列印', clear:'清空', clearConfirm:'再次點擊清空', demoConfirm:'取代目前？', switchConfirm:'清空畫布？', loop:'⟳ 循環', appChoseColour:'顏色由應用程式選擇', undo:'↩',
     recArm:'⏺ 錄製', recStop:'⏹ 錄製…',
     share:'分享', save:'儲存', saving:'儲存中…', saved:'已儲存 ✓', scoreExport:'樂譜', scoreXmlHint:'可在 MuseScore、Sibelius、Finale 中開啟…', exportLabel:'匯出', exportTitle:'匯出', exportHint:'匯出整首作品', exportScore:'樂譜 (xml)', exportScoreHint:'可在 MuseScore 等軟體中開啟', exportAudio:'音訊', exportAudioHint:'播放並錄製整首作品', exportBoth:'兩者', exportBothHint:'先匯出樂譜，再錄製音訊', exportNeedsPlay:'請先播放再匯出', rendering:'渲染音訊中…', renderFail:'音訊渲染失敗',
@@ -12749,7 +12749,7 @@ const I18N = {
     demoMode:'示範模式 — 清空以重新播放', demoSkip:'點擊畫布跳過',
     stopRecFirst:'請先停止錄音以使用播放控制',
     stopListenFirst:'請先停止聆聽', stopSingFirst:'請先停止演唱',
-    scaleBtn:'⚙ 音階',
+    scaleBtn:'音階',
     midiInput:'♬ MIDI 輸入', musicInput:'♪ 添加音樂', audioInput:'♫ 音訊輸入', scoreInput:'𝄞 樂譜輸入', imageInput:'🖼 圖像輸入', micInput:'🎙 麥克風輸入',
     micVoiceHint:'唱、哼或吹口哨 · 自動對齊到 C 大調 · 單音',
     micMusicHint:'從附近的喇叭播放音樂 · 在和弦變化時繪製',
@@ -12857,7 +12857,7 @@ const I18N = {
     listen:'🔊 OUVIR', listening:'🔊 OUVINDO…',
     mic:'MIC', micActive:'AO VIVO',
     voicePreset:'🎤 voz', musicPreset:'🔊 música',
-    play:'▶ tocar', pause:'⏸ pausar', resume:'▶ continuar', mute:'silenciar áudio', unmute:'ativar áudio', randomOn:'aleatório LIG', randomOff:'aleatório DES',
+    play:'tocar', pause:'pausar', resume:'continuar', mute:'silenciar áudio', unmute:'ativar áudio', randomOn:'aleatório LIG', randomOff:'aleatório DES',
     print:'🖨 imprimir', clear:'limpar', clearConfirm:'toque novamente para limpar', demoConfirm:'substituir atual?', switchConfirm:'limpar tela?', loop:'⟳ loop', appChoseColour:'o app escolheu a cor', undo:'↩',
     recArm:'⏺ grav', recStop:'⏹ grav…',
     share:'compartilhar', save:'salvar', showLabel:'slideshow', saving:'salvando…', saved:'salvo ✓', scoreExport:'partitura', scoreXmlHint:'abre no MuseScore, Sibelius, Finale…', exportLabel:'exportar', exportTitle:'exportar', exportHint:'exporta a peça inteira', exportScore:'partitura (xml)', exportScoreHint:'abre no MuseScore etc.', exportAudio:'áudio', exportAudioHint:'toca e grava a peça inteira', exportBoth:'ambos', exportBothHint:'partitura primeiro, depois grava áudio', exportNeedsPlay:'toque primeiro para exportar', rendering:'renderizando áudio…', renderFail:'falha ao renderizar áudio',
@@ -12883,7 +12883,7 @@ const I18N = {
     demoMode:'modo demo — limpe para tocar novamente', demoSkip:'toque a tela para pular',
     stopRecFirst:'pare a gravação para usar os controles de reprodução',
     stopListenFirst:'pare de ouvir primeiro', stopSingFirst:'pare de cantar primeiro',
-    scaleBtn:'⚙ escala',
+    scaleBtn:'escala',
     midiInput:'♬ ENTRADA MIDI', musicInput:'♪ ADICIONAR MÚSICA', audioInput:'♫ ENTRADA DE ÁUDIO', scoreInput:'𝄞 ENTRADA DE PARTITURA', imageInput:'🖼 ENTRADA DE IMAGEM', micInput:'🎙 ENTRADA DE MIC',
     micVoiceHint:'cante, cantarole ou assobie · ajusta para dó maior · monofônico',
     micMusicHint:'toque música de um alto-falante próximo · pinta nas mudanças de acorde',
@@ -12992,7 +12992,7 @@ const I18N = {
     listen:'🔊 聴く', listening:'🔊 聴いています…',
     mic:'マイク', micActive:'ライブ',
     voicePreset:'🎤 声', musicPreset:'🔊 音楽',
-    play:'▶ 再生', pause:'⏸ 一時停止', resume:'▶ 続き', mute:'音声ミュート', unmute:'音声オン', randomOn:'ランダム ON', randomOff:'ランダム OFF',
+    play:'再生', pause:'一時停止', resume:'続き', mute:'音声ミュート', unmute:'音声オン', randomOn:'ランダム ON', randomOff:'ランダム OFF',
     print:'🖨 印刷', clear:'クリア', clearConfirm:'もう一度タップでクリア', demoConfirm:'現在のものを置き換える?', switchConfirm:'キャンバスをクリーンに?', loop:'⟳ ループ', appChoseColour:'アプリが色の読み方を選んだ', undo:'↩',
     recArm:'⏺ 録音', recStop:'⏹ 録音…',
     share:'シェア', save:'保存', showLabel:'スライド', saving:'保存中…', saved:'保存しました ✓', scoreExport:'楽譜', scoreXmlHint:'MuseScore、Sibelius、Finale で開ける…', exportLabel:'エクスポート', exportTitle:'エクスポート', exportHint:'曲全体をエクスポート', exportScore:'楽譜 (xml)', exportScoreHint:'MuseScore などで開ける', exportAudio:'音声', exportAudioHint:'曲全体を再生して録音', exportBoth:'両方', exportBothHint:'今すぐ楽譜、続けて音声録音', exportNeedsPlay:'エクスポートするには先に再生', rendering:'音声をレンダリング中…', renderFail:'音声レンダリングに失敗',
@@ -13018,7 +13018,7 @@ const I18N = {
     demoMode:'デモモード — もう一度再生するにはクリア', demoSkip:'キャンバスをタップでスキップ',
     stopRecFirst:'再生コントロールを使うには録音を停止',
     stopListenFirst:'まず聴くのを止めてください', stopSingFirst:'まず歌うのを止めてください',
-    scaleBtn:'⚙ スケール',
+    scaleBtn:'スケール',
     midiInput:'♬ MIDI 入力', musicInput:'♪ 音楽を追加', audioInput:'♫ AUDIO 入力', scoreInput:'𝄞 SCORE 入力', imageInput:'🖼 画像入力', micInput:'🎙 MIC 入力',
     micVoiceHint:'歌、ハミング、口笛 · C メジャーにスナップ · 単音',
     micMusicHint:'近くのスピーカーから音楽を再生 · 和音の変化で描く',
@@ -16614,8 +16614,8 @@ function txStyle(token, opts={}){
     active:{ border:'1px solid #e8c766', background:'rgba(201,168,76,.18)', color:'#e8c766', boxShadow:'0 3px 10px rgba(201,168,76,.22)' },
     pink:{ border:'1px solid rgba(232,85,122,.5)', background:'rgba(232,85,122,.14)', color:'#ff7a9c', fontWeight:700 },
     blue:{ border:'1px solid rgba(120,160,255,.45)', background:'rgba(120,160,255,.12)', color:'#9bc0ff' },
-    ai:   on ? { border:'1px solid rgba(150,120,255,.6)', background:'rgba(150,120,255,.18)', color:'#c4b0ff', boxShadow:'0 3px 12px rgba(150,120,255,.25)' }
-             : { border:'1px solid rgba(150,120,255,.32)', background:'rgba(150,120,255,.07)', color:'rgba(180,160,255,.78)' },
+    ai:   on ? { border:'1px solid rgba(220,150,255,.55)', background:'rgba(220,150,255,.2)', color:'rgba(228,178,255,.98)', boxShadow:'0 3px 12px rgba(220,150,255,.25)' }
+             : { border:'1px solid rgba(220,150,255,.3)', background:'rgba(220,150,255,.08)', color:'rgba(225,175,255,.78)' },
     save:{ border:'1px solid rgba(255,200,120,.55)', background:'rgba(255,200,120,.16)', color:'#ffd07a', fontWeight:700 },
     danger: on ? { border:'1px solid rgba(255,90,90,.65)', background:'rgba(255,90,90,.16)', color:'#ff8a8a' }
                : { border:'1px solid rgba(232,90,90,.45)', background:'rgba(232,90,90,.10)', color:'#e8857a' },
@@ -16642,6 +16642,7 @@ const TxIcon = ({n, s=15}) => {
     case 'show':    return <svg {...P}><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>;
     case 'sparkle': return <svg {...P}><path d="M12 3l1.6 4.8L18 9l-4.4 1.2L12 15l-1.6-4.8L6 9z"/></svg>;
     case 'notes':   return <svg {...P}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>;
+    case 'undo':    return <svg {...P}><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>;
     default:        return null;
   }
 };
@@ -25700,7 +25701,7 @@ Composition rules:
           style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
         {composeMode&&(
-          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}>↩</button>
+          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
         )}
       </div>
       {composeMode && (

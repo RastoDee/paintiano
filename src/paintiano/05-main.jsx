@@ -8855,7 +8855,7 @@ Composition rules:
           : loadedSource==='score'
           ? { line:'rgba(169,127,245,.95)', dim:'rgba(200,170,255,.5)', border:'rgba(169,127,245,.5)', edge:'rgba(169,127,245,.4)' }
           : (loadedSource==='image' && !moodFromImg)
-          ? { line:'rgba(78,203,141,.95)', dim:'rgba(120,200,160,.5)', border:'rgba(78,203,141,.5)', edge:'rgba(78,203,141,.4)' }
+          ? { line:'rgba(244,124,60,.95)', dim:'rgba(255,160,100,.5)', border:'rgba(244,124,60,.5)', edge:'rgba(244,124,60,.4)' }
           : moodFromImg
           ? { line:'rgba(228,178,255,.95)', dim:'rgba(225,175,255,.55)', border:'rgba(220,150,255,.55)', edge:'rgba(220,150,255,.4)' }
           : currentMood
@@ -9382,18 +9382,22 @@ Composition rules:
         })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'&&effectiveStyle!=='oneM'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'—'}
       </div>
       {showAdvanced && composeMode && (
-        <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:8,justifyContent:'center',alignItems:'center',marginBottom:8,padding:'8px 12px',borderRadius:14,background:'rgba(140,255,180,.06)',border:'1px solid rgba(140,255,180,.25)',maxWidth:'fit-content',marginLeft:'auto',marginRight:'auto',flexWrap:'wrap'}}>
+          <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(140,255,180,.6)'}}>{t('scaleSnapLabel')!=='scaleSnapLabel'?t('scaleSnapLabel'):'snap to key'}</span>
           <button onClick={()=>{
             const cur=PAINT_SCALE_KEYS.indexOf(paintScale);
             setPaintScale(PAINT_SCALE_KEYS[(cur+1)%PAINT_SCALE_KEYS.length]);
-          }} style={{padding:'7px 10px',background:'transparent',color:paintScale==='off'?'rgba(180,180,180,.55)':'rgba(140,255,180,.85)',border:'1px solid '+(paintScale==='off'?'rgba(180,180,180,.25)':'rgba(140,255,180,.35)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}} title="snap every tap to the chosen key (chromatic = off)">
+          }} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 16px',background:paintScale==='off'?'transparent':'rgba(140,255,180,.16)',color:paintScale==='off'?'rgba(200,200,200,.7)':'rgba(160,255,195,.98)',border:'1px solid '+(paintScale==='off'?'rgba(180,180,180,.3)':'rgba(140,255,180,.5)'),borderRadius:18,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,minWidth:78,justifyContent:'center'}} title="tap to change key (free = no snap)">
             ♫ {PAINT_SCALES[paintScale].label}
           </button>
+          {paintScale!=='off' && (
+            <button onClick={()=>setPaintScale('off')} aria-label="back to free" title="back to free (no snap)" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:30,height:30,padding:0,borderRadius:15,background:'transparent',border:'1px solid rgba(180,180,180,.3)',color:'rgba(200,200,200,.7)',cursor:'pointer',fontFamily:'inherit'}}>✕</button>
+          )}
         </div>
       )}
       <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
-        <button onClick={()=>{if(paintScale!=='off'){setPaintScale('off');setShowAdvanced(false);}else setShowAdvanced(v=>!v);}} title="advanced: scale snap" style={{...txStyle(paintScale!=='off'?'active':(showAdvanced?'neutral':'ghost'),{effScale}),display:composeMode?'inline-flex':'none'}}>
-          <TxIcon n="notes" s={13*effScale}/>{t('scaleBtn')}
+        <button onClick={()=>{ setShowAdvanced(v=>!v); }} title="scale snap — tap notes to a musical key" style={{...txStyle((paintScale!=='off'||showAdvanced)?'active':'ghost',{effScale}),display:composeMode?'inline-flex':'none'}}>
+          <TxIcon n="notes" s={13*effScale}/>{paintScale!=='off'?PAINT_SCALES[paintScale].label:t('scaleBtn')}
         </button>
         <button
           className="pf-lift"

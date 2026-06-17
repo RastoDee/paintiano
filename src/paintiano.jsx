@@ -11931,7 +11931,7 @@ const I18N = {
     demoMode:'demo mode — clear to play again', demoSkip:'tap canvas to skip',
     stopRecFirst:'stop recording to use playback controls',
     stopListenFirst:'stop listening first', stopSingFirst:'stop singing first',
-    scaleBtn:'scale',
+    scaleBtn:'scale', scaleSnapLabel:'snap to key',
     midiInput:'♬ MIDI INPUT', musicInput:'♪ ADD MUSIC', audioInput:'♫ AUDIO INPUT', scoreInput:'𝄞 SCORE INPUT', imageInput:'🖼 IMAGE INPUT', micInput:'🎙 MIC INPUT',
     micVoiceHint:'sing, hum or whistle · snaps to C major · monophonic',
     micMusicHint:'play music from a nearby speaker · paints on chord changes',
@@ -12068,7 +12068,7 @@ const I18N = {
     demoMode:'demo-modus — löschen zum erneuten spielen', demoSkip:'auf canvas tippen zum überspringen',
     stopRecFirst:'aufnahme stoppen für wiedergabe',
     stopListenFirst:'erst lauschen stoppen', stopSingFirst:'erst singen stoppen',
-    scaleBtn:'tonart',
+    scaleBtn:'tonart', scaleSnapLabel:'auf tonart',
     midiInput:'♬ MIDI EINGABE', musicInput:'♪ MUSIK HINZUFÜGEN', audioInput:'♫ AUDIO EINGABE', scoreInput:'𝄞 PARTITUR EINGABE', imageInput:'🖼 BILD EINGABE', micInput:'🎙 MIKRO EINGABE',
     micVoiceHint:'singen, summen oder pfeifen · auf C-Dur eingerastet · monophon',
     micMusicHint:'musik aus nahem lautsprecher · malt bei akkordwechsel',
@@ -12203,7 +12203,7 @@ const I18N = {
     demoMode:'mode démo — effacer pour rejouer', demoSkip:'toucher la toile pour passer',
     stopRecFirst:'arrêter l\'enregistrement pour contrôler',
     stopListenFirst:'arrêter l\'écoute d\'abord', stopSingFirst:'arrêter le chant d\'abord',
-    scaleBtn:'gamme',
+    scaleBtn:'gamme', scaleSnapLabel:'sur la gamme',
     midiInput:'♬ ENTRÉE MIDI', musicInput:'♪ AJOUTER MUSIQUE', audioInput:'♫ ENTRÉE AUDIO', scoreInput:'𝄞 ENTRÉE PARTITION', imageInput:'🖼 ENTRÉE IMAGE', micInput:'🎙 ENTRÉE MICRO',
     micVoiceHint:'chanter, fredonner ou siffler · ancré en do majeur · monophonique',
     micMusicHint:'musique d\'un haut-parleur proche · peint aux changements d\'accord',
@@ -12338,7 +12338,7 @@ const I18N = {
     demoMode:'modo demo — borrar para volver a tocar', demoSkip:'toca el lienzo para saltar',
     stopRecFirst:'detener grabación para controlar',
     stopListenFirst:'detener escucha primero', stopSingFirst:'detener canto primero',
-    scaleBtn:'escala',
+    scaleBtn:'escala', scaleSnapLabel:'a la tonalidad',
     midiInput:'♬ ENTRADA MIDI', musicInput:'♪ AÑADIR MÚSICA', audioInput:'♫ ENTRADA AUDIO', scoreInput:'𝄞 ENTRADA PARTITURA', imageInput:'🖼 ENTRADA IMAGEN', micInput:'🎙 ENTRADA MICRO',
     micVoiceHint:'canta, tararea o silba · ajustado a do mayor · monofónico',
     micMusicHint:'música de un altavoz cercano · pinta en cambios de acorde',
@@ -12473,7 +12473,7 @@ const I18N = {
     demoMode:'režim demo — vyčisti pre nové prehratie', demoSkip:'klikni na plátno pre preskočenie',
     stopRecFirst:'najprv zastav nahrávanie pre použitie ovládania',
     stopListenFirst:'najprv zastav počúvanie', stopSingFirst:'najprv zastav spievanie',
-    scaleBtn:'stupnica',
+    scaleBtn:'stupnica', scaleSnapLabel:'na tóninu',
     midiInput:'♬ MIDI VSTUP', musicInput:'♪ PRIDAŤ HUDBU', audioInput:'♫ AUDIO VSTUP', scoreInput:'𝄞 VSTUP PARTITÚRY', imageInput:'🖼 OBRAZOVÝ VSTUP', micInput:'🎙 VSTUP MIKROFÓNU',
     micVoiceHint:'spievaj, hum alebo pískaj · prichytí na C dur · monofónne',
     micMusicHint:'pusti hudbu z blízkeho reproduktora · maľuje pri zmene akordu',
@@ -12608,7 +12608,7 @@ const I18N = {
     demoMode:'演示模式 — 清空以重新播放', demoSkip:'点击画布跳过',
     stopRecFirst:'请先停止录音以使用播放控制',
     stopListenFirst:'请先停止聆听', stopSingFirst:'请先停止演唱',
-    scaleBtn:'音阶',
+    scaleBtn:'音阶', scaleSnapLabel:'吸附到调',
     midiInput:'♬ MIDI 输入', musicInput:'♪ 添加音乐', audioInput:'♫ 音频输入', scoreInput:'𝄞 乐谱输入', imageInput:'🖼 图像输入', micInput:'🎙 麦克风输入',
     micVoiceHint:'唱、哼或吹口哨 · 自动对齐到 C 大调 · 单音',
     micMusicHint:'从附近的扬声器播放音乐 · 在和弦变化时绘制',
@@ -12749,7 +12749,7 @@ const I18N = {
     demoMode:'示範模式 — 清空以重新播放', demoSkip:'點擊畫布跳過',
     stopRecFirst:'請先停止錄音以使用播放控制',
     stopListenFirst:'請先停止聆聽', stopSingFirst:'請先停止演唱',
-    scaleBtn:'音階',
+    scaleBtn:'音階', scaleSnapLabel:'吸附到調',
     midiInput:'♬ MIDI 輸入', musicInput:'♪ 添加音樂', audioInput:'♫ 音訊輸入', scoreInput:'𝄞 樂譜輸入', imageInput:'🖼 圖像輸入', micInput:'🎙 麥克風輸入',
     micVoiceHint:'唱、哼或吹口哨 · 自動對齊到 C 大調 · 單音',
     micMusicHint:'從附近的喇叭播放音樂 · 在和弦變化時繪製',
@@ -12883,7 +12883,7 @@ const I18N = {
     demoMode:'modo demo — limpe para tocar novamente', demoSkip:'toque a tela para pular',
     stopRecFirst:'pare a gravação para usar os controles de reprodução',
     stopListenFirst:'pare de ouvir primeiro', stopSingFirst:'pare de cantar primeiro',
-    scaleBtn:'escala',
+    scaleBtn:'escala', scaleSnapLabel:'à tonalidade',
     midiInput:'♬ ENTRADA MIDI', musicInput:'♪ ADICIONAR MÚSICA', audioInput:'♫ ENTRADA DE ÁUDIO', scoreInput:'𝄞 ENTRADA DE PARTITURA', imageInput:'🖼 ENTRADA DE IMAGEM', micInput:'🎙 ENTRADA DE MIC',
     micVoiceHint:'cante, cantarole ou assobie · ajusta para dó maior · monofônico',
     micMusicHint:'toque música de um alto-falante próximo · pinta nas mudanças de acorde',
@@ -13018,7 +13018,7 @@ const I18N = {
     demoMode:'デモモード — もう一度再生するにはクリア', demoSkip:'キャンバスをタップでスキップ',
     stopRecFirst:'再生コントロールを使うには録音を停止',
     stopListenFirst:'まず聴くのを止めてください', stopSingFirst:'まず歌うのを止めてください',
-    scaleBtn:'スケール',
+    scaleBtn:'スケール', scaleSnapLabel:'キーに合わせる',
     midiInput:'♬ MIDI 入力', musicInput:'♪ 音楽を追加', audioInput:'♫ AUDIO 入力', scoreInput:'𝄞 SCORE 入力', imageInput:'🖼 画像入力', micInput:'🎙 MIC 入力',
     micVoiceHint:'歌、ハミング、口笛 · C メジャーにスナップ · 単音',
     micMusicHint:'近くのスピーカーから音楽を再生 · 和音の変化で描く',
@@ -24920,7 +24920,7 @@ Composition rules:
           : loadedSource==='score'
           ? { line:'rgba(169,127,245,.95)', dim:'rgba(200,170,255,.5)', border:'rgba(169,127,245,.5)', edge:'rgba(169,127,245,.4)' }
           : (loadedSource==='image' && !moodFromImg)
-          ? { line:'rgba(78,203,141,.95)', dim:'rgba(120,200,160,.5)', border:'rgba(78,203,141,.5)', edge:'rgba(78,203,141,.4)' }
+          ? { line:'rgba(244,124,60,.95)', dim:'rgba(255,160,100,.5)', border:'rgba(244,124,60,.5)', edge:'rgba(244,124,60,.4)' }
           : moodFromImg
           ? { line:'rgba(228,178,255,.95)', dim:'rgba(225,175,255,.55)', border:'rgba(220,150,255,.55)', edge:'rgba(220,150,255,.4)' }
           : currentMood
@@ -25447,18 +25447,22 @@ Composition rules:
         })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'&&effectiveStyle!=='oneM'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'—'}
       </div>
       {showAdvanced && composeMode && (
-        <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:8,justifyContent:'center',alignItems:'center',marginBottom:8,padding:'8px 12px',borderRadius:14,background:'rgba(140,255,180,.06)',border:'1px solid rgba(140,255,180,.25)',maxWidth:'fit-content',marginLeft:'auto',marginRight:'auto',flexWrap:'wrap'}}>
+          <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(140,255,180,.6)'}}>{t('scaleSnapLabel')!=='scaleSnapLabel'?t('scaleSnapLabel'):'snap to key'}</span>
           <button onClick={()=>{
             const cur=PAINT_SCALE_KEYS.indexOf(paintScale);
             setPaintScale(PAINT_SCALE_KEYS[(cur+1)%PAINT_SCALE_KEYS.length]);
-          }} style={{padding:'7px 10px',background:'transparent',color:paintScale==='off'?'rgba(180,180,180,.55)':'rgba(140,255,180,.85)',border:'1px solid '+(paintScale==='off'?'rgba(180,180,180,.25)':'rgba(140,255,180,.35)'),borderRadius:5,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit'}} title="snap every tap to the chosen key (chromatic = off)">
+          }} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 16px',background:paintScale==='off'?'transparent':'rgba(140,255,180,.16)',color:paintScale==='off'?'rgba(200,200,200,.7)':'rgba(160,255,195,.98)',border:'1px solid '+(paintScale==='off'?'rgba(180,180,180,.3)':'rgba(140,255,180,.5)'),borderRadius:18,cursor:'pointer',letterSpacing:'.06em',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,minWidth:78,justifyContent:'center'}} title="tap to change key (free = no snap)">
             ♫ {PAINT_SCALES[paintScale].label}
           </button>
+          {paintScale!=='off' && (
+            <button onClick={()=>setPaintScale('off')} aria-label="back to free" title="back to free (no snap)" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:30,height:30,padding:0,borderRadius:15,background:'transparent',border:'1px solid rgba(180,180,180,.3)',color:'rgba(200,200,200,.7)',cursor:'pointer',fontFamily:'inherit'}}>✕</button>
+          )}
         </div>
       )}
       <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
-        <button onClick={()=>{if(paintScale!=='off'){setPaintScale('off');setShowAdvanced(false);}else setShowAdvanced(v=>!v);}} title="advanced: scale snap" style={{...txStyle(paintScale!=='off'?'active':(showAdvanced?'neutral':'ghost'),{effScale}),display:composeMode?'inline-flex':'none'}}>
-          <TxIcon n="notes" s={13*effScale}/>{t('scaleBtn')}
+        <button onClick={()=>{ setShowAdvanced(v=>!v); }} title="scale snap — tap notes to a musical key" style={{...txStyle((paintScale!=='off'||showAdvanced)?'active':'ghost',{effScale}),display:composeMode?'inline-flex':'none'}}>
+          <TxIcon n="notes" s={13*effScale}/>{paintScale!=='off'?PAINT_SCALES[paintScale].label:t('scaleBtn')}
         </button>
         <button
           className="pf-lift"
