@@ -24558,6 +24558,7 @@ Composition rules:
               {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
             </span>
           </div>
+          {viewMode!=='image' && (
           <div
             role="slider"
             aria-label="playback position"
@@ -24639,6 +24640,7 @@ Composition rules:
             onBlur={()=>setFocusedInput(null)}>
             <div style={{height:'100%',width:pct+'%',background:playing?'rgba(90,190,110,.65)':'rgba(201,168,76,.45)',borderRadius:3,transition:'none',pointerEvents:'none'}}/>
           </div>
+          )}
         </div>
       ); })()}
 
