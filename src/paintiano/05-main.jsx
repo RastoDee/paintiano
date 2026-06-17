@@ -2723,11 +2723,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // Normally a running context just needs a 1-sample silent buffer to
         // nudge iOS's output active. BUT after returning from background the
         // context frequently reads 'running' while the audio device is dead —
-        // a kick alone stays silent. If we know we were just hidden, force the
-        // suspend()->resume() re-acquire cycle (howler.js #1106) which is the
-        // only thing that revives a running-but-dead device.
+        // a kick alone stays silent. If we know we were just hidden, attempt
+        // the suspend()->resume() re-acquire cycle. We do NOT clear the flag
+        // here: this path runs from visibilitychange/focus (NOT a user gesture),
+        // where iOS usually ignores the re-acquire. The flag stays set so the
+        // stronger wakeAudio re-acquire fires inside the real Resume/Play tap,
+        // which is the gesture iOS actually honours.
         if(audioWasHiddenRef.current){
-          audioWasHiddenRef.current = false;
           try{
             await ac.suspend();
             await ac.resume();
@@ -2818,27 +2820,54 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     let ac=null;
     try{ ac = Tone.getContext().rawContext; }catch(_){}
     if(!ac) return;
-    try{
-      if(ac.state === 'suspended' || ac.state === 'interrupted'){
-        try{ await ac.resume(); }catch(_){}
-      } else if(ac.state === 'running'){
-        const nowT=Date.now();
-        // Force the re-acquire cycle if we just came back from background
-        // (running-but-dead), bypassing the throttle that otherwise debounces
-        // rapid taps. Always clear the flag once handled.
-        const forced = audioWasHiddenRef.current;
-        if(forced) audioWasHiddenRef.current = false;
-        if(forced || nowT - wakeAudioRef.current > 400){
-          wakeAudioRef.current=nowT;
-          try{
-            await ac.suspend();
-            await ac.resume();
-          }catch(_){
-            try{ await ac.resume(); }catch(__){}
+    // Silent hard-recover when returning from background. A single suspend->
+    // resume (the throttled path below) was not enough on iOS — the user had to
+    // long-press the speaker (which works partly because its alert() blocks JS
+    // and its dismissal is a SECOND gesture that lets iOS finish re-acquiring).
+    // Here we replicate what actually fixes it, automatically and silently:
+    //   1) releaseAll FIRST so frozen notes don't burst out as the "first tresk"
+    //   2) a DOUBLE suspend->resume cycle (iOS often needs more than one to
+    //      re-acquire a torn-down audio device)
+    //   3) rebuild the sampler if it died while we were away
+    const forcedHidden = audioWasHiddenRef.current;
+    if(forcedHidden){
+      audioWasHiddenRef.current = false;
+      try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
+      try{
+        await ac.suspend(); await ac.resume();
+        await ac.suspend(); await ac.resume();   // second pass — iOS re-acquire
+      }catch(_){
+        try{ await ac.resume(); }catch(__){}
+      }
+      // Sampler rebuild if it was lost while backgrounded.
+      try{
+        if(!samplerOk.current){
+          try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
+          const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+            onload:()=>{ samplerOk.current=true; setPiano('ready'); },
+            onerror:()=>{ samplerOk.current=false; setPiano('error'); },
+          }).toDestination();
+          samplerRef.current = s2;
+        }
+      }catch(_){}
+    } else {
+      try{
+        if(ac.state === 'suspended' || ac.state === 'interrupted'){
+          try{ await ac.resume(); }catch(_){}
+        } else if(ac.state === 'running'){
+          const nowT=Date.now();
+          if(nowT - wakeAudioRef.current > 400){
+            wakeAudioRef.current=nowT;
+            try{
+              await ac.suspend();
+              await ac.resume();
+            }catch(_){
+              try{ await ac.resume(); }catch(__){}
+            }
           }
         }
-      }
-    }catch(_){}
+      }catch(_){}
+    }
     try{
       if(ac.state==='running'){
         const buf=ac.createBuffer(1,1,22050);

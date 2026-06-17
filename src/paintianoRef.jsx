@@ -16892,6 +16892,13 @@ export default function Paintiano() {
   // oscillators so they don't burst out as a monotone piano blast when the
   // session returns. See unlockAudio.
   const audioStateListenerRef = useRef(false);
+  // Set true when the page goes to background while audio is live. On iOS the
+  // context often comes back as state==='running' yet produces NO sound (the
+  // audio device was torn down) — a plain silent-kick won't revive it, only a
+  // suspend()->resume() cycle does. This flag tells unlockAudio/wakeAudio that
+  // the next revive must force that cycle even though the context reads
+  // 'running'. Cleared once a successful re-acquire has run.
+  const audioWasHiddenRef = useRef(false);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -19008,10 +19015,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         }catch(_){}
       }
       if(ac.state==='running'){
-        // Even when 'running', play a 1-sample silent buffer to nudge iOS's
-        // audio session into the active output state. Cheap (one sample),
-        // imperceptible, and routinely fixes the "running but silent" bug
-        // that appears after MediaRecorder + share-sheet sequences.
+        // Normally a running context just needs a 1-sample silent buffer to
+        // nudge iOS's output active. BUT after returning from background the
+        // context frequently reads 'running' while the audio device is dead —
+        // a kick alone stays silent. If we know we were just hidden, force the
+        // suspend()->resume() re-acquire cycle (howler.js #1106) which is the
+        // only thing that revives a running-but-dead device.
+        if(audioWasHiddenRef.current){
+          audioWasHiddenRef.current = false;
+          try{
+            await ac.suspend();
+            await ac.resume();
+          }catch(_){
+            try{ await ac.resume(); }catch(__){}
+          }
+        }
+        // Silent kick (also re-routes output to the speaker post-resume).
         try{
           const buf = ac.createBuffer(1, 1, 22050);
           const src = ac.createBufferSource();
@@ -19037,6 +19056,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const start = Date.now();
       while(ac.state !== 'running' && Date.now() - start < 500){
         await new Promise(r=>setTimeout(r, 20));
+      }
+      // Reaching state==='running' is not enough on iOS: right after a resume /
+      // re-acquire the context clock (ac.currentTime / Tone.now()) can stay
+      // frozen for a few hundred ms while the device spins back up. The visual
+      // scan loop runs on setTimeout (real wall-clock), but notes are scheduled
+      // against Tone.now(); if the clock hasn't started ticking yet, the audio
+      // lands in the future and trails the painting by seconds (the "shifted"
+      // playback after Resume). Wait until the clock is observably advancing —
+      // capped so a stuck context never hangs Play.
+      if(ac.state==='running'){
+        const t0 = ac.currentTime;
+        const cs = Date.now();
+        while(Date.now() - cs < 350){
+          await new Promise(r=>setTimeout(r, 20));
+          if(ac.currentTime > t0) break;   // clock is ticking → audio & scan will start together
+        }
       }
       // After resume succeeded, fire the silent-kick buffer so iOS routes
       // audio to the speaker.
@@ -19083,7 +19118,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         try{ await ac.resume(); }catch(_){}
       } else if(ac.state === 'running'){
         const nowT=Date.now();
-        if(nowT - wakeAudioRef.current > 400){
+        // Force the re-acquire cycle if we just came back from background
+        // (running-but-dead), bypassing the throttle that otherwise debounces
+        // rapid taps. Always clear the flag once handled.
+        const forced = audioWasHiddenRef.current;
+        if(forced) audioWasHiddenRef.current = false;
+        if(forced || nowT - wakeAudioRef.current > 400){
           wakeAudioRef.current=nowT;
           try{
             await ac.suspend();
@@ -19189,6 +19229,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{
     const onHide=()=>{
       if(document.hidden){
+        // Mark that we backgrounded — the next revive must force a full
+        // suspend->resume re-acquire (iOS returns a running-but-dead device).
+        audioWasHiddenRef.current = true;
         if(playingRef.current){
           resumeFromRef.current=dispRef.current;
           setHoldPaused(true);
