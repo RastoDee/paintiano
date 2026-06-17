@@ -9672,12 +9672,15 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   //  A = Cosmic scatter (free composition).  B = Bauhaus grid.
   //  C = Circles (concentric).  D = Composition 8.  E = Improvisation.  F = Paris.
   // REF per phase = that phase's highest threshold (A's RING 280 is the max).
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  // 7 phases: A Cosmic · B Bauhaus · Circles · Comp8 · Paris · Geom · Dense.
+  // (Improvisation was retired; Geom + Dense added.)
+  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ kandinskyPhaseB(ctx, CW, CH, eff(60), ss, mode, palette); return; }
   if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, eff(230), ss, mode, palette); return; }
   if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, eff(255), ss, mode, palette); return; }
-  if(pick===4){ kandinskyPhaseImprov(ctx, CW, CH, eff(215), ss, mode, palette); return; }
-  if(pick===5){ kandinskyPhaseParis(ctx, CW, CH, eff(180), ss, mode, palette); return; }
+  if(pick===4){ kandinskyPhaseParis(ctx, CW, CH, eff(180), ss, mode, palette); return; }
+  if(pick===5){ kandinskyPhaseGeom(ctx, CW, CH, eff(240), ss, mode, palette); return; }
+  if(pick===6){ kandinskyPhaseDense(ctx, CW, CH, eff(260), ss, mode, palette); return; }
   kandinskyPhaseA(ctx, CW, CH, eff(280), ss, mode, palette);
 }
 
@@ -10035,6 +10038,109 @@ function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
       ctx.strokeStyle=cols[(rnd()*cols.length)|0];ctx.lineWidth=Math.max(1.5,R*0.16);
       ctx.beginPath();ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy+R);for(let b=-2;b<=2;b++){ctx.moveTo(cx,cy+b*R*0.4);ctx.lineTo(cx+R*0.7,cy+b*R*0.4);}ctx.stroke();
     }
+  }
+}
+
+// ── Kandinsky phase: Geometric "Komposition" ──
+// Sharp shapes (triangles, outlined circles, a checkerboard), clean saturated
+// colours, bold black lines. Cleaner than Cosmic scatter, fuller plane. Element
+// counts scale LINEARLY with progress (chordCount is the eff(240) for this phase).
+function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
+  const ss = sessionSeed|0, isBW = mode==='bw';
+  const cols = _kandPal(palette);
+  const ink = isBW ? '#1a1a1a' : '#0a060c';
+  ctx.fillStyle = isBW ? '#e8e4dc' : '#f4f0e6';
+  ctx.fillRect(0,0,CW,CH);
+  const p = Math.max(0, Math.min(1, chordCount / 240));
+  const minD = Math.min(CW,CH);
+  // big translucent ground triangles (1–4)
+  const grounds = Math.max(1, Math.round(p*4));
+  for(let i=0;i<grounds;i++){
+    const r=_seedRnd(2100+i, ss, CW, CH);
+    ctx.globalAlpha=.42; ctx.fillStyle=cols[(r()*cols.length)|0];
+    ctx.beginPath();
+    const cx=r()*CW, cy=r()*CH, s=minD*(0.28+r()*0.30), rot=r()*Math.PI*2;
+    for(let k=0;k<3;k++){const a=rot+k*2.094+(r()-0.5)*0.5; ctx[k?'lineTo':'moveTo'](cx+Math.cos(a)*s, cy+Math.sin(a)*s);}
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // outlined filled circles (0–9)
+  const circs = Math.round(p*9);
+  for(let i=0;i<circs;i++){
+    const r=_seedRnd(2200+i, ss, CW, CH);
+    const cx=r()*CW, cy=r()*CH, R=minD*(0.05+r()*0.10);
+    ctx.fillStyle=cols[(r()*cols.length)|0];
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=ink; ctx.lineWidth=Math.max(1.5,minD*0.006); ctx.stroke();
+  }
+  // a checkerboard block appears past mid-song
+  if(p>0.45){
+    const r=_seedRnd(2300, ss, CW, CH);
+    const cell=minD*0.035, gx=r()*CW*0.6, gy=r()*CH*0.6, rot=(r()-0.5)*0.6;
+    ctx.save(); ctx.translate(gx,gy); ctx.rotate(rot);
+    ctx.fillStyle=ink;
+    for(let a=0;a<4;a++)for(let b=0;b<3;b++) if((a+b)%2) ctx.fillRect(a*cell,b*cell,cell,cell);
+    ctx.restore();
+  }
+  // bold black lines (0–5)
+  const lines = Math.round(p*5);
+  ctx.strokeStyle=ink; ctx.lineWidth=Math.max(2,minD*0.008);
+  for(let i=0;i<lines;i++){
+    const r=_seedRnd(2400+i, ss, CW, CH);
+    ctx.beginPath(); ctx.moveTo(r()*CW, r()*CH); ctx.lineTo(r()*CW, r()*CH); ctx.stroke();
+  }
+  // small accent triangles (0–6)
+  const tris = Math.round(p*6);
+  for(let i=0;i<tris;i++){
+    const r=_seedRnd(2500+i, ss, CW, CH);
+    const cx=r()*CW, cy=r()*CH, s=minD*(0.03+r()*0.04);
+    ctx.fillStyle=cols[(r()*cols.length)|0];
+    ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx+s,cy+s); ctx.lineTo(cx-s,cy+s); ctx.closePath(); ctx.fill();
+  }
+}
+
+// ── Kandinsky phase: Dense "Circles + radials" ──
+// A big concentric-circle nucleus, radial spokes, plus many small circles/dots
+// filling the whole plane — energetic cosmic density, no empty space. Progressive.
+function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
+  const ss = sessionSeed|0, isBW = mode==='bw';
+  const cols = _kandPal(palette);
+  ctx.fillStyle = isBW ? '#ececec' : '#f4f0e6';
+  ctx.fillRect(0,0,CW,CH);
+  const p = Math.max(0, Math.min(1, chordCount / 260));
+  const ink = isBW ? '#1a1a1a' : '#0a060c';
+  const minD = Math.min(CW,CH);
+  const r0 = _seedRnd(2600, ss, CW, CH);
+  const cx = CW*(0.35+r0()*0.30), cy = CH*(0.30+r0()*0.25);
+  // central concentric nucleus — ring count grows with progress
+  const rings = Math.max(2, Math.round(p*7));
+  const Rmax = minD*0.34;
+  for(let i=rings;i>=0;i--){
+    ctx.globalAlpha=.88; ctx.fillStyle=cols[i%cols.length];
+    ctx.beginPath(); ctx.arc(cx,cy,Rmax*(i+1)/(rings+1),0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // radial spokes (grow with progress)
+  const spokes = Math.max(3, Math.round(p*12));
+  ctx.strokeStyle=ink; ctx.lineWidth=Math.max(1,minD*0.004);
+  for(let a=0;a<spokes;a++){
+    const an=a/spokes*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(an)*minD*0.9, cy+Math.sin(an)*minD*0.9); ctx.stroke();
+  }
+  // scattered small circles + dots across the whole plane (0–44)
+  const dots = Math.round(p*44);
+  for(let i=0;i<dots;i++){
+    const r=_seedRnd(2700+i, ss, CW, CH);
+    ctx.globalAlpha=0.5+r()*0.5; ctx.fillStyle=cols[(r()*cols.length)|0];
+    ctx.beginPath(); ctx.arc(r()*CW, r()*CH, minD*(0.01+r()*0.035), 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // a couple of small concentric satellites past mid-song
+  if(p>0.5){
+    [[0.82,0.80],[0.18,0.86]].forEach((f,si)=>{
+      const sx=CW*f[0], sy=CH*f[1];
+      for(let i=3;i>=0;i--){ ctx.fillStyle=cols[(i+si)%cols.length]; ctx.beginPath(); ctx.arc(sx,sy,minD*0.02*(i+1)/4*2,0,Math.PI*2); ctx.fill(); }
+    });
   }
 }
 
