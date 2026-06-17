@@ -21318,7 +21318,7 @@ Composition rules:
             if(ss>25 && ll<85 && ll>6) vivid++;        // truly saturated, not pale/near-black
           }
           const vividPct = considered ? (vivid/considered)*100 : 0;
-          const autoMode = vividPct < 5 ? 'bw' : 'harmony';   // <5% colour ⇒ monochrome reading
+          const autoMode = vividPct < 5 ? 'bw' : 'kontra';   // <5% colour ⇒ monochrome reading; colourful ⇒ Kontra (painter's reading) as the image default
           appModeRef.current = autoMode;             // remember the app's pick for Custom→back
           setSetupNoSel(false);                      // a fresh image re-enables the app's colour pick
           // Keep a manual Custom choice if the user already had it; otherwise apply
