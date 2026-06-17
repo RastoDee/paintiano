@@ -10332,19 +10332,15 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
 function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, phaseIndex, cn){
   if(chordCount === 0) return;
   const ss = sessionSeed|0;
-  // ── Progress-stretch ──
+  // ── Progress-stretch (per phase) ──
   // Kandinsky's phases pick element counts from ABSOLUTE thresholds (countFor)
-  // and from grid breakpoints (chordCount < N). On long songs those caps were
-  // hit well before the end (the painting "finished" early); on short songs the
-  // top thresholds were never reached (it never fully built). We instead feed the
-  // phases an EFFECTIVE count that maps playback progress (lim/cn) onto a fixed
-  // reference span (REF), so the highest threshold lands exactly on the last note
-  // regardless of song length. REF = 300 clears every phase's top threshold
-  // (RING 280, Comp8 255, Circles 230, …).
-  const REF = 300;
+  // and grid breakpoints. A single fixed REF finished phases whose top threshold
+  // was below REF *before* the song ended (e.g. Circles maxes at 230, so REF 300
+  // saturated it at 77% of the track). Instead each phase gets an effCount scaled
+  // to ITS OWN top threshold, so the final element lands exactly on the last note.
   const _cn = (cn && cn > 0) ? cn : chordCount;       // fallback if cn not passed
   const prog = Math.max(0, Math.min(1, chordCount / _cn));
-  const effCount = Math.max(1, Math.round(prog * REF));
+  const eff = (ref) => Math.max(1, Math.round(prog * ref));
   // Bauhaus palette tuned to the active colour scheme. Instead of one hard-coded
   // set, we sample gc() across 8 pitches spread over the range, so Harmony yields
   // a circle-of-fifths family, Spectral a chromatic rainbow, B/W a grey scale,
@@ -10358,13 +10354,14 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   // Determined by phaseIndex (modulo phase count). The Next button cycles it.
   //  A = Cosmic scatter (free composition).  B = Bauhaus grid.
   //  C = Circles (concentric).  D = Composition 8.  E = Improvisation.  F = Paris.
+  // REF per phase = that phase's highest threshold (A's RING 280 is the max).
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick===1){ kandinskyPhaseB(ctx, CW, CH, effCount, ss, mode, palette); return; }
-  if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, effCount, ss, mode, palette); return; }
-  if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, effCount, ss, mode, palette); return; }
-  if(pick===4){ kandinskyPhaseImprov(ctx, CW, CH, effCount, ss, mode, palette); return; }
-  if(pick===5){ kandinskyPhaseParis(ctx, CW, CH, effCount, ss, mode, palette); return; }
-  kandinskyPhaseA(ctx, CW, CH, effCount, ss, mode, palette);
+  if(pick===1){ kandinskyPhaseB(ctx, CW, CH, eff(60), ss, mode, palette); return; }
+  if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, eff(230), ss, mode, palette); return; }
+  if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, eff(255), ss, mode, palette); return; }
+  if(pick===4){ kandinskyPhaseImprov(ctx, CW, CH, eff(215), ss, mode, palette); return; }
+  if(pick===5){ kandinskyPhaseParis(ctx, CW, CH, eff(180), ss, mode, palette); return; }
+  kandinskyPhaseA(ctx, CW, CH, eff(280), ss, mode, palette);
 }
 
 // ── Kandinsky phase A: the original free "cosmic scatter" composition. ──

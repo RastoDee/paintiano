@@ -9692,11 +9692,13 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   const TH_ARC    = [7, 18, 32, 50, 80, 125, 180, 250];
   const TH_ZIG    = [10, 24, 42, 70, 110, 160, 220];
 
-  const countFor = (thresholds) => {
-    let count = 0;
-    for(const t of thresholds){ if(chordCount >= t) count++; else break; }
-    return count;
-  };
+  // chordCount here is the per-phase effCount (REF 280 for this phase). The old
+  // countFor() used sparse thresholds whose top entries were far apart, so the
+  // back half of a long song added almost nothing (looked frozen). Instead scale
+  // each element type LINEARLY with progress: count = round(p · maxForType),
+  // where maxForType = how many that type has at full build (= thresholds.length).
+  const _prog = Math.max(0, Math.min(1, chordCount / 280));
+  const countFor = (thresholds) => Math.round(_prog * thresholds.length);
 
   // Kandinsky palette -- tuned to the active scheme when a palette is supplied
   // (Harmony/Spectral/B-W/Custom); otherwise falls back to the classic fixed set.
@@ -9950,7 +9952,7 @@ function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
   ctx.fillStyle=isBW?'#1a1a1a':'#0c0a14';ctx.fillRect(0,0,CW,CH);
   const TH=[2,5,9,14,20,28,38,50,65,82,100,125,155,190,230];
-  let n=0;for(const t of TH){if(chordCount>=t)n++;else break;}
+  let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/230))*TH.length));
   n=Math.max(1,n);
   for(let i=0;i<n;i++){
     const rnd=_seedRnd(2200+i,ss,CW,CH);
@@ -9968,7 +9970,7 @@ function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
   ctx.fillStyle=isBW?'#cac6be':'#e8e4d8';ctx.fillRect(0,0,CW,CH);
   const TH=[1,4,8,13,19,27,38,52,70,95,125,160,205,255];
-  let n=0;for(const t of TH){if(chordCount>=t)n++;else break;}n=Math.max(1,n);
+  let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/255))*TH.length));
   // long lines
   for(let i=0;i<n;i++){
     const rnd=_seedRnd(2300+i,ss,CW,CH);
@@ -9993,7 +9995,7 @@ function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
   ctx.fillStyle=isBW?'#d8d4cc':'#f0ead8';ctx.fillRect(0,0,CW,CH);
   const TH=[2,6,11,18,27,40,56,76,100,130,170,215];
-  let n=0;for(const t of TH){if(chordCount>=t)n++;else break;}n=Math.max(1,n);
+  let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/215))*TH.length));
   // soft washes
   for(let i=0;i<n;i++){
     const rnd=_seedRnd(2400+i,ss,CW,CH);
@@ -10018,7 +10020,7 @@ function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
   ctx.fillStyle=isBW?'#9a96a0':'#5a6a8a';ctx.fillRect(0,0,CW,CH);
   const TH=[2,5,9,15,23,33,46,62,82,108,140,180];
-  let n=0;for(const t of TH){if(chordCount>=t)n++;else break;}n=Math.max(1,n);
+  let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/180))*TH.length));
   for(let i=0;i<n;i++){
     const rnd=_seedRnd(2500+i,ss,CW,CH);
     const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.04+rnd()*0.10);
