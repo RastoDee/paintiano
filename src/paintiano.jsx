@@ -10325,9 +10325,22 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
 }
 
-function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, phaseIndex){
+function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, phaseIndex, cn){
   if(chordCount === 0) return;
   const ss = sessionSeed|0;
+  // ── Progress-stretch ──
+  // Kandinsky's phases pick element counts from ABSOLUTE thresholds (countFor)
+  // and from grid breakpoints (chordCount < N). On long songs those caps were
+  // hit well before the end (the painting "finished" early); on short songs the
+  // top thresholds were never reached (it never fully built). We instead feed the
+  // phases an EFFECTIVE count that maps playback progress (lim/cn) onto a fixed
+  // reference span (REF), so the highest threshold lands exactly on the last note
+  // regardless of song length. REF = 300 clears every phase's top threshold
+  // (RING 280, Comp8 255, Circles 230, …).
+  const REF = 300;
+  const _cn = (cn && cn > 0) ? cn : chordCount;       // fallback if cn not passed
+  const prog = Math.max(0, Math.min(1, chordCount / _cn));
+  const effCount = Math.max(1, Math.round(prog * REF));
   // Bauhaus palette tuned to the active colour scheme. Instead of one hard-coded
   // set, we sample gc() across 8 pitches spread over the range, so Harmony yields
   // a circle-of-fifths family, Spectral a chromatic rainbow, B/W a grey scale,
@@ -10342,12 +10355,12 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   //  A = Cosmic scatter (free composition).  B = Bauhaus grid.
   //  C = Circles (concentric).  D = Composition 8.  E = Improvisation.  F = Paris.
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick===1){ kandinskyPhaseB(ctx, CW, CH, chordCount, ss, mode, palette); return; }
-  if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, chordCount, ss, mode, palette); return; }
-  if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, chordCount, ss, mode, palette); return; }
-  if(pick===4){ kandinskyPhaseImprov(ctx, CW, CH, chordCount, ss, mode, palette); return; }
-  if(pick===5){ kandinskyPhaseParis(ctx, CW, CH, chordCount, ss, mode, palette); return; }
-  kandinskyPhaseA(ctx, CW, CH, chordCount, ss, mode, palette);
+  if(pick===1){ kandinskyPhaseB(ctx, CW, CH, effCount, ss, mode, palette); return; }
+  if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, effCount, ss, mode, palette); return; }
+  if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, effCount, ss, mode, palette); return; }
+  if(pick===4){ kandinskyPhaseImprov(ctx, CW, CH, effCount, ss, mode, palette); return; }
+  if(pick===5){ kandinskyPhaseParis(ctx, CW, CH, effCount, ss, mode, palette); return; }
+  kandinskyPhaseA(ctx, CW, CH, effCount, ss, mode, palette);
 }
 
 // ── Kandinsky phase A: the original free "cosmic scatter" composition. ──
@@ -18234,7 +18247,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, paintPhase);
         else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase);
+        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length);
         else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
@@ -18273,7 +18286,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Kandinsky canvas-wide contour overlay — large outlined shapes in
       // varied colors layered over the per-cell Kandinsky composition.
       if(style==='kandinsky' && lim>0){
-        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase);
+        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length);
       }
       if(style==='rothko' && lim>0){
         drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);

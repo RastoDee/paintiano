@@ -16914,6 +16914,15 @@ export default function Paintiano() {
   const [showMode,setShowMode]=useState(false);
   const showTimerRef=useRef(null);
   const showDiceRef=useRef(null); // holds the latest _diceRoll so the interval calls a fresh closure
+  // ── DICE "BAG" (shuffle without replacement) ──
+  // Within one song, Dice should not repeat an already-shown combination until
+  // every combination has been shown; then the bag refills and reshuffles.
+  //  • selected artist → bag = that artist's variants [0..N-1]
+  //  • full shuffle    → bag = every (artistIndex × variant) combination
+  // diceBagKeyRef identifies the current bag's context (song + artist + mode +
+  // pool size + tier); when it changes the bag is rebuilt from scratch.
+  const diceBagRef=useRef([]);
+  const diceBagKeyRef=useRef('');
   // Variation history for Random mode prev/next navigation. saltHistory holds
   // the sequence of random salts that have been shown; saltIdxRef points at the
   // current one. Play-from-start and Loop append+advance (fresh variation);
@@ -17440,13 +17449,39 @@ export default function Paintiano() {
   //  • shuffle (no manual artist): jump to a random artist AND a random style.
   //  • manual artist + dice: jump to a random style of that one artist.
   const _diceRoll = () => {
+    const N = _effVariants();
     if(style){
-      setPhaseIndex(() => (Math.random()*_effVariants())|0);
+      // ── SELECTED ARTIST ── bag = this artist's variants [0..N-1], no repeat.
+      const key = 'sel|'+style+'|'+N+'|'+(pollockSessionSeed>>>0);
+      if(diceBagKeyRef.current!==key || diceBagRef.current.length===0){
+        diceBagKeyRef.current = key;
+        const arr = Array.from({length:N},(_,i)=>i);
+        for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=arr[i];arr[i]=arr[j];arr[j]=t; }
+        // Avoid immediately repeating the currently-shown variant on refill.
+        if(arr.length>1 && arr[0]===(phaseIndex|0)){ const t=arr[0];arr[0]=arr[1];arr[1]=t; }
+        diceBagRef.current = arr;
+      }
+      const next = diceBagRef.current.shift();
+      setPhaseIndex(()=> next|0);
     } else {
-      // step the artist by a random non-zero amount so a new artist shows,
-      // and pick a random style for it
-      setShuffleArtistIndex(prev => prev + 1 + ((Math.random()*997)|0));
-      setShufVariant(() => (Math.random()*_effVariants())|0);
+      // ── FULL SHUFFLE ── bag = every (artistIndex × variant) combination.
+      // Pool size mirrors shuffleStyle: selected artists (+ mosaic family if on).
+      const familyOn = setupArtists.includes('mosaicFamily');
+      const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k));
+      const poolLen = (filteredArtists.length + (familyOn?3:0)) || 1;
+      const key = 'full|'+poolLen+'|'+N+'|'+(familyOn?1:0)+'|'+(pollockSessionSeed>>>0);
+      if(diceBagKeyRef.current!==key || diceBagRef.current.length===0){
+        diceBagKeyRef.current = key;
+        const combos=[];
+        for(let a=0;a<poolLen;a++) for(let v=0;v<N;v++) combos.push({a,v});
+        for(let i=combos.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=combos[i];combos[i]=combos[j];combos[j]=t; }
+        diceBagRef.current = combos;
+      }
+      const next = diceBagRef.current.shift() || {a:0,v:0};
+      // shuffleStyle reads ((basePick + shuffleArtistIndex) % poolLen). Set the
+      // index so the artist lands exactly on combo.a (cancel basePick offset).
+      setShuffleArtistIndex(next.a|0);
+      setShufVariant(()=> next.v|0);
     }
   };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
@@ -24112,7 +24147,7 @@ Composition rules:
           {(loadedSource!=='image' || moodFromImg) && (
           <div style={{position:'relative',marginTop:6,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
-            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:26,height:26,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
+            <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-artist pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:26,height:26,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'all .18s',color:randomMode?'#ffd07a':PF.muted,background:randomMode?'rgba(255,200,120,.16)':PF.card2,border:'1px solid '+(randomMode?'rgba(255,200,120,.6)':'rgba(242,238,232,.08)'),boxShadow:randomMode?'0 0 0 1px rgba(255,200,120,.25)':'none'}}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
             </button>
           </div>
