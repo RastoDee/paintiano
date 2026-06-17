@@ -6955,7 +6955,7 @@ function rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const maxR=Math.hypot(CW,CH)*0.7, step=maxR/nRings;
   const petals=4+((sR()*9)|0);
   const wobPh=sR()*Math.PI*2;
-  const vis=Math.max(1,Math.min(nRings,Math.ceil(N/cn*nRings*1.04)));
+  const vis=Math.max(1,Math.min(nRings,Math.ceil(N/cn*nRings)));
   for(let r=Math.min(nRings,vis);r>=1;r--){
     const rad=r*step;
     const {rgb}=_picChord(chords,r%cn,gc,isBW);
@@ -6993,12 +6993,14 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const idealTh=tw*Math.sqrt(3)/2;
   const nRows=Math.max(1, Math.floor(CH/idealTh));
   const th=CH/nRows;  // adjusted so nRows*th == CH (triangles slightly non-equilateral)
-  const total=nCols*nRows*2;
-  // Reveal scales 1:1 with progress so the grid completes on the LAST note.
-  // (Previously ×2.5 filled the whole canvas at ~40% of the song, leaving the
-  // back half static.) A tiny ×1.04 headroom guarantees the final cells land
-  // exactly at the end without overshooting earlier.
-  const vis=Math.max(1,Math.min(total,Math.ceil(N/cn*total*1.04)));
+  // total = the ACTUAL number of triangles the loop can draw. Each row has nCols
+  // up-triangles but only (nCols-1) down-triangles — the last column's down would
+  // spill past CW (guarded by x0+tw*1.5<=CW below), so it's never drawn. Using the
+  // naive nCols*nRows*2 made `vis` aim higher than reachable, so the canvas filled
+  // ~13% (≈45s) before the end. (2*nCols-1) per row matches reality exactly.
+  const total=nRows*(2*nCols-1);
+  // Reveal scales 1:1 with progress so the last triangle lands on the last note.
+  const vis=Math.max(1,Math.min(total,Math.ceil(N/cn*total)));
 
   // ── BW mode keeps the original sequential pattern (k%cn) ─────────────────
   // The high-contrast monochrome looked best with simple top-to-bottom fill.

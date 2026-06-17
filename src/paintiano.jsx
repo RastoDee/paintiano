@@ -6846,7 +6846,7 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  square Riley is the strongest visual contrast in her catalogue.
   {
     const _pn=_capN(6); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_rpick===1){ rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===1){ rileyPhaseWarp(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===2){ rileyPhaseStripes(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===3){ rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===4){ rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -7099,6 +7099,49 @@ function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const {rgb} = _picChord(chords, Math.floor(r/rows * cn)%cn, gc, isBW);
     ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.04)`;
     ctx.fillRect(0, r*cellH, CW, cellH);
+  }
+}
+
+// ── Riley: Warp Field — colour columns warping toward a vertical axis ──
+// Replaces the old B/W "Movement in Squares": vertical bands whose WIDTH narrows
+// toward a seed-placed axis and widens at the edges, giving Riley's optical pull
+// — but the bands are coloured from the chords (gc), so it belongs to Paintiano's
+// music→colour concept instead of being a mechanical monochrome op-art grid.
+// Reveal grows outward from the axis with playback progress (lim/cn).
+function rileyPhaseWarp(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const sR=_seedRnd(71,ss,CW,CH);
+  // ground
+  ctx.fillStyle=isBW?'#101014':'#0c0a14';
+  ctx.fillRect(0,0,CW,CH);
+  // axis position (seed-varied, kept off dead-centre for tension)
+  const axisF=0.40+sR()*0.20;          // 0.40–0.60
+  const nCols=cn<=8?28:cn<=24?40:cn<=60?56:cn<=120?72:cn<=240?92:120;
+  // build column edges: width depends on distance from axis (narrow at axis).
+  // We precompute fractional widths then normalise to span the canvas.
+  const widths=[];
+  for(let i=0;i<nCols;i++){
+    const f=(i+0.5)/nCols;
+    const d=Math.abs(f-axisF);
+    widths.push(0.18+d*1.9);            // narrow near axis, wide at edges
+  }
+  const sum=widths.reduce((a,b)=>a+b,0);
+  // reveal: columns nearest the axis appear first, spreading outward.
+  const order=[...Array(nCols).keys()].sort((a,b)=>Math.abs((a+0.5)/nCols-axisF)-Math.abs((b+0.5)/nCols-axisF));
+  const visN=Math.max(1,Math.ceil(nCols*reveal));
+  const visible=new Set(order.slice(0,visN));
+  let x=0;
+  for(let i=0;i<nCols;i++){
+    const w=widths[i]/sum*CW;
+    if(visible.has(i)){
+      const t=(i+0.5)/nCols;
+      const {rgb}=_picChord(chords, Math.floor(t*cn)%cn, gc, isBW);
+      const r=Math.min(255,rgb[0]*1.05), g=Math.min(255,rgb[1]*1.05), b=Math.min(255,rgb[2]*1.05);
+      ctx.fillStyle=`rgb(${r|0},${g|0},${b|0})`;
+      ctx.fillRect(x,0,w+1,CH);
+    }
+    x+=w;
   }
 }
 
