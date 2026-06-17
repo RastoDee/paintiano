@@ -9091,7 +9091,7 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // advances, so the painting fills in calmly instead of re-rolling every note.
   // Density is deliberately modest (a sqrt curve, hard cap 200) — the old
   // per-note growth made long pieces like Liszt an overcrowded flickering field.
-  const _cnA = Math.max(1, cn);
+  const _cnA = Math.max(1, chords.length);
   const TOTAL = Math.max(8, Math.min(200, Math.round(20 + Math.sqrt(_cnA) * 5)));
   const vis = Math.max(1, Math.ceil((N/_cnA) * TOTAL));
 
@@ -9100,7 +9100,7 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     const rnd=_seedRnd(p+900,ss,0,0);
     // Chord tied to the element's FIXED slot (p/TOTAL), NOT the moving playhead,
     // so each object keeps its colour for the whole song (no per-note recolour).
-    const chord=chords[Math.floor((p/TOTAL)*cn)%cn];
+    const chord=chords[Math.floor((p/TOTAL)*_cnA)%_cnA];
     const[cR,cG,cB]=chordRGB(chord);
     const ac=accent(cR,cG,cB,rnd);
     const ax=CW*(0.03+rnd()*0.94);
