@@ -549,8 +549,8 @@ function txStyle(token, opts={}){
     active:{ border:'1px solid #e8c766', background:'rgba(201,168,76,.18)', color:'#e8c766', boxShadow:'0 3px 10px rgba(201,168,76,.22)' },
     pink:{ border:'1px solid rgba(232,85,122,.5)', background:'rgba(232,85,122,.14)', color:'#ff7a9c', fontWeight:700 },
     blue:{ border:'1px solid rgba(120,160,255,.45)', background:'rgba(120,160,255,.12)', color:'#9bc0ff' },
-    ai:   on ? { border:'1px solid rgba(150,120,255,.6)', background:'rgba(150,120,255,.18)', color:'#c4b0ff', boxShadow:'0 3px 12px rgba(150,120,255,.25)' }
-             : { border:'1px solid rgba(150,120,255,.32)', background:'rgba(150,120,255,.07)', color:'rgba(180,160,255,.78)' },
+    ai:   on ? { border:'1px solid rgba(220,150,255,.55)', background:'rgba(220,150,255,.2)', color:'rgba(228,178,255,.98)', boxShadow:'0 3px 12px rgba(220,150,255,.25)' }
+             : { border:'1px solid rgba(220,150,255,.3)', background:'rgba(220,150,255,.08)', color:'rgba(225,175,255,.78)' },
     save:{ border:'1px solid rgba(255,200,120,.55)', background:'rgba(255,200,120,.16)', color:'#ffd07a', fontWeight:700 },
     danger: on ? { border:'1px solid rgba(255,90,90,.65)', background:'rgba(255,90,90,.16)', color:'#ff8a8a' }
                : { border:'1px solid rgba(232,90,90,.45)', background:'rgba(232,90,90,.10)', color:'#e8857a' },
@@ -577,6 +577,7 @@ const TxIcon = ({n, s=15}) => {
     case 'show':    return <svg {...P}><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>;
     case 'sparkle': return <svg {...P}><path d="M12 3l1.6 4.8L18 9l-4.4 1.2L12 15l-1.6-4.8L6 9z"/></svg>;
     case 'notes':   return <svg {...P}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>;
+    case 'undo':    return <svg {...P}><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>;
     default:        return null;
   }
 };
@@ -9635,7 +9636,7 @@ Composition rules:
           style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
         {composeMode&&(
-          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}>↩</button>
+          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
         )}
       </div>
       {composeMode && (

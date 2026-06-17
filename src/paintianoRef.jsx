@@ -17993,6 +17993,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }catch(_){}
       return;
     }
+    // Defensive grid guard. The mosaic draws from grid.cells[idx]; the note
+    // overlay (bubbles) draws independently from chords/disp. A source switch
+    // (e.g. Image/Mood → Music) can momentarily leave a stale/default grid
+    // (cells absent or shorter than chords) while playback already runs — the
+    // result is a black canvas with only bubbles and no mosaic. If we have a
+    // real (non-image) piece whose grid clearly doesn't match the chords,
+    // recompute it from the current chords and bail; the effect re-runs with
+    // the correct grid and the mosaic paints normally.
+    if(!imgComposeRef.current && viewMode!=='image' && chords.length>0){
+      const cells = grid.cells;
+      if(!cells || cells.length < chords.length){
+        try{
+          const evs = chords.map((c,i)=>({...c, idx:i, durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
+          const fixed = computeGrid(evs, {liveMode: draftOwnerRef.current!=='listen'});
+          gridRef.current = fixed;
+          setGrid(fixed);
+        }catch(_){}
+        return;
+      }
+    }
     // Per-painting seed for renderers needing a stable whole-painting choice.
     _setArtistSeed(pollockSessionSeed);
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
