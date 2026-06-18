@@ -138,7 +138,7 @@ const PF_STYLE = `
              (<769px) never sees this — the app stays a single column. */
           .pf-app-root {
             display: grid !important;
-            grid-template-columns: 300px minmax(0, 1fr) 300px;
+            grid-template-columns: 320px minmax(0, 1fr) 320px;
             grid-template-rows: auto auto auto 1fr;
             grid-template-areas:
               "topbar   topbar topbar"
@@ -147,14 +147,14 @@ const PF_STYLE = `
               "colors   stage  styles";
             align-items: start !important;
             justify-items: stretch !important;
-            column-gap: 22px;
+            column-gap: 28px;
             max-width: 100% !important;
             width: 100% !important;
-            padding: 20px 28px 40px !important;
+            padding: 16px 32px 40px !important;
           }
           .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; }
-          .pf-app-root > header     { grid-area: header; }
-          .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; margin-bottom: 10px; }
+          .pf-app-root > header     { grid-area: header; margin-bottom: 6px !important; }
+          .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; margin-bottom: 12px; gap: 10px; }
           /* The active-view strip (pf-panel-part) and its inner grid wrapper are
              flattened with display:contents so their two inner columns —
              pf-colors-inner (left) and pf-styles-inner (right) — become direct
@@ -167,20 +167,36 @@ const PF_STYLE = `
             grid-area: colors;
             align-self: start;
             background: var(--pf-card, #161320);
-            border: 1px solid rgba(242,238,232,.07);
-            border-radius: 16px;
-            padding: 14px;
+            border: 1px solid rgba(242,238,232,.08);
+            border-radius: 18px;
+            padding: 18px 16px;
+            gap: 14px !important;
           }
-          /* Palettes stack vertically in the narrow left column. */
-          .pf-app-root .pf-color-tabs { grid-template-columns: 1fr !important; }
+          /* Palettes stack vertically in the narrow left column, comfortably
+             tall so each reads as a full-width choice (not a cramped chip). */
+          .pf-app-root .pf-color-tabs {
+            grid-template-columns: 1fr !important;
+            gap: 9px !important;
+          }
+          .pf-app-root .pf-color-tabs > button { padding: 12px 10px !important; letter-spacing: .12em !important; }
           .pf-app-root .pf-styles-inner {
             grid-area: styles;
             align-self: start;
             background: var(--pf-card, #161320);
-            border: 1px solid rgba(242,238,232,.07);
-            border-radius: 16px;
-            padding: 14px;
+            border: 1px solid rgba(242,238,232,.08);
+            border-radius: 18px;
+            padding: 18px 16px;
+            gap: 14px !important;
           }
+          /* Artists stack in a single column on the right, mirroring the
+             palettes on the left — 9 pair chips + mosaic fit comfortably
+             vertically and read cleaner than a squeezed multi-column grid. */
+          .pf-app-root .pf-styles-inner [title^="painting style"] {
+            grid-template-columns: 1fr !important;
+            gap: 9px !important;
+            row-gap: 9px !important;
+          }
+          .pf-app-root .pf-styles-inner .pf-artist { padding: 12px 10px !important; letter-spacing: .12em !important; }
           /* Setup view (pre-load) has no colors/styles split — its single panel
              part spans the left+stage area so the setup tiles + hero read well. */
           .pf-app-root > .pf-panel-part.pf-fade { display: flex; grid-area: colors; }
