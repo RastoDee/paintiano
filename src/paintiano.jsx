@@ -127,6 +127,36 @@ const PF_STYLE = `
           /* On desktop, keep the fullscreen exit button inside the canvas —
              the mobile "hang above" position would land outside the shell. */
           .pf-fs-btn-immersive { top: 8px !important; }
+          /* ── STAGE 3.4: two-pane landscape layout (tools-left / stage-right) ──
+             The app root is normally a centered flex-column. On desktop we turn
+             it into a CSS grid: a full-width top bar + header, then a 380px tools
+             column on the left and the canvas stage on the right. Only the 5
+             normal-flow blocks below get a grid-area; the ~43 position:fixed/
+             absolute siblings (modals, overlays, hidden file inputs, the fixed
+             transport dock, the immersive canvas) are taken out of grid flow by
+             the spec, so they keep their own positioning untouched. Mobile
+             (<769px) never sees this — the app stays a single column. */
+          .pf-app-root {
+            display: grid !important;
+            grid-template-columns: 380px minmax(0, 1fr);
+            grid-template-rows: auto auto 1fr;
+            grid-template-areas:
+              "topbar topbar"
+              "header header"
+              "panel  stage";
+            align-items: start !important;
+            justify-items: stretch !important;
+            column-gap: 26px;
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 20px 28px 40px !important;
+          }
+          .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; }
+          .pf-app-root > header     { grid-area: header; }
+          .pf-app-root > .pf-panel-part { grid-area: panel; max-width: 100% !important; }
+          .pf-app-root > .pf-stage-part { grid-area: stage; max-width: 100% !important; margin-left: 0; margin-right: 0; }
+          /* The setup/onboarding hero spans the stage column when present. */
+          .pf-app-root > .pf-panel-part { align-self: start; }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
@@ -23694,7 +23724,7 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div className="pf-app-root" style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && (()=>{
@@ -23806,7 +23836,7 @@ Composition rules:
           </div>
         );
       })()}
-      <div style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible',padding:'9px 6px',borderBottom:'1px solid rgba(201,168,76,.14)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
+      <div className="pf-topbar" style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible',padding:'9px 6px',borderBottom:'1px solid rgba(201,168,76,.14)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
         {/* ── V2 nav: hamburger (left) opens a glass menu panel; zoom + language
             sit together in a segmented control (right). The five destinations
             (Concept · Book · Guide · Setup · Pro) moved out of the always-on
@@ -23913,7 +23943,7 @@ Composition rules:
           users, orient first-timers). lbl() / divider markup inline.
           ───────────────────────────────────────────────────────────── */}
       {isSetupView && (
-      <div className="pf-fade" style={{width:'100%',maxWidth:560,display:'flex',flexDirection:'column',gap:14,marginBottom:18}}>
+      <div className="pf-fade pf-panel-part" style={{width:'100%',maxWidth:560,display:'flex',flexDirection:'column',gap:14,marginBottom:18}}>
 
         {/* Resume — when you parked the current painting via "← Setup", this
             returns to the canvas without changing anything. Only shown when
@@ -24049,7 +24079,7 @@ Composition rules:
           is on the canvas, without the full setup panel. Collapsed by default
           so the canvas keeps the room; tap the header to expand. ── */}
       {isActiveView && (
-      <div ref={stripWrapRef} style={{width:'100%',maxWidth:480,marginBottom:(composeMode||micActive)?4:12}}>
+      <div ref={stripWrapRef} className="pf-panel-part" style={{width:'100%',maxWidth:480,marginBottom:(composeMode||micActive)?4:12}}>
         {/* Back to setup — abandons the current mood/source and returns to the
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
@@ -25059,7 +25089,7 @@ Composition rules:
         </div>
         );
       })()}
-      <div ref={canvasWrapRef} style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
+      <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onClick={e=>{

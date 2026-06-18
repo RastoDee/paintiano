@@ -127,6 +127,36 @@ const PF_STYLE = `
           /* On desktop, keep the fullscreen exit button inside the canvas —
              the mobile "hang above" position would land outside the shell. */
           .pf-fs-btn-immersive { top: 8px !important; }
+          /* ── STAGE 3.4: two-pane landscape layout (tools-left / stage-right) ──
+             The app root is normally a centered flex-column. On desktop we turn
+             it into a CSS grid: a full-width top bar + header, then a 380px tools
+             column on the left and the canvas stage on the right. Only the 5
+             normal-flow blocks below get a grid-area; the ~43 position:fixed/
+             absolute siblings (modals, overlays, hidden file inputs, the fixed
+             transport dock, the immersive canvas) are taken out of grid flow by
+             the spec, so they keep their own positioning untouched. Mobile
+             (<769px) never sees this — the app stays a single column. */
+          .pf-app-root {
+            display: grid !important;
+            grid-template-columns: 380px minmax(0, 1fr);
+            grid-template-rows: auto auto 1fr;
+            grid-template-areas:
+              "topbar topbar"
+              "header header"
+              "panel  stage";
+            align-items: start !important;
+            justify-items: stretch !important;
+            column-gap: 26px;
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 20px 28px 40px !important;
+          }
+          .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; }
+          .pf-app-root > header     { grid-area: header; }
+          .pf-app-root > .pf-panel-part { grid-area: panel; max-width: 100% !important; }
+          .pf-app-root > .pf-stage-part { grid-area: stage; max-width: 100% !important; margin-left: 0; margin-right: 0; }
+          /* The setup/onboarding hero spans the stage column when present. */
+          .pf-app-root > .pf-panel-part { align-self: start; }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
