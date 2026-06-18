@@ -280,10 +280,11 @@ const PF_STYLE = `
           .pf-app-root > .pf-setup-stage {
             grid-area: stage;
             align-self: center;
-            justify-self: center;
-            width: auto;
+            justify-self: stretch;
+            width: 100%;
+            max-width: 720px;
+            margin: 0 auto;
             height: min(calc(100vh - 170px), 82vh);
-            aspect-ratio: 1 / 1.5;
             border: 1px solid rgba(201,168,76,.10);
             border-radius: 10px;
             background:
@@ -24384,7 +24385,7 @@ Composition rules:
       <div className="pf-setup-stage" aria-hidden="true">
         <div className="pf-setup-stage-inner">
           <div className="pf-setup-stage-mark">Paintiano</div>
-          <div className="pf-setup-stage-hint">{t('pickSourceHint')!=='pickSourceHint'?t('pickSourceHint'):(lang==='SK'?'vyber zdroj vľavo — hudbu, obraz alebo náladu':'choose a source on the left — music, image or mood')}</div>
+          <div className="pf-setup-stage-hint">{t('pickSourceHint')!=='pickSourceHint'?t('pickSourceHint'):(lang==='SK'?'vyber zdroj vľavo — importuj hudbu alebo obraz, opíš náladu, skladaj na klávesoch alebo spievaj do mikrofónu':'choose a source on the left — import music or an image, describe a mood, compose on the keys, or sing into the mic')}</div>
         </div>
       </div>
       )}
