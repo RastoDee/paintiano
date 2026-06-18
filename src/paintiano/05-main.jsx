@@ -9690,7 +9690,10 @@ Composition rules:
             completion, so a separate SAVE was duplicate UI. */}
         {/* Score button removed from image-mode toolbar — it now lives inside
             the SAVE picker as one of three choices (Story / Audio / Score). */}
-        {chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
+        {/* TEMP DISABLED (Jun 2026): playback speed button hidden on PC + mobile
+            until users request it. Re-enable by changing `false &&` back to
+            `chords.length>0&&!composeMode&&!micPainting&&!micListening&&`. */}
+        {false && chords.length>0&&!composeMode&&!micPainting&&!micListening&&(()=>{
           const spd=playbackSpeed;
           const setSpd=setPlaybackSpeed;
           // Discrete rate ladder: half-speed, normal, double-speed.
