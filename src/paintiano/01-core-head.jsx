@@ -174,21 +174,26 @@ const PF_STYLE = `
             margin: 0 !important;
             z-index: 4;
             pointer-events: none;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 10px !important;
           }
-          .pf-app-root > header h1 { font-size: 1.5rem !important; margin: 0 !important; }
-          .pf-app-root > header > div { margin: 0 0 0 10px !important; display: inline-block !important; vertical-align: middle; }
+          .pf-app-root > header h1 { font-size: 1.6rem !important; margin: 0 !important; line-height: 1 !important; }
+          .pf-app-root > header > div { margin: 0 !important; display: inline-flex !important; align-items: center; transform: scale(.82); transform-origin: left center; }
           /* Help (?) button moves from the bottom-right FAB up next to the
              hamburger menu in the top-left, where help conventionally lives. */
           .pf-app-root > .pf-help-fab {
             position: fixed !important;
-            top: 24px !important;
-            left: 92px !important;
+            top: 26px !important;
+            left: 96px !important;
             bottom: auto !important;
             right: auto !important;
             width: 34px !important;
             height: 34px !important;
-            font-size: 18px !important;
-            z-index: 100 !important;
+            font-size: 17px !important;
+            z-index: 200 !important;
+            pointer-events: auto !important;
           }
           /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
           .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; gap: 8px; margin-bottom: 10px; }
@@ -270,8 +275,8 @@ const PF_STYLE = `
             align-self: center;
             justify-self: center;
             width: auto;
-            height: min(calc(100vh - 230px), 70vh);
-            aspect-ratio: 1 / 1.618;
+            height: min(calc(100vh - 170px), 82vh);
+            aspect-ratio: 1 / 1.5;
             border: 1px solid rgba(201,168,76,.10);
             border-radius: 10px;
             background:
@@ -378,6 +383,15 @@ const PF_STYLE = `
              reachable — the grid's own desktop padding would otherwise be only
              28px and leave them hidden behind the keys. */
           .pf-mode-live.pf-app-root { padding-bottom: 210px !important; }
+          /* Compose transport button order (vertical, left column):
+             undo · play · mute · save · clear · scale. */
+          .pf-mode-live .pf-transport-row { display: flex !important; flex-direction: column !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-undo  { order: 1 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-play  { order: 2 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-mute  { order: 3 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-save  { order: 4 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-clear { order: 5 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-scale { order: 6 !important; }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
