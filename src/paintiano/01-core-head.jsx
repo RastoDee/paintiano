@@ -153,21 +153,24 @@ const PF_STYLE = `
             width: 100% !important;
             padding: 14px 24px 28px !important;
           }
-          .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; }
-          .pf-app-root > header     { grid-area: header; margin-bottom: 6px !important; }
-          .pf-app-root .pf-controls-inner { display: contents !important; }
-          /* SPÄŤ (always the first control) sits top-left, above palettes. */
-          .pf-app-root .pf-controls-inner > button:first-child { grid-area: controls; align-self: start; justify-self: start; margin-bottom: 10px; }
-          /* The "+ NOVÁ HUDBA / mood / image" variants sit top-right, above the
-             artists, where the right thumb reaches. They share the styles column
-             top; styles-inner flows beneath via align-self:start. */
-          .pf-app-root .pf-controls-inner > button:not(:first-child) {
-            grid-area: rtop;
-            align-self: start;
-            justify-self: stretch;
-            margin-bottom: 10px;
+          .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; position: relative; z-index: 3; }
+          /* Wordmark + PRO AI badge sit centered on the top bar's level (between
+             the hamburger menu and the AA/lang control) instead of as a large
+             standalone header below. Absolutely centered over the topbar row. */
+          .pf-app-root > header {
+            grid-area: topbar;
+            align-self: center;
+            justify-self: center;
+            margin: 0 !important;
             z-index: 2;
+            pointer-events: none;
           }
+          .pf-app-root > header h1 { font-size: 1.5rem !important; margin: 0 !important; }
+          .pf-app-root > header > div { margin: 0 0 0 10px !important; display: inline-block !important; vertical-align: middle; }
+          /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
+          .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; gap: 8px; margin-bottom: 10px; }
+          /* Progress/seek bar sits above the artists in the right column. */
+          .pf-app-root > .pf-seek-block { grid-area: rtop; align-self: start; max-width: 100% !important; margin: 0 0 10px !important; }
           /* The active-view strip (pf-panel-part) and its inner grid wrapper are
              flattened with display:contents so their two inner columns —
              pf-colors-inner (left) and pf-styles-inner (right) — become direct
