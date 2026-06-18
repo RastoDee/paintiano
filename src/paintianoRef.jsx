@@ -320,29 +320,35 @@ const PF_STYLE = `
              active view) instead of as a full-screen modal — contextual, keeps
              the two-thumb layout. The dim full-screen backdrop is dropped; the
              dialog flows into the styles area. Mobile keeps the modal. */
-          .pf-mode-setup .pf-picker-overlay {
-            position: static !important;
-            inset: auto !important;
-            grid-area: styles;
-            align-self: center;
-            display: block !important;
+          .pf-app-root .pf-picker-overlay {
+            position: fixed !important;
+            inset: 0 !important;
             background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            display: block !important;
             padding: 0 !important;
-            z-index: auto !important;
+            pointer-events: none !important;
+            z-index: 100002 !important;
           }
-          .pf-mode-setup .pf-picker-overlay .pf-picker-dialog {
-            max-width: 100% !important;
+          .pf-app-root .pf-picker-overlay .pf-picker-dialog {
+            position: absolute !important;
+            top: 150px !important;
+            right: 24px !important;
+            left: auto !important;
+            width: 180px !important;
+            max-width: 180px !important;
             min-width: 0 !important;
-            width: 100% !important;
             box-sizing: border-box !important;
             background: linear-gradient(180deg, rgba(24,21,34,.92), rgba(14,12,20,.92)) !important;
             border: 1px solid rgba(201,168,76,.28) !important;
             border-radius: 18px !important;
             padding: 16px 12px !important;
             box-shadow: 0 12px 40px rgba(0,0,0,.4) !important;
+            pointer-events: auto !important;
           }
           /* Picker buttons wrap their label instead of overflowing the 180px column. */
-          .pf-mode-setup .pf-picker-overlay .pf-picker-dialog button {
+          .pf-app-root .pf-picker-overlay .pf-picker-dialog button {
             white-space: normal !important;
             word-break: break-word !important;
             padding-left: 8px !important;
@@ -416,15 +422,6 @@ const PF_STYLE = `
             margin: 0 !important;
             pointer-events: none;
           }
-          /* When the setup picker is open, keep the right column the SAME width as
-             the left tools column (180px) so the two sides are balanced/symmetric
-             — the picker reads as the mirror of the source buttons on the left. */
-          .pf-mode-setup:has(.pf-picker-overlay) {
-            grid-template-columns: 180px minmax(0, 1fr) 180px !important;
-          }
-          /* While the picker occupies the right column, hide the centre
-             placeholder prompt (the picker is now the active focus). */
-          .pf-mode-setup:has(.pf-picker-overlay) > .pf-setup-stage { opacity: .35; }
           /* ── Two-thumb ergonomics: transport flows in the LEFT column directly
              under the palettes (one continuous tools column), so it sits where
              the left thumb rests. Not fixed — it's a grid item, no overlap. Its
