@@ -211,7 +211,18 @@ const PF_STYLE = `
           .pf-app-root .pf-styles-inner .pf-artist { padding: 9px 8px !important; letter-spacing: .1em !important; }
           /* Setup view (pre-load) has no colors/styles split — its single panel
              part spans the left+stage area so the setup tiles + hero read well. */
-          .pf-app-root > .pf-panel-part.pf-fade { display: flex; grid-area: colors; }
+          /* Setup view (pre-load): a single narrow left-column panel (mirrors the
+             canvas-view tools column) so every control is one thumb-reach wide.
+             Import + Create tiles stack vertically instead of 2-up. The PRIDAŤ
+             HUDBU / mood dialogs are fixed-position modals, unaffected. */
+          .pf-app-root > .pf-panel-part.pf-fade {
+            display: flex !important;
+            grid-area: colors;
+            max-width: 100% !important;
+            align-self: start;
+          }
+          .pf-app-root .pf-setup-import,
+          .pf-app-root .pf-setup-create { grid-template-columns: 1fr !important; }
           .pf-app-root > .pf-stage-part {
             grid-area: stage;
             max-width: 100% !important;
