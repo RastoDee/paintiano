@@ -351,17 +351,19 @@ const PF_STYLE = `
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
           /* Fullscreen (immersive) control bar — HARMONY / NEXT / SHOW / SAVE /
-             STORY — moves from the bottom centre to the RIGHT edge, stacked
-             vertically so it's reachable with the right thumb. This is the
-             on-canvas immersive bar, NOT the transport dock. */
+             STORY — sits in the SAME place as the right artists column in the
+             active view (right:24px, 180px wide), so the controls don't jump when
+             toggling fullscreen and stay under the right thumb. */
           .pf-immersive .pf-fs-controls {
             left: auto !important;
-            right: 18px !important;
+            right: 24px !important;
+            width: 180px !important;
             bottom: auto !important;
-            top: 50% !important;
-            transform: translateY(-50%) !important;
+            top: 96px !important;
+            transform: none !important;
             flex-direction: column !important;
             align-items: stretch !important;
+            gap: 8px !important;
           }
           .pf-immersive .pf-fs-controls > button { width: 100% !important; }
           /* Version footer + legal links span all three columns at the very
