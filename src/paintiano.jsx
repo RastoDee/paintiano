@@ -21033,6 +21033,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stopAll,_composeRecentLabel]);
   const [showMicRecent,setShowMicRecent]=useState(false);
 
+  // Picker mutual-exclusivity: only one source/recent/mood chooser open at a
+  // time. On desktop these now sit in the right column with a transparent
+  // backdrop, so two open at once would visibly overlap. Opening any one closes
+  // the others. (Harmless on mobile too — they were always one-at-a-time there.)
+  useEffect(()=>{ if(pickMode){ setShowMoodMenu(false); setShowComposeRecent(false); setShowMicRecent(false); } },[pickMode]);
+  useEffect(()=>{ if(showMoodMenu){ setPickMode(null); setShowComposeRecent(false); setShowMicRecent(false); } },[showMoodMenu]);
+  useEffect(()=>{ if(showComposeRecent){ setPickMode(null); setShowMoodMenu(false); setShowMicRecent(false); } },[showComposeRecent]);
+  useEffect(()=>{ if(showMicRecent){ setPickMode(null); setShowMoodMenu(false); setShowComposeRecent(false); } },[showMicRecent]);
+
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   // isSample=true means it's the built-in sample (loadSampleImgMood), which we
   // don't add to "Recently AI generated" — sample stays accessible via its own
