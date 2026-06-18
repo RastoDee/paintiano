@@ -186,8 +186,12 @@ const PF_STYLE = `
           .pf-app-root > header > div { margin: 0 !important; display: inline-flex !important; align-items: center; transform: scale(.82); transform-origin: left center; }
           /* Help (?) button moves from the bottom-right FAB up next to the
              hamburger menu in the top-left, where help conventionally lives. */
+          /* Help (?) sits next to the hamburger. position:absolute (NOT fixed) so
+             it scrolls away with the top bar — fixed kept it pinned to the
+             viewport, overlapping the left buttons when the page scrolled on
+             short (phone-landscape) viewports. */
           .pf-app-root .pf-help-fab {
-            position: fixed !important;
+            position: absolute !important;
             top: 26px !important;
             left: 96px !important;
             bottom: auto !important;
