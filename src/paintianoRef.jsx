@@ -321,7 +321,7 @@ const PF_STYLE = `
              the two-thumb layout. The dim full-screen backdrop is dropped; the
              dialog flows into the styles area. Mobile keeps the modal. */
           .pf-app-root .pf-picker-overlay {
-            position: fixed !important;
+            position: absolute !important;
             inset: 0 !important;
             background: transparent !important;
             backdrop-filter: none !important;
@@ -363,7 +363,7 @@ const PF_STYLE = `
              a centered fullscreen modal. The overlay backdrop is made transparent
              and click-through; only the dialog itself catches clicks. */
           .pf-app-root .pf-recent-overlay {
-            position: fixed !important;
+            position: absolute !important;
             inset: 0 !important;
             background: transparent !important;
             backdrop-filter: none !important;

@@ -21062,7 +21062,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setOriginalImgUrl(_src); setImgMoodThumb(null);
     // Clear the previous piece title so it doesn't linger over the new image while AI composes.
     setCurrentMood(null); setInfo(null);
-    setMoodContext(true); setMoodFromImg(true); setViewMode('image');
+    setMoodContext(true); setMoodFromImg(true); setViewMode('image'); setLoadedSource(null);
     setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ if(im.naturalWidth&&im.naturalHeight) setMfiImgAspect(im.naturalWidth+' / '+im.naturalHeight); const max=384; let w=im.naturalWidth||384,h=im.naturalHeight||384; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } }; im.onerror=()=>rej(new Error('img')); im.src=_src; });
