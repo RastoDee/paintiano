@@ -183,7 +183,7 @@ const PF_STYLE = `
           .pf-app-root > header > div { margin: 0 !important; display: inline-flex !important; align-items: center; transform: scale(.82); transform-origin: left center; }
           /* Help (?) button moves from the bottom-right FAB up next to the
              hamburger menu in the top-left, where help conventionally lives. */
-          .pf-app-root > .pf-help-fab {
+          .pf-app-root .pf-help-fab {
             position: fixed !important;
             top: 26px !important;
             left: 96px !important;
@@ -312,7 +312,7 @@ const PF_STYLE = `
              active view) instead of as a full-screen modal — contextual, keeps
              the two-thumb layout. The dim full-screen backdrop is dropped; the
              dialog flows into the styles area. Mobile keeps the modal. */
-          .pf-mode-setup > .pf-picker-overlay {
+          .pf-mode-setup .pf-picker-overlay {
             position: static !important;
             inset: auto !important;
             grid-area: styles;
@@ -322,7 +322,7 @@ const PF_STYLE = `
             padding: 0 !important;
             z-index: auto !important;
           }
-          .pf-mode-setup > .pf-picker-overlay .pf-picker-dialog {
+          .pf-mode-setup .pf-picker-overlay .pf-picker-dialog {
             max-width: 100% !important;
             min-width: 0 !important;
             width: 100% !important;
@@ -333,14 +333,17 @@ const PF_STYLE = `
             padding: 20px 16px !important;
             box-shadow: 0 12px 40px rgba(0,0,0,.4) !important;
           }
+          /* Compose / Mic are live play — no import picker belongs there. If one is
+             somehow open, hide it (it shouldn't overlay the canvas). */
+          .pf-mode-live .pf-picker-overlay { display: none !important; }
           /* When the setup picker is open, widen the right column so the card
              fits comfortably instead of being clipped at the viewport edge. */
-          .pf-mode-setup:has(> .pf-picker-overlay) {
+          .pf-mode-setup:has(.pf-picker-overlay) {
             grid-template-columns: 180px minmax(0, 1fr) 300px !important;
           }
           /* While the picker occupies the right column, hide the centre
              placeholder prompt (the picker is now the active focus). */
-          .pf-mode-setup:has(> .pf-picker-overlay) > .pf-setup-stage { opacity: .35; }
+          .pf-mode-setup:has(.pf-picker-overlay) > .pf-setup-stage { opacity: .35; }
           /* ── Two-thumb ergonomics: transport flows in the LEFT column directly
              under the palettes (one continuous tools column), so it sits where
              the left thumb rests. Not fixed — it's a grid item, no overlap. Its
