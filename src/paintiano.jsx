@@ -205,6 +205,10 @@ const PF_STYLE = `
             padding: 12px;
             gap: 14px !important;
           }
+          /* Image-scan mode: the artist picker is hidden (the picture dictates
+             colour), so the right column would be empty. Hide the empty styles
+             box; the colour/scan panel stays in the left column, image centre. */
+          .pf-strip-imagescan .pf-styles-inner { display: none !important; }
           /* Artists stack in a single column on the right, mirroring the
              palettes on the left — 9 pair chips + mosaic fit comfortably
              vertically and read cleaner than a squeezed multi-column grid. */
@@ -301,6 +305,33 @@ const PF_STYLE = `
             margin-bottom: 0 !important;
           }
           .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
+          /* Compose / Mic modes embed the piano keyboard inside the transport
+             dock, which needs the full width — the narrow 180px left column would
+             crush it. In these modes the dock returns to a full-width bottom bar
+             and its row goes horizontal again. The three columns above still hold
+             (palettes left, canvas centre, artists right). */
+          .pf-mode-live > .pf-transport-dock {
+            position: fixed !important;
+            grid-area: unset;
+            left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important;
+            width: auto !important;
+            margin-top: 0 !important;
+            border-radius: 0 !important;
+            border: none !important;
+            border-top: 1px solid rgba(201,168,76,.15) !important;
+            background: rgba(4,3,8,0.97) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            padding: 8px !important;
+            z-index: 50;
+          }
+          .pf-mode-live > .pf-transport-dock .pf-transport-row {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            align-items: center !important;
+          }
+          .pf-mode-live > .pf-transport-dock .pf-transport-row > button { width: auto !important; }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
@@ -23876,7 +23907,7 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div className="pf-app-root" style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')} style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && (()=>{
@@ -24379,7 +24410,7 @@ Composition rules:
         )}
         </>)}
         {(stripOpen || isDesktop) && (
-        <div className="pf-strip-grid" style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
+        <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Morph / Vary — only for mood-based pieces (mood + mood-from-image),
               never for loaded MIDI/audio/score. Morph: text moods only. Vary: both. */}

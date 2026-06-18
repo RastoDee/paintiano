@@ -205,6 +205,10 @@ const PF_STYLE = `
             padding: 12px;
             gap: 14px !important;
           }
+          /* Image-scan mode: the artist picker is hidden (the picture dictates
+             colour), so the right column would be empty. Hide the empty styles
+             box; the colour/scan panel stays in the left column, image centre. */
+          .pf-strip-imagescan .pf-styles-inner { display: none !important; }
           /* Artists stack in a single column on the right, mirroring the
              palettes on the left — 9 pair chips + mosaic fit comfortably
              vertically and read cleaner than a squeezed multi-column grid. */
@@ -301,6 +305,33 @@ const PF_STYLE = `
             margin-bottom: 0 !important;
           }
           .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
+          /* Compose / Mic modes embed the piano keyboard inside the transport
+             dock, which needs the full width — the narrow 180px left column would
+             crush it. In these modes the dock returns to a full-width bottom bar
+             and its row goes horizontal again. The three columns above still hold
+             (palettes left, canvas centre, artists right). */
+          .pf-mode-live > .pf-transport-dock {
+            position: fixed !important;
+            grid-area: unset;
+            left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important;
+            width: auto !important;
+            margin-top: 0 !important;
+            border-radius: 0 !important;
+            border: none !important;
+            border-top: 1px solid rgba(201,168,76,.15) !important;
+            background: rgba(4,3,8,0.97) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            padding: 8px !important;
+            z-index: 50;
+          }
+          .pf-mode-live > .pf-transport-dock .pf-transport-row {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            align-items: center !important;
+          }
+          .pf-mode-live > .pf-transport-dock .pf-transport-row > button { width: auto !important; }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
