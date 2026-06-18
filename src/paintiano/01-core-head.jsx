@@ -280,10 +280,11 @@ const PF_STYLE = `
           .pf-app-root > .pf-setup-stage {
             grid-area: stage;
             align-self: center;
-            justify-self: center;
-            width: auto;
+            justify-self: stretch;
+            width: 100%;
+            max-width: 720px;
+            margin: 0 auto;
             height: min(calc(100vh - 170px), 82vh);
-            aspect-ratio: 1 / 1.5;
             border: 1px solid rgba(201,168,76,.10);
             border-radius: 10px;
             background:

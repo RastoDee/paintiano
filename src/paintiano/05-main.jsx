@@ -7732,7 +7732,7 @@ Composition rules:
       <div className="pf-setup-stage" aria-hidden="true">
         <div className="pf-setup-stage-inner">
           <div className="pf-setup-stage-mark">Paintiano</div>
-          <div className="pf-setup-stage-hint">{t('pickSourceHint')!=='pickSourceHint'?t('pickSourceHint'):(lang==='SK'?'vyber zdroj vľavo — hudbu, obraz alebo náladu':'choose a source on the left — music, image or mood')}</div>
+          <div className="pf-setup-stage-hint">{t('pickSourceHint')!=='pickSourceHint'?t('pickSourceHint'):(lang==='SK'?'vyber zdroj vľavo — importuj hudbu alebo obraz, opíš náladu, skladaj na klávesoch alebo spievaj do mikrofónu':'choose a source on the left — import music or an image, describe a mood, compose on the keys, or sing into the mic')}</div>
         </div>
       </div>
       )}
