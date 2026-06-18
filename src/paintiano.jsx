@@ -330,16 +330,24 @@ const PF_STYLE = `
             background: linear-gradient(180deg, rgba(24,21,34,.92), rgba(14,12,20,.92)) !important;
             border: 1px solid rgba(201,168,76,.28) !important;
             border-radius: 18px !important;
-            padding: 20px 16px !important;
+            padding: 16px 12px !important;
             box-shadow: 0 12px 40px rgba(0,0,0,.4) !important;
+          }
+          /* Picker buttons wrap their label instead of overflowing the 180px column. */
+          .pf-mode-setup .pf-picker-overlay .pf-picker-dialog button {
+            white-space: normal !important;
+            word-break: break-word !important;
+            padding-left: 8px !important;
+            padding-right: 8px !important;
           }
           /* Compose / Mic are live play — no import picker belongs there. If one is
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
-          /* When the setup picker is open, widen the right column so the card
-             fits comfortably instead of being clipped at the viewport edge. */
+          /* When the setup picker is open, keep the right column the SAME width as
+             the left tools column (180px) so the two sides are balanced/symmetric
+             — the picker reads as the mirror of the source buttons on the left. */
           .pf-mode-setup:has(.pf-picker-overlay) {
-            grid-template-columns: 180px minmax(0, 1fr) 300px !important;
+            grid-template-columns: 180px minmax(0, 1fr) 180px !important;
           }
           /* While the picker occupies the right column, hide the centre
              placeholder prompt (the picker is now the active focus). */
