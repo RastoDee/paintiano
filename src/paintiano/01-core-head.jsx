@@ -49,6 +49,7 @@ const PF_STYLE = `
         .pf-tool:focus, .pf-tool:focus-visible { outline:none!important; }
         .pf-tool .pf-glyph { transition: transform .18s; display:inline-block; }
         .pf-lift { transition: all .18s; }
+        .pf-midi, .pf-audio, .pf-score, .pf-image, .pf-compose, .pf-mic, .pf-moodtile, .pf-mfitile { transition: all .18s; }
         .pf-chip { transition: all .18s; }
         /* All hover affordances gated to real pointers. On touch screens :hover
            "sticks" after a tap — which made SOURCE tiles (Score/Image) keep their
