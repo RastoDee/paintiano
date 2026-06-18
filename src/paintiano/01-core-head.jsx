@@ -326,11 +326,17 @@ const PF_STYLE = `
             max-width: 100% !important;
             min-width: 0 !important;
             width: 100% !important;
+            box-sizing: border-box !important;
             background: linear-gradient(180deg, rgba(24,21,34,.92), rgba(14,12,20,.92)) !important;
             border: 1px solid rgba(201,168,76,.28) !important;
             border-radius: 18px !important;
             padding: 20px 16px !important;
             box-shadow: 0 12px 40px rgba(0,0,0,.4) !important;
+          }
+          /* When the setup picker is open, widen the right column so the card
+             fits comfortably instead of being clipped at the viewport edge. */
+          .pf-mode-setup:has(> .pf-picker-overlay) {
+            grid-template-columns: 180px minmax(0, 1fr) 300px !important;
           }
           /* While the picker occupies the right column, hide the centre
              placeholder prompt (the picker is now the active focus). */

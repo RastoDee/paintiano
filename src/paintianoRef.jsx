@@ -174,21 +174,26 @@ const PF_STYLE = `
             margin: 0 !important;
             z-index: 4;
             pointer-events: none;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 10px !important;
           }
-          .pf-app-root > header h1 { font-size: 1.5rem !important; margin: 0 !important; }
-          .pf-app-root > header > div { margin: 0 0 0 10px !important; display: inline-block !important; vertical-align: middle; }
+          .pf-app-root > header h1 { font-size: 1.6rem !important; margin: 0 !important; line-height: 1 !important; }
+          .pf-app-root > header > div { margin: 0 !important; display: inline-flex !important; align-items: center; transform: scale(.82); transform-origin: left center; }
           /* Help (?) button moves from the bottom-right FAB up next to the
              hamburger menu in the top-left, where help conventionally lives. */
           .pf-app-root > .pf-help-fab {
             position: fixed !important;
-            top: 24px !important;
-            left: 92px !important;
+            top: 26px !important;
+            left: 96px !important;
             bottom: auto !important;
             right: auto !important;
             width: 34px !important;
             height: 34px !important;
-            font-size: 18px !important;
-            z-index: 100 !important;
+            font-size: 17px !important;
+            z-index: 200 !important;
+            pointer-events: auto !important;
           }
           /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
           .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; gap: 8px; margin-bottom: 10px; }
@@ -270,8 +275,8 @@ const PF_STYLE = `
             align-self: center;
             justify-self: center;
             width: auto;
-            height: min(calc(100vh - 230px), 70vh);
-            aspect-ratio: 1 / 1.618;
+            height: min(calc(100vh - 170px), 82vh);
+            aspect-ratio: 1 / 1.5;
             border: 1px solid rgba(201,168,76,.10);
             border-radius: 10px;
             background:
@@ -378,6 +383,15 @@ const PF_STYLE = `
              reachable — the grid's own desktop padding would otherwise be only
              28px and leave them hidden behind the keys. */
           .pf-mode-live.pf-app-root { padding-bottom: 210px !important; }
+          /* Compose transport button order (vertical, left column):
+             undo · play · mute · save · clear · scale. */
+          .pf-mode-live .pf-transport-row { display: flex !important; flex-direction: column !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-undo  { order: 1 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-play  { order: 2 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-mute  { order: 3 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-save  { order: 4 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-clear { order: 5 !important; }
+          .pf-mode-live .pf-transport-row .pf-tx-scale { order: 6 !important; }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
@@ -26117,11 +26131,11 @@ Composition rules:
         </div>
       )}
       <div className="pf-transport-row" style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
-        <button onClick={()=>{ setShowAdvanced(v=>!v); }} title="scale snap — tap notes to a musical key" style={{...txStyle((paintScale!=='off'||showAdvanced)?'active':'ghost',{effScale}),display:composeMode?'inline-flex':'none',minWidth:96,justifyContent:'center'}}>
+        <button className="pf-tx-scale" onClick={()=>{ setShowAdvanced(v=>!v); }} title="scale snap — tap notes to a musical key" style={{...txStyle((paintScale!=='off'||showAdvanced)?'active':'ghost',{effScale}),display:composeMode?'inline-flex':'none',minWidth:96,justifyContent:'center'}}>
           <TxIcon n="notes" s={13*effScale}/>{paintScale!=='off'?PAINT_SCALES[paintScale].label:t('scaleBtn')}
         </button>
         <button
-          className="pf-lift"
+          className="pf-lift pf-tx-play"
           onClick={handlePauseClick}
           disabled={demoReelOn||recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
           title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
@@ -26136,7 +26150,7 @@ Composition rules:
           </button>
         )}{/* After stop, the transport pill disappears entirely — Clear is the
             way to start a fresh song. The old "tap REC again" pill caused
-            confusion and let the user accidentally extend a finished take. */}<button className="pf-lift" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
+            confusion and let the user accidentally extend a finished take. */}<button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={txStyle(loopMode?'active':'neutral',{effScale,disabled:recording})}><TxIcon n="loop" s={14*effScale}/>{t('loop')}</button>
         )}
@@ -26214,7 +26228,7 @@ Composition rules:
             chords.length>0 && disp>0 && !playing && !anim && !holdPaused &&
             !demoReelOn && !micActive && !busy && !recording;
           return (
-            <button className="pf-lift" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
+            <button className="pf-lift pf-tx-save" onClick={()=>{ if(exportReady) setShowSizePicker(true); }} disabled={!exportReady}
               title={exportReady?t('save'):t('exportNeedsPlay')}
               style={txStyle('save',{effScale,disabled:!exportReady})}>
               <TxIcon n="save" s={14*effScale}/>{t('save')}
@@ -26358,13 +26372,13 @@ Composition rules:
               clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
             }
           }}
-          className="pf-lift"
+          className="pf-lift pf-tx-clear"
           disabled={recording}
           title={recording?t('stopRecFirst'):undefined}
           style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
         {composeMode&&(
-          <button className="pf-lift" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
+          <button className="pf-lift pf-tx-undo" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
         )}
       </div>
       {composeMode && (
@@ -26461,10 +26475,6 @@ Composition rules:
           style={{
             position:'fixed',
             bottom:'max(18px, env(safe-area-inset-bottom) + 12px)',
-            // On mobile (≤480px viewport) sit 16px from the right edge.
-            // On wider screens align with the right edge of the 480px-wide
-            // content column so the button doesn't fly off into the empty
-            // margin on PC. The max(...) guarantees a sane minimum gap.
             right:'max(16px, calc(50vw - 240px + 16px))',
             width:44, height:44, borderRadius:'50%',
             background:'linear-gradient(135deg,#c9a84c,#ffd07a)',
@@ -26476,6 +26486,7 @@ Composition rules:
             cursor:'pointer', border:'none',
             zIndex:90,
             lineHeight:1,
+            pointerEvents:'auto',
           }}
         >?</button>
       )}
