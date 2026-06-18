@@ -435,6 +435,62 @@ const PF_STYLE = `
              page foot — not floating in the middle of the layout). */
           .pf-app-root > .pf-version-footer { grid-area: vfooter; width: 100%; }
           .pf-app-root > .pf-legal-links { grid-area: legal; width: 100%; }
+          /* ── Guide / Concept / Book modal — two-thumb desktop layout.
+             Panel widens to a comfortable reading width; categories move to a
+             vertical list on the RIGHT (right thumb), progress bars sit on the
+             LEFT (mirror of Concept), and up/down nav buttons appear bottom
+             left+right so both thumbs can page through cards. Mobile keeps the
+             narrow swipe deck untouched. */
+          .pf-guide-panel {
+            max-width: 920px !important;
+            border-left: 1px solid rgba(201,168,76,.12) !important;
+            border-right: 1px solid rgba(201,168,76,.12) !important;
+          }
+          /* Categories → vertical column pinned to the right, vertically centered */
+          .pf-guide-panel .pf-guide-cats {
+            position: absolute !important;
+            right: 24px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            flex-direction: column !important;
+            width: 132px !important;
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            padding: 0 !important;
+            gap: 7px !important;
+            z-index: 4 !important;
+          }
+          .pf-guide-panel .pf-guide-cats > button { width: 100% !important; text-align: center !important; }
+          /* Progress dots → vertical bars on the LEFT (like Concept's rhythm) */
+          .pf-guide-panel .pf-guide-progress {
+            left: 24px !important;
+            right: auto !important;
+          }
+          .pf-guide-panel .pf-guide-progress > button {
+            width: 6px !important;
+            border-radius: 3px !important;
+          }
+          /* Give the swipe deck breathing room either side so the card sits
+             centered between the progress bars (left) and categories (right). */
+          .pf-guide-panel .pf-guide-deck:not(.pf-guide-cats) > .pf-guide-card {
+            padding-left: 80px !important;
+            padding-right: 170px !important;
+          }
+          /* Two-thumb up/down nav, split to the bottom corners */
+          .pf-guide-panel .pf-guide-nav {
+            display: flex !important;
+            position: absolute !important;
+            left: 24px !important;
+            right: 24px !important;
+            bottom: 24px !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            z-index: 5 !important;
+            pointer-events: none !important;
+          }
+          .pf-guide-panel .pf-guide-nav > button { pointer-events: auto !important; }
+          /* Hide the old bottom-left position indicator (nav has its own) */
+          .pf-guide-panel > div[style*="bottom: 18px"] { display: none !important; }
           /* Mood-from-image source thumbnail: centered at the TOP of the stage
              column, above the big canvas (same as mobile) — not floating in the
              left tools column where grid auto-placement would otherwise drop it. */
@@ -16979,7 +17035,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         @keyframes pf-guide-card-in{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
         .pf-guide-card-inner{animation:pf-guide-card-in .4s cubic-bezier(.2,.8,.2,1) both;}
       `}</style>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" style={{position:'relative',width:'100%',maxWidth:480,height:'100%',display:'flex',flexDirection:'column',color:'rgba(247,243,236,.92)',fontFamily:'inherit',borderLeft:'1px solid rgba(201,168,76,.08)',borderRight:'1px solid rgba(201,168,76,.08)',background:'rgba(8,6,14,0.35)'}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" className="pf-guide-panel" style={{position:'relative',width:'100%',maxWidth:480,height:'100%',display:'flex',flexDirection:'column',color:'rgba(247,243,236,.92)',fontFamily:'inherit',borderLeft:'1px solid rgba(201,168,76,.08)',borderRight:'1px solid rgba(201,168,76,.08)',background:'rgba(8,6,14,0.35)'}}>
         {/* Top bar */}
         <div style={{flexShrink:0,padding:'14px 16px 8px',display:'flex',alignItems:'center',gap:10,position:'relative',zIndex:2}}>
           <button onClick={onClose} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
@@ -17009,7 +17065,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
           </div>
         )}
         {/* Category chips */}
-        {!isConcept && !isBook && <div style={{flexShrink:0,padding:'2px 8px 10px',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',position:'relative',zIndex:2}} className="pf-guide-deck">
+        {!isConcept && !isBook && <div style={{flexShrink:0,padding:'2px 8px 10px',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',position:'relative',zIndex:2}} className="pf-guide-deck pf-guide-cats">
           {CATS.map(c=>{
             const on = category===c.key;
             return (
@@ -17049,7 +17105,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         </div>
         {/* Progress dots (right side, vertical) */}
         {cards.length > 1 && (
-          <div style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:6,zIndex:3,pointerEvents:'none'}}>
+          <div className="pf-guide-progress" style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:6,zIndex:3,pointerEvents:'none'}}>
             {cards.map((_,i)=>(
               <button key={i} onClick={()=>jumpTo(i)} aria-label={`card ${i+1}`} style={{pointerEvents:'auto',width:i===currentIdx?10:6,height:i===currentIdx?10:6,borderRadius:'50%',background:i===currentIdx?'rgba(201,168,76,.85)':'rgba(242,238,232,.3)',border:'none',cursor:'pointer',padding:0,transition:'all .2s'}} />
             ))}
@@ -17058,6 +17114,15 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         {/* Position indicator (bottom left) */}
         {cards.length > 0 && (
           <div style={{position:'absolute',left:18,bottom:18,fontSize:(.6*readScale)+'rem',color:'rgba(201,168,76,.55)',letterSpacing:'.12em',pointerEvents:'none',fontVariantNumeric:'tabular-nums'}}>{currentIdx+1} / {cards.length}</div>
+        )}
+        {/* Two-thumb nav — prev (bottom-left) / next (bottom-right). Desktop only
+            via CSS; mobile keeps pure swipe. */}
+        {cards.length > 1 && (
+          <div className="pf-guide-nav" style={{display:'none'}}>
+            <button onClick={()=>jumpTo(Math.max(0,currentIdx-1))} disabled={currentIdx<=0} aria-label="previous" className="pf-guide-nav-prev" style={{width:60,height:60,borderRadius:'50%',background:'rgba(28,24,40,.72)',border:'1px solid rgba(201,168,76,.3)',color:currentIdx<=0?'rgba(201,168,76,.3)':'rgba(201,168,76,.82)',fontSize:'1.6rem',cursor:currentIdx<=0?'default':'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>˄</button>
+            <span className="pf-guide-nav-pos" style={{fontSize:(.6*readScale)+'rem',letterSpacing:'.16em',color:'rgba(230,222,196,.45)',textTransform:'uppercase',fontVariantNumeric:'tabular-nums'}}>{currentIdx+1} / {cards.length}</span>
+            <button onClick={()=>jumpTo(Math.min(cards.length-1,currentIdx+1))} disabled={currentIdx>=cards.length-1} aria-label="next" className="pf-guide-nav-next" style={{width:60,height:60,borderRadius:'50%',background:currentIdx>=cards.length-1?'rgba(28,24,40,.72)':'rgba(201,168,76,.85)',border:'1px solid rgba(201,168,76,.6)',color:currentIdx>=cards.length-1?'rgba(201,168,76,.3)':'#1a1400',fontSize:'1.6rem',cursor:currentIdx>=cards.length-1?'default':'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>˅</button>
+          </div>
         )}
         {/* Text size toggle (bottom right) */}
         <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{position:'absolute',right:14,bottom:12,display:'inline-flex',alignItems:'center',gap:4,padding:'5px 12px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',background:'rgba(28,24,40,.55)',border:'1px solid rgba(201,168,76,.3)',fontSize:'.55rem',fontWeight:600}}>A<span style={{fontSize:(.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.5rem',opacity:.6}}>{readScale===1?'1×':readScale===1.25?'1¼':'1½'}</span></button>

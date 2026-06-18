@@ -435,6 +435,62 @@ const PF_STYLE = `
              page foot — not floating in the middle of the layout). */
           .pf-app-root > .pf-version-footer { grid-area: vfooter; width: 100%; }
           .pf-app-root > .pf-legal-links { grid-area: legal; width: 100%; }
+          /* ── Guide / Concept / Book modal — two-thumb desktop layout.
+             Panel widens to a comfortable reading width; categories move to a
+             vertical list on the RIGHT (right thumb), progress bars sit on the
+             LEFT (mirror of Concept), and up/down nav buttons appear bottom
+             left+right so both thumbs can page through cards. Mobile keeps the
+             narrow swipe deck untouched. */
+          .pf-guide-panel {
+            max-width: 920px !important;
+            border-left: 1px solid rgba(201,168,76,.12) !important;
+            border-right: 1px solid rgba(201,168,76,.12) !important;
+          }
+          /* Categories → vertical column pinned to the right, vertically centered */
+          .pf-guide-panel .pf-guide-cats {
+            position: absolute !important;
+            right: 24px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            flex-direction: column !important;
+            width: 132px !important;
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            padding: 0 !important;
+            gap: 7px !important;
+            z-index: 4 !important;
+          }
+          .pf-guide-panel .pf-guide-cats > button { width: 100% !important; text-align: center !important; }
+          /* Progress dots → vertical bars on the LEFT (like Concept's rhythm) */
+          .pf-guide-panel .pf-guide-progress {
+            left: 24px !important;
+            right: auto !important;
+          }
+          .pf-guide-panel .pf-guide-progress > button {
+            width: 6px !important;
+            border-radius: 3px !important;
+          }
+          /* Give the swipe deck breathing room either side so the card sits
+             centered between the progress bars (left) and categories (right). */
+          .pf-guide-panel .pf-guide-deck:not(.pf-guide-cats) > .pf-guide-card {
+            padding-left: 80px !important;
+            padding-right: 170px !important;
+          }
+          /* Two-thumb up/down nav, split to the bottom corners */
+          .pf-guide-panel .pf-guide-nav {
+            display: flex !important;
+            position: absolute !important;
+            left: 24px !important;
+            right: 24px !important;
+            bottom: 24px !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            z-index: 5 !important;
+            pointer-events: none !important;
+          }
+          .pf-guide-panel .pf-guide-nav > button { pointer-events: auto !important; }
+          /* Hide the old bottom-left position indicator (nav has its own) */
+          .pf-guide-panel > div[style*="bottom: 18px"] { display: none !important; }
           /* Mood-from-image source thumbnail: centered at the TOP of the stage
              column, above the big canvas (same as mobile) — not floating in the
              left tools column where grid auto-placement would otherwise drop it. */
