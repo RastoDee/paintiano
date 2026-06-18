@@ -351,22 +351,10 @@ const PF_STYLE = `
           /* Compose / Mic are live play — no import picker belongs there. If one is
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
-          /* Fullscreen (immersive) control bar — HARMONY / NEXT / SHOW / SAVE /
-             STORY — into the BLACK space at the far-right of the screen (the
-             canvas is a centered portrait, so the right edge of the viewport is
-             empty). Compact width, stacked vertically, thumb-reachable. */
-          .pf-immersive .pf-fs-controls {
-            left: auto !important;
-            right: 32px !important;
-            bottom: auto !important;
-            top: 50% !important;
-            transform: translateY(-50%) !important;
-            width: 150px !important;
-            max-width: 150px !important;
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 8px !important;
-          }
+          /* Fullscreen (immersive) control bar — HARMONY / NEXT / SHOW / SAVE.
+             Position is set inline in JSX (it needs the live canvas width CW/CH to
+             land in the black space just right of the centered portrait canvas).
+             Here we only size the buttons compactly. */
           .pf-immersive .pf-fs-controls > button {
             width: 100% !important;
             padding: 10px 12px !important;
@@ -25488,7 +25476,21 @@ Composition rules:
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
           if(!exportReadyFs && !showNextFs && !showPaletteFs && !showSlideFs) return null;
           return (
-            <div className="pf-fs-controls" style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
+            <div className="pf-fs-controls" style={{position:'fixed',zIndex:10000,display:'flex',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease',...(immersive?{
+                top:'50%',
+                left:`min(calc(50% + min(49vw, 49dvh * ${CW} / ${CH}) + 14px), calc(100vw - 164px))`,
+                transform:'translateY(-50%)',
+                flexDirection:'column',
+                alignItems:'stretch',
+                gap:8,
+                width:150
+              }:{
+                bottom:'max(20px, env(safe-area-inset-bottom))',
+                left:'50%',
+                transform:'translateX(-50%)',
+                alignItems:'center',
+                gap:10
+              })}}>
               {showPaletteFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); cycleColorFs(); wakeControls(); }} className="pf-lift" aria-label="cycle palette"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#5b8bf0,#3361d9)',border:'1px solid #5b8bf0',boxShadow:'0 6px 22px rgba(91,139,240,.45)',WebkitTapHighlightColor:'transparent'}}>

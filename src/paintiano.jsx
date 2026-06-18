@@ -351,6 +351,41 @@ const PF_STYLE = `
           /* Compose / Mic are live play — no import picker belongs there. If one is
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
+          /* Recent + mood pickers (compose-recent, mic-recent, new-mood) — unify
+             with the source picker: on desktop the dialog is pinned into the
+             RIGHT column (same 180px / right:24px slot as the artists), instead of
+             a centered fullscreen modal. The overlay backdrop is made transparent
+             and click-through; only the dialog itself catches clicks. */
+          .pf-app-root .pf-recent-overlay {
+            position: fixed !important;
+            inset: 0 !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            display: block !important;
+            padding: 0 !important;
+            pointer-events: none !important;
+            z-index: 100002 !important;
+          }
+          .pf-app-root .pf-recent-overlay .pf-recent-dialog {
+            position: absolute !important;
+            top: 150px !important;
+            right: 24px !important;
+            left: auto !important;
+            width: 180px !important;
+            max-width: 180px !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+            pointer-events: auto !important;
+          }
+          /* The mood menu is taller (input + preset list) — a touch wider + capped
+             height so it stays usable pinned in the right column. */
+          .pf-app-root .pf-mood-overlay .pf-mood-dialog {
+            width: 220px !important;
+            max-width: 220px !important;
+            max-height: calc(100vh - 175px) !important;
+            overflow-y: auto !important;
+          }
           /* Fullscreen (immersive) control bar — HARMONY / NEXT / SHOW / SAVE.
              Position is set inline in JSX (it needs the live canvas width CW/CH to
              land in the black space just right of the centered portrait canvas).
@@ -25890,8 +25925,8 @@ Composition rules:
       )}
 
       {showComposeRecent && (
-        <div onClick={()=>setShowComposeRecent(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
+        <div onClick={()=>setShowComposeRecent(false)} className="pf-recent-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recently played'}</div>
             <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
               {composeRecent.map(entry=>(
@@ -25906,8 +25941,8 @@ Composition rules:
       )}
 
       {showMicRecent && (
-        <div onClick={()=>setShowMicRecent(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
+        <div onClick={()=>setShowMicRecent(false)} className="pf-recent-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recently played'}</div>
             <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
               {(()=>{ const preset = micPreset==='music' ? 'music' : 'voice'; const list = preset==='voice' ? micVoiceRecent : micMusicRecent; return list.map(entry=>(
@@ -25922,8 +25957,8 @@ Composition rules:
       )}
 
       {showMoodMenu && (
-        <div onClick={()=>setShowMoodMenu(false)} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'20px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh'}}>
+        <div onClick={()=>setShowMoodMenu(false)} className="pf-recent-overlay pf-mood-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" className="pf-recent-dialog pf-mood-dialog" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'20px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase',flexShrink:0}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
             {(()=>{
               // For Free + aiLocked the input stays fully editable (so the
