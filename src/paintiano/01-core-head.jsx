@@ -268,9 +268,9 @@ const PF_STYLE = `
             grid-area: stage;
             align-self: center;
             justify-self: center;
-            width: 100%;
-            max-width: min(100%, calc((100vh - 230px) * 1.618));
-            aspect-ratio: 1.618 / 1;
+            width: auto;
+            height: min(calc(100vh - 230px), 70vh);
+            aspect-ratio: 1 / 1.618;
             border: 1px solid rgba(201,168,76,.10);
             border-radius: 10px;
             background:
@@ -840,29 +840,28 @@ function computeGrid(arg, opts){
     CH=Math.max(140,Math.round(CW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
   } else if(typeof window!=='undefined' && window.innerWidth>=769){
-    // LOADED-MODE DESKTOP LANDSCAPE FRAME — STAGE 2 + 3 (PC ≥769px only).
-    // On a wide screen the canvas lives in the RIGHT pane of the two-pane grid
-    // (a ~380px tools column sits on the left, with column-gap + page padding).
-    // We size the fixed golden-ratio landscape frame to fill THAT pane as large
-    // as possible: width = pane width, but capped by the available height so the
-    // PHI frame never overflows the viewport vertically. Rows get thinner as the
-    // piece grows. Mobile (<769px) keeps the portrait grow-canvas below.
+    // LOADED-MODE DESKTOP PORTRAIT FRAME — STAGE 2 + 3 (PC ≥769px only).
+    // The canvas sits in the CENTRE column of the three-column grid (tools left,
+    // artists right). A PORTRAIT golden-ratio frame (taller than wide) fits that
+    // tall narrow centre far better than a landscape one. We size it to fill the
+    // available height, then cap the width by the centre pane so it never bleeds
+    // into the side columns. Rows get thinner as the piece grows; the whole piece
+    // is shown (no scroll). Mobile (<769px) keeps the portrait grow-canvas below.
     const vpW=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:960;
     const vpH=(typeof window!=='undefined'&&window.innerHeight)?window.innerHeight:800;
-    // Two side panels (≈210px each) + two column-gaps (28) + page padding (64).
-    // Subtract both so the centre stage gets the real remaining width.
+    // Two side panels (≈180px each) + two column-gaps (24) + page padding (56).
     const SIDE_W=180, GAPS=2*24, PAGE_PAD=56, SLACK=12;
-    const paneW=Math.max(360, vpW - 2*SIDE_W - GAPS - PAGE_PAD - SLACK);
-    // Height budget: transport now lives on the LEFT edge (not a bottom bar),
-    // so the canvas can use almost the full height — only the top bar/header
-    // (~150) is above it. Keep a small bottom margin.
-    const paneH=Math.max(280, vpH - 210);
-    // Largest landscape PHI frame that fits BOTH the pane width and height.
-    let frameW=Math.min(paneW, paneH*PHI);
-    let targetCWL=Math.max(480, Math.floor(frameW));
+    const paneW=Math.max(300, vpW - 2*SIDE_W - GAPS - PAGE_PAD - SLACK);
+    // Height budget: top bar/header (~150) above, small bottom margin.
+    const paneH=Math.max(320, vpH - 200);
+    // Largest PORTRAIT PHI frame: height-led, width = height/φ, but capped so it
+    // never exceeds the centre pane width.
+    let frameH=Math.min(paneH, paneW*PHI);
+    let frameW=Math.min(paneW, Math.floor(frameH/PHI));
+    let targetCWL=Math.max(300, Math.floor(frameW));
     BW=Math.max(2,Math.floor(targetCWL/N));
     CW=N*BW;
-    CH=Math.max(180,Math.round(CW/PHI));
+    CH=Math.max(280,Math.round(CW*PHI));
     BH=Math.max(2,Math.floor(CH/rows));
   } else {
     // LOADED-MODE GROW CANVAS — MIDI / audio / score / image / mood (MOBILE).
