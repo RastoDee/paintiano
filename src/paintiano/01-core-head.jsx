@@ -65,6 +65,8 @@ const PF_STYLE = `
         .pf-score:hover { background:rgba(169,127,245,.12)!important; border-color:${PF.purple}!important; box-shadow:0 4px 16px rgba(169,127,245,.22); }
         .pf-image:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(244,124,60,.22); }
         .pf-compose:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(78,203,141,.25); }
+        .pf-moodtile:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(201,168,76,.22); }
+        .pf-mfitile:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(220,150,255,.22); }
         .pf-mic:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(240,106,166,.22); }
         .pf-morph:hover { transform: translateY(-1px); box-shadow:0 4px 16px rgba(169,127,245,.4); }
         .pf-vary:hover { transform: translateY(-1px); box-shadow:0 4px 16px rgba(244,124,60,.4); }

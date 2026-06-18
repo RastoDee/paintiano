@@ -60,10 +60,10 @@ const PF_STYLE = `
         .pf-lift:hover { transform: translateY(-1px); }
         .pf-chip:hover { transform: translateY(-1px); }
         .pf-dice:hover { transform: rotate(20deg) translateY(-1px) !important; }
-        .pf-midi:hover  { background:rgba(91,156,246,.12)!important; border-color:${PF.blue}!important; box-shadow:0 4px 16px rgba(91,156,246,.22); }
+        .pf-midi:hover  { transform: translateY(-2px); box-shadow:0 5px 18px rgba(91,156,246,.22); }
         .pf-audio:hover { background:rgba(244,124,60,.12)!important; border-color:${PF.orange}!important; box-shadow:0 4px 16px rgba(244,124,60,.22); }
         .pf-score:hover { background:rgba(169,127,245,.12)!important; border-color:${PF.purple}!important; box-shadow:0 4px 16px rgba(169,127,245,.22); }
-        .pf-image:hover { background:rgba(78,203,141,.12)!important; border-color:${PF.green}!important; box-shadow:0 4px 16px rgba(78,203,141,.22); }
+        .pf-image:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(244,124,60,.22); }
         .pf-compose:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(78,203,141,.25); }
         .pf-mic:hover { transform: translateY(-2px); box-shadow:0 5px 18px rgba(240,106,166,.22); }
         .pf-morph:hover { transform: translateY(-1px); box-shadow:0 4px 16px rgba(169,127,245,.4); }
