@@ -9791,7 +9791,7 @@ Composition rules:
         )}
       </div>
       {composeMode && (
-      <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',marginTop:12,paddingBottom:4,touchAction:'pan-x',WebkitOverflowScrolling:'touch'}}>
+      <div ref={kbScrollRef} className="pf-piano-dock" style={{overflowX:'auto',maxWidth:'100%',marginTop:12,paddingBottom:4,touchAction:'pan-x',WebkitOverflowScrolling:'touch'}}>
         <div style={{position:'relative',width:PW,height:WKH,userSelect:'none',opacity:loadedMode?0.25:(busy&&!playing?0.4:1),filter:loadedMode?'grayscale(0.6)':'none',pointerEvents:loadedMode?'none':'auto'}}>
           {WKEYS.map(({midi,wi})=>{
             const isActive=active.has(midi);

@@ -154,7 +154,14 @@ const PF_STYLE = `
             width: 100% !important;
             padding: 14px 24px 28px !important;
           }
-          .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; position: relative; z-index: 2; }
+          .pf-app-root > .pf-topbar {
+            grid-area: topbar;
+            max-width: 100% !important;
+            position: relative;
+            z-index: 2;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
           /* Wordmark + PRO AI badge sit centered on the top bar's level (between
              the hamburger menu and the AA/lang control) instead of as a large
              standalone header below. Sits ABOVE the topbar's blur layer (z-index
@@ -321,42 +328,21 @@ const PF_STYLE = `
             margin-bottom: 0 !important;
           }
           .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
-          /* Compose / Mic modes embed the piano keyboard inside the transport
-             dock, which needs the full width — the narrow 180px left column would
-             crush it. In these modes the dock returns to a full-width bottom bar
-             and its row goes horizontal again. The three columns above still hold
-             (palettes left, canvas centre, artists right). */
-          .pf-mode-live > .pf-transport-dock {
+          /* Compose / Mic: the transport stays in the LEFT column under the
+             palettes (same as every mode). Only the piano keyboard docks at the
+             bottom as a clean full-width strip. The grid content (panels + canvas)
+             gets bottom room equal to the keyboard height so everything can be
+             reached "above" the keyboard without scrolling inside panels. */
+          .pf-mode-live .pf-piano-dock {
             position: fixed !important;
-            grid-area: unset;
-            left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important;
-            width: auto !important;
-            margin-top: 0 !important;
-            border-radius: 0 !important;
-            border: none !important;
-            border-top: 1px solid rgba(201,168,76,.15) !important;
-            background: rgba(4,3,8,0.97) !important;
-            backdrop-filter: blur(8px) !important;
-            -webkit-backdrop-filter: blur(8px) !important;
-            padding: 8px !important;
+            left: 0 !important; right: 0 !important; bottom: 0 !important;
             z-index: 50;
-          }
-          .pf-mode-live > .pf-transport-dock .pf-transport-row {
-            flex-direction: row !important;
-            flex-wrap: wrap !important;
-            justify-content: center !important;
-            align-items: center !important;
-          }
-          .pf-mode-live > .pf-transport-dock .pf-transport-row > button { width: auto !important; }
-          /* In compose/mic the piano dock sits fixed at the bottom over the full
-             width, covering the lower part of the side panels. Make the colour
-             and artist panels scrollable within the space above the dock so every
-             palette / artist stays reachable (scroll past the keyboard). */
-          .pf-mode-live .pf-colors-inner,
-          .pf-mode-live .pf-styles-inner {
-            max-height: calc(100vh - 320px) !important;
-            overflow-y: auto !important;
-            overscroll-behavior: contain;
+            background: rgba(4,3,8,0.97);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-top: 1px solid rgba(201,168,76,.15);
+            padding: 8px;
+            margin: 0 !important;
           }
         }
 `;
@@ -26352,7 +26338,7 @@ Composition rules:
         )}
       </div>
       {composeMode && (
-      <div ref={kbScrollRef} style={{overflowX:'auto',maxWidth:'100%',marginTop:12,paddingBottom:4,touchAction:'pan-x',WebkitOverflowScrolling:'touch'}}>
+      <div ref={kbScrollRef} className="pf-piano-dock" style={{overflowX:'auto',maxWidth:'100%',marginTop:12,paddingBottom:4,touchAction:'pan-x',WebkitOverflowScrolling:'touch'}}>
         <div style={{position:'relative',width:PW,height:WKH,userSelect:'none',opacity:loadedMode?0.25:(busy&&!playing?0.4:1),filter:loadedMode?'grayscale(0.6)':'none',pointerEvents:loadedMode?'none':'auto'}}>
           {WKEYS.map(({midi,wi})=>{
             const isActive=active.has(midi);
