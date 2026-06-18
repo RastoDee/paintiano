@@ -301,6 +301,31 @@ const PF_STYLE = `
             margin: 0 auto;
             line-height: 1.5;
           }
+          /* SETUP-VIEW PICKER: when a source mode is chosen in setup, the
+             sample/file picker appears in the RIGHT column (where artists sit in
+             active view) instead of as a full-screen modal — contextual, keeps
+             the two-thumb layout. The dim full-screen backdrop is dropped; the
+             dialog flows into the styles area. Mobile keeps the modal. */
+          .pf-mode-setup > .pf-picker-overlay {
+            position: static !important;
+            inset: auto !important;
+            grid-area: styles;
+            align-self: start;
+            display: block !important;
+            background: transparent !important;
+            padding: 0 !important;
+            z-index: auto !important;
+          }
+          .pf-mode-setup > .pf-picker-overlay .pf-picker-dialog {
+            max-width: 100% !important;
+            min-width: 0 !important;
+            width: 100% !important;
+            background: var(--pf-card, #161320) !important;
+            border-radius: 18px !important;
+          }
+          /* While the picker occupies the right column, hide the centre
+             placeholder prompt (the picker is now the active focus). */
+          .pf-mode-setup:has(> .pf-picker-overlay) > .pf-setup-stage { opacity: .35; }
           /* ── Two-thumb ergonomics: transport flows in the LEFT column directly
              under the palettes (one continuous tools column), so it sits where
              the left thumb rests. Not fixed — it's a grid item, no overlap. Its

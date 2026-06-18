@@ -301,6 +301,31 @@ const PF_STYLE = `
             margin: 0 auto;
             line-height: 1.5;
           }
+          /* SETUP-VIEW PICKER: when a source mode is chosen in setup, the
+             sample/file picker appears in the RIGHT column (where artists sit in
+             active view) instead of as a full-screen modal — contextual, keeps
+             the two-thumb layout. The dim full-screen backdrop is dropped; the
+             dialog flows into the styles area. Mobile keeps the modal. */
+          .pf-mode-setup > .pf-picker-overlay {
+            position: static !important;
+            inset: auto !important;
+            grid-area: styles;
+            align-self: start;
+            display: block !important;
+            background: transparent !important;
+            padding: 0 !important;
+            z-index: auto !important;
+          }
+          .pf-mode-setup > .pf-picker-overlay .pf-picker-dialog {
+            max-width: 100% !important;
+            min-width: 0 !important;
+            width: 100% !important;
+            background: var(--pf-card, #161320) !important;
+            border-radius: 18px !important;
+          }
+          /* While the picker occupies the right column, hide the centre
+             placeholder prompt (the picker is now the active focus). */
+          .pf-mode-setup:has(> .pf-picker-overlay) > .pf-setup-stage { opacity: .35; }
           /* ── Two-thumb ergonomics: transport flows in the LEFT column directly
              under the palettes (one continuous tools column), so it sits where
              the left thumb rests. Not fixed — it's a grid item, no overlap. Its
@@ -23918,7 +23943,7 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')} style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(isSetupView?' pf-mode-setup':'')} style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && (()=>{
@@ -25046,8 +25071,8 @@ Composition rules:
       <input ref={refImgMood} type="file" accept="image/*" onChange={loadImgMood} style={{display:'none'}}/>
 
       {pickMode && (
-        <div onClick={()=>setPickMode(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
+        <div onClick={()=>setPickMode(null)} className="pf-picker-overlay" style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" className="pf-picker-dialog" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:(.65*effScale)+'rem'}}>
               {pickMode==='sound'?(t('musicInput')||'add music'):pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')}
             </div>
