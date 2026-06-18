@@ -8830,7 +8830,21 @@ Composition rules:
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
           if(!exportReadyFs && !showNextFs && !showPaletteFs && !showSlideFs) return null;
           return (
-            <div className="pf-fs-controls" style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
+            <div className="pf-fs-controls" style={{position:'fixed',zIndex:10000,display:'flex',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease',...(immersive?{
+                top:'50%',
+                left:`min(calc(50% + min(49vw, 49dvh * ${CW} / ${CH}) + 14px), calc(100vw - 164px))`,
+                transform:'translateY(-50%)',
+                flexDirection:'column',
+                alignItems:'stretch',
+                gap:8,
+                width:150
+              }:{
+                bottom:'max(20px, env(safe-area-inset-bottom))',
+                left:'50%',
+                transform:'translateX(-50%)',
+                alignItems:'center',
+                gap:10
+              })}}>
               {showPaletteFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); cycleColorFs(); wakeControls(); }} className="pf-lift" aria-label="cycle palette"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#5b8bf0,#3361d9)',border:'1px solid #5b8bf0',boxShadow:'0 6px 22px rgba(91,139,240,.45)',WebkitTapHighlightColor:'transparent'}}>

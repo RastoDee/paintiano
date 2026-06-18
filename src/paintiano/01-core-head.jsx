@@ -351,22 +351,10 @@ const PF_STYLE = `
           /* Compose / Mic are live play — no import picker belongs there. If one is
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
-          /* Fullscreen (immersive) control bar — HARMONY / NEXT / SHOW / SAVE /
-             STORY — into the BLACK space at the far-right of the screen (the
-             canvas is a centered portrait, so the right edge of the viewport is
-             empty). Compact width, stacked vertically, thumb-reachable. */
-          .pf-immersive .pf-fs-controls {
-            left: auto !important;
-            right: 32px !important;
-            bottom: auto !important;
-            top: 50% !important;
-            transform: translateY(-50%) !important;
-            width: 150px !important;
-            max-width: 150px !important;
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 8px !important;
-          }
+          /* Fullscreen (immersive) control bar — HARMONY / NEXT / SHOW / SAVE.
+             Position is set inline in JSX (it needs the live canvas width CW/CH to
+             land in the black space just right of the centered portrait canvas).
+             Here we only size the buttons compactly. */
           .pf-immersive .pf-fs-controls > button {
             width: 100% !important;
             padding: 10px 12px !important;
