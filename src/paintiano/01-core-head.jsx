@@ -208,7 +208,9 @@ const PF_STYLE = `
           /* Image-scan mode: the artist picker is hidden (the picture dictates
              colour), so the right column would be empty. Hide the empty styles
              box; the colour/scan panel stays in the left column, image centre. */
-          .pf-strip-imagescan .pf-styles-inner { display: none !important; }
+          /* Image-scan mode keeps the standard three columns: colours left (same
+             as every mode), scan/AI + scan-direction right (where artists sit in
+             other modes). Both panels are populated, so no special hiding needed. */
           /* Artists stack in a single column on the right, mirroring the
              palettes on the left — 9 pair chips + mosaic fit comfortably
              vertically and read cleaner than a squeezed multi-column grid. */
