@@ -350,36 +350,20 @@ const PF_STYLE = `
           /* Compose / Mic are live play — no import picker belongs there. If one is
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
-          /* Fullscreen (immersive): move the playback controls to the RIGHT edge,
-             stacked vertically, so they're reachable with the right thumb instead
-             of spread across the bottom centre. zIndex above the immersive canvas. */
-          .pf-immersive .pf-transport-dock {
-            position: fixed !important;
-            top: 50% !important;
-            right: 16px !important;
+          /* Fullscreen (immersive) control bar — HARMONY / NEXT / SHOW / SAVE /
+             STORY — moves from the bottom centre to the RIGHT edge, stacked
+             vertically so it's reachable with the right thumb. This is the
+             on-canvas immersive bar, NOT the transport dock. */
+          .pf-immersive .pf-fs-controls {
             left: auto !important;
+            right: 18px !important;
             bottom: auto !important;
+            top: 50% !important;
             transform: translateY(-50%) !important;
-            width: auto !important;
-            max-width: 200px !important;
-            z-index: 10001 !important;
-            background: rgba(4,3,8,0.72) !important;
-            backdrop-filter: blur(10px) !important;
-            -webkit-backdrop-filter: blur(10px) !important;
-            border: 1px solid rgba(201,168,76,.18) !important;
-            border-radius: 18px !important;
-            padding: 12px !important;
-          }
-          .pf-immersive .pf-transport-dock .pf-transport-row {
-            display: flex !important;
             flex-direction: column !important;
-            gap: 8px !important;
-            flex-wrap: nowrap !important;
+            align-items: stretch !important;
           }
-          .pf-immersive .pf-transport-dock .pf-transport-row > button {
-            width: 100% !important;
-            justify-content: center !important;
-          }
+          .pf-immersive .pf-fs-controls > button { width: 100% !important; }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
@@ -25496,7 +25480,7 @@ Composition rules:
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
           if(!exportReadyFs && !showNextFs && !showPaletteFs && !showSlideFs) return null;
           return (
-            <div style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
+            <div className="pf-fs-controls" style={{position:'fixed',bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',zIndex:10000,display:'flex',alignItems:'center',gap:10,opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
               {showPaletteFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); cycleColorFs(); wakeControls(); }} className="pf-lift" aria-label="cycle palette"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#5b8bf0,#3361d9)',border:'1px solid #5b8bf0',boxShadow:'0 6px 22px rgba(91,139,240,.45)',WebkitTapHighlightColor:'transparent'}}>

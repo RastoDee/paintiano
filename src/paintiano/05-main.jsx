@@ -9875,7 +9875,7 @@ Composition rules:
           scroll; the popup it opens is also fixed and covers the full
           viewport. zIndex high enough to sit above app chrome but below
           the paywall modal. ── */}
-      {!showOnboarding && !isActiveView && (
+      {!showOnboarding && !showIntro && !isActiveView && (
         <button
           className="pf-help-fab"
           onClick={()=>setShowHelp(true)}
