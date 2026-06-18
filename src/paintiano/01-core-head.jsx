@@ -404,6 +404,32 @@ const PF_STYLE = `
             padding: 10px 12px !important;
             font-size: .58rem !important;
           }
+          /* SETUP modal — three-column layout mirroring the active screen:
+             PALETTES in the left column, empty middle, ARTISTS in the right
+             column, and DONE pinned to the bottom of the left column so its
+             bottom edge lines up with the last artist tile on the right. */
+          .pf-setup-dialog { max-width: 860px !important; }
+          .pf-setup-body {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr 1fr !important;
+            grid-template-areas: "pal mid art" !important;
+            gap: 0 28px !important;
+            align-items: start !important;
+          }
+          .pf-setup-palettes { grid-area: pal; display: flex; flex-direction: column; height: 100%; }
+          .pf-setup-artists  { grid-area: art; }
+          /* palettes single column; artists single column (like the active screen) */
+          .pf-setup-palettes .pf-setup-grid,
+          .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
+          /* DONE moves out of the modal footer and sits at the bottom of the left
+             column. Hide the original footer; show a left-column DONE instead. */
+          .pf-setup-footer { display: none !important; }
+          .pf-setup-palettes .pf-setup-done {
+            display: flex !important;
+            margin-top: auto;
+            padding-top: 18px;
+          }
+          .pf-setup-palettes .pf-setup-done > button { width: 100%; }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */

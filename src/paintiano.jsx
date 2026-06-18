@@ -404,6 +404,32 @@ const PF_STYLE = `
             padding: 10px 12px !important;
             font-size: .58rem !important;
           }
+          /* SETUP modal — three-column layout mirroring the active screen:
+             PALETTES in the left column, empty middle, ARTISTS in the right
+             column, and DONE pinned to the bottom of the left column so its
+             bottom edge lines up with the last artist tile on the right. */
+          .pf-setup-dialog { max-width: 860px !important; }
+          .pf-setup-body {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr 1fr !important;
+            grid-template-areas: "pal mid art" !important;
+            gap: 0 28px !important;
+            align-items: start !important;
+          }
+          .pf-setup-palettes { grid-area: pal; display: flex; flex-direction: column; height: 100%; }
+          .pf-setup-artists  { grid-area: art; }
+          /* palettes single column; artists single column (like the active screen) */
+          .pf-setup-palettes .pf-setup-grid,
+          .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
+          /* DONE moves out of the modal footer and sits at the bottom of the left
+             column. Hide the original footer; show a left-column DONE instead. */
+          .pf-setup-footer { display: none !important; }
+          .pf-setup-palettes .pf-setup-done {
+            display: flex !important;
+            margin-top: auto;
+            padding-top: 18px;
+          }
+          .pf-setup-palettes .pf-setup-done > button { width: 100%; }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
@@ -26920,13 +26946,13 @@ Composition rules:
         const isFree = proStatus==='free';
         return (
         <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) closeSetup(); }} style={{position:'fixed',inset:0,zIndex:11000,background:'rgba(8,6,14,.78)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px'}}>
-          <div style={{width:'100%',maxWidth:520,maxHeight:'92vh',display:'flex',flexDirection:'column',background:'rgba(20,16,28,.96)',border:'1px solid rgba(201,168,76,.4)',borderRadius:18,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
+          <div className="pf-setup-dialog" style={{width:'100%',maxWidth:520,maxHeight:'92vh',display:'flex',flexDirection:'column',background:'rgba(20,16,28,.96)',border:'1px solid rgba(201,168,76,.4)',borderRadius:18,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
             <div style={{padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(242,238,232,.08)'}}>
               <span style={{fontSize:(.85*effScale)+'rem',fontWeight:600,letterSpacing:'.14em',color:PF.gold2,textTransform:'uppercase'}}>⚙ {ts('setupPickerLabel','Setup')}</span>
               <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} aria-label="close" style={{background:'transparent',border:'none',color:okMin?'rgba(247,243,236,.8)':'rgba(247,243,236,.25)',fontSize:'1.5rem',cursor:okMin?'pointer':'default',padding:'4px 8px',fontFamily:'inherit'}}>✕</button>
             </div>
-            <div style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
-              <div>
+            <div className="pf-setup-body" style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
+              <div className="pf-setup-palettes">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase'}}>{ts('setupPalettesTitle','Palettes')}</span>
                   <span style={{display:'inline-flex',gap:14,fontSize:(.5*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase'}}>
@@ -26934,7 +26960,7 @@ Composition rules:
                     <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{ts('setupNone','None')}</span>
                   </span>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
+                <div className="pf-setup-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
                   {ALL_PALETTE_KEYS.map(k=>{
                     const on = setupPalettes.includes(k);
                     return (
@@ -26945,8 +26971,11 @@ Composition rules:
                     );
                   })}
                 </div>
+                <div className="pf-setup-done" style={{display:'none'}}>
+                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'11px 22px',background:okMin?'rgba(201,168,76,.2)':'rgba(201,168,76,.06)',color:okMin?PF.gold2:'rgba(201,168,76,.35)',border:'1px solid '+(okMin?'rgba(201,168,76,.6)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase'}}>{ts('setupSave','Done')}</button>
+                </div>
               </div>
-              <div>
+              <div className="pf-setup-artists">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.55*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',color:'rgba(242,238,232,.55)',textTransform:'uppercase'}}>{ts('setupArtistsTitle','Artists')}</span>
                   <span style={{display:'inline-flex',gap:14,fontSize:(.5*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase'}}>
@@ -26954,7 +26983,7 @@ Composition rules:
                     <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{ts('setupNone','None')}</span>
                   </span>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
+                <div className="pf-setup-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
                   {/* Mosaic family — single tile (the trio Mosaic / Notes / $1M$). */}
                   {(()=>{
                     const k='mosaicFamily';
@@ -26996,7 +27025,7 @@ Composition rules:
                 <div style={{padding:'10px 12px',borderRadius:8,background:'rgba(232,85,122,.12)',border:'1px solid rgba(232,85,122,.4)',color:'#ff9ab4',fontSize:(.6*effScale)+'rem',lineHeight:1.4}}>{ts('setupMinError','Choose at least 1 palette and 1 artist.')}</div>
               )}
             </div>
-            <div style={{padding:'14px 20px',borderTop:'1px solid rgba(242,238,232,.08)',display:'flex',justifyContent:'flex-end',gap:8}}>
+            <div className="pf-setup-footer" style={{padding:'14px 20px',borderTop:'1px solid rgba(242,238,232,.08)',display:'flex',justifyContent:'flex-end',gap:8}}>
               <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'9px 22px',background:okMin?'rgba(201,168,76,.2)':'rgba(201,168,76,.06)',color:okMin?PF.gold2:'rgba(201,168,76,.35)',border:'1px solid '+(okMin?'rgba(201,168,76,.6)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase'}}>{ts('setupSave','Done')}</button>
             </div>
           </div>
