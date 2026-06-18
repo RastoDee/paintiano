@@ -138,12 +138,12 @@ const PF_STYLE = `
              (<769px) never sees this — the app stays a single column. */
           .pf-app-root {
             display: grid !important;
-            grid-template-columns: 320px minmax(0, 1fr) 320px;
+            grid-template-columns: 210px minmax(0, 1fr) 210px;
             grid-template-rows: auto auto auto 1fr;
             grid-template-areas:
               "topbar   topbar topbar"
               "header   header header"
-              "controls stage  styles"
+              "controls stage  rtop"
               "colors   stage  styles";
             align-items: start !important;
             justify-items: stretch !important;
@@ -154,7 +154,19 @@ const PF_STYLE = `
           }
           .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; }
           .pf-app-root > header     { grid-area: header; margin-bottom: 6px !important; }
-          .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; margin-bottom: 12px; gap: 10px; }
+          .pf-app-root .pf-controls-inner { display: contents; }
+          /* SPÄŤ (always the first control) sits top-left, above palettes. */
+          .pf-app-root .pf-controls-inner > button:first-child { grid-area: controls; align-self: start; justify-self: start; margin-bottom: 10px; }
+          /* The "+ NOVÁ HUDBA / mood / image" variants sit top-right, above the
+             artists, where the right thumb reaches. They share the styles column
+             top; styles-inner flows beneath via align-self:start. */
+          .pf-app-root .pf-controls-inner > button:not(:first-child) {
+            grid-area: rtop;
+            align-self: start;
+            justify-self: stretch;
+            margin-bottom: 10px;
+            z-index: 2;
+          }
           /* The active-view strip (pf-panel-part) and its inner grid wrapper are
              flattened with display:contents so their two inner columns —
              pf-colors-inner (left) and pf-styles-inner (right) — become direct
@@ -176,9 +188,9 @@ const PF_STYLE = `
              tall so each reads as a full-width choice (not a cramped chip). */
           .pf-app-root .pf-color-tabs {
             grid-template-columns: 1fr !important;
-            gap: 9px !important;
+            gap: 7px !important;
           }
-          .pf-app-root .pf-color-tabs > button { padding: 12px 10px !important; letter-spacing: .12em !important; }
+          .pf-app-root .pf-color-tabs > button { padding: 9px 8px !important; letter-spacing: .1em !important; }
           .pf-app-root .pf-styles-inner {
             grid-area: styles;
             align-self: start;
@@ -193,10 +205,10 @@ const PF_STYLE = `
              vertically and read cleaner than a squeezed multi-column grid. */
           .pf-app-root .pf-styles-inner [title^="painting style"] {
             grid-template-columns: 1fr !important;
-            gap: 9px !important;
-            row-gap: 9px !important;
+            gap: 7px !important;
+            row-gap: 7px !important;
           }
-          .pf-app-root .pf-styles-inner .pf-artist { padding: 12px 10px !important; letter-spacing: .12em !important; }
+          .pf-app-root .pf-styles-inner .pf-artist { padding: 9px 8px !important; letter-spacing: .1em !important; }
           /* Setup view (pre-load) has no colors/styles split — its single panel
              part spans the left+stage area so the setup tiles + hero read well. */
           .pf-app-root > .pf-panel-part.pf-fade { display: flex; grid-area: colors; }
@@ -207,6 +219,30 @@ const PF_STYLE = `
             align-self: center;
             justify-self: center;
           }
+          /* ── Two-thumb ergonomics: transport pinned to the LEFT edge, under the
+             palettes, so it sits where the left thumb rests when holding a tablet
+             / touch-PC. Its inner control row stacks vertically. Mobile keeps the
+             original full-width bottom dock. ── */
+          .pf-app-root ~ .pf-transport-dock,
+          .pf-transport-dock {
+            position: fixed !important;
+            left: 16px !important;
+            right: auto !important;
+            bottom: 24px !important;
+            top: auto !important;
+            width: 210px !important;
+            border-top: none !important;
+            border: 1px solid rgba(201,168,76,.15) !important;
+            border-radius: 16px !important;
+            padding: 10px !important;
+          }
+          .pf-transport-dock .pf-transport-row {
+            flex-direction: column !important;
+            flex-wrap: nowrap !important;
+            gap: 8px !important;
+            align-items: stretch !important;
+          }
+          .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
@@ -712,16 +748,17 @@ function computeGrid(arg, opts){
     // piece grows. Mobile (<769px) keeps the portrait grow-canvas below.
     const vpW=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:960;
     const vpH=(typeof window!=='undefined'&&window.innerHeight)?window.innerHeight:800;
-    // Right-pane width = viewport − left tools column (380) − column-gap (26)
-    //                    − page horizontal padding (28*2) − canvas border slack.
-    const PANEL_W=380, GAP=26, PAGE_PAD=56, SLACK=24;
-    const paneW=Math.max(360, vpW - PANEL_W - GAP - PAGE_PAD - SLACK);
-    // Height budget: viewport minus top bar/header (~150) and the fixed transport
-    // dock (~150) so the whole frame is visible without scrolling.
-    const paneH=Math.max(240, vpH - 300);
+    // Two side panels (≈210px each) + two column-gaps (28) + page padding (64).
+    // Subtract both so the centre stage gets the real remaining width.
+    const SIDE_W=210, GAPS=2*28, PAGE_PAD=64, SLACK=16;
+    const paneW=Math.max(360, vpW - 2*SIDE_W - GAPS - PAGE_PAD - SLACK);
+    // Height budget: transport now lives on the LEFT edge (not a bottom bar),
+    // so the canvas can use almost the full height — only the top bar/header
+    // (~150) is above it. Keep a small bottom margin.
+    const paneH=Math.max(280, vpH - 210);
     // Largest landscape PHI frame that fits BOTH the pane width and height.
     let frameW=Math.min(paneW, paneH*PHI);
-    let targetCWL=Math.max(420, Math.floor(frameW));
+    let targetCWL=Math.max(480, Math.floor(frameW));
     BW=Math.max(2,Math.floor(targetCWL/N));
     CW=N*BW;
     CH=Math.max(180,Math.round(CW/PHI));
