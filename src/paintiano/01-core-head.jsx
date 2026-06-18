@@ -103,7 +103,7 @@ const PF_STYLE = `
             padding: 0;
           }
           #root {
-            width: min(960px, calc(100vw - 48px));
+            width: min(1600px, calc(100vw - 48px));
             height: 100vh;
             max-height: 100vh;
             background: radial-gradient(ellipse at 50% -10%, #0e0b16, #06060c 55%);
@@ -138,25 +138,55 @@ const PF_STYLE = `
              (<769px) never sees this — the app stays a single column. */
           .pf-app-root {
             display: grid !important;
-            grid-template-columns: 380px minmax(0, 1fr);
+            grid-template-columns: 300px minmax(0, 1fr) 300px;
             grid-template-rows: auto auto 1fr;
             grid-template-areas:
-              "topbar topbar"
-              "header header"
-              "panel  stage";
+              "topbar topbar topbar"
+              "header header header"
+              "colors stage  styles";
             align-items: start !important;
             justify-items: stretch !important;
-            column-gap: 26px;
+            column-gap: 22px;
             max-width: 100% !important;
             width: 100% !important;
             padding: 20px 28px 40px !important;
           }
           .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; }
           .pf-app-root > header     { grid-area: header; }
-          .pf-app-root > .pf-panel-part { grid-area: panel; max-width: 100% !important; }
-          .pf-app-root > .pf-stage-part { grid-area: stage; max-width: 100% !important; margin-left: 0; margin-right: 0; }
-          /* The setup/onboarding hero spans the stage column when present. */
-          .pf-app-root > .pf-panel-part { align-self: start; }
+          /* The active-view strip (pf-panel-part) and its inner grid wrapper are
+             flattened with display:contents so their two inner columns —
+             pf-colors-inner (left) and pf-styles-inner (right) — become direct
+             grid items of the root, landing in the colors/styles areas with the
+             canvas stage between them. Mobile (<769px) never hits this block, so
+             the strip stays a normal stacked column there. */
+          .pf-app-root > .pf-panel-part { display: contents !important; }
+          .pf-app-root .pf-strip-grid { display: contents !important; }
+          .pf-app-root .pf-colors-inner {
+            grid-area: colors;
+            align-self: start;
+            background: var(--pf-card, #161320);
+            border: 1px solid rgba(242,238,232,.07);
+            border-radius: 16px;
+            padding: 14px;
+          }
+          .pf-app-root .pf-styles-inner {
+            grid-area: styles;
+            align-self: start;
+            background: var(--pf-card, #161320);
+            border: 1px solid rgba(242,238,232,.07);
+            border-radius: 16px;
+            padding: 14px;
+          }
+          /* Setup view (pre-load) has no colors/styles split — its single panel
+             part spans the left+stage area so the setup tiles + hero read well. */
+          .pf-app-root > .pf-panel-part.pf-fade { display: flex; grid-area: colors; }
+          .pf-app-root > .pf-stage-part {
+            grid-area: stage;
+            max-width: 100% !important;
+            margin-left: 0; margin-right: 0;
+            align-self: center;
+            justify-self: center;
+          }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
@@ -653,18 +683,25 @@ function computeGrid(arg, opts){
     CH=Math.max(140,Math.round(CW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
   } else if(typeof window!=='undefined' && window.innerWidth>=769){
-    // LOADED-MODE DESKTOP LANDSCAPE FRAME — STAGE 2 (PC ≥769px only).
-    // On a wide screen, a tall grow-canvas wastes the landscape viewport and
-    // forces scrolling. Instead we use a FIXED golden-ratio landscape frame
-    // (same idea as live-mode): width is taken from the desktop column, height
-    // = width / PHI, and rows get thinner as the piece gets longer — so the
-    // WHOLE piece shows at once, landscape, without scrolling. Mobile (<769px)
-    // is unaffected and keeps the original portrait grow-canvas below.
-    // CW is bounded so very wide monitors don't stretch the frame past comfort.
+    // LOADED-MODE DESKTOP LANDSCAPE FRAME — STAGE 2 + 3 (PC ≥769px only).
+    // On a wide screen the canvas lives in the RIGHT pane of the two-pane grid
+    // (a ~380px tools column sits on the left, with column-gap + page padding).
+    // We size the fixed golden-ratio landscape frame to fill THAT pane as large
+    // as possible: width = pane width, but capped by the available height so the
+    // PHI frame never overflows the viewport vertically. Rows get thinner as the
+    // piece grows. Mobile (<769px) keeps the portrait grow-canvas below.
     const vpW=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:960;
-    // The desktop shell column is min(960, vw-48); the canvas sits inside it
-    // with some padding, so target a touch under the column width.
-    const targetCWL=Math.min(1000,Math.max(420,vpW-64));
+    const vpH=(typeof window!=='undefined'&&window.innerHeight)?window.innerHeight:800;
+    // Right-pane width = viewport − left tools column (380) − column-gap (26)
+    //                    − page horizontal padding (28*2) − canvas border slack.
+    const PANEL_W=380, GAP=26, PAGE_PAD=56, SLACK=24;
+    const paneW=Math.max(360, vpW - PANEL_W - GAP - PAGE_PAD - SLACK);
+    // Height budget: viewport minus top bar/header (~150) and the fixed transport
+    // dock (~150) so the whole frame is visible without scrolling.
+    const paneH=Math.max(240, vpH - 300);
+    // Largest landscape PHI frame that fits BOTH the pane width and height.
+    let frameW=Math.min(paneW, paneH*PHI);
+    let targetCWL=Math.max(420, Math.floor(frameW));
     BW=Math.max(2,Math.floor(targetCWL/N));
     CW=N*BW;
     CH=Math.max(180,Math.round(CW/PHI));
