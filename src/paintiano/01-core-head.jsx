@@ -154,20 +154,34 @@ const PF_STYLE = `
             width: 100% !important;
             padding: 14px 24px 28px !important;
           }
-          .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; position: relative; z-index: 3; }
+          .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; position: relative; z-index: 2; }
           /* Wordmark + PRO AI badge sit centered on the top bar's level (between
              the hamburger menu and the AA/lang control) instead of as a large
-             standalone header below. Absolutely centered over the topbar row. */
+             standalone header below. Sits ABOVE the topbar's blur layer (z-index
+             4 > 2) so the gold text stays crisp, not frosted; pointer-events:none
+             lets clicks pass through to the hamburger / lang controls beneath. */
           .pf-app-root > header {
             grid-area: topbar;
             align-self: center;
             justify-self: center;
             margin: 0 !important;
-            z-index: 2;
+            z-index: 4;
             pointer-events: none;
           }
           .pf-app-root > header h1 { font-size: 1.5rem !important; margin: 0 !important; }
           .pf-app-root > header > div { margin: 0 0 0 10px !important; display: inline-block !important; vertical-align: middle; }
+          /* Help (?) button moves from the bottom-right FAB up next to the
+             hamburger menu in the top-left, where help conventionally lives. */
+          .pf-app-root > .pf-help-fab {
+            position: fixed !important;
+            top: 22px !important;
+            left: 74px !important;
+            bottom: auto !important;
+            right: auto !important;
+            width: 38px !important;
+            height: 38px !important;
+            z-index: 100 !important;
+          }
           /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
           .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; gap: 8px; margin-bottom: 10px; }
           /* Progress/seek bar sits above the artists in the right column. */
@@ -334,6 +348,16 @@ const PF_STYLE = `
             align-items: center !important;
           }
           .pf-mode-live > .pf-transport-dock .pf-transport-row > button { width: auto !important; }
+          /* In compose/mic the piano dock sits fixed at the bottom over the full
+             width, covering the lower part of the side panels. Make the colour
+             and artist panels scrollable within the space above the dock so every
+             palette / artist stays reachable (scroll past the keyboard). */
+          .pf-mode-live .pf-colors-inner,
+          .pf-mode-live .pf-styles-inner {
+            max-height: calc(100vh - 320px) !important;
+            overflow-y: auto !important;
+            overscroll-behavior: contain;
+          }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the

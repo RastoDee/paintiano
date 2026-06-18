@@ -8001,7 +8001,7 @@ Composition rules:
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
               {(()=>{ const _allTabs = appColour?['harmony','spectral','phi','kontra','custom']:['bw','custom']; const _tabs = _allTabs.filter(m => m==='bw' || setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs; return (
-              <div style={{display:'grid',gridTemplateColumns: `repeat(${_shown.length},1fr)`,gap:6}}>
+              <div className="pf-color-tabs" style={{display:'grid',gridTemplateColumns: `repeat(${_shown.length},1fr)`,gap:6}}>
                 {_shown.map(m=>{
                   const isCustomTab = m==='custom';
                   const armed = isCustomTab && mode==='custom' && customArmed;
@@ -9877,6 +9877,7 @@ Composition rules:
           the paywall modal. ── */}
       {!showOnboarding && !isActiveView && (
         <button
+          className="pf-help-fab"
           onClick={()=>setShowHelp(true)}
           aria-label={t('helpFab')||'help'}
           title={t('helpFab')||'help'}
