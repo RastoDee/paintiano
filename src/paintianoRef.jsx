@@ -181,12 +181,13 @@ const PF_STYLE = `
              hamburger menu in the top-left, where help conventionally lives. */
           .pf-app-root > .pf-help-fab {
             position: fixed !important;
-            top: 22px !important;
-            left: 74px !important;
+            top: 24px !important;
+            left: 92px !important;
             bottom: auto !important;
             right: auto !important;
-            width: 38px !important;
-            height: 38px !important;
+            width: 34px !important;
+            height: 34px !important;
+            font-size: 18px !important;
             z-index: 100 !important;
           }
           /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
@@ -369,6 +370,11 @@ const PF_STYLE = `
             padding: 8px;
             margin: 0 !important;
           }
+          /* The fixed keyboard at the bottom covers ~190px. Pad the whole grid so
+             the left column's lowest buttons (Save / Clear) sit ABOVE it and stay
+             reachable — the grid's own desktop padding would otherwise be only
+             28px and leave them hidden behind the keys. */
+          .pf-mode-live.pf-app-root { padding-bottom: 210px !important; }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the

@@ -311,7 +311,7 @@ const PF_STYLE = `
             position: static !important;
             inset: auto !important;
             grid-area: styles;
-            align-self: start;
+            align-self: center;
             display: block !important;
             background: transparent !important;
             padding: 0 !important;
@@ -321,8 +321,11 @@ const PF_STYLE = `
             max-width: 100% !important;
             min-width: 0 !important;
             width: 100% !important;
-            background: var(--pf-card, #161320) !important;
+            background: linear-gradient(180deg, rgba(24,21,34,.92), rgba(14,12,20,.92)) !important;
+            border: 1px solid rgba(201,168,76,.28) !important;
             border-radius: 18px !important;
+            padding: 20px 16px !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4) !important;
           }
           /* While the picker occupies the right column, hide the centre
              placeholder prompt (the picker is now the active focus). */
@@ -837,7 +840,12 @@ function computeGrid(arg, opts){
   // golden-ratio frame (see the loaded-mode branch below). `fixedFrame` marks
   // any mode that keeps a declared CH and stretches the last row to fill it —
   // i.e. live-mode OR desktop-landscape. Mobile loaded-mode stays grow-canvas.
-  const desktopLandscape = !liveMode && (typeof window!=='undefined' && window.innerWidth>=769);
+  // Desktop loaded-mode now uses the SAME grow-canvas engine as mobile (square
+  // blocks, BH=BW*PHI), NOT a fixed frame — so it must NOT be treated as a fixed
+  // frame. Only live-mode (compose/sing/listen) keeps the fixed picture frame.
+  // (Previously desktop forced a fixed landscape/portrait frame whose row-stretch
+  // logic deformed circles into ellipses and made the paint lag the leading note.)
+  const desktopLandscape = false;
   const fixedFrame = liveMode || desktopLandscape;
   const totalQ=evs.reduce((s,e)=>s+(e.durQ!=null?e.durQ:1),0);
   // Smart N (column count) picker — minimizes wasted space in the last row.
@@ -871,29 +879,21 @@ function computeGrid(arg, opts){
     CH=Math.max(140,Math.round(CW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
   } else if(typeof window!=='undefined' && window.innerWidth>=769){
-    // LOADED-MODE DESKTOP PORTRAIT FRAME — STAGE 2 + 3 (PC ≥769px only).
-    // The canvas sits in the CENTRE column of the three-column grid (tools left,
-    // artists right). A PORTRAIT golden-ratio frame (taller than wide) fits that
-    // tall narrow centre far better than a landscape one. We size it to fill the
-    // available height, then cap the width by the centre pane so it never bleeds
-    // into the side columns. Rows get thinner as the piece grows; the whole piece
-    // is shown (no scroll). Mobile (<769px) keeps the portrait grow-canvas below.
+    // LOADED-MODE DESKTOP (PC ≥769px) — uses the SAME grow-canvas engine as
+    // mobile (square-ish blocks: BH = BW*PHI, CW = N*BW, CH = rows*BH). This is
+    // what makes circles render as circles and the paint keep pace with the
+    // leading note. The ONLY difference from mobile is the target width: instead
+    // of the full viewport, we cap it to the centre column of the three-column
+    // grid (tools left ~180px, artists right ~180px, gaps + page padding). The
+    // result is the identical painting, just sized to the middle lane.
     const vpW=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:960;
-    const vpH=(typeof window!=='undefined'&&window.innerHeight)?window.innerHeight:800;
-    // Two side panels (≈180px each) + two column-gaps (24) + page padding (56).
     const SIDE_W=180, GAPS=2*24, PAGE_PAD=56, SLACK=12;
-    const paneW=Math.max(300, vpW - 2*SIDE_W - GAPS - PAGE_PAD - SLACK);
-    // Height budget: top bar/header (~150) above, small bottom margin.
-    const paneH=Math.max(320, vpH - 200);
-    // Largest PORTRAIT PHI frame: height-led, width = height/φ, but capped so it
-    // never exceeds the centre pane width.
-    let frameH=Math.min(paneH, paneW*PHI);
-    let frameW=Math.min(paneW, Math.floor(frameH/PHI));
-    let targetCWL=Math.max(300, Math.floor(frameW));
+    const paneW=Math.max(320, vpW - 2*SIDE_W - GAPS - PAGE_PAD - SLACK);
+    const targetCWL=Math.min(900, paneW);
     BW=Math.max(2,Math.floor(targetCWL/N));
+    BH=Math.round(BW*PHI);
     CW=N*BW;
-    CH=Math.max(280,Math.round(CW*PHI));
-    BH=Math.max(2,Math.floor(CH/rows));
+    CH=rows*BH;
   } else {
     // LOADED-MODE GROW CANVAS — MIDI / audio / score / image / mood (MOBILE).
     // Block height = BW * PHI (golden ratio per block), canvas height grows
