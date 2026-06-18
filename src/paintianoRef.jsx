@@ -211,7 +211,18 @@ const PF_STYLE = `
           .pf-app-root .pf-styles-inner .pf-artist { padding: 9px 8px !important; letter-spacing: .1em !important; }
           /* Setup view (pre-load) has no colors/styles split — its single panel
              part spans the left+stage area so the setup tiles + hero read well. */
-          .pf-app-root > .pf-panel-part.pf-fade { display: flex; grid-area: colors; }
+          /* Setup view (pre-load): a single narrow left-column panel (mirrors the
+             canvas-view tools column) so every control is one thumb-reach wide.
+             Import + Create tiles stack vertically instead of 2-up. The PRIDAŤ
+             HUDBU / mood dialogs are fixed-position modals, unaffected. */
+          .pf-app-root > .pf-panel-part.pf-fade {
+            display: flex !important;
+            grid-area: colors;
+            max-width: 100% !important;
+            align-self: start;
+          }
+          .pf-app-root .pf-setup-import,
+          .pf-app-root .pf-setup-create { grid-template-columns: 1fr !important; }
           .pf-app-root > .pf-stage-part {
             grid-area: stage;
             max-width: 100% !important;
@@ -24076,7 +24087,7 @@ Composition rules:
           {/* SOURCE — input tiles, split into IMPORT (files) and CREATE (live) */}
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
+            <div className="pf-setup-import" style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
               {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
                   loadSound routes by file type. Active when any of the three
                   music sources is loaded. */}
@@ -24084,7 +24095,7 @@ Composition rules:
               <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
             </div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',margin:'16px 0 10px',textTransform:'uppercase'}}>{t('createLabel')}</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            <div className="pf-setup-create" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               <button className="pf-compose" onClick={()=>{
                 if(busy)return;
                 if(!composeMode&&(micPainting||micListening))return;

@@ -138,23 +138,24 @@ const PF_STYLE = `
              (<769px) never sees this — the app stays a single column. */
           .pf-app-root {
             display: grid !important;
-            grid-template-columns: 210px minmax(0, 1fr) 210px;
-            grid-template-rows: auto auto auto 1fr;
+            grid-template-columns: 180px minmax(0, 1fr) 180px;
+            grid-template-rows: auto auto auto auto 1fr;
             grid-template-areas:
               "topbar   topbar topbar"
               "header   header header"
               "controls stage  rtop"
-              "colors   stage  styles";
+              "colors   stage  styles"
+              "ltrans   stage  styles";
             align-items: start !important;
             justify-items: stretch !important;
-            column-gap: 28px;
+            column-gap: 24px;
             max-width: 100% !important;
             width: 100% !important;
-            padding: 16px 32px 40px !important;
+            padding: 14px 24px 28px !important;
           }
           .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; }
           .pf-app-root > header     { grid-area: header; margin-bottom: 6px !important; }
-          .pf-app-root .pf-controls-inner { display: contents; }
+          .pf-app-root .pf-controls-inner { display: contents !important; }
           /* SPÄŤ (always the first control) sits top-left, above palettes. */
           .pf-app-root .pf-controls-inner > button:first-child { grid-area: controls; align-self: start; justify-self: start; margin-bottom: 10px; }
           /* The "+ NOVÁ HUDBA / mood / image" variants sit top-right, above the
@@ -181,7 +182,7 @@ const PF_STYLE = `
             background: var(--pf-card, #161320);
             border: 1px solid rgba(242,238,232,.08);
             border-radius: 18px;
-            padding: 18px 16px;
+            padding: 12px;
             gap: 14px !important;
           }
           /* Palettes stack vertically in the narrow left column, comfortably
@@ -190,14 +191,14 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 7px !important;
           }
-          .pf-app-root .pf-color-tabs > button { padding: 9px 8px !important; letter-spacing: .1em !important; }
+          .pf-app-root .pf-color-tabs > button { padding: 7px 6px !important; letter-spacing: .08em !important; font-size: .56rem !important; }
           .pf-app-root .pf-styles-inner {
             grid-area: styles;
             align-self: start;
             background: var(--pf-card, #161320);
             border: 1px solid rgba(242,238,232,.08);
             border-radius: 18px;
-            padding: 18px 16px;
+            padding: 12px;
             gap: 14px !important;
           }
           /* Artists stack in a single column on the right, mirroring the
@@ -208,7 +209,7 @@ const PF_STYLE = `
             gap: 7px !important;
             row-gap: 7px !important;
           }
-          .pf-app-root .pf-styles-inner .pf-artist { padding: 9px 8px !important; letter-spacing: .1em !important; }
+          .pf-app-root .pf-styles-inner .pf-artist { padding: 7px 6px !important; letter-spacing: .06em !important; font-size: .56rem !important; }
           /* Setup view (pre-load) has no colors/styles split — its single panel
              part spans the left+stage area so the setup tiles + hero read well. */
           /* Setup view (pre-load): a single narrow left-column panel (mirrors the
@@ -230,28 +231,31 @@ const PF_STYLE = `
             align-self: center;
             justify-self: center;
           }
-          /* ── Two-thumb ergonomics: transport pinned to the LEFT edge, under the
-             palettes, so it sits where the left thumb rests when holding a tablet
-             / touch-PC. Its inner control row stacks vertically. Mobile keeps the
-             original full-width bottom dock. ── */
-          .pf-app-root ~ .pf-transport-dock,
-          .pf-transport-dock {
-            position: fixed !important;
-            left: 16px !important;
-            right: auto !important;
-            bottom: 24px !important;
-            top: auto !important;
-            width: 210px !important;
+          /* ── Two-thumb ergonomics: transport flows in the LEFT column directly
+             under the palettes (one continuous tools column), so it sits where
+             the left thumb rests. Not fixed — it's a grid item, no overlap. Its
+             control row stacks vertically. Mobile keeps the bottom dock. ── */
+          .pf-app-root > .pf-transport-dock {
+            position: static !important;
+            grid-area: ltrans;
+            align-self: start;
+            margin-top: 12px;
+            left: auto !important; right: auto !important; bottom: auto !important; top: auto !important;
+            width: auto !important;
+            background: var(--pf-card, #161320) !important;
             border-top: none !important;
-            border: 1px solid rgba(201,168,76,.15) !important;
-            border-radius: 16px !important;
-            padding: 10px !important;
+            border: 1px solid rgba(242,238,232,.08) !important;
+            border-radius: 18px !important;
+            padding: 12px !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
           }
           .pf-transport-dock .pf-transport-row {
             flex-direction: column !important;
             flex-wrap: nowrap !important;
-            gap: 8px !important;
+            gap: 7px !important;
             align-items: stretch !important;
+            margin-bottom: 0 !important;
           }
           .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
         }
@@ -761,7 +765,7 @@ function computeGrid(arg, opts){
     const vpH=(typeof window!=='undefined'&&window.innerHeight)?window.innerHeight:800;
     // Two side panels (≈210px each) + two column-gaps (28) + page padding (64).
     // Subtract both so the centre stage gets the real remaining width.
-    const SIDE_W=210, GAPS=2*28, PAGE_PAD=64, SLACK=16;
+    const SIDE_W=180, GAPS=2*24, PAGE_PAD=56, SLACK=12;
     const paneW=Math.max(360, vpW - 2*SIDE_W - GAPS - PAGE_PAD - SLACK);
     // Height budget: transport now lives on the LEFT edge (not a bottom bar),
     // so the canvas can use almost the full height — only the top bar/header
