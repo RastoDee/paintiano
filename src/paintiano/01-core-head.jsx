@@ -585,6 +585,12 @@ function parseMusicXml(xmlText){
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
   const liveMode = !!(opts && opts.liveMode);
+  // STAGE 2: a loaded piece on a wide desktop screen uses a FIXED landscape
+  // golden-ratio frame (see the loaded-mode branch below). `fixedFrame` marks
+  // any mode that keeps a declared CH and stretches the last row to fill it —
+  // i.e. live-mode OR desktop-landscape. Mobile loaded-mode stays grow-canvas.
+  const desktopLandscape = !liveMode && (typeof window!=='undefined' && window.innerWidth>=769);
+  const fixedFrame = liveMode || desktopLandscape;
   const totalQ=evs.reduce((s,e)=>s+(e.durQ!=null?e.durQ:1),0);
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
@@ -616,8 +622,25 @@ function computeGrid(arg, opts){
     CW=N*BW;
     CH=Math.max(140,Math.round(CW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
+  } else if(typeof window!=='undefined' && window.innerWidth>=769){
+    // LOADED-MODE DESKTOP LANDSCAPE FRAME — STAGE 2 (PC ≥769px only).
+    // On a wide screen, a tall grow-canvas wastes the landscape viewport and
+    // forces scrolling. Instead we use a FIXED golden-ratio landscape frame
+    // (same idea as live-mode): width is taken from the desktop column, height
+    // = width / PHI, and rows get thinner as the piece gets longer — so the
+    // WHOLE piece shows at once, landscape, without scrolling. Mobile (<769px)
+    // is unaffected and keeps the original portrait grow-canvas below.
+    // CW is bounded so very wide monitors don't stretch the frame past comfort.
+    const vpW=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:960;
+    // The desktop shell column is min(960, vw-48); the canvas sits inside it
+    // with some padding, so target a touch under the column width.
+    const targetCWL=Math.min(1000,Math.max(420,vpW-64));
+    BW=Math.max(2,Math.floor(targetCWL/N));
+    CW=N*BW;
+    CH=Math.max(180,Math.round(CW/PHI));
+    BH=Math.max(2,Math.floor(CH/rows));
   } else {
-    // LOADED-MODE GROW CANVAS — MIDI / audio / score / image / mood.
+    // LOADED-MODE GROW CANVAS — MIDI / audio / score / image / mood (MOBILE).
     // Block height = BW * PHI (golden ratio per block), canvas height grows
     // with row count. This is the original behavior pre-treemap experiment;
     // imported content should display naturally per-chord without being
@@ -658,11 +681,12 @@ function computeGrid(arg, opts){
     const finalSegs=cells[cells.length-1].segments;
     const finalLast=finalSegs[finalSegs.length-1];
     if(finalLast.x+finalLast.w<CW){finalLast.w=CW-finalLast.x;}
-    // Live-mode only: stretch the last row vertically to reach the bottom edge.
-    // Integer flooring of BH=CH/rows can leave 1-Nrows pixels short; stretch
-    // every segment in the last row to cover that gap. In grow-mode the
-    // canvas height matches content exactly so no stretch is needed.
-    if(liveMode){
+    // Fixed-frame modes (live-mode OR desktop-landscape): stretch the last row
+    // vertically to reach the bottom edge. Integer flooring of BH=CH/rows can
+    // leave 1-Nrows pixels short; stretch every segment in the last row to cover
+    // that gap. In mobile grow-mode the canvas height matches content exactly so
+    // no stretch is needed.
+    if(fixedFrame){
       const lastY=finalLast.y;
       if(lastY+finalLast.h<CH){
         const extraH=CH-(lastY+finalLast.h);
@@ -674,9 +698,10 @@ function computeGrid(arg, opts){
       }
     }
   }
-  // Grow-mode: recompute CH from actual cell positions in case rounding
-  // created a tiny mismatch. Live-mode keeps the declared CH (fixed frame).
-  if(!liveMode && cells.length>0){
+  // Mobile grow-mode: recompute CH from actual cell positions in case rounding
+  // created a tiny mismatch. Fixed-frame modes (live / desktop-landscape) keep
+  // the declared CH.
+  if(!fixedFrame && cells.length>0){
     const lastSeg=cells[cells.length-1].segments[cells[cells.length-1].segments.length-1];
     CH=lastSeg.y+BH;
   }

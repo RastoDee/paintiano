@@ -81,11 +81,13 @@ const PF_STYLE = `
            immersive (in the surrounding dark area). On desktop the shell media
            query below keeps the button inside the canvas (default top:8). */
         .pf-fs-btn-immersive { top: -44px !important; }
-        /* ── Desktop mobile-shell ─────────────────────────────────────────────
-           Paintiano is designed mobile-first. On wider screens we frame the
-           whole app inside a phone-shaped column centered on a dark stage —
-           same pixel-perfect mobile UI, just inset with rounded corners and a
-           shadow. App layout/JSX is unchanged; this is purely a CSS frame.
+        /* ── Desktop landscape shell — STAGE 1A (widened column) ──────────────
+           Paintiano is designed mobile-first. On wider screens we previously
+           framed the whole app inside a narrow 480px phone column. Stage 1A
+           widens that column to a comfortable landscape width so the canvas and
+           controls can breathe on a PC, while keeping the app's single-column
+           JSX layout untouched. (A later stage splits this into a true two-pane
+           tools-left / stage-right grid.)
            Mobile (<769px): no changes, app fills the viewport edge-to-edge. */
         @media (min-width: 769px) {
           html, body {
@@ -101,7 +103,7 @@ const PF_STYLE = `
             padding: 0;
           }
           #root {
-            width: min(480px, calc(100vw - 32px));
+            width: min(960px, calc(100vw - 48px));
             height: 100vh;
             max-height: 100vh;
             background: radial-gradient(ellipse at 50% -10%, #0e0b16, #06060c 55%);
