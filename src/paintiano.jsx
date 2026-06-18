@@ -138,15 +138,18 @@ const PF_STYLE = `
              the spec, so they keep their own positioning untouched. Mobile
              (<769px) never sees this — the app stays a single column. */
           .pf-app-root {
+            position: relative;
             display: grid !important;
             grid-template-columns: 180px minmax(0, 1fr) 180px;
-            grid-template-rows: auto auto auto auto 1fr;
+            grid-template-rows: auto auto auto auto 1fr auto auto;
             grid-template-areas:
               "topbar   topbar topbar"
               "header   header header"
               "controls stage  rtop"
               "colors   stage  styles"
-              "ltrans   stage  styles";
+              "ltrans   stage  styles"
+              "vfooter  vfooter vfooter"
+              "legal    legal  legal";
             align-items: start !important;
             justify-items: stretch !important;
             column-gap: 24px;
@@ -343,6 +346,27 @@ const PF_STYLE = `
           /* Compose / Mic are live play — no import picker belongs there. If one is
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
+          /* Version footer + legal links span all three columns at the very
+             bottom of the grid (it's a version/legal footer, so it belongs at the
+             page foot — not floating in the middle of the layout). */
+          .pf-app-root > .pf-version-footer { grid-area: vfooter; width: 100%; }
+          .pf-app-root > .pf-legal-links { grid-area: legal; width: 100%; }
+          /* Mood-from-image source thumbnail: centered at the TOP of the stage
+             column, above the big canvas (same as mobile) — not floating in the
+             left tools column where grid auto-placement would otherwise drop it. */
+          /* Mood-from-image source thumbnail: it sits deep in the tree (not a
+             direct grid child), so grid-area won't move it. Instead pin it
+             centered horizontally over the stage column, just below the header,
+             like mobile shows it above the canvas. */
+          .pf-app-root .pf-mood-thumb {
+            position: absolute;
+            left: 50%;
+            top: 132px;
+            transform: translateX(-50%);
+            z-index: 6;
+            margin: 0 !important;
+            pointer-events: none;
+          }
           /* When the setup picker is open, keep the right column the SAME width as
              the left tools column (180px) so the two sides are balanced/symmetric
              — the picker reads as the mirror of the source buttons on the left. */
@@ -25329,7 +25353,7 @@ Composition rules:
         // (disp>0), it shrinks to the small thumbnail that sits over the canvas.
         const big = disp===0 && !playing && !anim;
         return (
-          <div style={{display:'flex',justifyContent:'center',marginBottom:big?14:10,transition:'margin .25s ease'}}>
+          <div className="pf-mood-thumb" style={{display:'flex',justifyContent:'center',marginBottom:big?14:10,transition:'margin .25s ease'}}>
             <img src={imgMoodThumb} alt="source" style={{width:big?'100%':74,height:big?'auto':74,maxWidth:big?`min(100%, 360px)`:74,objectFit:'cover',borderRadius:big?14:10,border:'1px solid rgba(220,150,255,.45)',boxShadow:big?'0 4px 24px rgba(0,0,0,.55)':'0 2px 10px rgba(0,0,0,.4)',opacity:big?1:.88,transition:'all .3s ease'}}/>
           </div>
         );
@@ -26458,8 +26482,8 @@ Composition rules:
       )}
       </div>
       )}
-      <footer style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
-      <div style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
+      <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:(.5*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
+      <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
         <button onClick={()=>setLegalDoc('terms')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalTerms')}</button>

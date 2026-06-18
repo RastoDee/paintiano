@@ -138,15 +138,18 @@ const PF_STYLE = `
              the spec, so they keep their own positioning untouched. Mobile
              (<769px) never sees this — the app stays a single column. */
           .pf-app-root {
+            position: relative;
             display: grid !important;
             grid-template-columns: 180px minmax(0, 1fr) 180px;
-            grid-template-rows: auto auto auto auto 1fr;
+            grid-template-rows: auto auto auto auto 1fr auto auto;
             grid-template-areas:
               "topbar   topbar topbar"
               "header   header header"
               "controls stage  rtop"
               "colors   stage  styles"
-              "ltrans   stage  styles";
+              "ltrans   stage  styles"
+              "vfooter  vfooter vfooter"
+              "legal    legal  legal";
             align-items: start !important;
             justify-items: stretch !important;
             column-gap: 24px;
@@ -343,6 +346,27 @@ const PF_STYLE = `
           /* Compose / Mic are live play — no import picker belongs there. If one is
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
+          /* Version footer + legal links span all three columns at the very
+             bottom of the grid (it's a version/legal footer, so it belongs at the
+             page foot — not floating in the middle of the layout). */
+          .pf-app-root > .pf-version-footer { grid-area: vfooter; width: 100%; }
+          .pf-app-root > .pf-legal-links { grid-area: legal; width: 100%; }
+          /* Mood-from-image source thumbnail: centered at the TOP of the stage
+             column, above the big canvas (same as mobile) — not floating in the
+             left tools column where grid auto-placement would otherwise drop it. */
+          /* Mood-from-image source thumbnail: it sits deep in the tree (not a
+             direct grid child), so grid-area won't move it. Instead pin it
+             centered horizontally over the stage column, just below the header,
+             like mobile shows it above the canvas. */
+          .pf-app-root .pf-mood-thumb {
+            position: absolute;
+            left: 50%;
+            top: 132px;
+            transform: translateX(-50%);
+            z-index: 6;
+            margin: 0 !important;
+            pointer-events: none;
+          }
           /* When the setup picker is open, keep the right column the SAME width as
              the left tools column (180px) so the two sides are balanced/symmetric
              — the picker reads as the mirror of the source buttons on the left. */
