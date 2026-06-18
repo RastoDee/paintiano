@@ -139,11 +139,12 @@ const PF_STYLE = `
           .pf-app-root {
             display: grid !important;
             grid-template-columns: 300px minmax(0, 1fr) 300px;
-            grid-template-rows: auto auto 1fr;
+            grid-template-rows: auto auto auto 1fr;
             grid-template-areas:
-              "topbar topbar topbar"
-              "header header header"
-              "colors stage  styles";
+              "topbar   topbar topbar"
+              "header   header header"
+              "controls stage  styles"
+              "colors   stage  styles";
             align-items: start !important;
             justify-items: stretch !important;
             column-gap: 22px;
@@ -153,6 +154,7 @@ const PF_STYLE = `
           }
           .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; }
           .pf-app-root > header     { grid-area: header; }
+          .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; margin-bottom: 10px; }
           /* The active-view strip (pf-panel-part) and its inner grid wrapper are
              flattened with display:contents so their two inner columns —
              pf-colors-inner (left) and pf-styles-inner (right) — become direct
@@ -169,6 +171,8 @@ const PF_STYLE = `
             border-radius: 16px;
             padding: 14px;
           }
+          /* Palettes stack vertically in the narrow left column. */
+          .pf-app-root .pf-color-tabs { grid-template-columns: 1fr !important; }
           .pf-app-root .pf-styles-inner {
             grid-area: styles;
             align-self: start;

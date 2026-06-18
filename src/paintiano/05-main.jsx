@@ -7731,7 +7731,7 @@ Composition rules:
         {/* Back to setup — abandons the current mood/source and returns to the
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?4:8,position:'relative'}}>
+        <div className="pf-controls-inner" style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?4:8,position:'relative'}}>
           <button onClick={()=>{if(demoReelOn){demoReelStop();return;}if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);
             // Leaving to Setup while a painting is playing/paused should PRESERVE
             // the position so "← Canvas" (Resume) picks up exactly where it left
@@ -8095,7 +8095,7 @@ Composition rules:
             );
           })() : (<>
             {(()=>{ const _allTabs = ['harmony','spectral','phi','kontra','custom']; const _tabs = _allTabs.filter(m => setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs; return (
-            <div style={{display:'grid',gridTemplateColumns:`repeat(${_shown.length},1fr)`,gap:6}}>
+            <div className="pf-color-tabs" style={{display:'grid',gridTemplateColumns:`repeat(${_shown.length},1fr)`,gap:6}}>
               {_shown.map(m=>{
               const isCustomTab = m==='custom';
               const armed = isCustomTab && mode==='custom' && customArmed;
