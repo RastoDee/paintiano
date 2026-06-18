@@ -153,21 +153,24 @@ const PF_STYLE = `
             width: 100% !important;
             padding: 14px 24px 28px !important;
           }
-          .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; }
-          .pf-app-root > header     { grid-area: header; margin-bottom: 6px !important; }
-          .pf-app-root .pf-controls-inner { display: contents !important; }
-          /* SPÄŤ (always the first control) sits top-left, above palettes. */
-          .pf-app-root .pf-controls-inner > button:first-child { grid-area: controls; align-self: start; justify-self: start; margin-bottom: 10px; }
-          /* The "+ NOVÁ HUDBA / mood / image" variants sit top-right, above the
-             artists, where the right thumb reaches. They share the styles column
-             top; styles-inner flows beneath via align-self:start. */
-          .pf-app-root .pf-controls-inner > button:not(:first-child) {
-            grid-area: rtop;
-            align-self: start;
-            justify-self: stretch;
-            margin-bottom: 10px;
+          .pf-app-root > .pf-topbar { grid-area: topbar; max-width: 100% !important; position: relative; z-index: 3; }
+          /* Wordmark + PRO AI badge sit centered on the top bar's level (between
+             the hamburger menu and the AA/lang control) instead of as a large
+             standalone header below. Absolutely centered over the topbar row. */
+          .pf-app-root > header {
+            grid-area: topbar;
+            align-self: center;
+            justify-self: center;
+            margin: 0 !important;
             z-index: 2;
+            pointer-events: none;
           }
+          .pf-app-root > header h1 { font-size: 1.5rem !important; margin: 0 !important; }
+          .pf-app-root > header > div { margin: 0 0 0 10px !important; display: inline-block !important; vertical-align: middle; }
+          /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
+          .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; gap: 8px; margin-bottom: 10px; }
+          /* Progress/seek bar sits above the artists in the right column. */
+          .pf-app-root > .pf-seek-block { grid-area: rtop; align-self: start; max-width: 100% !important; margin: 0 0 10px !important; }
           /* The active-view strip (pf-panel-part) and its inner grid wrapper are
              flattened with display:contents so their two inner columns —
              pf-colors-inner (left) and pf-styles-inner (right) — become direct
@@ -25068,11 +25071,11 @@ Composition rules:
         const _imgAtmo = (viewMode==='image' && originalImgUrl && atmoOn && atmoMood);
         const _atmoTitle = _imgAtmo ? (()=>{ const w=_atmoWordSeek(atmoMood.v,atmoMood.e); const ti=(atmoMood.title&&String(atmoMood.title).trim())||''; return ti?(ti+' · '+w):w; })() : null;
         const seekTitle = _atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : t('mic').replace(/[^\p{L} ]/gu,''))); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
-        <div style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
+        <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{(moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>))}</span>
             <span style={{opacity:.75}}>
-              {disp}/{chords.length} · {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
+              {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
             </span>
           </div>
           {viewMode!=='image' && (

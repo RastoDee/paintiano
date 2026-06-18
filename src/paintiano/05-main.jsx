@@ -7723,6 +7723,20 @@ Composition rules:
       </div>
       )}
 
+      {/* Setup-view centre stage (desktop two-thumb layout): the canvas only
+          exists in active view, so before a source is loaded the centre column
+          would be empty. This quiet placeholder fills it — a golden-ratio frame
+          hint with a soft prompt — so the screen never reads as broken. Mobile
+          (<769px) hides it via CSS; the mobile flow stacks panel-only as before. */}
+      {isSetupView && !showOnboarding && (
+      <div className="pf-setup-stage" aria-hidden="true">
+        <div className="pf-setup-stage-inner">
+          <div className="pf-setup-stage-mark">Paintiano</div>
+          <div className="pf-setup-stage-hint">{t('pickSourceHint')!=='pickSourceHint'?t('pickSourceHint'):(lang==='SK'?'vyber zdroj vľavo — hudbu, obraz alebo náladu':'choose a source on the left — music, image or mood')}</div>
+        </div>
+      </div>
+      )}
+
       {/* ── Active-view strip ── Color + Style stay reachable while a painting
           is on the canvas, without the full setup panel. Collapsed by default
           so the canvas keeps the room; tap the header to expand. ── */}

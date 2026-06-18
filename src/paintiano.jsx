@@ -43,6 +43,7 @@ const goldA = (a)=>`rgba(${PF.goldQuietRGB},${a})`;
 const PF_STYLE = `
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
         .pf-fade { animation: pf-fadeUp .5s ease both; }
+        .pf-setup-stage { display: none; }
         .pf-tool { transition: all .18s; }
         .pf-tool, .pf-morph, .pf-vary, .pf-lift { -webkit-tap-highlight-color:transparent; }
         .pf-tool:focus, .pf-tool:focus-visible { outline:none!important; }
@@ -233,6 +234,45 @@ const PF_STYLE = `
             margin-left: 0; margin-right: 0;
             align-self: center;
             justify-self: center;
+          }
+          /* Setup-view centre placeholder (desktop): a quiet golden-ratio frame
+             that fills the stage column before any source is loaded. */
+          .pf-app-root > .pf-setup-stage {
+            grid-area: stage;
+            align-self: center;
+            justify-self: center;
+            width: 100%;
+            max-width: min(100%, calc((100vh - 230px) * 1.618));
+            aspect-ratio: 1.618 / 1;
+            border: 1px solid rgba(201,168,76,.10);
+            border-radius: 10px;
+            background:
+              linear-gradient(rgba(201,168,76,.012), rgba(201,168,76,.012)),
+              repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(201,168,76,.03) 38px, rgba(201,168,76,.03) 39px),
+              repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(201,168,76,.03) 38px, rgba(201,168,76,.03) 39px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .pf-setup-stage-inner { text-align: center; padding: 24px; }
+          .pf-setup-stage-mark {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.4rem;
+            font-weight: 600;
+            letter-spacing: .04em;
+            background: linear-gradient(135deg, rgba(255,217,110,.28), rgba(201,168,76,.18));
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+          }
+          .pf-setup-stage-hint {
+            font-size: .8rem;
+            letter-spacing: .04em;
+            color: rgba(242,238,232,.32);
+            font-style: italic;
+            max-width: 280px;
+            margin: 0 auto;
+            line-height: 1.5;
           }
           /* ── Two-thumb ergonomics: transport flows in the LEFT column directly
              under the palettes (one continuous tools column), so it sits where
@@ -24183,6 +24223,20 @@ Composition rules:
             </div>
           </div>
 
+        </div>
+      </div>
+      )}
+
+      {/* Setup-view centre stage (desktop two-thumb layout): the canvas only
+          exists in active view, so before a source is loaded the centre column
+          would be empty. This quiet placeholder fills it — a golden-ratio frame
+          hint with a soft prompt — so the screen never reads as broken. Mobile
+          (<769px) hides it via CSS; the mobile flow stacks panel-only as before. */}
+      {isSetupView && !showOnboarding && (
+      <div className="pf-setup-stage" aria-hidden="true">
+        <div className="pf-setup-stage-inner">
+          <div className="pf-setup-stage-mark">Paintiano</div>
+          <div className="pf-setup-stage-hint">{t('pickSourceHint')!=='pickSourceHint'?t('pickSourceHint'):(lang==='SK'?'vyber zdroj vľavo — hudbu, obraz alebo náladu':'choose a source on the left — music, image or mood')}</div>
         </div>
       </div>
       )}
