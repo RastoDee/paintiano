@@ -195,7 +195,7 @@ const PF_STYLE = `
             width: 34px !important;
             height: 34px !important;
             font-size: 17px !important;
-            z-index: 200 !important;
+            z-index: 100001 !important;
             pointer-events: auto !important;
           }
           /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
@@ -346,6 +346,36 @@ const PF_STYLE = `
           /* Compose / Mic are live play — no import picker belongs there. If one is
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
+          /* Fullscreen (immersive): move the playback controls to the RIGHT edge,
+             stacked vertically, so they're reachable with the right thumb instead
+             of spread across the bottom centre. zIndex above the immersive canvas. */
+          .pf-immersive .pf-transport-dock {
+            position: fixed !important;
+            top: 50% !important;
+            right: 16px !important;
+            left: auto !important;
+            bottom: auto !important;
+            transform: translateY(-50%) !important;
+            width: auto !important;
+            max-width: 200px !important;
+            z-index: 10001 !important;
+            background: rgba(4,3,8,0.72) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+            border: 1px solid rgba(201,168,76,.18) !important;
+            border-radius: 18px !important;
+            padding: 12px !important;
+          }
+          .pf-immersive .pf-transport-dock .pf-transport-row {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+            flex-wrap: nowrap !important;
+          }
+          .pf-immersive .pf-transport-dock .pf-transport-row > button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
@@ -24004,7 +24034,7 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(isSetupView?' pf-mode-setup':'')} style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && (()=>{

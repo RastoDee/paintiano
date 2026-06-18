@@ -195,7 +195,7 @@ const PF_STYLE = `
             width: 34px !important;
             height: 34px !important;
             font-size: 17px !important;
-            z-index: 200 !important;
+            z-index: 100001 !important;
             pointer-events: auto !important;
           }
           /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
@@ -346,6 +346,36 @@ const PF_STYLE = `
           /* Compose / Mic are live play — no import picker belongs there. If one is
              somehow open, hide it (it shouldn't overlay the canvas). */
           .pf-mode-live .pf-picker-overlay { display: none !important; }
+          /* Fullscreen (immersive): move the playback controls to the RIGHT edge,
+             stacked vertically, so they're reachable with the right thumb instead
+             of spread across the bottom centre. zIndex above the immersive canvas. */
+          .pf-immersive .pf-transport-dock {
+            position: fixed !important;
+            top: 50% !important;
+            right: 16px !important;
+            left: auto !important;
+            bottom: auto !important;
+            transform: translateY(-50%) !important;
+            width: auto !important;
+            max-width: 200px !important;
+            z-index: 10001 !important;
+            background: rgba(4,3,8,0.72) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+            border: 1px solid rgba(201,168,76,.18) !important;
+            border-radius: 18px !important;
+            padding: 12px !important;
+          }
+          .pf-immersive .pf-transport-dock .pf-transport-row {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+            flex-wrap: nowrap !important;
+          }
+          .pf-immersive .pf-transport-dock .pf-transport-row > button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
