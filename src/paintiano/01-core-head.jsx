@@ -1127,9 +1127,13 @@ function computeGrid(arg, opts){
     // Height still grows with row count (the "grow canvas" behaviour).
     const vpL=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:540;
     const targetCWL=Math.min(820,Math.max(320,vpL-32));
-    BW=Math.max(2,Math.floor(targetCWL/N));
+    // Fill the FULL target width: deriving CW = N*floor(targetCWL/N) lost up to
+    // N px to rounding, which on long pieces (large N) visibly narrowed the
+    // canvas on mobile. Keep BW fractional (segment math below rounds per-cell)
+    // and pin CW to the full target so the painting spans the whole column.
+    BW=Math.max(2,targetCWL/N);
     BH=Math.round(BW*PHI);
-    CW=N*BW;
+    CW=Math.round(targetCWL);
     CH=rows*BH;
   }
   const cells=[];
