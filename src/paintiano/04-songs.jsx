@@ -1610,6 +1610,103 @@ function _atmoTransform(evts, mood, skipTiming){
   return evts.map(ev=>({ ...ev, startMs:Math.round((ev.startMs||0)*tempoK), n:(ev.n||[]).map(no=>({ ...no, m:snap(no.m), v:Math.max(20,Math.min(124,Math.round((no.v||80)*vScale))), durMs:Math.max(40,Math.round((no.durMs||300)*tempoK)) })) }));
 }
 
+// ─── MELODY layer ────────────────────────────────────────────────────────────
+// "obraz spieva": lay an AI-composed SINGING melodic line ON TOP of the scan
+// texture. The scan piece stays exactly as-is (the literal colours→notes of the
+// image) — this only ADDS a lead voice that mirrors the image's mood, colour and
+// radiance. The result is the SAME scan composition, beautified and singable —
+// not a different piece (that's what aiComposeFromImage does instead).
+//
+// `evts`     — the scan events {n:[{m,v,durMs}],startMs,...} (already atmo-snapped
+//              if atmosphere is on). NEVER mutated — we return a fresh copy.
+// `mel`      — { notes:[[pitch,durBeats,startBeat,velocity],...], tempo } from AI,
+//              where pitch is a name like "C5"/"F#4" (name2midi-parseable) OR a
+//              MIDI number.
+//
+// How it stays a LEAD voice over the texture:
+//   • Time-scaled to the scan piece's full span, so the melody breathes across
+//     the whole painting rather than racing ahead or lagging.
+//   • Lifted in register to sit ABOVE the texture's top note (octave-shifted up
+//     until it clears the scan ceiling) — the ear reads it as the melody.
+//   • Prominent velocity (lead voice), longer notes kept long (lyrical).
+//   • Each melody note is time-merged into the nearest scan event (so the scan
+//     step-loop, which reads chordsRef live, plays texture + melody together —
+//     no second scheduler). Tagged _lead so playback can treat it specially.
+function _melodyLayer(evts, mel){
+  if(!evts||!evts.length||!mel||!mel.notes||!mel.notes.length) return evts;
+  // Work on a deep-ish copy: clone each event and its note array so the source
+  // scan events (the literal image) are never mutated — toggling MELODY off must
+  // return a byte-clean texture.
+  const out=evts.map(ev=>({ ...ev, n:(ev.n||[]).map(no=>({ ...no })) }));
+  // Scan piece span + texture ceiling (highest scan pitch) — the melody must sit
+  // above this so it sings over, not inside, the texture.
+  let firstMs=Infinity, lastMs=-Infinity, scanHi=0, scanLo=128;
+  for(const ev of out){
+    if(ev.startMs<firstMs) firstMs=ev.startMs;
+    if(ev.startMs>lastMs) lastMs=ev.startMs;
+    for(const no of (ev.n||[])){ if(no.m>scanHi)scanHi=no.m; if(no.m<scanLo)scanLo=no.m; }
+  }
+  if(!isFinite(firstMs)||lastMs<=firstMs) return evts;
+  const spanMs=lastMs-firstMs;
+  // Parse + normalise melody notes into {m, startBeat, durBeats, vel}.
+  const beat=60000/Math.max(40,Math.min(200,mel.tempo||90));
+  const parsed=[];
+  let melMinBeat=Infinity, melMaxBeat=-Infinity, melHi=0, melLo=128;
+  for(const raw of mel.notes){
+    if(!Array.isArray(raw)||raw.length<3) continue;
+    let m=raw[0];
+    if(typeof m==='string') m=name2midi(m);
+    if(typeof m!=='number'||!isFinite(m)) continue;
+    const durB=Math.max(0.25, +raw[1]||0.5);
+    const startB=Math.max(0, +raw[2]||0);
+    const vel=Math.max(1,Math.min(127, Math.round(+raw[3]||100)));
+    parsed.push({m, startB, durB, vel});
+    if(startB<melMinBeat)melMinBeat=startB;
+    if(startB+durB>melMaxBeat)melMaxBeat=startB+durB;
+    if(m>melHi)melHi=m; if(m<melLo)melLo=m;
+  }
+  if(!parsed.length||!isFinite(melMinBeat)||melMaxBeat<=melMinBeat) return evts;
+  // Register lift: shift the whole melody up by whole octaves until its LOW note
+  // clears the texture's HIGH note (so it floats above), but cap so it stays in a
+  // singable range (≤ MIDI 88 ≈ E6). If the melody is already high enough, leave
+  // it; if lifting would push it too high, accept sitting just above the texture.
+  let lift=0;
+  const targetFloor=scanHi+2;            // sit a whole-tone above the texture top
+  while(melLo+lift < targetFloor && (melHi+lift) < 88) lift+=12;
+  // If even one octave overshoots the ceiling, prefer the highest octave that
+  // keeps the top note ≤ 91 (G6) — never bury the lead back under the texture.
+  while((melHi+lift) > 91 && (melLo+lift) > scanHi+2) lift-=12;
+  // Time map: melody beat-space → scan ms-space, stretched across the full span.
+  const melBeatSpan=melMaxBeat-melMinBeat;
+  const beatToMs=(b)=> firstMs + ((b-melMinBeat)/melBeatSpan)*spanMs;
+  // Lead velocity floor: the melody must be heard over the texture. Push the
+  // melody's own dynamics up into a prominent band (≈92–122) while keeping its
+  // internal shape (phrasing) intact.
+  const liftVel=(v)=> Math.max(92, Math.min(122, Math.round(88 + (v/127)*40)));
+  // Insert each melody note into the nearest scan event by start time. Build a
+  // sorted index of scan event start times for nearest-lookup.
+  const idxByMs=out.map((ev,i)=>({ms:ev.startMs,i})).sort((a,b)=>a.ms-b.ms);
+  const nearestEvent=(ms)=>{
+    // binary search the closest scan event start
+    let lo=0, hi=idxByMs.length-1;
+    if(ms<=idxByMs[0].ms) return idxByMs[0].i;
+    if(ms>=idxByMs[hi].ms) return idxByMs[hi].i;
+    while(lo<=hi){ const mid=(lo+hi)>>1; if(idxByMs[mid].ms<ms) lo=mid+1; else hi=mid-1; }
+    const a=idxByMs[Math.max(0,hi)], b=idxByMs[Math.min(idxByMs.length-1,lo)];
+    return (Math.abs(a.ms-ms)<=Math.abs(b.ms-ms))?a.i:b.i;
+  };
+  for(const mn of parsed){
+    const ms=beatToMs(mn.startB);
+    const ei=nearestEvent(ms);
+    const ev=out[ei]; if(!ev) continue;
+    const durMs=Math.max(180, Math.round(mn.durB*beat));   // keep melody notes long/lyrical
+    let mm=mn.m+lift;
+    mm=Math.max(48, Math.min(96, mm));                     // safety clamp, stay singable
+    (ev.n||(ev.n=[])).push({ m:mm, v:liftVel(mn.vel), durMs, _lead:true });
+  }
+  return out;
+}
+
 // Crossfade-morph two mood pieces into one. First half is mood A,
 // second half is mood B (time-scaled to A's length), with a velocity
 // crossfade in the 40-60% zone where both pieces overlap and blend.

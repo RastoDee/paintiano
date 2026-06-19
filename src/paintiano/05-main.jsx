@@ -3436,6 +3436,19 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
+  // MELODY chip ("obraz spieva"): when ON, an AI-composed SINGING melodic line is
+  // layered ON TOP of the scan texture (see _melodyLayer in 04-songs). It does NOT
+  // replace the scan piece — the same image-as-music plays, now beautified with a
+  // lead voice that mirrors the picture's mood/colour/radiance. One-shot: auto-OFF
+  // after a playthrough. melodyData holds the AI line {notes,tempo,title} so the
+  // rebuild pipeline can re-apply the layer without another AI call.
+  const [melodyOn,setMelodyOn]=useState(false);
+  const [melodyBusy,setMelodyBusy]=useState(false);
+  const [melodyData,setMelodyData]=useState(null); // {notes,tempo,title} | null
+  const melodyOnRef=useRef(false);  useEffect(()=>{melodyOnRef.current=melodyOn;},[melodyOn]);
+  const melodyDataRef=useRef(null); useEffect(()=>{melodyDataRef.current=melodyData;},[melodyData]);
+  // Melody cache keyed by image hash + atmo signature (same image + same mood →
+  // replay the layered line free, no extra AI call). Parallels _imgComposeCache.
   // Body 10: AI-availability tracking. `isOnline` follows the network; `aiDown`
   // latches true when an AI call fails for any reason (budget/429/offline/no
   // endpoint) and clears on the next successful AI call. AI features are
@@ -3643,11 +3656,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             : COF;
           const _atmoBias2=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
           const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current,_atmoBias2);
-          _evts=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
+          let _ev0=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
+          _evts=_ev0;  // Clear returns to the bare texture — MELODY is a one-shot
         }
         setChords(_evts);chordsRef.current=_evts;
         idxRef.current=_evts.length;setDisp(_evts.length);
       }
+      setMelodyOn(false);setMelodyData(null);  // a cleared image sings only on a fresh re-tap
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
@@ -3789,7 +3804,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     draftOwnerRef.current=null;
     // Reset Colour + Style to defaults so returning to Setup is a clean slate.
     setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
-  },[stopAll,clear,composeMode,micPainting,micListening,micArmed,micPreset,loadedSource,mode,activePalette,atmoOn,atmoMood,moodFromImg,moodContext,varySource]);
+  },[stopAll,clear,composeMode,micPainting,micListening,micArmed,micPreset,loadedSource,mode,activePalette,atmoOn,atmoMood,moodFromImg,moodContext,varySource,melodyOn,melodyData]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -5004,6 +5019,105 @@ Composition rules:
     finally{ setWorking(false); setWLabel(''); setWPct(0); }
   },[busy,extractImageMaterial,stopAll,lang,gateAI,t,isPro,originalImgUrl,_imgMoodHash,_imgComposeCacheGet,_imgComposeCacheSet]);
 
+  // ── MELODY cache ────────────────────────────────────────────────────────────
+  // Keyed by image hash + atmosphere signature so the same picture in the same
+  // mood replays its sung line free. Distinct from the compose cache (that's a
+  // whole separate piece); this is the lead line we layer over the scan texture.
+  const MELODY_CACHE_KEY='paintiano_melody_cache_v1';
+  const _melodyCacheKey=useCallback((hash)=>{
+    const atmoSig=(atmoOn&&atmoMood)?('a'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2)+'_'+(atmoMood.root||0)):'plain';
+    return hash+'|'+atmoSig;
+  },[atmoOn,atmoMood]);
+  const _melodyCacheGet=useCallback((key)=>{
+    try{ const raw=localStorage.getItem(MELODY_CACHE_KEY); if(!raw) return null;
+      const map=JSON.parse(raw)||{}; return map[key]||null;
+    }catch(_){ return null; }
+  },[]);
+  const _melodyCacheSet=useCallback((key,result)=>{
+    try{ const raw=localStorage.getItem(MELODY_CACHE_KEY);
+      const map=raw?(JSON.parse(raw)||{}):{};
+      map[key]=result;
+      const keys=Object.keys(map);
+      if(keys.length>24){ for(const k of keys.slice(0,keys.length-24)) delete map[k]; }
+      localStorage.setItem(MELODY_CACHE_KEY, JSON.stringify(map));
+    }catch(_){ /* quota — skip */ }
+  },[]);
+
+  // Generate the SINGING lead line from the image. Mirrors the image's mood,
+  // colour and radiance, but — unlike aiComposeFromImage — it is meant to ride
+  // ON TOP of the scan texture, not replace it. Returns {notes,tempo,title} or
+  // null. Handles gateAI (Pro AI unlimited; Free/Pro trial→paywall) + cache.
+  const generateMelody=useCallback(async()=>{
+    if(melodyBusy) return null;
+    const mat=extractImageMaterial();
+    if(!mat){ setErr(t('noNotesGeneric')||'Load an image first'); setErrInfo(false); return null; }
+    const _imgHash = originalImgUrl ? _imgMoodHash(originalImgUrl) : null;
+    const _key = _imgHash!=null ? _melodyCacheKey(_imgHash) : null;
+    // Cache hit → free replay.
+    if(_key!=null){
+      const _cached=_melodyCacheGet(_key);
+      if(_cached&&_cached.notes&&_cached.notes.length){ return _cached; }
+    }
+    { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return null; } }
+    setMelodyBusy(true); setErr(''); setErrInfo(false);
+    try{
+      const prompt=`A painting has been scanned into a musical TEXTURE (its colours played as notes). Compose ONE singing melodic LINE that floats ON TOP of that texture — a clear, memorable lead the painting itself would "sing". This is NOT a new piece: it must mirror and crown the scan, echoing the image's mood, colour and radiance.
+The image's musical material:
+- Pitch palette (colours → notes): ${mat.palette}
+- Range of the texture: ${mat.noteRange}
+- Energy: ${mat.energy}    Texture: ${mat.tex}    Arc: ${mat.arc}${mat.mood?`\n- Mood / atmosphere: ${mat.mood}`:''}
+Compose with real musical craft so it is genuinely beautiful and singable:
+- ONE voice only (monophonic) — a true melody, not chords, not a run of equal notes.
+- Build it from the pitch palette above: let those pitch classes define the KEY/tonal centre, then sing diatonically in that key (major or natural minor to fit the mood). Occasional tasteful passing/leading tones are fine; no whole-tone, no random chromaticism.
+- A short recurring MOTIF (2–4 notes) that returns and develops — give the line memory.
+- Phrasing like a human voice: breathing space (rests), arcs that rise to a peak and settle, longer lyrical notes — not a constant stream.
+- An emotional shape that matches the image's energy arc (${mat.arc}).
+- 24–48 notes total. Velocity 90–120 (this is the prominent lead voice).
+Output ONLY valid JSON, no prose, no markdown:
+{"title":"...","tempo":90,"notes":[[pitch,durationInBeats,startBeat,velocity],...]}
+Each note: [pitch, durationInBeats, startBeat, velocity]. Pitches as names with octave and sharps only, e.g. "C5","F#4","Bb5"→write "A#5". Title: a short evocative phrase (Title Case, max 5 words).`;
+      const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
+      const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
+      const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      let resp=null,respText='',lastErr=null;
+      for(const _ep of _endpoints){
+        try{
+          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2500,messages:[{role:'user',content:prompt}]})});
+          const txt=await r.text();
+          if(r.ok&&txt){ resp=r; respText=txt; break; }
+          lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
+        }catch(err){ lastErr=err; }
+      }
+      if(!resp){ const _netErr=lastErr||new Error('melody endpoints unavailable'); _netErr._aiNet=true; throw _netErr; }
+      setAiDown(false);
+      let data; try{data=JSON.parse(respText);}catch(_){throw new Error('Response not JSON');}
+      const raw=(data.content||[]).map(b=>b.type==='text'?b.text:'').join('');
+      if(!raw)throw new Error('Empty content');
+      const parsed=extractAiJson(raw);
+      if(!parsed?.notes?.length)throw new Error('No notes');
+      gateAI(1,true);
+      const result={notes:parsed.notes,tempo:parsed.tempo||90,title:parsed.title||''};
+      if(_key!=null){ try{ _melodyCacheSet(_key,result); }catch(_){} }
+      return result;
+    }catch(e){
+      if(e&&e._aiNet) setAiDown(true);
+      setErr(e.message||'Melody failed'); setErrInfo(false);
+      return null;
+    }
+    finally{ setMelodyBusy(false); }
+  },[melodyBusy,extractImageMaterial,lang,gateAI,t,originalImgUrl,_imgMoodHash,_melodyCacheKey,_melodyCacheGet,_melodyCacheSet]);
+
+  // MELODY chip tap. Only meaningful before Play (the chip is disabled during
+  // playback/anim). ON → fetch (or cache-replay) the sung line, store it, enable
+  // the layer (the rebuild effect re-transcribes with the melody on top). OFF →
+  // just disable; the rebuild effect strips the layer back to bare texture.
+  const toggleMelody=useCallback(async()=>{
+    if(melodyBusy) return;
+    if(melodyOn){ setMelodyOn(false); return; }
+    const mel=await generateMelody();
+    if(mel&&mel.notes&&mel.notes.length){ setMelodyData(mel); setMelodyOn(true); }
+  },[melodyBusy,melodyOn,generateMelody]);
+
   const aiCompose=useCallback(async(overrideMood)=>{
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
     if(!title||busy||composedModeRef.current)return;
@@ -5239,6 +5353,7 @@ Composition rules:
           idxRef.current=evts.length;setStamp(s=>s+1);
           setPlaybackSpeed(1);playbackSpeedRef.current=1;
           setAtmoOn(false);setAtmoMood(null);
+          setMelodyOn(false);setMelodyData(null);
           setLoadedSource('image');
           setPickMode(null);
         }catch(e){if(loadTokenRef.current===myToken){setErr('Image: '+e.message);setErrInfo(false);}}
@@ -5254,7 +5369,7 @@ Composition rules:
     if(viewMode!=='image'||!pixelRef.current)return;
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
-    const sig = mode + '|' + imgDir + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '');
+    const sig = mode + '|' + imgDir + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
@@ -5269,7 +5384,8 @@ Composition rules:
       : COF;
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
-    const evts=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
+    const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
+    const evts=(melodyOn&&melodyData)?_melodyLayer(_evtsAtmo,melodyData):_evtsAtmo;
     // Changing the colour mode re-transcribes the SAME painting through a new
     // hue→pitch table, so the notes change but the structure/length do not. If a
     // playback is in progress we must NOT stop it — like MIDI and live drawing,
@@ -5297,7 +5413,7 @@ Composition rules:
       setDisp(evts.length);
       idxRef.current=evts.length;setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood]);
+  },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood,melodyOn,melodyData]);
 
   const loadSampleImage=useCallback(()=>{
     try{
@@ -5530,7 +5646,12 @@ Composition rules:
         // colour change mid-playback that swaps in re-transcribed notes is heard
         // immediately on the very next step — no restart needed, no stale copy.
         const liveChords=chordsRef.current;
-        if(i>=liveChords.length){setPlaying(false);setDisp(liveChords.length);return;}
+        if(i>=liveChords.length){setPlaying(false);setDisp(liveChords.length);
+          // MELODY is a one-shot effect: after a full playthrough, turn it OFF so
+          // the next plain Play is the bare texture again (a re-tap re-sings it,
+          // free from cache). The rebuild effect then strips the layer.
+          if(melodyOnRef.current){ setMelodyOn(false); }
+          return;}
         // For chord i: take its stored cell (band,cg) so non-row-major directions
         // (vert/spiral) paint the correct cell; fall back to row-major for safety.
         const _ev=liveChords[i]||{};
@@ -5557,9 +5678,17 @@ Composition rules:
           const velScale=liveChords[i]._runLen?1:0.75;
           try{
             const notes=liveChords[i].n;
-            const midis=notes.map(({m,v,durMs})=>{
-              const scaledDur=Math.round(durMs*durMul/playbackSpeedRef.current);
-              playNote(m,Math.round(v*velScale),scaledDur);
+            const midis=notes.map(({m,v,durMs,_lead})=>{
+              // _lead = the MELODY layer's singing line: it must ride ABOVE the
+              // texture, so it bypasses the texture's velocity softening and the
+              // 3× legato hold (which would smear it). It plays at its own
+              // composed velocity and length — prominent and lyrical, not blended
+              // into the scan wash.
+              const scaledDur=_lead
+                ? Math.round(durMs/playbackSpeedRef.current)
+                : Math.round(durMs*durMul/playbackSpeedRef.current);
+              const playVel=_lead ? Math.round(v) : Math.round(v*velScale);
+              playNote(m,playVel,scaledDur);
               return{m,scaledDur};
             });
             // Batch add all notes in this chord in one state update
@@ -9758,6 +9887,20 @@ Composition rules:
             {aiLocked && !atmoMood && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
         )}
+        {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(()=>{
+          // MELODY chip — sits right beside ATM. Sings an AI lead line over the
+          // scan texture (one-shot, pre-Play only). Enabled only when idle before
+          // Play: during playback / paint anim / a played-out piece (disp>0) it is
+          // disabled, matching the agreed "togglable IBA pred Play" rule.
+          const _prePlay = !playing && !anim && (disp===0);
+          const _melDisabled = melodyBusy || (!aiUsable && !aiLocked) || (!_prePlay && !melodyOn);
+          return (
+          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!_prePlay && !melodyOn) return; if(aiUsable||melodyOn) toggleMelody(); }} disabled={_melDisabled} className="pf-lift" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:_melDisabled})}}>
+            <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+' · '+(melodyBusy?'…':aiLocked?'—':!aiUsable?(t('aiOffline')||'offline'):melodyOn?'ON':'OFF')}</span>
+            {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
+          </button>
+          );
+        })()}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
           // REC button — single source of truth for image-mode recording:
           //   tap once → starts a fresh recording AND playback from index 0
