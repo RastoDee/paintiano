@@ -8768,14 +8768,15 @@ Composition rules:
       ); })()}
 
       {isActiveView && (<>
-      {imgMoodThumb && moodContext && viewMode!=='image' && (()=>{
+      {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && (()=>{
         // Body 11: before the mood plays, show the chosen picture large (like the
         // Image mode preview). Once playback begins / the mood pic has been drawn
         // (disp>0), it shrinks to the small thumbnail that sits over the canvas.
+        const _thumbSrc = imgMoodThumb || originalImgUrl;
         const big = disp===0 && !playing && !anim;
         return (
           <div className="pf-mood-thumb" style={{display:'flex',justifyContent:'center',marginBottom:big?14:10,transition:'margin .25s ease'}}>
-            <img src={imgMoodThumb} alt="source" style={{width:big?'100%':74,height:big?'auto':74,maxWidth:big?`min(100%, 360px)`:74,objectFit:'cover',borderRadius:big?14:10,border:'1px solid rgba(220,150,255,.45)',boxShadow:big?'0 4px 24px rgba(0,0,0,.55)':'0 2px 10px rgba(0,0,0,.4)',opacity:big?1:.88,transition:'all .3s ease'}}/>
+            <img src={_thumbSrc} alt="source" style={{width:big?'100%':74,height:big?'auto':74,maxWidth:big?`min(100%, 360px)`:74,objectFit:'cover',borderRadius:big?14:10,border:'1px solid rgba(220,150,255,.45)',boxShadow:big?'0 4px 24px rgba(0,0,0,.55)':'0 2px 10px rgba(0,0,0,.4)',opacity:big?1:.88,transition:'all .3s ease'}}/>
           </div>
         );
       })()}
@@ -8932,7 +8933,7 @@ Composition rules:
             </div>
           );
         })()}
-        {viewMode==='image'&&originalImgUrl&&(
+        {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
