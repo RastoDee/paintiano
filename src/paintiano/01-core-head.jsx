@@ -202,7 +202,7 @@ const PF_STYLE = `
             top: auto !important;
             left: auto !important;
             right: 24px !important;
-            bottom: 24px !important;
+            bottom: 44px !important;
             width: 34px !important;
             height: 34px !important;
             font-size: 17px !important;
