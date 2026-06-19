@@ -312,7 +312,10 @@ const PF_STYLE = `
              the MFI canvas here so the thumbnail sits above it in clear space.
              Portrait is left centered (it already looked correct). */
           @media (orientation: landscape) {
-            .pf-mode-mfi > .pf-stage-part { align-self: start !important; }
+            .pf-mode-mfi > .pf-stage-part {
+              align-self: start !important;
+              margin-top: 92px !important;
+            }
           }
           /* Image-scan mode: the <img> overlay (position:absolute, inset:0) fills
              the stage wrap, but the scan <canvas> is capped at 560px inline. On a
