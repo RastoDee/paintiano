@@ -26806,10 +26806,11 @@ Composition rules:
         )}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(()=>{
           // MELODY chip — sits right beside ATM. Sings an AI lead line over the
-          // scan texture (one-shot, pre-Play only). Enabled only when idle before
-          // Play: during playback / paint anim / a played-out piece (disp>0) it is
-          // disabled, matching the agreed "togglable IBA pred Play" rule.
-          const _prePlay = !playing && !anim && (disp===0);
+          // scan texture (one-shot, pre-Play only). Enabled when idle — i.e. not
+          // playing, not painting, not recording, not working. (In scan setup disp
+          // is already = events.length, NOT 0, so disp must NOT gate this — same
+          // idle test the REC button uses.)
+          const _prePlay = !playing && !anim && !recording && !working;
           const _melDisabled = melodyBusy || (!aiUsable && !aiLocked) || (!_prePlay && !melodyOn);
           return (
           <button onClick={()=>{ if(melodyBusy) return; if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!_prePlay && !melodyOn) return; if(aiUsable||melodyOn) toggleMelody(); }} disabled={_melDisabled} className="pf-lift" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:_melDisabled})}}>

@@ -5655,17 +5655,23 @@ Composition rules:
         // For chord i: take its stored cell (band,cg) so non-row-major directions
         // (vert/spiral) paint the correct cell; fall back to row-major for safety.
         const _ev=liveChords[i]||{};
-        const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
-        const cg=_ev.cg!=null?_ev.cg:i%effCols;
-        const colStart=cg*colStep;
-        if(ctx){
-          for(let sk=0;sk<colStep;sk++){
-            const col=colStart+sk; if(col>=nc) break;
-            for(let j=0;j<CHORD_SIZE;j++){
-              const row=band*CHORD_SIZE+j; if(row>=nr) break;
-              const pidx=row*nc+col,p=px[pidx];
-              ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
-              ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
+        // MELODY lead events carry only the sung note and NO texture cell — they
+        // must not paint (the row-major fallback would stamp an unrelated pixel).
+        // They only sound. Texture events keep their own band/cg so they paint the
+        // right cell regardless of where the interleaved lead events sit.
+        if(!_ev._leadEvent){
+          const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
+          const cg=_ev.cg!=null?_ev.cg:i%effCols;
+          const colStart=cg*colStep;
+          if(ctx){
+            for(let sk=0;sk<colStep;sk++){
+              const col=colStart+sk; if(col>=nc) break;
+              for(let j=0;j<CHORD_SIZE;j++){
+                const row=band*CHORD_SIZE+j; if(row>=nr) break;
+                const pidx=row*nc+col,p=px[pidx];
+                ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+                ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
+              }
             }
           }
         }
@@ -5678,16 +5684,19 @@ Composition rules:
           const velScale=liveChords[i]._runLen?1:0.75;
           try{
             const notes=liveChords[i].n;
-            const midis=notes.map(({m,v,durMs,_lead})=>{
-              // _lead = the MELODY layer's singing line: it must ride ABOVE the
-              // texture, so it bypasses the texture's velocity softening and the
-              // 3× legato hold (which would smear it). It plays at its own
-              // composed velocity and length — prominent and lyrical, not blended
-              // into the scan wash.
+            const midis=notes.map(({m,v,durMs,_lead,_accomp})=>{
+              // _lead = the MELODY layer's singing line: rides ABOVE the texture, so
+              // it bypasses the texture's velocity softening and the 3× legato hold
+              // (which would smear it). Plays at its own prominent velocity + length.
+              // _accomp = a texture note WHILE MELODY is on: duck it to a backing
+              // wash (~50%) so the sung lead sits clearly in front. This is what
+              // makes ON vs OFF unmistakable — lead forward, texture behind.
               const scaledDur=_lead
                 ? Math.round(durMs/playbackSpeedRef.current)
                 : Math.round(durMs*durMul/playbackSpeedRef.current);
-              const playVel=_lead ? Math.round(v) : Math.round(v*velScale);
+              const playVel=_lead ? Math.round(v)
+                            : _accomp ? Math.round(v*velScale*0.5)
+                            : Math.round(v*velScale);
               playNote(m,playVel,scaledDur);
               return{m,scaledDur};
             });
