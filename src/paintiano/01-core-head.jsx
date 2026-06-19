@@ -41,6 +41,11 @@ const goldA = (a)=>`rgba(${PF.goldQuietRGB},${a})`;
 // isn't re-interpolated on every React render (which thrashes during playback
 // when setDisp fires many times per second).
 const PF_STYLE = `
+        /* Stop iOS Safari from auto-inflating rem-based text in landscape
+           orientation (which blew up the version footer on mobile-landscape).
+           100% = no change to desktop; just disables the browser's automatic
+           text scaling. Applies at all widths, layout untouched. */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
         .pf-fade { animation: pf-fadeUp .5s ease both; }
         .pf-setup-stage { display: none; }
