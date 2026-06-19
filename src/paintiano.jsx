@@ -25466,7 +25466,7 @@ Composition rules:
               {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
             </span>
           </div>
-          {viewMode!=='image' && (
+          {(viewMode!=='image' || !(recording||!!recBlob)) && (
           <div
             role="slider"
             aria-label="playback position"
