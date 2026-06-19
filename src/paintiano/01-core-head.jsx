@@ -305,6 +305,38 @@ const PF_STYLE = `
             align-self: center;
             justify-self: center;
           }
+          /* MFI, PC only (≥1100px — telephones held landscape are typically
+             ≤956px so they are excluded): the source thumbnail used to be
+             position:absolute at top:132px, which crashed into a tall mosaic.
+             Promote the thumbnail to its own in-flow grid row 'mthumb' just
+             above stage, so the canvas always begins right below it — no
+             magic offsets. Portrait PC narrower than 1100px keeps the prior
+             absolute behaviour (which already looked correct). */
+          @media (min-width: 1100px) {
+            .pf-app-root.pf-mode-mfi {
+              grid-template-rows: auto auto auto auto auto 1fr auto auto auto !important;
+              grid-template-areas:
+                "topbar   topbar  topbar"
+                "header   header  header"
+                ".        mthumb  ."
+                "controls stage   rtop"
+                "colors   stage   styles"
+                "ltrans   stage   styles"
+                ".        stage   rfab"
+                "vfooter  vfooter vfooter"
+                "legal    legal   legal" !important;
+            }
+            .pf-app-root.pf-mode-mfi .pf-mood-thumb {
+              position: static !important;
+              grid-area: mthumb;
+              align-self: end;
+              justify-self: center;
+              top: auto !important;
+              left: auto !important;
+              transform: none !important;
+              margin: 0 0 8px 0 !important;
+            }
+          }
           /* Image-scan mode: the <img> overlay (position:absolute, inset:0) fills
              the stage wrap, but the scan <canvas> is capped at 560px inline. On a
              wide landscape column the wrap stretched well past 560px, so the
