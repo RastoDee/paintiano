@@ -300,6 +300,18 @@ const PF_STYLE = `
             align-self: center;
             justify-self: center;
           }
+          /* Image-scan mode: the <img> overlay (position:absolute, inset:0) fills
+             the stage wrap, but the scan <canvas> is capped at 560px inline. On a
+             wide landscape column the wrap stretched well past 560px, so the
+             painting and the scan canvas no longer lined up. Pin BOTH wrap and
+             canvas to the same width so they always overlap. */
+          .pf-mode-imagescan > .pf-stage-part {
+            max-width: min(100%, 560px) !important;
+            width: 100% !important;
+          }
+          .pf-mode-imagescan > .pf-stage-part > canvas {
+            max-width: 100% !important;
+          }
           /* Setup-view centre placeholder (desktop): a quiet golden-ratio frame
              that fills the stage column before any source is loaded. */
           .pf-app-root > .pf-setup-stage {
