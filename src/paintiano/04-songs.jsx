@@ -1648,12 +1648,6 @@ function _melodyLayer(evts, mel){
   }
   if(!isFinite(firstMs)||lastMs<=firstMs) return evts;
   const spanMs=lastMs-firstMs;
-  // DUCK THE TEXTURE → accompaniment. With a sung lead on top, the texture should
-  // step back and become a backing wash, not a co-equal stream. Tag every scan
-  // note _accomp so the playback loop softens it (and the renderer leaves paint
-  // untouched). This is THE thing that makes ON vs OFF obvious: lead forward,
-  // texture behind.
-  for(const ev of out){ for(const no of (ev.n||[])){ no._accomp=true; } }
   // Parse + normalise melody notes into {m, startBeat, durBeats, vel}.
   const beat=60000/Math.max(40,Math.min(200,mel.tempo||90));
   const parsed=[];
@@ -1673,19 +1667,19 @@ function _melodyLayer(evts, mel){
   }
   if(!parsed.length||!isFinite(melMinBeat)||melMaxBeat<=melMinBeat) return evts;
   // Register lift: shift the whole melody up by whole octaves until its LOW note
-  // clears the texture's HIGH note by at least a minor third (so it floats clearly
-  // above, never tangled in the texture), capped to stay singable.
+  // clears the texture's HIGH note by ~a whole tone, so it sits just above as a
+  // layer (not pushed way up into a separate, dominating register), capped to stay
+  // singable.
   let lift=0;
-  const targetFloor=scanHi+3;            // sit a clear minor-third above the texture top
-  while(melLo+lift < targetFloor && (melHi+lift) < 90) lift+=12;
-  while((melHi+lift) > 93 && (melLo+lift) > scanHi+3) lift-=12;
+  const targetFloor=scanHi+2;            // sit a whole-tone above the texture top
+  while(melLo+lift < targetFloor && (melHi+lift) < 88) lift+=12;
+  while((melHi+lift) > 91 && (melLo+lift) > scanHi+2) lift-=12;
   // Time map: melody beat-space → scan ms-space, stretched across the full span.
   const melBeatSpan=melMaxBeat-melMinBeat;
   const beatToMs=(b)=> firstMs + ((b-melMinBeat)/melBeatSpan)*spanMs;
-  // LEAD velocity: push the melody up into a dominant band (≈108–127) so it sits
-  // clearly in front of the (now ducked) texture, while keeping its own phrasing
-  // contour (loud peaks vs softer dips).
-  const leadVel=(v)=> Math.max(108, Math.min(127, Math.round(104 + (v/127)*30)));
+  // LEAD velocity: a MODEST lift only — the line should blend WITH the texture as
+  // an overlaid voice, not dominate it. Keeps the melody's own phrasing contour.
+  const leadVel=(v)=> Math.max(88, Math.min(116, Math.round(82 + (v/127)*34)));
   // Give every melody note its OWN event at its exact mapped time, rather than
   // snapping it onto the nearest texture event. This keeps the sung line's phrasing
   // intact even where the texture is sparse — the line breathes on its own clock.
@@ -1694,10 +1688,11 @@ function _melodyLayer(evts, mel){
   const leadEvents=[];
   for(const mn of parsed){
     const startMs=Math.round(beatToMs(mn.startB));
-    // Lyrical length: melody notes hold. Scale the AI's beat-duration into ms via
-    // the scan span (a quarter of the line ≈ a quarter of the piece), floored long
-    // so nothing is a blip. Slight overlap → legato singing line.
-    const durMs=Math.max(420, Math.round((mn.durB/melBeatSpan)*spanMs*0.9));
+    // Lyrical but clean length for a DENSE line: scale the AI's beat-duration into
+    // ms across the scan span, with only slight overlap (legato, not a blur), and
+    // a modest floor so nothing is a blip — but short enough that a continuous
+    // run of notes stays articulate rather than smearing into a chord.
+    const durMs=Math.max(240, Math.round((mn.durB/melBeatSpan)*spanMs*0.82));
     let mm=mn.m+lift;
     mm=Math.max(52, Math.min(96, mm));     // safety clamp, stay in a singing register
     leadEvents.push({ startMs, _lead:true, _leadEvent:true, n:[{ m:mm, v:leadVel(mn.vel), durMs, _lead:true }] });

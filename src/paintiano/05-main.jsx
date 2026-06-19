@@ -5070,9 +5070,11 @@ Compose with real musical craft so it is genuinely beautiful and singable:
 - ONE voice only (monophonic) — a true melody, not chords, not a run of equal notes.
 - Build it from the pitch palette above: let those pitch classes define the KEY/tonal centre, then sing diatonically in that key (major or natural minor to fit the mood). Occasional tasteful passing/leading tones are fine; no whole-tone, no random chromaticism.
 - A short recurring MOTIF (2–4 notes) that returns and develops — give the line memory.
-- Phrasing like a human voice: breathing space (rests), arcs that rise to a peak and settle, longer lyrical notes — not a constant stream.
+- CONTINUITY IS ESSENTIAL: the line must sing CONTINUOUSLY, like a voice — flowing phrases of several notes in a row, joined by mostly stepwise motion. Do NOT leave long silences: never a gap longer than about one beat between notes. The result should read as one connected melody, never isolated single high notes floating over silence.
+- Phrasing like a human voice: group notes into phrases, each phrase ended by only a SHORT breath (a beat or less), then the next phrase begins. Arcs that rise to a peak and settle. Mostly conjunct (stepwise) movement with occasional expressive leaps.
 - An emotional shape that matches the image's energy arc (${mat.arc}).
-- 24–48 notes total. Velocity 90–120 (this is the prominent lead voice).
+- DENSITY: 70–120 notes total, spread evenly across the whole piece so the singing never thins out into sparse lone notes. Mix note lengths (0.5/1/1.5/2 beats) for natural rhythm, but keep them close together in time.
+- Velocity 80–112 (a present lead voice that still blends with the texture, not a blaring solo).
 Output ONLY valid JSON, no prose, no markdown:
 {"title":"...","tempo":90,"notes":[[pitch,durationInBeats,startBeat,velocity],...]}
 Each note: [pitch, durationInBeats, startBeat, velocity]. Pitches as names with octave and sharps only, e.g. "C5","F#4","Bb5"→write "A#5". Title: a short evocative phrase (Title Case, max 5 words).`;
@@ -5082,7 +5084,7 @@ Each note: [pitch, durationInBeats, startBeat, velocity]. Pitches as names with 
       let resp=null,respText='',lastErr=null;
       for(const _ep of _endpoints){
         try{
-          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2500,messages:[{role:'user',content:prompt}]})});
+          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
           const txt=await r.text();
           if(r.ok&&txt){ resp=r; respText=txt; break; }
           lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
@@ -5684,19 +5686,16 @@ Composition rules:
           const velScale=liveChords[i]._runLen?1:0.75;
           try{
             const notes=liveChords[i].n;
-            const midis=notes.map(({m,v,durMs,_lead,_accomp})=>{
-              // _lead = the MELODY layer's singing line: rides ABOVE the texture, so
-              // it bypasses the texture's velocity softening and the 3× legato hold
-              // (which would smear it). Plays at its own prominent velocity + length.
-              // _accomp = a texture note WHILE MELODY is on: duck it to a backing
-              // wash (~50%) so the sung lead sits clearly in front. This is what
-              // makes ON vs OFF unmistakable — lead forward, texture behind.
+            const midis=notes.map(({m,v,durMs,_lead})=>{
+              // _lead = the MELODY layer's singing line: rides gently ABOVE the
+              // texture as a layer (not pushed to the front). It bypasses the
+              // texture's 3× legato hold (which would smear it) and plays at its
+              // own lyrical length, but its velocity is only modestly lifted so it
+              // blends WITH the texture rather than dominating it.
               const scaledDur=_lead
                 ? Math.round(durMs/playbackSpeedRef.current)
                 : Math.round(durMs*durMul/playbackSpeedRef.current);
-              const playVel=_lead ? Math.round(v)
-                            : _accomp ? Math.round(v*velScale*0.5)
-                            : Math.round(v*velScale);
+              const playVel=_lead ? Math.round(v) : Math.round(v*velScale);
               playNote(m,playVel,scaledDur);
               return{m,scaledDur};
             });
