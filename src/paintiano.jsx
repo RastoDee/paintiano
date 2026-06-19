@@ -15584,24 +15584,24 @@ function _atmoTransform(evts, mood, skipTiming){
 //   • Each melody note is time-merged into the nearest scan event (so the scan
 //     step-loop, which reads chordsRef live, plays texture + melody together —
 //     no second scheduler). Tagged _lead so playback can treat it specially.
-function _melodyLayer(evts, mel){
-  if(!evts||!evts.length||!mel||!mel.notes||!mel.notes.length) return evts;
-  // Work on a deep-ish copy: clone each event and its note array so the source
-  // scan events (the literal image) are never mutated — toggling MELODY off must
-  // return a byte-clean texture.
-  const out=evts.map(ev=>({ ...ev, n:(ev.n||[]).map(no=>({ ...no })) }));
-  // Scan piece span + texture ceiling (highest scan pitch) — the melody must sit
-  // above this so it sings over, not inside, the texture.
-  let firstMs=Infinity, lastMs=-Infinity, scanHi=0, scanLo=128;
-  for(const ev of out){
-    if(ev.startMs<firstMs) firstMs=ev.startMs;
-    if(ev.startMs>lastMs) lastMs=ev.startMs;
-    for(const no of (ev.n||[])){ if(no.m>scanHi)scanHi=no.m; if(no.m<scanLo)scanLo=no.m; }
-  }
-  if(!isFinite(firstMs)||lastMs<=firstMs) return evts;
-  const spanMs=lastMs-firstMs;
+// MELODY as a SEPARATE VOICE. Instead of splicing melody notes into the texture
+// events (which forces them through the single-track step-loop and chops them into
+// disjointed ticks), this returns the texture UNCHANGED plus a standalone `voice`:
+// a list of melody notes keyed by PROPORTIONAL position in the piece (pos 0..1).
+// The player schedules that voice on its own timers, in parallel with the texture,
+// so the sung line flows continuously over the (dynamically-paced) texture — two
+// real voices at once. Position is proportional (not absolute ms) so it lands
+// correctly however the texture's dynamic tempo stretches the timeline.
+//
+// Returns { events, voice } — events is the texture (clone, never mutated); voice
+// is [{pos, m, v, durMs}] or [] if nothing to sing.
+function _melodyVoice(evts, mel){
+  const empty={ events:evts, voice:[] };
+  if(!evts||!evts.length||!mel||!mel.notes||!mel.notes.length) return empty;
+  // Texture ceiling (highest scan pitch) so the melody can sit just above it.
+  let scanHi=0, scanLo=128;
+  for(const ev of evts){ for(const no of (ev.n||[])){ if(no.m>scanHi)scanHi=no.m; if(no.m<scanLo)scanLo=no.m; } }
   // Parse + normalise melody notes into {m, startBeat, durBeats, vel}.
-  const beat=60000/Math.max(40,Math.min(200,mel.tempo||90));
   const parsed=[];
   let melMinBeat=Infinity, melMaxBeat=-Infinity, melHi=0, melLo=128;
   for(const raw of mel.notes){
@@ -15617,42 +15617,30 @@ function _melodyLayer(evts, mel){
     if(startB+durB>melMaxBeat)melMaxBeat=startB+durB;
     if(m>melHi)melHi=m; if(m<melLo)melLo=m;
   }
-  if(!parsed.length||!isFinite(melMinBeat)||melMaxBeat<=melMinBeat) return evts;
-  // Register lift: shift the whole melody up by whole octaves until its LOW note
-  // clears the texture's HIGH note by ~a whole tone, so it sits just above as a
-  // layer (not pushed way up into a separate, dominating register), capped to stay
-  // singable.
+  if(!parsed.length||!isFinite(melMinBeat)||melMaxBeat<=melMinBeat) return empty;
+  // Register lift: shift up by whole octaves until the melody's low note clears the
+  // texture top by ~a whole tone — sings just above as a layer, stays singable.
   let lift=0;
-  const targetFloor=scanHi+2;            // sit a whole-tone above the texture top
+  const targetFloor=scanHi+2;
   while(melLo+lift < targetFloor && (melHi+lift) < 88) lift+=12;
   while((melHi+lift) > 91 && (melLo+lift) > scanHi+2) lift-=12;
-  // Time map: melody beat-space → scan ms-space, stretched across the full span.
+  // Proportional position 0..1 across the melody's own beat span.
   const melBeatSpan=melMaxBeat-melMinBeat;
-  const beatToMs=(b)=> firstMs + ((b-melMinBeat)/melBeatSpan)*spanMs;
-  // LEAD velocity: a MODEST lift only — the line should blend WITH the texture as
-  // an overlaid voice, not dominate it. Keeps the melody's own phrasing contour.
+  // Lyrical velocity — a modest, blended lead (not a blaring solo).
   const leadVel=(v)=> Math.max(88, Math.min(116, Math.round(82 + (v/127)*34)));
-  // Give every melody note its OWN event at its exact mapped time, rather than
-  // snapping it onto the nearest texture event. This keeps the sung line's phrasing
-  // intact even where the texture is sparse — the line breathes on its own clock.
-  // The events carry only the lead note (texture stays in its own events), and the
-  // step-loop plays all events in start order.
-  const leadEvents=[];
+  const voice=[];
   for(const mn of parsed){
-    const startMs=Math.round(beatToMs(mn.startB));
-    // Lyrical but clean length for a DENSE line: scale the AI's beat-duration into
-    // ms across the scan span, with only slight overlap (legato, not a blur), and
-    // a modest floor so nothing is a blip — but short enough that a continuous
-    // run of notes stays articulate rather than smearing into a chord.
-    const durMs=Math.max(240, Math.round((mn.durB/melBeatSpan)*spanMs*0.82));
+    const pos=Math.max(0,Math.min(1,(mn.startB-melMinBeat)/melBeatSpan));
+    // Duration as a FRACTION of the whole piece; the player turns it into ms once
+    // it knows the real (dynamic) total length. Slight detach so a run stays
+    // articulate rather than smearing into one held chord.
+    const durFrac=Math.max(0.004, (mn.durB/melBeatSpan)*0.82);
     let mm=mn.m+lift;
-    mm=Math.max(52, Math.min(96, mm));     // safety clamp, stay in a singing register
-    leadEvents.push({ startMs, _lead:true, _leadEvent:true, n:[{ m:mm, v:leadVel(mn.vel), durMs, _lead:true }] });
+    mm=Math.max(52, Math.min(96, mm));
+    voice.push({ pos, durFrac, m:mm, v:leadVel(mn.vel) });
   }
-  // Merge lead events into the texture timeline and re-sort by time so the
-  // step-loop's sequential read plays texture + sung line interleaved correctly.
-  const merged=out.concat(leadEvents).sort((a,b)=>(a.startMs||0)-(b.startMs||0));
-  return merged;
+  voice.sort((a,b)=>a.pos-b.pos);
+  return { events:evts, voice };
 }
 
 // Crossfade-morph two mood pieces into one. First half is mood A,
@@ -20350,7 +20338,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
   // MELODY chip ("obraz spieva"): when ON, an AI-composed SINGING melodic line is
-  // layered ON TOP of the scan texture (see _melodyLayer in 04-songs). It does NOT
+  // layered ON TOP of the scan texture (see _melodyVoice in 04-songs). It does NOT
   // replace the scan piece — the same image-as-music plays, now beautified with a
   // lead voice that mirrors the picture's mood/colour/radiance. One-shot: auto-OFF
   // after a playthrough. melodyData holds the AI line {notes,tempo,title} so the
@@ -20360,6 +20348,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [melodyData,setMelodyData]=useState(null); // {notes,tempo,title} | null
   const melodyOnRef=useRef(false);  useEffect(()=>{melodyOnRef.current=melodyOn;},[melodyOn]);
   const melodyDataRef=useRef(null); useEffect(()=>{melodyDataRef.current=melodyData;},[melodyData]);
+  // The sung melody as a SEPARATE VOICE (list of {pos,durFrac,m,v}) prepared by
+  // _melodyVoice. The texture in chordsRef stays clean; startPlay schedules this
+  // voice on its own parallel timers so the line flows over the texture.
+  const melodyVoiceRef=useRef([]);
+  // Set true by the MELODY chip when it flips melody on/off DURING playback, so the
+  // mode-toggle effect knows to restart-from-position (to re-arm the parallel voice)
+  // instead of doing a seamless live swap (which is right for colour changes).
+  const _melodyTogglePlayingRef=useRef(false);
   // Melody cache keyed by image hash + atmo signature (same image + same mood →
   // replay the layered line free, no extra AI call). Parallels _imgComposeCache.
   // Body 10: AI-availability tracking. `isOnline` follows the network; `aiDown`
@@ -20575,7 +20571,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         setChords(_evts);chordsRef.current=_evts;
         idxRef.current=_evts.length;setDisp(_evts.length);
       }
-      setMelodyOn(false);setMelodyData(null);  // a cleared image sings only on a fresh re-tap
+      setMelodyOn(false);setMelodyData(null);melodyVoiceRef.current=[];  // cleared image: no sung voice until a fresh re-tap
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
@@ -22300,7 +22296,12 @@ Composition rules:
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
-    const evts=(melodyOn&&melodyData)?_melodyLayer(_evtsAtmo,melodyData):_evtsAtmo;
+    // MELODY as a separate voice: the texture stays clean; the sung line goes to
+    // melodyVoiceRef and is scheduled in parallel by startPlay. So `evts` here is
+    // always just the texture — no lead notes spliced in.
+    let evts=_evtsAtmo;
+    if(melodyOn&&melodyData){ const _mv=_melodyVoice(_evtsAtmo,melodyData); evts=_mv.events; melodyVoiceRef.current=_mv.voice||[]; }
+    else { melodyVoiceRef.current=[]; }
     // Changing the colour mode re-transcribes the SAME painting through a new
     // hue→pitch table, so the notes change but the structure/length do not. If a
     // playback is in progress we must NOT stop it — like MIDI and live drawing,
@@ -22309,11 +22310,25 @@ Composition rules:
     // resume playback from that same index. Only when stopped do we reset to the
     // top (ready to play from the start in the new colour).
     if(playingRef.current){
-      // Playback loop now reads chords live from chordsRef each step, so swapping
-      // in the re-transcribed notes is enough — the very next step plays the new
-      // colour's tones from the same position. No restart, no stutter.
-      setChords(evts);chordsRef.current=evts;
-      setStamp(s=>s+1);
+      // Texture swaps live as before. But the MELODY voice is scheduled once at
+      // startPlay (parallel timers), so a melody on/off toggle MID-PLAYBACK must
+      // re-arm it: restart from the current position. _melodyTogglePlayingRef is
+      // set true by the chip handler only when it flips melody during playback, so
+      // a plain colour change still swaps seamlessly without a restart.
+      if(_melodyTogglePlayingRef.current){
+        _melodyTogglePlayingRef.current=false;
+        const keep=Math.min(dispRef.current||0, evts.length);
+        setChords(evts);chordsRef.current=evts;
+        resumeFromRef.current=keep;
+        setStamp(s=>s+1);
+        try{ startPlayRef.current?.(); }catch(_){}
+      } else {
+        // Playback loop reads chords live from chordsRef each step, so swapping in
+        // the re-transcribed notes is enough — next step plays the new colour's
+        // tones from the same position. No restart, no stutter.
+        setChords(evts);chordsRef.current=evts;
+        setStamp(s=>s+1);
+      }
     }else if(holdPausedRef.current){
       // Paused mid-piece: swap in the new colour's notes but KEEP the position so
       // pressing Resume continues from where it was, now in the new tones. Don't
@@ -22572,7 +22587,6 @@ Composition rules:
         const live=new Array(src.length).fill(0.5);
         for(let k=0;k<src.length;k++){
           const e=src[k]; if(!e) continue;
-          if(e._leadEvent){ live[k]=-1; continue; }   // mark: inherit neighbour pace
           const ch=typeof e._chroma==='number'?Math.max(0,Math.min(1,e._chroma)):0.4;
           const ns=e.n||[];
           let vAvg=0; for(const nn of ns) vAvg+=(nn.v||60); vAvg=ns.length?vAvg/ns.length:60;
@@ -22581,10 +22595,6 @@ Composition rules:
           // Weighted vibrancy. Chroma leads (colour), energy and density support.
           live[k]=Math.max(0,Math.min(1, 0.55*ch + 0.30*vNorm + 0.15*dens));
         }
-        // Fill lead-event liveliness from the nearest texture neighbour so they
-        // flow with the surrounding passage.
-        let lastLive=0.5;
-        for(let k=0;k<src.length;k++){ if(live[k]<0) live[k]=lastLive; else lastLive=live[k]; }
         // Map liveliness → step. Vivid (1) → fast (~85ms), calm (0) → slow (~320ms).
         const FAST=85, SLOW=320;
         for(let k=0;k<src.length;k++){
@@ -22594,7 +22604,7 @@ Composition rules:
         }
         // Normalize so the MEAN step ≈150ms — dynamics ride on top, overall tempo
         // stays familiar regardless of how vivid/dark the particular image is.
-        let sum=0,cnt=0; for(let k=0;k<raw.length;k++){ if(src[k]&&!src[k]._leadEvent){ sum+=raw[k]; cnt++; } }
+        let sum=0,cnt=0; for(let k=0;k<raw.length;k++){ if(src[k]){ sum+=raw[k]; cnt++; } }
         const mean=cnt?sum/cnt:150;
         const norm=mean>0?150/mean:1;
         for(let k=0;k<raw.length;k++){ raw[k]=Math.max(60,Math.min(520,raw[k]*norm)); }
@@ -22613,23 +22623,17 @@ Composition rules:
         // For chord i: take its stored cell (band,cg) so non-row-major directions
         // (vert/spiral) paint the correct cell; fall back to row-major for safety.
         const _ev=liveChords[i]||{};
-        // MELODY lead events carry only the sung note and NO texture cell — they
-        // must not paint (the row-major fallback would stamp an unrelated pixel).
-        // They only sound. Texture events keep their own band/cg so they paint the
-        // right cell regardless of where the interleaved lead events sit.
-        if(!_ev._leadEvent){
-          const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
-          const cg=_ev.cg!=null?_ev.cg:i%effCols;
-          const colStart=cg*colStep;
-          if(ctx){
-            for(let sk=0;sk<colStep;sk++){
-              const col=colStart+sk; if(col>=nc) break;
-              for(let j=0;j<CHORD_SIZE;j++){
-                const row=band*CHORD_SIZE+j; if(row>=nr) break;
-                const pidx=row*nc+col,p=px[pidx];
-                ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
-                ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
-              }
+        const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
+        const cg=_ev.cg!=null?_ev.cg:i%effCols;
+        const colStart=cg*colStep;
+        if(ctx){
+          for(let sk=0;sk<colStep;sk++){
+            const col=colStart+sk; if(col>=nc) break;
+            for(let j=0;j<CHORD_SIZE;j++){
+              const row=band*CHORD_SIZE+j; if(row>=nr) break;
+              const pidx=row*nc+col,p=px[pidx];
+              ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+              ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
             }
           }
         }
@@ -22642,17 +22646,9 @@ Composition rules:
           const velScale=liveChords[i]._runLen?1:0.75;
           try{
             const notes=liveChords[i].n;
-            const midis=notes.map(({m,v,durMs,_lead})=>{
-              // _lead = the MELODY layer's singing line: rides gently ABOVE the
-              // texture as a layer (not pushed to the front). It bypasses the
-              // texture's 3× legato hold (which would smear it) and plays at its
-              // own lyrical length, but its velocity is only modestly lifted so it
-              // blends WITH the texture rather than dominating it.
-              const scaledDur=_lead
-                ? Math.round(durMs/playbackSpeedRef.current)
-                : Math.round(durMs*durMul/playbackSpeedRef.current);
-              const playVel=_lead ? Math.round(v) : Math.round(v*velScale);
-              playNote(m,playVel,scaledDur);
+            const midis=notes.map(({m,v,durMs})=>{
+              const scaledDur=Math.round(durMs*durMul/playbackSpeedRef.current);
+              playNote(m,Math.round(v*velScale),scaledDur);
               return{m,scaledDur};
             });
             // Batch add all notes in this chord in one state update
@@ -22707,6 +22703,43 @@ Composition rules:
         }
         timers.current.push(setTimeout(step,Math.round(_gapMs/playbackSpeedRef.current)));
       };
+      // ── Parallel MELODY voice ────────────────────────────────────────────────
+      // The sung line is NOT in chordsRef (texture stays clean). Schedule it on its
+      // own timers, in parallel with the texture step-loop above, so it flows as a
+      // second voice over the (dynamically-paced) painting. Each voice note's `pos`
+      // (0..1) maps onto the texture's REAL total duration — computed from the same
+      // _melSteps tempo curve — so the melody lands correctly however the dynamic
+      // tempo stretches the timeline. Timers go into timers.current, so Stop/Pause/
+      // Clear (which clear that array + bump genRef) tear the voice down cleanly.
+      if(melodyOnRef.current){
+        const voice=melodyVoiceRef.current||[];
+        if(voice.length){
+          // Real total duration of the texture at the current dynamic tempo, from
+          // the not-yet-elapsed portion (so a resume mid-piece still lines up).
+          let totalMs=0;
+          for(let k=Math.max(1,fromIdx);k<(_melSteps?_melSteps.length:0);k++){ totalMs += (_melSteps[k]||150); }
+          if(totalMs<=0){ totalMs = (chordsRef.current.length||1)*150; }
+          const startedAtFrac = (_melSteps&&_melSteps.length)
+            ? (fromIdx>0 ? Math.min(1, fromIdx/_melSteps.length) : 0) : 0;
+          const voiceGen = genRef.current;
+          for(const mn of voice){
+            // Skip notes already passed when resuming from the middle.
+            if(mn.pos < startedAtFrac) continue;
+            const relPos = (mn.pos - startedAtFrac) / Math.max(1e-6, (1 - startedAtFrac));
+            const atMs = Math.round((relPos * totalMs) / playbackSpeedRef.current);
+            const durMs = Math.max(220, Math.round((mn.durFrac||0.01) * totalMs));
+            const id = setTimeout(()=>{
+              if(genRef.current!==voiceGen) return;          // stopped → don't sound
+              try{
+                playNote(mn.m, mn.v, Math.round(durMs/playbackSpeedRef.current));
+                setActive(p=>{const s=new Set(p); s.add(mn.m); return s;});
+                pushTimer(()=>setActive(p=>{const s=new Set(p); s.delete(mn.m); return s;}), Math.min(900, Math.round(durMs/playbackSpeedRef.current)));
+              }catch(_){}
+            }, atMs);
+            timers.current.push(id);
+          }
+        }
+      }
       step();
     }else{
       // Step-loop: schedules one chord at a time so playbackSpeedRef is read
@@ -26872,7 +26905,7 @@ Composition rules:
           </button>
         )}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
-          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(melodyOn){ setMelodyOn(false); } else if(melodyData){ setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
+          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ setMelodyOn(false); } else if(melodyData){ setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
             <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+' · '+(melodyBusy?'…':(aiLocked&&!melodyData)?'—':(!melodyData&&!aiUsable)?(t('aiOffline')||'offline'):melodyOn?'ON':'OFF')}</span>
             {aiLocked && !melodyData && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>

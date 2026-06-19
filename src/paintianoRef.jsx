@@ -22555,6 +22555,54 @@ Composition rules:
       const CHORD_SIZE=6;
       const colStep=pixelRef.current.colStep||1;
       const effCols=Math.ceil(nc/colStep);
+      // MELODY dynamic tempo — DRIVEN BY THE IMAGE. With MELODY on we leave the
+      // rigid grid and let each part of the painting set its own pace: vivid,
+      // saturated, energetic regions push FORWARD (shorter steps); dark, calm,
+      // sparse regions BREATHE (longer steps). So the music speeds up and slows
+      // down with the picture — real dynamics, not a flat pulse. The whole curve
+      // is normalized so the AVERAGE step stays ≈150ms (the familiar feel), the
+      // variation just rides on top. Lead (melody) events inherit the local pace.
+      // Precompute a per-event step (ms) array aligned to chordsRef indices.
+      const _computeMelSteps=(src)=>{
+        const raw=new Array(src.length).fill(150);
+        if(!melodyOnRef.current) return raw;
+        // "Liveliness" per event from real image data the scan already carries:
+        //   _chroma (0..1) colour saturation/vibrancy of the cell,
+        //   note velocity (chroma-derived energy), and note count (motif density).
+        const live=new Array(src.length).fill(0.5);
+        for(let k=0;k<src.length;k++){
+          const e=src[k]; if(!e) continue;
+          if(e._leadEvent){ live[k]=-1; continue; }   // mark: inherit neighbour pace
+          const ch=typeof e._chroma==='number'?Math.max(0,Math.min(1,e._chroma)):0.4;
+          const ns=e.n||[];
+          let vAvg=0; for(const nn of ns) vAvg+=(nn.v||60); vAvg=ns.length?vAvg/ns.length:60;
+          const vNorm=Math.max(0,Math.min(1,(vAvg-38)/68));   // back out the 38+68·chroma mapping
+          const dens=Math.max(0,Math.min(1,(ns.length-1)/4)); // 1 note→0, 5+→1
+          // Weighted vibrancy. Chroma leads (colour), energy and density support.
+          live[k]=Math.max(0,Math.min(1, 0.55*ch + 0.30*vNorm + 0.15*dens));
+        }
+        // Fill lead-event liveliness from the nearest texture neighbour so they
+        // flow with the surrounding passage.
+        let lastLive=0.5;
+        for(let k=0;k<src.length;k++){ if(live[k]<0) live[k]=lastLive; else lastLive=live[k]; }
+        // Map liveliness → step. Vivid (1) → fast (~85ms), calm (0) → slow (~320ms).
+        const FAST=85, SLOW=320;
+        for(let k=0;k<src.length;k++){
+          const L=live[k];
+          const e2=L*L*(3-2*L);                       // smoothstep — read dynamics clearly
+          raw[k]=SLOW-(SLOW-FAST)*e2;
+        }
+        // Normalize so the MEAN step ≈150ms — dynamics ride on top, overall tempo
+        // stays familiar regardless of how vivid/dark the particular image is.
+        let sum=0,cnt=0; for(let k=0;k<raw.length;k++){ if(src[k]&&!src[k]._leadEvent){ sum+=raw[k]; cnt++; } }
+        const mean=cnt?sum/cnt:150;
+        const norm=mean>0?150/mean:1;
+        for(let k=0;k<raw.length;k++){ raw[k]=Math.max(60,Math.min(520,raw[k]*norm)); }
+        return raw;
+      };
+      let _melSteps=_computeMelSteps(chordsRef.current||[]);
+      let _melStepsLen=(chordsRef.current||[]).length;
+      let _melStepsOn=melodyOnRef.current;
       const step=()=>{
         if(genRef.current!==gen)return;
         // Read chords LIVE from the ref each step (not the captured local), so a
@@ -22641,9 +22689,19 @@ Composition rules:
         //    notes land where they belong — a flowing line instead of ticks
         //    sprinkled between grid steps. Gap clamped to keep it sane.
         let _gapMs;
-        if(melodyOnRef.current && liveChords[i] && liveChords[i-1] &&
-           typeof liveChords[i].startMs==='number' && typeof liveChords[i-1].startMs==='number'){
-          _gapMs = Math.max(8, Math.min(1400, liveChords[i].startMs - liveChords[i-1].startMs));
+        // Recompute the per-event tempo curve if the live chords changed length or
+        // MELODY was toggled mid-playback (colour swap / melody on/off). Cheap: only
+        // on actual change, not every step.
+        if(melodyOnRef.current !== _melStepsOn || liveChords.length !== _melStepsLen){
+          _melSteps=_computeMelSteps(liveChords);
+          _melStepsLen=liveChords.length;
+          _melStepsOn=melodyOnRef.current;
+        }
+        if(melodyOnRef.current && _melSteps && _melSteps.length){
+          // Image-driven dynamic pace: the step that just elapsed (event i-1)
+          // determines the wait to the next. Vivid passages rush, calm ones
+          // breathe — the painting conducts the tempo. Mean stays ≈150ms.
+          _gapMs = Math.max(8, Math.min(1400, _melSteps[i-1] || 150));
         } else {
           _gapMs = (liveChords[i-1] && liveChords[i-1]._stepMs) || 150;
         }

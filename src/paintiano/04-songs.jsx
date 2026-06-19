@@ -1632,24 +1632,24 @@ function _atmoTransform(evts, mood, skipTiming){
 //   • Each melody note is time-merged into the nearest scan event (so the scan
 //     step-loop, which reads chordsRef live, plays texture + melody together —
 //     no second scheduler). Tagged _lead so playback can treat it specially.
-function _melodyLayer(evts, mel){
-  if(!evts||!evts.length||!mel||!mel.notes||!mel.notes.length) return evts;
-  // Work on a deep-ish copy: clone each event and its note array so the source
-  // scan events (the literal image) are never mutated — toggling MELODY off must
-  // return a byte-clean texture.
-  const out=evts.map(ev=>({ ...ev, n:(ev.n||[]).map(no=>({ ...no })) }));
-  // Scan piece span + texture ceiling (highest scan pitch) — the melody must sit
-  // above this so it sings over, not inside, the texture.
-  let firstMs=Infinity, lastMs=-Infinity, scanHi=0, scanLo=128;
-  for(const ev of out){
-    if(ev.startMs<firstMs) firstMs=ev.startMs;
-    if(ev.startMs>lastMs) lastMs=ev.startMs;
-    for(const no of (ev.n||[])){ if(no.m>scanHi)scanHi=no.m; if(no.m<scanLo)scanLo=no.m; }
-  }
-  if(!isFinite(firstMs)||lastMs<=firstMs) return evts;
-  const spanMs=lastMs-firstMs;
+// MELODY as a SEPARATE VOICE. Instead of splicing melody notes into the texture
+// events (which forces them through the single-track step-loop and chops them into
+// disjointed ticks), this returns the texture UNCHANGED plus a standalone `voice`:
+// a list of melody notes keyed by PROPORTIONAL position in the piece (pos 0..1).
+// The player schedules that voice on its own timers, in parallel with the texture,
+// so the sung line flows continuously over the (dynamically-paced) texture — two
+// real voices at once. Position is proportional (not absolute ms) so it lands
+// correctly however the texture's dynamic tempo stretches the timeline.
+//
+// Returns { events, voice } — events is the texture (clone, never mutated); voice
+// is [{pos, m, v, durMs}] or [] if nothing to sing.
+function _melodyVoice(evts, mel){
+  const empty={ events:evts, voice:[] };
+  if(!evts||!evts.length||!mel||!mel.notes||!mel.notes.length) return empty;
+  // Texture ceiling (highest scan pitch) so the melody can sit just above it.
+  let scanHi=0, scanLo=128;
+  for(const ev of evts){ for(const no of (ev.n||[])){ if(no.m>scanHi)scanHi=no.m; if(no.m<scanLo)scanLo=no.m; } }
   // Parse + normalise melody notes into {m, startBeat, durBeats, vel}.
-  const beat=60000/Math.max(40,Math.min(200,mel.tempo||90));
   const parsed=[];
   let melMinBeat=Infinity, melMaxBeat=-Infinity, melHi=0, melLo=128;
   for(const raw of mel.notes){
@@ -1665,42 +1665,30 @@ function _melodyLayer(evts, mel){
     if(startB+durB>melMaxBeat)melMaxBeat=startB+durB;
     if(m>melHi)melHi=m; if(m<melLo)melLo=m;
   }
-  if(!parsed.length||!isFinite(melMinBeat)||melMaxBeat<=melMinBeat) return evts;
-  // Register lift: shift the whole melody up by whole octaves until its LOW note
-  // clears the texture's HIGH note by ~a whole tone, so it sits just above as a
-  // layer (not pushed way up into a separate, dominating register), capped to stay
-  // singable.
+  if(!parsed.length||!isFinite(melMinBeat)||melMaxBeat<=melMinBeat) return empty;
+  // Register lift: shift up by whole octaves until the melody's low note clears the
+  // texture top by ~a whole tone — sings just above as a layer, stays singable.
   let lift=0;
-  const targetFloor=scanHi+2;            // sit a whole-tone above the texture top
+  const targetFloor=scanHi+2;
   while(melLo+lift < targetFloor && (melHi+lift) < 88) lift+=12;
   while((melHi+lift) > 91 && (melLo+lift) > scanHi+2) lift-=12;
-  // Time map: melody beat-space → scan ms-space, stretched across the full span.
+  // Proportional position 0..1 across the melody's own beat span.
   const melBeatSpan=melMaxBeat-melMinBeat;
-  const beatToMs=(b)=> firstMs + ((b-melMinBeat)/melBeatSpan)*spanMs;
-  // LEAD velocity: a MODEST lift only — the line should blend WITH the texture as
-  // an overlaid voice, not dominate it. Keeps the melody's own phrasing contour.
+  // Lyrical velocity — a modest, blended lead (not a blaring solo).
   const leadVel=(v)=> Math.max(88, Math.min(116, Math.round(82 + (v/127)*34)));
-  // Give every melody note its OWN event at its exact mapped time, rather than
-  // snapping it onto the nearest texture event. This keeps the sung line's phrasing
-  // intact even where the texture is sparse — the line breathes on its own clock.
-  // The events carry only the lead note (texture stays in its own events), and the
-  // step-loop plays all events in start order.
-  const leadEvents=[];
+  const voice=[];
   for(const mn of parsed){
-    const startMs=Math.round(beatToMs(mn.startB));
-    // Lyrical but clean length for a DENSE line: scale the AI's beat-duration into
-    // ms across the scan span, with only slight overlap (legato, not a blur), and
-    // a modest floor so nothing is a blip — but short enough that a continuous
-    // run of notes stays articulate rather than smearing into a chord.
-    const durMs=Math.max(240, Math.round((mn.durB/melBeatSpan)*spanMs*0.82));
+    const pos=Math.max(0,Math.min(1,(mn.startB-melMinBeat)/melBeatSpan));
+    // Duration as a FRACTION of the whole piece; the player turns it into ms once
+    // it knows the real (dynamic) total length. Slight detach so a run stays
+    // articulate rather than smearing into one held chord.
+    const durFrac=Math.max(0.004, (mn.durB/melBeatSpan)*0.82);
     let mm=mn.m+lift;
-    mm=Math.max(52, Math.min(96, mm));     // safety clamp, stay in a singing register
-    leadEvents.push({ startMs, _lead:true, _leadEvent:true, n:[{ m:mm, v:leadVel(mn.vel), durMs, _lead:true }] });
+    mm=Math.max(52, Math.min(96, mm));
+    voice.push({ pos, durFrac, m:mm, v:leadVel(mn.vel) });
   }
-  // Merge lead events into the texture timeline and re-sort by time so the
-  // step-loop's sequential read plays texture + sung line interleaved correctly.
-  const merged=out.concat(leadEvents).sort((a,b)=>(a.startMs||0)-(b.startMs||0));
-  return merged;
+  voice.sort((a,b)=>a.pos-b.pos);
+  return { events:evts, voice };
 }
 
 // Crossfade-morph two mood pieces into one. First half is mood A,
