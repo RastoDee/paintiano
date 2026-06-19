@@ -274,7 +274,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
       `}</style>
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" className="pf-guide-panel" style={{position:'relative',width:'100%',maxWidth:480,height:'100%',display:'flex',flexDirection:'column',color:'rgba(247,243,236,.92)',fontFamily:'inherit',borderLeft:'1px solid rgba(201,168,76,.08)',borderRight:'1px solid rgba(201,168,76,.08)',background:'rgba(8,6,14,0.35)'}}>
         {/* Top bar */}
-        <div style={{flexShrink:0,padding:'14px 16px 8px',display:'flex',alignItems:'center',gap:10,position:'relative',zIndex:2}}>
+        <div className="pf-guide-topbar" style={{flexShrink:0,padding:'14px 16px 8px',display:'flex',alignItems:'center',gap:10,position:'relative',zIndex:2}}>
           {!isConcept && !isBook ? <button onClick={()=>{ setSearchOpen(v=>{ const n=!v; if(!n) setGuideQuery(''); return n; }); }} aria-label="search" title="search" style={{background:searchOpen?'rgba(201,168,76,.18)':'rgba(28,24,40,.6)',border:'1px solid '+(searchOpen?'rgba(201,168,76,.55)':'rgba(242,238,232,.15)'),color:searchOpen?PF.gold2:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'.95rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>⌕</button> : <div style={{width:34,height:34}} aria-hidden="true" />}
           <div id="paintiano-guide-title" style={{flex:1,textAlign:'center',letterSpacing:'.22em',color:'rgba(201,168,76,.85)',fontSize:(.65*readScale)+'rem',textTransform:'uppercase',fontWeight:600}}>{isBook ? ts('gcat_book','Book') : isConcept ? (t('conceptTitle')||'Concept') : (t('guideTitle')||'Guide')}</div>
           <button onClick={onClose} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:'rgba(247,243,236,.85)',width:34,height:34,borderRadius:'50%',cursor:'pointer',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
@@ -9964,8 +9964,8 @@ Composition rules:
               // Match the safe-area padding so the close button sits inside
               // the notch-respecting safe zone on iPhone.
               top:'max(14px, calc(env(safe-area-inset-top) + 8px))',
-              left: isDesktop ? 'max(12px, env(safe-area-inset-left))' : 'auto',
-              right: isDesktop ? 'auto' : 'max(16px, env(safe-area-inset-right))',
+              left: 'auto',
+              right: 'max(16px, env(safe-area-inset-right))',
               width:32, height:32, borderRadius:'50%',
               background:'rgba(255,255,255,.08)',
               color:'rgba(255,255,255,.7)',
