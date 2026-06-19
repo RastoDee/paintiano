@@ -22226,11 +22226,11 @@ Composition rules:
           const vividPct = considered ? (vivid/considered)*100 : 0;
           const autoMode = vividPct < 5 ? 'bw' : 'kontra';   // <5% colour ⇒ monochrome reading; colourful ⇒ Kontra (painter's reading) as the image default
           appModeRef.current = autoMode;             // remember the app's pick for Custom→back
-          kontraAutoRef.current = (startMode==='kontra'); // flag auto-kontra so it doesn't leak to other sources
           setSetupNoSel(false);                      // a fresh image re-enables the app's colour pick
           // Keep a manual Custom choice if the user already had it; otherwise apply
           // the app's pick. (spectral/other non-image modes fall back to autoMode.)
           const startMode = mode==='custom' ? 'custom' : autoMode;
+          kontraAutoRef.current = (startMode==='kontra'); // flag auto-kontra so it doesn't leak to other sources
           if(startMode!==mode) setMode(startMode);
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
           imgComposeRef.current=false;
