@@ -9912,7 +9912,7 @@ Composition rules:
           scroll; the popup it opens is also fixed and covers the full
           viewport. zIndex high enough to sit above app chrome but below
           the paywall modal. ── */}
-      {!showOnboarding && !showIntro && !isActiveView && (
+      {!showOnboarding && !showIntro && !isActiveView && !showGuide && !showAbout && !showBook && !showSetupModal && !showHelp && !legalDoc && !paywallReason && (
         <button
           className="pf-help-fab"
           onClick={()=>setShowHelp(true)}
@@ -9965,7 +9965,8 @@ Composition rules:
               // Match the safe-area padding so the close button sits inside
               // the notch-respecting safe zone on iPhone.
               top:'max(14px, calc(env(safe-area-inset-top) + 8px))',
-              right: isDesktop ? 'calc(50% - 224px)' : 16,
+              left: isDesktop ? 'calc(50% - 224px)' : 12,
+              right: 'auto',
               width:32, height:32, borderRadius:'50%',
               background:'rgba(255,255,255,.08)',
               color:'rgba(255,255,255,.7)',
