@@ -199,10 +199,10 @@ const PF_STYLE = `
              short (phone-landscape) viewports. */
           .pf-app-root .pf-help-fab {
             position: absolute !important;
-            top: 26px !important;
-            left: 96px !important;
-            bottom: auto !important;
-            right: auto !important;
+            top: auto !important;
+            left: auto !important;
+            right: 24px !important;
+            bottom: 24px !important;
             width: 34px !important;
             height: 34px !important;
             font-size: 17px !important;
