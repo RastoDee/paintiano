@@ -687,6 +687,9 @@ export default function Paintiano() {
   // The colour reading the app chose for the current image (harmony or bw), so
   // leaving Custom returns to it rather than always to harmony.
   const appModeRef = useRef('harmony');
+  // True when KONTRA is the colourful-image AUTO default (not a manual pick), so the
+  // leave-image cleanup can reset it to harmony without clobbering a hand-chosen kontra.
+  const kontraAutoRef = useRef(false);
   // ─── Paintiano Pro state (from 07-pro.jsx) ───
   // Hoisted up here so `proStatus` is in scope for activePalette / shuffle pool /
   // effectivePairs / etc. below. The hook has no parameter dependencies — order
@@ -1057,8 +1060,19 @@ export default function Paintiano() {
   // exposes B/W. If the user lands on a non-image source while mode is still
   // 'bw' (left over from a previously loaded BW image), force back to harmony
   // so the canvas doesn't render grey with no visibly-active tab.
+  //
+  // KONTRA gets the same treatment, but conditionally: a colourful image AUTO-sets
+  // kontra as its default reading. That auto-pick must NOT leak into Music/MFI/
+  // Mood/Compose — those default to Harmony. So when we leave the image source with
+  // kontra still active AND it was the image's auto-pick (not a manual choice),
+  // fall back to harmony. A kontra the user picked by hand is preserved (the
+  // auto-flag is cleared the moment they touch the palette tabs).
   useEffect(()=>{
     if(mode==='bw' && viewMode!=='image' && loadedSource!=='image'){
+      setMode('harmony');
+    }
+    if(mode==='kontra' && kontraAutoRef.current && viewMode!=='image' && loadedSource!=='image'){
+      kontraAutoRef.current=false;
       setMode('harmony');
     }
   },[viewMode, loadedSource, mode]);
@@ -5309,6 +5323,7 @@ Composition rules:
           const vividPct = considered ? (vivid/considered)*100 : 0;
           const autoMode = vividPct < 5 ? 'bw' : 'kontra';   // <5% colour ⇒ monochrome reading; colourful ⇒ Kontra (painter's reading) as the image default
           appModeRef.current = autoMode;             // remember the app's pick for Custom→back
+          kontraAutoRef.current = (startMode==='kontra'); // flag auto-kontra so it doesn't leak to other sources
           setSetupNoSel(false);                      // a fresh image re-enables the app's colour pick
           // Keep a manual Custom choice if the user already had it; otherwise apply
           // the app's pick. (spectral/other non-image modes fall back to autoMode.)
@@ -8379,6 +8394,7 @@ Composition rules:
                     else if(mode===m){ setShowColorPalette(v=>!v); return; }   // tap active chip → toggle preview
                     else setShowColorPalette(false);
                     if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                    kontraAutoRef.current=false;   // manual palette tap → kontra (if chosen) is now deliberate
                     setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
                   }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:dis?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:dis?0.32:1,whiteSpace:'nowrap',overflow:'visible',...chipStyle(mode===m)}}>
                     <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
@@ -8454,6 +8470,7 @@ Composition rules:
                 else if(mode===m){ setShowColorPalette(v=>!v); return; }   // tap active H/S/BW tab → toggle preview
                 else setShowColorPalette(false);
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                kontraAutoRef.current=false;   // manual palette choice → deliberate
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
               }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...chipStyle(mode===m)}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
@@ -9718,10 +9735,15 @@ Composition rules:
                   }
                   return [];
                 }
-                // Non-empty: starts-with autocomplete for everyone (works
-                // across the full MOODS list, including for aiLocked users —
-                // they can type to find any mood, then tap to play the preset).
-                return MOODS.filter(m=>_n((t('moodNames')||{})[m]||m).startsWith(q));
+                // Non-empty: autocomplete across BOTH the internal key and the
+                // localized display name. Prefer starts-with matches (Love for "l"),
+                // then fall back to contains so partial mid-word typing still finds
+                // moods. De-duped, starts-with ranked first.
+                const _names=(t('moodNames')||{});
+                const _match=(m)=>{ const key=_n(m); const nm=_n(_names[m]||m); return {starts:(key.startsWith(q)||nm.startsWith(q)), has:(key.includes(q)||nm.includes(q))}; };
+                const _starts=[], _has=[];
+                for(const m of MOODS){ const r=_match(m); if(r.starts) _starts.push(m); else if(r.has) _has.push(m); }
+                return _starts.concat(_has);
               })().map(m=>(
                 <button key={m} onClick={()=>{
                   setShowMoodMenu(false);
@@ -10004,13 +10026,13 @@ Composition rules:
         })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
           <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{...txStyle('ai',{effScale,on:atmoOn,disabled:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked))})}}>
-            <TxIcon n="sparkle" s={14*effScale}/><span>{(t('atmoLabel')||'atmosphere')+' · '+(atmoBusy?'…':(aiLocked&&!atmoMood)?'—':(!atmoMood&&!aiUsable)?(t('aiOffline')||'offline'):atmoOn?'ON':'OFF')}</span>
+            <TxIcon n="sparkle" s={14*effScale}/><span>{(t('atmoLabel')||'atmosphere')+(atmoBusy?' · …':(aiLocked&&!atmoMood)?' · —':(!atmoMood&&!aiUsable)?' · '+(t('aiOffline')||'offline'):'')}</span>
             {aiLocked && !atmoMood && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
         )}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
           <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ setMelodyOn(false); } else if(melodyData){ setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
-            <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+' · '+(melodyBusy?'…':(aiLocked&&!melodyData)?'—':(!melodyData&&!aiUsable)?(t('aiOffline')||'offline'):melodyOn?'ON':'OFF')}</span>
+            <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+(melodyBusy?' · …':(aiLocked&&!melodyData)?' · —':(!melodyData&&!aiUsable)?' · '+(t('aiOffline')||'offline'):'')}</span>
             {aiLocked && !melodyData && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
         )}

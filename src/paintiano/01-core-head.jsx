@@ -148,7 +148,7 @@ const PF_STYLE = `
             position: relative;
             display: grid !important;
             grid-template-columns: 180px minmax(0, 1fr) 180px;
-            grid-template-rows: auto auto auto auto 1fr auto auto auto;
+            grid-template-rows: auto auto auto auto auto 1fr auto auto;
             grid-template-areas:
               "topbar   topbar topbar"
               "header   header header"
@@ -158,6 +158,7 @@ const PF_STYLE = `
               ".        stage  rfab"
               "vfooter  vfooter vfooter"
               "legal    legal  legal";
+            align-content: start !important;
             align-items: start !important;
             justify-items: stretch !important;
             column-gap: 24px;
