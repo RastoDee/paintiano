@@ -236,7 +236,7 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 7px !important;
           }
-          .pf-app-root .pf-color-tabs > button { padding: 7px 6px !important; letter-spacing: .08em !important; font-size: .56rem !important; }
+          .pf-app-root .pf-color-tabs > button { padding: 7px 6px !important; letter-spacing: .08em !important; font-size: calc(.56rem * var(--pf-read-scale, 1)) !important; }
           .pf-app-root .pf-styles-inner {
             grid-area: styles;
             align-self: start;
@@ -260,7 +260,7 @@ const PF_STYLE = `
             gap: 7px !important;
             row-gap: 7px !important;
           }
-          .pf-app-root .pf-styles-inner .pf-artist { padding: 7px 6px !important; letter-spacing: .06em !important; font-size: .56rem !important; }
+          .pf-app-root .pf-styles-inner .pf-artist { padding: 7px 6px !important; letter-spacing: .06em !important; font-size: calc(.56rem * var(--pf-read-scale, 1)) !important; }
           /* Setup view (pre-load) has no colors/styles split — its single panel
              part spans the left+stage area so the setup tiles + hero read well. */
           /* Setup view (pre-load): a single narrow left-column panel (mirrors the

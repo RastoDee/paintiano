@@ -236,7 +236,7 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 7px !important;
           }
-          .pf-app-root .pf-color-tabs > button { padding: 7px 6px !important; letter-spacing: .08em !important; font-size: .56rem !important; }
+          .pf-app-root .pf-color-tabs > button { padding: 7px 6px !important; letter-spacing: .08em !important; font-size: calc(.56rem * var(--pf-read-scale, 1)) !important; }
           .pf-app-root .pf-styles-inner {
             grid-area: styles;
             align-self: start;
@@ -260,7 +260,7 @@ const PF_STYLE = `
             gap: 7px !important;
             row-gap: 7px !important;
           }
-          .pf-app-root .pf-styles-inner .pf-artist { padding: 7px 6px !important; letter-spacing: .06em !important; font-size: .56rem !important; }
+          .pf-app-root .pf-styles-inner .pf-artist { padding: 7px 6px !important; letter-spacing: .06em !important; font-size: calc(.56rem * var(--pf-read-scale, 1)) !important; }
           /* Setup view (pre-load) has no colors/styles split — its single panel
              part spans the left+stage area so the setup tiles + hero read well. */
           /* Setup view (pre-load): a single narrow left-column panel (mirrors the
@@ -24189,7 +24189,7 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && (()=>{
@@ -26352,7 +26352,7 @@ Composition rules:
         </div>
       )}
       {/* Note-name readout */}
-      <div style={{textAlign:'center',marginBottom:2,fontSize:(.7*effScale)+'rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.78)':'rgba(201,168,76,.55)',fontVariantNumeric:'tabular-nums',minHeight:'1em',fontFamily:'inherit',transition:'color .15s ease'}}>
+      <div style={{textAlign:'center',marginBottom:2,fontSize:(.7*effScale)+'rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.78)':'rgba(201,168,76,.55)',fontVariantNumeric:'tabular-nums',height:'1.5em',lineHeight:'1.5em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontFamily:'inherit',transition:'color .15s ease'}}>
         {active.size>0?(()=>{
           const sorted=[...active].sort((a,b)=>a-b);
           const chord=recognizeChord(sorted);
