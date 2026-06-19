@@ -148,13 +148,14 @@ const PF_STYLE = `
             position: relative;
             display: grid !important;
             grid-template-columns: 180px minmax(0, 1fr) 180px;
-            grid-template-rows: auto auto auto auto 1fr auto auto;
+            grid-template-rows: auto auto auto auto 1fr auto auto auto;
             grid-template-areas:
               "topbar   topbar topbar"
               "header   header header"
               "controls stage  rtop"
               "colors   stage  styles"
               "ltrans   stage  styles"
+              ".        stage  rfab"
               "vfooter  vfooter vfooter"
               "legal    legal  legal";
             align-items: start !important;
@@ -198,11 +199,15 @@ const PF_STYLE = `
              viewport, overlapping the left buttons when the page scrolled on
              short (phone-landscape) viewports. */
           .pf-app-root .pf-help-fab {
-            position: absolute !important;
+            position: static !important;
+            grid-area: rfab !important;
+            justify-self: end !important;
+            align-self: start !important;
+            margin: 18px 0 0 0 !important;
             top: auto !important;
             left: auto !important;
-            right: 24px !important;
-            bottom: 44px !important;
+            right: auto !important;
+            bottom: auto !important;
             width: 34px !important;
             height: 34px !important;
             font-size: 17px !important;

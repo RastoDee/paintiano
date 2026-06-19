@@ -148,13 +148,14 @@ const PF_STYLE = `
             position: relative;
             display: grid !important;
             grid-template-columns: 180px minmax(0, 1fr) 180px;
-            grid-template-rows: auto auto auto auto 1fr auto auto;
+            grid-template-rows: auto auto auto auto 1fr auto auto auto;
             grid-template-areas:
               "topbar   topbar topbar"
               "header   header header"
               "controls stage  rtop"
               "colors   stage  styles"
               "ltrans   stage  styles"
+              ".        stage  rfab"
               "vfooter  vfooter vfooter"
               "legal    legal  legal";
             align-items: start !important;
@@ -198,11 +199,15 @@ const PF_STYLE = `
              viewport, overlapping the left buttons when the page scrolled on
              short (phone-landscape) viewports. */
           .pf-app-root .pf-help-fab {
-            position: absolute !important;
+            position: static !important;
+            grid-area: rfab !important;
+            justify-self: end !important;
+            align-self: start !important;
+            margin: 18px 0 0 0 !important;
             top: auto !important;
             left: auto !important;
-            right: 24px !important;
-            bottom: 44px !important;
+            right: auto !important;
+            bottom: auto !important;
             width: 34px !important;
             height: 34px !important;
             font-size: 17px !important;
@@ -24445,7 +24450,7 @@ Composition rules:
               mood (how do you feel?) · compose · mic. */}
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('createLabel')}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
+            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
               <span style={{fontSize:'1.05rem'}}>✦</span>
               {t('moodHowFeel')}
             </button>
