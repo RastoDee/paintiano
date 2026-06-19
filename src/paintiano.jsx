@@ -305,38 +305,6 @@ const PF_STYLE = `
             align-self: center;
             justify-self: center;
           }
-          /* MFI, PC only (≥1100px — telephones held landscape are typically
-             ≤956px so they are excluded): the source thumbnail used to be
-             position:absolute at top:132px, which crashed into a tall mosaic.
-             Promote the thumbnail to its own in-flow grid row 'mthumb' just
-             above stage, so the canvas always begins right below it — no
-             magic offsets. Portrait PC narrower than 1100px keeps the prior
-             absolute behaviour (which already looked correct). */
-          @media (min-width: 1100px) {
-            .pf-app-root.pf-mode-mfi {
-              grid-template-rows: auto auto auto auto auto 1fr auto auto auto !important;
-              grid-template-areas:
-                "topbar   topbar  topbar"
-                "header   header  header"
-                ".        mthumb  ."
-                "controls stage   rtop"
-                "colors   stage   styles"
-                "ltrans   stage   styles"
-                ".        stage   rfab"
-                "vfooter  vfooter vfooter"
-                "legal    legal   legal" !important;
-            }
-            .pf-app-root.pf-mode-mfi .pf-mood-thumb {
-              position: static !important;
-              grid-area: mthumb;
-              align-self: end;
-              justify-self: center;
-              top: auto !important;
-              left: auto !important;
-              transform: none !important;
-              margin: 0 0 8px 0 !important;
-            }
-          }
           /* Image-scan mode: the <img> overlay (position:absolute, inset:0) fills
              the stage wrap, but the scan <canvas> is capped at 560px inline. On a
              wide landscape column the wrap stretched well past 560px, so the
@@ -24768,7 +24736,7 @@ Composition rules:
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); const _mc = _isMusic?'rgba(150,185,255,.85)':(srcBtn==='image'?'rgba(248,170,120,.9)':'rgba(230,222,196,.7)'); const _mbd = _isMusic?'rgba(91,156,246,.3)':(srcBtn==='image'?'rgba(244,124,60,.3)':'rgba(242,238,232,.15)'); return (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode((srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?'sound':srcBtn);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+((srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':_mc,border:'1px solid '+(recording||sourcePickerLocked?'rgba(242,238,232,.15)':_mbd),borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;const _target=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?'sound':srcBtn;if(pickMode===_target){setPickMode(null);return;}if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(_target);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+((srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':_mc,border:'1px solid '+(recording||sourcePickerLocked?'rgba(242,238,232,.15)':_mbd),borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
           ); })()}
           {/* New MOOD — opens an inline mood picker right over the canvas (no
               jump back to setup); picking one loads it immediately. Shown for the
@@ -24776,9 +24744,9 @@ Composition rules:
               Clear, when currentMood is null but we're still on the mood canvas. */}
           {!loadedSource && !composeMode && !micActive && moodContext && (
             moodFromImg ? (
-            <button onClick={()=>{if(recording||sourcePickerLocked||!aiUsable)return;if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode('imgmood');}} disabled={recording||sourcePickerLocked||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(((t('newBy')||{}).image||t('newSource'))+' '+(t('backToImage')||'image'))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:(recording||sourcePickerLocked||!aiUsable)?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:(recording||sourcePickerLocked||!aiUsable)?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}>+ {((t('newBy')||{}).image||t('newSource'))} {t('backToImage')||'image'}{!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8}}>· {t('aiOffline')||'offline'}</span>}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked||!aiUsable)return;if(pickMode==='imgmood'){setPickMode(null);return;}if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode('imgmood');}} disabled={recording||sourcePickerLocked||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(((t('newBy')||{}).image||t('newSource'))+' '+(t('backToImage')||'image'))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:(recording||sourcePickerLocked||!aiUsable)?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:(recording||sourcePickerLocked||!aiUsable)?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}>+ {((t('newBy')||{}).image||t('newSource'))} {t('backToImage')||'image'}{!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8}}>· {t('aiOffline')||'offline'}</span>}</button>
             ) : (
-            <button onClick={()=>{if(recording)return;setMoodEdit('');setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={((t('newBy')||{}).mood||t('newSource'))+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(220,180,90,.92)',border:'1px solid '+(recording?'rgba(242,238,232,.15)':'rgba(201,168,76,.3)'),borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).mood||t('newSource'))} {t('moodLabel')}</button>
+            <button onClick={()=>{if(recording)return;if(showMoodMenu){setShowMoodMenu(false);return;}setMoodEdit('');setShowMoodMenu(true);}} disabled={recording} className="pf-lift" title={((t('newBy')||{}).mood||t('newSource'))+' '+t('moodLabel')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(220,180,90,.92)',border:'1px solid '+(recording?'rgba(242,238,232,.15)':'rgba(201,168,76,.3)'),borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{}).mood||t('newSource'))} {t('moodLabel')}</button>
             )
           )}
           {/* ← back to image — shown after an image→atmosphere jump, restores the photo */}
