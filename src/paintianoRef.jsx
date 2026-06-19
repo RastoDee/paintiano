@@ -552,13 +552,23 @@ const PF_STYLE = `
              centered horizontally over the stage column, just below the header,
              like mobile shows it above the canvas. */
           .pf-app-root .pf-mood-thumb {
-            position: absolute;
-            left: 50%;
-            top: 132px;
-            transform: translateX(-50%);
+            position: static !important;
+            grid-area: stage;
+            align-self: start !important;
+            justify-self: center !important;
+            transform: none !important;
+            left: auto !important; top: auto !important;
             z-index: 6;
-            margin: 0 !important;
+            margin: 0 0 8px 0 !important;
             pointer-events: none;
+          }
+          /* On desktop the canvas fills the centre column, so a LARGE pre-play
+             thumbnail would land on top of the painting. Force the thumbnail to
+             the small size and keep it just above the canvas. */
+          .pf-app-root .pf-mood-thumb > img {
+            width: 64px !important;
+            height: 64px !important;
+            max-width: 64px !important;
           }
           /* ── Two-thumb ergonomics: transport flows in the LEFT column directly
              under the palettes (one continuous tools column), so it sits where
