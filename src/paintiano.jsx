@@ -19188,13 +19188,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         if(!moodFromImgRef.current) return;
         const ng=computeGrid(chordsRef.current);
         gridRef.current=ng;
-        if(!playingRef.current){ setGrid(ng); }
-        else{
-          if(pendingGridRef.current){clearInterval(pendingGridRef.current);pendingGridRef.current=null;}
-          pendingGridRef.current=setInterval(()=>{
-            if(!playingRef.current){clearInterval(pendingGridRef.current);pendingGridRef.current=null;setGrid(computeGrid(chordsRef.current));}
-          },200);
-        }
+        // Apply immediately — even during playback. MFI wants the correct width
+        // right away; the paint loop reads gridRef (already updated above), so
+        // this only syncs the visual canvas size. (Deferring via playingRef left
+        // the frame narrow until the user hit pause.)
+        setGrid(ng);
       },180);
     };
     window.addEventListener('resize',onResize);
