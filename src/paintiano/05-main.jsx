@@ -2347,6 +2347,39 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     };
   },[chords]);
 
+  // MFI grid follows orientation. The MFI mosaic grid is computed once when the
+  // piece is generated, using the window width at that moment. If the device
+  // rotates landscape→portrait (or back), computeGrid would pick a different
+  // width — but nothing recomputed it, so the mosaic kept a stale (narrow)
+  // frame. Recompute the grid on resize, but ONLY for MFI (moodFromImg). Scan
+  // and AI-compose size themselves via CSS / their own styling and already
+  // follow orientation, so they are intentionally left out. Deferred during
+  // playback (same pattern as the chord-driven recompute above) so it never
+  // stutters audio.
+  useEffect(()=>{
+    if(typeof window==='undefined') return;
+    let t=null;
+    const onResize=()=>{
+      if(!moodFromImgRef.current) return;
+      const evs=chordsRef.current;
+      if(!evs || !evs.length) return;
+      if(t) clearTimeout(t);
+      t=setTimeout(()=>{
+        if(!moodFromImgRef.current) return;
+        const ng=computeGrid(chordsRef.current);
+        gridRef.current=ng;
+        if(!playingRef.current){ setGrid(ng); }
+        else{
+          if(pendingGridRef.current){clearInterval(pendingGridRef.current);pendingGridRef.current=null;}
+          pendingGridRef.current=setInterval(()=>{
+            if(!playingRef.current){clearInterval(pendingGridRef.current);pendingGridRef.current=null;setGrid(computeGrid(chordsRef.current));}
+          },200);
+        }
+      },180);
+    };
+    window.addEventListener('resize',onResize);
+    return ()=>{ if(t)clearTimeout(t); window.removeEventListener('resize',onResize); };
+  },[]);
   // Center the keyboard scroll on middle C (MIDI 60) whenever the keyboard
   // becomes visible (compose mode toggles on, or first mount with it already on).
   // Display:none zeroes clientWidth, so the calculation must happen post-paint.
