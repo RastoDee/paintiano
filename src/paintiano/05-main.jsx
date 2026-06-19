@@ -5810,8 +5810,13 @@ Composition rules:
       // _melSteps tempo curve — so the melody lands correctly however the dynamic
       // tempo stretches the timeline. Timers go into timers.current, so Stop/Pause/
       // Clear (which clear that array + bump genRef) tear the voice down cleanly.
-      if(melodyOnRef.current){
-        const voice=melodyVoiceRef.current||[];
+      // Compute the voice DIRECTLY from the live texture + melody data here, rather
+      // than reading melodyVoiceRef (which is filled by an effect that can lag a
+      // render behind a fresh toggle). This guarantees: MELODY on → the line plays;
+      // MELODY off → nothing is scheduled. No race with the rebuild effect.
+      if(melodyOnRef.current && melodyDataRef.current){
+        let voice=[];
+        try{ const _mv=_melodyVoice(chordsRef.current||[], melodyDataRef.current); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
         if(voice.length){
           // Real total duration of the texture at the current dynamic tempo, from
           // the not-yet-elapsed portion (so a resume mid-piece still lines up).
