@@ -199,10 +199,10 @@ const PF_STYLE = `
              short (phone-landscape) viewports. */
           .pf-app-root .pf-help-fab {
             position: absolute !important;
-            top: 26px !important;
-            left: 96px !important;
-            bottom: auto !important;
-            right: auto !important;
+            top: auto !important;
+            left: auto !important;
+            right: 24px !important;
+            bottom: 24px !important;
             width: 34px !important;
             height: 34px !important;
             font-size: 17px !important;
@@ -21890,7 +21890,18 @@ Composition rules:
         if(loadTokenRef.current!==myToken)return; // user left mid-decode — abandon
         try{
           const nc=192;
-          const availW=window.innerWidth||480;
+          // On a wide desktop the canvas lives in the centre column of a
+          // 3-column grid, not the full window — basing the scan grid on the raw
+          // window width made it wider than the visible canvas, so only the top
+          // portion of the image got scanned. Cap the scan width to the centre
+          // pane on wide screens. Narrow/mobile (incl. mobile-landscape, which
+          // already scans correctly) is left untouched.
+          const _vw=window.innerWidth||480;
+          let availW=_vw;
+          if(_vw>=1100){
+            const SIDE_W=180, GAPS=2*24, PAGE_PAD=56, SLACK=12;
+            availW=Math.min(900, Math.max(320, _vw - 2*SIDE_W - GAPS - PAGE_PAD - SLACK));
+          }
           const BW=Math.max(1,Math.floor(availW/nc));
           const BH=Math.max(2,Math.round(BW*PHI));
           const imgRatio=img.naturalHeight/Math.max(1,img.naturalWidth);
