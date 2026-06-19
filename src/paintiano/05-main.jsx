@@ -5648,12 +5648,7 @@ Composition rules:
         // colour change mid-playback that swaps in re-transcribed notes is heard
         // immediately on the very next step — no restart needed, no stale copy.
         const liveChords=chordsRef.current;
-        if(i>=liveChords.length){setPlaying(false);setDisp(liveChords.length);
-          // MELODY is a one-shot effect: after a full playthrough, turn it OFF so
-          // the next plain Play is the bare texture again (a re-tap re-sings it,
-          // free from cache). The rebuild effect then strips the layer.
-          if(melodyOnRef.current){ setMelodyOn(false); }
-          return;}
+        if(i>=liveChords.length){setPlaying(false);setDisp(liveChords.length);return;}
         // For chord i: take its stored cell (band,cg) so non-row-major directions
         // (vert/spiral) paint the correct cell; fall back to row-major for safety.
         const _ev=liveChords[i]||{};
@@ -5723,13 +5718,23 @@ Composition rules:
         }
         setDisp(i+1);
         i++;
-        // Per-event step interval (agogics): tempo now breathes with the image —
-        // dark strips broaden, vivid strips lean, phrase-ends take a breath, and
-        // the piece eases to a close. Falls back to the old fixed 150 ms if a
-        // re-transcribe hasn't tagged this event yet. The manual speed slider
-        // still scales the whole thing (divides), so it composes on top.
-        const _stepMs = (liveChords[i-1] && liveChords[i-1]._stepMs) || 150;
-        timers.current.push(setTimeout(step,Math.round(_stepMs/playbackSpeedRef.current)));
+        // Step interval. Two modes:
+        //  • Normal scan: the fixed per-event agogic step (or 150ms fallback) —
+        //    the familiar scan pulse.
+        //  • MELODY on: BREAK the scan grid. Schedule each event by its REAL
+        //    startMs gap (event[i].startMs − event[i-1].startMs), so texture +
+        //    the sung lead both play on the true timeline. This stops the texture
+        //    from marching in a rigid 150ms grid and lets the melody's own-clock
+        //    notes land where they belong — a flowing line instead of ticks
+        //    sprinkled between grid steps. Gap clamped to keep it sane.
+        let _gapMs;
+        if(melodyOnRef.current && liveChords[i] && liveChords[i-1] &&
+           typeof liveChords[i].startMs==='number' && typeof liveChords[i-1].startMs==='number'){
+          _gapMs = Math.max(8, Math.min(1400, liveChords[i].startMs - liveChords[i-1].startMs));
+        } else {
+          _gapMs = (liveChords[i-1] && liveChords[i-1]._stepMs) || 150;
+        }
+        timers.current.push(setTimeout(step,Math.round(_gapMs/playbackSpeedRef.current)));
       };
       step();
     }else{
@@ -9895,21 +9900,12 @@ Composition rules:
             {aiLocked && !atmoMood && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
         )}
-        {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(()=>{
-          // MELODY chip — sits right beside ATM. Sings an AI lead line over the
-          // scan texture (one-shot, pre-Play only). Enabled when idle — i.e. not
-          // playing, not painting, not recording, not working. (In scan setup disp
-          // is already = events.length, NOT 0, so disp must NOT gate this — same
-          // idle test the REC button uses.)
-          const _prePlay = !playing && !anim && !recording && !working;
-          const _melDisabled = melodyBusy || (!aiUsable && !aiLocked) || (!_prePlay && !melodyOn);
-          return (
-          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!_prePlay && !melodyOn) return; if(aiUsable||melodyOn) toggleMelody(); }} disabled={_melDisabled} className="pf-lift" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:_melDisabled})}}>
-            <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+' · '+(melodyBusy?'…':aiLocked?'—':!aiUsable?(t('aiOffline')||'offline'):melodyOn?'ON':'OFF')}</span>
-            {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
+        {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
+          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(melodyOn){ setMelodyOn(false); } else if(melodyData){ setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
+            <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+' · '+(melodyBusy?'…':(aiLocked&&!melodyData)?'—':(!melodyData&&!aiUsable)?(t('aiOffline')||'offline'):melodyOn?'ON':'OFF')}</span>
+            {aiLocked && !melodyData && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
-          );
-        })()}
+        )}
         {viewMode==='image'&&chords.length>0&&!moodFromImg&&(()=>{
           // REC button — single source of truth for image-mode recording:
           //   tap once → starts a fresh recording AND playback from index 0
