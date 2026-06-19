@@ -41,11 +41,6 @@ const goldA = (a)=>`rgba(${PF.goldQuietRGB},${a})`;
 // isn't re-interpolated on every React render (which thrashes during playback
 // when setDisp fires many times per second).
 const PF_STYLE = `
-        /* Stop iOS Safari from auto-inflating rem-based text in landscape
-           orientation (which blew up the version footer on mobile-landscape).
-           100% = no change to desktop; just disables the browser's automatic
-           text scaling. Applies at all widths, layout untouched. */
-        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
         .pf-fade { animation: pf-fadeUp .5s ease both; }
         .pf-setup-stage { display: none; }
@@ -269,10 +264,28 @@ const PF_STYLE = `
              Import + Create tiles stack vertically instead of 2-up. The PRIDAŤ
              HUDBU / mood dialogs are fixed-position modals, unaffected. */
           .pf-app-root > .pf-panel-part.pf-fade {
-            display: flex !important;
+            display: contents !important;
+          }
+          /* The setup card wrapper is flattened so its two columns become direct
+             grid items; each column then carries its own card chrome and lands in
+             the colors (left) / styles (right) areas, with the stage between. */
+          .pf-app-root > .pf-panel-part.pf-fade > div:not(.pf-setup-col-left):not(.pf-setup-col-right) { display: contents !important; }
+          .pf-app-root > .pf-panel-part.pf-fade > button.pf-lift { grid-area: controls; align-self: start; justify-self: start; }
+          .pf-app-root .pf-setup-col-left {
             grid-area: colors;
-            max-width: 100% !important;
             align-self: start;
+            background: var(--pf-card, #161320);
+            border: 1px solid rgba(242,238,232,.08);
+            border-radius: 18px;
+            padding: 14px;
+          }
+          .pf-app-root .pf-setup-col-right {
+            grid-area: styles;
+            align-self: start;
+            background: var(--pf-card, #161320);
+            border: 1px solid rgba(242,238,232,.08);
+            border-radius: 18px;
+            padding: 14px;
           }
           .pf-app-root .pf-setup-import,
           .pf-app-root .pf-setup-create { grid-template-columns: 1fr !important; }
@@ -292,6 +305,15 @@ const PF_STYLE = `
             width: 100%;
             max-width: 720px;
             margin: 0 auto;
+          }
+          /* SETUP mode only: the right artists column is empty (no artists shown
+             before a source loads), which left the placeholder pinned to the
+             narrow centre column with a dead 180px strip on the right. In setup,
+             let the placeholder span the centre + right columns so it centres
+             across the whole available width and the right strip disappears. */
+          .pf-mode-setup > .pf-setup-stage {
+            grid-column: 2 / 4;
+            max-width: 880px;
             height: min(calc(100vh - 170px), 82vh);
             border: 1px solid rgba(201,168,76,.10);
             border-radius: 10px;
@@ -24390,40 +24412,18 @@ Composition rules:
             attributes strip, shown contextually after a source is picked) ── */}
         <div style={{background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:20,padding:isDesktop?14:20,display:'flex',flexDirection:'column',gap:isDesktop?12:18}}>
 
-          {/* MOOD — single entry point. Opens the same showMoodMenu modal as
-              "+ NEW MOOD" on the canvas screen, where input, suggestions, recents
-              and the mood grid live together. Keeps setup minimal and means there
-              is one canonical mood UX shared across the app. */}
+          {/* ── LEFT column (desktop): CREATE from scratch — mood · compose · mic.
+              On mobile this is just the first stacked group. ── */}
+          <div className="pf-setup-col pf-setup-col-left" style={{display:'flex',flexDirection:'column',gap:isDesktop?12:18}}>
+
+          {/* CREATE — create-from-scratch sources under one header:
+              mood (how do you feel?) · compose · mic. */}
           <div>
-            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('moodLabel')}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
+            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('createLabel')}</div>
+            <button onClick={()=>{ if(sourcePickerLocked)return; if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
               <span style={{fontSize:'1.05rem'}}>✦</span>
               {t('moodHowFeel')}
             </button>
-          </div>
-
-          {/* Mood from image — standalone AI source: pick a picture → AI composes its mood */}
-          <div style={{marginBottom:isDesktop?6:14}}>
-            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
-              <span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
-              {imgAiBusy?'…':(t('imgMood')||'mood from image')}
-              {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
-              {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
-            </button>
-          </div>
-          <div style={{height:1,background:'rgba(242,238,232,.06)'}}/>
-
-          {/* SOURCE — input tiles, split into IMPORT (files) and CREATE (live) */}
-          <div>
-            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
-            <div className="pf-setup-import" style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
-              {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
-                  loadSound routes by file type. Active when any of the three
-                  music sources is loaded. */}
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode('sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':(t('music')!=='music'?t('music'):'MUSIC')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
-            </div>
-            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',margin:'16px 0 10px',textTransform:'uppercase'}}>{t('createLabel')}</div>
             <div className="pf-setup-create" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               <button className="pf-compose" onClick={()=>{
                 if(busy)return;
@@ -24505,6 +24505,33 @@ Composition rules:
             </div>
           </div>
 
+          </div>{/* ── end LEFT column ── */}
+
+          {/* ── RIGHT column (desktop): IMPORT — bring your own — mood-from-image
+              · music · image. On mobile this is the second stacked group. ── */}
+          <div className="pf-setup-col pf-setup-col-right" style={{display:'flex',flexDirection:'column',gap:isDesktop?12:18}}>
+
+          {/* IMPORT — bring-your-own sources under one header:
+              mood-from-image · music · image. */}
+          <div>
+            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
+            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode('imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
+              <span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
+              {imgAiBusy?'…':(t('imgMood')||'mood from image')}
+              {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
+              {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
+            </button>
+            <div className="pf-setup-import" style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
+              {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
+                  loadSound routes by file type. Active when any of the three
+                  music sources is loaded. */}
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode('sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':(t('music')!=='music'?t('music'):'MUSIC')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode('image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,padding:'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
+            </div>
+          </div>
+
+          </div>{/* ── end RIGHT column ── */}
+
         </div>
       </div>
       )}
@@ -24518,7 +24545,7 @@ Composition rules:
       <div className="pf-setup-stage" aria-hidden="true">
         <div className="pf-setup-stage-inner">
           <div className="pf-setup-stage-mark">Paintiano</div>
-          <div className="pf-setup-stage-hint">{t('pickSourceHint')!=='pickSourceHint'?t('pickSourceHint'):(lang==='SK'?'vyber zdroj vľavo — importuj hudbu alebo obraz, opíš náladu, skladaj na klávesoch alebo spievaj do mikrofónu':'choose a source on the left — import music or an image, describe a mood, compose on the keys, or sing into the mic')}</div>
+          <div className="pf-setup-stage-hint">{t('pickSourceHint')!=='pickSourceHint'?t('pickSourceHint'):(lang==='SK'?'vyber zdroj — importuj hudbu alebo obraz, opíš náladu, skladaj na klávesoch alebo spievaj do mikrofónu':'choose a source — import music or an image, describe a mood, compose on the keys, or sing into the mic')}</div>
         </div>
       </div>
       )}

@@ -41,11 +41,6 @@ const goldA = (a)=>`rgba(${PF.goldQuietRGB},${a})`;
 // isn't re-interpolated on every React render (which thrashes during playback
 // when setDisp fires many times per second).
 const PF_STYLE = `
-        /* Stop iOS Safari from auto-inflating rem-based text in landscape
-           orientation (which blew up the version footer on mobile-landscape).
-           100% = no change to desktop; just disables the browser's automatic
-           text scaling. Applies at all widths, layout untouched. */
-        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
         .pf-fade { animation: pf-fadeUp .5s ease both; }
         .pf-setup-stage { display: none; }
@@ -269,10 +264,28 @@ const PF_STYLE = `
              Import + Create tiles stack vertically instead of 2-up. The PRIDAŤ
              HUDBU / mood dialogs are fixed-position modals, unaffected. */
           .pf-app-root > .pf-panel-part.pf-fade {
-            display: flex !important;
+            display: contents !important;
+          }
+          /* The setup card wrapper is flattened so its two columns become direct
+             grid items; each column then carries its own card chrome and lands in
+             the colors (left) / styles (right) areas, with the stage between. */
+          .pf-app-root > .pf-panel-part.pf-fade > div:not(.pf-setup-col-left):not(.pf-setup-col-right) { display: contents !important; }
+          .pf-app-root > .pf-panel-part.pf-fade > button.pf-lift { grid-area: controls; align-self: start; justify-self: start; }
+          .pf-app-root .pf-setup-col-left {
             grid-area: colors;
-            max-width: 100% !important;
             align-self: start;
+            background: var(--pf-card, #161320);
+            border: 1px solid rgba(242,238,232,.08);
+            border-radius: 18px;
+            padding: 14px;
+          }
+          .pf-app-root .pf-setup-col-right {
+            grid-area: styles;
+            align-self: start;
+            background: var(--pf-card, #161320);
+            border: 1px solid rgba(242,238,232,.08);
+            border-radius: 18px;
+            padding: 14px;
           }
           .pf-app-root .pf-setup-import,
           .pf-app-root .pf-setup-create { grid-template-columns: 1fr !important; }
@@ -292,6 +305,15 @@ const PF_STYLE = `
             width: 100%;
             max-width: 720px;
             margin: 0 auto;
+          }
+          /* SETUP mode only: the right artists column is empty (no artists shown
+             before a source loads), which left the placeholder pinned to the
+             narrow centre column with a dead 180px strip on the right. In setup,
+             let the placeholder span the centre + right columns so it centres
+             across the whole available width and the right strip disappears. */
+          .pf-mode-setup > .pf-setup-stage {
+            grid-column: 2 / 4;
+            max-width: 880px;
             height: min(calc(100vh - 170px), 82vh);
             border: 1px solid rgba(201,168,76,.10);
             border-radius: 10px;
