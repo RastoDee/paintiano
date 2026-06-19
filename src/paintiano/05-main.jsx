@@ -2347,31 +2347,38 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     };
   },[chords]);
 
-  // MFI grid follows orientation. The MFI mosaic grid is computed once when the
-  // piece is generated, using the window width at that moment. If the device
-  // rotates landscape→portrait (or back), computeGrid would pick a different
-  // width — but nothing recomputed it, so the mosaic kept a stale (narrow)
-  // frame. Recompute the grid on resize, but ONLY for MFI (moodFromImg). Scan
-  // and AI-compose size themselves via CSS / their own styling and already
-  // follow orientation, so they are intentionally left out. Deferred during
-  // playback (same pattern as the chord-driven recompute above) so it never
-  // stutters audio.
+  // Loaded-source grid follows orientation. A loaded piece's grid (score / midi
+  // / audio / MFI mosaic) is computed once at the window width it was loaded at.
+  // If the device rotates landscape↔portrait, computeGrid would pick a different
+  // width — but nothing recomputed it, so the canvas kept a stale (narrow) frame
+  // and pause/resume didn't fix it. Recompute the grid on resize for those
+  // sources. Image scan (own CSS pin) and live compose / sing (own recompute)
+  // are skipped — see _skip below.
   useEffect(()=>{
     if(typeof window==='undefined') return;
     let t=null;
+    const _skip=()=>{
+      // Skip image scan (its own CSS width pin handles sizing) and live
+      // authoring compose / sing (their own chord-driven recompute, which uses
+      // liveMode — recomputing here without it would give the wrong frame).
+      const vm = viewModeRef.current;
+      const isScan = vm==='image' && !moodFromImgRef.current;
+      const isLiveAuthoring = draftOwnerRef.current && draftOwnerRef.current!=='listen';
+      return isScan || isLiveAuthoring;
+    };
     const onResize=()=>{
-      if(!moodFromImgRef.current) return;
+      if(_skip()) return;
       const evs=chordsRef.current;
       if(!evs || !evs.length) return;
       if(t) clearTimeout(t);
       t=setTimeout(()=>{
-        if(!moodFromImgRef.current) return;
+        if(_skip()) return;
         const ng=computeGrid(chordsRef.current);
         gridRef.current=ng;
-        // Apply immediately — even during playback. MFI wants the correct width
-        // right away; the paint loop reads gridRef (already updated above), so
-        // this only syncs the visual canvas size. (Deferring via playingRef left
-        // the frame narrow until the user hit pause.)
+        // Apply immediately — even during playback. The paint loop reads gridRef
+        // (already updated above), so this only syncs the visual canvas size.
+        // (Deferring left the frame narrow until the user hit pause; for Music
+        // mode pause/resume didn't widen it at all.)
         setGrid(ng);
       },180);
     };
@@ -3735,6 +3742,39 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       draftOwnerRef.current=null;
       setMicArmed(true);
+      return;
+    }
+    // Loaded MUSIC source (MIDI / Score / Audio): Clear wipes the painted piece
+    // but STAYS on the canvas — same idea as the image / MFI branches above — so
+    // the "+ new music" affordance and the empty frame remain instead of
+    // dropping back to setup. loadedSource + stayActive are kept; only the
+    // chords / canvas are wiped. (Previously this fell through to the generic
+    // clear() which nulls loadedSource and, depending on the stayActive latch,
+    // sometimes collapsed the active view and made the "+ new music" chip vanish
+    // unpredictably.)
+    if((loadedSource==='midi'||loadedSource==='audio'||loadedSource==='score')
+       && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
+      stopAll();
+      setChords([]); chordsRef.current=[]; idxRef.current=0;
+      setPending([]); pendingRef.current=[];
+      pressInfo.current={}; sessionStart.current=0; gridSigRef.current='';
+      composedModeRef.current=false;
+      setDisp(0); setInfo(null);
+      setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
+      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
+      try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
+      try{ const vc=visualizerRef.current; if(vc){ const vx=vc.getContext('2d'); vx&&vx.clearRect(0,0,vc.width,vc.height); } }catch(_){}
+      try{ const hc=highlightCanvasRef.current; if(hc){ const hx=hc.getContext('2d'); hx&&hx.clearRect(0,0,hc.width,hc.height); } }catch(_){}
+      setStamp(s=>s+1); setPlayedOnce(false);
+      resumeFromRef.current=null; setHoldPaused(false);
+      setShowColorPalette(false); setCustomArmed(false);
+      setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
+      setScoreBlob(null); setScoreFileName(''); setScoreMsg(null);
+      setClearArmed(false);
+      // loadedSource + stayActive STAY → active view persists with "+ new music".
+      setStayActive(true);
+      requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
       return;
     }
     // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
@@ -7420,7 +7460,7 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && (()=>{
