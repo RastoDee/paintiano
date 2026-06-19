@@ -379,6 +379,13 @@ const PF_STYLE = `
             box-shadow: 0 12px 40px rgba(0,0,0,.4) !important;
             pointer-events: auto !important;
           }
+          /* IMPORT-source pickers (mood-from-image / music / image) sit in the
+             RIGHT column, so their picker opens on the LEFT to avoid covering the
+             panel it came from. Mood (left column) keeps its right-side picker. */
+          .pf-app-root .pf-picker-overlay.pf-picker-left .pf-picker-dialog {
+            left: 24px !important;
+            right: auto !important;
+          }
           /* Picker buttons wrap their label instead of overflowing the 180px column. */
           .pf-app-root .pf-picker-overlay .pf-picker-dialog button {
             white-space: normal !important;
