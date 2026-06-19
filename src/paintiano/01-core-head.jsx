@@ -306,14 +306,12 @@ const PF_STYLE = `
             max-width: 720px;
             margin: 0 auto;
           }
-          /* SETUP mode only: the right artists column is empty (no artists shown
-             before a source loads), which left the placeholder pinned to the
-             narrow centre column with a dead 180px strip on the right. In setup,
-             let the placeholder span the centre + right columns so it centres
-             across the whole available width and the right strip disappears. */
+          /* SETUP mode: the placeholder stays in the centre column. The right
+             column now holds the IMPORT panel (mood-from-image / music / image),
+             so the placeholder must NOT span into it (that caused an overlap). */
           .pf-mode-setup > .pf-setup-stage {
-            grid-column: 2 / 4;
-            max-width: 880px;
+            grid-column: 2 / 3;
+            max-width: 720px;
             height: min(calc(100vh - 170px), 82vh);
             border: 1px solid rgba(201,168,76,.10);
             border-radius: 10px;
