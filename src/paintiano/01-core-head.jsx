@@ -619,9 +619,14 @@ const PF_STYLE = `
             align-self: start !important;
             margin-top: 0 !important;
             max-height: calc(100vh - 230px) !important;
+            width: fit-content !important;
+            max-width: 100% !important;
+            justify-self: center !important;
           }
           .pf-mode-live > .pf-stage-part > canvas {
             max-height: calc(100vh - 230px) !important;
+            max-width: 100% !important;
+            display: block !important;
           }
           /* Compose transport button order (vertical, left column):
              undo · play · mute · save · clear · scale. */

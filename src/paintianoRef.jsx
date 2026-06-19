@@ -609,6 +609,20 @@ const PF_STYLE = `
              reachable — the grid's own desktop padding would otherwise be only
              28px and leave them hidden behind the keys. */
           .pf-mode-live.pf-app-root { padding-bottom: 210px !important; }
+          /* Compose/Mic canvas: the stage is normally align-self:center, which in a
+             short (mobile-landscape) viewport drops the canvas into the lower half —
+             right under the fixed piano keyboard, so you can't see what you paint
+             while playing. Pin it to the TOP of the stage column and cap its height
+             to the room above the keyboard, so the live painting always sits in
+             clear view above the keys. */
+          .pf-mode-live > .pf-stage-part {
+            align-self: start !important;
+            margin-top: 0 !important;
+            max-height: calc(100vh - 230px) !important;
+          }
+          .pf-mode-live > .pf-stage-part > canvas {
+            max-height: calc(100vh - 230px) !important;
+          }
           /* Compose transport button order (vertical, left column):
              undo · play · mute · save · clear · scale. */
           .pf-mode-live .pf-transport-row { display: flex !important; flex-direction: column !important; }
