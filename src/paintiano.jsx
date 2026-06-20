@@ -299,6 +299,19 @@ const PF_STYLE = `
           }
           .pf-app-root .pf-setup-import,
           .pf-app-root .pf-setup-create { grid-template-columns: 1fr !important; }
+          /* All 6 setup source chips (mood · compose · mic · mood-from-image ·
+             music · image) the SAME height in desktop/landscape — matched to the
+             IMAGE chip (48px). Without this the two-line chips (How do you feel? /
+             Mood from image) and the single-line ones came out different heights. */
+          .pf-app-root .pf-moodtile,
+          .pf-app-root .pf-mfitile,
+          .pf-app-root .pf-compose,
+          .pf-app-root .pf-mic,
+          .pf-app-root .pf-setup-import .pf-tool {
+            min-height: 48px !important;
+            height: 48px !important;
+            box-sizing: border-box !important;
+          }
           .pf-app-root > .pf-stage-part {
             grid-area: stage;
             max-width: 100% !important;
