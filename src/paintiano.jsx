@@ -633,6 +633,19 @@ const PF_STYLE = `
             .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
               grid-area: txR !important;
             }
+            /* When a recording is ready (dock contains .pf-rec-save-row), the
+               dock expands across BOTH right columns (styles + txR) — the
+               save row + transport stack get ~262px instead of 110px. The
+               internal vertical layout (filename above, then size, then
+               share, then ✕) is preserved — just wider. While rec-save is
+               showing, the artist list overlap is acceptable: the user just
+               finished recording and is choosing what to do with it, not
+               browsing artists. Returns to txR-only when rec-save closes. */
+            .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock:has(.pf-rec-save-row) {
+              grid-area: rtop / styles / styles / txR !important;
+              align-self: start;
+              z-index: 5;
+            }
             .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l {
               grid-area: txL;
               align-self: start;
@@ -778,6 +791,14 @@ const PF_STYLE = `
             padding: 8px !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
+          }
+          /* Mobile landscape: same dock expansion as desktop landscape — when
+             rec-save is present, dock spans styles + txR (~170px instead of
+             70px) so the save row gets breathing room. */
+          .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock:has(.pf-rec-save-row) {
+            grid-area: rtop / styles / styles / txR !important;
+            align-self: start;
+            z-index: 5;
           }
           .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row {
             flex-direction: column !important;
