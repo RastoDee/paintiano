@@ -15701,7 +15701,6 @@ function _melodyVoice(evts, mel){
   // Total scan duration in seconds (from the last texture event's timing).
   const lastEv = evts[evts.length-1];
   const scanSec = Math.max(cellSec, ((lastEv && (lastEv.startMs||0)) || (evts.length*150)) / 1000 + 0.5);
-  const loops = Math.max(1, Math.round(scanSec / cellSec));   // how many times the cell repeats
 
   // Build one cell as {tBeat (from 0), durB, m, v} for melody, plus chords.
   const cellNotes = parsed.map(p=>({ tBeat:p.startB-melMinBeat, durB:p.durB, m:Math.max(52,Math.min(97,p.m+lift)), v:leadVel(p.vel) }))
@@ -15720,28 +15719,56 @@ function _melodyVoice(evts, mel){
     }
   }
 
-  // Emit the cell `loops` times across 0..1. Within a cell, legato-bind melody
-  // notes (hold to the next onset) so each repeat is a flowing line, not ticks.
+  // ── FORM ───────────────────────────────────────────────────────────────────
+  // A real piece breathes: it does NOT loop the same tune nonstop for 2½ minutes.
+  // The texture establishes alone, the melody ENTERS, sings its phrase, then steps
+  // back to let the painting breathe, returns, lifts to a climax, and bows out —
+  // leaving the texture to close. So instead of filling 0..1 with back-to-back
+  // loops, we place a FEW melody entries at musically sensible windows, with
+  // texture-only gaps between them.
+  //
+  // The cell occupies cellFrac of the whole timeline. We choose entry points (as
+  // fractions 0..1) scaled to how many cells fit, so a short scan gets 1–2 entries
+  // and a long one gets 4–5 — never wall-to-wall.
+  const cellFrac = Math.min(0.5, Math.max(0.06, cellSec/scanSec));  // one cell's share of the timeline
+  // How many entries the piece can host (leave room for intro + gaps + outro).
+  const capacity = Math.floor((1 - 0.16 /*intro*/ - 0.12 /*outro*/) / (cellFrac*1.7 /*gap≈0.7·cell*/));
+  const entries = Math.max(1, Math.min(5, capacity));
+  // Distribute entry start-positions: first after a texture-only intro (~14%),
+  // spread evenly, last finishing before a texture-only outro (~12%).
+  const firstStart = 0.14;
+  const lastStart  = Math.max(firstStart, 1 - 0.12 - cellFrac);
+  const span = (entries>1) ? (lastStart-firstStart)/(entries-1) : 0;
+
   const voice=[];
-  const cellFrac = 1/loops;                 // each loop occupies this fraction of 0..1
-  const beatToFrac = cellBeats>0 ? (cellFrac/cellBeats) : 0;  // beats → fraction within a loop
-  for(let L=0;L<loops;L++){
-    const base = L*cellFrac;
-    // melody (legato within the loop)
+  const beatToFrac = cellBeats>0 ? (cellFrac/cellBeats) : 0;   // beats → fraction of timeline
+  for(let E=0;E<entries;E++){
+    const base = (entries>1) ? (firstStart + E*span) : firstStart;
+    // Dynamic shape across the piece: gentle at first entry, fullest near the
+    // climax (the penultimate/last entry), settling at the very end.
+    const arc = entries>1 ? E/(entries-1) : 0.6;          // 0..1 across entries
+    const climax = 1 - Math.abs(arc-0.78)*1.4;            // peaks ~78% through
+    const dynMul = 0.82 + 0.18*Math.max(0,Math.min(1,climax));
+    // melody (legato within the entry)
     for(let i=0;i<cellNotes.length;i++){
       const cur=cellNotes[i], nxt=cellNotes[i+1];
       const pos=base + cur.tBeat*beatToFrac;
+      if(pos>=1) continue;
       let durFrac;
       if(nxt){ durFrac=Math.max(0.004,(nxt.tBeat-cur.tBeat)*beatToFrac*1.05); }
       else   { durFrac=Math.max(0.004, cur.durB*beatToFrac*0.95); }
       durFrac=Math.min(cellFrac*0.9, durFrac);
-      voice.push({ pos:Math.min(1,pos), durFrac, m:cur.m, v:cur.v });
+      voice.push({ pos:Math.min(1,pos), durFrac, m:cur.m, v:Math.max(70,Math.min(124,Math.round(cur.v*dynMul))) });
     }
-    // chords under it
-    for(const ch of cellChords){
-      const pos=base + ch.tBeat*beatToFrac;
-      const durFrac=Math.min(cellFrac*0.95, Math.max(0.01, ch.durB*beatToFrac*0.95));
-      for(const m of ch.ms){ voice.push({ pos:Math.min(1,pos), durFrac, m, v:ch.v }); }
+    // chords under it — thin them out on the gentle first entry, full at climax
+    const withChords = (arc>0.15);   // first quiet entry: melody mostly alone
+    if(withChords){
+      for(const ch of cellChords){
+        const pos=base + ch.tBeat*beatToFrac;
+        if(pos>=1) continue;
+        const durFrac=Math.min(cellFrac*0.95, Math.max(0.01, ch.durB*beatToFrac*0.95));
+        for(const m of ch.ms){ voice.push({ pos:Math.min(1,pos), durFrac, m, v:Math.max(54,Math.min(98,Math.round(ch.v*dynMul))) }); }
+      }
     }
   }
   voice.sort((a,b)=>a.pos-b.pos);
