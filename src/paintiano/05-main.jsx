@@ -1773,6 +1773,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [varySource, setVarySource] = useState(null);
 
   const [originalImgUrl, setOriginalImgUrl] = useState(null);
+  // Data-URL of the lazily-fetched built-in MFI sample image, remembered so
+  // _mfiCustomActive can distinguish the sample from a user-picked image.
+  const mfiSampleUrlRef = useRef(null);
   // Image reading direction: 'lr' (default), 'vert', 'spiralIn', 'spiralOut'.
   // Mirrored to a ref so transcription loops read the current value live.
   const [imgDir, setImgDir] = useState('lr');
@@ -4613,7 +4616,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // for that language, swap instantly; otherwise translate the title (a tiny,
   // async, title-only AI call — NO new composition, NO audio interruption) and
   // cache it in the map. The built-in sample is localized via its own i18n effect.
-  const _mfiCustomActive = () => moodFromImg && originalImgUrl && originalImgUrl!==SAMPLE_IMAGE_MFI_B64;
+  const _mfiCustomActive = () => moodFromImg && originalImgUrl && originalImgUrl!==mfiSampleUrlRef.current;
   const _mfiTitleBusyRef = useRef(false);
   const _mfiTranslateTitle = useCallback(async (text, targetAppLang)=>{
     const _ln=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[targetAppLang])||'English';
@@ -4657,9 +4660,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // routes the embedded picture through composeFromImage (AI mood) instead of the
   // pixel→notes pipeline. The sample's AI result is intended to be baked offline
   // (see composeFromImage sample-cache) so it stays free + works without a network.
-  const loadSampleImgMood=useCallback(()=>{
+  const loadSampleImgMood=useCallback(async()=>{
     if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; }
-    composeFromImage(SAMPLE_IMAGE_MFI_B64, true);  // isSample=true → skip recent
+    try{
+      const dataUrl=await _fetchSampleDataUrl(SAMPLE_IMAGE_MFI_B64_URL);
+      mfiSampleUrlRef.current=dataUrl;                 // remember so _mfiCustomActive can tell sample vs user image
+      composeFromImage(dataUrl, true);                 // isSample=true → skip recent
+    }catch(e){ setErr('Sample image: '+(e&&e.message||'load failed')); setErrInfo(false); }
   },[composeFromImage,stashDraft]);
 
   // MusicXML upload — exact, structured score data from MuseScore / Finale / Dorico.
@@ -4756,7 +4763,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setWorking(true);setWLabel(t('transcribingSample')||'transcribing sample');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
-      const arrayBuffer=b64ToArrayBuffer(SAMPLE_AUDIO_B64);
+      const arrayBuffer=await _fetchSampleArrayBuffer(SAMPLE_AUDIO_B64_URL);
       const blob=new Blob([arrayBuffer],{type:'audio/mpeg'});
       // OfflineAudioContext-first decode (see loadAudio for the iOS bug).
       const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
@@ -5450,16 +5457,15 @@ Composition rules:
     }
   },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood,melodyOn,melodyData]);
 
-  const loadSampleImage=useCallback(()=>{
+  const loadSampleImage=useCallback(async()=>{
     try{
-      // Strip "data:image/jpeg;base64," prefix → decode → Blob → File → synthetic event
-      const b64=SAMPLE_IMAGE_B64.split(',')[1];
-      const buffer=b64ToArrayBuffer(b64);
-      const blob=new Blob([buffer],{type:'image/jpeg'});
+      // Lazy-fetch the built-in sample image from /public, build a File, feed it
+      // through the normal image pipeline. (Was ~678KB of inlined base64.)
+      const blob=await (await fetch(SAMPLE_IMAGE_B64_URL)).blob();
       const file=new File([blob],'sample-image.jpg',{type:'image/jpeg'});
       const fakeEvent={target:{files:[file],value:''}};
       loadImage(fakeEvent);
-    }catch(e){setErr('Sample image: '+e.message);setErrInfo(false);}
+    }catch(e){setErr('Sample image: '+(e&&e.message||'load failed'));setErrInfo(false);}
   },[loadImage]);
   // Re-enter image mode from a stashed data-URL (the "← image" button after an
   // image→atmosphere jump). Rebuilds a File and re-runs loadImage.
