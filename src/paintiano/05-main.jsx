@@ -3878,7 +3878,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(ev.n.length>1) ev.n=[...ev.n].sort((a,b)=>b.m-a.m);
     });
     const wi=events.map((c,i)=>({...c,idx:i}));
-    const g=computeGrid(wi,{hires:true}),lastMs=wi[wi.length-1]?.startMs||0;
+    const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
     setGrid(g);setChords(wi);setDisp(0);
     setInfo({title,count:wi.length,dur:Math.round(lastMs/1000)});
