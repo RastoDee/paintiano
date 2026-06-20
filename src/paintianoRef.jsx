@@ -15710,7 +15710,7 @@ function _melodyVoice(evts, mel){
   // Cap how long a single note may sustain (as a fraction of the piece) so that a
   // longer rest between phrases doesn't smear one note into a drone — it sings,
   // breathes briefly, then the next phrase comes in.
-  const maxHold=0.045;
+  const maxHold=0.07;
   for(let i=0;i<raw.length;i++){
     const cur=raw[i];
     const nxt=raw[i+1];
@@ -15724,7 +15724,16 @@ function _melodyVoice(evts, mel){
     }else{
       durFrac=Math.min(maxHold, Math.max(0.012, (cur.durB/melBeatSpan)*0.9));
     }
+    // Lead note (top voice).
     voice.push({ pos:cur.pos, durFrac, m:cur.m, v:cur.v });
+    // OCTAVE-DOUBLE the melody: a pianist plays a theme in octaves, not with one
+    // finger. Adding the octave below turns a thin "one-finger tick" into a full,
+    // ringing melodic line that carries over the texture. Slightly softer than the
+    // top note so the lead still defines the contour.
+    const oct=cur.m-12;
+    if(oct>=33){
+      voice.push({ pos:cur.pos, durFrac, m:oct, v:Math.max(70,Math.round(cur.v*0.88)) });
+    }
   }
   // ── HARMONY: chordal accompaniment beneath the melody ──────────────────────
   // The AI returns "chords" as [[pitch,pitch,...],dur,start,vel] — the diatonic

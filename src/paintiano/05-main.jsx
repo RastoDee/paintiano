@@ -5050,7 +5050,7 @@ Composition rules:
   // Keyed by image hash + atmosphere signature so the same picture in the same
   // mood replays its sung line free. Distinct from the compose cache (that's a
   // whole separate piece); this is the lead line we layer over the scan texture.
-  const MELODY_CACHE_KEY='paintiano_melody_cache_v4';
+  const MELODY_CACHE_KEY='paintiano_melody_cache_v5';
   const _melodyCacheKey=useCallback((hash)=>{
     const atmoSig=(atmoOn&&atmoMood)?('a'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2)+'_'+(atmoMood.root||0)):'plain';
     return hash+'|'+atmoSig;
@@ -5095,11 +5095,10 @@ The image's musical material:
 - Energy: ${mat.energy}    Texture: ${mat.tex}    Arc: ${mat.arc}${mat.mood?`\n- Mood / atmosphere: ${mat.mood}`:''}
 Compose with real musical craft, following classical harmonization method:
 - KEY: let the pitch palette define the tonal centre; choose major or natural minor to fit the mood. Stay diatonic (tasteful passing/leading tones fine; no random chromaticism).
-- MELODY (top voice): a clear, singable, memorable lead in the upper register (octaves 5–6). A recurring 2–4 note MOTIF that returns and develops. Flowing, mostly stepwise, phrased like a singer (60–80 melody notes, continuous, short breaths between phrases — never sparse lone notes).
-- HARMONY (underneath): under the melody, supply CHORDS that harmonize each strong melodic note — diatonic triads and sevenths (I ii iii IV V vi, V7), chosen by FUNCTION so phrases move tonic → subdominant → dominant → tonic and cadence at phrase ends. The melody note is the top of its chord. Mid-register chord tones (octaves 3–4) plus a bass root (octaves 2–3).
-- VOICE LEADING: move the inner chord voices by the SMALLEST steps between changes (common tones held, others stepwise) — this is what separates a real pianist from random stabs.
-- TEXTURE/FIGURATION: full but not muddy. On strong beats sound the chord; on weaker beats the melody can move alone or over a sustained/broken chord. Vary it so it breathes like real piano writing, not a block-chord on every note.
-- DYNAMICS: melody slightly louder than its accompaniment (velocity 96–118 melody, 70–92 chords) so the lead always sings through.
+- LENGTH: write ONE short, COMPLETE melodic phrase of about 8–16 bars (a self-contained tune that could loop seamlessly back to its start). Keep total length under ~24 beats. This cell will be REPEATED across the painting, so it must sound whole on its own and join cleanly to its own beginning.
+- MELODY (top voice): clear, singable, memorable, in the upper register (octaves 5–6). A 2–4 note MOTIF stated and answered. CONTINUOUS within the phrase — flowing eighth/quarter motion, mostly stepwise, no gaps longer than a beat. 16–28 notes in the cell (dense enough to sing, not a busy run).
+- HARMONY (underneath): under the melody supply CHORDS — diatonic triads/sevenths chosen by FUNCTION (I ii iii IV V vi V7) so the phrase moves tonic → subdominant → dominant → tonic and CADENCES at the end so the loop closes. Melody note = top of its chord. Mid-register voices (oct 3–4) + a bass root (oct 2–3). Move inner voices by the smallest steps (voice leading).
+- DYNAMICS: melody louder than accompaniment (vel 96–118 melody, 70–92 chords) so the lead sings on top.
 Output ONLY valid JSON, no prose, no markdown:
 {"title":"...","tempo":90,"notes":[[pitch,durationInBeats,startBeat,velocity],...],"chords":[[[pitch,pitch,...],durationInBeats,startBeat,velocity],...]}
 "notes" = the melody (top voice), one pitch each. "chords" = the harmony underneath, each a LIST of pitches (the accompanying chord voices + bass) sounding together. Pitches as names with octave, sharps only, e.g. "C5","F#4" ("Bb5"→"A#5"). Align each chord's startBeat to the melodic note it harmonizes. Title: a short evocative phrase (Title Case, max 5 words).`;

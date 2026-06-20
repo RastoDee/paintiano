@@ -1649,7 +1649,7 @@ function _melodyVoice(evts, mel){
   // Texture ceiling (highest scan pitch) so the melody can sit just above it.
   let scanHi=0, scanLo=128;
   for(const ev of evts){ for(const no of (ev.n||[])){ if(no.m>scanHi)scanHi=no.m; if(no.m<scanLo)scanLo=no.m; } }
-  // Parse + normalise melody notes into {m, startBeat, durBeats, vel}.
+  // Parse melody notes into {m, startBeat, durBeats, vel}.
   const parsed=[];
   let melMinBeat=Infinity, melMaxBeat=-Infinity, melHi=0, melLo=128;
   for(const raw of mel.notes){
@@ -1666,90 +1666,69 @@ function _melodyVoice(evts, mel){
     if(m>melHi)melHi=m; if(m<melLo)melLo=m;
   }
   if(!parsed.length||!isFinite(melMinBeat)||melMaxBeat<=melMinBeat) return empty;
-  // Register lift: shift up by whole octaves until the melody's low note clears the
-  // texture top by ~a whole tone — sings just above as a layer, stays singable.
+  // Register lift: shift the melody up by whole octaves so it sits just above the
+  // texture top — sings as a layer over it, stays singable.
   let lift=0;
-  const targetFloor=scanHi+5;            // a clear perfect-fourth above the texture top — sits out front
+  const targetFloor=scanHi+4;
   while(melLo+lift < targetFloor && (melHi+lift) < 94) lift+=12;
-  while((melHi+lift) > 96 && (melLo+lift) > scanHi+5) lift-=12;
-  // Proportional position 0..1 across the melody's own beat span.
-  const melBeatSpan=melMaxBeat-melMinBeat;
-  // Lead velocity — present out front over the texture, but NOT a hammer on every
-  // note. A gentler curve (90..118) keeps the line singing rather than clicking;
-  // the phrasing contour (its own louder peaks vs softer dips) is preserved.
-  const leadVel=(v)=> Math.max(90, Math.min(118, Math.round(88 + (v/127)*30)));
-  // First pass: positions + base pitch.
-  const raw=[];
-  for(const mn of parsed){
-    const pos=Math.max(0,Math.min(1,(mn.startB-melMinBeat)/melBeatSpan));
-    let mm=mn.m+lift;
-    mm=Math.max(52, Math.min(97, mm));
-    raw.push({ pos, m:mm, v:leadVel(mn.vel), durB:mn.durB });
-  }
-  raw.sort((a,b)=>a.pos-b.pos);
-  // Second pass: LEGATO. Instead of giving each note its own isolated length,
-  // sustain it THROUGH the start of the next note (plus a small overlap) so the
-  // notes physically connect — the way a pianist's fingers overlap to bind a
-  // melodic line, rather than striking each key as a separate detached event.
-  // The final note keeps its written length. This is what turns "tick · tick ·
-  // tick" into one flowing sung phrase over the texture underneath.
-  const voice=[];
-  // Cap how long a single note may sustain (as a fraction of the piece) so that a
-  // longer rest between phrases doesn't smear one note into a drone — it sings,
-  // breathes briefly, then the next phrase comes in.
-  const maxHold=0.07;
-  for(let i=0;i<raw.length;i++){
-    const cur=raw[i];
-    const nxt=raw[i+1];
-    let durFrac;
-    if(nxt){
-      const gapToNext=Math.max(0, nxt.pos-cur.pos);
-      // Bind to the next note: hold to its onset (+8% overlap) so consecutive notes
-      // connect into a line, but never longer than maxHold so a phrase-end breath
-      // stays a breath, not a held drone.
-      durFrac=Math.min(maxHold, Math.max(0.012, gapToNext*1.08));
-    }else{
-      durFrac=Math.min(maxHold, Math.max(0.012, (cur.durB/melBeatSpan)*0.9));
-    }
-    // Lead note (top voice).
-    voice.push({ pos:cur.pos, durFrac, m:cur.m, v:cur.v });
-    // OCTAVE-DOUBLE the melody: a pianist plays a theme in octaves, not with one
-    // finger. Adding the octave below turns a thin "one-finger tick" into a full,
-    // ringing melodic line that carries over the texture. Slightly softer than the
-    // top note so the lead still defines the contour.
-    const oct=cur.m-12;
-    if(oct>=33){
-      voice.push({ pos:cur.pos, durFrac, m:oct, v:Math.max(70,Math.round(cur.v*0.88)) });
-    }
-  }
-  // ── HARMONY: chordal accompaniment beneath the melody ──────────────────────
-  // The AI returns "chords" as [[pitch,pitch,...],dur,start,vel] — the diatonic
-  // harmony (mid-register voices + bass) that supports each melodic note. We add
-  // those tones to the voice so the second part plays as a FULL two-handed piano
-  // piece (melody on top, chords under it) rather than a thin single line. The
-  // chord tones are NOT lifted (they keep the AI's mid/bass register) and play a
-  // touch softer than the melody so the lead still sings through.
+  while((melHi+lift) > 96 && (melLo+lift) > scanHi+4) lift-=12;
+  const leadVel=(v)=> Math.max(92, Math.min(120, Math.round(90 + (v/127)*30)));
+
+  // ── LOOP MODEL ─────────────────────────────────────────────────────────────
+  // The AI writes ONE short, continuous melodic cell (a real phrase, dense and
+  // singable). We do NOT stretch those few notes across the whole 2–3 min scan
+  // (that turns a melody into one isolated note every couple of seconds). Instead
+  // we measure the cell's real length in SECONDS (beats ÷ tempo) and REPEAT it
+  // back-to-back for the whole painting, so the listener always hears a continuous
+  // tune, looping like a song over the texture — not sparse drips.
+  const tempo = (mel.tempo && mel.tempo>20 && mel.tempo<260) ? mel.tempo : 90;
+  const secPerBeat = 60/tempo;
+  const cellBeats = melMaxBeat - melMinBeat;            // length of one melodic cell, in beats
+  const cellSec = Math.max(2, cellBeats*secPerBeat);    // …in seconds
+  // Total scan duration in seconds (from the last texture event's timing).
+  const lastEv = evts[evts.length-1];
+  const scanSec = Math.max(cellSec, ((lastEv && (lastEv.startMs||0)) || (evts.length*150)) / 1000 + 0.5);
+  const loops = Math.max(1, Math.round(scanSec / cellSec));   // how many times the cell repeats
+
+  // Build one cell as {tBeat (from 0), durB, m, v} for melody, plus chords.
+  const cellNotes = parsed.map(p=>({ tBeat:p.startB-melMinBeat, durB:p.durB, m:Math.max(52,Math.min(97,p.m+lift)), v:leadVel(p.vel) }))
+                          .sort((a,b)=>a.tBeat-b.tBeat);
+  const cellChords=[];
   if(Array.isArray(mel.chords) && mel.chords.length){
-    const chMin=melMinBeat, chSpan=melBeatSpan;     // align chords to the melody's timeline
     for(const raw of mel.chords){
       if(!Array.isArray(raw)||raw.length<3) continue;
-      const pitches=raw[0];
-      if(!Array.isArray(pitches)||!pitches.length) continue;
+      const pitches=raw[0]; if(!Array.isArray(pitches)||!pitches.length) continue;
       const durB=Math.max(0.25, +raw[1]||1);
       const startB=Math.max(0, +raw[2]||0);
       const vel=Math.max(1,Math.min(127, Math.round(+raw[3]||80)));
-      const pos=Math.max(0,Math.min(1,(startB-chMin)/chSpan));
-      // chord sustains to roughly its written length (held, pedal-like), capped
-      // so it doesn't blur across the next harmony change.
-      const durFrac=Math.min(0.06, Math.max(0.02, (durB/chSpan)*0.95));
-      // accompaniment a touch softer than the lead so the melody stays on top
-      const cv=Math.max(58, Math.min(96, Math.round(vel*0.82)));
-      for(const p of pitches){
-        let m = typeof p==='string' ? name2midi(p) : p;
-        if(typeof m!=='number'||!isFinite(m)) continue;
-        m=Math.max(33, Math.min(88, m));   // keep harmony in mid/bass piano range
-        voice.push({ pos, durFrac, m, v:cv });
-      }
+      const ms=[];
+      for(const p of pitches){ let m=typeof p==='string'?name2midi(p):p; if(typeof m==='number'&&isFinite(m)){ ms.push(Math.max(33,Math.min(88,m))); } }
+      if(ms.length) cellChords.push({ tBeat:Math.max(0,startB-melMinBeat), durB, ms, v:Math.max(58,Math.min(96,Math.round(vel*0.82))) });
+    }
+  }
+
+  // Emit the cell `loops` times across 0..1. Within a cell, legato-bind melody
+  // notes (hold to the next onset) so each repeat is a flowing line, not ticks.
+  const voice=[];
+  const cellFrac = 1/loops;                 // each loop occupies this fraction of 0..1
+  const beatToFrac = cellBeats>0 ? (cellFrac/cellBeats) : 0;  // beats → fraction within a loop
+  for(let L=0;L<loops;L++){
+    const base = L*cellFrac;
+    // melody (legato within the loop)
+    for(let i=0;i<cellNotes.length;i++){
+      const cur=cellNotes[i], nxt=cellNotes[i+1];
+      const pos=base + cur.tBeat*beatToFrac;
+      let durFrac;
+      if(nxt){ durFrac=Math.max(0.004,(nxt.tBeat-cur.tBeat)*beatToFrac*1.05); }
+      else   { durFrac=Math.max(0.004, cur.durB*beatToFrac*0.95); }
+      durFrac=Math.min(cellFrac*0.9, durFrac);
+      voice.push({ pos:Math.min(1,pos), durFrac, m:cur.m, v:cur.v });
+    }
+    // chords under it
+    for(const ch of cellChords){
+      const pos=base + ch.tBeat*beatToFrac;
+      const durFrac=Math.min(cellFrac*0.95, Math.max(0.01, ch.durB*beatToFrac*0.95));
+      for(const m of ch.ms){ voice.push({ pos:Math.min(1,pos), durFrac, m, v:ch.v }); }
     }
   }
   voice.sort((a,b)=>a.pos-b.pos);
