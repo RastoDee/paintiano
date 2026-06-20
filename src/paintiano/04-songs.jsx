@@ -1643,9 +1643,20 @@ function _atmoTransform(evts, mood, skipTiming){
 //
 // Returns { events, voice } — events is the texture (clone, never mutated); voice
 // is [{pos, m, v, durMs}] or [] if nothing to sing.
-function _melodyVoice(evts, mel){
+function _melodyVoice(evts, mel, atmo){
   const empty={ events:evts, voice:[] };
   if(!evts||!evts.length||!mel||!mel.notes||!mel.notes.length) return empty;
+  // KEY MATCH: when ATM is on, the texture has been snapped to a mood scale
+  // (root + major/minor/lydian). Snap the melody + chords to the SAME scale so the
+  // sung line stays in tune with the retuned texture instead of clashing.
+  let snap=(m)=>m;
+  if(atmo && typeof atmo.root==='number'){
+    const v=typeof atmo.v==='number'?atmo.v:0, e=typeof atmo.e==='number'?atmo.e:0.5;
+    const sm=(v>=0.5&&e>0.7)?'lydian':(v>=0?'major':'minor');
+    const SC=({major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],lydian:[0,2,4,6,7,9,11]})[sm];
+    const root=((atmo.root||0)%12+12)%12;
+    snap=(m)=>{ const pc=((m-root)%12+12)%12; let best=SC[0],bd=99; for(const d of SC){ const dd=Math.min(((pc-d)%12+12)%12,((d-pc)%12+12)%12); if(dd<bd){bd=dd;best=d;} } let delta=((best-pc)%12+12)%12; if(delta>6) delta-=12; return m+delta; };
+  }
   // Texture ceiling (highest scan pitch) so the melody can sit just above it.
   let scanHi=0, scanLo=128;
   for(const ev of evts){ for(const no of (ev.n||[])){ if(no.m>scanHi)scanHi=no.m; if(no.m<scanLo)scanLo=no.m; } }
@@ -1657,6 +1668,7 @@ function _melodyVoice(evts, mel){
     let m=raw[0];
     if(typeof m==='string') m=name2midi(m);
     if(typeof m!=='number'||!isFinite(m)) continue;
+    m=snap(m);
     const durB=Math.max(0.25, +raw[1]||0.5);
     const startB=Math.max(0, +raw[2]||0);
     const vel=Math.max(1,Math.min(127, Math.round(+raw[3]||100)));
@@ -1701,7 +1713,7 @@ function _melodyVoice(evts, mel){
       const startB=Math.max(0, +raw[2]||0);
       const vel=Math.max(1,Math.min(127, Math.round(+raw[3]||80)));
       const ms=[];
-      for(const p of pitches){ let m=typeof p==='string'?name2midi(p):p; if(typeof m==='number'&&isFinite(m)){ ms.push(Math.max(33,Math.min(88,m))); } }
+      for(const p of pitches){ let m=typeof p==='string'?name2midi(p):p; if(typeof m==='number'&&isFinite(m)){ ms.push(Math.max(33,Math.min(88,snap(m)))); } }
       if(ms.length) cellChords.push({ tBeat:Math.max(0,startB-melMinBeat), durB, ms, v:Math.max(58,Math.min(96,Math.round(vel*0.82))) });
     }
   }

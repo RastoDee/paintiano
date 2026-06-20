@@ -3449,6 +3449,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // the effect, micArmed remains stable across re-renders.
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
+  // Mirror atmo into refs so the melody voice (scheduled from the stable startPlay
+  // callback) can snap the sung line to the SAME mood scale the texture was
+  // transformed into — otherwise turning ATM on retunes the texture but leaves the
+  // melody in its original key, and the two clash.
+  const atmoOnRef=useRef(false);   useEffect(()=>{atmoOnRef.current=atmoOn;},[atmoOn]);
+  const atmoMoodRef=useRef(null);  useEffect(()=>{atmoMoodRef.current=atmoMood;},[atmoMood]);
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
   // MELODY chip ("obraz spieva"): when ON, an AI-composed SINGING melodic line is
   // layered ON TOP of the scan texture (see _melodyVoice in 04-songs). It does NOT
@@ -5848,7 +5854,7 @@ Composition rules:
       // No race with the rebuild effect.
       if(melodyOnRef.current && melodyDataRef.current){
         let voice=[];
-        try{ const _mv=_melodyVoice(chordsRef.current||[], melodyDataRef.current); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
+        try{ const _atmoForMel=(atmoOnRef.current&&atmoMoodRef.current)?atmoMoodRef.current:null; const _mv=_melodyVoice(chordsRef.current||[], melodyDataRef.current, _atmoForMel); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
         if(voice.length){
           // Real total duration of the texture at the current dynamic tempo, from
           // the not-yet-elapsed portion (so a resume mid-piece still lines up).
@@ -10045,7 +10051,7 @@ Composition rules:
           );
         })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&imgPlayMode!=='compose'&&(
-          <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{...txStyle('ai',{effScale,on:atmoOn,disabled:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked))})}}>
+          <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if((playingRef.current||holdPausedRef.current)&&melodyOnRef.current) _melodyTogglePlayingRef.current=true; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{...txStyle('ai',{effScale,on:atmoOn,disabled:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked))})}}>
             <TxIcon n="sparkle" s={14*effScale}/><span>{(t('atmoLabel')||'atmosphere')+(atmoBusy?' · …':(aiLocked&&!atmoMood)?' · —':(!atmoMood&&!aiUsable)?' · '+(t('aiOffline')||'offline'):'')}</span>
             {aiLocked && !atmoMood && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
