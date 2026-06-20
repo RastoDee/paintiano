@@ -995,6 +995,7 @@ export default function Paintiano() {
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
   const [viewMode,  setViewMode]  = useState('paint');
+  const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too); declared here (early) so the paint effect can read it without a TDZ crash
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
@@ -1937,19 +1938,18 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{
     const cv=canvasRef.current;if(!cv)return;
     const{N,BW,BH,CW,CH}=grid;
-    // ── SUPERSAMPLING (immersive fullscreen, painted modes only) ──────────────
-    // Root cause of fullscreen pixelation: the substrate + main canvas are both
-    // CW×CH (~900px); CSS stretches that to the full tablet width, so pixels show.
-    // Fix mirrors the export path: render at SS× the internal resolution and pre-
-    // scale the context, so the SAME draw calls (in CW/CH coords) produce a crisp
-    // high-res image. SS is 1 everywhere except immersive paint view, so normal and
-    // mobile rendering are byte-for-byte unchanged.
-    const SS = (immersive && viewMode==='paint') ? 2 : 1;
+    // SUPERSAMPLING (immersive fullscreen, painted modes only). Renders the painting
+    // at SS× internal resolution + pre-scales the context, exactly like the export
+    // path, so fullscreen on a big/tablet screen is crisp instead of a stretched
+    // ~900px buffer. SS=1 everywhere else → normal & mobile rendering byte-for-byte
+    // unchanged. (immersive is declared early, near viewMode, so reading it here is
+    // safe — reading it before its declaration was a TDZ crash = black screen.)
+    const SS=(immersive && viewMode==='paint')?2:1;
     const _bw=Math.max(1,Math.round(CW*SS)), _bh=Math.max(1,Math.round(CH*SS));
     if(cv.width!==_bw) cv.width=_bw;
     if(cv.height!==_bh) cv.height=_bh;
     const ctx=cv.getContext('2d');
-    ctx.setTransform(SS,0,0,SS,0,0);   // CW/CH-space drawing now fills the SS× backing
+    ctx.setTransform(SS,0,0,SS,0,0);
     // The style actually rendered: the user's pick, or — in shuffle mode (no
     // artist + Random on) — the seed-derived shuffle draw. Shadowing `style`
     // here means every downstream render decision (overlay dispatch, cache key,
@@ -2154,8 +2154,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const subKey=`${CW}x${CH}|${style}|${mode}|${stamp}|${pollockSessionSeed}`;
         let sctx=sub.ctx;
         if(sub.key!==subKey||sub.CW!==CW||sub.CH!==CH||sub.SS!==SS||!sub.canvas){
-          // (Re)allocate offscreen canvas. Reuse the existing element when only
-          // the key changed but dimensions match, to avoid GC churn.
           if(!sub.canvas||sub.CW!==CW||sub.CH!==CH||sub.SS!==SS){
             const oc=(typeof OffscreenCanvas!=='undefined')
               ? new OffscreenCanvas(Math.max(1,Math.round(CW*SS)),Math.max(1,Math.round(CH*SS)))
@@ -2163,7 +2161,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             sub.canvas=oc; sctx=oc.getContext('2d');
             sub.ctx=sctx; sub.CW=CW; sub.CH=CH; sub.SS=SS;
           }
-          // Pre-scale so substrate drawing (in CW/CH coords) fills the SS× buffer.
           sctx.setTransform(SS,0,0,SS,0,0);
           // Fresh substrate: paint background + grid, reset reveal counter.
           sctx.fillStyle='#04040a';sctx.fillRect(0,0,CW,CH);
@@ -7124,6 +7121,11 @@ Composition rules:
   };
 
   const{N,BW,BH,CW,CH}=grid;
+  // Supersampling factor for the canvas backing — must match the paint effect so
+  // the JSX-set backing and the effect's transform agree (keeping the backing in
+  // JSX, consistent every render, avoids the black-screen window from setting it
+  // only inside the effect).
+  const _ssF=(immersive && viewMode==='paint')?2:1;
   const pct=(info||chords.length)?Math.round(disp/Math.max(1,chords.length)*100):null;
   // Pre-build a Set so each of the 88 white keys can do O(1) `.has()`
   // instead of pending.includes() which would be O(88 * len(pending)).
@@ -7553,7 +7555,6 @@ Composition rules:
   // overrides isActiveView; the "→ Canvas" resume button and picking a new
   // mood/source clear it.
   const [forceSetup, setForceSetup] = useState(false);
-  const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too)
   // First-visit onboarding (v3). Reads the localStorage flag synchronously
   // during initial state setup so we don't briefly flash the setup screen.
   // Feature-flagged via ONBOARDING_V3 — set it false in 01-core-head to disable
@@ -9284,7 +9285,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
+        <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
