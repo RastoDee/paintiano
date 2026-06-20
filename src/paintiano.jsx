@@ -17933,7 +17933,6 @@ export default function Paintiano() {
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
-  const [moodFocused, setMoodFocused] = useState(false); // mood input focused → show autocomplete suggestions
   const [composeSource, setComposeSource] = useState(null); // 'ai' | 'offline' | 'crafted' — how the current mood piece was made
   // Mirror composeSource into a ref for callbacks (startPlay reads it without
   // becoming dependent on composeSource and re-creating per change).
@@ -18104,7 +18103,6 @@ export default function Paintiano() {
   const [scoreMsg, setScoreMsg] = useState(null);   // MusicXML export status
   const [scoreBlob, setScoreBlob] = useState(null); // MusicXML blob (share row, like rec/print)
   const [scoreFileName, setScoreFileName] = useState('');
-  const [exportPick, setExportPick] = useState(false); // EXPORT chooser (audio/score/both)
   const [playedOnce, setPlayedOnce] = useState(false); // image actually played (gates EXPORT like Print's disp)
   // Auto-dismiss share status after a few seconds
   useEffect(()=>{
@@ -18124,7 +18122,6 @@ export default function Paintiano() {
   const [speedSweeping, setSpeedSweeping] = useState(false);   // true while holding — shows a floating rate label above the finger
   // Same pattern for the demo link: if the canvas has content, ask once before
   // replacing it with Für Elise. Empty canvas → demo fires immediately.
-  const [demoArmed, setDemoArmed] = useState(false);
   const demoArmRef = useRef(null);
   // Source-switch arm — only guards a CREATION canvas (Compose/MIC), which the
   // user hand-made and can't reload. Loaded sources (MIDI/Audio/Score/Image/mood)
@@ -20396,10 +20393,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [melodyData,setMelodyData]=useState(null); // {notes,tempo,title} | null
   const melodyOnRef=useRef(false);  useEffect(()=>{melodyOnRef.current=melodyOn;},[melodyOn]);
   const melodyDataRef=useRef(null); useEffect(()=>{melodyDataRef.current=melodyData;},[melodyData]);
-  // The sung melody as a SEPARATE VOICE (list of {pos,durFrac,m,v}) prepared by
-  // _melodyVoice. The texture in chordsRef stays clean; startPlay schedules this
-  // voice on its own parallel timers so the line flows over the texture.
-  const melodyVoiceRef=useRef([]);
   // Set true by the MELODY chip when it flips melody on/off DURING playback, so the
   // mode-toggle effect knows to restart-from-position (to re-arm the parallel voice)
   // instead of doing a seamless live swap (which is right for colour changes).
@@ -20619,7 +20612,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         setChords(_evts);chordsRef.current=_evts;
         idxRef.current=_evts.length;setDisp(_evts.length);
       }
-      setMelodyOn(false);setMelodyData(null);melodyVoiceRef.current=[];  // cleared image: no sung voice until a fresh re-tap
+      setMelodyOn(false);setMelodyData(null);  // cleared image: no sung voice until a fresh re-tap
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
@@ -22345,12 +22338,10 @@ Composition rules:
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
-    // MELODY as a separate voice: the texture stays clean; the sung line goes to
-    // melodyVoiceRef and is scheduled in parallel by startPlay. So `evts` here is
-    // always just the texture — no lead notes spliced in.
-    let evts=_evtsAtmo;
-    if(melodyOn&&melodyData){ const _mv=_melodyVoice(_evtsAtmo,melodyData); evts=_mv.events; melodyVoiceRef.current=_mv.voice||[]; }
-    else { melodyVoiceRef.current=[]; }
+    // MELODY stays a separate voice: the texture in chordsRef is never altered by it
+    // (the sung line is computed and scheduled in parallel by startPlay), so the
+    // events here are always just the texture.
+    const evts=_evtsAtmo;
     // Changing the colour mode re-transcribes the SAME painting through a new
     // hue→pitch table, so the notes change but the structure/length do not. If a
     // playback is in progress we must NOT stop it — like MIDI and live drawing,
@@ -22760,10 +22751,9 @@ Composition rules:
       // _melSteps tempo curve — so the melody lands correctly however the dynamic
       // tempo stretches the timeline. Timers go into timers.current, so Stop/Pause/
       // Clear (which clear that array + bump genRef) tear the voice down cleanly.
-      // Compute the voice DIRECTLY from the live texture + melody data here, rather
-      // than reading melodyVoiceRef (which is filled by an effect that can lag a
-      // render behind a fresh toggle). This guarantees: MELODY on → the line plays;
-      // MELODY off → nothing is scheduled. No race with the rebuild effect.
+      // Compute the voice DIRECTLY from the live texture + melody data here. This
+      // guarantees: MELODY on → the line plays; MELODY off → nothing is scheduled.
+      // No race with the rebuild effect.
       if(melodyOnRef.current && melodyDataRef.current){
         let voice=[];
         try{ const _mv=_melodyVoice(chordsRef.current||[], melodyDataRef.current); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
@@ -25748,14 +25738,14 @@ Composition rules:
                 // that usually can't save a file, so we bypass it there. Touch /
                 // mobile devices use the share sheet (→ Save to Photos/Files),
                 // falling back to <a download> if share is unavailable or fails.
-                const isDesktop = typeof window!=='undefined' && window.matchMedia
+                const hasFinePointer = typeof window!=='undefined' && window.matchMedia
                   && window.matchMedia('(hover:hover) and (pointer:fine)').matches;
                 const doDownload=()=>{
                   const a=document.createElement('a');
                   a.href=preview.url;a.download=preview.filename;
                   a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);
                 };
-                if(!isDesktop && navigator.share){
+                if(!hasFinePointer && navigator.share){
                   navigator.share({files:[preview.file],title:preview.filename}).catch(()=>doDownload());
                 } else {
                   doDownload();
