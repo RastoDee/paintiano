@@ -147,21 +147,21 @@ const PF_STYLE = `
           .pf-app-root {
             position: relative;
             display: grid !important;
-            grid-template-columns: 180px minmax(0, 1fr) 180px;
+            grid-template-columns: 90px 180px minmax(0, 1fr) 180px 90px;
             grid-template-rows: auto auto auto auto auto 1fr auto auto;
             grid-template-areas:
-              "topbar   topbar topbar"
-              "header   header header"
-              "controls stage  rtop"
-              "colors   stage  styles"
-              "ltrans   stage  styles"
-              ".        stage  rfab"
-              "vfooter  vfooter vfooter"
-              "legal    legal  legal";
+              "topbar  topbar   topbar topbar  topbar"
+              "header  header   header header  header"
+              "txL     controls stage  rtop    txR"
+              "txL     colors   stage  styles  txR"
+              "txL     .        stage  styles  txR"
+              "txL     .        stage  rfab    txR"
+              "vfooter vfooter  vfooter vfooter vfooter"
+              "legal   legal    legal  legal   legal";
             align-content: start !important;
             align-items: start !important;
             justify-items: stretch !important;
-            column-gap: 24px;
+            column-gap: 16px;
             max-width: 100% !important;
             width: 100% !important;
             padding: 14px 24px 28px !important;
@@ -580,7 +580,7 @@ const PF_STYLE = `
              control row stacks vertically. Mobile keeps the bottom dock. ── */
           .pf-app-root > .pf-transport-dock {
             position: static !important;
-            grid-area: ltrans;
+            grid-area: txR;
             align-self: start;
             margin-top: 12px;
             left: auto !important; right: auto !important; bottom: auto !important; top: auto !important;
