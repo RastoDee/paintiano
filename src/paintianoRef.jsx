@@ -1108,12 +1108,6 @@ function parseMusicXml(xmlText){
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
   const liveMode = !!(opts && opts.liveMode);
-  // Supersampling: when the caller asks for hi-res (Music mode painting), raise the
-  // canvas's INTERNAL pixel resolution so a fullscreen painting on a big desktop /
-  // tablet-portrait screen stays crisp instead of stretching a ~900px buffer. Only
-  // the block size / canvas dimensions grow — the column count N (and therefore the
-  // number of notes/chords) is untouched, so the MUSIC is byte-for-byte identical.
-  const hiresMul = (opts && opts.hires) ? 2 : 1;
   // STAGE 2: a loaded piece on a wide desktop screen uses a FIXED landscape
   // golden-ratio frame (see the loaded-mode branch below). `fixedFrame` marks
   // any mode that keeps a declared CH and stretches the last row to fill it —
@@ -1167,7 +1161,7 @@ function computeGrid(arg, opts){
     const vpW=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:960;
     const SIDE_W=180, GAPS=2*24, PAGE_PAD=56, SLACK=12;
     const paneW=Math.max(320, vpW - 2*SIDE_W - GAPS - PAGE_PAD - SLACK);
-    const targetCWL=Math.min(900, paneW)*hiresMul;
+    const targetCWL=Math.min(900, paneW);
     BW=Math.max(2,Math.floor(targetCWL/N));
     BH=Math.round(BW*PHI);
     CW=N*BW;
@@ -1182,7 +1176,7 @@ function computeGrid(arg, opts){
     // no matter how many columns N a piece has (e.g. a long AI-composed mood).
     // Height still grows with row count (the "grow canvas" behaviour).
     const vpL=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:540;
-    const targetCWL=Math.min(820,Math.max(320,vpL-32))*hiresMul;
+    const targetCWL=Math.min(820,Math.max(320,vpL-32));
     // Fill the FULL target width: deriving CW = N*floor(targetCWL/N) lost up to
     // N px to rounding, which on long pieces (large N) visibly narrowed the
     // canvas on mobile. Keep BW fractional (segment math below rounds per-cell)
@@ -20949,7 +20943,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(ev.n.length>1) ev.n=[...ev.n].sort((a,b)=>b.m-a.m);
     });
     const wi=events.map((c,i)=>({...c,idx:i}));
-    const g=computeGrid(wi,{hires:true}),lastMs=wi[wi.length-1]?.startMs||0;
+    const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
     setGrid(g);setChords(wi);setDisp(0);
     setInfo({title,count:wi.length,dur:Math.round(lastMs/1000)});

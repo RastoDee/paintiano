@@ -1937,7 +1937,21 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{
     const cv=canvasRef.current;if(!cv)return;
     const{N,BW,BH,CW,CH}=grid;
+    // SUPERSAMPLING (fullscreen only): when the painting is shown immersive on a
+    // big/tablet screen, a CW-wide buffer gets stretched and looks pixelated. Mirror
+    // the EXPORT approach — give the canvas a higher INTERNAL resolution and pre-scale
+    // the context, so all the existing draw calls (which work in CW/CH coordinates)
+    // render crisp without any change to the drawing logic. Outside immersive we keep
+    // the native CW/CH backing, so normal (incl. mobile) rendering is byte-for-byte
+    // unchanged. Only applies to the painted modes (paint viewMode); image-scan keeps
+    // its transparent canvas untouched.
+    const _ss = (immersive && viewMode==='paint') ? 2 : 1;
+    const _wantW = Math.max(1, Math.round(CW*_ss)), _wantH = Math.max(1, Math.round(CH*_ss));
+    if(cv.width!==_wantW || cv.height!==_wantH){ cv.width=_wantW; cv.height=_wantH; }
     const ctx=cv.getContext('2d');
+    // Reset any prior transform, then pre-scale so CW/CH-space drawing fills the
+    // higher-resolution backing. setTransform is idempotent per render.
+    ctx.setTransform(_ss,0,0,_ss,0,0);
     // The style actually rendered: the user's pick, or — in shuffle mode (no
     // artist + Random on) — the seed-derived shuffle draw. Shadowing `style`
     // here means every downstream render decision (overlay dispatch, cache key,
@@ -2298,7 +2312,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
