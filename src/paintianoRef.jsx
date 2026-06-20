@@ -15707,19 +15707,56 @@ function _melodyVoice(evts, mel){
   // The final note keeps its written length. This is what turns "tick · tick ·
   // tick" into one flowing sung phrase over the texture underneath.
   const voice=[];
+  // Cap how long a single note may sustain (as a fraction of the piece) so that a
+  // longer rest between phrases doesn't smear one note into a drone — it sings,
+  // breathes briefly, then the next phrase comes in.
+  const maxHold=0.045;
   for(let i=0;i<raw.length;i++){
     const cur=raw[i];
     const nxt=raw[i+1];
     let durFrac;
     if(nxt){
-      const gapToNext=Math.max(0, nxt.pos-cur.pos);     // fraction of the piece until the next note
-      // hold to the next onset, then 18% past it so the tones overlap and bind
-      durFrac=Math.max(0.012, gapToNext*1.18);
+      const gapToNext=Math.max(0, nxt.pos-cur.pos);
+      // Bind to the next note: hold to its onset (+8% overlap) so consecutive notes
+      // connect into a line, but never longer than maxHold so a phrase-end breath
+      // stays a breath, not a held drone.
+      durFrac=Math.min(maxHold, Math.max(0.012, gapToNext*1.08));
     }else{
-      durFrac=Math.max(0.012, (cur.durB/melBeatSpan)*0.96);
+      durFrac=Math.min(maxHold, Math.max(0.012, (cur.durB/melBeatSpan)*0.9));
     }
     voice.push({ pos:cur.pos, durFrac, m:cur.m, v:cur.v });
   }
+  // ── HARMONY: chordal accompaniment beneath the melody ──────────────────────
+  // The AI returns "chords" as [[pitch,pitch,...],dur,start,vel] — the diatonic
+  // harmony (mid-register voices + bass) that supports each melodic note. We add
+  // those tones to the voice so the second part plays as a FULL two-handed piano
+  // piece (melody on top, chords under it) rather than a thin single line. The
+  // chord tones are NOT lifted (they keep the AI's mid/bass register) and play a
+  // touch softer than the melody so the lead still sings through.
+  if(Array.isArray(mel.chords) && mel.chords.length){
+    const chMin=melMinBeat, chSpan=melBeatSpan;     // align chords to the melody's timeline
+    for(const raw of mel.chords){
+      if(!Array.isArray(raw)||raw.length<3) continue;
+      const pitches=raw[0];
+      if(!Array.isArray(pitches)||!pitches.length) continue;
+      const durB=Math.max(0.25, +raw[1]||1);
+      const startB=Math.max(0, +raw[2]||0);
+      const vel=Math.max(1,Math.min(127, Math.round(+raw[3]||80)));
+      const pos=Math.max(0,Math.min(1,(startB-chMin)/chSpan));
+      // chord sustains to roughly its written length (held, pedal-like), capped
+      // so it doesn't blur across the next harmony change.
+      const durFrac=Math.min(0.06, Math.max(0.02, (durB/chSpan)*0.95));
+      // accompaniment a touch softer than the lead so the melody stays on top
+      const cv=Math.max(58, Math.min(96, Math.round(vel*0.82)));
+      for(const p of pitches){
+        let m = typeof p==='string' ? name2midi(p) : p;
+        if(typeof m!=='number'||!isFinite(m)) continue;
+        m=Math.max(33, Math.min(88, m));   // keep harmony in mid/bass piano range
+        voice.push({ pos, durFrac, m, v:cv });
+      }
+    }
+  }
+  voice.sort((a,b)=>a.pos-b.pos);
   return { events:evts, voice };
 }
 
@@ -22031,7 +22068,7 @@ Composition rules:
   // Keyed by image hash + atmosphere signature so the same picture in the same
   // mood replays its sung line free. Distinct from the compose cache (that's a
   // whole separate piece); this is the lead line we layer over the scan texture.
-  const MELODY_CACHE_KEY='paintiano_melody_cache_v2';
+  const MELODY_CACHE_KEY='paintiano_melody_cache_v4';
   const _melodyCacheKey=useCallback((hash)=>{
     const atmoSig=(atmoOn&&atmoMood)?('a'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2)+'_'+(atmoMood.root||0)):'plain';
     return hash+'|'+atmoSig;
@@ -22069,25 +22106,21 @@ Composition rules:
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return null; } }
     setMelodyBusy(true); setErr(''); setErrInfo(false);
     try{
-      const prompt=`A painting has been scanned into a musical TEXTURE (its colours played as notes). Compose ONE singing melodic LINE that floats ON TOP of that texture — a clear, memorable lead the painting itself would "sing". This is NOT a new piece: it must mirror and crown the scan, echoing the image's mood, colour and radiance.
+      const prompt=`A painting has been scanned into a musical TEXTURE (its colours played as notes). Compose a SECOND PIANO PART that a concert pianist would play over that texture — a full, two-handed, CHORDAL piece with a clear singing MELODY on top and real harmony underneath. NOT a thin one-finger line: this is a complete, rich piano voice that stands beside the texture as an equal. It must mirror and crown the scan, echoing the image's mood, colour and radiance.
 The image's musical material:
 - Pitch palette (colours → notes): ${mat.palette}
 - Range of the texture: ${mat.noteRange}
 - Energy: ${mat.energy}    Texture: ${mat.tex}    Arc: ${mat.arc}${mat.mood?`\n- Mood / atmosphere: ${mat.mood}`:''}
-Compose with real musical craft so it is genuinely beautiful and singable:
-- ONE voice only (monophonic) — a true melody, not chords, not a run of equal notes.
-- Build it from the pitch palette above: let those pitch classes define the KEY/tonal centre, then sing diatonically in that key (major or natural minor to fit the mood). Occasional tasteful passing/leading tones are fine; no whole-tone, no random chromaticism.
-- A short recurring MOTIF (2–4 notes) that returns and develops — give the line memory.
-- CONNECTED PHRASES: within a phrase the notes flow by mostly stepwise motion like one breath of singing; BETWEEN phrases, a clear rest is good and wanted. The line should read as a few connected sung phrases with space around them, never one unbroken stream of notes.
-- Phrasing like a human voice: group notes into phrases, each phrase ended by only a SHORT breath (a beat or less), then the next phrase begins. Arcs that rise to a peak and settle. Mostly conjunct (stepwise) movement with occasional expressive leaps.
-- An emotional shape that matches the image's energy arc (${mat.arc}).
-- DENSITY: 35–55 notes for the WHOLE piece — a real singer breathes; do NOT fill every beat. Favour longer values (1 / 1.5 / 2 / 3 beats) with only occasional shorter passing notes. Sparser, sustained, lyrical — a melody you could hum, NOT a busy run.
-- RHYTHM: place notes mostly on strong beats; let notes ring. Clear phrases of 4–7 notes, each followed by a real breath (a beat or more of rest), then the next phrase answers. Think art-song or film-theme, never an étude or finger-exercise.
-- SHAPE: a singable arc — rise to one clear high point in the piece, then resolve down to the tonic. Mostly stepwise; save leaps for emotional moments. Repeat and vary the opening motif so the ear remembers it.
-- Velocity 80–112 (a present lead voice that still blends with the texture, not a blaring solo).
+Compose with real musical craft, following classical harmonization method:
+- KEY: let the pitch palette define the tonal centre; choose major or natural minor to fit the mood. Stay diatonic (tasteful passing/leading tones fine; no random chromaticism).
+- MELODY (top voice): a clear, singable, memorable lead in the upper register (octaves 5–6). A recurring 2–4 note MOTIF that returns and develops. Flowing, mostly stepwise, phrased like a singer (60–80 melody notes, continuous, short breaths between phrases — never sparse lone notes).
+- HARMONY (underneath): under the melody, supply CHORDS that harmonize each strong melodic note — diatonic triads and sevenths (I ii iii IV V vi, V7), chosen by FUNCTION so phrases move tonic → subdominant → dominant → tonic and cadence at phrase ends. The melody note is the top of its chord. Mid-register chord tones (octaves 3–4) plus a bass root (octaves 2–3).
+- VOICE LEADING: move the inner chord voices by the SMALLEST steps between changes (common tones held, others stepwise) — this is what separates a real pianist from random stabs.
+- TEXTURE/FIGURATION: full but not muddy. On strong beats sound the chord; on weaker beats the melody can move alone or over a sustained/broken chord. Vary it so it breathes like real piano writing, not a block-chord on every note.
+- DYNAMICS: melody slightly louder than its accompaniment (velocity 96–118 melody, 70–92 chords) so the lead always sings through.
 Output ONLY valid JSON, no prose, no markdown:
-{"title":"...","tempo":90,"notes":[[pitch,durationInBeats,startBeat,velocity],...]}
-Each note: [pitch, durationInBeats, startBeat, velocity]. Pitches as names with octave and sharps only, e.g. "C5","F#4","Bb5"→write "A#5". Title: a short evocative phrase (Title Case, max 5 words).`;
+{"title":"...","tempo":90,"notes":[[pitch,durationInBeats,startBeat,velocity],...],"chords":[[[pitch,pitch,...],durationInBeats,startBeat,velocity],...]}
+"notes" = the melody (top voice), one pitch each. "chords" = the harmony underneath, each a LIST of pitches (the accompanying chord voices + bass) sounding together. Pitches as names with octave, sharps only, e.g. "C5","F#4" ("Bb5"→"A#5"). Align each chord's startBeat to the melodic note it harmonizes. Title: a short evocative phrase (Title Case, max 5 words).`;
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -22108,7 +22141,7 @@ Each note: [pitch, durationInBeats, startBeat, velocity]. Pitches as names with 
       const parsed=extractAiJson(raw);
       if(!parsed?.notes?.length)throw new Error('No notes');
       gateAI(1,true);
-      const result={notes:parsed.notes,tempo:parsed.tempo||90,title:parsed.title||''};
+      const result={notes:parsed.notes,chords:Array.isArray(parsed.chords)?parsed.chords:[],tempo:parsed.tempo||90,title:parsed.title||''};
       if(_key!=null){ try{ _melodyCacheSet(_key,result); }catch(_){} }
       return result;
     }catch(e){
