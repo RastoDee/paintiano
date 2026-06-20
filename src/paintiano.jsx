@@ -97,6 +97,10 @@ const PF_STYLE = `
            JSX layout untouched. (A later stage splits this into a true two-pane
            tools-left / stage-right grid.)
            Mobile (<769px): no changes, app fills the viewport edge-to-edge. */
+        /* Base (mobile): the desktop edge-column wrappers dissolve so the
+           transport stays one centered flex row exactly as before. They only
+           become real columns inside the ≥769px grid. */
+        .pf-tx-col-l, .pf-tx-col-r { display: contents; }
         @media (min-width: 769px) {
           html, body {
             background: #050507 !important;
@@ -147,24 +151,34 @@ const PF_STYLE = `
           .pf-app-root {
             position: relative;
             display: grid !important;
-            grid-template-columns: 180px minmax(0, 1fr) 180px;
+            grid-template-columns: 84px 168px minmax(0, 1fr) 168px 84px;
             grid-template-rows: auto auto auto auto auto 1fr auto auto;
             grid-template-areas:
-              "topbar   topbar topbar"
-              "header   header header"
-              "controls stage  rtop"
-              "colors   stage  styles"
-              "ltrans   stage  styles"
-              ".        stage  rfab"
-              "vfooter  vfooter vfooter"
-              "legal    legal  legal";
+              "topbar  topbar   topbar topbar topbar"
+              "header  header   header header header"
+              "txL     controls stage  rtop   txR"
+              "txL     colors   stage  styles txR"
+              "txL     ltrans   stage  styles txR"
+              "txL     .        stage  rfab   txR"
+              "vfooter vfooter  vfooter vfooter vfooter"
+              "legal   legal    legal  legal  legal";
             align-content: start !important;
             align-items: start !important;
             justify-items: stretch !important;
-            column-gap: 24px;
+            column-gap: 16px;
             max-width: 100% !important;
             width: 100% !important;
             padding: 14px 24px 28px !important;
+          }
+          /* Transport split to the OUTER edge columns. The single centered flex
+             row (mobile, untouched) is, on desktop, dissolved (display:contents)
+             so its two wrapper columns land in txL / txR — both thumbs reach the
+             controls, nothing below the fold. Desktop ≥769px only. */
+          .pf-app-root > .pf-transport-row { display: contents !important; }
+          .pf-app-root .pf-tx-col-l { grid-area: txL; }
+          .pf-app-root .pf-tx-col-r { grid-area: txR; }
+          .pf-app-root .pf-tx-col-l, .pf-app-root .pf-tx-col-r {
+            align-self: start; display: flex; flex-direction: column; gap: 7px; width: 100%;
           }
           .pf-app-root > .pf-topbar {
             grid-area: topbar;
@@ -27026,9 +27040,7 @@ Composition rules:
         </div>
       )}
       <div className="pf-transport-row" style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
-        <button className="pf-tx-scale" onClick={()=>{ setShowAdvanced(v=>!v); }} title="scale snap — tap notes to a musical key" style={{...txStyle((paintScale!=='off'||showAdvanced)?'active':'ghost',{effScale}),display:composeMode?'inline-flex':'none',minWidth:96,justifyContent:'center'}}>
-          <TxIcon n="notes" s={13*effScale}/>{paintScale!=='off'?PAINT_SCALES[paintScale].label:t('scaleBtn')}
-        </button>
+        <div className="pf-tx-col-l">
         <button
           className="pf-lift pf-tx-play"
           onClick={handlePauseClick}
@@ -27036,7 +27048,33 @@ Composition rules:
           title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
           style={{...txStyle('primary',{effScale,primary:true,disabled:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))}),display:(viewMode==='image'&&(recording||!!recBlob))?'none':'inline-flex',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer'}}>
           <TxIcon n={playing&&!holdPaused?'pause':'play'} s={15*effScale}/>{holdPaused?t('resume'):playing?t('pause'):t('play')}
-        </button>{/* MIC STOP / REC — in the transport row UNDER the canvas (not in
+        </button>
+        <button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
+        <button
+          onClick={()=>{
+            if(demoReelOn){ demoReelStop(); return; }
+            if(recording)return;
+            if(clearArmed){
+              if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
+              setClearArmed(false);
+              clearCanvas();
+            }else{
+              const hasPainting = disp>0 || (composedModeRef.current && chords.length>0);
+              if(!hasPainting&&!pending.length){clearCanvas();return;}
+              setClearArmed(true);
+              clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
+            }
+          }}
+          className="pf-lift pf-tx-clear"
+          disabled={recording}
+          title={recording?t('stopRecFirst'):undefined}
+          style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
+        </div>
+        <div className="pf-tx-col-r">
+        <button className="pf-tx-scale" onClick={()=>{ setShowAdvanced(v=>!v); }} title="scale snap — tap notes to a musical key" style={{...txStyle((paintScale!=='off'||showAdvanced)?'active':'ghost',{effScale}),display:composeMode?'inline-flex':'none',minWidth:96,justifyContent:'center'}}>
+          <TxIcon n="notes" s={13*effScale}/>{paintScale!=='off'?PAINT_SCALES[paintScale].label:t('scaleBtn')}
+        </button>
+        {/* MIC STOP / REC — in the transport row UNDER the canvas (not in
             the strip above it). Replaces the on-canvas STOP/REC buttons; the
             on-canvas voice/music toggle remains for live preset switching. */}
         {micActive && (
@@ -27045,7 +27083,7 @@ Composition rules:
           </button>
         )}{/* After stop, the transport pill disappears entirely — Clear is the
             way to start a fresh song. The old "tap REC again" pill caused
-            confusion and let the user accidentally extend a finished take. */}<button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
+            confusion and let the user accidentally extend a finished take. */}
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={txStyle(loopMode?'active':'neutral',{effScale,disabled:recording})}><TxIcon n="loop" s={14*effScale}/>{t('loop')}</button>
         )}
@@ -27243,44 +27281,10 @@ Composition rules:
             </span>
           );
         })()}
-        <button
-          onClick={()=>{
-            // During the demo reel, Clear is an escape gesture: stop the reel
-            // and DO NOT actually clear the canvas — leaving the painting
-            // intact so the viewer can keep it or interact further.
-            if(demoReelOn){ demoReelStop(); return; }
-            // L3: clear() doesn't gracefully handle being called while recording —
-            // it stops playback (the recorder's audio source) but leaves the
-            // recorder running with no input, producing a silent / truncated
-            // file. Block clear during recording; the user must stop the
-            // recording explicitly first.
-            if(recording)return;
-            if(clearArmed){
-              // Second tap — actually clear
-              if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
-              setClearArmed(false);
-              clearCanvas();
-            }else{
-              // First tap — arm only if there's something worth protecting.
-              // Visually empty canvas (no painted blocks AND no held keys) = nothing
-              // to protect, clear immediately. Loaded but not-yet-played sources
-              // (e.g. just picked a Mood) count as empty: chords is populated but
-              // disp is 0 since playback hasn't rendered any blocks yet.
-              // In compose mode disp stays 0 but chords IS the painting — count it.
-              const hasPainting = disp>0 || (composedModeRef.current && chords.length>0);
-              if(!hasPainting&&!pending.length){clearCanvas();return;}
-              setClearArmed(true);
-              clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
-            }
-          }}
-          className="pf-lift pf-tx-clear"
-          disabled={recording}
-          title={recording?t('stopRecFirst'):undefined}
-          style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
-        
         {composeMode&&(
           <button className="pf-lift pf-tx-undo" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
         )}
+        </div>
       </div>
       {composeMode && (
       <div ref={kbScrollRef} className="pf-piano-dock" style={{overflowX:'auto',maxWidth:'100%',marginTop:12,paddingBottom:4,touchAction:'pan-x',WebkitOverflowScrolling:'touch'}}>

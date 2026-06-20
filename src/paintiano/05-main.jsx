@@ -9961,9 +9961,7 @@ Composition rules:
         </div>
       )}
       <div className="pf-transport-row" style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
-        <button className="pf-tx-scale" onClick={()=>{ setShowAdvanced(v=>!v); }} title="scale snap — tap notes to a musical key" style={{...txStyle((paintScale!=='off'||showAdvanced)?'active':'ghost',{effScale}),display:composeMode?'inline-flex':'none',minWidth:96,justifyContent:'center'}}>
-          <TxIcon n="notes" s={13*effScale}/>{paintScale!=='off'?PAINT_SCALES[paintScale].label:t('scaleBtn')}
-        </button>
+        <div className="pf-tx-col-l">
         <button
           className="pf-lift pf-tx-play"
           onClick={handlePauseClick}
@@ -9971,7 +9969,33 @@ Composition rules:
           title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
           style={{...txStyle('primary',{effScale,primary:true,disabled:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))}),display:(viewMode==='image'&&(recording||!!recBlob))?'none':'inline-flex',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer'}}>
           <TxIcon n={playing&&!holdPaused?'pause':'play'} s={15*effScale}/>{holdPaused?t('resume'):playing?t('pause'):t('play')}
-        </button>{/* MIC STOP / REC — in the transport row UNDER the canvas (not in
+        </button>
+        <button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
+        <button
+          onClick={()=>{
+            if(demoReelOn){ demoReelStop(); return; }
+            if(recording)return;
+            if(clearArmed){
+              if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
+              setClearArmed(false);
+              clearCanvas();
+            }else{
+              const hasPainting = disp>0 || (composedModeRef.current && chords.length>0);
+              if(!hasPainting&&!pending.length){clearCanvas();return;}
+              setClearArmed(true);
+              clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
+            }
+          }}
+          className="pf-lift pf-tx-clear"
+          disabled={recording}
+          title={recording?t('stopRecFirst'):undefined}
+          style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
+        </div>
+        <div className="pf-tx-col-r">
+        <button className="pf-tx-scale" onClick={()=>{ setShowAdvanced(v=>!v); }} title="scale snap — tap notes to a musical key" style={{...txStyle((paintScale!=='off'||showAdvanced)?'active':'ghost',{effScale}),display:composeMode?'inline-flex':'none',minWidth:96,justifyContent:'center'}}>
+          <TxIcon n="notes" s={13*effScale}/>{paintScale!=='off'?PAINT_SCALES[paintScale].label:t('scaleBtn')}
+        </button>
+        {/* MIC STOP / REC — in the transport row UNDER the canvas (not in
             the strip above it). Replaces the on-canvas STOP/REC buttons; the
             on-canvas voice/music toggle remains for live preset switching. */}
         {micActive && (
@@ -9980,7 +10004,7 @@ Composition rules:
           </button>
         )}{/* After stop, the transport pill disappears entirely — Clear is the
             way to start a fresh song. The old "tap REC again" pill caused
-            confusion and let the user accidentally extend a finished take. */}<button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
+            confusion and let the user accidentally extend a finished take. */}
         {currentMood&&(
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={txStyle(loopMode?'active':'neutral',{effScale,disabled:recording})}><TxIcon n="loop" s={14*effScale}/>{t('loop')}</button>
         )}
@@ -10178,44 +10202,10 @@ Composition rules:
             </span>
           );
         })()}
-        <button
-          onClick={()=>{
-            // During the demo reel, Clear is an escape gesture: stop the reel
-            // and DO NOT actually clear the canvas — leaving the painting
-            // intact so the viewer can keep it or interact further.
-            if(demoReelOn){ demoReelStop(); return; }
-            // L3: clear() doesn't gracefully handle being called while recording —
-            // it stops playback (the recorder's audio source) but leaves the
-            // recorder running with no input, producing a silent / truncated
-            // file. Block clear during recording; the user must stop the
-            // recording explicitly first.
-            if(recording)return;
-            if(clearArmed){
-              // Second tap — actually clear
-              if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
-              setClearArmed(false);
-              clearCanvas();
-            }else{
-              // First tap — arm only if there's something worth protecting.
-              // Visually empty canvas (no painted blocks AND no held keys) = nothing
-              // to protect, clear immediately. Loaded but not-yet-played sources
-              // (e.g. just picked a Mood) count as empty: chords is populated but
-              // disp is 0 since playback hasn't rendered any blocks yet.
-              // In compose mode disp stays 0 but chords IS the painting — count it.
-              const hasPainting = disp>0 || (composedModeRef.current && chords.length>0);
-              if(!hasPainting&&!pending.length){clearCanvas();return;}
-              setClearArmed(true);
-              clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
-            }
-          }}
-          className="pf-lift pf-tx-clear"
-          disabled={recording}
-          title={recording?t('stopRecFirst'):undefined}
-          style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
-        
         {composeMode&&(
           <button className="pf-lift pf-tx-undo" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
         )}
+        </div>
       </div>
       {composeMode && (
       <div ref={kbScrollRef} className="pf-piano-dock" style={{overflowX:'auto',maxWidth:'100%',marginTop:12,paddingBottom:4,touchAction:'pan-x',WebkitOverflowScrolling:'touch'}}>
