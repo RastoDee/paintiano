@@ -22429,7 +22429,7 @@ Composition rules:
         setChords(evts);chordsRef.current=evts;
         resumeFromRef.current=keep;
         setStamp(s=>s+1);
-        try{ startPlayRef.current?.(); }catch(_){}
+        try{ startPlayRef.current?.({melodyRearm:true}); }catch(_){}
       } else {
         // Playback loop reads chords live from chordsRef each step, so swapping in
         // the re-transcribed notes is enough — next step plays the new colour's
@@ -22518,9 +22518,14 @@ Composition rules:
 
 
   const lastStartPlayRef = useRef(0);
-  const startPlay=useCallback(async ()=>{
+  const startPlay=useCallback(async (opts)=>{
+    const _melodyRearm = !!(opts && opts.melodyRearm);
     const now=Date.now();
-    if(now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
+    // Skip the double-fire debounce when this call is a melody re-arm (the rebuild
+    // effect restarting the voice from the current position) — that legitimately
+    // fires right after the original Play, and must not be swallowed, or turning
+    // MELODY on mid-playback would silently do nothing.
+    if(!_melodyRearm && now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
     // Gentle in-gesture audio wake: just make sure the context is running. The
     // heavier disconnect/rebuild/restart recovery was destabilising audio across
@@ -24079,7 +24084,7 @@ Composition rules:
   };
 
   const{N,BW,BH,CW,CH}=grid;
-  const pct=info?Math.round(disp/Math.max(1,chords.length)*100):null;
+  const pct=(info||chords.length)?Math.round(disp/Math.max(1,chords.length)*100):null;
   // Pre-build a Set so each of the 88 white keys can do O(1) `.has()`
   // instead of pending.includes() which would be O(88 * len(pending)).
   const pendingSet = useMemo(() => new Set(pending), [pending]);
@@ -25975,7 +25980,7 @@ Composition rules:
         };
         const _imgAtmo = (viewMode==='image' && originalImgUrl && atmoOn && atmoMood);
         const _atmoTitle = _imgAtmo ? (()=>{ const w=_atmoWordSeek(atmoMood.v,atmoMood.e); const ti=(atmoMood.title&&String(atmoMood.title).trim())||''; return ti?(ti+' · '+w):w; })() : null;
-        const seekTitle = _atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : t('mic').replace(/[^\p{L} ]/gu,''))); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
+        const seekTitle = _atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : (micPainting||micListening||micActive) ? t('mic').replace(/[^\p{L} ]/gu,'') : '')); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{(moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>))}</span>
