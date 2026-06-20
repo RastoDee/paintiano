@@ -15656,9 +15656,20 @@ function _atmoTransform(evts, mood, skipTiming){
 //
 // Returns { events, voice } — events is the texture (clone, never mutated); voice
 // is [{pos, m, v, durMs}] or [] if nothing to sing.
-function _melodyVoice(evts, mel){
+function _melodyVoice(evts, mel, atmo){
   const empty={ events:evts, voice:[] };
   if(!evts||!evts.length||!mel||!mel.notes||!mel.notes.length) return empty;
+  // KEY MATCH: when ATM is on, the texture has been snapped to a mood scale
+  // (root + major/minor/lydian). Snap the melody + chords to the SAME scale so the
+  // sung line stays in tune with the retuned texture instead of clashing.
+  let snap=(m)=>m;
+  if(atmo && typeof atmo.root==='number'){
+    const v=typeof atmo.v==='number'?atmo.v:0, e=typeof atmo.e==='number'?atmo.e:0.5;
+    const sm=(v>=0.5&&e>0.7)?'lydian':(v>=0?'major':'minor');
+    const SC=({major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],lydian:[0,2,4,6,7,9,11]})[sm];
+    const root=((atmo.root||0)%12+12)%12;
+    snap=(m)=>{ const pc=((m-root)%12+12)%12; let best=SC[0],bd=99; for(const d of SC){ const dd=Math.min(((pc-d)%12+12)%12,((d-pc)%12+12)%12); if(dd<bd){bd=dd;best=d;} } let delta=((best-pc)%12+12)%12; if(delta>6) delta-=12; return m+delta; };
+  }
   // Texture ceiling (highest scan pitch) so the melody can sit just above it.
   let scanHi=0, scanLo=128;
   for(const ev of evts){ for(const no of (ev.n||[])){ if(no.m>scanHi)scanHi=no.m; if(no.m<scanLo)scanLo=no.m; } }
@@ -15670,6 +15681,7 @@ function _melodyVoice(evts, mel){
     let m=raw[0];
     if(typeof m==='string') m=name2midi(m);
     if(typeof m!=='number'||!isFinite(m)) continue;
+    m=snap(m);
     const durB=Math.max(0.25, +raw[1]||0.5);
     const startB=Math.max(0, +raw[2]||0);
     const vel=Math.max(1,Math.min(127, Math.round(+raw[3]||100)));
@@ -15714,7 +15726,7 @@ function _melodyVoice(evts, mel){
       const startB=Math.max(0, +raw[2]||0);
       const vel=Math.max(1,Math.min(127, Math.round(+raw[3]||80)));
       const ms=[];
-      for(const p of pitches){ let m=typeof p==='string'?name2midi(p):p; if(typeof m==='number'&&isFinite(m)){ ms.push(Math.max(33,Math.min(88,m))); } }
+      for(const p of pitches){ let m=typeof p==='string'?name2midi(p):p; if(typeof m==='number'&&isFinite(m)){ ms.push(Math.max(33,Math.min(88,snap(m)))); } }
       if(ms.length) cellChords.push({ tBeat:Math.max(0,startB-melMinBeat), durB, ms, v:Math.max(58,Math.min(96,Math.round(vel*0.82))) });
     }
   }
@@ -20482,6 +20494,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // the effect, micArmed remains stable across re-renders.
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
+  // Mirror atmo into refs so the melody voice (scheduled from the stable startPlay
+  // callback) can snap the sung line to the SAME mood scale the texture was
+  // transformed into — otherwise turning ATM on retunes the texture but leaves the
+  // melody in its original key, and the two clash.
+  const atmoOnRef=useRef(false);   useEffect(()=>{atmoOnRef.current=atmoOn;},[atmoOn]);
+  const atmoMoodRef=useRef(null);  useEffect(()=>{atmoMoodRef.current=atmoMood;},[atmoMood]);
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
   // MELODY chip ("obraz spieva"): when ON, an AI-composed SINGING melodic line is
   // layered ON TOP of the scan texture (see _melodyVoice in 04-songs). It does NOT
@@ -22881,7 +22899,7 @@ Composition rules:
       // No race with the rebuild effect.
       if(melodyOnRef.current && melodyDataRef.current){
         let voice=[];
-        try{ const _mv=_melodyVoice(chordsRef.current||[], melodyDataRef.current); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
+        try{ const _atmoForMel=(atmoOnRef.current&&atmoMoodRef.current)?atmoMoodRef.current:null; const _mv=_melodyVoice(chordsRef.current||[], melodyDataRef.current, _atmoForMel); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
         if(voice.length){
           // Real total duration of the texture at the current dynamic tempo, from
           // the not-yet-elapsed portion (so a resume mid-piece still lines up).
@@ -27078,7 +27096,7 @@ Composition rules:
           );
         })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&imgPlayMode!=='compose'&&(
-          <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{...txStyle('ai',{effScale,on:atmoOn,disabled:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked))})}}>
+          <button onClick={()=>{ if(atmoBusy) return; if(aiLocked && !atmoMood){ setPaywallReason('ai_trial'); return; } if((playingRef.current||holdPausedRef.current)&&melodyOnRef.current) _melodyTogglePlayingRef.current=true; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={{...txStyle('ai',{effScale,on:atmoOn,disabled:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLocked))})}}>
             <TxIcon n="sparkle" s={14*effScale}/><span>{(t('atmoLabel')||'atmosphere')+(atmoBusy?' · …':(aiLocked&&!atmoMood)?' · —':(!atmoMood&&!aiUsable)?' · '+(t('aiOffline')||'offline'):'')}</span>
             {aiLocked && !atmoMood && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>

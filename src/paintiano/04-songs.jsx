@@ -1741,32 +1741,52 @@ function _melodyVoice(evts, mel, atmo){
 
   const voice=[];
   const beatToFrac = cellBeats>0 ? (cellFrac/cellBeats) : 0;   // beats → fraction of timeline
+  const cellHi = cellNotes.reduce((a,n)=>Math.max(a,n.m),0);   // cell's own peak (for phrase-arc shaping)
   for(let E=0;E<entries;E++){
     const base = (entries>1) ? (firstStart + E*span) : firstStart;
-    // Dynamic shape across the piece: gentle at first entry, fullest near the
-    // climax (the penultimate/last entry), settling at the very end.
-    const arc = entries>1 ? E/(entries-1) : 0.6;          // 0..1 across entries
-    const climax = 1 - Math.abs(arc-0.78)*1.4;            // peaks ~78% through
+    // Dynamic shape across the whole piece: gentle first entry, fullest near the
+    // climax (~78% through), settling at the very end.
+    const arc = entries>1 ? E/(entries-1) : 0.6;
+    const climax = 1 - Math.abs(arc-0.78)*1.4;
     const dynMul = 0.82 + 0.18*Math.max(0,Math.min(1,climax));
-    // melody (legato within the entry)
+    // #5 VARIATION ON RETURN: the first statement is the plain theme. Each return
+    // is varied so the piece develops instead of repeating — alternate returns lift
+    // an octave (when it stays in range), and later returns sing a touch brighter.
+    // Entry 0 = theme; entry 1 = octave-up answer; entry 2 = theme (climax, full);
+    // entry 3 = octave-up; … This is what keeps repeats from getting tiresome.
+    let octShift = 0;
+    if(E>0 && (E%2===1) && cellHi+12 <= 96) octShift = 12;
+    // #3 INTRA-PHRASE DYNAMICS: within each entry, swell toward the melodic peak
+    // and ease off at the phrase ends, so the line breathes like a singer rather
+    // than playing every note at one level.
     for(let i=0;i<cellNotes.length;i++){
       const cur=cellNotes[i], nxt=cellNotes[i+1];
       const pos=base + cur.tBeat*beatToFrac;
       if(pos>=1) continue;
+      // phrase-arc factor: higher notes / mid-phrase louder, edges softer.
+      const pitchRise = cellHi>0 ? (cur.m/cellHi) : 1;                  // ~0.8..1 across the cell's range
+      const edge = 1 - Math.abs((i/(Math.max(1,cellNotes.length-1)))-0.5)*0.5; // mid-phrase fuller
+      const shape = 0.84 + 0.16*Math.max(0,Math.min(1,(pitchRise-0.8)/0.2))*edge;
       let durFrac;
-      if(nxt){ durFrac=Math.max(0.004,(nxt.tBeat-cur.tBeat)*beatToFrac*1.05); }
-      else   { durFrac=Math.max(0.004, cur.durB*beatToFrac*0.95); }
-      durFrac=Math.min(cellFrac*0.9, durFrac);
-      voice.push({ pos:Math.min(1,pos), durFrac, m:cur.m, v:Math.max(70,Math.min(124,Math.round(cur.v*dynMul))) });
+      if(nxt){ durFrac=Math.max(0.004,(nxt.tBeat-cur.tBeat)*beatToFrac*1.08); }
+      else   { durFrac=Math.max(0.004, cur.durB*beatToFrac*1.0); }
+      // #1 PEDAL: let melody notes ring a little past the next onset (sustain-pedal
+      // bleed) so the line is connected and resonant, not dry and detached.
+      durFrac=Math.min(cellFrac*1.05, durFrac);
+      const m = cur.m + octShift;
+      voice.push({ pos:Math.min(1,pos), durFrac, m:Math.min(100,m), v:Math.max(66,Math.min(124,Math.round(cur.v*dynMul*shape))) });
     }
-    // chords under it — thin them out on the gentle first entry, full at climax
-    const withChords = (arc>0.15);   // first quiet entry: melody mostly alone
+    // chords under it — thin on the gentle first entry, full at climax. With PEDAL
+    // the chords sustain longer for harmonic resonance under the melody.
+    const withChords = (arc>0.15);
     if(withChords){
       for(const ch of cellChords){
         const pos=base + ch.tBeat*beatToFrac;
         if(pos>=1) continue;
-        const durFrac=Math.min(cellFrac*0.95, Math.max(0.01, ch.durB*beatToFrac*0.95));
-        for(const m of ch.ms){ voice.push({ pos:Math.min(1,pos), durFrac, m, v:Math.max(54,Math.min(98,Math.round(ch.v*dynMul))) }); }
+        // pedal: hold the harmony through ~1.6× its written length for resonance,
+        // capped so it doesn't smear across the next chord change.
+        const durFrac=Math.min(cellFrac*1.1, Math.max(0.01, ch.durB*beatToFrac*1.6));
+        for(const m of ch.ms){ voice.push({ pos:Math.min(1,pos), durFrac, m, v:Math.max(52,Math.min(98,Math.round(ch.v*dynMul))) }); }
       }
     }
   }
