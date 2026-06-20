@@ -1682,9 +1682,10 @@ function _melodyVoice(evts, mel){
   for(const mn of parsed){
     const pos=Math.max(0,Math.min(1,(mn.startB-melMinBeat)/melBeatSpan));
     // Duration as a FRACTION of the whole piece; the player turns it into ms once
-    // it knows the real (dynamic) total length. Slight detach so a run stays
-    // articulate rather than smearing into one held chord.
-    const durFrac=Math.max(0.004, (mn.durB/melBeatSpan)*0.82);
+    // it knows the real (dynamic) total length. Near-legato (0.96) so consecutive
+    // notes almost touch and the line SINGS as one connected phrase rather than
+    // ticking out separated dots.
+    const durFrac=Math.max(0.004, (mn.durB/melBeatSpan)*0.96);
     let mm=mn.m+lift;
     mm=Math.max(52, Math.min(97, mm));
     voice.push({ pos, durFrac, m:mm, v:leadVel(mn.vel) });
