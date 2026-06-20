@@ -821,6 +821,15 @@ const PF_STYLE = `
           .pf-app-root:not(.pf-mode-setup) div:has(> .pf-vary) {
             grid-template-columns: 1fr !important;
           }
+          /* Save picker on landscape: shift the modal toward the right edge so
+             a thumb holding the tablet can reach it (centered modals on wide
+             screens sit dead-center and are unreachable). Portrait keeps the
+             centered default (overlay's inline justifyContent:center still
+             applies because this rule doesn't fire there). */
+          .pf-save-overlay {
+            justify-content: flex-end !important;
+            padding-right: clamp(40px, 12vw, 160px) !important;
+          }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the

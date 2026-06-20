@@ -169,23 +169,32 @@ const PF_STYLE = `
             width: 100% !important;
             padding: 14px 24px 28px !important;
           }
-          /* PLAY SCREEN ONLY — 5-column grid (matches the approved mockup
-             exactly: 96 / 152 / 1fr / 152 / 96, gap 14). Outer txL/txR are the
-             transport edges reachable by both thumbs. Setup screen excluded via
-             :not(.pf-mode-setup) so it keeps the original 3-col rule above. */
-          .pf-app-root:not(.pf-mode-setup) {
-            grid-template-columns: 110px 138px minmax(0, 1fr) 138px 110px !important;
-            grid-template-areas:
-              "topbar  topbar   topbar topbar  topbar"
-              "header  header   header header  header"
-              "txL     controls stage  rtop    txR"
-              "txL     colors   stage  styles  txR"
-              "txL     .        stage  styles  txR"
-              "txL     .        stage  rfab    txR"
-              "vfooter vfooter  vfooter vfooter vfooter"
-              "legal   legal    legal  legal   legal" !important;
-            column-gap: 14px !important;
+          /* PLAY SCREEN — 5-column grid for LANDSCAPE viewports ≥769px (desktop,
+             tablet landscape). Outer txL/txR are the transport edges reachable
+             by both thumbs. Setup screen excluded. Tablet PORTRAIT keeps the
+             original 3-col layout (handled separately below) — there the canvas
+             needs the full middle, transport just splits L/R inside the existing
+             side columns. */
+          @media (orientation: landscape) {
+            .pf-app-root:not(.pf-mode-setup) {
+              grid-template-columns: 110px 138px minmax(0, 1fr) 138px 110px !important;
+              grid-template-areas:
+                "topbar  topbar   topbar topbar  topbar"
+                "header  header   header header  header"
+                "txL     controls stage  rtop    txR"
+                "txL     colors   stage  styles  txR"
+                "txL     .        stage  styles  txR"
+                "txL     .        stage  rfab    txR"
+                "vfooter vfooter  vfooter vfooter vfooter"
+                "legal   legal    legal  legal   legal" !important;
+              column-gap: 14px !important;
+            }
           }
+          /* TABLET PORTRAIT (≥769px portrait): keep the original 3-column grid
+             — canvas needs the full middle. The L/R transport split happens via
+             a DIFFERENT mechanism (controls inside the side columns), not via
+             new grid columns. So no override here; the default 3-col rule above
+             already applies. */
           .pf-app-root > .pf-topbar {
             grid-area: topbar;
             max-width: 100% !important;
@@ -613,39 +622,39 @@ const PF_STYLE = `
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
           }
-          /* Play screen: dock moves from the legacy ltrans (under palettes) to
-             the right edge. Mirror styling on the new left edge wrapper so both
-             edges read as matching transport cards. The left edge holds the
-             three universal playback controls (play/mute/clear); the dock holds
-             everything else (mode-specific actions). Inside the dock, the L
-             buttons are hidden on desktop play (they'd otherwise duplicate). */
-          .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
-            grid-area: txR !important;
-          }
-          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l {
-            grid-area: txL;
-            align-self: start;
-            margin-top: 12px;
-            background: var(--pf-card, #161320);
-            border: 1px solid rgba(242,238,232,.08);
-            border-radius: 18px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-            align-items: stretch;
-          }
-          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button {
-            width: 100% !important;
-            justify-content: center !important;
-          }
-          /* In desktop play, the duplicates of L-buttons that still live inside
-             the dock would render twice. Hide the dock copies so each control
-             appears exactly once (on the L edge). */
-          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-play,
-          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-mute,
-          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-clear {
-            display: none !important;
+          /* Play screen LANDSCAPE: dock moves from the legacy ltrans (under
+             palettes) to the right edge txR. Mirror styling on the new left
+             edge wrapper so both edges read as matching transport cards. The
+             left edge holds the three universal playback controls; the dock
+             holds everything else. Inside the dock, the L buttons are hidden
+             so they don't duplicate. — In PORTRAIT these txL/txR areas don't
+             exist (no 5-col grid), so portrait scoping is essential. */
+          @media (orientation: landscape) {
+            .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
+              grid-area: txR !important;
+            }
+            .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l {
+              grid-area: txL;
+              align-self: start;
+              margin-top: 12px;
+              background: var(--pf-card, #161320);
+              border: 1px solid rgba(242,238,232,.08);
+              border-radius: 18px;
+              padding: 12px;
+              display: flex;
+              flex-direction: column;
+              gap: 7px;
+              align-items: stretch;
+            }
+            .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button {
+              width: 100% !important;
+              justify-content: center !important;
+            }
+            .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-play,
+            .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-mute,
+            .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-clear {
+              display: none !important;
+            }
           }
           .pf-transport-dock .pf-transport-row {
             flex-direction: column !important;
@@ -704,6 +713,114 @@ const PF_STYLE = `
           .pf-mode-live .pf-transport-row .pf-tx-save  { order: 4 !important; }
           .pf-mode-live .pf-transport-row .pf-tx-clear { order: 5 !important; }
           .pf-mode-live .pf-transport-row .pf-tx-scale { order: 6 !important; }
+        }
+        /* MOBILE LANDSCAPE (<769px landscape, e.g. phone on its side ~700–900px
+           wide): use a 5-column grid too, but with TIGHTER widths so the chips
+           fit. txL/txR 70px, palettes/artists 90px, canvas takes the middle.
+           The pf-tx-edge-l wrapper and dock→txR rules below this block are
+           shared with the desktop landscape rules above (same selectors). */
+        @media (max-width: 768px) and (orientation: landscape) {
+          .pf-app-root:not(.pf-mode-setup) {
+            display: grid !important;
+            grid-template-columns: 70px 90px minmax(0, 1fr) 90px 70px !important;
+            grid-template-rows: auto auto auto auto auto 1fr auto auto;
+            grid-template-areas:
+              "topbar  topbar   topbar topbar  topbar"
+              "header  header   header header  header"
+              "txL     controls stage  rtop    txR"
+              "txL     colors   stage  styles  txR"
+              "txL     .        stage  styles  txR"
+              "txL     .        stage  rfab    txR"
+              "vfooter vfooter  vfooter vfooter vfooter"
+              "legal   legal    legal  legal   legal" !important;
+            column-gap: 10px !important;
+            padding: 10px 12px 20px !important;
+            align-content: start !important;
+            align-items: start !important;
+            justify-items: stretch !important;
+          }
+          /* Same area-mapping as landscape desktop — the rules above (inside
+             the 769px+ block, scoped by @media (orientation: landscape)) don't
+             apply here because we're <769px. Replicate the essentials. */
+          .pf-app-root:not(.pf-mode-setup) > .pf-topbar      { grid-area: topbar; }
+          .pf-app-root:not(.pf-mode-setup) > header          { grid-area: topbar; }
+          .pf-app-root:not(.pf-mode-setup) .pf-controls-inner { grid-area: controls; align-self: start; }
+          .pf-app-root:not(.pf-mode-setup) > .pf-seek-block  { grid-area: rtop; align-self: start; max-width: 100% !important; margin: 0 0 8px !important; }
+          .pf-app-root:not(.pf-mode-setup) > .pf-panel-part  { display: contents !important; }
+          .pf-app-root:not(.pf-mode-setup) .pf-strip-grid    { display: contents !important; }
+          .pf-app-root:not(.pf-mode-setup) .pf-colors-inner  { grid-area: colors; }
+          .pf-app-root:not(.pf-mode-setup) .pf-styles-inner  { grid-area: styles; }
+          .pf-app-root:not(.pf-mode-setup) > .pf-stage-part  { grid-area: stage; }
+          .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
+            grid-area: txR !important;
+            position: static !important;
+            margin-top: 10px;
+            left: auto !important; right: auto !important; bottom: auto !important; top: auto !important;
+            width: auto !important;
+            background: var(--pf-card, #161320) !important;
+            border-top: none !important;
+            border: 1px solid rgba(242,238,232,.08) !important;
+            border-radius: 14px !important;
+            padding: 8px !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row {
+            flex-direction: column !important;
+            flex-wrap: nowrap !important;
+            gap: 6px !important;
+            align-items: stretch !important;
+            margin-bottom: 0 !important;
+          }
+          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
+          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l {
+            grid-area: txL;
+            align-self: start;
+            margin-top: 10px;
+            background: var(--pf-card, #161320);
+            border: 1px solid rgba(242,238,232,.08);
+            border-radius: 14px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: stretch;
+          }
+          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button { width: 100% !important; justify-content: center !important; }
+          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-play,
+          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-mute,
+          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-clear {
+            display: none !important;
+          }
+          .pf-app-root:not(.pf-mode-setup) > .pf-version-footer { grid-area: vfooter; width: 100%; }
+          .pf-app-root:not(.pf-mode-setup) > .pf-legal-links    { grid-area: legal; width: 100%; }
+          .pf-app-root:not(.pf-mode-setup) .pf-help-fab         { grid-area: rfab !important; position: static !important; }
+        }
+        /* LANDSCAPE-ONLY chip styling (applies to BOTH desktop ≥769px landscape
+           AND mobile landscape — i.e. any time the 5-col grid is active). Taller
+           chips so long labels (MELODY, VARIATION, ATM/MELODY combos) wrap to
+           two lines instead of being cut. MORF + VARIÁCIA buttons stack
+           vertically instead of side-by-side (uniform with the edge columns).
+           Tablet PORTRAIT (3-col) is untouched — no rule fires there. */
+        @media (orientation: landscape) {
+          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button,
+          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button {
+            min-height: 56px;
+            padding: 8px 5px !important;
+            white-space: normal !important;
+            line-height: 1.15 !important;
+            word-break: keep-all;
+          }
+          /* MORF + VARIÁCIA: their parent is an inline-styled 2-col grid (set in
+             JSX at the MORF button site). :has() lets us target that parent
+             without touching JSX. In landscape, collapse to a single column so
+             the two action buttons stack — consistent with the vertical edge
+             stacks left and right. */
+          .pf-app-root:not(.pf-mode-setup) .pf-controls-inner ~ * div:has(> .pf-morph),
+          .pf-app-root:not(.pf-mode-setup) div:has(> .pf-morph),
+          .pf-app-root:not(.pf-mode-setup) div:has(> .pf-vary) {
+            grid-template-columns: 1fr !important;
+          }
         }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the

@@ -9428,7 +9428,7 @@ Composition rules:
         // option set because their pieces are newly composed.
         const isImportedMedia = loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score';
         return (
-        <div onClick={()=>setShowSizePicker(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:20}}>
+        <div onClick={()=>setShowSizePicker(false)} className="pf-save-overlay" style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:20}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export" style={{background:'#0a0a14',border:'1px solid '+pk.edge,borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:pk.line,fontSize:(.65*effScale)+'rem'}}>
               ↓ {t('save')}</div>
@@ -10013,7 +10013,7 @@ Composition rules:
         )}{/* After stop, the transport pill disappears entirely — Clear is the
             way to start a fresh song. The old "tap REC again" pill caused
             confusion and let the user accidentally extend a finished take. */}<button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
-        {currentMood&&(
+        {currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && (
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={txStyle(loopMode?'active':'neutral',{effScale,disabled:recording})}><TxIcon n="loop" s={14*effScale}/>{t('loop')}</button>
         )}
         {/* Original ⇄ Piano source toggle — appears once the mic session
