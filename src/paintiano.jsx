@@ -15687,23 +15687,39 @@ function _melodyVoice(evts, mel){
   while((melHi+lift) > 96 && (melLo+lift) > scanHi+5) lift-=12;
   // Proportional position 0..1 across the melody's own beat span.
   const melBeatSpan=melMaxBeat-melMinBeat;
-  // Lead velocity — sits clearly out front over the texture, while still keeping
-  // the line's own phrasing contour (its loud peaks vs softer dips). Peaks reach
-  // full ff so the sung line reads as the foreground voice.
-  const leadVel=(v)=> Math.max(106, Math.min(127, Math.round(104 + (v/127)*30)));
-  const voice=[];
+  // Lead velocity — present out front over the texture, but NOT a hammer on every
+  // note. A gentler curve (90..118) keeps the line singing rather than clicking;
+  // the phrasing contour (its own louder peaks vs softer dips) is preserved.
+  const leadVel=(v)=> Math.max(90, Math.min(118, Math.round(88 + (v/127)*30)));
+  // First pass: positions + base pitch.
+  const raw=[];
   for(const mn of parsed){
     const pos=Math.max(0,Math.min(1,(mn.startB-melMinBeat)/melBeatSpan));
-    // Duration as a FRACTION of the whole piece; the player turns it into ms once
-    // it knows the real (dynamic) total length. Near-legato (0.96) so consecutive
-    // notes almost touch and the line SINGS as one connected phrase rather than
-    // ticking out separated dots.
-    const durFrac=Math.max(0.004, (mn.durB/melBeatSpan)*0.96);
     let mm=mn.m+lift;
     mm=Math.max(52, Math.min(97, mm));
-    voice.push({ pos, durFrac, m:mm, v:leadVel(mn.vel) });
+    raw.push({ pos, m:mm, v:leadVel(mn.vel), durB:mn.durB });
   }
-  voice.sort((a,b)=>a.pos-b.pos);
+  raw.sort((a,b)=>a.pos-b.pos);
+  // Second pass: LEGATO. Instead of giving each note its own isolated length,
+  // sustain it THROUGH the start of the next note (plus a small overlap) so the
+  // notes physically connect — the way a pianist's fingers overlap to bind a
+  // melodic line, rather than striking each key as a separate detached event.
+  // The final note keeps its written length. This is what turns "tick · tick ·
+  // tick" into one flowing sung phrase over the texture underneath.
+  const voice=[];
+  for(let i=0;i<raw.length;i++){
+    const cur=raw[i];
+    const nxt=raw[i+1];
+    let durFrac;
+    if(nxt){
+      const gapToNext=Math.max(0, nxt.pos-cur.pos);     // fraction of the piece until the next note
+      // hold to the next onset, then 18% past it so the tones overlap and bind
+      durFrac=Math.max(0.012, gapToNext*1.18);
+    }else{
+      durFrac=Math.max(0.012, (cur.durB/melBeatSpan)*0.96);
+    }
+    voice.push({ pos:cur.pos, durFrac, m:cur.m, v:cur.v });
+  }
   return { events:evts, voice };
 }
 
@@ -20430,6 +20446,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // mode-toggle effect knows to restart-from-position (to re-arm the parallel voice)
   // instead of doing a seamless live swap (which is right for colour changes).
   const _melodyTogglePlayingRef=useRef(false);
+  // Bumped to instantly silence the parallel sung voice: every scheduled voice
+  // note captures the current value and bails if it changed by the time it fires.
+  // The chip handler bumps this the moment MELODY is switched OFF mid-playback, so
+  // the line stops on the spot without waiting on the rebuild-effect restart.
+  const melodyVoiceGenRef=useRef(0);
   // Melody cache keyed by image hash + atmo signature (same image + same mood →
   // replay the layered line free, no extra AI call). Parallels _imgComposeCache.
   // Body 10: AI-availability tracking. `isOnline` follows the network; `aiDown`
@@ -22112,7 +22133,7 @@ Each note: [pitch, durationInBeats, startBeat, velocity]. Pitches as names with 
       // in time, not from the top. Set the flag here (on the live transport
       // state) rather than at chip-tap time, so it's fresh when the data lands.
       if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true;
-      melodyDataRef.current=mel; melodyOnRef.current=true;
+      melodyDataRef.current=mel; melodyOnRef.current=true; melodyVoiceGenRef.current++;
       setMelodyData(mel); setMelodyOn(true);
     }
   },[melodyBusy,melodyOn,generateMelody]);
@@ -22812,6 +22833,7 @@ Composition rules:
           const startedAtFrac = (_melSteps&&_melSteps.length)
             ? (fromIdx>0 ? Math.min(1, fromIdx/_melSteps.length) : 0) : 0;
           const voiceGen = genRef.current;
+          const voiceGen2 = melodyVoiceGenRef.current;
           for(const mn of voice){
             // Skip notes already passed when resuming from the middle.
             if(mn.pos < startedAtFrac) continue;
@@ -22820,6 +22842,8 @@ Composition rules:
             const durMs = Math.max(300, Math.round((mn.durFrac||0.01) * totalMs));
             const id = setTimeout(()=>{
               if(genRef.current!==voiceGen) return;          // stopped → don't sound
+              if(melodyVoiceGenRef.current!==voiceGen2) return; // melody switched off → silence
+              if(!melodyOnRef.current) return;                // belt-and-braces: off → silent
               try{
                 playNote(mn.m, mn.v, Math.round(durMs/playbackSpeedRef.current));
                 setActive(p=>{const s=new Set(p); s.add(mn.m); return s;});
@@ -27002,7 +27026,7 @@ Composition rules:
           </button>
         )}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&imgPlayMode!=='compose'&&(
-          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ melodyOnRef.current=false; setMelodyOn(false); } else if(melodyData){ melodyOnRef.current=true; setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
+          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ melodyOnRef.current=false; melodyVoiceGenRef.current++; setMelodyOn(false); } else if(melodyData){ melodyOnRef.current=true; melodyVoiceGenRef.current++; setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
             <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+(melodyBusy?' · …':(aiLocked&&!melodyData)?' · —':(!melodyData&&!aiUsable)?' · '+(t('aiOffline')||'offline'):'')}</span>
             {aiLocked && !melodyData && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>

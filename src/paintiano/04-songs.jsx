@@ -1674,23 +1674,39 @@ function _melodyVoice(evts, mel){
   while((melHi+lift) > 96 && (melLo+lift) > scanHi+5) lift-=12;
   // Proportional position 0..1 across the melody's own beat span.
   const melBeatSpan=melMaxBeat-melMinBeat;
-  // Lead velocity — sits clearly out front over the texture, while still keeping
-  // the line's own phrasing contour (its loud peaks vs softer dips). Peaks reach
-  // full ff so the sung line reads as the foreground voice.
-  const leadVel=(v)=> Math.max(106, Math.min(127, Math.round(104 + (v/127)*30)));
-  const voice=[];
+  // Lead velocity — present out front over the texture, but NOT a hammer on every
+  // note. A gentler curve (90..118) keeps the line singing rather than clicking;
+  // the phrasing contour (its own louder peaks vs softer dips) is preserved.
+  const leadVel=(v)=> Math.max(90, Math.min(118, Math.round(88 + (v/127)*30)));
+  // First pass: positions + base pitch.
+  const raw=[];
   for(const mn of parsed){
     const pos=Math.max(0,Math.min(1,(mn.startB-melMinBeat)/melBeatSpan));
-    // Duration as a FRACTION of the whole piece; the player turns it into ms once
-    // it knows the real (dynamic) total length. Near-legato (0.96) so consecutive
-    // notes almost touch and the line SINGS as one connected phrase rather than
-    // ticking out separated dots.
-    const durFrac=Math.max(0.004, (mn.durB/melBeatSpan)*0.96);
     let mm=mn.m+lift;
     mm=Math.max(52, Math.min(97, mm));
-    voice.push({ pos, durFrac, m:mm, v:leadVel(mn.vel) });
+    raw.push({ pos, m:mm, v:leadVel(mn.vel), durB:mn.durB });
   }
-  voice.sort((a,b)=>a.pos-b.pos);
+  raw.sort((a,b)=>a.pos-b.pos);
+  // Second pass: LEGATO. Instead of giving each note its own isolated length,
+  // sustain it THROUGH the start of the next note (plus a small overlap) so the
+  // notes physically connect — the way a pianist's fingers overlap to bind a
+  // melodic line, rather than striking each key as a separate detached event.
+  // The final note keeps its written length. This is what turns "tick · tick ·
+  // tick" into one flowing sung phrase over the texture underneath.
+  const voice=[];
+  for(let i=0;i<raw.length;i++){
+    const cur=raw[i];
+    const nxt=raw[i+1];
+    let durFrac;
+    if(nxt){
+      const gapToNext=Math.max(0, nxt.pos-cur.pos);     // fraction of the piece until the next note
+      // hold to the next onset, then 18% past it so the tones overlap and bind
+      durFrac=Math.max(0.012, gapToNext*1.18);
+    }else{
+      durFrac=Math.max(0.012, (cur.durB/melBeatSpan)*0.96);
+    }
+    voice.push({ pos:cur.pos, durFrac, m:cur.m, v:cur.v });
+  }
   return { events:evts, voice };
 }
 

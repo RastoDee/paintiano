@@ -15695,9 +15695,10 @@ function _melodyVoice(evts, mel){
   for(const mn of parsed){
     const pos=Math.max(0,Math.min(1,(mn.startB-melMinBeat)/melBeatSpan));
     // Duration as a FRACTION of the whole piece; the player turns it into ms once
-    // it knows the real (dynamic) total length. Slight detach so a run stays
-    // articulate rather than smearing into one held chord.
-    const durFrac=Math.max(0.004, (mn.durB/melBeatSpan)*0.82);
+    // it knows the real (dynamic) total length. Near-legato (0.96) so consecutive
+    // notes almost touch and the line SINGS as one connected phrase rather than
+    // ticking out separated dots.
+    const durFrac=Math.max(0.004, (mn.durB/melBeatSpan)*0.96);
     let mm=mn.m+lift;
     mm=Math.max(52, Math.min(97, mm));
     voice.push({ pos, durFrac, m:mm, v:leadVel(mn.vel) });
@@ -22103,7 +22104,17 @@ Each note: [pitch, durationInBeats, startBeat, velocity]. Pitches as names with 
     if(melodyBusy) return;
     if(melodyOn){ setMelodyOn(false); return; }
     const mel=await generateMelody();
-    if(mel&&mel.notes&&mel.notes.length){ setMelodyData(mel); setMelodyOn(true); }
+    if(mel&&mel.notes&&mel.notes.length){
+      // If playback (or a hold-pause) is live at the moment the freshly generated
+      // melody comes back, arm the from-position re-join so the rebuild effect
+      // restarts the voice locked to the CURRENT spot — generation took a few
+      // seconds, so the playhead has moved; we want the line to come in there,
+      // in time, not from the top. Set the flag here (on the live transport
+      // state) rather than at chip-tap time, so it's fresh when the data lands.
+      if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true;
+      melodyDataRef.current=mel; melodyOnRef.current=true;
+      setMelodyData(mel); setMelodyOn(true);
+    }
   },[melodyBusy,melodyOn,generateMelody]);
 
   const aiCompose=useCallback(async(overrideMood)=>{
@@ -22806,7 +22817,7 @@ Composition rules:
             if(mn.pos < startedAtFrac) continue;
             const relPos = (mn.pos - startedAtFrac) / Math.max(1e-6, (1 - startedAtFrac));
             const atMs = Math.round((relPos * totalMs) / playbackSpeedRef.current);
-            const durMs = Math.max(220, Math.round((mn.durFrac||0.01) * totalMs));
+            const durMs = Math.max(300, Math.round((mn.durFrac||0.01) * totalMs));
             const id = setTimeout(()=>{
               if(genRef.current!==voiceGen) return;          // stopped → don't sound
               try{
@@ -26991,7 +27002,7 @@ Composition rules:
           </button>
         )}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&imgPlayMode!=='compose'&&(
-          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ setMelodyOn(false); } else if(melodyData){ setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
+          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ melodyOnRef.current=false; setMelodyOn(false); } else if(melodyData){ melodyOnRef.current=true; setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
             <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+(melodyBusy?' · …':(aiLocked&&!melodyData)?' · —':(!melodyData&&!aiUsable)?' · '+(t('aiOffline')||'offline'):'')}</span>
             {aiLocked && !melodyData && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>

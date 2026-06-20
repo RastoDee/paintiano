@@ -3465,6 +3465,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // mode-toggle effect knows to restart-from-position (to re-arm the parallel voice)
   // instead of doing a seamless live swap (which is right for colour changes).
   const _melodyTogglePlayingRef=useRef(false);
+  // Bumped to instantly silence the parallel sung voice: every scheduled voice
+  // note captures the current value and bails if it changed by the time it fires.
+  // The chip handler bumps this the moment MELODY is switched OFF mid-playback, so
+  // the line stops on the spot without waiting on the rebuild-effect restart.
+  const melodyVoiceGenRef=useRef(0);
   // Melody cache keyed by image hash + atmo signature (same image + same mood →
   // replay the layered line free, no extra AI call). Parallels _imgComposeCache.
   // Body 10: AI-availability tracking. `isOnline` follows the network; `aiDown`
@@ -5147,7 +5152,7 @@ Each note: [pitch, durationInBeats, startBeat, velocity]. Pitches as names with 
       // in time, not from the top. Set the flag here (on the live transport
       // state) rather than at chip-tap time, so it's fresh when the data lands.
       if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true;
-      melodyDataRef.current=mel; melodyOnRef.current=true;
+      melodyDataRef.current=mel; melodyOnRef.current=true; melodyVoiceGenRef.current++;
       setMelodyData(mel); setMelodyOn(true);
     }
   },[melodyBusy,melodyOn,generateMelody]);
@@ -5847,6 +5852,7 @@ Composition rules:
           const startedAtFrac = (_melSteps&&_melSteps.length)
             ? (fromIdx>0 ? Math.min(1, fromIdx/_melSteps.length) : 0) : 0;
           const voiceGen = genRef.current;
+          const voiceGen2 = melodyVoiceGenRef.current;
           for(const mn of voice){
             // Skip notes already passed when resuming from the middle.
             if(mn.pos < startedAtFrac) continue;
@@ -5855,6 +5861,8 @@ Composition rules:
             const durMs = Math.max(300, Math.round((mn.durFrac||0.01) * totalMs));
             const id = setTimeout(()=>{
               if(genRef.current!==voiceGen) return;          // stopped → don't sound
+              if(melodyVoiceGenRef.current!==voiceGen2) return; // melody switched off → silence
+              if(!melodyOnRef.current) return;                // belt-and-braces: off → silent
               try{
                 playNote(mn.m, mn.v, Math.round(durMs/playbackSpeedRef.current));
                 setActive(p=>{const s=new Set(p); s.add(mn.m); return s;});
@@ -10037,7 +10045,7 @@ Composition rules:
           </button>
         )}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&imgPlayMode!=='compose'&&(
-          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ melodyOnRef.current=false; setMelodyOn(false); } else if(melodyData){ melodyOnRef.current=true; setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
+          <button onClick={()=>{ if(melodyBusy) return; if(aiLocked && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ melodyOnRef.current=false; melodyVoiceGenRef.current++; setMelodyOn(false); } else if(melodyData){ melodyOnRef.current=true; melodyVoiceGenRef.current++; setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLocked)} className="pf-lift" title={(aiLocked&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={{...txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLocked))})}}>
             <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+(melodyBusy?' · …':(aiLocked&&!melodyData)?' · —':(!melodyData&&!aiUsable)?' · '+(t('aiOffline')||'offline'):'')}</span>
             {aiLocked && !melodyData && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
