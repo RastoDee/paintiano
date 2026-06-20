@@ -1937,7 +1937,19 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{
     const cv=canvasRef.current;if(!cv)return;
     const{N,BW,BH,CW,CH}=grid;
+    // ── SUPERSAMPLING (immersive fullscreen, painted modes only) ──────────────
+    // Root cause of fullscreen pixelation: the substrate + main canvas are both
+    // CW×CH (~900px); CSS stretches that to the full tablet width, so pixels show.
+    // Fix mirrors the export path: render at SS× the internal resolution and pre-
+    // scale the context, so the SAME draw calls (in CW/CH coords) produce a crisp
+    // high-res image. SS is 1 everywhere except immersive paint view, so normal and
+    // mobile rendering are byte-for-byte unchanged.
+    const SS = (immersive && viewMode==='paint') ? 2 : 1;
+    const _bw=Math.max(1,Math.round(CW*SS)), _bh=Math.max(1,Math.round(CH*SS));
+    if(cv.width!==_bw) cv.width=_bw;
+    if(cv.height!==_bh) cv.height=_bh;
     const ctx=cv.getContext('2d');
+    ctx.setTransform(SS,0,0,SS,0,0);   // CW/CH-space drawing now fills the SS× backing
     // The style actually rendered: the user's pick, or — in shuffle mode (no
     // artist + Random on) — the seed-derived shuffle draw. Shadowing `style`
     // here means every downstream render decision (overlay dispatch, cache key,
@@ -2141,16 +2153,18 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // is intentionally NOT in the key — growth is handled incrementally.
         const subKey=`${CW}x${CH}|${style}|${mode}|${stamp}|${pollockSessionSeed}`;
         let sctx=sub.ctx;
-        if(sub.key!==subKey||sub.CW!==CW||sub.CH!==CH||!sub.canvas){
+        if(sub.key!==subKey||sub.CW!==CW||sub.CH!==CH||sub.SS!==SS||!sub.canvas){
           // (Re)allocate offscreen canvas. Reuse the existing element when only
           // the key changed but dimensions match, to avoid GC churn.
-          if(!sub.canvas||sub.CW!==CW||sub.CH!==CH){
+          if(!sub.canvas||sub.CW!==CW||sub.CH!==CH||sub.SS!==SS){
             const oc=(typeof OffscreenCanvas!=='undefined')
-              ? new OffscreenCanvas(Math.max(1,CW),Math.max(1,CH))
-              : Object.assign(document.createElement('canvas'),{width:Math.max(1,CW),height:Math.max(1,CH)});
+              ? new OffscreenCanvas(Math.max(1,Math.round(CW*SS)),Math.max(1,Math.round(CH*SS)))
+              : Object.assign(document.createElement('canvas'),{width:Math.max(1,Math.round(CW*SS)),height:Math.max(1,Math.round(CH*SS))});
             sub.canvas=oc; sctx=oc.getContext('2d');
-            sub.ctx=sctx; sub.CW=CW; sub.CH=CH;
+            sub.ctx=sctx; sub.CW=CW; sub.CH=CH; sub.SS=SS;
           }
+          // Pre-scale so substrate drawing (in CW/CH coords) fills the SS× buffer.
+          sctx.setTransform(SS,0,0,SS,0,0);
           // Fresh substrate: paint background + grid, reset reveal counter.
           sctx.fillStyle='#04040a';sctx.fillRect(0,0,CW,CH);
           sctx.strokeStyle='rgba(255,255,255,0.025)';sctx.lineWidth=.5;
@@ -2199,7 +2213,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           // to be a uniform raw canvas, present from frame one).
           ctx.fillStyle = '#f2ede0';
           ctx.fillRect(0,0,CW,CH);
-        } else if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0);
+        } else if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0,CW,CH);
         // Run the canvas-wide overlay on top (this is the only per-frame cost
         // that legitimately scales with lim).
         if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
@@ -2298,7 +2312,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -9270,7 +9284,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW} height={CH} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
+        <canvas ref={canvasRef} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
