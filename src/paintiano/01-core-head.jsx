@@ -664,6 +664,20 @@ const PF_STYLE = `
             margin-bottom: 0 !important;
           }
           .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
+          /* Recording save row inside the dock: on desktop ≥769px (both
+             orientations) the dock is a narrow vertical column, so the inner
+             horizontal flex row (name + size + share + ×) squeezes into a
+             garbled red blob. Stack everything vertically so the input,
+             share button, and × button each get a full row. Mobile (<769px,
+             dock fixed at the bottom across the full viewport) keeps the
+             horizontal layout — that's where it reads correctly. */
+          .pf-rec-save-row > div:first-child {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 6px !important;
+          }
+          .pf-rec-save-row > div:first-child > span { width: 100% !important; }
+          .pf-rec-save-row > div:first-child > button { width: 100% !important; }
           /* Compose / Mic: the transport stays in the LEFT column under the
              palettes (same as every mode). Only the piano keyboard docks at the
              bottom as a clean full-width strip. The grid content (panels + canvas)

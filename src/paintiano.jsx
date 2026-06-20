@@ -664,6 +664,20 @@ const PF_STYLE = `
             margin-bottom: 0 !important;
           }
           .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
+          /* Recording save row inside the dock: on desktop ≥769px (both
+             orientations) the dock is a narrow vertical column, so the inner
+             horizontal flex row (name + size + share + ×) squeezes into a
+             garbled red blob. Stack everything vertically so the input,
+             share button, and × button each get a full row. Mobile (<769px,
+             dock fixed at the bottom across the full viewport) keeps the
+             horizontal layout — that's where it reads correctly. */
+          .pf-rec-save-row > div:first-child {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 6px !important;
+          }
+          .pf-rec-save-row > div:first-child > span { width: 100% !important; }
+          .pf-rec-save-row > div:first-child > button { width: 100% !important; }
           /* Compose / Mic: the transport stays in the LEFT column under the
              palettes (same as every mode). Only the piano keyboard docks at the
              bottom as a clean full-width strip. The grid content (panels + canvas)
@@ -27021,12 +27035,16 @@ Composition rules:
                   }
                   return [];
                 }
-                // Non-empty: autocomplete across BOTH the internal key and the
-                // localized display name. Prefer starts-with matches (Love for "l"),
-                // then fall back to contains so partial mid-word typing still finds
-                // moods. De-duped, starts-with ranked first.
+                // Non-empty: autocomplete across the LOCALIZED display name only
+                // (not the internal English key). The user types in their UI
+                // language; matching the key would surface wrong results — typing
+                // Slovak "L" would otherwise return POKOJNÁ (key 'calm'), HRAVÁ
+                // (key 'playful'), MYSTICKÁ (key 'mystical'), etc. — because the
+                // English keys contain 'l', even though the Slovak names don't.
+                // In EN the localized name equals the key, so EN behavior is
+                // identical. Starts-with ranked above contains.
                 const _names=(t('moodNames')||{});
-                const _match=(m)=>{ const key=_n(m); const nm=_n(_names[m]||m); return {starts:(key.startsWith(q)||nm.startsWith(q)), has:(key.includes(q)||nm.includes(q))}; };
+                const _match=(m)=>{ const nm=_n(_names[m]||m); return {starts:nm.startsWith(q), has:nm.includes(q)}; };
                 const _starts=[], _has=[];
                 for(const m of MOODS){ const r=_match(m); if(r.starts) _starts.push(m); else if(r.has) _has.push(m); }
                 return _starts.concat(_has);
@@ -27180,7 +27198,7 @@ Composition rules:
         </div>
       )}
       {recBlob&&(viewMode!=='image'||audioRowOpen)&&(
-        <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
+        <div className="pf-rec-save-row" style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {(()=>{ const m=recName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:recName; const ext=m?m[2]:''; return (
               <span style={{flex:1,display:'flex',alignItems:'center',gap:2,minWidth:0}}>

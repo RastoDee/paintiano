@@ -9776,12 +9776,16 @@ Composition rules:
                   }
                   return [];
                 }
-                // Non-empty: autocomplete across BOTH the internal key and the
-                // localized display name. Prefer starts-with matches (Love for "l"),
-                // then fall back to contains so partial mid-word typing still finds
-                // moods. De-duped, starts-with ranked first.
+                // Non-empty: autocomplete across the LOCALIZED display name only
+                // (not the internal English key). The user types in their UI
+                // language; matching the key would surface wrong results — typing
+                // Slovak "L" would otherwise return POKOJNÁ (key 'calm'), HRAVÁ
+                // (key 'playful'), MYSTICKÁ (key 'mystical'), etc. — because the
+                // English keys contain 'l', even though the Slovak names don't.
+                // In EN the localized name equals the key, so EN behavior is
+                // identical. Starts-with ranked above contains.
                 const _names=(t('moodNames')||{});
-                const _match=(m)=>{ const key=_n(m); const nm=_n(_names[m]||m); return {starts:(key.startsWith(q)||nm.startsWith(q)), has:(key.includes(q)||nm.includes(q))}; };
+                const _match=(m)=>{ const nm=_n(_names[m]||m); return {starts:nm.startsWith(q), has:nm.includes(q)}; };
                 const _starts=[], _has=[];
                 for(const m of MOODS){ const r=_match(m); if(r.starts) _starts.push(m); else if(r.has) _has.push(m); }
                 return _starts.concat(_has);
@@ -9935,7 +9939,7 @@ Composition rules:
         </div>
       )}
       {recBlob&&(viewMode!=='image'||audioRowOpen)&&(
-        <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
+        <div className="pf-rec-save-row" style={{display:'flex',flexDirection:'column',gap:4,marginBottom:6,padding:'8px 10px',background:'rgba(220,90,90,.08)',border:'1px solid rgba(220,90,90,.25)',borderRadius:6}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {(()=>{ const m=recName.match(/^(.*?)(\.[^.]+)$/); const base=m?m[1]:recName; const ext=m?m[2]:''; return (
               <span style={{flex:1,display:'flex',alignItems:'center',gap:2,minWidth:0}}>
