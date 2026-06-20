@@ -9895,6 +9895,38 @@ Composition rules:
           watch the canvas animate while the piano stays visible). When not
           playing, it flows in normal document order. */}
       {isActiveView && (
+      <div className="pf-tx-edge-l" aria-hidden="true">
+        <button
+          className="pf-lift pf-tx-play"
+          onClick={handlePauseClick}
+          disabled={demoReelOn||recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
+          title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
+          style={{...txStyle('primary',{effScale,primary:true,disabled:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))}),display:(viewMode==='image'&&(recording||!!recBlob))?'none':'inline-flex',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer'}}>
+          <TxIcon n={playing&&!holdPaused?'pause':'play'} s={15*effScale}/>{holdPaused?t('resume'):playing?t('pause'):t('play')}
+        </button>
+        <button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
+        <button
+          onClick={()=>{
+            if(demoReelOn){ demoReelStop(); return; }
+            if(recording)return;
+            if(clearArmed){
+              if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
+              setClearArmed(false);
+              clearCanvas();
+            }else{
+              const hasPainting = disp>0 || (composedModeRef.current && chords.length>0);
+              if(!hasPainting&&!pending.length){clearCanvas();return;}
+              setClearArmed(true);
+              clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
+            }
+          }}
+          className="pf-lift pf-tx-clear"
+          disabled={recording}
+          title={recording?t('stopRecFirst'):undefined}
+          style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
+      </div>
+      )}
+      {isActiveView && (
       <div role="region" aria-label="playback controls" className="pf-transport-dock" style={isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(

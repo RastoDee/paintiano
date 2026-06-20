@@ -97,6 +97,9 @@ const PF_STYLE = `
            JSX layout untouched. (A later stage splits this into a true two-pane
            tools-left / stage-right grid.)
            Mobile (<769px): no changes, app fills the viewport edge-to-edge. */
+        /* Mobile: hide the desktop left-edge transport wrapper entirely. It only
+           materialises inside the @media block below (desktop play screen). */
+        .pf-tx-edge-l { display: none; }
         @media (min-width: 769px) {
           html, body {
             background: #050507 !important;
@@ -166,15 +169,12 @@ const PF_STYLE = `
             width: 100% !important;
             padding: 14px 24px 28px !important;
           }
-          /* PLAY SCREEN ONLY (everything except setup): expand to 5 columns —
-             outer transport edges (txL play/mute/clear, txR mode actions) reach
-             both thumbs, and the inner palette/artist columns shrink (180→100px)
-             so the central canvas grows. Setup screen is excluded (it doesn't
-             have a transport row, and its two side cards need the wider 180px
-             tracks of the original 3-col layout) — it falls through to the
-             default rule above untouched. */
+          /* PLAY SCREEN ONLY — 5-column grid (matches the approved mockup
+             exactly: 96 / 152 / 1fr / 152 / 96, gap 14). Outer txL/txR are the
+             transport edges reachable by both thumbs. Setup screen excluded via
+             :not(.pf-mode-setup) so it keeps the original 3-col rule above. */
           .pf-app-root:not(.pf-mode-setup) {
-            grid-template-columns: 90px 100px minmax(0, 1fr) 100px 90px !important;
+            grid-template-columns: 110px 138px minmax(0, 1fr) 138px 110px !important;
             grid-template-areas:
               "topbar  topbar   topbar topbar  topbar"
               "header  header   header header  header"
@@ -184,7 +184,7 @@ const PF_STYLE = `
               "txL     .        stage  rfab    txR"
               "vfooter vfooter  vfooter vfooter vfooter"
               "legal   legal    legal  legal   legal" !important;
-            column-gap: 16px !important;
+            column-gap: 14px !important;
           }
           .pf-app-root > .pf-topbar {
             grid-area: topbar;
@@ -613,12 +613,39 @@ const PF_STYLE = `
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
           }
-          /* Play screen: the dock moves from the legacy ltrans (left under
-             palettes) to the new right edge column. The dock itself only holds
-             the mode-specific actions now (the L wrapper below pulls play/mute/
-             clear out to the left edge). */
+          /* Play screen: dock moves from the legacy ltrans (under palettes) to
+             the right edge. Mirror styling on the new left edge wrapper so both
+             edges read as matching transport cards. The left edge holds the
+             three universal playback controls (play/mute/clear); the dock holds
+             everything else (mode-specific actions). Inside the dock, the L
+             buttons are hidden on desktop play (they'd otherwise duplicate). */
           .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
             grid-area: txR !important;
+          }
+          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l {
+            grid-area: txL;
+            align-self: start;
+            margin-top: 12px;
+            background: var(--pf-card, #161320);
+            border: 1px solid rgba(242,238,232,.08);
+            border-radius: 18px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            align-items: stretch;
+          }
+          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          /* In desktop play, the duplicates of L-buttons that still live inside
+             the dock would render twice. Hide the dock copies so each control
+             appears exactly once (on the L edge). */
+          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-play,
+          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-mute,
+          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-clear {
+            display: none !important;
           }
           .pf-transport-dock .pf-transport-row {
             flex-direction: column !important;

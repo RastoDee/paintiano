@@ -147,8 +147,34 @@ const PF_STYLE = `
           .pf-app-root {
             position: relative;
             display: grid !important;
-            grid-template-columns: 90px 180px minmax(0, 1fr) 180px 90px;
+            grid-template-columns: 180px minmax(0, 1fr) 180px;
             grid-template-rows: auto auto auto auto auto 1fr auto auto;
+            grid-template-areas:
+              "topbar   topbar topbar"
+              "header   header header"
+              "controls stage  rtop"
+              "colors   stage  styles"
+              "ltrans   stage  styles"
+              ".        stage  rfab"
+              "vfooter  vfooter vfooter"
+              "legal    legal  legal";
+            align-content: start !important;
+            align-items: start !important;
+            justify-items: stretch !important;
+            column-gap: 24px;
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 14px 24px 28px !important;
+          }
+          /* PLAY SCREEN ONLY (everything except setup): expand to 5 columns —
+             outer transport edges (txL play/mute/clear, txR mode actions) reach
+             both thumbs, and the inner palette/artist columns shrink (180→100px)
+             so the central canvas grows. Setup screen is excluded (it doesn't
+             have a transport row, and its two side cards need the wider 180px
+             tracks of the original 3-col layout) — it falls through to the
+             default rule above untouched. */
+          .pf-app-root:not(.pf-mode-setup) {
+            grid-template-columns: 90px 100px minmax(0, 1fr) 100px 90px !important;
             grid-template-areas:
               "topbar  topbar   topbar topbar  topbar"
               "header  header   header header  header"
@@ -157,14 +183,8 @@ const PF_STYLE = `
               "txL     .        stage  styles  txR"
               "txL     .        stage  rfab    txR"
               "vfooter vfooter  vfooter vfooter vfooter"
-              "legal   legal    legal  legal   legal";
-            align-content: start !important;
-            align-items: start !important;
-            justify-items: stretch !important;
-            column-gap: 16px;
-            max-width: 100% !important;
-            width: 100% !important;
-            padding: 14px 24px 28px !important;
+              "legal   legal    legal  legal   legal" !important;
+            column-gap: 16px !important;
           }
           .pf-app-root > .pf-topbar {
             grid-area: topbar;
@@ -580,7 +600,7 @@ const PF_STYLE = `
              control row stacks vertically. Mobile keeps the bottom dock. ── */
           .pf-app-root > .pf-transport-dock {
             position: static !important;
-            grid-area: txR;
+            grid-area: ltrans;
             align-self: start;
             margin-top: 12px;
             left: auto !important; right: auto !important; bottom: auto !important; top: auto !important;
@@ -592,6 +612,13 @@ const PF_STYLE = `
             padding: 12px !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
+          }
+          /* Play screen: the dock moves from the legacy ltrans (left under
+             palettes) to the new right edge column. The dock itself only holds
+             the mode-specific actions now (the L wrapper below pulls play/mute/
+             clear out to the left edge). */
+          .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
+            grid-area: txR !important;
           }
           .pf-transport-dock .pf-transport-row {
             flex-direction: column !important;
