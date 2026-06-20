@@ -97,10 +97,6 @@ const PF_STYLE = `
            JSX layout untouched. (A later stage splits this into a true two-pane
            tools-left / stage-right grid.)
            Mobile (<769px): no changes, app fills the viewport edge-to-edge. */
-        /* Base (mobile): the desktop edge-column wrappers dissolve so the
-           transport stays one centered flex row exactly as before. They only
-           become real columns inside the ≥769px grid. */
-        .pf-tx-col-l, .pf-tx-col-r { display: contents; }
         @media (min-width: 769px) {
           html, body {
             background: #050507 !important;
@@ -151,34 +147,24 @@ const PF_STYLE = `
           .pf-app-root {
             position: relative;
             display: grid !important;
-            grid-template-columns: 84px 168px minmax(0, 1fr) 168px 84px;
+            grid-template-columns: 180px minmax(0, 1fr) 180px;
             grid-template-rows: auto auto auto auto auto 1fr auto auto;
             grid-template-areas:
-              "topbar  topbar   topbar topbar topbar"
-              "header  header   header header header"
-              "txL     controls stage  rtop   txR"
-              "txL     colors   stage  styles txR"
-              "txL     ltrans   stage  styles txR"
-              "txL     .        stage  rfab   txR"
-              "vfooter vfooter  vfooter vfooter vfooter"
-              "legal   legal    legal  legal  legal";
+              "topbar   topbar topbar"
+              "header   header header"
+              "controls stage  rtop"
+              "colors   stage  styles"
+              "ltrans   stage  styles"
+              ".        stage  rfab"
+              "vfooter  vfooter vfooter"
+              "legal    legal  legal";
             align-content: start !important;
             align-items: start !important;
             justify-items: stretch !important;
-            column-gap: 16px;
+            column-gap: 24px;
             max-width: 100% !important;
             width: 100% !important;
             padding: 14px 24px 28px !important;
-          }
-          /* Transport split to the OUTER edge columns. The single centered flex
-             row (mobile, untouched) is, on desktop, dissolved (display:contents)
-             so its two wrapper columns land in txL / txR — both thumbs reach the
-             controls, nothing below the fold. Desktop ≥769px only. */
-          .pf-app-root > .pf-transport-row { display: contents !important; }
-          .pf-app-root .pf-tx-col-l { grid-area: txL; }
-          .pf-app-root .pf-tx-col-r { grid-area: txR; }
-          .pf-app-root .pf-tx-col-l, .pf-app-root .pf-tx-col-r {
-            align-self: start; display: flex; flex-direction: column; gap: 7px; width: 100%;
           }
           .pf-app-root > .pf-topbar {
             grid-area: topbar;
