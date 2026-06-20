@@ -15682,14 +15682,15 @@ function _melodyVoice(evts, mel){
   // Register lift: shift up by whole octaves until the melody's low note clears the
   // texture top by ~a whole tone — sings just above as a layer, stays singable.
   let lift=0;
-  const targetFloor=scanHi+3;            // a clear minor-third above the texture top — stands out
-  while(melLo+lift < targetFloor && (melHi+lift) < 92) lift+=12;
-  while((melHi+lift) > 95 && (melLo+lift) > scanHi+3) lift-=12;
+  const targetFloor=scanHi+5;            // a clear perfect-fourth above the texture top — sits out front
+  while(melLo+lift < targetFloor && (melHi+lift) < 94) lift+=12;
+  while((melHi+lift) > 96 && (melLo+lift) > scanHi+5) lift-=12;
   // Proportional position 0..1 across the melody's own beat span.
   const melBeatSpan=melMaxBeat-melMinBeat;
-  // Lead velocity — present and clearly audible over the texture, while still
-  // keeping the line's own phrasing contour (its loud peaks vs softer dips).
-  const leadVel=(v)=> Math.max(102, Math.min(124, Math.round(98 + (v/127)*30)));
+  // Lead velocity — sits clearly out front over the texture, while still keeping
+  // the line's own phrasing contour (its loud peaks vs softer dips). Peaks reach
+  // full ff so the sung line reads as the foreground voice.
+  const leadVel=(v)=> Math.max(106, Math.min(127, Math.round(104 + (v/127)*30)));
   const voice=[];
   for(const mn of parsed){
     const pos=Math.max(0,Math.min(1,(mn.startB-melMinBeat)/melBeatSpan));
@@ -15698,7 +15699,7 @@ function _melodyVoice(evts, mel){
     // articulate rather than smearing into one held chord.
     const durFrac=Math.max(0.004, (mn.durB/melBeatSpan)*0.82);
     let mm=mn.m+lift;
-    mm=Math.max(52, Math.min(96, mm));
+    mm=Math.max(52, Math.min(97, mm));
     voice.push({ pos, durFrac, m:mm, v:leadVel(mn.vel) });
   }
   voice.sort((a,b)=>a.pos-b.pos);
