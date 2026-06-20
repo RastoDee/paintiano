@@ -22031,7 +22031,7 @@ Composition rules:
   // Keyed by image hash + atmosphere signature so the same picture in the same
   // mood replays its sung line free. Distinct from the compose cache (that's a
   // whole separate piece); this is the lead line we layer over the scan texture.
-  const MELODY_CACHE_KEY='paintiano_melody_cache_v1';
+  const MELODY_CACHE_KEY='paintiano_melody_cache_v2';
   const _melodyCacheKey=useCallback((hash)=>{
     const atmoSig=(atmoOn&&atmoMood)?('a'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2)+'_'+(atmoMood.root||0)):'plain';
     return hash+'|'+atmoSig;
@@ -22078,10 +22078,12 @@ Compose with real musical craft so it is genuinely beautiful and singable:
 - ONE voice only (monophonic) — a true melody, not chords, not a run of equal notes.
 - Build it from the pitch palette above: let those pitch classes define the KEY/tonal centre, then sing diatonically in that key (major or natural minor to fit the mood). Occasional tasteful passing/leading tones are fine; no whole-tone, no random chromaticism.
 - A short recurring MOTIF (2–4 notes) that returns and develops — give the line memory.
-- CONTINUITY IS ESSENTIAL: the line must sing CONTINUOUSLY, like a voice — flowing phrases of several notes in a row, joined by mostly stepwise motion. Do NOT leave long silences: never a gap longer than about one beat between notes. The result should read as one connected melody, never isolated single high notes floating over silence.
+- CONNECTED PHRASES: within a phrase the notes flow by mostly stepwise motion like one breath of singing; BETWEEN phrases, a clear rest is good and wanted. The line should read as a few connected sung phrases with space around them, never one unbroken stream of notes.
 - Phrasing like a human voice: group notes into phrases, each phrase ended by only a SHORT breath (a beat or less), then the next phrase begins. Arcs that rise to a peak and settle. Mostly conjunct (stepwise) movement with occasional expressive leaps.
 - An emotional shape that matches the image's energy arc (${mat.arc}).
-- DENSITY: 70–120 notes total, spread evenly across the whole piece so the singing never thins out into sparse lone notes. Mix note lengths (0.5/1/1.5/2 beats) for natural rhythm, but keep them close together in time.
+- DENSITY: 35–55 notes for the WHOLE piece — a real singer breathes; do NOT fill every beat. Favour longer values (1 / 1.5 / 2 / 3 beats) with only occasional shorter passing notes. Sparser, sustained, lyrical — a melody you could hum, NOT a busy run.
+- RHYTHM: place notes mostly on strong beats; let notes ring. Clear phrases of 4–7 notes, each followed by a real breath (a beat or more of rest), then the next phrase answers. Think art-song or film-theme, never an étude or finger-exercise.
+- SHAPE: a singable arc — rise to one clear high point in the piece, then resolve down to the tonic. Mostly stepwise; save leaps for emotional moments. Repeat and vary the opening motif so the ear remembers it.
 - Velocity 80–112 (a present lead voice that still blends with the texture, not a blaring solo).
 Output ONLY valid JSON, no prose, no markdown:
 {"title":"...","tempo":90,"notes":[[pitch,durationInBeats,startBeat,velocity],...]}
@@ -22707,19 +22709,23 @@ Composition rules:
           // Weighted vibrancy. Chroma leads (colour), energy and density support.
           live[k]=Math.max(0,Math.min(1, 0.55*ch + 0.30*vNorm + 0.15*dens));
         }
-        // Map liveliness → step. Vivid (1) → fast (~85ms), calm (0) → slow (~320ms).
-        const FAST=85, SLOW=320;
+        // Map liveliness → step. Calmer, more musical range: vivid (1) → 150ms,
+        // calm (0) → 300ms. The old 85ms floor turned saturated full-colour images
+        // into a machine-gun; a 150ms floor keeps even vibrant scans listenable,
+        // and dynamics still read because the smoothstep preserves contrast.
+        const FAST=150, SLOW=300;
         for(let k=0;k<src.length;k++){
           const L=live[k];
           const e2=L*L*(3-2*L);                       // smoothstep — read dynamics clearly
           raw[k]=SLOW-(SLOW-FAST)*e2;
         }
-        // Normalize so the MEAN step ≈150ms — dynamics ride on top, overall tempo
-        // stays familiar regardless of how vivid/dark the particular image is.
+        // Normalize so the MEAN step ≈195ms — a calmer overall pace than the old
+        // 150ms, so the painting breathes as a piece of music rather than a salvo;
+        // dynamics ride on top regardless of how vivid/dark the image is.
         let sum=0,cnt=0; for(let k=0;k<raw.length;k++){ if(src[k]){ sum+=raw[k]; cnt++; } }
-        const mean=cnt?sum/cnt:150;
-        const norm=mean>0?150/mean:1;
-        for(let k=0;k<raw.length;k++){ raw[k]=Math.max(60,Math.min(520,raw[k]*norm)); }
+        const mean=cnt?sum/cnt:195;
+        const norm=mean>0?195/mean:1;
+        for(let k=0;k<raw.length;k++){ raw[k]=Math.max(120,Math.min(520,raw[k]*norm)); }
         return raw;
       };
       let _melSteps=_computeMelSteps(chordsRef.current||[]);

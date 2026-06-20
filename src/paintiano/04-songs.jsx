@@ -1694,19 +1694,56 @@ function _melodyVoice(evts, mel){
   // The final note keeps its written length. This is what turns "tick · tick ·
   // tick" into one flowing sung phrase over the texture underneath.
   const voice=[];
+  // Cap how long a single note may sustain (as a fraction of the piece) so that a
+  // longer rest between phrases doesn't smear one note into a drone — it sings,
+  // breathes briefly, then the next phrase comes in.
+  const maxHold=0.045;
   for(let i=0;i<raw.length;i++){
     const cur=raw[i];
     const nxt=raw[i+1];
     let durFrac;
     if(nxt){
-      const gapToNext=Math.max(0, nxt.pos-cur.pos);     // fraction of the piece until the next note
-      // hold to the next onset, then 18% past it so the tones overlap and bind
-      durFrac=Math.max(0.012, gapToNext*1.18);
+      const gapToNext=Math.max(0, nxt.pos-cur.pos);
+      // Bind to the next note: hold to its onset (+8% overlap) so consecutive notes
+      // connect into a line, but never longer than maxHold so a phrase-end breath
+      // stays a breath, not a held drone.
+      durFrac=Math.min(maxHold, Math.max(0.012, gapToNext*1.08));
     }else{
-      durFrac=Math.max(0.012, (cur.durB/melBeatSpan)*0.96);
+      durFrac=Math.min(maxHold, Math.max(0.012, (cur.durB/melBeatSpan)*0.9));
     }
     voice.push({ pos:cur.pos, durFrac, m:cur.m, v:cur.v });
   }
+  // ── HARMONY: chordal accompaniment beneath the melody ──────────────────────
+  // The AI returns "chords" as [[pitch,pitch,...],dur,start,vel] — the diatonic
+  // harmony (mid-register voices + bass) that supports each melodic note. We add
+  // those tones to the voice so the second part plays as a FULL two-handed piano
+  // piece (melody on top, chords under it) rather than a thin single line. The
+  // chord tones are NOT lifted (they keep the AI's mid/bass register) and play a
+  // touch softer than the melody so the lead still sings through.
+  if(Array.isArray(mel.chords) && mel.chords.length){
+    const chMin=melMinBeat, chSpan=melBeatSpan;     // align chords to the melody's timeline
+    for(const raw of mel.chords){
+      if(!Array.isArray(raw)||raw.length<3) continue;
+      const pitches=raw[0];
+      if(!Array.isArray(pitches)||!pitches.length) continue;
+      const durB=Math.max(0.25, +raw[1]||1);
+      const startB=Math.max(0, +raw[2]||0);
+      const vel=Math.max(1,Math.min(127, Math.round(+raw[3]||80)));
+      const pos=Math.max(0,Math.min(1,(startB-chMin)/chSpan));
+      // chord sustains to roughly its written length (held, pedal-like), capped
+      // so it doesn't blur across the next harmony change.
+      const durFrac=Math.min(0.06, Math.max(0.02, (durB/chSpan)*0.95));
+      // accompaniment a touch softer than the lead so the melody stays on top
+      const cv=Math.max(58, Math.min(96, Math.round(vel*0.82)));
+      for(const p of pitches){
+        let m = typeof p==='string' ? name2midi(p) : p;
+        if(typeof m!=='number'||!isFinite(m)) continue;
+        m=Math.max(33, Math.min(88, m));   // keep harmony in mid/bass piano range
+        voice.push({ pos, durFrac, m, v:cv });
+      }
+    }
+  }
+  voice.sort((a,b)=>a.pos-b.pos);
   return { events:evts, voice };
 }
 
