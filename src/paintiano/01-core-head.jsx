@@ -158,6 +158,10 @@ const PF_STYLE = `
         /* Mobile: hide the desktop left-edge transport wrapper entirely. It only
            materialises inside the @media block below (desktop play screen). */
         .pf-tx-edge-l { display: none; }
+        /* INSPIRED BY row (artist palette header) — on DESKTOP only, restack
+           from "label-centered + dice-absolute-right" to "label on top, dice
+           below, centered". Avoids the dice button overlapping or hugging the
+           label in narrow palette columns. Mobile keeps the absolute layout. */
         /* SETUP modal — 2-col layout applied UNIVERSALLY (mobile portrait,
            mobile landscape, tablet portrait, tablet landscape, desktop). The
            layout splits PALETTES left, ARTISTS right. Checkboxes sit on outer
@@ -871,6 +875,11 @@ const PF_STYLE = `
           .pf-app-root:not(.pf-mode-setup) div:has(> .pf-vary) {
             grid-template-columns: 1fr !important;
           }
+          /* INSPIRED BY label: left-align on 5-col desktop only, so the dice
+             button (absolute right) has clear space and doesn't crowd the
+             text in the narrow palette column. Mobile/tablet-portrait keep
+             centered. */
+          .pf-inspired-label { text-align: left !important; padding-right: 32px !important; }
         }
         /* Save picker on landscape (all widths): shift the modal toward the
            right edge so a thumb holding the tablet can reach it (centered

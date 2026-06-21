@@ -158,6 +158,10 @@ const PF_STYLE = `
         /* Mobile: hide the desktop left-edge transport wrapper entirely. It only
            materialises inside the @media block below (desktop play screen). */
         .pf-tx-edge-l { display: none; }
+        /* INSPIRED BY row (artist palette header) — on DESKTOP only, restack
+           from "label-centered + dice-absolute-right" to "label on top, dice
+           below, centered". Avoids the dice button overlapping or hugging the
+           label in narrow palette columns. Mobile keeps the absolute layout. */
         /* SETUP modal — 2-col layout applied UNIVERSALLY (mobile portrait,
            mobile landscape, tablet portrait, tablet landscape, desktop). The
            layout splits PALETTES left, ARTISTS right. Checkboxes sit on outer
@@ -871,6 +875,11 @@ const PF_STYLE = `
           .pf-app-root:not(.pf-mode-setup) div:has(> .pf-vary) {
             grid-template-columns: 1fr !important;
           }
+          /* INSPIRED BY label: left-align on 5-col desktop only, so the dice
+             button (absolute right) has clear space and doesn't crowd the
+             text in the narrow palette column. Mobile/tablet-portrait keep
+             centered. */
+          .pf-inspired-label { text-align: left !important; padding-right: 32px !important; }
         }
         /* Save picker on landscape (all widths): shift the modal toward the
            right edge so a thumb holding the tablet can reach it (centered
@@ -25943,8 +25952,8 @@ Composition rules:
               flagged moodFromImg=true — there we DO compose a piece, so the
               artist picker belongs there. */}
           {(loadedSource!=='image' || moodFromImg) && (
-          <div style={{position:'relative',marginTop:6,marginBottom:2}}>
-            <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+          <div className="pf-inspired-row" style={{position:'relative',marginTop:6,marginBottom:2}}>
+            <div className="pf-inspired-label" style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
             <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:randomMode?'rgba(255,200,120,.95)':'rgba(207,197,168,.55)',background:randomMode?'rgba(255,200,120,.1)':'rgba(255,255,255,.02)',border:'1px solid '+(randomMode?'rgba(255,200,120,.4)':'rgba(255,255,255,.08)'),boxShadow:'none'}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
             </button>
