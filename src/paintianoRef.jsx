@@ -575,6 +575,26 @@ const PF_STYLE = `
             box-shadow: 0 12px 40px rgba(0,0,0,.4) !important;
             pointer-events: auto !important;
           }
+          /* Per-mode picker frame tint — matches the source colour identity
+             so the picker visually reads as "this is the music / image / etc.
+             input". Default (mood) keeps gold; the four import / mic sources
+             get their own colour. */
+          .pf-app-root .pf-picker-overlay.pf-picker-music .pf-picker-dialog {
+            border-color: rgba(91,156,246,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(91,156,246,.08) !important;
+          }
+          .pf-app-root .pf-picker-overlay.pf-picker-image .pf-picker-dialog {
+            border-color: rgba(244,124,60,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(244,124,60,.08) !important;
+          }
+          .pf-app-root .pf-picker-overlay.pf-picker-mfi .pf-picker-dialog {
+            border-color: rgba(220,150,255,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(220,150,255,.08) !important;
+          }
+          .pf-app-root .pf-picker-overlay.pf-picker-mic .pf-picker-dialog {
+            border-color: rgba(240,106,166,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(240,106,166,.08) !important;
+          }
           /* IMPORT-source pickers (mood-from-image / music / image) sit in the
              RIGHT column, so their picker opens on the LEFT to avoid covering the
              panel it came from. Mood (left column) keeps its right-side picker. */
@@ -26303,7 +26323,7 @@ Composition rules:
       <input ref={refImgMood} type="file" accept="image/*" onChange={loadImgMood} style={{display:'none'}}/>
 
       {pickMode && (
-        <div onClick={()=>setPickMode(null)} className={"pf-picker-overlay"+(['imgmood','sound','midi','audio','score','image'].includes(pickMode)?' pf-picker-left':'')} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+        <div onClick={()=>setPickMode(null)} className={"pf-picker-overlay"+(['imgmood','sound','midi','audio','score','image'].includes(pickMode)?' pf-picker-left':'')+' pf-picker-'+((pickMode==='sound'||pickMode==='midi'||pickMode==='audio'||pickMode==='score')?'music':(pickMode==='image')?'image':(pickMode==='imgmood')?'mfi':(pickMode==='mic')?'mic':'mood')} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" className="pf-picker-dialog" style={{background:'rgba(20,18,30,.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',minWidth:260,maxWidth:340}}>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>
               {_sent(_stripIcon(pickMode==='sound'?(t('musicInput')||'add music'):pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')))}
