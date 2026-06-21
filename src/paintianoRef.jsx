@@ -20926,6 +20926,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         grid: gridRef.current,
         idxCounter: idxRef.current,
         sessionStart: sessionStart.current,
+        disp: dispRef.current,
         info: meta.info||null, viewMode: meta.viewMode||'paint',
         currentMood: meta.currentMood||null, composeSource: meta.composeSource||null,
         varySource: meta.varySource||null, morphTargets: meta.morphTargets||[],
@@ -20949,8 +20950,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // canvas + refs
       setChords(s.chords); chordsRef.current = s.chords;
       if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
-      idxRef.current = s.idxCounter; setDisp(s.chords.length);
+      idxRef.current = s.idxCounter;
       sessionStart.current = s.sessionStart;
+      // Restore the playback position EXACTLY as left: leaving while playing (or
+      // a mid-piece pause) returns to that spot, partial painting shown, paused
+      // so Play resumes from there. A fully-played piece restores full; a
+      // never-started one restores blank — both as the user left them.
+      {
+        const _len = s.chords.length;
+        const _pos = (typeof s.disp==='number') ? Math.max(0, Math.min(s.disp, _len)) : _len;
+        setDisp(_pos); dispRef.current = _pos;
+        if(_pos>0 && _pos<_len){
+          setHoldPaused(true); holdPausedRef.current = true; resumeFromRef.current = _pos;
+        } else {
+          setHoldPaused(false); holdPausedRef.current = false; resumeFromRef.current = null;
+        }
+      }
+      // Invalidate cached substrate / last-paint from the previous (possibly
+      // different) source so the mood repaints cleanly at the restored disp.
+      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
       gridSigRef.current = '';
       composedModeRef.current = false;
       draftOwnerRef.current = null;
@@ -20970,6 +20989,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Set morph LAST; the currentMood effect is guarded by restoringRef so it
       // won't wipe this on the post-commit pass.
       setMorphTargets(s.morphTargets || []);
+      setStamp(prev=>prev+1);
       // Release the guard after the current commit + its passive effects.
       setTimeout(()=>{ restoringRef.current = false; }, 0);
       return true;

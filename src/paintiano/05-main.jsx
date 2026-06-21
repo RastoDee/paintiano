@@ -8513,7 +8513,7 @@ Composition rules:
               // flag and skip re-rolling the style. Vary changes tones only;
               // the (umelec, štýl) pair must persist for 4-tuple identity.
               varyInProgressRef.current = true;
-              const wasPlaying=playing;
+              const wasPlaying=playing||holdPausedRef.current; // active = playing OR paused → auto-restart, don't wait for Play
               // Random OFF → keep the picture STRUCTURE, change only colors+sound:
               // freeze the seed too (belt-and-braces with the pitch-only reroll).
               // Random ON → fresh structure: clear the lock.
@@ -10070,6 +10070,9 @@ Composition rules:
             <div style={{display:'flex',gap:8,marginTop:16}}>
               <button onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flex:1,padding:'10px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent('cancel')}</button>
               <button onClick={()=>{
+                // Capture whether playback was active (playing OR paused) BEFORE
+                // stopAll below — if so, the morph result auto-plays from the top.
+                const _morphWasActive = playingRef.current || holdPausedRef.current;
                 // 0 selected → "remove morph": recompose the base mood without
                 // a chain, clear the persistent morph targets, reset the title
                 // to the plain mood name. Same path the user takes when first
@@ -10091,6 +10094,7 @@ Composition rules:
                   const bytes=encodeMidi(evts,song.tempo||120);
                   setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                   setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
+                  if(_morphWasActive){ resumeFromRef.current=0; keepStripOpenRef.current=true; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
                   return;
                 }
                 const chain=[findSong(currentMood), ...morphSel.map(findSong)];
@@ -10113,6 +10117,7 @@ Composition rules:
                 const bytes=encodeMidi(evts,morphed.tempo||100);
                 setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                 setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
+                if(_morphWasActive){ resumeFromRef.current=0; keepStripOpenRef.current=true; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
               }} style={{flex:1,padding:'10px 16px',background:'linear-gradient(135deg,#7c4df5,#a97ff5)',color:'#fff',border:'none',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent(t('morphGo'))}</button>
             </div>
           </div>
