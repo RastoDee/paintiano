@@ -28003,11 +28003,12 @@ Composition rules:
         const okMin = setupPalettes.length>=1 && setupArtists.length>=1;
         const isFree = proStatus==='free';
         return (
-        <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) closeSetup(); }} style={{position:'fixed',inset:0,zIndex:11000,background:'rgba(8,6,14,.78)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px'}}>
-          <div className="pf-setup-dialog" style={{width:'100%',maxWidth:520,maxHeight:'92vh',display:'flex',flexDirection:'column',background:'rgba(20,18,30,.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
-            <div style={{padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(242,238,232,.08)'}}>
-              <span style={{fontSize:(.72*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.9)',textTransform:'uppercase'}}>{ts('setupPickerLabel','Setup')}</span>
-              <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} aria-label="close" style={{background:'transparent',border:'none',color:okMin?'rgba(247,243,236,.8)':'rgba(247,243,236,.25)',fontSize:'1.5rem',cursor:okMin?'pointer':'default',padding:'4px 8px',fontFamily:'inherit'}}>✕</button>
+        <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) closeSetup(); }} style={{position:'fixed',inset:0,zIndex:100000,background:'rgba(8,6,14,0.96)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',display:'flex',justifyContent:'center'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="setup" className="pf-setup-dialog" style={{position:'relative',width:'100%',maxWidth:980,height:'100%',display:'flex',flexDirection:'column',color:'rgba(247,243,236,.92)',fontFamily:'inherit',borderLeft:'1px solid rgba(201,168,76,.08)',borderRight:'1px solid rgba(201,168,76,.08)',background:'rgba(8,6,14,0.35)'}}>
+            <div style={{flexShrink:0,padding:'14px 16px 8px',display:'flex',alignItems:'center',gap:10,position:'relative',zIndex:2}}>
+              <div style={{width:34,height:34}} aria-hidden="true" />
+              <div style={{flex:1,textAlign:'center',letterSpacing:'.22em',color:'rgba(201,168,76,.85)',fontSize:(.65*effScale)+'rem',textTransform:'uppercase',fontWeight:600}}>{ts('setupPickerLabel','Setup')}</div>
+              <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:okMin?'rgba(247,243,236,.85)':'rgba(247,243,236,.25)',width:34,height:34,borderRadius:'50%',cursor:okMin?'pointer':'default',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
             </div>
             <div className="pf-setup-body" style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
               <div className="pf-setup-palettes">

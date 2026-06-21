@@ -579,10 +579,11 @@ const PF_STYLE = `
           .pf-setup-footer { display: none !important; }
           .pf-setup-palettes .pf-setup-done {
             display: flex !important;
+            justify-content: center;
             margin-top: auto;
-            padding-top: 18px;
+            padding-top: 22px;
           }
-          .pf-setup-palettes .pf-setup-done > button { width: 100%; }
+          .pf-setup-palettes .pf-setup-done > button { width: auto; }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
@@ -28003,7 +28004,7 @@ Composition rules:
         const isFree = proStatus==='free';
         return (
         <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) closeSetup(); }} style={{position:'fixed',inset:0,zIndex:11000,background:'rgba(8,6,14,.78)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px'}}>
-          <div className="pf-setup-dialog" style={{width:'100%',maxWidth:520,maxHeight:'92vh',display:'flex',flexDirection:'column',background:'rgba(20,16,28,.96)',border:'1px solid rgba(201,168,76,.4)',borderRadius:18,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
+          <div className="pf-setup-dialog" style={{width:'100%',maxWidth:520,maxHeight:'92vh',display:'flex',flexDirection:'column',background:'rgba(20,18,30,.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
             <div style={{padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(242,238,232,.08)'}}>
               <span style={{fontSize:(.72*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.9)',textTransform:'uppercase'}}>{ts('setupPickerLabel','Setup')}</span>
               <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} aria-label="close" style={{background:'transparent',border:'none',color:okMin?'rgba(247,243,236,.8)':'rgba(247,243,236,.25)',fontSize:'1.5rem',cursor:okMin?'pointer':'default',padding:'4px 8px',fontFamily:'inherit'}}>✕</button>
@@ -28012,42 +28013,42 @@ Composition rules:
               <div className="pf-setup-palettes">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupPalettesTitle','Palettes')}</span>
-                  <span style={{display:'inline-flex',gap:14,fontSize:(.5*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase'}}>
-                    <span onClick={()=>setSetupPalettes(ALL_PALETTE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes(ALL_PALETTE_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{ts('setupAll','All')}</span>
-                    <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{ts('setupNone','None')}</span>
+                  <span style={{display:'inline-flex',gap:14,fontSize:(.55*effScale)+'rem',letterSpacing:0}}>
+                    <span onClick={()=>setSetupPalettes(ALL_PALETTE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes(ALL_PALETTE_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.7)'}}>{_sent(ts('setupAll','All'))}</span>
+                    <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.45)'}}>{_sent(ts('setupNone','None'))}</span>
                   </span>
                 </div>
-                <div className="pf-setup-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
+                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
                   {ALL_PALETTE_KEYS.map(k=>{
                     const on = setupPalettes.includes(k);
                     return (
-                    <button key={k} onClick={()=>togglePal(k)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 12px',background:on?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:on?PF.gold2:'rgba(230,222,196,.7)',border:'1px solid '+(on?'rgba(201,168,76,.6)':'rgba(242,238,232,.12)'),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .15s'}}>
-                      <span style={{display:'inline-flex',width:16,height:16,alignItems:'center',justifyContent:'center',borderRadius:3,border:'1px solid '+(on?PF.gold:'rgba(242,238,232,.3)'),background:on?PF.gold:'transparent',color:'#0a0612',fontSize:'.75rem',fontWeight:900}}>{on?'✓':''}</span>
-                      {_palLabels[k]}
+                    <button key={k} onClick={()=>togglePal(k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
+                      <span style={{display:'inline-flex',width:18,height:18,alignItems:'center',justifyContent:'center',borderRadius:5,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
+                      {_sent(_palLabels[k])}
                     </button>
                     );
                   })}
                 </div>
                 <div className="pf-setup-done" style={{display:'none'}}>
-                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'11px 22px',background:okMin?'rgba(201,168,76,.2)':'rgba(201,168,76,.06)',color:okMin?PF.gold2:'rgba(201,168,76,.35)',border:'1px solid '+(okMin?'rgba(201,168,76,.6)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase'}}>{ts('setupSave','Done')}</button>
+                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
                 </div>
               </div>
               <div className="pf-setup-artists">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupArtistsTitle','Artists')}</span>
-                  <span style={{display:'inline-flex',gap:14,fontSize:(.5*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase'}}>
-                    <span onClick={()=>setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()]);}}} style={{cursor:'pointer',color:'rgba(201,168,76,.75)',borderBottom:'1px solid rgba(201,168,76,.3)'}}>{ts('setupAll','All')}</span>
-                    <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.5)',borderBottom:'1px solid rgba(242,238,232,.2)'}}>{ts('setupNone','None')}</span>
+                  <span style={{display:'inline-flex',gap:14,fontSize:(.55*effScale)+'rem',letterSpacing:0}}>
+                    <span onClick={()=>setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()]);}}} style={{cursor:'pointer',color:'rgba(201,168,76,.7)'}}>{_sent(ts('setupAll','All'))}</span>
+                    <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.45)'}}>{_sent(ts('setupNone','None'))}</span>
                   </span>
                 </div>
-                <div className="pf-setup-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:8}}>
+                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
                   {/* Mosaic family — single tile (the trio Mosaic / Notes / $1M$). */}
                   {(()=>{
                     const k='mosaicFamily';
                     const on = setupArtists.includes(k);
                     return (
-                    <button key={k} onClick={()=>toggleArt(k)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 12px',background:on?'rgba(201,168,76,.16)':'rgba(28,24,40,.5)',color:on?PF.gold2:'rgba(230,222,196,.7)',border:'1px solid '+(on?'rgba(201,168,76,.6)':'rgba(242,238,232,.12)'),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',transition:'all .15s'}}>
-                      <span style={{display:'inline-flex',width:16,height:16,alignItems:'center',justifyContent:'center',borderRadius:3,border:'1px solid '+(on?PF.gold:'rgba(242,238,232,.3)'),background:on?PF.gold:'transparent',color:'#0a0612',fontSize:'.75rem',fontWeight:900,flexShrink:0}}>{on?'✓':''}</span>
+                    <button key={k} onClick={()=>toggleArt(k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
+                      <span style={{display:'inline-flex',width:18,height:18,alignItems:'center',justifyContent:'center',borderRadius:5,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_artistLabels[k]}</span>
                     </button>
                     );
@@ -28068,10 +28069,10 @@ Composition rules:
                       return next;
                     });
                     return (
-                    <button key={a+'_'+b} onClick={togglePair} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 12px',background:on?'rgba(201,168,76,.16)':(halfOn?'rgba(201,168,76,.06)':'rgba(28,24,40,.5)'),color:on?PF.gold2:'rgba(230,222,196,.7)',border:'1px solid '+(on?'rgba(201,168,76,.6)':(halfOn?'rgba(201,168,76,.3)':'rgba(242,238,232,.12)')),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',transition:'all .15s'}}>
-                      <span style={{display:'inline-flex',width:16,height:16,alignItems:'center',justifyContent:'center',borderRadius:3,border:'1px solid '+(on?PF.gold:'rgba(242,238,232,.3)'),background:on?PF.gold:'transparent',color:'#0a0612',fontSize:'.75rem',fontWeight:900,flexShrink:0}}>{on?'✓':''}</span>
+                    <button key={a+'_'+b} onClick={togglePair} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':(halfOn?'rgba(247,243,236,.65)':'rgba(247,243,236,.45)'),border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
+                      <span style={{display:'inline-flex',width:18,height:18,alignItems:'center',justifyContent:'center',borderRadius:5,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                        {STYLE_INSPIRED[a]} · {STYLE_INSPIRED[b]}{isFree && (<span style={{marginLeft:4,fontSize:'.85em',opacity:.7}} title={ts('proLockTitle','Pro')}>🔒</span>)}
+                        {STYLE_INSPIRED[a]} · {STYLE_INSPIRED[b]}{isFree && (<span style={{marginLeft:4,fontSize:'.85em',opacity:.5}} title={ts('proLockTitle','Pro')}>🔒</span>)}
                       </span>
                     </button>
                     );
@@ -28082,8 +28083,8 @@ Composition rules:
                 <div style={{padding:'10px 12px',borderRadius:8,background:'rgba(232,85,122,.12)',border:'1px solid rgba(232,85,122,.4)',color:'#ff9ab4',fontSize:(.6*effScale)+'rem',lineHeight:1.4}}>{ts('setupMinError','Choose at least 1 palette and 1 artist.')}</div>
               )}
             </div>
-            <div className="pf-setup-footer" style={{padding:'14px 20px',borderTop:'1px solid rgba(242,238,232,.08)',display:'flex',justifyContent:'flex-end',gap:8}}>
-              <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'9px 22px',background:okMin?'rgba(201,168,76,.2)':'rgba(201,168,76,.06)',color:okMin?PF.gold2:'rgba(201,168,76,.35)',border:'1px solid '+(okMin?'rgba(201,168,76,.6)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase'}}>{ts('setupSave','Done')}</button>
+            <div className="pf-setup-footer" style={{padding:'18px 20px 22px',borderTop:'1px solid rgba(255,255,255,.05)',display:'flex',justifyContent:'center',gap:8}}>
+              <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
             </div>
           </div>
         </div>
