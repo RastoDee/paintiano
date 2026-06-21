@@ -26533,15 +26533,17 @@ Composition rules:
       })()}
 
       {isActiveView && (<>
-      {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && (()=>{
-        // Body 11: before the mood plays, show the chosen picture large (like the
-        // Image mode preview). Once playback begins / the mood pic has been drawn
-        // (disp>0), it shrinks to the small thumbnail that sits over the canvas.
+      {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (()=>{
+        // Body 11: once playback begins / the mood pic has been drawn (disp>0),
+        // the picture appears as a small thumbnail above the canvas, acting as
+        // a reminder of the source. Before that (step 1), the picture lives
+        // INSIDE the canvas (handled by the image-scan render path above),
+        // not as a separate above-canvas card. After playback finishes or
+        // pauses, the thumb stays (no return to the full-canvas picture).
         const _thumbSrc = imgMoodThumb || originalImgUrl;
-        const big = disp===0 && !playing && !anim;
         return (
-          <div className="pf-mood-thumb" style={{display:'flex',justifyContent:'center',marginBottom:big?14:10,transition:'margin .25s ease'}}>
-            <img src={_thumbSrc} alt="source" style={{width:big?'100%':74,height:big?'auto':74,maxWidth:big?`min(100%, 360px)`:74,objectFit:'cover',borderRadius:big?14:10,border:'1px solid rgba(220,150,255,.45)',boxShadow:big?'0 4px 24px rgba(0,0,0,.55)':'0 2px 10px rgba(0,0,0,.4)',opacity:big?1:.88,transition:'all .3s ease'}}/>
+          <div className="pf-mood-thumb" style={{display:'flex',justifyContent:'center',marginBottom:10,transition:'margin .25s ease'}}>
+            <img src={_thumbSrc} alt="source" style={{width:74,height:74,objectFit:'cover',borderRadius:10,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 10px rgba(0,0,0,.4)',opacity:.88,transition:'all .3s ease'}}/>
           </div>
         );
       })()}
@@ -26698,8 +26700,8 @@ Composition rules:
             </div>
           );
         })()}
-        {viewMode==='image'&&originalImgUrl&&!moodFromImg&&(
-          <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:moodFromImg?'contain':'fill',objectPosition:moodFromImg?'center':'0 0',display:'block',zIndex:0,pointerEvents:'none'}}/>
+        {viewMode==='image'&&originalImgUrl&&(!moodFromImg || (!playing&&!anim&&disp===0))&&(
+          <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none',transition:'opacity .25s ease'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
         <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>

@@ -27286,7 +27286,30 @@ Composition rules:
             </div>
             <div style={{display:'flex',gap:8,marginTop:16}}>
               <button onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flex:1,padding:'10px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent('cancel')}</button>
-              <button disabled={morphSel.length===0} onClick={()=>{
+              <button onClick={()=>{
+                // 0 selected → "remove morph": recompose the base mood without
+                // a chain, clear the persistent morph targets, reset the title
+                // to the plain mood name. Same path the user takes when first
+                // picking a mood from the Mood menu.
+                if(morphSel.length===0){
+                  const song=findSong(currentMood);
+                  setShowMorphMenu(false); setMorphSel([]);
+                  setMorphTargets([]);
+                  if(!song){ setErr(t('errs').songNotFound); return; }
+                  const evts=noteArr2events(song.notes,song.tempo);
+                  if(!evts.length){ setErr(t('errs').noNotesGeneric); return; }
+                  stopAll();
+                  const dispTitle=((t('moodNames')||{})[song.mood])||((t('moodNames')||{})[currentMood])||song.title;
+                  applyEvents(evts,dispTitle);
+                  setComposeSource('crafted');
+                  setMoodContext(true);
+                  setVarySource(song);
+                  setStructureSeedLock(null);
+                  const bytes=encodeMidi(evts,song.tempo||120);
+                  setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
+                  setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
+                  return;
+                }
                 const chain=[findSong(currentMood), ...morphSel.map(findSong)];
                 const morphed = morphSel.length===1 ? morphSongs(chain[0],chain[1]) : morphChain(chain);
                 if(!morphed){setErr(t('errs').morphFail);return;}
@@ -27307,7 +27330,7 @@ Composition rules:
                 const bytes=encodeMidi(evts,morphed.tempo||100);
                 setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                 setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
-              }} style={{flex:1,padding:'10px 16px',background:morphSel.length?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.25)',color:'#fff',border:'none',borderRadius:12,cursor:morphSel.length?'pointer':'default',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500,opacity:morphSel.length?1:.5}}>{_sent(t('morphGo'))}</button>
+              }} style={{flex:1,padding:'10px 16px',background:'linear-gradient(135deg,#7c4df5,#a97ff5)',color:'#fff',border:'none',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent(t('morphGo'))}</button>
             </div>
           </div>
         </div>
