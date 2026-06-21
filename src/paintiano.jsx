@@ -835,6 +835,70 @@ const PF_STYLE = `
             padding-right: clamp(40px, 12vw, 160px) !important;
           }
         }
+        /* MOBILE PORTRAIT setup screen: re-flow the CREATE / IMPORT panels
+           from vertically-stacked (default) into a side-by-side 2-column
+           layout, where each panel holds 3 SQUARE chips stacked vertically
+           (icon on top, text below). Tablet portrait (≥769px) untouched.
+           — Wrap: row, gap tightened.
+           — Inner chip grids: 1 column instead of 2.
+           — All 6 chips: square aspect-ratio, vertical flex, icon scaled up. */
+        @media (max-width: 768px) and (orientation: portrait) {
+          .pf-setup-create-import-wrap {
+            flex-direction: row !important;
+            gap: 10px !important;
+            padding: 12px !important;
+          }
+          .pf-setup-create-import-wrap .pf-setup-col {
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+            gap: 8px !important;
+          }
+          /* Inner chip grids (compose+mic, music+image) — stack vertically
+             instead of side-by-side, so each chip gets the full column width. */
+          .pf-setup-create-import-wrap .pf-setup-create,
+          .pf-setup-create-import-wrap .pf-setup-import {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+          }
+          /* Square chips: aspect-ratio 1:1 (square), vertical flex with icon
+             on top and label below. Override inline padding/min-height that
+             only made sense on a full-width chip. */
+          .pf-setup-create-import-wrap .pf-moodtile,
+          .pf-setup-create-import-wrap .pf-mfitile,
+          .pf-setup-create-import-wrap .pf-compose,
+          .pf-setup-create-import-wrap .pf-mic,
+          .pf-setup-create-import-wrap .pf-tool {
+            aspect-ratio: 1 / 1 !important;
+            flex-direction: column !important;
+            gap: 6px !important;
+            padding: 8px 6px !important;
+            min-height: 0 !important;
+            text-align: center !important;
+            line-height: 1.1 !important;
+            white-space: normal !important;
+            word-break: keep-all !important;
+          }
+          /* Icon (the first <span> child or .pf-glyph) larger in the square
+             layout — needs to read as the primary visual, with the text label
+             as supporting. Inline font-size is overridden. */
+          .pf-setup-create-import-wrap .pf-moodtile > span:first-child,
+          .pf-setup-create-import-wrap .pf-mfitile > span:first-child,
+          .pf-setup-create-import-wrap .pf-tool .pf-glyph {
+            font-size: 1.6rem !important;
+            line-height: 1 !important;
+            flex-shrink: 0 !important;
+          }
+          /* Slightly smaller text labels to fit the square tile cleanly with
+             the larger icon. */
+          .pf-setup-create-import-wrap .pf-moodtile,
+          .pf-setup-create-import-wrap .pf-mfitile,
+          .pf-setup-create-import-wrap .pf-compose,
+          .pf-setup-create-import-wrap .pf-mic,
+          .pf-setup-create-import-wrap .pf-tool {
+            font-size: .58rem !important;
+            letter-spacing: .08em !important;
+          }
+        }
 `;
 // Anthropic model used by aiCompose. Pinned to the version prescribed by the
 // "API in artifacts" feature; bump here when Anthropic publishes a newer one.
@@ -25245,7 +25309,7 @@ Composition rules:
 
         {/* ── MAIN PANEL ── mood · source (color/style/scan live in the canvas
             attributes strip, shown contextually after a source is picked) ── */}
-        <div style={{background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:20,padding:isDesktop?14:20,display:'flex',flexDirection:'column',gap:isDesktop?12:18}}>
+        <div className="pf-setup-create-import-wrap" style={{background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:20,padding:isDesktop?14:20,display:'flex',flexDirection:'column',gap:isDesktop?12:18}}>
 
           {/* ── LEFT column (desktop): CREATE from scratch — mood · compose · mic.
               On mobile this is just the first stacked group. ── */}

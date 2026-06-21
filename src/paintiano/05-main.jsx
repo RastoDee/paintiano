@@ -7996,7 +7996,7 @@ Composition rules:
 
         {/* ── MAIN PANEL ── mood · source (color/style/scan live in the canvas
             attributes strip, shown contextually after a source is picked) ── */}
-        <div style={{background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:20,padding:isDesktop?14:20,display:'flex',flexDirection:'column',gap:isDesktop?12:18}}>
+        <div className="pf-setup-create-import-wrap" style={{background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:20,padding:isDesktop?14:20,display:'flex',flexDirection:'column',gap:isDesktop?12:18}}>
 
           {/* ── LEFT column (desktop): CREATE from scratch — mood · compose · mic.
               On mobile this is just the first stacked group. ── */}
