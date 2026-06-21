@@ -310,6 +310,7 @@ const PF_STYLE = `
               grid-template-areas:
                 "topbar  topbar   topbar topbar  topbar"
                 "header  header   header header  header"
+                "txL     controls trkhd  rtop    txR"
                 "txL     controls stage  rtop    txR"
                 "txL     colors   stage  styles  txR"
                 "txL     .        stage  styles  txR"
@@ -375,6 +376,12 @@ const PF_STYLE = `
           }
           /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
           .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; gap: 8px; margin-bottom: 10px; }
+          /* Track head — mood title + library/AI badge — sits in its own row
+             above the stage in the 5-col layout. Spans the stage column width
+             so long morph chains ("yearning → calm → joy") read in full
+             without truncation. Aligned to the bottom of its row so it nests
+             snugly against the canvas. */
+          .pf-app-root > .pf-track-head { grid-area: trkhd; align-self: end; justify-self: center; max-width: 100% !important; margin: 0 0 6px !important; }
           /* Progress/seek bar sits above the artists in the right column. */
           .pf-app-root > .pf-seek-block { grid-area: rtop; align-self: start; max-width: 100% !important; margin: 0 0 10px !important; }
           /* The active-view strip (pf-panel-part) and its inner grid wrapper are
@@ -26426,8 +26433,8 @@ Composition rules:
         const _badgeSpan = (moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>));
         return showTransport && (<>
         {is5Col && (seekTitle || _badgeSpan) && (
-          <div className="pf-track-head" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8,display:'flex',alignItems:'center',justifyContent:'center',gap:10,flexWrap:'wrap',padding:'4px 12px'}}>
-            <span style={{fontSize:(.78*effScale)+'rem',color:seekTitle.includes('→')?'rgba(220,170,255,.95)':'rgba(247,243,236,.85)',fontStyle:seekTitle.includes('→')?'italic':'normal',textAlign:'center',lineHeight:1.3,wordBreak:'break-word'}}>{seekTitle}</span>
+          <div className="pf-track-head" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:6,display:'flex',alignItems:'center',justifyContent:'center',gap:8,flexWrap:'wrap'}}>
+            <span style={{fontSize:seekTitle.includes('→')?(.62*effScale)+'rem':(.57*effScale)+'rem',color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'rgba(247,243,236,.55)',fontStyle:seekTitle.includes('→')?'italic':'normal',textAlign:'center',lineHeight:1.3,wordBreak:'break-word'}}>{seekTitle}</span>
             {_badgeSpan}
           </div>
         )}
