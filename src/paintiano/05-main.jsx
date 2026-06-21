@@ -1884,6 +1884,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const composeStashRef = useRef(null);
   const singStashRef    = useRef(null);
   const listenStashRef  = useRef(null);
+  // Each non-creative source mode also keeps its own independent stash so the
+  // user can switch between Mood / MFI / Music / Image without losing what
+  // they had loaded. Snapshot payload differs per mode — see stashMode().
+  // Stash is created when the user LEAVES a mode (← BACK or switching to a
+  // different source). The corresponding setup chip then lights up; clicking
+  // it again restoreMode()s the snapshot.
+  const moodStashRef    = useRef(null);
+  const mfiStashRef     = useRef(null);
+  const musicStashRef   = useRef(null);
+  const imageStashRef   = useRef(null);
   // State mirror of composeStashRef so the Compose button can show a "draft
   // saved" visual when the user has stepped away from an in-progress canvas.
   // True iff composeStashRef.current holds a non-empty snapshot.
@@ -1891,6 +1901,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Sing and Listen are presets of the unified MIC mode and share one draft.
   // True iff either stash slot holds a non-empty snapshot.
   const [hasMicDraft, setHasMicDraft] = useState(false);
+  // Per-mode draft flags so the setup chip can light up when the user has
+  // an in-progress canvas for that mode. Set by stashMode(), cleared by
+  // clearModeStash(). True iff the corresponding xxxStashRef holds a
+  // non-empty snapshot.
+  const [hasMoodDraft,  setHasMoodDraft]  = useState(false);
+  const [hasMfiDraft,   setHasMfiDraft]   = useState(false);
+  const [hasMusicDraft, setHasMusicDraft] = useState(false);
+  const [hasImageDraft, setHasImageDraft] = useState(false);
   // True when we're in the MIC context with the mic stopped and the canvas
   // cleared — i.e. after Clear in MIC. Keeps the MIC view framed and shows a
   // "tap 🎙 to record" prompt so it's clear you're still in MIC and one tap
@@ -2611,6 +2629,111 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setViewMode('paint');
     setInfo(null);
     return true;
+  },[]);
+  // stashMode: capture the in-progress state of a SOURCE mode (mood / mfi /
+  // music / image) so the user can come back to it later via the setup chip.
+  // Unlike stashDraft (which only saves chords for the live compose / mic
+  // creative modes), each source mode persists the full slice of state that
+  // identifies the loaded piece — currentMood + midi for Mood, originalImgUrl
+  // + atmosphere for MFI/Image, loadedSource + blob for Music, etc.
+  // No-op if the canvas is empty (chords.length === 0).
+  const stashMode = useCallback((mode)=>{
+    const cur = chordsRef.current;
+    if(!cur || !cur.length) return;
+    const base = { chords: cur.slice(), info, viewMode };
+    if(mode==='mood'){
+      moodStashRef.current = { ...base, currentMood, composeSource, varySource, midiBlob, midiName, morphTargets };
+      setHasMoodDraft(true);
+    } else if(mode==='mfi'){
+      mfiStashRef.current = { ...base, originalImgUrl, imgMoodThumb, mfiImgAspect, composeSource, varySource, midiBlob, midiName };
+      setHasMfiDraft(true);
+    } else if(mode==='music'){
+      musicStashRef.current = { ...base, loadedSource, midiBlob, midiName, audioBlob, audioName };
+      setHasMusicDraft(true);
+    } else if(mode==='image'){
+      imageStashRef.current = { ...base, originalImgUrl, mfiImgAspect, loadedSource };
+      setHasImageDraft(true);
+    }
+  },[info,viewMode,currentMood,composeSource,varySource,midiBlob,midiName,morphTargets,originalImgUrl,imgMoodThumb,mfiImgAspect,loadedSource,audioBlob,audioName]);
+  // restoreMode: load a previously stashed source mode back onto the canvas.
+  // Sets every state field captured by stashMode, plus the mode-specific
+  // context flags (moodContext / moodFromImg / loadedSource) so the live
+  // chrome (chip, vary button, save tint, ...) matches. Returns true if a
+  // stash existed and was restored.
+  const restoreMode = useCallback((mode)=>{
+    let stash=null;
+    if(mode==='mood')       stash = moodStashRef.current;
+    else if(mode==='mfi')   stash = mfiStashRef.current;
+    else if(mode==='music') stash = musicStashRef.current;
+    else if(mode==='image') stash = imageStashRef.current;
+    if(!stash || !stash.chords || !stash.chords.length) return false;
+    // Before overwriting the canvas, snapshot whatever source mode it
+    // currently holds — otherwise switching from Mood to Image via the chip
+    // would silently lose the Mood draft. Only stash a different mode.
+    if(chordsRef.current && chordsRef.current.length){
+      if(mode!=='mfi'   && moodFromImg && originalImgUrl) stashMode('mfi');
+      else if(mode!=='mood' && moodContext && currentMood && !moodFromImg) stashMode('mood');
+      else if(mode!=='image' && loadedSource==='image' && !moodFromImg) stashMode('image');
+      else if(mode!=='music' && (loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score')) stashMode('music');
+    }
+    // Stop any current playback / live mode and clear the canvas owner — we
+    // are taking over the canvas with the stashed snapshot.
+    if(composeMode) setComposeMode(false);
+    if(micPainting) stopMicPainting();
+    if(micListening) stopMicListening();
+    draftOwnerRef.current = null;
+    composedModeRef.current = false;
+    // Shared payload first
+    setChords(stash.chords);
+    chordsRef.current = stash.chords;
+    setDisp(stash.chords.length);
+    setInfo(stash.info||null);
+    setViewMode(stash.viewMode||'paint');
+    // Mode-specific
+    if(mode==='mood'){
+      setCurrentMood(stash.currentMood||null);
+      setComposeSource(stash.composeSource||null);
+      setVarySource(stash.varySource||null);
+      setMidiBlob(stash.midiBlob||null);
+      setMidiName(stash.midiName||'');
+      setMorphTargets(stash.morphTargets||[]);
+      setMoodContext(true); setMoodFromImg(false); setLoadedSource(null);
+      setOriginalImgUrl(null); setImgMoodThumb(null);
+    } else if(mode==='mfi'){
+      setOriginalImgUrl(stash.originalImgUrl||null);
+      setImgMoodThumb(stash.imgMoodThumb||null);
+      setMfiImgAspect(stash.mfiImgAspect||null);
+      setComposeSource(stash.composeSource||null);
+      setVarySource(stash.varySource||null);
+      setMidiBlob(stash.midiBlob||null);
+      setMidiName(stash.midiName||'');
+      setMoodContext(true); setMoodFromImg(true); setLoadedSource(null);
+      setCurrentMood(null);
+    } else if(mode==='music'){
+      setLoadedSource(stash.loadedSource||null);
+      setMidiBlob(stash.midiBlob||null);
+      setMidiName(stash.midiName||'');
+      setAudioBlob(stash.audioBlob||null);
+      setAudioName(stash.audioName||'');
+      setMoodContext(false); setMoodFromImg(false);
+      setCurrentMood(null); setOriginalImgUrl(null); setImgMoodThumb(null);
+    } else if(mode==='image'){
+      setOriginalImgUrl(stash.originalImgUrl||null);
+      setMfiImgAspect(stash.mfiImgAspect||null);
+      setLoadedSource(stash.loadedSource||'image');
+      setMoodContext(false); setMoodFromImg(false);
+      setCurrentMood(null); setImgMoodThumb(null);
+    }
+    return true;
+  },[composeMode,micPainting,micListening,stopMicPainting,stopMicListening,stashMode,moodFromImg,originalImgUrl,moodContext,currentMood,loadedSource]);
+  // clearModeStash: discard the stash for `mode` and turn off its draft flag.
+  // Called on Clear, on + NEW <source> (replace flow), and on explicit mode
+  // discard. Safe to call even when no stash exists.
+  const clearModeStash = useCallback((mode)=>{
+    if(mode==='mood'){  moodStashRef.current  = null; setHasMoodDraft(false); }
+    else if(mode==='mfi'){   mfiStashRef.current   = null; setHasMfiDraft(false); }
+    else if(mode==='music'){ musicStashRef.current = null; setHasMusicDraft(false); }
+    else if(mode==='image'){ imageStashRef.current = null; setHasImageDraft(false); }
   },[]);
   // resetCanvasForDraft: start a clean canvas owned by `owner` (called when
   // entering a creative mode with no stash for it).
@@ -3662,6 +3785,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Canvas is now empty — return the page to its default (top) position so the
     // header and controls are back in their resting place.
     requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
+    // Clear is a full reset of the loaded content — also discards every source
+    // mode stash so the matching setup chips stop glowing. Compose/Mic drafts
+    // are handled by the owner-specific branches above.
+    moodStashRef.current=null; setHasMoodDraft(false);
+    mfiStashRef.current=null; setHasMfiDraft(false);
+    musicStashRef.current=null; setHasMusicDraft(false);
+    imageStashRef.current=null; setHasImageDraft(false);
   },[stopAll,micPainting,micListening,composeMode]);
 
   // Clear from the painting view. For a loaded source (mood / MIDI / audio /
@@ -8054,7 +8184,7 @@ Composition rules:
               mood (how do you feel?) · compose · mic. */}
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('createLabel'))}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:(moodContext&&!moodFromImg&&chords.length>0)?'#eafff4':'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
+            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMoodDraft){ if(restoreMode('mood')){ setForceSetup(false); return; } } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:(moodContext&&!moodFromImg&&chords.length>0)?'#eafff4':'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
               {(moodContext&&!moodFromImg&&chords.length>0)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dcb45a',boxShadow:'0 0 6px #dcb45a',flexShrink:0}}/>}
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-1.5A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></span>
               {_sent(t('moodHowFeel'))}
@@ -8150,8 +8280,8 @@ Composition rules:
               mood-from-image · music · image. */}
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('importLabel'))}</div>
-            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
-              {(moodFromImg&&chords.length>0)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dc96ff',boxShadow:'0 0 6px #dc96ff',flexShrink:0}}/>}
+            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMfiDraft){ if(restoreMode('mfi')){ setForceSetup(false); return; } } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':(((moodFromImg&&chords.length>0)||hasMfiDraft)?'#eafff4':'rgba(228,178,255,.95)')),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
+              {((moodFromImg&&chords.length>0)||hasMfiDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dc96ff',boxShadow:'0 0 6px #dc96ff',flexShrink:0}}/>}
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}>{imgAiBusy?<span>⏳</span>:<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.5L21 19l-1.3.5L19 21l-.7-1.5L17 19l1.3-.5z"/><path d="M5 4l.6 1.2L7 6l-1.4.4L5 8l-.6-1.6L3 6l1.4-.4z"/></svg>}</span>
               {imgAiBusy?'…':_sent(t('imgMood')||'mood from image').replace(/^(\S+)\s+/, '$1\u00A0')}
               {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:500,letterSpacing:0}}>· {t('aiOffline')||'offline'}</span>}
@@ -8161,8 +8291,8 @@ Composition rules:
               {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
                   loadSound routes by file type. Active when any of the three
                   music sources is loaded. */}
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':((activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'#eafff4':PF.blue),fontFamily:'inherit'}}>{(activeSource==='midi'||activeSource==='audio'||activeSource==='score')&&<span style={{width:7,height:7,borderRadius:'50%',background:'#5b9cf6',boxShadow:'0 0 6px #5b9cf6',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':_sent(t('music')!=='music'?t('music'):'music')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':((activeSource==='image'&&!moodFromImg)?'#eafff4':PF.orange),fontFamily:'inherit'}}>{(activeSource==='image'&&!moodFromImg)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#f47c3c',boxShadow:'0 0 6px #f47c3c',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{switchArmed==='image'?t('switchConfirm'):_sent(t('image').replace(/[^\p{L}]/gu,''))}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}if(hasMusicDraft){if(restoreMode('music')){setForceSetup(false);return;}}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':((activeSource==='midi'||activeSource==='audio'||activeSource==='score')||hasMusicDraft)?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':((activeSource==='midi'||activeSource==='audio'||activeSource==='score')||hasMusicDraft)?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':(((activeSource==='midi'||activeSource==='audio'||activeSource==='score')||hasMusicDraft)?'#eafff4':PF.blue),fontFamily:'inherit'}}>{((activeSource==='midi'||activeSource==='audio'||activeSource==='score')||hasMusicDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#5b9cf6',boxShadow:'0 0 6px #5b9cf6',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':_sent(t('music')!=='music'?t('music'):'music')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}if(hasImageDraft){if(restoreMode('image')){setForceSetup(false);return;}}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':((activeSource==='image'&&!moodFromImg)||hasImageDraft)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':((activeSource==='image'&&!moodFromImg)||hasImageDraft)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':(((activeSource==='image'&&!moodFromImg)||hasImageDraft)?'#eafff4':PF.orange),fontFamily:'inherit'}}>{((activeSource==='image'&&!moodFromImg)||hasImageDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#f47c3c',boxShadow:'0 0 6px #f47c3c',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{switchArmed==='image'?t('switchConfirm'):_sent(t('image').replace(/[^\p{L}]/gu,''))}</span></button>
             </div>
           </div>
 
@@ -8264,7 +8394,16 @@ Composition rules:
               try{if(audioSourceRef.current){audioSourceRef.current.stop();audioSourceRef.current.disconnect();audioSourceRef.current=null;}}catch(_){}
               setActive(new Set());setPlaying(false);setAnim(false);
             } else { stopAll(); wipeCanvasNow(); }
-            setWorking(false);setWLabel('');setWPct(0);if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setMicArmed(false);setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);
+            setWorking(false);setWLabel('');setWPct(0);
+            // Stash the current SOURCE mode so its chip lights up in setup
+            // and a click brings the same canvas back. Detected from the
+            // active state slice. Creative modes (compose / mic) are stashed
+            // separately above via stashDraft.
+            if(moodFromImg && originalImgUrl) stashMode('mfi');
+            else if(moodContext && currentMood && !moodFromImg) stashMode('mood');
+            else if(loadedSource==='image' && !moodFromImg) stashMode('image');
+            else if(loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score') stashMode('music');
+            if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setMicArmed(false);setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);
             // Close any open picker on the way back to setup — otherwise a
             // mood/morph/recent/source picker opened on the canvas lingers
             // over the setup screen.
