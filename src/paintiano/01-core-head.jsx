@@ -575,6 +575,26 @@ const PF_STYLE = `
             box-shadow: 0 12px 40px rgba(0,0,0,.4) !important;
             pointer-events: auto !important;
           }
+          /* Per-mode picker frame tint — matches the source colour identity
+             so the picker visually reads as "this is the music / image / etc.
+             input". Default (mood) keeps gold; the four import / mic sources
+             get their own colour. */
+          .pf-app-root .pf-picker-overlay.pf-picker-music .pf-picker-dialog {
+            border-color: rgba(91,156,246,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(91,156,246,.08) !important;
+          }
+          .pf-app-root .pf-picker-overlay.pf-picker-image .pf-picker-dialog {
+            border-color: rgba(244,124,60,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(244,124,60,.08) !important;
+          }
+          .pf-app-root .pf-picker-overlay.pf-picker-mfi .pf-picker-dialog {
+            border-color: rgba(220,150,255,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(220,150,255,.08) !important;
+          }
+          .pf-app-root .pf-picker-overlay.pf-picker-mic .pf-picker-dialog {
+            border-color: rgba(240,106,166,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(240,106,166,.08) !important;
+          }
           /* IMPORT-source pickers (mood-from-image / music / image) sit in the
              RIGHT column, so their picker opens on the LEFT to avoid covering the
              panel it came from. Mood (left column) keeps its right-side picker. */
