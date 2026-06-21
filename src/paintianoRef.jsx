@@ -21676,10 +21676,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const hh=String(d.getHours()).padStart(2,'0');
       const mm=String(d.getMinutes()).padStart(2,'0');
       const tm=hh+':'+mm;
-      if(sameDay) return '♪ '+(t('today')||'Today')+' '+tm;
+      if(sameDay) return (t('today')||'Today')+' '+tm;
       const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return '♪ '+d.getDate()+' '+mons[d.getMonth()]+' '+tm;
-    }catch(_){ return '♪ '+(t('recentPlayed')||'recent'); }
+      return d.getDate()+' '+mons[d.getMonth()]+' '+tm;
+    }catch(_){ return (t('recentPlayed')||'recent'); }
   },[t]);
   // Tracks which Compose recent entry the user is currently working on. Set
   // when they Recall an entry; cleared on Clear (user starts something new).
@@ -25626,7 +25626,7 @@ Composition rules:
           {/* ♪ Recently played — opens a picker of saved compose performances.
               Only visible in compose mode and only if any saved entries exist. */}
           {composeMode && composeRecent.length>0 && (
-            <button onClick={()=>{if(recording)return;setShowComposeRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recent'}</button>
+            <button onClick={()=>{if(recording)return;setShowComposeRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{_sent(t('recentPlayed')||'recent')}</button>
           )}
           {/* ♪ Recently played for Mic — preset-aware: voice store in voice mode,
               music store in music. Visible across the entire mic context window:
@@ -25635,7 +25635,7 @@ Composition rules:
               the user is still on the mic canvas). micContext stays true until
               Back/Clear, so the button does too. */}
           {(micActive || micArmed || micContext) && ((micPreset==='voice' && micVoiceRecent.length>0) || (micPreset==='music' && micMusicRecent.length>0)) && (
-            <button onClick={()=>{if(recording)return;setShowMicRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recent'}</button>
+            <button onClick={()=>{if(recording)return;setShowMicRecent(true);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{_sent(t('recentPlayed')||'recent')}</button>
           )}
         </div>
         {!isDesktop && (<>
@@ -27031,33 +27031,33 @@ Composition rules:
       )}
 
       {showComposeRecent && (
-        <div onClick={()=>setShowComposeRecent(false)} className="pf-recent-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recently played'}</div>
+        <div onClick={()=>setShowComposeRecent(false)} className="pf-recent-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(t('recentPlayed')||'recently played')}</div>
             <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
               {composeRecent.map(entry=>(
-                <button key={entry.id} onClick={()=>{ _composeRecall(entry); setShowComposeRecent(false); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.66*effScale)+'rem',textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                <button key={entry.id} onClick={()=>{ _composeRecall(entry); setShowComposeRecent(false); }} style={{padding:'12px 14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.7*effScale)+'rem',fontWeight:500,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                   {_composeRecentLabel(entry.ts)}
                 </button>
               ))}
             </div>
-            <button onClick={()=>setShowComposeRecent(false)} style={{display:'block',margin:'0 auto',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em'}}>cancel</button>
+            <button onClick={()=>setShowComposeRecent(false)} style={{display:'block',margin:'0 auto',padding:'8px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'none',cursor:'pointer',fontSize:(.65*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent('cancel')}</button>
           </div>
         </div>
       )}
 
       {showMicRecent && (
-        <div onClick={()=>setShowMicRecent(false)} className="pf-recent-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:320,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'22px 18px'}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase'}}>♪ {t('recentPlayed')||'recently played'}</div>
+        <div onClick={()=>setShowMicRecent(false)} className="pf-recent-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(t('recentPlayed')||'recently played')}</div>
             <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
               {(()=>{ const preset = micPreset==='music' ? 'music' : 'voice'; const list = preset==='voice' ? micVoiceRecent : micMusicRecent; return list.map(entry=>(
-                <button key={entry.id} onClick={()=>{ _micRecall(preset,entry); setShowMicRecent(false); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.66*effScale)+'rem',textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                <button key={entry.id} onClick={()=>{ _micRecall(preset,entry); setShowMicRecent(false); }} style={{padding:'12px 14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.7*effScale)+'rem',fontWeight:500,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                   {_composeRecentLabel(entry.ts)}
                 </button>
               )); })()}
             </div>
-            <button onClick={()=>setShowMicRecent(false)} style={{display:'block',margin:'0 auto',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em'}}>cancel</button>
+            <button onClick={()=>setShowMicRecent(false)} style={{display:'block',margin:'0 auto',padding:'8px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'none',cursor:'pointer',fontSize:(.65*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent('cancel')}</button>
           </div>
         </div>
       )}

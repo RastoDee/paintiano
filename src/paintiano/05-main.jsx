@@ -9454,10 +9454,9 @@ Composition rules:
         // option set because their pieces are newly composed.
         const isImportedMedia = loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score';
         return (
-        <div onClick={()=>setShowSizePicker(false)} className="pf-save-overlay" style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:20}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export" style={{background:'#0a0a14',border:'1px solid '+pk.edge,borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:320}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.12em',color:pk.line,fontSize:(.65*effScale)+'rem'}}>
-              ↓ {t('save')}</div>
+        <div onClick={()=>setShowSizePicker(false)} className="pf-save-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:'4vh 16px'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export" style={{background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',minWidth:260,maxWidth:340,backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>{_sent(t('save'))}</div>
             <input
               ref={compInputRef}
               type="text"
@@ -9468,7 +9467,7 @@ Composition rules:
               placeholder={t('nameThisPiece')}
               maxLength={80}
               aria-label={t('nameThisPiece')}
-              style={{width:'100%',boxSizing:'border-box',background:'rgba(8,6,14,0.8)',border:'1px solid '+(focusedInput==='comp'?'rgba(201,168,76,.85)':'rgba(201,168,76,.35)'),borderRadius:4,padding:'8px 12px',color:'rgba(207,197,168,.95)',fontSize:(.72*effScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:'.04em',textAlign:'center',marginBottom:14,boxShadow:focusedInput==='comp'?'0 0 0 2px rgba(201,168,76,.18)':'none',transition:'border-color .15s ease, box-shadow .15s ease'}}
+              style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,.018)',border:'1px solid '+(focusedInput==='comp'?'rgba(255,255,255,.25)':'rgba(255,255,255,.08)'),borderRadius:12,padding:'10px 14px',color:'rgba(247,243,236,.95)',fontSize:(.72*effScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:0,textAlign:'center',marginBottom:14,transition:'border-color .15s ease'}}
             />
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {viewMode==='image' ? (
@@ -9483,8 +9482,8 @@ Composition rules:
                       • Score — MusicXML in-app row
                       Web/Print removed: in image mode the source already IS a picture. */}
                   {originalImgUrl && (
-                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'9px 12px',background:includeSourceThumb?'rgba(220,150,255,.16)':'transparent',color:includeSourceThumb?'rgba(225,175,255,.95)':'rgba(180,170,150,.65)',border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.55)':'rgba(180,170,150,.22)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.6*effScale)+'rem',display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
-                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:16,height:16,borderRadius:3,border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.85)':'rgba(180,170,150,.4)'),background:includeSourceThumb?'rgba(220,150,255,.4)':'transparent',color:'#0a0a14',fontSize:'.7rem',lineHeight:1,fontWeight:700,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
+                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'10px 12px',background:'transparent',color:includeSourceThumb?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
+                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:5,border:'1px solid '+(includeSourceThumb?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',lineHeight:1,fontWeight:600,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left'}}>{t('includeSourceImage')!=='includeSourceImage' ? t('includeSourceImage') : 'include source original image'}</span>
                     </button>
                   )}
@@ -9493,9 +9492,9 @@ Composition rules:
                     setShowSizePicker(false);
                     if(recBlob && recName) exportImage('story', true, recBlob, recName, includeSourceThumb);
                     else { setRecordIntent('story'); startRecord(); }
-                  }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
+                  }} style={{padding:'14px',background:'linear-gradient(135deg,rgba(255,215,120,.16),rgba(220,170,70,.08))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.4)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                     ✦ {t('sizeStory')||'Story'}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(255,210,140,.55)',marginTop:4,letterSpacing:0,fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
                   </button>
                   <button onClick={()=>{
                     pendingWithSourceRef.current=includeSourceThumb;
@@ -9510,20 +9509,20 @@ Composition rules:
                       setAudioShareMsg(null);
                     }
                     else { setRecordIntent('audio'); startRecord(); }
-                  }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                  }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                     ⏺ {t('saveAudioLabel')||'Audio'}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{includeSourceThumb ? (t('saveAudioHintImg')!=='saveAudioHintImg'?t('saveAudioHintImg'):'image + audio · save to files') : (t('saveAudioHint')||'audio · save to files')}</div>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{includeSourceThumb ? (t('saveAudioHintImg')!=='saveAudioHintImg'?t('saveAudioHintImg'):'image + audio · save to files') : (t('saveAudioHint')||'audio · save to files')}</div>
                   </button>
-                  <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                  <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                     ♫ {t('scoreExport')}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
                   </button>
                 </>
               ) : (
                 <>
                   {(originalImgUrl || imgMoodThumb) && (
-                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'9px 12px',background:includeSourceThumb?'rgba(220,150,255,.16)':'transparent',color:includeSourceThumb?'rgba(225,175,255,.95)':'rgba(180,170,150,.65)',border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.55)':'rgba(180,170,150,.22)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.6*effScale)+'rem',display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
-                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:16,height:16,borderRadius:3,border:'1px solid '+(includeSourceThumb?'rgba(220,150,255,.85)':'rgba(180,170,150,.4)'),background:includeSourceThumb?'rgba(220,150,255,.4)':'transparent',color:'#0a0a14',fontSize:'.7rem',lineHeight:1,fontWeight:700,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
+                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'10px 12px',background:'transparent',color:includeSourceThumb?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
+                      <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:5,border:'1px solid '+(includeSourceThumb?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',lineHeight:1,fontWeight:600,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left'}}>{t('includeSourceThumb')!=='includeSourceThumb' ? t('includeSourceThumb') : 'include source thumbnail'}</span>
                     </button>
                   )}
@@ -9569,35 +9568,35 @@ Composition rules:
                       }
                       try{ await unlockAudio(); }catch(_){}
                       await exportImage('story', true, audioBlob, audioName, true);
-                    }} style={{padding:'12px',background:'linear-gradient(135deg,rgba(255,215,120,.18),rgba(220,170,70,.10))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.55)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',fontWeight:600}}>
+                    }} style={{padding:'14px',background:'linear-gradient(135deg,rgba(255,215,120,.16),rgba(220,170,70,.08))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.4)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                       ✦ {t('sizeStory')||'Story'}
-                      <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(255,210,140,.6)',marginTop:4,letterSpacing:'.04em',fontWeight:400}}>{isImportedMedia ? (t('storyImageHintNoAudio')||'painting · for IG / TikTok') : (t('storyImageHint')||'painting + audio · for IG / TikTok')}</div>
+                      <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(255,210,140,.55)',marginTop:4,letterSpacing:0,fontWeight:400}}>{isImportedMedia ? (t('storyImageHintNoAudio')||'painting · for IG / TikTok') : (t('storyImageHint')||'painting + audio · for IG / TikTok')}</div>
                     </button>
                   )}
-                  <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                  <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                     🖥 {t('sizeWeb')}
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizeWebHint')}</div>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizeWebHint')}</div>
                   </button>
                   <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('print', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
                       🖨 {t('sizePrint')}
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
-                    <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('sizePrintHint')}</div>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizePrintHint')}</div>
                   </button>
                   {/* Audio + Score export hidden for MIDI/Audio/Score sources
                       (isImportedMedia) — exporting them back to the same file
                       format the user just imported is redundant. */}
                   {!isImportedMedia && (
-                    <button onClick={()=>{ setShowSizePicker(false); saveAudio(true); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    <button onClick={()=>{ setShowSizePicker(false); saveAudio(true); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                       ⏺ {t('saveAudioLabel')||'Audio'}
-                      <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
+                      <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
                     </button>
                   )}
                   {!isImportedMedia && (
-                    <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'12px',background:'transparent',color:pk.line,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem'}}>
+                    <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                       ♫ {t('scoreExport')}
-                      <div style={{fontSize:(.52*effScale)+'rem',color:pk.dim,marginTop:4,letterSpacing:'.04em'}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
+                      <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
                     </button>
                   )}
                 </>
@@ -9863,10 +9862,10 @@ Composition rules:
         </div>
       )}
       {showMorphMenu && (
-        <div onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.85)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24,backdropFilter:'blur(6px)'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="morph mood" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.95)',border:'1px solid rgba(220,150,255,.35)',borderRadius:8,padding:'22px 18px'}}>
-            <div style={{textAlign:'center',marginBottom:4,letterSpacing:'.18em',color:'rgba(220,170,255,.85)',fontSize:(.7*effScale)+'rem',textTransform:'uppercase'}}>✦ {t('morphTitle').replace('{mood}',(t('moodNames')||{})[currentMood]||currentMood||'')}</div>
-            <div style={{textAlign:'center',marginBottom:12,fontSize:(.55*effScale)+'rem',letterSpacing:'.04em',color:'rgba(207,197,168,.45)'}}>{t('morphHint')} · <span role="button" tabIndex={0} onClick={()=>{setMorphPool([...morphSel, ...makeMorphPool(currentMood, morphSel)]);setMorphPoolSource('offline');setMorphPoolLoading(false);}} title="shuffle / iné" style={{cursor:'pointer',color:'rgba(220,180,255,.85)',userSelect:'none'}}>↻</span> · <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',textTransform:'uppercase',color:morphPoolLoading?'rgba(220,180,255,.7)':morphPoolSource==='ai'?'rgba(220,170,255,.95)':'rgba(207,197,168,.5)'}}>{morphPoolLoading?'✦ …':morphPoolSource==='ai'?'✦ AI':'offline'}</span></div>
+        <div onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="morph mood" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
+            <div style={{textAlign:'center',marginBottom:4,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>{_sent(t('morphTitle').replace('{mood}',(t('moodNames')||{})[currentMood]||currentMood||''))}</div>
+            <div style={{textAlign:'center',marginBottom:12,fontSize:(.58*effScale)+'rem',letterSpacing:0,color:'rgba(230,222,196,.45)'}}>{t('morphHint')} · <span role="button" tabIndex={0} onClick={()=>{setMorphPool([...morphSel, ...makeMorphPool(currentMood, morphSel)]);setMorphPoolSource('offline');setMorphPoolLoading(false);}} title="shuffle / iné" style={{cursor:'pointer',color:'rgba(220,180,255,.85)',userSelect:'none'}}>↻</span> · <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',textTransform:'uppercase',color:morphPoolLoading?'rgba(220,180,255,.7)':morphPoolSource==='ai'?'rgba(220,170,255,.95)':'rgba(207,197,168,.5)'}}>{morphPoolLoading?'✦ …':morphPoolSource==='ai'?'✦ AI':'offline'}</span></div>
             {/* Live chain preview: current → sel1 → sel2 → sel3 */}
             <div style={{textAlign:'center',marginBottom:12,fontSize:(.62*effScale)+'rem',letterSpacing:'.04em',color:'rgba(220,180,255,.9)',textTransform:'capitalize',minHeight:'1.2em'}}>
               {[(t('moodNames')||{})[currentMood]||currentMood, ...morphSel.map(m=>(t('moodNames')||{})[m]||m)].join(' → ')}
@@ -9893,7 +9892,7 @@ Composition rules:
               })}
             </div>
             <div style={{display:'flex',gap:8,marginTop:16}}>
-              <button onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flex:1,padding:'9px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:4,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase'}}>cancel</button>
+              <button onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flex:1,padding:'10px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent('cancel')}</button>
               <button disabled={morphSel.length===0} onClick={()=>{
                 const chain=[findSong(currentMood), ...morphSel.map(findSong)];
                 const morphed = morphSel.length===1 ? morphSongs(chain[0],chain[1]) : morphChain(chain);
@@ -9915,7 +9914,7 @@ Composition rules:
                 const bytes=encodeMidi(evts,morphed.tempo||100);
                 setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                 setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
-              }} style={{flex:1,padding:'9px 16px',background:morphSel.length?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.25)',color:'#fff',border:'none',borderRadius:4,cursor:morphSel.length?'pointer':'default',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',textTransform:'uppercase',opacity:morphSel.length?1:.5}}>✦ {t('morphGo')}</button>
+              }} style={{flex:1,padding:'10px 16px',background:morphSel.length?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.25)',color:'#fff',border:'none',borderRadius:12,cursor:morphSel.length?'pointer':'default',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500,opacity:morphSel.length?1:.5}}>{_sent(t('morphGo'))}</button>
             </div>
           </div>
         </div>
