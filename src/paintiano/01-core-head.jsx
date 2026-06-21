@@ -183,6 +183,17 @@ const PF_STYLE = `
         /* ARTISTS col: row reversed → checkbox at right edge, text+lock left-aligned (toward center) */
         .pf-setup-artists  .pf-setup-grid > button { flex-direction: row-reverse !important; }
         .pf-setup-artists  .pf-setup-grid > button > span:last-child { text-align: left !important; }
+        /* Section head (Artists / All / None): nudge slightly inward from the
+           right edge so "None" stays visible on narrow mobile widths. */
+        .pf-setup-artists > div:first-child { padding-right: 8px !important; }
+        /* Section heads: keep the title + All/None group together on the left
+           instead of justify-content: space-between (which pushed "None" off
+           the right edge on narrow mobile portrait modals). */
+        .pf-setup-palettes > div:first-child,
+        .pf-setup-artists  > div:first-child {
+          justify-content: flex-start !important;
+          gap: 16px !important;
+        }
         @media (min-width: 769px) and (min-height: 501px),
                (max-height: 500px) and (orientation: landscape) {
           html, body {
