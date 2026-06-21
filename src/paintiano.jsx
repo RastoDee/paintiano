@@ -26436,6 +26436,9 @@ Composition rules:
           <div className="pf-track-head" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:6,display:'flex',alignItems:'center',justifyContent:'center',gap:8,flexWrap:'wrap'}}>
             <span style={{fontSize:seekTitle.includes('→')?(.62*effScale)+'rem':(.57*effScale)+'rem',color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'rgba(247,243,236,.55)',fontStyle:seekTitle.includes('→')?'italic':'normal',textAlign:'center',lineHeight:1.3,wordBreak:'break-word'}}>{seekTitle}</span>
             {_badgeSpan}
+            {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (
+              <img src={imgMoodThumb || originalImgUrl} alt="source" style={{width:44,height:44,objectFit:'cover',borderRadius:8,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 8px rgba(0,0,0,.4)',opacity:.88,flexShrink:0}}/>
+            )}
           </div>
         )}
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
@@ -26533,7 +26536,7 @@ Composition rules:
       })()}
 
       {isActiveView && (<>
-      {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (()=>{
+      {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !is5Col && !(disp===0 && !playing && !anim) && (()=>{
         // Body 11: once playback begins / the mood pic has been drawn (disp>0),
         // the picture appears as a small thumbnail above the canvas, acting as
         // a reminder of the source. Before that (step 1), the picture lives
