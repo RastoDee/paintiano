@@ -26212,10 +26212,10 @@ Composition rules:
       <input ref={refImgMood} type="file" accept="image/*" onChange={loadImgMood} style={{display:'none'}}/>
 
       {pickMode && (
-        <div onClick={()=>setPickMode(null)} className={"pf-picker-overlay"+(['imgmood','sound','midi','audio','score','image'].includes(pickMode)?' pf-picker-left':'')} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" className="pf-picker-dialog" style={{background:'#0a0a14',border:'1px solid rgba(201,168,76,.35)',borderRadius:10,padding:'22px 18px',minWidth:260,maxWidth:340}}>
-            <div style={{textAlign:'center',marginBottom:18,letterSpacing:'.12em',color:'rgba(201,168,76,.75)',fontSize:(.65*effScale)+'rem'}}>
-              {pickMode==='sound'?(t('musicInput')||'add music'):pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')}
+        <div onClick={()=>setPickMode(null)} className={"pf-picker-overlay"+(['imgmood','sound','midi','audio','score','image'].includes(pickMode)?' pf-picker-left':'')} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" className="pf-picker-dialog" style={{background:'rgba(20,18,30,.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',minWidth:260,maxWidth:340}}>
+            <div style={{textAlign:'center',marginBottom:18,letterSpacing:0,color:PF.cream,fontSize:(.95*effScale)+'rem',fontWeight:500}}>
+              {_sent(pickMode==='sound'?(t('musicInput')||'add music'):pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput'))}
             </div>
             {pickMode==='mic' ? (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -26247,6 +26247,9 @@ Composition rules:
             </div>
             ) : (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {/* SAMPLE TILE — icon matches the mode (gramophone for music,
+                  image-frame for image, sparkles for MFI), label sentence-case,
+                  hint shows the actual sample name underneath. */}
               <button onClick={()=>{
                 if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
                 if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
@@ -26258,12 +26261,23 @@ Composition rules:
                 else loadSampleImage();
                 setForceSetup(false);
                 setPickMode(null);
-              }} style={{padding:'12px',background:'transparent',color:pickMode==='sound'?'rgba(140,180,255,.85)':pickMode==='midi'?'rgba(140,180,255,.85)':pickMode==='audio'?'rgba(255,180,100,.85)':pickMode==='score'?'rgba(210,150,255,.85)':pickMode==='imgmood'?'rgba(228,178,255,.95)':pickMode==='image'?'rgba(255,180,100,.9)':'rgba(120,220,170,.9)',border:'1px solid '+(pickMode==='sound'?'rgba(120,160,255,.4)':pickMode==='midi'?'rgba(120,160,255,.4)':pickMode==='audio'?'rgba(255,160,80,.4)':pickMode==='score'?'rgba(200,120,255,.4)':pickMode==='imgmood'?'rgba(220,150,255,.45)':pickMode==='image'?'rgba(244,124,60,.5)':'rgba(78,203,141,.45)'),borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*effScale)+'rem'}}>
-                {t('builtInSample')}
+              }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:12,transition:'background-color .18s, border-color .18s'}}>
+                <span style={{width:36,height:36,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,background:pickMode==='sound'||pickMode==='midi'||pickMode==='audio'||pickMode==='score'?'rgba(91,156,246,.12)':pickMode==='imgmood'?'rgba(220,150,255,.12)':'rgba(244,124,60,.12)',color:pickMode==='sound'||pickMode==='midi'||pickMode==='audio'||pickMode==='score'?'rgba(140,180,255,.95)':pickMode==='imgmood'?'rgba(228,178,255,.95)':'rgba(255,180,100,.95)'}}>
+                  {(pickMode==='sound'||pickMode==='midi'||pickMode==='audio'||pickMode==='score')?
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                  :pickMode==='imgmood'?
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.5L21 19l-1.3.5L19 21l-.7-1.5L17 19l1.3-.5z"/><path d="M5 4l.6 1.2L7 6l-1.4.4L5 8l-.6-1.6L3 6l1.4-.4z"/></svg>
+                  :
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                  }
+                </span>
+                <span style={{flex:1,minWidth:0}}>
+                  <span style={{display:'block',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:2}}>{_sent(t('builtInSample'))}</span>
+                  <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?SAMPLE_SCORE_NAME:pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}</span>
+                </span>
               </button>
-              <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
-                {pickMode==='sound'?SAMPLE_SCORE_NAME:pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}
-              </div>
+
+              {/* FILE TILE — universal upload icon, gold accent, hint shows accepted formats. */}
               <button onClick={()=>{
                 if(pickMode==='sound') refSound.current?.click();
                 else if(pickMode==='midi') refMidi.current?.click();
@@ -26276,28 +26290,32 @@ Composition rules:
                 // opens, cancelling it (Choose File appeared to do nothing). The
                 // loaders (loadMidi/loadAudio/loadScore/loadImage) close the modal
                 // via setPickMode(null) once a file is actually selected.
-              }} style={{padding:'12px',background:'transparent',color:'rgba(201,168,76,.85)',border:'1px solid rgba(201,168,76,.4)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.75*effScale)+'rem'}}>
-                {t('chooseFile')}
+              }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:12,transition:'background-color .18s, border-color .18s'}}>
+                <span style={{width:36,height:36,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,background:'rgba(201,168,76,.12)',color:'rgba(220,180,90,.95)'}}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                </span>
+                <span style={{flex:1,minWidth:0}}>
+                  <span style={{display:'block',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:2}}>{_sent(t('chooseFile'))}</span>
+                  <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'MIDI · audio · MusicXML':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'Audio · .mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'JPG · PNG · GIF · WEBP · HEIC'}</span>
+                </span>
               </button>
-              <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 8px',lineHeight:1.4}}>
-                {pickMode==='sound'?'.mid .midi · .mp3 .wav .m4a .ogg · .musicxml .xml .mxl':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'.mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'.jpg .png .gif .webp .heic'}
-              </div>
               {/* Recently AI generated — Pro feature. Free users see locked items;
                   tapping any opens the paywall via _mfiRecall. Only in MFI picker. */}
               {pickMode==='imgmood' && mfiRecent.length>0 && (
-                <div style={{marginTop:6,display:'flex',flexDirection:'column',gap:6}}>
-                  <div style={{fontSize:(.55*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(242,238,232,.45)',textAlign:'center',marginTop:4,marginBottom:2}}>
+                <div style={{marginTop:8,display:'flex',flexDirection:'column',gap:6}}>
+                  <div style={{fontSize:(.58*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(242,238,232,.4)',textAlign:'center',marginTop:4,marginBottom:2,fontWeight:500}}>
                     {t('recentAiGenerated')||'Recently AI generated'}
                   </div>
                   {mfiRecent.map((entry)=>(
-                    <button key={entry.id} onClick={()=>{ _mfiRecall(entry); setPickMode(null); }} style={{padding:'10px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.7*effScale)+'rem',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
-                      <span style={{flex:1,textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>✦ {entry.title}</span>
+                    <button key={entry.id} onClick={()=>{ _mfiRecall(entry); setPickMode(null); }} style={{padding:'10px 14px',background:'rgba(255,255,255,.012)',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.18)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',display:'flex',alignItems:'center',gap:8}}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
+                      <span style={{flex:1,textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{entry.title}</span>
                     </button>
                   ))}
                 </div>
               )}
-              <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*effScale)+'rem',marginTop:4}}>
-                {t('cancel')}
+              <button onClick={()=>setPickMode(null)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.45)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',marginTop:6,width:'100%'}}>
+                {_sent(t('cancel'))}
               </button>
             </div>
             )}
@@ -26990,8 +27008,8 @@ Composition rules:
 
       {showMoodMenu && (
         <div onClick={()=>setShowMoodMenu(false)} className="pf-recent-overlay pf-mood-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" className="pf-recent-dialog pf-mood-dialog" style={{maxWidth:340,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'20px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh'}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:'.18em',color:PF.gold2,fontSize:(.7*effScale)+'rem',textTransform:'uppercase',flexShrink:0}}>✦ {t('selectMood').replace('✦ ','').replace('…','')}</div>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" className="pf-recent-dialog pf-mood-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.95*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(t('selectMood').replace('✦ ','').replace('…',''))}</div>
             {(()=>{
               // For Free + aiLocked the input stays fully editable (so the
               // autocomplete is useful) but the submit path is restricted to
@@ -27039,7 +27057,7 @@ Composition rules:
               return (
               <div style={{display:'flex',gap:6,marginBottom:12,flexShrink:0}}>
                 <div style={{flex:1,minWidth:0,position:'relative'}}>
-                  <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder="" autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); if(canSubmit) submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:'rgba(0,0,0,.25)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'11px 12px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
+                  <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder="" autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); if(canSubmit) submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,.018)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,padding:'12px 14px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
                   {/* Empty-state placeholder: for trial-active users a marquee
                       of examples; for aiLocked an instruction + PRO AI badge
                       since free-typing won't reach the AI. */}
@@ -27063,7 +27081,7 @@ Composition rules:
                     </div>
                   )}
                 </div>
-                <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={aiLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:42,borderRadius:8,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
+                <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={aiLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:46,borderRadius:12,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
               </div>
             ); })()}
             {/* Suggestions grid — autocomplete-filtered moods while typing.
@@ -27117,9 +27135,9 @@ Composition rules:
                   aiMidi(m);
                   if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
                   setMoodHint(false);
-                }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',borderRadius:12,background: (m===currentMood&&!imgMoodThumb)?PF.gold:PF.card2,color: (m===currentMood&&!imgMoodThumb)?PF.bg:PF.cream,border:'1px solid '+((m===currentMood&&!imgMoodThumb)?PF.gold:'rgba(242,238,232,.08)'),cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
-                  <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
-                  <span style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{(t('moodNames')||{})[m]||m}</span>
+                }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,padding:'12px 4px',borderRadius:14,background: (m===currentMood&&!imgMoodThumb)?'rgba(201,168,76,.18)':'rgba(255,255,255,.015)',color: (m===currentMood&&!imgMoodThumb)?PF.gold2:PF.cream,border:'1px solid '+((m===currentMood&&!imgMoodThumb)?'rgba(201,168,76,.5)':'rgba(255,255,255,.06)'),cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
+                  <span style={{fontSize:'1.15rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
+                  <span style={{fontSize:(.56*effScale)+'rem',fontWeight:500,letterSpacing:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{_sent((t('moodNames')||{})[m]||m)}</span>
                 </button>
               ))}
             </div>
@@ -27132,18 +27150,19 @@ Composition rules:
                 always at the bottom regardless of typing state. Click replays the
                 piece for free, no AI call. */}
             {aiComposeRecent.length>0 && (
-              <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
-                <div style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(242,238,232,.45)',textAlign:'center',marginBottom:2}}>
+              <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0,marginTop:10}}>
+                <div style={{fontSize:(.58*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(242,238,232,.4)',textAlign:'center',marginBottom:4,fontWeight:500}}>
                   {t('recentAiGenerated')||'Recently AI generated'}
                 </div>
                 {aiComposeRecent.map((entry)=>(
-                  <button key={entry.id} onClick={()=>{ _aiComposeRecall(entry); setShowMoodMenu(false); }} style={{padding:'9px 12px',background:'transparent',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.35)',borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.66*effScale)+'rem',textAlign:'left',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                    ✦ {entry.title}
+                  <button key={entry.id} onClick={()=>{ _aiComposeRecall(entry); setShowMoodMenu(false); }} style={{padding:'10px 14px',background:'rgba(255,255,255,.012)',color:'rgba(228,178,255,.85)',border:'1px solid rgba(220,150,255,.18)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',textAlign:'left',display:'flex',alignItems:'center',gap:8}}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
+                    <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{entry.title}</span>
                   </button>
                 ))}
               </div>
             )}
-            <button onClick={()=>setShowMoodMenu(false)} style={{display:'block',margin:'14px auto 0',padding:'6px 16px',background:'transparent',color:'rgba(207,197,168,.5)',border:'1px solid rgba(207,197,168,.15)',borderRadius:3,cursor:'pointer',fontSize:(.6*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.1em',flexShrink:0}}>cancel</button>
+            <button onClick={()=>setShowMoodMenu(false)} style={{display:'block',margin:'14px auto 0',padding:'8px 16px',background:'transparent',color:'rgba(207,197,168,.45)',border:'none',cursor:'pointer',fontSize:(.72*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,flexShrink:0,width:'100%',textAlign:'center'}}>{_sent(t('cancel'))}</button>
           </div>
         </div>
       )}
