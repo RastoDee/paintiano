@@ -813,6 +813,16 @@ const PF_STYLE = `
              sentence case via inline JSX (uppercase removed), letter-spacing 0
              for natural reading, font-weight 500 for premium-light feel,
              subtle white tint background for depth without heavy borders. */
+          /* Mockup-A look: subtle TRANSLUCENT wrap (not solid #14121e), uniform
+             subtle WHITE border on every chip (overrides inline colored borders),
+             larger 16px corners. Color now lives only in the icon + text, not
+             the border — that's the Linear/Notion/Vercel premium feel. */
+          .pf-setup-create-import-wrap {
+            background: rgba(20,18,30,.55) !important;
+            border-color: rgba(255,255,255,.04) !important;
+            border-radius: 24px !important;
+            padding: 14px !important;
+          }
           .pf-setup-create-import-wrap .pf-moodtile,
           .pf-setup-create-import-wrap .pf-mfitile,
           .pf-setup-create-import-wrap .pf-compose,
@@ -824,6 +834,7 @@ const PF_STYLE = `
             flex-direction: column !important;
             gap: 8px !important;
             padding: 12px 8px !important;
+            border-radius: 16px !important;
             overflow: hidden !important;
             text-align: center !important;
             text-transform: none !important;
@@ -832,7 +843,10 @@ const PF_STYLE = `
             line-height: 1.2 !important;
             white-space: normal !important;
             word-break: keep-all !important;
-            background-color: rgba(255,255,255,.018) !important;
+            background-color: rgba(255,255,255,.015) !important;
+            background-image: none !important;
+            border: 1px solid rgba(255,255,255,.06) !important;
+            box-shadow: none !important;
           }
           /* Hover: very subtle lift, no color shift — premium app pattern */
           .pf-setup-create-import-wrap .pf-moodtile:hover,
@@ -840,8 +854,17 @@ const PF_STYLE = `
           .pf-setup-create-import-wrap .pf-compose:hover,
           .pf-setup-create-import-wrap .pf-mic:hover,
           .pf-setup-create-import-wrap .pf-tool:hover {
-            background-color: rgba(255,255,255,.04) !important;
-            transition: background-color .18s ease;
+            background-color: rgba(255,255,255,.045) !important;
+            border-color: rgba(255,255,255,.12) !important;
+            transition: background-color .18s ease, border-color .18s ease;
+          }
+          /* Section labels (TVORBA / IMPORT): subtle uppercase per mockup A —
+             small caps, decent letter-spacing, lower opacity. */
+          .pf-setup-create-import-wrap .pf-setup-col > div > div:first-child {
+            text-transform: uppercase !important;
+            letter-spacing: .14em !important;
+            font-weight: 500 !important;
+            color: rgba(242,238,232,.45) !important;
           }
           /* Uniform icon size for all 6 chips via the .pf-chip-icon class
              added to every icon span in JSX. Without this, Mood/MFI use
@@ -25390,7 +25413,7 @@ Composition rules:
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('importLabel'))}</div>
             <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
-              <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}>{imgAiBusy?<span>⏳</span>:<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/><path d="M18 5l.5 1.5L20 7l-1.5.5L18 9l-.5-1.5L16 7l1.5-.5z"/></svg>}</span>
+              <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}>{imgAiBusy?<span>⏳</span>:<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.5L21 19l-1.3.5L19 21l-.7-1.5L17 19l1.3-.5z"/><path d="M5 4l.6 1.2L7 6l-1.4.4L5 8l-.6-1.6L3 6l1.4-.4z"/></svg>}</span>
               {imgAiBusy?'…':_sent(t('imgMood')||'mood from image')}
               {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:500,letterSpacing:0}}>· {t('aiOffline')||'offline'}</span>}
               {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
@@ -27705,7 +27728,7 @@ Composition rules:
 
             {[
               { key:'mood',    icon:<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-1.5A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>, color:'#ffd07a', bg:'rgba(201,168,76,.12)',  name:t('moodHowFeel')||'How do you feel?' },
-              { key:'mfi',     icon:'✦', color:'#e4b2ff', bg:'rgba(220,150,255,.12)', name:t('imgMood')||'Mood from image' },
+              { key:'mfi',     icon:<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.5L21 19l-1.3.5L19 21l-.7-1.5L17 19l1.3-.5z"/><path d="M5 4l.6 1.2L7 6l-1.4.4L5 8l-.6-1.6L3 6l1.4-.4z"/></svg>, color:'#e4b2ff', bg:'rgba(220,150,255,.12)', name:t('imgMood')||'Mood from image' },
               { key:'music',   icon:'♪', color:'#5b9cf6', bg:'rgba(91,156,246,.12)',  name:(t('music')||'Music').replace(/[^\p{L} ]/gu,'').trim() },
               { key:'image',   icon:'◫', color:'#f47c3c', bg:'rgba(244,124,60,.12)',  name:(t('image')||'Image').replace(/[^\p{L} ]/gu,'').trim() },
               { key:'compose', icon:'𝄞', color:'#4ecb8d', bg:'rgba(78,203,141,.12)',  name:(t('compose')||'Compose').replace(/[^\p{L} ]/gu,'').trim() },

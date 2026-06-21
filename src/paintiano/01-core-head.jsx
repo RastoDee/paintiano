@@ -813,6 +813,16 @@ const PF_STYLE = `
              sentence case via inline JSX (uppercase removed), letter-spacing 0
              for natural reading, font-weight 500 for premium-light feel,
              subtle white tint background for depth without heavy borders. */
+          /* Mockup-A look: subtle TRANSLUCENT wrap (not solid #14121e), uniform
+             subtle WHITE border on every chip (overrides inline colored borders),
+             larger 16px corners. Color now lives only in the icon + text, not
+             the border — that's the Linear/Notion/Vercel premium feel. */
+          .pf-setup-create-import-wrap {
+            background: rgba(20,18,30,.55) !important;
+            border-color: rgba(255,255,255,.04) !important;
+            border-radius: 24px !important;
+            padding: 14px !important;
+          }
           .pf-setup-create-import-wrap .pf-moodtile,
           .pf-setup-create-import-wrap .pf-mfitile,
           .pf-setup-create-import-wrap .pf-compose,
@@ -824,6 +834,7 @@ const PF_STYLE = `
             flex-direction: column !important;
             gap: 8px !important;
             padding: 12px 8px !important;
+            border-radius: 16px !important;
             overflow: hidden !important;
             text-align: center !important;
             text-transform: none !important;
@@ -832,7 +843,10 @@ const PF_STYLE = `
             line-height: 1.2 !important;
             white-space: normal !important;
             word-break: keep-all !important;
-            background-color: rgba(255,255,255,.018) !important;
+            background-color: rgba(255,255,255,.015) !important;
+            background-image: none !important;
+            border: 1px solid rgba(255,255,255,.06) !important;
+            box-shadow: none !important;
           }
           /* Hover: very subtle lift, no color shift — premium app pattern */
           .pf-setup-create-import-wrap .pf-moodtile:hover,
@@ -840,8 +854,17 @@ const PF_STYLE = `
           .pf-setup-create-import-wrap .pf-compose:hover,
           .pf-setup-create-import-wrap .pf-mic:hover,
           .pf-setup-create-import-wrap .pf-tool:hover {
-            background-color: rgba(255,255,255,.04) !important;
-            transition: background-color .18s ease;
+            background-color: rgba(255,255,255,.045) !important;
+            border-color: rgba(255,255,255,.12) !important;
+            transition: background-color .18s ease, border-color .18s ease;
+          }
+          /* Section labels (TVORBA / IMPORT): subtle uppercase per mockup A —
+             small caps, decent letter-spacing, lower opacity. */
+          .pf-setup-create-import-wrap .pf-setup-col > div > div:first-child {
+            text-transform: uppercase !important;
+            letter-spacing: .14em !important;
+            font-weight: 500 !important;
+            color: rgba(242,238,232,.45) !important;
           }
           /* Uniform icon size for all 6 chips via the .pf-chip-icon class
              added to every icon span in JSX. Without this, Mood/MFI use

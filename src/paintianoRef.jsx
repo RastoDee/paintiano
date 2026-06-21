@@ -808,27 +808,40 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 8px !important;
           }
-          /* Square-ish chips at FIXED 100px height regardless of zoom. The
-             chip box itself doesn't grow with the A A zoom — only the text
-             inside grows (driven by the JSX inline effScale font-size, which
-             we don't override here). overflow:hidden keeps oversized zoom
-             text from blowing the chip apart. */
+          /* Modern chip styling (variant A — refined outline). 96px height
+             matches Linear / Notion / Vercel proportions, generous padding,
+             sentence case via inline JSX (uppercase removed), letter-spacing 0
+             for natural reading, font-weight 500 for premium-light feel,
+             subtle white tint background for depth without heavy borders. */
           .pf-setup-create-import-wrap .pf-moodtile,
           .pf-setup-create-import-wrap .pf-mfitile,
           .pf-setup-create-import-wrap .pf-compose,
           .pf-setup-create-import-wrap .pf-mic,
           .pf-setup-create-import-wrap .pf-tool {
             aspect-ratio: auto !important;
-            height: 100px !important;
+            height: 96px !important;
             min-height: 0 !important;
             flex-direction: column !important;
-            gap: 4px !important;
-            padding: 6px 4px !important;
+            gap: 8px !important;
+            padding: 12px 8px !important;
             overflow: hidden !important;
             text-align: center !important;
-            line-height: 1.1 !important;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
+            font-weight: 500 !important;
+            line-height: 1.2 !important;
             white-space: normal !important;
             word-break: keep-all !important;
+            background-color: rgba(255,255,255,.018) !important;
+          }
+          /* Hover: very subtle lift, no color shift — premium app pattern */
+          .pf-setup-create-import-wrap .pf-moodtile:hover,
+          .pf-setup-create-import-wrap .pf-mfitile:hover,
+          .pf-setup-create-import-wrap .pf-compose:hover,
+          .pf-setup-create-import-wrap .pf-mic:hover,
+          .pf-setup-create-import-wrap .pf-tool:hover {
+            background-color: rgba(255,255,255,.04) !important;
+            transition: background-color .18s ease;
           }
           /* Uniform icon size for all 6 chips via the .pf-chip-icon class
              added to every icon span in JSX. Without this, Mood/MFI use
@@ -18902,6 +18915,16 @@ export default function Paintiano() {
   // Jazyk-závislý zoom: čínske znaky majú vyššiu optickú hustotu detailov,
   // preto pre zh/zhTW pridávame 15% k readScale aby boli rovnako čitateľné ako latinka.
   const effScale = readScale * ((lang === 'zh' || lang === 'zhTW' || lang === 'ja') ? 1.15 : 1);
+  // Sentence-case helper. Modern setup screen calls _sent(t('compose')) etc.
+  // so existing CAPS i18n keys (COMPOSE, MUSIC, MIC) render as "Compose",
+  // "Music", "Mic" without any i18n changes (keeps transport dock CAPS intact
+  // since it uses t('compose') directly). Handles any language; idempotent
+  // on already-lowercased strings (only capitalizes first character).
+  const _sent = (s) => {
+    if (!s || typeof s !== 'string') return s;
+    const lower = s.toLocaleLowerCase(lang === 'sk' ? 'sk' : lang === 'zh' || lang === 'zhTW' ? 'zh' : 'en');
+    return lower.charAt(0).toLocaleUpperCase(lang === 'sk' ? 'sk' : lang === 'zh' || lang === 'zhTW' ? 'zh' : 'en') + lower.slice(1);
+  };
   // Unified active/idle chip styling for the Color·Style strip (color modes,
   // scan direction, artist styles). Premium look: the ACTIVE chip is no longer a
   // heavy solid-gold fill with dark text — instead a soft gold-tinted fill, a
@@ -25270,10 +25293,10 @@ Composition rules:
           {/* CREATE — create-from-scratch sources under one header:
               mood (how do you feel?) · compose · mic. */}
           <div>
-            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('createLabel')}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
-              <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.05rem',height:'1.05rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-1.5A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></span>
-              {t('moodHowFeel')}
+            <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('createLabel'))}</div>
+            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
+              <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-1.5A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></span>
+              {_sent(t('moodHowFeel'))}
             </button>
             <div className="pf-setup-create" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               <button className="pf-compose" onClick={()=>{
@@ -25307,7 +25330,7 @@ Composition rules:
                   setComposeMode(true);
                   setMicArmed(false);
                 } else setComposeMode(false);
-              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}<span className="pf-chip-icon" style={{fontSize:'1.05rem'}}>𝄞</span> {composeMode?t('composing').replace(/[^\p{L} ]/gu,''):t('compose').replace(/[^\p{L} ]/gu,'')}</button>
+              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:500,letterSpacing:0,color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}<span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="1.5"/><line x1="9" y1="6" x2="9" y2="14"/><line x1="15" y1="6" x2="15" y2="14"/><line x1="6.5" y1="6" x2="6.5" y2="12"/><line x1="11.5" y1="6" x2="11.5" y2="12"/><line x1="17.5" y1="6" x2="17.5" y2="12"/></svg></span> {_sent(composeMode?t('composing'):t('compose'))}</button>
               <button className="pf-mic" onClick={()=>{
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
@@ -25352,7 +25375,7 @@ Composition rules:
                 }
                 setMicArmed(true);
                 setStayActive(true);
-              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':'transparent',border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}><span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.05rem',height:'1.05rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span> {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
+              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:500,letterSpacing:0,color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':'transparent',border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}><span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span> {_sent(micActive?t('micActive'):t('mic'))}</button>
             </div>
           </div>
 
@@ -25365,19 +25388,19 @@ Composition rules:
           {/* IMPORT — bring-your-own sources under one header:
               mood-from-image · music · image. */}
           <div>
-            <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
-            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
-              <span className="pf-chip-icon" style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
-              {imgAiBusy?'…':(t('imgMood')||'mood from image')}
-              {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
+            <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('importLabel'))}</div>
+            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
+              <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}>{imgAiBusy?<span>⏳</span>:<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/><path d="M18 5l.5 1.5L20 7l-1.5.5L18 9l-.5-1.5L16 7l1.5-.5z"/></svg>}</span>
+              {imgAiBusy?'…':_sent(t('imgMood')||'mood from image')}
+              {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:500,letterSpacing:0}}>· {t('aiOffline')||'offline'}</span>}
               {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
             </button>
             <div className="pf-setup-import" style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
               {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
                   loadSound routes by file type. Active when any of the three
                   music sources is loaded. */}
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph pf-chip-icon" style={{fontSize:isDesktop?'1.05rem':'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':(t('music')!=='music'?t('music'):'MUSIC')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph pf-chip-icon" style={{fontSize:isDesktop?'1.05rem':'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span style={{fontSize:(.66*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':_sent(t('music')!=='music'?t('music'):'music')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><span style={{fontSize:(.66*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{switchArmed==='image'?t('switchConfirm'):_sent(t('image').replace(/[^\p{L}]/gu,''))}</span></button>
             </div>
           </div>
 
