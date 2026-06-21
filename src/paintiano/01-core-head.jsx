@@ -584,6 +584,16 @@ const PF_STYLE = `
             padding-top: 22px;
           }
           .pf-setup-palettes .pf-setup-done > button { width: auto; }
+          /* ── 2-thumb ergonomics (desktop + tablet landscape only) ──
+             Controls sit on outer edges, content squeezes toward center.
+             PALETTES col → checkbox at outer left, text right-aligned.
+             ARTISTS col  → checkbox at outer right, text left-aligned.
+             Section heads mirror the row direction (title outer, links inner).
+             Locks (🔒) stay next to artist names (already in label span). */
+          .pf-setup-palettes .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
+          .pf-setup-artists  .pf-setup-grid > button { flex-direction: row-reverse !important; }
+          .pf-setup-artists  .pf-setup-grid > button > span:last-child { text-align: left !important; }
+          .pf-setup-artists > div:first-child { flex-direction: row-reverse !important; }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
