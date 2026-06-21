@@ -808,27 +808,40 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 8px !important;
           }
-          /* Square-ish chips at FIXED 100px height regardless of zoom. The
-             chip box itself doesn't grow with the A A zoom — only the text
-             inside grows (driven by the JSX inline effScale font-size, which
-             we don't override here). overflow:hidden keeps oversized zoom
-             text from blowing the chip apart. */
+          /* Modern chip styling (variant A — refined outline). 96px height
+             matches Linear / Notion / Vercel proportions, generous padding,
+             sentence case via inline JSX (uppercase removed), letter-spacing 0
+             for natural reading, font-weight 500 for premium-light feel,
+             subtle white tint background for depth without heavy borders. */
           .pf-setup-create-import-wrap .pf-moodtile,
           .pf-setup-create-import-wrap .pf-mfitile,
           .pf-setup-create-import-wrap .pf-compose,
           .pf-setup-create-import-wrap .pf-mic,
           .pf-setup-create-import-wrap .pf-tool {
             aspect-ratio: auto !important;
-            height: 100px !important;
+            height: 96px !important;
             min-height: 0 !important;
             flex-direction: column !important;
-            gap: 4px !important;
-            padding: 6px 4px !important;
+            gap: 8px !important;
+            padding: 12px 8px !important;
             overflow: hidden !important;
             text-align: center !important;
-            line-height: 1.1 !important;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
+            font-weight: 500 !important;
+            line-height: 1.2 !important;
             white-space: normal !important;
             word-break: keep-all !important;
+            background-color: rgba(255,255,255,.018) !important;
+          }
+          /* Hover: very subtle lift, no color shift — premium app pattern */
+          .pf-setup-create-import-wrap .pf-moodtile:hover,
+          .pf-setup-create-import-wrap .pf-mfitile:hover,
+          .pf-setup-create-import-wrap .pf-compose:hover,
+          .pf-setup-create-import-wrap .pf-mic:hover,
+          .pf-setup-create-import-wrap .pf-tool:hover {
+            background-color: rgba(255,255,255,.04) !important;
+            transition: background-color .18s ease;
           }
           /* Uniform icon size for all 6 chips via the .pf-chip-icon class
              added to every icon span in JSX. Without this, Mood/MFI use
