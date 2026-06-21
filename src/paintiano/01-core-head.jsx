@@ -158,6 +158,28 @@ const PF_STYLE = `
         /* Mobile: hide the desktop left-edge transport wrapper entirely. It only
            materialises inside the @media block below (desktop play screen). */
         .pf-tx-edge-l { display: none; }
+        /* SETUP modal — 2-col layout applied UNIVERSALLY (mobile portrait,
+           mobile landscape, tablet portrait, tablet landscape, desktop). The
+           layout splits PALETTES left, ARTISTS right. Checkboxes sit on outer
+           edges (2-thumb ergonomics: left thumb hits palette checks at left
+           edge, right thumb hits artist checks at right edge). Locks (🔒) ride
+           with artist names inside the label span, so they stay next to names
+           regardless of row direction. */
+        .pf-setup-body {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr !important;
+          gap: 0 16px !important;
+          align-items: start !important;
+        }
+        .pf-setup-palettes { display: flex; flex-direction: column; }
+        .pf-setup-palettes .pf-setup-grid,
+        .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
+        /* PALETTES col: text right-aligned (toward center), checkbox at left edge */
+        .pf-setup-palettes .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
+        /* ARTISTS col: row reversed → checkbox at right edge, text+lock left-aligned (toward center) */
+        .pf-setup-artists  .pf-setup-grid > button { flex-direction: row-reverse !important; }
+        .pf-setup-artists  .pf-setup-grid > button > span:last-child { text-align: left !important; }
+        .pf-setup-artists > div:first-child { flex-direction: row-reverse !important; }
         @media (min-width: 769px) and (min-height: 501px),
                (max-height: 500px) and (orientation: landscape) {
           html, body {
@@ -557,23 +579,18 @@ const PF_STYLE = `
             padding: 10px 12px !important;
             font-size: .58rem !important;
           }
-          /* SETUP modal — three-column layout mirroring the active screen:
-             PALETTES in the left column, empty middle, ARTISTS in the right
-             column, and DONE pinned to the bottom of the left column so its
-             bottom edge lines up with the last artist tile on the right. */
+          /* SETUP modal — three-column override for desktop: insert empty
+             middle column between PALETTES and ARTISTS so they breathe on
+             wider screens. The base 2-col layout + 2-thumb rules apply
+             globally; here we just swap to 3-col grid and pin DONE. */
           .pf-setup-dialog { max-width: 860px !important; }
           .pf-setup-body {
-            display: grid !important;
             grid-template-columns: 1fr 1fr 1fr !important;
             grid-template-areas: "pal mid art" !important;
             gap: 0 28px !important;
-            align-items: start !important;
           }
-          .pf-setup-palettes { grid-area: pal; display: flex; flex-direction: column; height: 100%; }
+          .pf-setup-palettes { grid-area: pal; height: 100%; }
           .pf-setup-artists  { grid-area: art; }
-          /* palettes single column; artists single column (like the active screen) */
-          .pf-setup-palettes .pf-setup-grid,
-          .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
           /* DONE moves out of the modal footer and sits at the bottom of the left
              column. Hide the original footer; show a left-column DONE instead. */
           .pf-setup-footer { display: none !important; }
@@ -584,16 +601,6 @@ const PF_STYLE = `
             padding-top: 22px;
           }
           .pf-setup-palettes .pf-setup-done > button { width: auto; }
-          /* ── 2-thumb ergonomics (desktop + tablet landscape only) ──
-             Controls sit on outer edges, content squeezes toward center.
-             PALETTES col → checkbox at outer left, text right-aligned.
-             ARTISTS col  → checkbox at outer right, text left-aligned.
-             Section heads mirror the row direction (title outer, links inner).
-             Locks (🔒) stay next to artist names (already in label span). */
-          .pf-setup-palettes .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
-          .pf-setup-artists  .pf-setup-grid > button { flex-direction: row-reverse !important; }
-          .pf-setup-artists  .pf-setup-grid > button > span:last-child { text-align: left !important; }
-          .pf-setup-artists > div:first-child { flex-direction: row-reverse !important; }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
