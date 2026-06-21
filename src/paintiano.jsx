@@ -595,6 +595,22 @@ const PF_STYLE = `
             border-color: rgba(240,106,166,.45) !important;
             box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(240,106,166,.08) !important;
           }
+          /* Recent / mood pickers share the same per-mode tinting scheme via
+             a .pf-picker-{mood,compose,mic} class on the overlay. The dialog
+             child gets the colored border + a subtle outer 1px glow. */
+          .pf-app-root .pf-recent-overlay.pf-picker-mood .pf-recent-dialog,
+          .pf-app-root .pf-recent-overlay.pf-picker-mood .pf-mood-dialog {
+            border-color: rgba(201,168,76,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(201,168,76,.08) !important;
+          }
+          .pf-app-root .pf-recent-overlay.pf-picker-compose .pf-recent-dialog {
+            border-color: rgba(78,203,141,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(78,203,141,.08) !important;
+          }
+          .pf-app-root .pf-recent-overlay.pf-picker-mic .pf-recent-dialog {
+            border-color: rgba(240,106,166,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(240,106,166,.08) !important;
+          }
           /* IMPORT-source pickers (mood-from-image / music / image) sit in the
              RIGHT column, so their picker opens on the LEFT to avoid covering the
              panel it came from. Mood (left column) keeps its right-side picker. */
@@ -27101,7 +27117,7 @@ Composition rules:
       )}
 
       {showComposeRecent && (
-        <div onClick={()=>setShowComposeRecent(false)} className="pf-recent-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+        <div onClick={()=>setShowComposeRecent(false)} className="pf-recent-overlay pf-picker-compose" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(t('recentPlayed')||'recently played')}</div>
             <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
@@ -27117,7 +27133,7 @@ Composition rules:
       )}
 
       {showMicRecent && (
-        <div onClick={()=>setShowMicRecent(false)} className="pf-recent-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+        <div onClick={()=>setShowMicRecent(false)} className="pf-recent-overlay pf-picker-mic" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(t('recentPlayed')||'recently played')}</div>
             <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
@@ -27133,7 +27149,7 @@ Composition rules:
       )}
 
       {showMoodMenu && (
-        <div onClick={()=>setShowMoodMenu(false)} className="pf-recent-overlay pf-mood-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+        <div onClick={()=>setShowMoodMenu(false)} className="pf-recent-overlay pf-mood-overlay pf-picker-mood" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" className="pf-recent-dialog pf-mood-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(_stripIcon(t('selectMood')))}</div>
             {(()=>{

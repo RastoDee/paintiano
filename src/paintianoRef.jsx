@@ -21917,6 +21917,20 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{ if(showMoodMenu){ setPickMode(null); setShowComposeRecent(false); setShowMicRecent(false); } },[showMoodMenu]);
   useEffect(()=>{ if(showComposeRecent){ setPickMode(null); setShowMoodMenu(false); setShowMicRecent(false); } },[showComposeRecent]);
   useEffect(()=>{ if(showMicRecent){ setPickMode(null); setShowMoodMenu(false); setShowComposeRecent(false); } },[showMicRecent]);
+  // When the active mode flips on — mic armed/active, compose started, a
+  // source loaded (image/midi/audio/score), or MFI engaged — close every
+  // open picker. Otherwise a half-finished interaction (e.g. user opens the
+  // Mood picker, then taps the Mic chip) leaves the previous picker hanging
+  // over the new mode's UI.
+  useEffect(()=>{
+    if(micActive||micArmed||composeMode||loadedSource||moodFromImg){
+      setShowMoodMenu(false);
+      setShowMorphMenu(false);
+      setShowComposeRecent(false);
+      setShowMicRecent(false);
+      setPickMode(null);
+    }
+  },[micActive,micArmed,composeMode,loadedSource,moodFromImg]);
 
   // "Mood from image": send the loaded image to Claude (vision) → emotion → piece.
   // isSample=true means it's the built-in sample (loadSampleImgMood), which we

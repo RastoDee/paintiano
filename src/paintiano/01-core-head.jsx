@@ -595,6 +595,22 @@ const PF_STYLE = `
             border-color: rgba(240,106,166,.45) !important;
             box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(240,106,166,.08) !important;
           }
+          /* Recent / mood pickers share the same per-mode tinting scheme via
+             a .pf-picker-{mood,compose,mic} class on the overlay. The dialog
+             child gets the colored border + a subtle outer 1px glow. */
+          .pf-app-root .pf-recent-overlay.pf-picker-mood .pf-recent-dialog,
+          .pf-app-root .pf-recent-overlay.pf-picker-mood .pf-mood-dialog {
+            border-color: rgba(201,168,76,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(201,168,76,.08) !important;
+          }
+          .pf-app-root .pf-recent-overlay.pf-picker-compose .pf-recent-dialog {
+            border-color: rgba(78,203,141,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(78,203,141,.08) !important;
+          }
+          .pf-app-root .pf-recent-overlay.pf-picker-mic .pf-recent-dialog {
+            border-color: rgba(240,106,166,.45) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(240,106,166,.08) !important;
+          }
           /* IMPORT-source pickers (mood-from-image / music / image) sit in the
              RIGHT column, so their picker opens on the LEFT to avoid covering the
              panel it came from. Mood (left column) keeps its right-side picker. */
