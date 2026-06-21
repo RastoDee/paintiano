@@ -18946,6 +18946,19 @@ export default function Paintiano() {
     const lower = s.toLocaleLowerCase(lang === 'sk' ? 'sk' : lang === 'zh' || lang === 'zhTW' ? 'zh' : 'en');
     return lower.charAt(0).toLocaleUpperCase(lang === 'sk' ? 'sk' : lang === 'zh' || lang === 'zhTW' ? 'zh' : 'en') + lower.slice(1);
   };
+  // Strip leading icon glyphs/emoji from i18n strings before rendering as
+  // picker/mood titles. Several translations have icons baked in (e.g.
+  // musicInput: '♪ ADD MUSIC', selectMood: '✦ select a mood…',
+  // imageInput: '🖼 IMAGE INPUT'). We can't change all 9 i18n languages,
+  // so we strip them defensively here. Matches: ✦ ♪ ♬ ♫ 𝄞 🖼 🎙 and any
+  // generic emoji at the start, plus the trailing ellipsis.
+  const _stripIcon = (s) => {
+    if (!s || typeof s !== 'string') return s;
+    return s
+      .replace(/^[✦♪♬♫𝄞🖼🎙♥◫✧✩✰🎵🎶🎨🎬🎤🖌📷📸🌈⭐]+\s*/u, '')
+      .replace(/…\s*$/, '')
+      .trim();
+  };
   // Unified active/idle chip styling for the Color·Style strip (color modes,
   // scan direction, artist styles). Premium look: the ACTIVE chip is no longer a
   // heavy solid-gold fill with dark text — instead a soft gold-tinted fill, a
@@ -26212,8 +26225,8 @@ Composition rules:
       {pickMode && (
         <div onClick={()=>setPickMode(null)} className={"pf-picker-overlay"+(['imgmood','sound','midi','audio','score','image'].includes(pickMode)?' pf-picker-left':'')} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" className="pf-picker-dialog" style={{background:'rgba(20,18,30,.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',minWidth:260,maxWidth:340}}>
-            <div style={{textAlign:'center',marginBottom:18,letterSpacing:0,color:PF.cream,fontSize:(.95*effScale)+'rem',fontWeight:500}}>
-              {_sent(pickMode==='sound'?(t('musicInput')||'add music'):pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput'))}
+            <div style={{textAlign:'center',marginBottom:18,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>
+              {_sent(_stripIcon(pickMode==='sound'?(t('musicInput')||'add music'):pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')))}
             </div>
             {pickMode==='mic' ? (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -26990,7 +27003,7 @@ Composition rules:
       {showMoodMenu && (
         <div onClick={()=>setShowMoodMenu(false)} className="pf-recent-overlay pf-mood-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" className="pf-recent-dialog pf-mood-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.95*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(t('selectMood').replace('✦ ','').replace('…',''))}</div>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(_stripIcon(t('selectMood')))}</div>
             {(()=>{
               // For Free + aiLocked the input stays fully editable (so the
               // autocomplete is useful) but the submit path is restricted to
