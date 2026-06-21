@@ -100,7 +100,7 @@ const PF_STYLE = `
         /* Mobile: hide the desktop left-edge transport wrapper entirely. It only
            materialises inside the @media block below (desktop play screen). */
         .pf-tx-edge-l { display: none; }
-        @media (min-width: 769px) {
+        @media (min-width: 769px) and (min-height: 501px) {
           html, body {
             background: #050507 !important;
             min-height: 100vh;
@@ -741,13 +741,14 @@ const PF_STYLE = `
           .pf-mode-live .pf-transport-row .pf-tx-clear { order: 5 !important; }
           .pf-mode-live .pf-transport-row .pf-tx-scale { order: 6 !important; }
         }
-        /* MOBILE LANDSCAPE (<769px landscape, e.g. phone on its side ~700–900px
-           wide): use the same 3-col grid as tablet portrait — dock sits under
-           palettes in the left column, artists get the full right column,
-           canvas the middle. Side columns are TIGHTER (140px instead of 180px)
-           so the canvas keeps usable width on narrow landscape phones. No L/R
-           transport split — there isn't room. */
-        @media (max-width: 768px) and (orientation: landscape) {
+        /* MOBILE LANDSCAPE (phone on its side). Detect via low viewport HEIGHT
+           (≤500px) instead of width, because modern iPhones in landscape are
+           700–932px wide and so a max-width:768px never matched them — they
+           fell through to the desktop 5-col rule and rendered as tablet/desktop.
+           A landscape phone is ALWAYS short (≤430px tall typically), so
+           max-height:500px catches every phone-in-landscape and excludes
+           tablets (which are ≥768px tall in landscape too). */
+        @media (max-height: 500px) and (orientation: landscape) {
           .pf-app-root:not(.pf-mode-setup) {
             display: grid !important;
             grid-template-columns: 140px minmax(0, 1fr) 140px !important;
@@ -805,7 +806,7 @@ const PF_STYLE = `
            MORF + VARIÁCIA buttons stack vertically instead of side-by-side
            (uniform with the edge columns). Tablet PORTRAIT (3-col) and
            MOBILE LANDSCAPE (also 3-col now) are untouched. */
-        @media (min-width: 769px) and (orientation: landscape) {
+        @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape) {
           .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button,
           .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button {
             min-height: 56px;
@@ -860,45 +861,47 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 8px !important;
           }
-          /* Square-ish chips (actually short rectangles ~150×88px to keep the
-             grid compact). aspect-ratio 1/1 was too tall on mobile portrait —
-             3 chips per column hit ~500px and ate the entire viewport. A
-             shorter height keeps icon + label readable while letting the whole
-             2x3 grid sit cleanly above the fold. */
+          /* Square-ish chips at FIXED 80px height regardless of zoom. The
+             chip box itself doesn't grow with the A A zoom — only the text
+             inside grows (driven by the JSX inline effScale font-size, which
+             we don't override here). overflow:hidden keeps oversized zoom
+             text from blowing the chip apart. */
           .pf-setup-create-import-wrap .pf-moodtile,
           .pf-setup-create-import-wrap .pf-mfitile,
           .pf-setup-create-import-wrap .pf-compose,
           .pf-setup-create-import-wrap .pf-mic,
           .pf-setup-create-import-wrap .pf-tool {
             aspect-ratio: auto !important;
-            height: 88px !important;
-            flex-direction: column !important;
-            gap: 5px !important;
-            padding: 8px 6px !important;
+            height: 80px !important;
             min-height: 0 !important;
+            flex-direction: column !important;
+            gap: 4px !important;
+            padding: 6px 4px !important;
+            overflow: hidden !important;
             text-align: center !important;
             line-height: 1.1 !important;
             white-space: normal !important;
             word-break: keep-all !important;
           }
-          /* Icon (the first <span> child or .pf-glyph) — sized for the shorter
-             chip; readable but not dominant over the label. */
-          .pf-setup-create-import-wrap .pf-moodtile > span:first-child,
-          .pf-setup-create-import-wrap .pf-mfitile > span:first-child,
-          .pf-setup-create-import-wrap .pf-tool .pf-glyph {
-            font-size: 1.25rem !important;
+          /* Uniform icon size for all 6 chips via the .pf-chip-icon class
+             added to every icon span in JSX. Without this, Mood/MFI use
+             1.05rem inline, Music/Image use 1.35rem inline (mobile), and
+             Compose/Mic were unwrapped emoji that inherited text size —
+             so the row felt visually unbalanced. One selector, one size. */
+          .pf-setup-create-import-wrap .pf-chip-icon {
+            font-size: 1.2rem !important;
             line-height: 1 !important;
             flex-shrink: 0 !important;
           }
-          /* Slightly smaller text labels to fit the square tile cleanly with
-             the larger icon. */
-          .pf-setup-create-import-wrap .pf-moodtile,
-          .pf-setup-create-import-wrap .pf-mfitile,
-          .pf-setup-create-import-wrap .pf-compose,
-          .pf-setup-create-import-wrap .pf-mic,
-          .pf-setup-create-import-wrap .pf-tool {
-            font-size: .58rem !important;
-            letter-spacing: .08em !important;
+          /* SVG-backed icons (currently just Mic) need an explicit box so
+             the SVG fills it. 1.2rem ≈ 19.2px at root font-size. */
+          .pf-setup-create-import-wrap .pf-chip-icon > svg {
+            width: 1.2rem !important;
+            height: 1.2rem !important;
+          }
+          .pf-setup-create-import-wrap .pf-chip-icon:has(> svg) {
+            width: 1.2rem !important;
+            height: 1.2rem !important;
           }
         }
 `;
