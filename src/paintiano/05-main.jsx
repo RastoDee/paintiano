@@ -887,6 +887,17 @@ export default function Paintiano() {
   // isDesktop — tightens vertical rhythm on notebook viewports so the phone-shape
   // column fits 100vh without a scrollbar. Mobile keeps the original spacing.
   const [isDesktop, setIsDesktop] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px)').matches;}catch(_){return false;}});
+  // 5-col layout breakpoint (desktop landscape + tablet landscape). Matches
+  // the CSS @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape).
+  // Used to opt-in to layout changes that only make sense at this width.
+  const [is5Col, setIs5Col] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)').matches;}catch(_){return false;}});
+  useEffect(()=>{
+    if(typeof window==='undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)');
+    const onChange = (e)=>setIs5Col(e.matches);
+    try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
+    return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
+  },[]);
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(min-width: 769px)');
@@ -9047,10 +9058,23 @@ Composition rules:
         };
         const _imgAtmo = (viewMode==='image' && originalImgUrl && atmoOn && atmoMood);
         const _atmoTitle = _imgAtmo ? (()=>{ const w=_atmoWordSeek(atmoMood.v,atmoMood.e); const ti=(atmoMood.title&&String(atmoMood.title).trim())||''; return ti?(ti+' · '+w):w; })() : null;
-        const seekTitle = _atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : (micPainting||micListening||micActive) ? t('mic').replace(/[^\p{L} ]/gu,'') : '')); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening); return showTransport && (
+        const seekTitle = _atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : (micPainting||micListening||micActive) ? t('mic').replace(/[^\p{L} ]/gu,'') : '')); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening);
+        // Title group (mood/morph title + library/AI badge). Rendered either
+        // inline in the seek row (default) or as a separate block above the
+        // seek bar on the 5-col layout (desktop/tablet landscape) — there the
+        // narrow tools column would otherwise truncate long morph chains.
+        const _titleSpan = (<span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>);
+        const _badgeSpan = (moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>));
+        return showTransport && (<>
+        {is5Col && (seekTitle || _badgeSpan) && (
+          <div className="pf-track-head" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8,display:'flex',alignItems:'center',justifyContent:'center',gap:10,flexWrap:'wrap',padding:'4px 12px'}}>
+            <span style={{fontSize:(.78*effScale)+'rem',color:seekTitle.includes('→')?'rgba(220,170,255,.95)':'rgba(247,243,236,.85)',fontStyle:seekTitle.includes('→')?'italic':'normal',textAlign:'center',lineHeight:1.3,wordBreak:'break-word'}}>{seekTitle}</span>
+            {_badgeSpan}
+          </div>
+        )}
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
-          <div style={{display:'flex',justifyContent:'space-between',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
-            <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>{(moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>))}</span>
+          <div style={{display:'flex',justifyContent:is5Col?'flex-end':'space-between',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
+            {!is5Col && <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>}
             <span style={{opacity:.75}}>
               {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
             </span>
@@ -9139,7 +9163,8 @@ Composition rules:
           </div>
           )}
         </div>
-      ); })()}
+        </>);
+      })()}
 
       {isActiveView && (<>
       {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && (()=>{
