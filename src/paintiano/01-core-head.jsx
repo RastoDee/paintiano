@@ -310,6 +310,7 @@ const PF_STYLE = `
               grid-template-areas:
                 "topbar  topbar   topbar topbar  topbar"
                 "header  header   header header  header"
+                "txL     controls trkhd  rtop    txR"
                 "txL     controls stage  rtop    txR"
                 "txL     colors   stage  styles  txR"
                 "txL     .        stage  styles  txR"
@@ -375,6 +376,12 @@ const PF_STYLE = `
           }
           /* SPÄŤ + NOVÁ HUDBA sit together in a row, top-left above the palettes. */
           .pf-app-root .pf-controls-inner { grid-area: controls; align-self: start; gap: 8px; margin-bottom: 10px; }
+          /* Track head — mood title + library/AI badge — sits in its own row
+             above the stage in the 5-col layout. Spans the stage column width
+             so long morph chains ("yearning → calm → joy") read in full
+             without truncation. Aligned to the bottom of its row so it nests
+             snugly against the canvas. */
+          .pf-app-root > .pf-track-head { grid-area: trkhd; align-self: end; justify-self: center; max-width: 100% !important; margin: 0 0 6px !important; }
           /* Progress/seek bar sits above the artists in the right column. */
           .pf-app-root > .pf-seek-block { grid-area: rtop; align-self: start; max-width: 100% !important; margin: 0 0 10px !important; }
           /* The active-view strip (pf-panel-part) and its inner grid wrapper are
