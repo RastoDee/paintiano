@@ -8265,6 +8265,10 @@ Composition rules:
               setActive(new Set());setPlaying(false);setAnim(false);
             } else { stopAll(); wipeCanvasNow(); }
             setWorking(false);setWLabel('');setWPct(0);if(composeMode){setComposeMode(false);}if(micPainting||micListening){}if(micPainting)stopMicPainting();if(micListening)stopMicListening();setMicArmed(false);setStripOpen(false);setShowColorPalette(false);setCustomArmed(false);setSourceContext(null);if(!keepResume)setMoodContext(false);if(loadedSource==='image'){setSetupNoSel(true);}setForceSetup(true);
+            // Close any open picker on the way back to setup — otherwise a
+            // mood/morph/recent/source picker opened on the canvas lingers
+            // over the setup screen.
+            setShowMoodMenu(false);setShowMorphMenu(false);setShowComposeRecent(false);setShowMicRecent(false);setPickMode(null);
             // Back to setup = close any active AI recording window (no seal —
             // next Play after another Add/Recall reopens recording normally).
             if(aiRecordingRef.current){ setAiRecording(false); }}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'transparent',color:recording?'rgba(230,222,196,.2)':'rgba(230,222,196,.55)',border:'1px solid rgba(242,238,232,.1)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
