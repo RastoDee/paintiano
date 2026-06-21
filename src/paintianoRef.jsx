@@ -55,6 +55,64 @@ const PF_STYLE = `
         .pf-lift { transition: all .18s; }
         .pf-midi, .pf-audio, .pf-score, .pf-image, .pf-compose, .pf-mic, .pf-moodtile, .pf-mfitile { transition: all .18s; }
         .pf-chip { transition: all .18s; }
+
+        /* ─── SETUP SCREEN · VARIANT A · UNIVERSAL VISUAL ───────────────────
+           These rules apply across ALL layouts (mobile portrait, mobile
+           landscape, tablet portrait, tablet landscape, desktop). Layout-
+           specific bits (flex direction, height, grid columns) live in the
+           per-breakpoint @media blocks below. The premise is that the chip's
+           VISUAL identity — subtle white border, subtle tint background,
+           sentence case, no caps, 16px radius — should be consistent
+           regardless of orientation. Color stays only in the icon + text. */
+        .pf-setup-create-import-wrap {
+          background: rgba(20,18,30,.55) !important;
+          border-color: rgba(255,255,255,.04) !important;
+          border-radius: 24px !important;
+        }
+        .pf-setup-create-import-wrap .pf-moodtile,
+        .pf-setup-create-import-wrap .pf-mfitile,
+        .pf-setup-create-import-wrap .pf-compose,
+        .pf-setup-create-import-wrap .pf-mic,
+        .pf-setup-create-import-wrap .pf-tool {
+          border-radius: 16px !important;
+          text-transform: none !important;
+          letter-spacing: 0 !important;
+          font-weight: 500 !important;
+          background-color: rgba(255,255,255,.015) !important;
+          background-image: none !important;
+          border: 1px solid rgba(255,255,255,.06) !important;
+          box-shadow: none !important;
+        }
+        .pf-setup-create-import-wrap .pf-moodtile:hover,
+        .pf-setup-create-import-wrap .pf-mfitile:hover,
+        .pf-setup-create-import-wrap .pf-compose:hover,
+        .pf-setup-create-import-wrap .pf-mic:hover,
+        .pf-setup-create-import-wrap .pf-tool:hover {
+          background-color: rgba(255,255,255,.045) !important;
+          border-color: rgba(255,255,255,.12) !important;
+          transition: background-color .18s ease, border-color .18s ease;
+        }
+        /* Section labels (TVORBA / IMPORT): subtle uppercase across layouts. */
+        .pf-setup-create-import-wrap .pf-setup-col > div > div:first-child {
+          text-transform: uppercase !important;
+          letter-spacing: .14em !important;
+          font-weight: 500 !important;
+          color: rgba(242,238,232,.45) !important;
+        }
+        /* Uniform icon size across all layouts. */
+        .pf-setup-create-import-wrap .pf-chip-icon {
+          font-size: 1.2rem !important;
+          line-height: 1 !important;
+          flex-shrink: 0 !important;
+        }
+        .pf-setup-create-import-wrap .pf-chip-icon > svg {
+          width: 1.2rem !important;
+          height: 1.2rem !important;
+        }
+        .pf-setup-create-import-wrap .pf-chip-icon:has(> svg) {
+          width: 1.2rem !important;
+          height: 1.2rem !important;
+        }
         /* All hover affordances gated to real pointers. On touch screens :hover
            "sticks" after a tap — which made SOURCE tiles (Score/Image) keep their
            coloured glow as if active. (hover:hover) keeps lifts/glows for mouse
@@ -794,7 +852,7 @@ const PF_STYLE = `
           .pf-setup-create-import-wrap {
             flex-direction: row !important;
             gap: 10px !important;
-            padding: 12px !important;
+            padding: 14px !important;
           }
           .pf-setup-create-import-wrap .pf-setup-col {
             flex: 1 1 0 !important;
@@ -808,21 +866,7 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 8px !important;
           }
-          /* Modern chip styling (variant A — refined outline). 96px height
-             matches Linear / Notion / Vercel proportions, generous padding,
-             sentence case via inline JSX (uppercase removed), letter-spacing 0
-             for natural reading, font-weight 500 for premium-light feel,
-             subtle white tint background for depth without heavy borders. */
-          /* Mockup-A look: subtle TRANSLUCENT wrap (not solid #14121e), uniform
-             subtle WHITE border on every chip (overrides inline colored borders),
-             larger 16px corners. Color now lives only in the icon + text, not
-             the border — that's the Linear/Notion/Vercel premium feel. */
-          .pf-setup-create-import-wrap {
-            background: rgba(20,18,30,.55) !important;
-            border-color: rgba(255,255,255,.04) !important;
-            border-radius: 24px !important;
-            padding: 14px !important;
-          }
+          /* Chip layout for mobile portrait: square 96px tile, icon over text. */
           .pf-setup-create-import-wrap .pf-moodtile,
           .pf-setup-create-import-wrap .pf-mfitile,
           .pf-setup-create-import-wrap .pf-compose,
@@ -834,57 +878,11 @@ const PF_STYLE = `
             flex-direction: column !important;
             gap: 8px !important;
             padding: 12px 8px !important;
-            border-radius: 16px !important;
             overflow: hidden !important;
             text-align: center !important;
-            text-transform: none !important;
-            letter-spacing: 0 !important;
-            font-weight: 500 !important;
             line-height: 1.2 !important;
             white-space: normal !important;
             word-break: keep-all !important;
-            background-color: rgba(255,255,255,.015) !important;
-            background-image: none !important;
-            border: 1px solid rgba(255,255,255,.06) !important;
-            box-shadow: none !important;
-          }
-          /* Hover: very subtle lift, no color shift — premium app pattern */
-          .pf-setup-create-import-wrap .pf-moodtile:hover,
-          .pf-setup-create-import-wrap .pf-mfitile:hover,
-          .pf-setup-create-import-wrap .pf-compose:hover,
-          .pf-setup-create-import-wrap .pf-mic:hover,
-          .pf-setup-create-import-wrap .pf-tool:hover {
-            background-color: rgba(255,255,255,.045) !important;
-            border-color: rgba(255,255,255,.12) !important;
-            transition: background-color .18s ease, border-color .18s ease;
-          }
-          /* Section labels (TVORBA / IMPORT): subtle uppercase per mockup A —
-             small caps, decent letter-spacing, lower opacity. */
-          .pf-setup-create-import-wrap .pf-setup-col > div > div:first-child {
-            text-transform: uppercase !important;
-            letter-spacing: .14em !important;
-            font-weight: 500 !important;
-            color: rgba(242,238,232,.45) !important;
-          }
-          /* Uniform icon size for all 6 chips via the .pf-chip-icon class
-             added to every icon span in JSX. Without this, Mood/MFI use
-             1.05rem inline, Music/Image use 1.35rem inline (mobile), and
-             Compose/Mic were unwrapped emoji that inherited text size —
-             so the row felt visually unbalanced. One selector, one size. */
-          .pf-setup-create-import-wrap .pf-chip-icon {
-            font-size: 1.2rem !important;
-            line-height: 1 !important;
-            flex-shrink: 0 !important;
-          }
-          /* SVG-backed icons (currently just Mic) need an explicit box so
-             the SVG fills it. 1.2rem ≈ 19.2px at root font-size. */
-          .pf-setup-create-import-wrap .pf-chip-icon > svg {
-            width: 1.2rem !important;
-            height: 1.2rem !important;
-          }
-          .pf-setup-create-import-wrap .pf-chip-icon:has(> svg) {
-            width: 1.2rem !important;
-            height: 1.2rem !important;
           }
         }
 `;
