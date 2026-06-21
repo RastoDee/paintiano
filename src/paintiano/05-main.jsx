@@ -8318,6 +8318,13 @@ Composition rules:
             // then just flip the mode off, draft safely preserved for ← Canvas.
             if(composeMode && draftOwnerRef.current==='compose') stashDraft('compose');
             if((micPainting||micListening) && (draftOwnerRef.current==='sing'||draftOwnerRef.current==='listen')) stashDraft(draftOwnerRef.current);
+            // Multi-draft: stash the live Mood piece BEFORE we touch the canvas.
+            // The non-keepResume path (mood was still PLAYING, or idle) runs
+            // wipeCanvasNow() below which empties chordsRef — so if we don't
+            // capture here, switching to another source afterwards finds no
+            // chords and the draft is silently lost. No-op for non-mood sources
+            // (stashMode self-guards on moodContext/moodFromImg).
+            stashMode('mood');
             // Save the compose performance to "Recently played" before tearing
             // down. Min 3 chords so accidental opens aren't saved. Captured here
             // (before wipeCanvasNow / clear) while chords still hold the user's notes.
