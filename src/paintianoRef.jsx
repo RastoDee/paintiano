@@ -584,6 +584,16 @@ const PF_STYLE = `
             padding-top: 22px;
           }
           .pf-setup-palettes .pf-setup-done > button { width: auto; }
+          /* ── 2-thumb ergonomics (desktop + tablet landscape only) ──
+             Controls sit on outer edges, content squeezes toward center.
+             PALETTES col → checkbox at outer left, text right-aligned.
+             ARTISTS col  → checkbox at outer right, text left-aligned.
+             Section heads mirror the row direction (title outer, links inner).
+             Locks (🔒) stay next to artist names (already in label span). */
+          .pf-setup-palettes .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
+          .pf-setup-artists  .pf-setup-grid > button { flex-direction: row-reverse !important; }
+          .pf-setup-artists  .pf-setup-grid > button > span:last-child { text-align: left !important; }
+          .pf-setup-artists > div:first-child { flex-direction: row-reverse !important; }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
@@ -28025,7 +28035,7 @@ Composition rules:
                     return (
                     <button key={k} onClick={()=>togglePal(k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
                       <span style={{display:'inline-flex',width:18,height:18,alignItems:'center',justifyContent:'center',borderRadius:5,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
-                      {_sent(_palLabels[k])}
+                      <span style={{flex:1,textAlign:'left'}}>{_sent(_palLabels[k])}</span>
                     </button>
                     );
                   })}

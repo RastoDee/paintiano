@@ -640,19 +640,42 @@ const PF_STYLE = `
             padding-left: 80px !important;
             padding-right: 170px !important;
           }
-          /* Two-thumb up/down nav, split to the bottom corners */
+          /* Up/down nav — small outline arrows above and below the progress
+             dots column on the LEFT. Replaces the big circular bottom-corner
+             buttons that dominated the modal. Arrows align vertically with the
+             progress bars to form a single navigation rail. */
           .pf-guide-panel .pf-guide-nav {
-            display: flex !important;
+            display: block !important;
             position: absolute !important;
             left: 24px !important;
-            right: 24px !important;
-            bottom: 24px !important;
-            align-items: center !important;
-            justify-content: space-between !important;
-            z-index: 5 !important;
+            right: auto !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            width: 28px !important;
             pointer-events: none !important;
+            z-index: 5 !important;
           }
-          .pf-guide-panel .pf-guide-nav > button { pointer-events: auto !important; }
+          .pf-guide-panel .pf-guide-nav > button {
+            pointer-events: auto !important;
+            position: absolute !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 26px !important;
+            height: 26px !important;
+            border-radius: 50% !important;
+            background: transparent !important;
+            border: 1px solid rgba(255,255,255,.1) !important;
+            color: rgba(230,222,196,.55) !important;
+            font-size: .8rem !important;
+            transition: border-color .18s, color .18s !important;
+          }
+          .pf-guide-panel .pf-guide-nav > button:hover:not(:disabled) {
+            border-color: rgba(220,180,90,.6) !important;
+            color: rgba(220,180,90,.95) !important;
+          }
+          .pf-guide-panel .pf-guide-nav > .pf-guide-nav-prev { top: calc(50% - 130px) !important; }
+          .pf-guide-panel .pf-guide-nav > .pf-guide-nav-next { top: calc(50% + 110px) !important; }
+          .pf-guide-panel .pf-guide-nav > .pf-guide-nav-pos { display: none !important; }
           /* Hide the old bottom-left position indicator (nav has its own) */
           .pf-guide-panel > div[style*="bottom: 18px"] { display: none !important; }
           /* Mood-from-image source thumbnail: centered at the TOP of the stage
