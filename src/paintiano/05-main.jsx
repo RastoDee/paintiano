@@ -3502,13 +3502,21 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // that is being left, which is exactly what we want to stash.
   const moodContextRef = useRef(false);
   useEffect(()=>{ moodContextRef.current = moodContext; },[moodContext]);
+  // Mirror of loadedSource so stashOutgoing can detect the live source mode
+  // inside a stable ([]) callback / at synchronous call sites.
+  const loadedSourceRef = useRef(null);
+  useEffect(()=>{ loadedSourceRef.current = loadedSource; },[loadedSource]);
+  // Music source stash (midi / audio / score) — parallel to the Mood stash.
+  // Lights the Music tile when a draft exists; tapping it restoreMode()s.
+  const musicStashRef = useRef(null);
+  const [hasMusicDraft, setHasMusicDraft] = useState(false);
   // Live mirror of the Mood piece's metadata (everything not already on a ref).
   // Written on change; read by stashMode so the snapshot is built with [] deps
   // (no useCallback deps explosion, no stale closures).
   const moodMetaRef = useRef(null);
   useEffect(()=>{
-    moodMetaRef.current = { info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName };
-  },[info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName]);
+    moodMetaRef.current = { info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen };
+  },[info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen]);
 
   // stashMode: capture the current SOURCE-mode draft (Mood only for now).
   const stashMode = useCallback((mode)=>{
@@ -3533,6 +3541,43 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       };
       setHasMoodDraft(true);
     }
+    if(mode==='music'){
+      const ls = loadedSourceRef.current;
+      if(ls!=='midi' && ls!=='audio' && ls!=='score') return;
+      const cur = chordsRef.current;
+      if(!cur || !cur.length) return;
+      const meta = moodMetaRef.current || {};
+      musicStashRef.current = {
+        sub: ls,
+        chords: cur.slice(),
+        grid: gridRef.current,
+        idxCounter: idxRef.current,
+        sessionStart: sessionStart.current,
+        disp: dispRef.current,
+        info: meta.info||null, viewMode: meta.viewMode||'paint',
+        compositionName: meta.compositionName||'',
+        scoreName: meta.scoreName||'',
+        // audio sub-type: hold the decoded buffer + blob so playback replays
+        audioPCM: ls==='audio' ? audioPCMRef.current : null,
+        audioBlob: ls==='audio' ? audioBlobRef.current : null,
+        audioName: ls==='audio' ? (meta.audioName||'') : '',
+        audioSideImage: ls==='audio' ? (meta.audioSideImage||null) : null,
+        audioRowOpen: ls==='audio' ? !!meta.audioRowOpen : false,
+      };
+      setHasMusicDraft(true);
+    }
+  },[]);
+
+  // stashOutgoing: stash whatever SOURCE mode is currently live, unless it's the
+  // same as the mode we're entering (so "+ NEW <same source>" replaces in place
+  // rather than self-stashing). Called at every mode-transition chokepoint.
+  const stashOutgoing = useCallback((target)=>{
+    let cur=null;
+    if(moodContextRef.current && !moodFromImgRef.current) cur='mood';
+    else if(moodFromImgRef.current) cur='mfi';
+    else if(loadedSourceRef.current==='image') cur='image';
+    else if(loadedSourceRef.current==='midi'||loadedSourceRef.current==='audio'||loadedSourceRef.current==='score') cur='music';
+    if(cur && cur!==target) stashMode(cur);
   },[]);
 
   // restoreMode: put a stashed SOURCE-mode draft back on the canvas. Returns
@@ -3540,6 +3585,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // substrateRef and does not set loadedSource / moodFromImg, so the auto-close
   // picker effect (deps: …,loadedSource,moodFromImg) is not retriggered.
   const restoreMode = useCallback((mode)=>{
+    // Restoring INTO `mode` means leaving whatever source is currently live →
+    // stash it first (stashOutgoing self-skips if the live mode == `mode`, e.g.
+    // a wiped same-mode canvas) so switching between drafts never loses one.
+    stashOutgoing(mode);
     if(mode==='mood'){
       const s = moodStashRef.current;
       if(!s || !s.chords || !s.chords.length) return false;
@@ -3592,12 +3641,65 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setTimeout(()=>{ restoringRef.current = false; }, 0);
       return true;
     }
+    if(mode==='music'){
+      const s = musicStashRef.current;
+      if(!s || !s.chords || !s.chords.length) return false;
+      restoringRef.current = true;
+      stopAll();
+      setChords(s.chords); chordsRef.current = s.chords;
+      if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
+      idxRef.current = s.idxCounter;
+      sessionStart.current = s.sessionStart;
+      // Restore the playback position exactly as left (same logic as mood).
+      {
+        const _len = s.chords.length;
+        const _pos = (typeof s.disp==='number') ? Math.max(0, Math.min(s.disp, _len)) : _len;
+        setDisp(_pos); dispRef.current = _pos;
+        if(_pos>0 && _pos<_len){
+          setHoldPaused(true); holdPausedRef.current = true; resumeFromRef.current = _pos;
+        } else {
+          setHoldPaused(false); holdPausedRef.current = false; resumeFromRef.current = null;
+        }
+      }
+      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
+      gridSigRef.current = '';
+      composedModeRef.current = false;
+      draftOwnerRef.current = null;
+      pixelRef.current = null; imgComposeRef.current = false;
+      // music is not a mood / image source
+      setMoodContext(false); setMoodFromImg(false); setCurrentMood(null); setVarySource(null);
+      setOriginalImgUrl(null); setImgMoodThumb(null);
+      setInfo(s.info || null);
+      setCompositionName(s.compositionName || '');
+      setMidiBlob(null); setMidiName('');
+      const _sub = s.sub;
+      if(_sub==='audio'){
+        audioPCMRef.current = s.audioPCM || null;
+        setAudioBlobAndRef(s.audioBlob || null);
+        setAudioName(s.audioName || '');
+        setAudioSideImage(s.audioSideImage || null);
+        setAudioRowOpen(!!s.audioRowOpen);
+        setViewMode('audio'); viewModeRef.current = 'audio';
+      } else {
+        // midi / score: synthesis playback from chords; clear audio state
+        audioPCMRef.current = null; setAudioBlobAndRef(null); setAudioName('');
+        setAudioSideImage(null); setAudioRowOpen(false);
+        setViewMode(s.viewMode || 'paint'); viewModeRef.current = s.viewMode || 'paint';
+        if(_sub==='score') setScoreName(s.scoreName || '');
+      }
+      setLoadedSource(_sub);
+      setStamp(prev=>prev+1);
+      setTimeout(()=>{ restoringRef.current = false; }, 0);
+      return true;
+    }
     return false;
-  },[stopAll]);
+  },[stopAll,stashOutgoing]);
 
   // clearModeStash: drop a source-mode draft (used by full clear).
   const clearModeStash = useCallback((mode)=>{
     if(mode==='mood'){ moodStashRef.current = null; setHasMoodDraft(false); }
+    if(mode==='music'){ musicStashRef.current = null; setHasMusicDraft(false); }
   },[]);
   // Notes mode is a per-painting choice — reset it to plain colour Mosaic
   // whenever the source changes (new loaded file, new mood, image↔mood switch),
@@ -3993,6 +4095,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     singStashRef.current=null;listenStashRef.current=null;setHasMicDraft(false);
     composeStashRef.current=null;setHasComposeDraft(false);
     moodStashRef.current=null;setHasMoodDraft(false);
+    musicStashRef.current=null;setHasMusicDraft(false);
     draftOwnerRef.current=null;
     // Reset Colour + Style to defaults so returning to Setup is a clean slate.
     setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
@@ -4057,7 +4160,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stashDraft]);
 
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';stashMode('mood');if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     const r=new FileReader();
@@ -4079,7 +4182,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   };
 
   const loadAudio=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';stashMode('mood');if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     // The flow:
     //   1. reading file → arrayBuffer
     //   2. decoding audio → decodeAudioData via OfflineAudioContext (iOS-safe)
@@ -4303,6 +4406,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // which has the paywall gate).
   const _mfiRecall=useCallback((entry)=>{
     if(!entry) return;
+    stashOutgoing('mfi');
     try{
       const evts=noteArr2events(entry.notes||[],entry.tempo||90);
       if(!evts.length) return;
@@ -4374,6 +4478,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // users (exhausted free trial doesn't block replay; only new generation does).
   const _aiComposeRecall=useCallback((entry)=>{
     if(!entry) return;
+    stashOutgoing('mood');
     try{
       const evts=noteArr2events(entry.notes||[],entry.tempo||90);
       if(!evts.length) return;
@@ -4671,7 +4776,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const composeFromImage=useCallback(async(srcUrl,isSample)=>{
     const _src=srcUrl||originalImgUrl;
     if(imgAiBusy||!_src) return;
-    stashMode('mood'); // entering MFI from a text-mood → stash it (self-guards if already MFI)
+    stashOutgoing('mfi'); // entering MFI → stash whatever source was live (self-guards if already MFI)
     // NOTE: trial gate is INSIDE the try-block below, AFTER the cache check.
     // This lets free trial-exhausted users replay the built-in sample image
     // (which is always pre-cached, no AI call needed) and any other image they
@@ -4863,7 +4968,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';stashMode('mood');if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
@@ -5046,6 +5151,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // yet, so aiMidi saw playing===true and bailed — the new mood never loaded,
     // the old title stayed on the canvas, and only a second attempt worked.
     if(!title||working)return;
+    stashOutgoing('mood');
     setSongQ(title);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');audioBlobRef.current=null;stopAll();
     const song=findSong(title);
     if(!song){setErr(t('errs').songNotFound);return;}
@@ -5079,6 +5185,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       return;
     }
     // Hard fallback: offline procedural generator (no network).
+    stashOutgoing('mood');
     const song=moodToSong(text);
     if(!song){ setErr(t('errs').songNotFound); return; }
     setSongQ(text);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');audioBlobRef.current=null;stopAll();
@@ -5341,6 +5448,7 @@ Output ONLY valid JSON, no prose, no markdown:
   const aiCompose=useCallback(async(overrideMood)=>{
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
     if(!title||busy||composedModeRef.current)return;
+    stashOutgoing('mood');
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
     // Cache hit: same mood phrase + language already composed by AI → replay the
     // stored piece, no new AI call, no "composing…" spinner. This is what makes
@@ -8192,7 +8300,7 @@ Composition rules:
                   // meant to re-roll) so existing marks stay put and new notes just
                   // extend the painting.
                   if(!randomMode){ setStructureSeedLock((pollockSessionSeed>>>0)||1); }
-                  stashMode('mood');
+                  stashOutgoing('compose');
                   const owner = draftOwnerRef.current;
                   if(owner==='compose'){
                     // Re-entering compose. If the canvas was wiped on the way to
@@ -8225,7 +8333,7 @@ Composition rules:
                 if(draftOwnerRef.current && draftOwnerRef.current!=='sing' && draftOwnerRef.current!=='listen'){
                   stashDraft(draftOwnerRef.current); draftOwnerRef.current=null;
                 }
-                stashMode('mood');
+                stashOutgoing('mic');
                 setComposeMode(false);
                 setCurrentMood(null); setVarySource(null); setSongQ('');
                 setMidiBlob(null); setMidiName(''); setAudioBlob(null); setAudioName(''); audioBlobRef.current=null;
@@ -8282,7 +8390,7 @@ Composition rules:
               {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
                   loadSound routes by file type. Active when any of the three
                   music sources is loaded. */}
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':((activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'#eafff4':PF.blue),fontFamily:'inherit'}}>{(activeSource==='midi'||activeSource==='audio'||activeSource==='score')&&<span style={{width:7,height:7,borderRadius:'50%',background:'#5b9cf6',boxShadow:'0 0 6px #5b9cf6',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':_sent(t('music')!=='music'?t('music'):'music')}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}if(hasMusicDraft){restoreMode('music');setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':((activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?'#eafff4':PF.blue),fontFamily:'inherit'}}>{(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#5b9cf6',boxShadow:'0 0 6px #5b9cf6',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':_sent(t('music')!=='music'?t('music'):'music')}</span></button>
               <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':((activeSource==='image'&&!moodFromImg)?'#eafff4':PF.orange),fontFamily:'inherit'}}>{(activeSource==='image'&&!moodFromImg)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#f47c3c',boxShadow:'0 0 6px #f47c3c',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{switchArmed==='image'?t('switchConfirm'):_sent(t('image').replace(/[^\p{L}]/gu,''))}</span></button>
             </div>
           </div>
@@ -8343,8 +8451,8 @@ Composition rules:
             // wipeCanvasNow() below which empties chordsRef — so if we don't
             // capture here, switching to another source afterwards finds no
             // chords and the draft is silently lost. No-op for non-mood sources
-            // (stashMode self-guards on moodContext/moodFromImg).
-            stashMode('mood');
+            // (stashOutgoing self-guards: no-op if nothing source-mode is live).
+            stashOutgoing(null);
             // Save the compose performance to "Recently played" before tearing
             // down. Min 3 chords so accidental opens aren't saved. Captured here
             // (before wipeCanvasNow / clear) while chords still hold the user's notes.
