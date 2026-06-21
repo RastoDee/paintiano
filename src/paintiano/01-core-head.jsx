@@ -860,17 +860,20 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 8px !important;
           }
-          /* Square chips: aspect-ratio 1:1 (square), vertical flex with icon
-             on top and label below. Override inline padding/min-height that
-             only made sense on a full-width chip. */
+          /* Square-ish chips (actually short rectangles ~150×88px to keep the
+             grid compact). aspect-ratio 1/1 was too tall on mobile portrait —
+             3 chips per column hit ~500px and ate the entire viewport. A
+             shorter height keeps icon + label readable while letting the whole
+             2x3 grid sit cleanly above the fold. */
           .pf-setup-create-import-wrap .pf-moodtile,
           .pf-setup-create-import-wrap .pf-mfitile,
           .pf-setup-create-import-wrap .pf-compose,
           .pf-setup-create-import-wrap .pf-mic,
           .pf-setup-create-import-wrap .pf-tool {
-            aspect-ratio: 1 / 1 !important;
+            aspect-ratio: auto !important;
+            height: 88px !important;
             flex-direction: column !important;
-            gap: 6px !important;
+            gap: 5px !important;
             padding: 8px 6px !important;
             min-height: 0 !important;
             text-align: center !important;
@@ -878,13 +881,12 @@ const PF_STYLE = `
             white-space: normal !important;
             word-break: keep-all !important;
           }
-          /* Icon (the first <span> child or .pf-glyph) larger in the square
-             layout — needs to read as the primary visual, with the text label
-             as supporting. Inline font-size is overridden. */
+          /* Icon (the first <span> child or .pf-glyph) — sized for the shorter
+             chip; readable but not dominant over the label. */
           .pf-setup-create-import-wrap .pf-moodtile > span:first-child,
           .pf-setup-create-import-wrap .pf-mfitile > span:first-child,
           .pf-setup-create-import-wrap .pf-tool .pf-glyph {
-            font-size: 1.6rem !important;
+            font-size: 1.25rem !important;
             line-height: 1 !important;
             flex-shrink: 0 !important;
           }
