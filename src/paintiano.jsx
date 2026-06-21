@@ -742,44 +742,36 @@ const PF_STYLE = `
           .pf-mode-live .pf-transport-row .pf-tx-scale { order: 6 !important; }
         }
         /* MOBILE LANDSCAPE (<769px landscape, e.g. phone on its side ~700–900px
-           wide): use a 5-column grid too, but with TIGHTER widths so the chips
-           fit. txL/txR 70px, palettes/artists 90px, canvas takes the middle.
-           The pf-tx-edge-l wrapper and dock→txR rules below this block are
-           shared with the desktop landscape rules above (same selectors). */
+           wide): use the same 3-col grid as tablet portrait — dock sits under
+           palettes in the left column, artists get the full right column,
+           canvas the middle. Side columns are TIGHTER (140px instead of 180px)
+           so the canvas keeps usable width on narrow landscape phones. No L/R
+           transport split — there isn't room. */
         @media (max-width: 768px) and (orientation: landscape) {
           .pf-app-root:not(.pf-mode-setup) {
             display: grid !important;
-            grid-template-columns: 70px 90px minmax(0, 1fr) 90px 70px !important;
+            grid-template-columns: 140px minmax(0, 1fr) 140px !important;
             grid-template-rows: auto auto auto auto auto 1fr auto auto;
             grid-template-areas:
-              "topbar  topbar   topbar topbar  topbar"
-              "header  header   header header  header"
-              "txL     controls stage  rtop    txR"
-              "txL     colors   stage  styles  txR"
-              "txL     .        stage  styles  txR"
-              "txL     .        stage  rfab    txR"
-              "vfooter vfooter  vfooter vfooter vfooter"
-              "legal   legal    legal  legal   legal" !important;
-            column-gap: 10px !important;
-            padding: 10px 12px 20px !important;
+              "topbar   topbar topbar"
+              "header   header header"
+              "controls stage  rtop"
+              "colors   stage  styles"
+              "ltrans   stage  styles"
+              ".        stage  rfab"
+              "vfooter  vfooter vfooter"
+              "legal    legal  legal" !important;
+            column-gap: 14px !important;
+            padding: 10px 14px 20px !important;
             align-content: start !important;
             align-items: start !important;
             justify-items: stretch !important;
           }
-          /* Same area-mapping as landscape desktop — the rules above (inside
-             the 769px+ block, scoped by @media (orientation: landscape)) don't
-             apply here because we're <769px. Replicate the essentials. */
-          .pf-app-root:not(.pf-mode-setup) > .pf-topbar      { grid-area: topbar; }
-          .pf-app-root:not(.pf-mode-setup) > header          { grid-area: topbar; }
-          .pf-app-root:not(.pf-mode-setup) .pf-controls-inner { grid-area: controls; align-self: start; }
-          .pf-app-root:not(.pf-mode-setup) > .pf-seek-block  { grid-area: rtop; align-self: start; max-width: 100% !important; margin: 0 0 8px !important; }
-          .pf-app-root:not(.pf-mode-setup) > .pf-panel-part  { display: contents !important; }
-          .pf-app-root:not(.pf-mode-setup) .pf-strip-grid    { display: contents !important; }
-          .pf-app-root:not(.pf-mode-setup) .pf-colors-inner  { grid-area: colors; }
-          .pf-app-root:not(.pf-mode-setup) .pf-styles-inner  { grid-area: styles; }
-          .pf-app-root:not(.pf-mode-setup) > .pf-stage-part  { grid-area: stage; }
+          /* Dock back to its 3-col home (under the palettes in the left column,
+             grid-area: ltrans). Strip the mobile-portrait fixed-bottom styling
+             so it flows inline as a normal card. */
           .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
-            grid-area: txR !important;
+            grid-area: ltrans !important;
             position: static !important;
             margin-top: 10px;
             left: auto !important; right: auto !important; bottom: auto !important; top: auto !important;
@@ -792,14 +784,6 @@ const PF_STYLE = `
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
           }
-          /* Mobile landscape: same dock expansion as desktop landscape — when
-             rec-save is present, dock spans styles + txR (~170px instead of
-             70px) so the save row gets breathing room. */
-          .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock:has(.pf-rec-save-row) {
-            grid-area: rtop / styles / styles / txR !important;
-            align-self: start;
-            z-index: 5;
-          }
           .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row {
             flex-direction: column !important;
             flex-wrap: nowrap !important;
@@ -808,36 +792,20 @@ const PF_STYLE = `
             margin-bottom: 0 !important;
           }
           .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
+          /* The 5-col txL edge wrapper exists in JSX but has no home in 3-col,
+             so hide it. Buttons (play/mute/clear) are still rendered inside the
+             dock by the JSX, so they remain reachable there. */
           .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l {
-            grid-area: txL;
-            align-self: start;
-            margin-top: 10px;
-            background: var(--pf-card, #161320);
-            border: 1px solid rgba(242,238,232,.08);
-            border-radius: 14px;
-            padding: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            align-items: stretch;
-          }
-          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button { width: 100% !important; justify-content: center !important; }
-          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-play,
-          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-mute,
-          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-clear {
             display: none !important;
           }
-          .pf-app-root:not(.pf-mode-setup) > .pf-version-footer { grid-area: vfooter; width: 100%; }
-          .pf-app-root:not(.pf-mode-setup) > .pf-legal-links    { grid-area: legal; width: 100%; }
-          .pf-app-root:not(.pf-mode-setup) .pf-help-fab         { grid-area: rfab !important; position: static !important; }
         }
-        /* LANDSCAPE-ONLY chip styling (applies to BOTH desktop ≥769px landscape
-           AND mobile landscape — i.e. any time the 5-col grid is active). Taller
-           chips so long labels (MELODY, VARIATION, ATM/MELODY combos) wrap to
-           two lines instead of being cut. MORF + VARIÁCIA buttons stack
-           vertically instead of side-by-side (uniform with the edge columns).
-           Tablet PORTRAIT (3-col) is untouched — no rule fires there. */
-        @media (orientation: landscape) {
+        /* DESKTOP/TABLET LANDSCAPE chip styling (≥769px landscape only — the
+           5-col grid is only active there). Taller chips so long labels (MELODY,
+           VARIATION, ATM/MELODY combos) wrap to two lines instead of being cut.
+           MORF + VARIÁCIA buttons stack vertically instead of side-by-side
+           (uniform with the edge columns). Tablet PORTRAIT (3-col) and
+           MOBILE LANDSCAPE (also 3-col now) are untouched. */
+        @media (min-width: 769px) and (orientation: landscape) {
           .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button,
           .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button {
             min-height: 56px;
@@ -856,11 +824,12 @@ const PF_STYLE = `
           .pf-app-root:not(.pf-mode-setup) div:has(> .pf-vary) {
             grid-template-columns: 1fr !important;
           }
-          /* Save picker on landscape: shift the modal toward the right edge so
-             a thumb holding the tablet can reach it (centered modals on wide
-             screens sit dead-center and are unreachable). Portrait keeps the
-             centered default (overlay's inline justifyContent:center still
-             applies because this rule doesn't fire there). */
+        }
+        /* Save picker on landscape (all widths): shift the modal toward the
+           right edge so a thumb holding the tablet can reach it (centered
+           modals on wide screens sit dead-center and are unreachable). Portrait
+           keeps the centered default. */
+        @media (orientation: landscape) {
           .pf-save-overlay {
             justify-content: flex-end !important;
             padding-right: clamp(40px, 12vw, 160px) !important;
