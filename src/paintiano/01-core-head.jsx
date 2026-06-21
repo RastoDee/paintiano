@@ -100,7 +100,8 @@ const PF_STYLE = `
         /* Mobile: hide the desktop left-edge transport wrapper entirely. It only
            materialises inside the @media block below (desktop play screen). */
         .pf-tx-edge-l { display: none; }
-        @media (min-width: 769px) and (min-height: 501px) {
+        @media (min-width: 769px) and (min-height: 501px),
+               (max-height: 500px) and (orientation: landscape) {
           html, body {
             background: #050507 !important;
             min-height: 100vh;
@@ -169,13 +170,11 @@ const PF_STYLE = `
             width: 100% !important;
             padding: 14px 24px 28px !important;
           }
-          /* PLAY SCREEN — 5-column grid for LANDSCAPE viewports ≥769px (desktop,
-             tablet landscape). Outer txL/txR are the transport edges reachable
-             by both thumbs. Setup screen excluded. Tablet PORTRAIT keeps the
-             original 3-col layout (handled separately below) — there the canvas
-             needs the full middle, transport just splits L/R inside the existing
-             side columns. */
-          @media (orientation: landscape) {
+          /* PLAY SCREEN — 5-column grid for LANDSCAPE viewports ≥769px
+             AND height ≥501px (tablet landscape, desktop). Mobile landscape
+             height ≤500px stays on the 3-col tablet-portrait grid inherited
+             from the parent block. */
+          @media (orientation: landscape) and (min-height: 501px) {
             .pf-app-root:not(.pf-mode-setup) {
               grid-template-columns: 110px 138px minmax(0, 1fr) 138px 110px !important;
               grid-template-areas:
@@ -629,7 +628,7 @@ const PF_STYLE = `
              holds everything else. Inside the dock, the L buttons are hidden
              so they don't duplicate. — In PORTRAIT these txL/txR areas don't
              exist (no 5-col grid), so portrait scoping is essential. */
-          @media (orientation: landscape) {
+          @media (orientation: landscape) and (min-height: 501px) {
             .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
               grid-area: txR !important;
             }
@@ -748,58 +747,6 @@ const PF_STYLE = `
            A landscape phone is ALWAYS short (≤430px tall typically), so
            max-height:500px catches every phone-in-landscape and excludes
            tablets (which are ≥768px tall in landscape too). */
-        @media (max-height: 500px) and (orientation: landscape) {
-          .pf-app-root:not(.pf-mode-setup) {
-            display: grid !important;
-            grid-template-columns: 140px minmax(0, 1fr) 140px !important;
-            grid-template-rows: auto auto auto auto auto 1fr auto auto;
-            grid-template-areas:
-              "topbar   topbar topbar"
-              "header   header header"
-              "controls stage  rtop"
-              "colors   stage  styles"
-              "ltrans   stage  styles"
-              ".        stage  rfab"
-              "vfooter  vfooter vfooter"
-              "legal    legal  legal" !important;
-            column-gap: 14px !important;
-            padding: 10px 14px 20px !important;
-            align-content: start !important;
-            align-items: start !important;
-            justify-items: stretch !important;
-          }
-          /* Dock back to its 3-col home (under the palettes in the left column,
-             grid-area: ltrans). Strip the mobile-portrait fixed-bottom styling
-             so it flows inline as a normal card. */
-          .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
-            grid-area: ltrans !important;
-            position: static !important;
-            margin-top: 10px;
-            left: auto !important; right: auto !important; bottom: auto !important; top: auto !important;
-            width: auto !important;
-            background: var(--pf-card, #161320) !important;
-            border-top: none !important;
-            border: 1px solid rgba(242,238,232,.08) !important;
-            border-radius: 14px !important;
-            padding: 8px !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-          }
-          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row {
-            flex-direction: column !important;
-            flex-wrap: nowrap !important;
-            gap: 6px !important;
-            align-items: stretch !important;
-            margin-bottom: 0 !important;
-          }
-          .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button { width: 100% !important; justify-content: center !important; }
-          /* The 5-col txL edge wrapper exists in JSX but has no home in 3-col,
-             so hide it. Buttons (play/mute/clear) are still rendered inside the
-             dock by the JSX, so they remain reachable there. */
-          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l {
-            display: none !important;
-          }
-        }
         /* DESKTOP/TABLET LANDSCAPE chip styling (≥769px landscape only — the
            5-col grid is only active there). Taller chips so long labels (MELODY,
            VARIATION, ATM/MELODY combos) wrap to two lines instead of being cut.
@@ -861,7 +808,7 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 8px !important;
           }
-          /* Square-ish chips at FIXED 80px height regardless of zoom. The
+          /* Square-ish chips at FIXED 100px height regardless of zoom. The
              chip box itself doesn't grow with the A A zoom — only the text
              inside grows (driven by the JSX inline effScale font-size, which
              we don't override here). overflow:hidden keeps oversized zoom
@@ -872,7 +819,7 @@ const PF_STYLE = `
           .pf-setup-create-import-wrap .pf-mic,
           .pf-setup-create-import-wrap .pf-tool {
             aspect-ratio: auto !important;
-            height: 80px !important;
+            height: 100px !important;
             min-height: 0 !important;
             flex-direction: column !important;
             gap: 4px !important;

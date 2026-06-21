@@ -100,7 +100,7 @@ const PF_STYLE = `
         /* Mobile: hide the desktop left-edge transport wrapper entirely. It only
            materialises inside the @media block below (desktop play screen). */
         .pf-tx-edge-l { display: none; }
-        @media (min-width: 769px) {
+        @media (min-width: 769px) and (min-height: 501px) {
           html, body {
             background: #050507 !important;
             min-height: 100vh;
@@ -741,13 +741,14 @@ const PF_STYLE = `
           .pf-mode-live .pf-transport-row .pf-tx-clear { order: 5 !important; }
           .pf-mode-live .pf-transport-row .pf-tx-scale { order: 6 !important; }
         }
-        /* MOBILE LANDSCAPE (<769px landscape, e.g. phone on its side ~700–900px
-           wide): use the same 3-col grid as tablet portrait — dock sits under
-           palettes in the left column, artists get the full right column,
-           canvas the middle. Side columns are TIGHTER (140px instead of 180px)
-           so the canvas keeps usable width on narrow landscape phones. No L/R
-           transport split — there isn't room. */
-        @media (max-width: 768px) and (orientation: landscape) {
+        /* MOBILE LANDSCAPE (phone on its side). Detect via low viewport HEIGHT
+           (≤500px) instead of width, because modern iPhones in landscape are
+           700–932px wide and so a max-width:768px never matched them — they
+           fell through to the desktop 5-col rule and rendered as tablet/desktop.
+           A landscape phone is ALWAYS short (≤430px tall typically), so
+           max-height:500px catches every phone-in-landscape and excludes
+           tablets (which are ≥768px tall in landscape too). */
+        @media (max-height: 500px) and (orientation: landscape) {
           .pf-app-root:not(.pf-mode-setup) {
             display: grid !important;
             grid-template-columns: 140px minmax(0, 1fr) 140px !important;
@@ -805,7 +806,7 @@ const PF_STYLE = `
            MORF + VARIÁCIA buttons stack vertically instead of side-by-side
            (uniform with the edge columns). Tablet PORTRAIT (3-col) and
            MOBILE LANDSCAPE (also 3-col now) are untouched. */
-        @media (min-width: 769px) and (orientation: landscape) {
+        @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape) {
           .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button,
           .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button {
             min-height: 56px;
@@ -860,45 +861,47 @@ const PF_STYLE = `
             grid-template-columns: 1fr !important;
             gap: 8px !important;
           }
-          /* Square-ish chips (actually short rectangles ~150×88px to keep the
-             grid compact). aspect-ratio 1/1 was too tall on mobile portrait —
-             3 chips per column hit ~500px and ate the entire viewport. A
-             shorter height keeps icon + label readable while letting the whole
-             2x3 grid sit cleanly above the fold. */
+          /* Square-ish chips at FIXED 80px height regardless of zoom. The
+             chip box itself doesn't grow with the A A zoom — only the text
+             inside grows (driven by the JSX inline effScale font-size, which
+             we don't override here). overflow:hidden keeps oversized zoom
+             text from blowing the chip apart. */
           .pf-setup-create-import-wrap .pf-moodtile,
           .pf-setup-create-import-wrap .pf-mfitile,
           .pf-setup-create-import-wrap .pf-compose,
           .pf-setup-create-import-wrap .pf-mic,
           .pf-setup-create-import-wrap .pf-tool {
             aspect-ratio: auto !important;
-            height: 88px !important;
-            flex-direction: column !important;
-            gap: 5px !important;
-            padding: 8px 6px !important;
+            height: 80px !important;
             min-height: 0 !important;
+            flex-direction: column !important;
+            gap: 4px !important;
+            padding: 6px 4px !important;
+            overflow: hidden !important;
             text-align: center !important;
             line-height: 1.1 !important;
             white-space: normal !important;
             word-break: keep-all !important;
           }
-          /* Icon (the first <span> child or .pf-glyph) — sized for the shorter
-             chip; readable but not dominant over the label. */
-          .pf-setup-create-import-wrap .pf-moodtile > span:first-child,
-          .pf-setup-create-import-wrap .pf-mfitile > span:first-child,
-          .pf-setup-create-import-wrap .pf-tool .pf-glyph {
-            font-size: 1.25rem !important;
+          /* Uniform icon size for all 6 chips via the .pf-chip-icon class
+             added to every icon span in JSX. Without this, Mood/MFI use
+             1.05rem inline, Music/Image use 1.35rem inline (mobile), and
+             Compose/Mic were unwrapped emoji that inherited text size —
+             so the row felt visually unbalanced. One selector, one size. */
+          .pf-setup-create-import-wrap .pf-chip-icon {
+            font-size: 1.2rem !important;
             line-height: 1 !important;
             flex-shrink: 0 !important;
           }
-          /* Slightly smaller text labels to fit the square tile cleanly with
-             the larger icon. */
-          .pf-setup-create-import-wrap .pf-moodtile,
-          .pf-setup-create-import-wrap .pf-mfitile,
-          .pf-setup-create-import-wrap .pf-compose,
-          .pf-setup-create-import-wrap .pf-mic,
-          .pf-setup-create-import-wrap .pf-tool {
-            font-size: .58rem !important;
-            letter-spacing: .08em !important;
+          /* SVG-backed icons (currently just Mic) need an explicit box so
+             the SVG fills it. 1.2rem ≈ 19.2px at root font-size. */
+          .pf-setup-create-import-wrap .pf-chip-icon > svg {
+            width: 1.2rem !important;
+            height: 1.2rem !important;
+          }
+          .pf-setup-create-import-wrap .pf-chip-icon:has(> svg) {
+            width: 1.2rem !important;
+            height: 1.2rem !important;
           }
         }
 `;
@@ -25322,7 +25325,7 @@ Composition rules:
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('createLabel')}</div>
             <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
-              <span style={{fontSize:'1.05rem'}}>✦</span>
+              <span className="pf-chip-icon" style={{fontSize:'1.05rem'}}>✦</span>
               {t('moodHowFeel')}
             </button>
             <div className="pf-setup-create" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
@@ -25357,7 +25360,7 @@ Composition rules:
                   setComposeMode(true);
                   setMicArmed(false);
                 } else setComposeMode(false);
-              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}♪ {composeMode?t('composing').replace(/[^\p{L} ]/gu,''):t('compose').replace(/[^\p{L} ]/gu,'')}</button>
+              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}<span className="pf-chip-icon" style={{fontSize:'1.05rem'}}>♪</span> {composeMode?t('composing').replace(/[^\p{L} ]/gu,''):t('compose').replace(/[^\p{L} ]/gu,'')}</button>
               <button className="pf-mic" onClick={()=>{
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
@@ -25402,7 +25405,7 @@ Composition rules:
                 }
                 setMicArmed(true);
                 setStayActive(true);
-              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':'transparent',border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>🎙 {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
+              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:micActive?(micPreset==='voice'?'#ff8a8a':'#8accff'):'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':'transparent',border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}><span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.05rem',height:'1.05rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span> {micActive?t('micActive').replace(/[^\p{L} ]/gu,''):t('mic').replace(/[^\p{L} ]/gu,'')}</button>
             </div>
           </div>
 
@@ -25417,7 +25420,7 @@ Composition rules:
           <div>
             <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:'rgba(242,238,232,0.6)',marginBottom:10,textTransform:'uppercase'}}>{t('importLabel')}</div>
             <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
-              <span style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
+              <span className="pf-chip-icon" style={{fontSize:'1.05rem'}}>{imgAiBusy?'⏳':'✦'}</span>
               {imgAiBusy?'…':(t('imgMood')||'mood from image')}
               {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:600,letterSpacing:'.08em'}}>· {t('aiOffline')||'offline'}</span>}
               {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
@@ -25426,8 +25429,8 @@ Composition rules:
               {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
                   loadSound routes by file type. Active when any of the three
                   music sources is loaded. */}
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:isDesktop?'1.05rem':'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':(t('music')!=='music'?t('music'):'MUSIC')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph" style={{fontSize:isDesktop?'1.05rem':'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score')?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':PF.blue,fontFamily:'inherit'}}><span className="pf-glyph pf-chip-icon" style={{fontSize:isDesktop?'1.05rem':'1.35rem',lineHeight:1}}>♪</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':(t('music')!=='music'?t('music'):'MUSIC')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':PF.orange,fontFamily:'inherit'}}><span className="pf-glyph pf-chip-icon" style={{fontSize:isDesktop?'1.05rem':'1.35rem',lineHeight:1}}>◫</span><span style={{fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{switchArmed==='image'?t('switchConfirm'):t('image').replace(/[^\p{L}]/gu,'')}</span></button>
             </div>
           </div>
 
