@@ -579,10 +579,11 @@ const PF_STYLE = `
           .pf-setup-footer { display: none !important; }
           .pf-setup-palettes .pf-setup-done {
             display: flex !important;
+            justify-content: center;
             margin-top: auto;
-            padding-top: 18px;
+            padding-top: 22px;
           }
-          .pf-setup-palettes .pf-setup-done > button { width: 100%; }
+          .pf-setup-palettes .pf-setup-done > button { width: auto; }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
