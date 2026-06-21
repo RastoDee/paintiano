@@ -183,7 +183,6 @@ const PF_STYLE = `
         /* ARTISTS col: row reversed → checkbox at right edge, text+lock left-aligned (toward center) */
         .pf-setup-artists  .pf-setup-grid > button { flex-direction: row-reverse !important; }
         .pf-setup-artists  .pf-setup-grid > button > span:last-child { text-align: left !important; }
-        .pf-setup-artists > div:first-child { flex-direction: row-reverse !important; }
         @media (min-width: 769px) and (min-height: 501px),
                (max-height: 500px) and (orientation: landscape) {
           html, body {

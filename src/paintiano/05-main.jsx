@@ -10713,8 +10713,8 @@ Composition rules:
             <div className="pf-setup-body" style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
               <div className="pf-setup-palettes">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
-                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupPalettesTitle','Palettes')}</span>
-                  <span style={{display:'inline-flex',gap:14,fontSize:(.55*effScale)+'rem',letterSpacing:0}}>
+                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupPalettesTitle','Palettes')}</span>
+                  <span style={{display:'inline-flex',gap:14,fontSize:(.6*effScale)+'rem',letterSpacing:0}}>
                     <span onClick={()=>setSetupPalettes(ALL_PALETTE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes(ALL_PALETTE_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.7)'}}>{_sent(ts('setupAll','All'))}</span>
                     <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.45)'}}>{_sent(ts('setupNone','None'))}</span>
                   </span>
@@ -10736,8 +10736,8 @@ Composition rules:
               </div>
               <div className="pf-setup-artists">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
-                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupArtistsTitle','Artists')}</span>
-                  <span style={{display:'inline-flex',gap:14,fontSize:(.55*effScale)+'rem',letterSpacing:0}}>
+                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupArtistsTitle','Artists')}</span>
+                  <span style={{display:'inline-flex',gap:14,fontSize:(.6*effScale)+'rem',letterSpacing:0}}>
                     <span onClick={()=>setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()]);}}} style={{cursor:'pointer',color:'rgba(201,168,76,.7)'}}>{_sent(ts('setupAll','All'))}</span>
                     <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.45)'}}>{_sent(ts('setupNone','None'))}</span>
                   </span>
