@@ -21300,6 +21300,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(keep!=='mic' && keep!=='compose'){ composedModeRef.current=false; draftOwnerRef.current=null; }
     // LOOP is a transient playback toggle — always reset when changing context.
     setLoopMode(false); loopModeRef.current=false;
+    // This burst of state changes can make React skip the canvas paint effect
+    // (it's keyed on `stamp`), leaving stale imperative pixels — a BLACK canvas
+    // on entry (esp. via restoreStash, which doesn't bump stamp itself). Force a
+    // repaint so the restored / cleared canvas always renders.
+    setStamp(s=>s+1);
   },[]);
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
   // MELODY chip ("obraz spieva"): when ON, an AI-composed SINGING melodic line is

@@ -19447,6 +19447,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
+      if(!chord) return; // stale disp can index past chords → undefined chord
       const{n:notes,idx}=chord;
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
@@ -19595,7 +19596,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         _setVariantCap(proStatus==='free' ? 2 : null);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
-            const chord=chords[i];const{n:notes,idx}=chord;
+            const chord=chords[i];if(!chord)break; // stale disp / lim past chords → bail, don't destructure undefined
+            const{n:notes,idx}=chord;
             const cell=grid.cells&&grid.cells[idx];
             if(cell){
               if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style));
@@ -25969,10 +25971,15 @@ Composition rules:
                 const targetPreset = presetOwner==='listen' ? 'music' : 'voice';
                 if(targetPreset!==micPreset) setMicPreset(targetPreset);
                 if(!restoreStash(presetOwner)){
-                  // No stash for this preset — clean armed canvas.
+                  // No stash for this preset — clean armed canvas. Reset the
+                  // playback position too: carrying a stale disp from the
+                  // outgoing (e.g. mood-in-progress) draft over an EMPTY chord
+                  // list makes the paint loop read chords[disp-1] === undefined.
                   setChords([]); chordsRef.current=[]; idxRef.current=0;
                   composedModeRef.current=false; draftOwnerRef.current=null;
                   gridSigRef.current='';
+                  setDisp(0); dispRef.current=0;
+                  setHoldPaused(false); holdPausedRef.current=false; resumeFromRef.current=null;
                 }
                 setMicArmed(true);
                 setStayActive(true);
