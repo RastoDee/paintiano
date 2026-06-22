@@ -19972,6 +19972,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     else if(owner==='sing') stash=singStashRef.current;
     else if(owner==='listen') stash=listenStashRef.current;
     if(!stash || !stash.chords.length) return false;
+    enterContext(owner==='compose'?'compose':'mic');
     setChords(stash.chords);
     chordsRef.current=stash.chords;
     idxRef.current=stash.idxCounter;
@@ -19987,6 +19988,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // resetCanvasForDraft: start a clean canvas owned by `owner` (called when
   // entering a creative mode with no stash for it).
   const resetCanvasForDraft = useCallback((owner)=>{
+    enterContext(owner==='compose'?'compose':'mic');
     setChords([]); chordsRef.current=[];
     idxRef.current=0; setPending([]); pendingRef.current=[];
     pressInfo.current={}; sessionStart.current=0; gridSigRef.current='';
@@ -21034,6 +21036,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!s || !s.chords || !s.chords.length) return false;
       restoringRef.current = true;
       stopAll();
+      enterContext('mood');
       // canvas + refs
       setChords(s.chords); chordsRef.current = s.chords;
       if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
@@ -21086,6 +21089,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!s || !s.chords || !s.chords.length) return false;
       restoringRef.current = true;
       stopAll();
+      enterContext('music');
       setChords(s.chords); chordsRef.current = s.chords;
       if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
       idxRef.current = s.idxCounter;
@@ -21139,6 +21143,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!s.pixel && !s.imgCompose) return false; // scan draft needs pixel; compose draft doesn't
       restoringRef.current = true;
       stopAll();
+      enterContext('image');
       setChords(s.chords); chordsRef.current = s.chords;
       if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
       idxRef.current = s.idxCounter;
@@ -21189,6 +21194,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!s || !s.chords || !s.chords.length) return false;
       restoringRef.current = true;
       stopAll();
+      enterContext('mfi');
       setChords(s.chords); chordsRef.current = s.chords;
       if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
       idxRef.current = s.idxCounter;
@@ -21256,6 +21262,45 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // melody in its original key, and the two clash.
   const atmoOnRef=useRef(false);   useEffect(()=>{atmoOnRef.current=atmoOn;},[atmoOn]);
   const atmoMoodRef=useRef(null);  useEffect(()=>{atmoMoodRef.current=atmoMood;},[atmoMood]);
+
+  // ───────── enterContext: one switch for all mode transitions ─────────
+  // Two draft systems coexist: the 4-mode multi-draft (mood / mfi / image /
+  // music) and the creative-draft system (compose / sing / listen). Each used
+  // to manage only its OWN family's latches, so crossing between them left the
+  // other family's context bleeding through — a "+ NEW MOOD" header over a MIC
+  // canvas, MORPH/VARY/LOOP lit over a Compose canvas, a stray MIC "Recently
+  // played" on a Mood screen, etc. enterContext is called at the TOP of every
+  // restore / reset path and neutralises every FOREIGN family's latches +
+  // canvas-context, leaving only the family we're entering for the caller to
+  // populate. `keep` ∈ 'mood' | 'mfi' | 'image' | 'music' | 'mic' | 'compose'.
+  const enterContext = useCallback((keep)=>{
+    const moodFam = (keep==='mood' || keep==='mfi');
+    // Mood / MFI latches: MORPH(currentMood)+VARY(varySource) lit, "+ NEW MOOD",
+    // compose-source badge, morph chain, free-text query, structure seed.
+    if(!moodFam){
+      setMoodContext(false); setCurrentMood(null); setVarySource(null);
+      setComposeSource(null); composeSourceRef.current=null;
+      setMorphTargets([]); setSongQ(''); setStructureSeedLock(null);
+    }
+    // MFI-only image trim (source thumb / aspect / return-url) + moodFromImg.
+    if(keep!=='mfi'){ setMoodFromImg(false); setImgMoodThumb(null); setMfiImgAspect(null); setImgReturnUrl(null); }
+    // Image latches: pixel-scan buffer, AI-compose sub-mode, atmosphere.
+    if(keep!=='image'){
+      pixelRef.current=null; imgComposeRef.current=false;
+      setImgPlayMode('scan'); imgPlayModeRef.current='scan';
+      setAtmoOn(false); atmoOnRef.current=false; setAtmoMood(null); atmoMoodRef.current=null;
+    }
+    if(keep!=='image' && keep!=='mfi'){ setOriginalImgUrl(null); }
+    // File-source latch (image/music share loadedSource + sourceContext).
+    if(keep!=='image' && keep!=='music'){ setLoadedSource(null); setSourceContext(null); }
+    // MIC / Compose latches: on-canvas voice⇄music chip (micActive||micArmed),
+    // Original⇄Piano toggle, MIC "Recently played" (micContext), composedMode.
+    if(keep!=='mic'){ setMicArmed(false); setMicContext(false); }
+    if(keep!=='compose'){ setComposeMode(false); }
+    if(keep!=='mic' && keep!=='compose'){ composedModeRef.current=false; draftOwnerRef.current=null; }
+    // LOOP is a transient playback toggle — always reset when changing context.
+    setLoopMode(false); loopModeRef.current=false;
+  },[]);
   const [atmoBusy,setAtmoBusy]=useState(false);   // AI detection in progress
   // MELODY chip ("obraz spieva"): when ON, an AI-composed SINGING melodic line is
   // layered ON TOP of the scan texture (see _melodyVoice in 04-songs). It does NOT
