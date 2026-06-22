@@ -21029,6 +21029,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // stash it first (stashOutgoing self-skips if the live mode == `mode`, e.g.
     // a wiped same-mode canvas) so switching between drafts never loses one.
     stashOutgoing(mode);
+    // A restore from a playing source can leave the play debounce primed and the
+    // playing ref momentarily stale — both can swallow the FIRST Play tap after
+    // restore (most visible in AI-compose, which has no canvas animation). Reset
+    // them so the next genuine tap starts cleanly.
+    lastStartPlayRef.current = 0;
+    playingRef.current = false;
     if(mode==='mood'){
       const s = moodStashRef.current;
       if(!s || !s.chords || !s.chords.length) return false;
