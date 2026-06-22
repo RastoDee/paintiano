@@ -16668,6 +16668,7 @@ function useProStatus() {
 
   const openCheckout = useCallback(async (tier = 'pro') => {
     try {
+      try { window.posthog && window.posthog.capture('checkout_opened', { tier }); } catch (_) {}
       const Paddle = await loadPaddleScript();
       if (!Paddle) throw new Error('Paddle not available');
       // Pick the price for the requested tier. Pro AI falls back to the Pro
@@ -18222,6 +18223,20 @@ export default function Paintiano() {
   // reconciliation when the parent re-renders for unrelated reasons.
   const closePaletteEditor = useCallback(()=>{setShowPaletteEditor(false);setCustomArmed(false);},[]);
   const [chords,    setChords]    = useState([]);
+  // ── PostHog funnel events ──
+  const firedCreateRef = useRef(false);
+  useEffect(() => {
+    if (!firedCreateRef.current && chords.length > 0) {
+      firedCreateRef.current = true;
+      try { window.posthog && window.posthog.capture('first_creation'); } catch (_) {}
+    }
+  }, [chords.length]);
+  useEffect(() => {
+    if (paywallReason) { try { window.posthog && window.posthog.capture('paywall_shown', { reason: paywallReason }); } catch (_) {} }
+  }, [paywallReason]);
+  useEffect(() => {
+    try { if (new URLSearchParams(window.location.search).get('paid') === '1') window.posthog && window.posthog.capture('purchase_return'); } catch (_) {}
+  }, []);
   const [disp,      setDisp]      = useState(0);
   const [active,    setActive]    = useState(new Set());
   const [pickMode,  setPickMode]  = useState(null); // 'midi' | 'audio' | null
