@@ -3223,7 +3223,7 @@ function matissePhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const pickPos=(rnd)=>{let best=null,bestD=-1;for(let t=0;t<6;t++){const x=CW*(0.13+rnd()*0.74),y=CH*(0.13+rnd()*0.74);let md=1e9;for(const p of placed){const d=Math.hypot(x-p.x,y-p.y);if(d<md)md=d;}if(!placed.length)md=1e9;if(md>bestD){bestD=md;best={x,y};}}return best;};
 
   for(let p=0;p<paintCount;p++){
-    const rnd=_seedRnd(p+2700,ss,CW,CH);
+    const rnd=_seedRnd(p+2700,ss, 0, 0);
     const pos=pickPos(rnd);placed.push(pos);
     const cx=pos.x,cy=pos.y;
     const col=flat(p);
@@ -3637,7 +3637,7 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
 
   for(let p=0; p<passCount; p++){
     // Per-pass seed: passIndex + sessionSeed
-    const rnd = _seedRnd(p+1, ss, CW, CH);
+    const rnd = _seedRnd(p+1, ss, 0, 0);
 
     // === CHORD-DRIVEN PROPERTIES ===
     // Each pass corresponds to a chord. Color is biased toward that chord's
@@ -4575,7 +4575,7 @@ function picassoPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 
   // Lay shapes out on a loose diagonal drift so they overlap like pasted paper.
   for(let p=0;p<paintCount;p++){
-    const rnd=_seedRnd(p+900,ss,CW,CH);
+    const rnd=_seedRnd(p+900,ss, 0, 0);
     const {rgb,energy}=chordColor(p);
     const [r,g,b]=rgb;
     // Size: large, a meaningful fraction of the canvas, shrinking slightly as count rises.
@@ -7978,7 +7978,7 @@ function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function rileyPhaseWarp(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal=Math.max(0,Math.min(1,N/cn));
-  const sR=_seedRnd(71,ss,CW,CH);
+  const sR=_seedRnd(71,ss, 0, 0);
   // ground
   ctx.fillStyle=isBW?'#101014':'#0c0a14';
   ctx.fillRect(0,0,CW,CH);
@@ -8018,7 +8018,7 @@ function rileyPhaseWarp(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function rileyPhaseBlaze(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal=Math.max(0,Math.min(1,N/cn));
-  const sR=_seedRnd(73,ss,CW,CH);
+  const sR=_seedRnd(73,ss, 0, 0);
   ctx.fillStyle=isBW?'#101014':'#0c0a14'; ctx.fillRect(0,0,CW,CH);
   const cx=CW*(0.42+sR()*0.16), cy=CH*(0.42+sR()*0.16);
   const maxR=Math.hypot(CW,CH)*0.62;
@@ -8049,7 +8049,7 @@ function rileyPhaseBlaze(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function rileyPhaseFall(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal=Math.max(0,Math.min(1,N/cn));
-  const sR=_seedRnd(74,ss,CW,CH);
+  const sR=_seedRnd(74,ss, 0, 0);
   ctx.fillStyle=isBW?'#101014':'#0c0a14'; ctx.fillRect(0,0,CW,CH);
   const nBands=cn<=8?18:cn<=24?28:cn<=60?40:cn<=120?56:cn<=240?74:96;
   const visBands=Math.max(1,Math.ceil(nBands*reveal));
@@ -10316,7 +10316,7 @@ function kusamaPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed){
 
   // Density gradient: a luminous focus where dots thin out, packing denser away
   // from it (the glowing center in the reference). Focus position from the seed.
-  const fr=_seedRnd(1300,ss,CW,CH);
+  const fr=_seedRnd(1300,ss, 0, 0);
   fr();fr();
   const focusX=CW*(0.3+fr()*0.4), focusY=CH*(0.25+fr()*0.5);
   const maxD=Math.hypot(CW,CH)*0.6;
@@ -10333,7 +10333,7 @@ function kusamaPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed){
   for(let gy=0; gy<rows; gy++){
     for(let gx=0; gx<cols; gx++){
       idx++;
-      const rnd=_seedRnd(idx*3+1700, ss, CW, CH);
+      const rnd=_seedRnd(idx*3+1700, ss, 0, 0);
       // progressive reveal: skip dots beyond the revealed fraction (stable order)
       if(rnd() > revealFrac + 0.0001) { /* still advance rng below for stability */ }
       const px=gx*baseStep + (rnd()-0.5)*baseStep*0.9;
@@ -10845,7 +10845,7 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   };
 
   for(let p=0;p<paintCount;p++){
-    const rnd=_seedRnd(p+2100,ss,CW,CH);
+    const rnd=_seedRnd(p+2100,ss, 0, 0);
     const pos=pickPos(rnd); placed.push(pos);
     const ax=pos.x, ay=pos.y;
     const ac=chordRGB(p);
@@ -10890,9 +10890,9 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // connective "wire" that ties a Miró composition together. Only once enough
   // of the piece has played, so it doesn't appear before the shapes.
   if(paintCount>=2){
-    const lineN=1+(_seedRnd(2050,ss,CW,CH)()<0.5?1:0);
+    const lineN=1+(_seedRnd(2050,ss, 0, 0)()<0.5?1:0);
     for(let i=0;i<lineN;i++){
-      const rnd=_seedRnd(2060+i,ss,CW,CH);
+      const rnd=_seedRnd(2060+i,ss, 0, 0);
       const x0=CW*(0.08+rnd()*0.2), y0=CH*(0.1+rnd()*0.8);
       const x1=CW*(0.7+rnd()*0.22), y1=CH*(0.1+rnd()*0.8);
       const mx=(x0+x1)/2+(rnd()-0.5)*CW*0.3, my=(y0+y1)/2+(rnd()-0.5)*CH*0.3;
@@ -11376,7 +11376,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   // === 1. LARGE OUTLINED TRIANGLES ===
   const triCount = countFor(TH_TRI);
   for(let i=0; i<triCount; i++){
-    const rnd = _seedRnd(1000+i, ss, CW, CH);
+    const rnd = _seedRnd(1000+i, ss, 0, 0);
     const sizeScale = 0.28 + rnd()*0.45;
     const baseSize = Math.min(CW, CH) * sizeScale;
     const cx = rnd()*CW;
@@ -11403,7 +11403,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   // === 2. LARGE CONCENTRIC CIRCLE RINGS (no fill) ===
   const ringCount = countFor(TH_RING);
   for(let i=0; i<ringCount; i++){
-    const rnd = _seedRnd(2000+i, ss, CW, CH);
+    const rnd = _seedRnd(2000+i, ss, 0, 0);
     const cx = CW*0.10 + rnd()*CW*0.80;
     const cy = CH*0.10 + rnd()*CH*0.80;
     const outerR = Math.min(CW, CH) * (0.10 + rnd()*0.12);
@@ -11425,7 +11425,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   const lineCount = countFor(TH_LINE);
   ctx.lineCap = 'round';
   for(let i=0; i<lineCount; i++){
-    const rnd = _seedRnd(3000+i, ss, CW, CH);
+    const rnd = _seedRnd(3000+i, ss, 0, 0);
     const angle = rnd() * Math.PI;
     const cx = rnd()*CW;
     const cy = rnd()*CH;
@@ -11442,7 +11442,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   const arcCount = countFor(TH_ARC);
   ctx.lineCap = 'round';
   for(let i=0; i<arcCount; i++){
-    const rnd = _seedRnd(4000+i, ss, CW, CH);
+    const rnd = _seedRnd(4000+i, ss, 0, 0);
     const cx = CW*0.15 + rnd()*CW*0.70;
     const cy = CH*0.15 + rnd()*CH*0.70;
     const arcR = Math.min(CW, CH) * (0.12 + rnd()*0.15);
@@ -11458,7 +11458,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   // === 5. BIG ZIGZAG LIGHTNING ===
   const zigCount = countFor(TH_ZIG);
   for(let i=0; i<zigCount; i++){
-    const rnd = _seedRnd(5000+i, ss, CW, CH);
+    const rnd = _seedRnd(5000+i, ss, 0, 0);
     const segCount = 4 + Math.floor(rnd()*4);
     const segLen = Math.min(CW, CH) * (0.08 + rnd()*0.06);
     const baseAng = rnd() * Math.PI * 2;
@@ -11512,7 +11512,7 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   // === 1. GRID CELLS — each holds concentric circles, a target, or a dot ===
   for(let r=0; r<rows; r++){
     for(let c=0; c<cols; c++){
-      const rnd = _seedRnd(7000 + r*cols + c, ss, CW, CH);
+      const rnd = _seedRnd(7000 + r*cols + c, ss, 0, 0);
       const cx = c*cellW + cellW*0.5;
       const cy = r*cellH + cellH*0.5;
       // A little jitter so the grid feels hand-placed, not mechanical.
@@ -11561,7 +11561,7 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   // === 2. A FEW BOLD DIAGONALS crossing the whole canvas ===
   const diagCount = chordCount < 6 ? 1 : chordCount < 30 ? 2 : 3;
   for(let i=0; i<diagCount; i++){
-    const rnd = _seedRnd(7700+i, ss, CW, CH);
+    const rnd = _seedRnd(7700+i, ss, 0, 0);
     const angle = rnd() * Math.PI;
     const cx = rnd()*CW, cy = rnd()*CH;
     const length = Math.max(CW, CH) * 1.4;
@@ -11576,7 +11576,7 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
 
   // === 3. CHECKERBOARD CORNER (only when there's enough music) ===
   if(chordCount >= 10){
-    const rnd = _seedRnd(7800, ss, CW, CH);
+    const rnd = _seedRnd(7800, ss, 0, 0);
     const n = 3 + Math.floor(rnd()*2);            // 3–4 squares per side
     const sq = minCell * 0.22;
     const corner = Math.floor(rnd()*4);            // which corner
@@ -11615,7 +11615,7 @@ function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/230))*TH.length));
   n=Math.max(1,n);
   for(let i=0;i<n;i++){
-    const rnd=_seedRnd(2200+i,ss,CW,CH);
+    const rnd=_seedRnd(2200+i,ss, 0, 0);
     const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.05+rnd()*0.13);
     const rings=2+((rnd()*4)|0);
     for(let r=rings;r>=1;r--){
@@ -11633,7 +11633,7 @@ function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/255))*TH.length));
   // long lines
   for(let i=0;i<n;i++){
-    const rnd=_seedRnd(2300+i,ss,CW,CH);
+    const rnd=_seedRnd(2300+i,ss, 0, 0);
     const k=(rnd()*3)|0;
     ctx.strokeStyle=cols[(rnd()*cols.length)|0];
     ctx.lineWidth=Math.max(1,Math.min(CW,CH)*0.004);
@@ -11658,7 +11658,7 @@ function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/215))*TH.length));
   // soft washes
   for(let i=0;i<n;i++){
-    const rnd=_seedRnd(2400+i,ss,CW,CH);
+    const rnd=_seedRnd(2400+i,ss, 0, 0);
     const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.08+rnd()*0.18);
     ctx.fillStyle=_kandAlpha(cols[(rnd()*cols.length)|0],'0.35');
     ctx.beginPath();
@@ -11668,7 +11668,7 @@ function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   // black gesture lines
   const gn=Math.max(1,(n*0.6)|0);
   for(let i=0;i<gn;i++){
-    const rnd=_seedRnd(2450+i,ss,CW,CH);
+    const rnd=_seedRnd(2450+i,ss, 0, 0);
     ctx.strokeStyle='rgba(10,8,14,0.9)';ctx.lineWidth=Math.max(1.5,Math.min(CW,CH)*0.004);ctx.lineCap='round';
     let x=rnd()*CW,y=rnd()*CH;ctx.beginPath();ctx.moveTo(x,y);
     const segs=3+((rnd()*4)|0);for(let s=0;s<segs;s++){const nx=x+(rnd()-0.5)*CW*0.4,ny=y+(rnd()-0.5)*CH*0.4;ctx.quadraticCurveTo((x+nx)/2+(rnd()-0.5)*30,(y+ny)/2+(rnd()-0.5)*30,nx,ny);x=nx;y=ny;}ctx.stroke();
@@ -11682,7 +11682,7 @@ function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
   const TH=[2,5,9,15,23,33,46,62,82,108,140,180];
   let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/180))*TH.length));
   for(let i=0;i<n;i++){
-    const rnd=_seedRnd(2500+i,ss,CW,CH);
+    const rnd=_seedRnd(2500+i,ss, 0, 0);
     const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.04+rnd()*0.10);
     ctx.fillStyle=cols[(rnd()*cols.length)|0];
     const k=(rnd()*3)|0;
@@ -11713,7 +11713,7 @@ function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette)
   // big translucent ground triangles (1–4)
   const grounds = Math.max(1, Math.round(p*4));
   for(let i=0;i<grounds;i++){
-    const r=_seedRnd(2100+i, ss, CW, CH);
+    const r=_seedRnd(2100+i, ss, 0, 0);
     ctx.globalAlpha=.42; ctx.fillStyle=cols[(r()*cols.length)|0];
     ctx.beginPath();
     const cx=r()*CW, cy=r()*CH, s=minD*(0.28+r()*0.30), rot=r()*Math.PI*2;
@@ -11724,7 +11724,7 @@ function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette)
   // outlined filled circles (0–9)
   const circs = Math.round(p*9);
   for(let i=0;i<circs;i++){
-    const r=_seedRnd(2200+i, ss, CW, CH);
+    const r=_seedRnd(2200+i, ss, 0, 0);
     const cx=r()*CW, cy=r()*CH, R=minD*(0.05+r()*0.10);
     ctx.fillStyle=cols[(r()*cols.length)|0];
     ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
@@ -11732,7 +11732,7 @@ function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette)
   }
   // a checkerboard block appears past mid-song
   if(p>0.45){
-    const r=_seedRnd(2300, ss, CW, CH);
+    const r=_seedRnd(2300, ss, 0, 0);
     const cell=minD*0.035, gx=r()*CW*0.6, gy=r()*CH*0.6, rot=(r()-0.5)*0.6;
     ctx.save(); ctx.translate(gx,gy); ctx.rotate(rot);
     ctx.fillStyle=ink;
@@ -11743,13 +11743,13 @@ function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette)
   const lines = Math.round(p*5);
   ctx.strokeStyle=ink; ctx.lineWidth=Math.max(2,minD*0.008);
   for(let i=0;i<lines;i++){
-    const r=_seedRnd(2400+i, ss, CW, CH);
+    const r=_seedRnd(2400+i, ss, 0, 0);
     ctx.beginPath(); ctx.moveTo(r()*CW, r()*CH); ctx.lineTo(r()*CW, r()*CH); ctx.stroke();
   }
   // small accent triangles (0–6)
   const tris = Math.round(p*6);
   for(let i=0;i<tris;i++){
-    const r=_seedRnd(2500+i, ss, CW, CH);
+    const r=_seedRnd(2500+i, ss, 0, 0);
     const cx=r()*CW, cy=r()*CH, s=minD*(0.03+r()*0.04);
     ctx.fillStyle=cols[(r()*cols.length)|0];
     ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx+s,cy+s); ctx.lineTo(cx-s,cy+s); ctx.closePath(); ctx.fill();
@@ -11767,7 +11767,7 @@ function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette
   const p = Math.max(0, Math.min(1, chordCount / 260));
   const ink = isBW ? '#1a1a1a' : '#0a060c';
   const minD = Math.min(CW,CH);
-  const r0 = _seedRnd(2600, ss, CW, CH);
+  const r0 = _seedRnd(2600, ss, 0, 0);
   const cx = CW*(0.35+r0()*0.30), cy = CH*(0.30+r0()*0.25);
   // central concentric nucleus — ring count grows with progress
   const rings = Math.max(2, Math.round(p*7));
@@ -11787,7 +11787,7 @@ function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette
   // scattered small circles + dots across the whole plane (0–44)
   const dots = Math.round(p*44);
   for(let i=0;i<dots;i++){
-    const r=_seedRnd(2700+i, ss, CW, CH);
+    const r=_seedRnd(2700+i, ss, 0, 0);
     ctx.globalAlpha=0.5+r()*0.5; ctx.fillStyle=cols[(r()*cols.length)|0];
     ctx.beginPath(); ctx.arc(r()*CW, r()*CH, minD*(0.01+r()*0.035), 0, Math.PI*2); ctx.fill();
   }
@@ -28280,7 +28280,7 @@ Composition rules:
       )}
       </div>
       )}
-      <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
+      <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.2{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
