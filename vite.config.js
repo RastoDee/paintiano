@@ -38,7 +38,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       // PWA only attaches to the /play entry — the landing must NEVER register
       // a service worker (otherwise the SW would intercept future / navigations
       // and serve the PWA cached HTML instead of the static landing).
