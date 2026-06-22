@@ -21426,6 +21426,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // user explicitly taps "← Setup". This keeps the cleared view calm.
     if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
+      // Clear always drops back to SCAN and drops the AI-compose state, so a
+      // leftover 'compose' sub-mode can't make the next Play silently re-compose.
+      // Also discard the multi-draft image stash + tile glow.
+      imgComposeRef.current=false; setImgPlayMode('scan'); imgPlayModeRef.current='scan';
+      imageStashRef.current=null; setHasImageDraft(false);
       setPending([]);pendingRef.current=[];
       pressInfo.current={};sessionStart.current=0;gridSigRef.current='';
       // Keep the picture's pixel data AND the displayed photo. Clear in image
@@ -21614,6 +21619,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setStamp(s=>s+1);
+    setImgPlayMode('scan'); imgPlayModeRef.current='scan';
+    moodStashRef.current=null;setHasMoodDraft(false);
+    musicStashRef.current=null;setHasMusicDraft(false);
+    imageStashRef.current=null;setHasImageDraft(false);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
     setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);setForceSetup(false);
@@ -23135,6 +23144,7 @@ Composition rules:
           if(startMode!==mode) setMode(startMode);
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
           imgComposeRef.current=false;
+          setImgPlayMode('scan'); imgPlayModeRef.current='scan'; // a fresh image always starts in scan
           // Process pixels into events using the chosen mode's hue→pitch table.
           // B/W uses harmony's hue table — same music as harmony, but the canvas
           // renders monochrome because gc() returns greys in bw mode.

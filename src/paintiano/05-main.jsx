@@ -5368,6 +5368,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setInfo({title:_dispT,count:evts.length,dur:Math.round((evts[evts.length-1]?.startMs||0)/1000)+2});
       try{ const bytes=encodeMidi(evts,parsed.tempo||120); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(_dispT.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
       setWorking(false); setWLabel(''); setWPct(0);
+      // The Play tap that triggered this compose already stamped the startPlay
+      // debounce. On a cache hit _applyComposition runs <300ms later, so the
+      // auto-play below would be swallowed (→ "first tap does nothing, second
+      // plays"). Clear the stamp so the post-compose play always fires.
+      lastStartPlayRef.current=0;
       if(typeof afterReady==='function'){ setTimeout(()=>{ try{ afterReady(); }catch(_){} }, 80); }
       else { setTimeout(()=>{ try{ startPlayRef.current?.(); }catch(_){} }, 60); }
     };
