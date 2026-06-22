@@ -21616,8 +21616,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setVarySource(null);
       // Drop the source-image thumbnail.
       setImgMoodThumb(null);
-      // Drop the MFI multi-draft stash + tile glow — Clear inside MFI means gone.
-      mfiStashRef.current=null; setHasMfiDraft(false);
+      // NOTE: do NOT touch the MFI stash here. This branch is image-SCAN only
+      // (MFI has loadedSource=null, so it never reaches here — it falls to the
+      // tail). Clearing an image-scan must leave an independent MFI draft intact.
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
@@ -21685,16 +21686,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // For everything else (loaded MIDI/Score/Audio/mood OR empty), do a
     // full clear(): it drops the loaded source and chords so the source tile
     // no longer shows as active when returning to setup.
+    // Capture the mode being cleared BEFORE clear() resets moodFromImg/moodContext.
+    const _wasMfi  = moodFromImg;
+    const _wasMood = moodContext && !moodFromImg;
     clear();
-    // Discard any stopped-session draft + glow too (a Compose/MIC draft whose
-    // live mode already ended). Without this the MIC/COMPOSE button kept its
-    // "draft saved" glow after clearing a stopped session.
-    singStashRef.current=null;listenStashRef.current=null;setHasMicDraft(false);
-    composeStashRef.current=null;setHasComposeDraft(false);
-    moodStashRef.current=null;setHasMoodDraft(false);
-    musicStashRef.current=null;setHasMusicDraft(false);
-    imageStashRef.current=null;setHasImageDraft(false);
-    mfiStashRef.current=null;setHasMfiDraft(false);
+    // Drop ONLY the draft of the mode actually being cleared on this path
+    // (mood / MFI / empty / a stopped creative session). clear() already
+    // discarded the active creative owner's stash via draftOwnerRef. Every
+    // OTHER mode's draft is INDEPENDENT and must survive — clearing a Mood must
+    // not wipe a stashed MIC / Compose / Music / Image / MFI draft (and vice-versa).
+    if(_wasMfi){ mfiStashRef.current=null; setHasMfiDraft(false); }
+    else if(_wasMood){ moodStashRef.current=null; setHasMoodDraft(false); }
     draftOwnerRef.current=null;
     // Reset Colour + Style to defaults so returning to Setup is a clean slate.
     setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
