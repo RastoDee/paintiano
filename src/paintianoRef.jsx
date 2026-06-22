@@ -124,18 +124,6 @@ const PF_STYLE = `
         .pf-app-root .pf-recent-overlay.pf-picker-mood    .pf-recent-dialog { border-color: rgba(201,168,76,.5) !important; }
         .pf-app-root .pf-recent-overlay.pf-picker-compose .pf-recent-dialog { border-color: rgba(78,203,141,.5) !important; }
         .pf-app-root .pf-recent-overlay.pf-picker-mic     .pf-recent-dialog { border-color: rgba(240,106,166,.5) !important; }
-        /* Short landscape (phone in landscape: width≥769 but very low height).
-           The pinned mood menu's default top:150px + max-height:calc(100vh-175px)
-           leaves almost no room for the suggestions grid, so no moods are visible.
-           Lift it up and hand back nearly the full height so the grid is usable. */
-        @media (min-width: 769px) and (max-height: 560px) {
-          .pf-app-root .pf-recent-overlay .pf-recent-dialog,
-          .pf-app-root .pf-picker-overlay .pf-picker-dialog { top: 44px !important; }
-          .pf-app-root .pf-mood-overlay .pf-mood-dialog {
-            top: 44px !important;
-            max-height: calc(100vh - 60px) !important;
-          }
-        }
         /* All hover affordances gated to real pointers. On touch screens :hover
            "sticks" after a tap — which made SOURCE tiles (Score/Image) keep their
            coloured glow as if active. (hover:hover) keeps lifts/glows for mouse
@@ -27710,7 +27698,7 @@ Composition rules:
                 MOODS list alphabetically (so the user has something to pick
                 without typing); once they start typing, normal autocomplete
                 behaviour applies. Clicking any preset is free (no AI). */}
-            <div style={{flex:'0 1 auto',minHeight:0,overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
+            <div style={{flex:'1 1 auto',minHeight:'72px',overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
               {(()=>{
                 const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
                 const q=_n(moodEdit.trim());

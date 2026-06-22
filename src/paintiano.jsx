@@ -83,15 +83,6 @@ const PF_STYLE = `
           border: 1px solid rgba(255,255,255,.06) !important;
           box-shadow: none !important;
         }
-        .pf-setup-create-import-wrap .pf-moodtile:hover,
-        .pf-setup-create-import-wrap .pf-mfitile:hover,
-        .pf-setup-create-import-wrap .pf-compose:hover,
-        .pf-setup-create-import-wrap .pf-mic:hover,
-        .pf-setup-create-import-wrap .pf-tool:hover {
-          background-color: rgba(255,255,255,.045) !important;
-          border-color: rgba(255,255,255,.12) !important;
-          transition: background-color .18s ease, border-color .18s ease;
-        }
         /* Section labels (TVORBA / IMPORT): subtle uppercase across layouts. */
         .pf-setup-create-import-wrap .pf-setup-col > div > div:first-child {
           text-transform: uppercase !important;
@@ -129,6 +120,16 @@ const PF_STYLE = `
            coloured glow as if active. (hover:hover) keeps lifts/glows for mouse
            users only; touch taps no longer leave a tile stuck highlighted. */
         @media (hover:hover) and (pointer:fine) {
+        /* wrap tile hover (gated: was sticking on touch as a faint grey frame) */
+        .pf-setup-create-import-wrap .pf-moodtile:hover,
+        .pf-setup-create-import-wrap .pf-mfitile:hover,
+        .pf-setup-create-import-wrap .pf-compose:hover,
+        .pf-setup-create-import-wrap .pf-mic:hover,
+        .pf-setup-create-import-wrap .pf-tool:hover {
+          background-color: rgba(255,255,255,.045) !important;
+          border-color: rgba(255,255,255,.12) !important;
+          transition: background-color .18s ease, border-color .18s ease;
+        }
         .pf-tool:hover { transform: translateY(-2px); }
         .pf-tool:hover .pf-glyph { transform: scale(1.2); }
         .pf-lift:hover { transform: translateY(-1px); }
