@@ -1186,6 +1186,8 @@ export default function Paintiano() {
   const [scoreBlob, setScoreBlob] = useState(null); // MusicXML blob (share row, like rec/print)
   const [scoreFileName, setScoreFileName] = useState('');
   const [playedOnce, setPlayedOnce] = useState(false); // image actually played (gates EXPORT like Print's disp)
+  const playedOnceRef = useRef(false);
+  useEffect(()=>{ playedOnceRef.current=playedOnce; },[playedOnce]);
   // Auto-dismiss share status after a few seconds
   useEffect(()=>{
     if(!audioShareMsg||audioShareMsg.tone==='wait')return;
@@ -3580,6 +3582,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Restore only sets state — the AI re-runs solely on a later Play, which is
       // the user's own action, so capturing the compose sub-mode is safe.
       if(loadedSourceRef.current!=='image') return;
+      // Only stash an image the user actually worked on (played the scan, or
+      // composed). A freshly loaded or just-CLEARED image (playedOnce reset to
+      // false) is not a draft — otherwise ← Back after Clear would resurrect it.
+      if(!playedOnceRef.current && !imgComposeRef.current) return;
       // Scan needs pixelRef (for re-transcribe); AI-compose nulls it, so a
       // composed draft is valid without pixel data.
       if(!pixelRef.current && !imgComposeRef.current) return;
