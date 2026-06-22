@@ -606,13 +606,13 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             {PRO_CFG.checkoutDisabled ? (
               <>
                 <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
-                  <span>{tr('proComingSoon', 'Checkout — coming soon')}</span>
+                  <span>{tr('proComingSoon', 'Checkout returns in a few days')}</span>
                   <span style={{fontSize:(.6*readScale)+'rem', fontWeight:400, opacity:.75, letterSpacing:'.02em'}}>
-                    {tr('proCheckoutMoving', 'we\u2019re moving payment providers')}
+                    {tr('proCheckoutMoving', 'we\u2019re switching payment providers')}
                   </span>
                 </div>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
-                  {tr('proBackOnlineSoon', 'back online in a few days · early-bird prices preserved')}
+                  {tr('proBackOnlineSoon', 'your early-bird price is held · first 50 supporters')}
                 </p>
               </>
             ) : (
@@ -834,9 +834,9 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             {PRO_CFG.checkoutDisabled ? (
               <>
                 <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
-                  <span>{tr('proComingSoon', 'Checkout — coming soon')}</span>
+                  <span>{tr('proComingSoon', 'Checkout returns in a few days')}</span>
                   <span style={{fontSize:(.6*readScale)+'rem', fontWeight:400, opacity:.75, letterSpacing:'.02em'}}>
-                    {tr('proCheckoutMoving', 'we\u2019re moving payment providers')}
+                    {tr('proCheckoutMoving', 'we\u2019re switching payment providers')}
                   </span>
                 </div>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
