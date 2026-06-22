@@ -307,14 +307,15 @@ const PF_STYLE = `
           @media (orientation: landscape) and (min-height: 501px) {
             .pf-app-root:not(.pf-mode-setup) {
               grid-template-columns: 180px minmax(0, 1fr) 180px !important;
+              grid-template-rows: auto auto auto auto auto auto 1fr auto auto !important;
               grid-template-areas:
                 "topbar   topbar  topbar"
                 "header   header  header"
                 "controls trkhd   rtop"
-                "colors   stage   rtop"
                 "colors   stage   styles"
                 "ltrans   stage   styles"
-                "ltrans   stage   rfab"
+                ".        stage   rfab"
+                ".        stage   ."
                 "vfooter  vfooter vfooter"
                 "legal    legal   legal" !important;
               column-gap: 24px !important;
