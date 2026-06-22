@@ -195,6 +195,7 @@ function useProStatus() {
 
   const openCheckout = useCallback(async (tier = 'pro') => {
     try {
+      try { window.posthog && window.posthog.capture('checkout_opened', { tier }); } catch (_) {}
       const Paddle = await loadPaddleScript();
       if (!Paddle) throw new Error('Paddle not available');
       // Pick the price for the requested tier. Pro AI falls back to the Pro
