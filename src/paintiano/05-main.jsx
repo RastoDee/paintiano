@@ -617,6 +617,11 @@ export default function Paintiano() {
   const timers       = useRef([]);
   const idxRef       = useRef(0);
   const pixelRef     = useRef(null);
+  // Backup of the scan pixel data ({nc,nr,px,...}). aiComposeFromImage nulls
+  // pixelRef (so re-transcribe/Vary don't run over a composed piece), which
+  // would otherwise leave Clear unable to rebuild the scan. Kept here so Clear
+  // can restore scan from the same picture.
+  const scanPixelBackupRef = useRef(null);
   const genRef       = useRef(0);
   const inputFocus   = useRef(false);
   const refMidi      = useRef(null);
@@ -4038,8 +4043,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
       lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
       try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
-      { let _evts=[]; const _pr=pixelRef.current;
-        if(_pr){ const _nc=_pr.nc,_nr=_pr.nr,_px=_pr.px;
+      { let _evts=[]; const _pr=pixelRef.current||scanPixelBackupRef.current;
+        if(_pr){ pixelRef.current=_pr; const _nc=_pr.nc,_nr=_pr.nr,_px=_pr.px;
           const _hue = mode==='custom'
             ? Object.assign(activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[0];}),
                 {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
@@ -5746,6 +5751,7 @@ Composition rules:
           kontraAutoRef.current = (startMode==='kontra'); // flag auto-kontra so it doesn't leak to other sources
           if(startMode!==mode) setMode(startMode);
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
+          scanPixelBackupRef.current=pixelRef.current; // keep scan data for Clear after a compose nulls pixelRef
           imgComposeRef.current=false;
           setImgPlayMode('scan'); imgPlayModeRef.current='scan'; // a fresh image always starts in scan
           // Process pixels into events using the chosen mode's hue→pitch table.
