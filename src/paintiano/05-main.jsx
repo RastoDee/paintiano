@@ -9520,16 +9520,18 @@ Composition rules:
         const _titleSpan = (<span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>);
         const _badgeSpan = (moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>));
         return showTransport && (<>
-        {is5Col && (seekTitle || _badgeSpan) && (
+        {is5Col && (imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (
           <div className="pf-track-head" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:6,display:'flex',alignItems:'center',justifyContent:'center',gap:8,flexWrap:'wrap'}}>
-            <span style={{fontSize:seekTitle.includes('→')?(.62*effScale)+'rem':(.57*effScale)+'rem',color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'rgba(247,243,236,.55)',fontStyle:seekTitle.includes('→')?'italic':'normal',textAlign:'center',lineHeight:1.3,wordBreak:'break-word'}}>{seekTitle}</span>
-            {_badgeSpan}
-            {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (
-              <img src={imgMoodThumb || originalImgUrl} alt="source" style={{width:44,height:44,objectFit:'cover',borderRadius:8,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 8px rgba(0,0,0,.4)',opacity:.88,flexShrink:0}}/>
-            )}
+            <img src={imgMoodThumb || originalImgUrl} alt="source" style={{width:44,height:44,objectFit:'cover',borderRadius:8,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 8px rgba(0,0,0,.4)',opacity:.88,flexShrink:0}}/>
           </div>
         )}
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
+          {is5Col && (seekTitle || _badgeSpan) && (
+            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,flexWrap:'wrap'}}>
+              <span style={{opacity:seekTitle.includes('→')?0.9:0.6,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'rgba(247,243,236,.6)',fontSize:seekTitle.includes('→')?(.6*effScale)+'rem':(.56*effScale)+'rem',fontStyle:seekTitle.includes('→')?'italic':'normal',lineHeight:1.3,wordBreak:'break-word'}}>{seekTitle}</span>
+              {_badgeSpan}
+            </div>
+          )}
           <div style={{display:'flex',justifyContent:is5Col?'flex-end':'space-between',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             {!is5Col && <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>}
             <span style={{opacity:.75}}>
