@@ -3521,13 +3521,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // restoreMode()s. The AI image-compose sub-mode is NOT captured here.
   const imageStashRef = useRef(null);
   const [hasImageDraft, setHasImageDraft] = useState(false);
+  // MFI (mood-from-image) source stash — moodFromImg pieces. Like the Mood
+  // stash plus the image-display fields.
+  const mfiStashRef = useRef(null);
+  const [hasMfiDraft, setHasMfiDraft] = useState(false);
   // Live mirror of the Mood piece's metadata (everything not already on a ref).
   // Written on change; read by stashMode so the snapshot is built with [] deps
   // (no useCallback deps explosion, no stale closures).
   const moodMetaRef = useRef(null);
   useEffect(()=>{
-    moodMetaRef.current = { info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen, originalImgUrl, mode, imgDir, setupNoSel, playedOnce };
-  },[info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen, originalImgUrl, mode, imgDir, setupNoSel, playedOnce]);
+    moodMetaRef.current = { info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen, originalImgUrl, mode, imgDir, setupNoSel, playedOnce, imgMoodThumb, mfiImgAspect, imgReturnUrl };
+  },[info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen, originalImgUrl, mode, imgDir, setupNoSel, playedOnce, imgMoodThumb, mfiImgAspect, imgReturnUrl]);
 
   // stashMode: capture the current SOURCE-mode draft (Mood only for now).
   const stashMode = useCallback((mode)=>{
@@ -3614,6 +3618,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         playedOnce: !!meta.playedOnce,
       };
       setHasImageDraft(true);
+    }
+    if(mode==='mfi'){
+      if(!moodFromImgRef.current) return;
+      const cur = chordsRef.current;
+      if(!cur || !cur.length) return;
+      const meta = moodMetaRef.current || {};
+      mfiStashRef.current = {
+        chords: cur.slice(),
+        grid: gridRef.current,
+        idxCounter: idxRef.current,
+        sessionStart: sessionStart.current,
+        disp: dispRef.current,
+        info: meta.info||null, viewMode: meta.viewMode||'image',
+        currentMood: meta.currentMood||null, composeSource: meta.composeSource||null,
+        varySource: meta.varySource||null,
+        midiBlob: meta.midiBlob||null, midiName: meta.midiName||'',
+        originalImgUrl: meta.originalImgUrl||null, imgMoodThumb: meta.imgMoodThumb||null,
+        mfiImgAspect: meta.mfiImgAspect||null, imgReturnUrl: meta.imgReturnUrl||null,
+      };
+      setHasMfiDraft(true);
     }
   },[]);
 
@@ -3799,6 +3823,50 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setTimeout(()=>{ restoringRef.current = false; }, 0);
       return true;
     }
+    if(mode==='mfi'){
+      const s = mfiStashRef.current;
+      if(!s || !s.chords || !s.chords.length) return false;
+      restoringRef.current = true;
+      stopAll();
+      setChords(s.chords); chordsRef.current = s.chords;
+      if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
+      idxRef.current = s.idxCounter;
+      sessionStart.current = s.sessionStart;
+      {
+        const _len = s.chords.length;
+        const _pos = (typeof s.disp==='number') ? Math.max(0, Math.min(s.disp, _len)) : _len;
+        setDisp(_pos); dispRef.current = _pos;
+        if(_pos>0 && _pos<_len){
+          setHoldPaused(true); holdPausedRef.current = true; resumeFromRef.current = _pos;
+        } else {
+          setHoldPaused(false); holdPausedRef.current = false; resumeFromRef.current = null;
+        }
+      }
+      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
+      gridSigRef.current = '';
+      composedModeRef.current = false;
+      draftOwnerRef.current = null;
+      pixelRef.current = null; imgComposeRef.current = false;
+      setLoadedSource(null);
+      setInfo(s.info || null);
+      setComposeSource(s.composeSource || null);
+      setVarySource(s.varySource || null);
+      setSongQ('');
+      setMidiBlob(s.midiBlob || null); setMidiName(s.midiName || '');
+      setOriginalImgUrl(s.originalImgUrl || null);
+      setImgMoodThumb(s.imgMoodThumb || null);
+      setMfiImgAspect(s.mfiImgAspect || null);
+      setImgReturnUrl(s.imgReturnUrl || null);
+      setViewMode(s.viewMode || 'image'); viewModeRef.current = s.viewMode || 'image';
+      setMoodContext(true);
+      setMoodFromImg(true);
+      setCurrentMood(s.currentMood || null);
+      setMorphTargets([]); // MFI has no morph chain
+      setStamp(prev=>prev+1);
+      setTimeout(()=>{ restoringRef.current = false; }, 0);
+      return true;
+    }
     return false;
   },[stopAll,stashOutgoing]);
 
@@ -3807,6 +3875,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(mode==='mood'){ moodStashRef.current = null; setHasMoodDraft(false); }
     if(mode==='music'){ musicStashRef.current = null; setHasMusicDraft(false); }
     if(mode==='image'){ imageStashRef.current = null; setHasImageDraft(false); }
+    if(mode==='mfi'){ mfiStashRef.current = null; setHasMfiDraft(false); }
   },[]);
   // Notes mode is a per-painting choice — reset it to plain colour Mosaic
   // whenever the source changes (new loaded file, new mood, image↔mood switch),
@@ -4209,6 +4278,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     moodStashRef.current=null;setHasMoodDraft(false);
     musicStashRef.current=null;setHasMusicDraft(false);
     imageStashRef.current=null;setHasImageDraft(false);
+    mfiStashRef.current=null;setHasMfiDraft(false);
     draftOwnerRef.current=null;
     // Reset Colour + Style to defaults so returning to Setup is a clean slate.
     setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
@@ -4232,6 +4302,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     moodStashRef.current=null;setHasMoodDraft(false);
     musicStashRef.current=null;setHasMusicDraft(false);
     imageStashRef.current=null;setHasImageDraft(false);
+    mfiStashRef.current=null;setHasMfiDraft(false);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
     setCurrentMood(null);setVarySource(null);setSongQ('');setPickMode(null);setStructureSeedLock(null);setForceSetup(false);
@@ -8505,8 +8576,8 @@ Composition rules:
               mood-from-image · music · image. */}
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('importLabel'))}</div>
-            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
-              {(moodFromImg&&chords.length>0)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dc96ff',boxShadow:'0 0 6px #dc96ff',flexShrink:0}}/>}
+            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMfiDraft){ restoreMode('mfi'); setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':'rgba(228,178,255,.95)'),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
+              {(moodFromImg&&chords.length>0||hasMfiDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dc96ff',boxShadow:'0 0 6px #dc96ff',flexShrink:0}}/>}
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}>{imgAiBusy?<span>⏳</span>:<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.5L21 19l-1.3.5L19 21l-.7-1.5L17 19l1.3-.5z"/><path d="M5 4l.6 1.2L7 6l-1.4.4L5 8l-.6-1.6L3 6l1.4-.4z"/></svg>}</span>
               {imgAiBusy?'…':_sent(t('imgMood')||'mood from image').replace(/^(\S+)\s+/, '$1\u00A0')}
               {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:500,letterSpacing:0}}>· {t('aiOffline')||'offline'}</span>}
