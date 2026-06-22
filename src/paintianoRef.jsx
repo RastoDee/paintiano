@@ -20973,10 +20973,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setHasMusicDraft(true);
     }
     if(mode==='image'){
-      // Classic pixel-scan image only. The AI image-compose sub-mode is its own
-      // (async) thing — skip it here.
+      // Classic pixel-scan AND AI-compose sub-modes (imgPlayMode 'scan'|'compose').
+      // Restore only sets state — the AI re-runs solely on a later Play, which is
+      // the user's own action, so capturing the compose sub-mode is safe.
       if(loadedSourceRef.current!=='image') return;
-      if(imgPlayModeRef.current!=='scan' || imgComposeRef.current) return;
       if(!pixelRef.current) return;
       const cur = chordsRef.current;
       if(!cur || !cur.length) return;
@@ -20993,6 +20993,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         pixel: pixelRef.current,               // {nc,nr,px,lastMode,lastSig,colStep}
         mode: meta.mode||'harmony',
         imgDir: imgDirRef.current||'lr',
+        imgPlayMode: imgPlayModeRef.current||'scan',
+        imgCompose: !!imgComposeRef.current,
         atmoOn: !!atmoOnRef.current,
         atmoMood: atmoMoodRef.current||null,
         appMode: appModeRef.current,
@@ -21162,8 +21164,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setCompositionName(s.compositionName || '');
       // image-specific
       pixelRef.current = s.pixel;
-      imgComposeRef.current = false;
-      setImgPlayMode('scan'); imgPlayModeRef.current='scan';
+      imgComposeRef.current = !!s.imgCompose;
+      setImgPlayMode(s.imgPlayMode||'scan'); imgPlayModeRef.current=s.imgPlayMode||'scan';
       if(s.mode){ setMode(s.mode); }
       setImgDir(s.imgDir||'lr'); imgDirRef.current = s.imgDir||'lr';
       if(typeof s.appMode!=='undefined') appModeRef.current = s.appMode;

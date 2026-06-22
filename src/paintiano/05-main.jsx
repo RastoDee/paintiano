@@ -3575,7 +3575,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Restore only sets state — the AI re-runs solely on a later Play, which is
       // the user's own action, so capturing the compose sub-mode is safe.
       if(loadedSourceRef.current!=='image') return;
-      if(!pixelRef.current) return;
+      // Scan needs pixelRef (for re-transcribe); AI-compose nulls it, so a
+      // composed draft is valid without pixel data.
+      if(!pixelRef.current && !imgComposeRef.current) return;
       const cur = chordsRef.current;
       if(!cur || !cur.length) return;
       const meta = moodMetaRef.current || {};
@@ -3731,7 +3733,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
     if(mode==='image'){
       const s = imageStashRef.current;
-      if(!s || !s.chords || !s.chords.length || !s.pixel) return false;
+      if(!s || !s.chords || !s.chords.length) return false;
+      if(!s.pixel && !s.imgCompose) return false; // scan draft needs pixel; compose draft doesn't
       restoringRef.current = true;
       stopAll();
       setChords(s.chords); chordsRef.current = s.chords;
