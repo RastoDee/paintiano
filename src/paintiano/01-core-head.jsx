@@ -300,24 +300,24 @@ const PF_STYLE = `
             width: 100% !important;
             padding: 14px 24px 28px !important;
           }
-          /* PLAY SCREEN — 5-column grid for LANDSCAPE viewports ≥769px
+          /* PLAY SCREEN — 3-column grid for LANDSCAPE viewports ≥769px
              AND height ≥501px (tablet landscape, desktop). Mobile landscape
              height ≤500px stays on the 3-col tablet-portrait grid inherited
              from the parent block. */
           @media (orientation: landscape) and (min-height: 501px) {
             .pf-app-root:not(.pf-mode-setup) {
-              grid-template-columns: 110px 138px minmax(0, 1fr) 138px 110px !important;
+              grid-template-columns: 180px minmax(0, 1fr) 180px !important;
               grid-template-areas:
-                "topbar  topbar   topbar topbar  topbar"
-                "header  header   header header  header"
-                "txL     controls trkhd  rtop    txR"
-                "txL     controls stage  rtop    txR"
-                "txL     colors   stage  styles  txR"
-                "txL     .        stage  styles  txR"
-                "txL     .        stage  rfab    txR"
-                "vfooter vfooter  vfooter vfooter vfooter"
-                "legal   legal    legal  legal   legal" !important;
-              column-gap: 14px !important;
+                "topbar   topbar  topbar"
+                "header   header  header"
+                "controls trkhd   rtop"
+                "colors   stage   rtop"
+                "colors   stage   styles"
+                "ltrans   stage   styles"
+                "ltrans   stage   rfab"
+                "vfooter  vfooter vfooter"
+                "legal    legal   legal" !important;
+              column-gap: 24px !important;
             }
           }
           /* TABLET PORTRAIT (≥769px portrait): keep the original 3-column grid
@@ -777,53 +777,11 @@ const PF_STYLE = `
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
           }
-          /* Play screen LANDSCAPE: dock moves from the legacy ltrans (under
-             palettes) to the right edge txR. Mirror styling on the new left
-             edge wrapper so both edges read as matching transport cards. The
-             left edge holds the three universal playback controls; the dock
-             holds everything else. Inside the dock, the L buttons are hidden
-             so they don't duplicate. — In PORTRAIT these txL/txR areas don't
-             exist (no 5-col grid), so portrait scoping is essential. */
-          @media (orientation: landscape) and (min-height: 501px) {
-            .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock {
-              grid-area: txR !important;
-            }
-            /* When a recording is ready (dock contains .pf-rec-save-row), the
-               dock expands across BOTH right columns (styles + txR) — the
-               save row + transport stack get ~262px instead of 110px. The
-               internal vertical layout (filename above, then size, then
-               share, then ✕) is preserved — just wider. While rec-save is
-               showing, the artist list overlap is acceptable: the user just
-               finished recording and is choosing what to do with it, not
-               browsing artists. Returns to txR-only when rec-save closes. */
-            .pf-app-root:not(.pf-mode-setup) > .pf-transport-dock:has(.pf-rec-save-row) {
-              grid-area: rtop / styles / styles / txR !important;
-              align-self: start;
-              z-index: 5;
-            }
-            .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l {
-              grid-area: txL;
-              align-self: start;
-              margin-top: 12px;
-              background: var(--pf-card, #161320);
-              border: 1px solid rgba(242,238,232,.08);
-              border-radius: 18px;
-              padding: 12px;
-              display: flex;
-              flex-direction: column;
-              gap: 7px;
-              align-items: stretch;
-            }
-            .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button {
-              width: 100% !important;
-              justify-content: center !important;
-            }
-            .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-play,
-            .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-mute,
-            .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-tx-clear {
-              display: none !important;
-            }
-          }
+          /* Play screen LANDSCAPE: now uses the SAME 3-column grid as tablet
+             portrait. The transport dock stays at ltrans (the left column, under the palettes)
+             in the left column (see the .pf-transport-dock rule above), so no
+             right-edge (txR) relocation is needed. The left-edge wrapper
+             (.pf-tx-edge-l) stays hidden; the dock shows all controls. */
           .pf-transport-dock .pf-transport-row {
             flex-direction: column !important;
             flex-wrap: nowrap !important;
