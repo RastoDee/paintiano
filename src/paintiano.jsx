@@ -26887,14 +26887,8 @@ Composition rules:
           </div>
         )}
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
-          {is5Col && (seekTitle || _badgeSpan) && (
-            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,flexWrap:'wrap'}}>
-              <span style={{opacity:seekTitle.includes('→')?0.9:0.6,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'rgba(247,243,236,.6)',fontSize:seekTitle.includes('→')?(.6*effScale)+'rem':(.56*effScale)+'rem',fontStyle:seekTitle.includes('→')?'italic':'normal',lineHeight:1.3,wordBreak:'break-word'}}>{seekTitle}</span>
-              {_badgeSpan}
-            </div>
-          )}
-          <div style={{display:'flex',justifyContent:is5Col?'flex-end':'space-between',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
-            {!is5Col && <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>}
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
             <span style={{opacity:.75}}>
               {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
             </span>
