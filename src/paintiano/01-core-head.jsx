@@ -113,6 +113,29 @@ const PF_STYLE = `
           width: 1.2rem !important;
           height: 1.2rem !important;
         }
+        /* ── Picker frame tint — GLOBAL (applies on the centered MOBILE modal
+           too, not only the desktop pinned column). Each source keeps its colour
+           identity. border-color only; positioning is layout-specific elsewhere. */
+        .pf-app-root .pf-picker-overlay.pf-picker-music .pf-picker-dialog { border-color: rgba(91,156,246,.5) !important; }
+        .pf-app-root .pf-picker-overlay.pf-picker-image .pf-picker-dialog { border-color: rgba(244,124,60,.5) !important; }
+        .pf-app-root .pf-picker-overlay.pf-picker-mfi   .pf-picker-dialog { border-color: rgba(220,150,255,.5) !important; }
+        .pf-app-root .pf-picker-overlay.pf-picker-mic   .pf-picker-dialog { border-color: rgba(240,106,166,.5) !important; }
+        .pf-app-root .pf-recent-overlay.pf-picker-mood    .pf-mood-dialog,
+        .pf-app-root .pf-recent-overlay.pf-picker-mood    .pf-recent-dialog { border-color: rgba(201,168,76,.5) !important; }
+        .pf-app-root .pf-recent-overlay.pf-picker-compose .pf-recent-dialog { border-color: rgba(78,203,141,.5) !important; }
+        .pf-app-root .pf-recent-overlay.pf-picker-mic     .pf-recent-dialog { border-color: rgba(240,106,166,.5) !important; }
+        /* Short landscape (phone in landscape: width≥769 but very low height).
+           The pinned mood menu's default top:150px + max-height:calc(100vh-175px)
+           leaves almost no room for the suggestions grid, so no moods are visible.
+           Lift it up and hand back nearly the full height so the grid is usable. */
+        @media (min-width: 769px) and (max-height: 560px) {
+          .pf-app-root .pf-recent-overlay .pf-recent-dialog,
+          .pf-app-root .pf-picker-overlay .pf-picker-dialog { top: 44px !important; }
+          .pf-app-root .pf-mood-overlay .pf-mood-dialog {
+            top: 44px !important;
+            max-height: calc(100vh - 60px) !important;
+          }
+        }
         /* All hover affordances gated to real pointers. On touch screens :hover
            "sticks" after a tap — which made SOURCE tiles (Score/Image) keep their
            coloured glow as if active. (hover:hover) keeps lifts/glows for mouse
