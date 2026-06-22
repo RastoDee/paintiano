@@ -20912,13 +20912,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Lights the Music tile when a draft exists; tapping it restoreMode()s.
   const musicStashRef = useRef(null);
   const [hasMusicDraft, setHasMusicDraft] = useState(false);
+  // Image source stash (classic pixel-scan image). Lights the Image tile; tap
+  // restoreMode()s. The AI image-compose sub-mode is NOT captured here.
+  const imageStashRef = useRef(null);
+  const [hasImageDraft, setHasImageDraft] = useState(false);
   // Live mirror of the Mood piece's metadata (everything not already on a ref).
   // Written on change; read by stashMode so the snapshot is built with [] deps
   // (no useCallback deps explosion, no stale closures).
   const moodMetaRef = useRef(null);
   useEffect(()=>{
-    moodMetaRef.current = { info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen };
-  },[info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen]);
+    moodMetaRef.current = { info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen, originalImgUrl, mode, imgDir, setupNoSel, playedOnce };
+  },[info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen, originalImgUrl, mode, imgDir, setupNoSel, playedOnce]);
 
   // stashMode: capture the current SOURCE-mode draft (Mood only for now).
   const stashMode = useCallback((mode)=>{
@@ -20967,6 +20971,36 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         audioRowOpen: ls==='audio' ? !!meta.audioRowOpen : false,
       };
       setHasMusicDraft(true);
+    }
+    if(mode==='image'){
+      // Classic pixel-scan image only. The AI image-compose sub-mode is its own
+      // (async) thing — skip it here.
+      if(loadedSourceRef.current!=='image') return;
+      if(imgPlayModeRef.current!=='scan' || imgComposeRef.current) return;
+      if(!pixelRef.current) return;
+      const cur = chordsRef.current;
+      if(!cur || !cur.length) return;
+      const meta = moodMetaRef.current || {};
+      imageStashRef.current = {
+        chords: cur.slice(),
+        grid: gridRef.current,
+        idxCounter: idxRef.current,
+        sessionStart: sessionStart.current,
+        disp: dispRef.current,
+        info: meta.info||null,
+        compositionName: meta.compositionName||'',
+        originalImgUrl: meta.originalImgUrl||null,
+        pixel: pixelRef.current,               // {nc,nr,px,lastMode,lastSig,colStep}
+        mode: meta.mode||'harmony',
+        imgDir: imgDirRef.current||'lr',
+        atmoOn: !!atmoOnRef.current,
+        atmoMood: atmoMoodRef.current||null,
+        appMode: appModeRef.current,
+        kontraAuto: kontraAutoRef.current,
+        setupNoSel: !!meta.setupNoSel,
+        playedOnce: !!meta.playedOnce,
+      };
+      setHasImageDraft(true);
     }
   },[]);
 
@@ -21095,6 +21129,56 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setTimeout(()=>{ restoringRef.current = false; }, 0);
       return true;
     }
+    if(mode==='image'){
+      const s = imageStashRef.current;
+      if(!s || !s.chords || !s.chords.length || !s.pixel) return false;
+      restoringRef.current = true;
+      stopAll();
+      setChords(s.chords); chordsRef.current = s.chords;
+      if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
+      idxRef.current = s.idxCounter;
+      sessionStart.current = s.sessionStart;
+      // position / pause (same as mood/music)
+      {
+        const _len = s.chords.length;
+        const _pos = (typeof s.disp==='number') ? Math.max(0, Math.min(s.disp, _len)) : _len;
+        setDisp(_pos); dispRef.current = _pos;
+        if(_pos>0 && _pos<_len){
+          setHoldPaused(true); holdPausedRef.current = true; resumeFromRef.current = _pos;
+        } else {
+          setHoldPaused(false); holdPausedRef.current = false; resumeFromRef.current = null;
+        }
+      }
+      substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
+      lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
+      gridSigRef.current = '';
+      composedModeRef.current = false;
+      draftOwnerRef.current = null;
+      // image is not mood / mfi / music
+      setMoodContext(false); setMoodFromImg(false); setCurrentMood(null); setVarySource(null);
+      setImgMoodThumb(null); setMidiBlob(null); setMidiName('');
+      setAudioBlobAndRef(null); setAudioName(''); audioPCMRef.current=null;
+      setInfo(s.info || null);
+      setCompositionName(s.compositionName || '');
+      // image-specific
+      pixelRef.current = s.pixel;
+      imgComposeRef.current = false;
+      setImgPlayMode('scan'); imgPlayModeRef.current='scan';
+      if(s.mode){ setMode(s.mode); }
+      setImgDir(s.imgDir||'lr'); imgDirRef.current = s.imgDir||'lr';
+      if(typeof s.appMode!=='undefined') appModeRef.current = s.appMode;
+      if(typeof s.kontraAuto!=='undefined') kontraAutoRef.current = s.kontraAuto;
+      setAtmoOn(!!s.atmoOn); atmoOnRef.current=!!s.atmoOn;
+      setAtmoMood(s.atmoMood||null); atmoMoodRef.current=s.atmoMood||null;
+      setSetupNoSel(!!s.setupNoSel);
+      setPlayedOnce(!!s.playedOnce);
+      setOriginalImgUrl(s.originalImgUrl||null);
+      setViewMode('image'); viewModeRef.current='image';
+      setLoadedSource('image');
+      setStamp(prev=>prev+1);
+      setTimeout(()=>{ restoringRef.current = false; }, 0);
+      return true;
+    }
     return false;
   },[stopAll,stashOutgoing]);
 
@@ -21102,6 +21186,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const clearModeStash = useCallback((mode)=>{
     if(mode==='mood'){ moodStashRef.current = null; setHasMoodDraft(false); }
     if(mode==='music'){ musicStashRef.current = null; setHasMusicDraft(false); }
+    if(mode==='image'){ imageStashRef.current = null; setHasImageDraft(false); }
   },[]);
   // Notes mode is a per-painting choice — reset it to plain colour Mosaic
   // whenever the source changes (new loaded file, new mood, image↔mood switch),
@@ -21498,6 +21583,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     composeStashRef.current=null;setHasComposeDraft(false);
     moodStashRef.current=null;setHasMoodDraft(false);
     musicStashRef.current=null;setHasMusicDraft(false);
+    imageStashRef.current=null;setHasImageDraft(false);
     draftOwnerRef.current=null;
     // Reset Colour + Style to defaults so returning to Setup is a clean slate.
     setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
@@ -22981,6 +23067,7 @@ Composition rules:
 
   const loadImage=useCallback(e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);
+    stashOutgoing('image');
     if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
@@ -23098,6 +23185,7 @@ Composition rules:
   // hue→pitch table (HARMONY: COF / SPECTRAL: SPEC_HUE / CUSTOM: user palette).
   useEffect(()=>{
     if(viewMode!=='image'||!pixelRef.current)return;
+    if(restoringRef.current)return; // multi-draft restore in progress — keep the stashed chords/disp
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
     const sig = mode + '|' + imgDir + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
@@ -25793,7 +25881,7 @@ Composition rules:
                   loadSound routes by file type. Active when any of the three
                   music sources is loaded. */}
               <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}if(hasMusicDraft){restoreMode('music');setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':((activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?'#eafff4':PF.blue),fontFamily:'inherit'}}>{(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#5b9cf6',boxShadow:'0 0 6px #5b9cf6',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':_sent(t('music')!=='music'?t('music'):'music')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':((activeSource==='image'&&!moodFromImg)?'#eafff4':PF.orange),fontFamily:'inherit'}}>{(activeSource==='image'&&!moodFromImg)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#f47c3c',boxShadow:'0 0 6px #f47c3c',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{switchArmed==='image'?t('switchConfirm'):_sent(t('image').replace(/[^\p{L}]/gu,''))}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}if(hasImageDraft){restoreMode('image');setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg||hasImageDraft)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg||hasImageDraft)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':((activeSource==='image'&&!moodFromImg||hasImageDraft)?'#eafff4':PF.orange),fontFamily:'inherit'}}>{(activeSource==='image'&&!moodFromImg||hasImageDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#f47c3c',boxShadow:'0 0 6px #f47c3c',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{switchArmed==='image'?t('switchConfirm'):_sent(t('image').replace(/[^\p{L}]/gu,''))}</span></button>
             </div>
           </div>
 
