@@ -4255,9 +4255,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setVarySource(null);
       // Drop the source-image thumbnail.
       setImgMoodThumb(null);
-      // NOTE: do NOT touch the MFI stash here. This branch is image-SCAN only
-      // (MFI has loadedSource=null, so it never reaches here — it falls to the
-      // tail). Clearing an image-scan must leave an independent MFI draft intact.
+      // This IS the MFI branch (moodFromImg && moodContext). Clear inside MFI
+      // means the painting is gone → drop the MFI multi-draft stash + tile glow.
+      // (The image-SCAN branch above — loadedSource==='image' — is separate and
+      // drops imageStash, never this; the two modes' drafts stay independent.)
+      mfiStashRef.current=null; setHasMfiDraft(false);
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
