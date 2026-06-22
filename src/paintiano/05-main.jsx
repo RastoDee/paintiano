@@ -10326,7 +10326,7 @@ Composition rules:
                 MOODS list alphabetically (so the user has something to pick
                 without typing); once they start typing, normal autocomplete
                 behaviour applies. Clicking any preset is free (no AI). */}
-            <div style={{flex:'0 1 auto',minHeight:0,overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
+            <div style={{flex:'1 1 auto',minHeight:'72px',overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
               {(()=>{
                 const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
                 const q=_n(moodEdit.trim());
