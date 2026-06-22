@@ -1,1094 +1,532 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Paintiano — Music becomes painting. Painting becomes music.</title>
-<meta name="description" content="Sing, hum, drop a photo. Watch the canvas fill. 18 artist styles, 5 colour palettes, golden-ratio grid. Save the painting, record the song. One-time purchase, no subscription.">
-<meta name="theme-color" content="#0a0612">
-
-<!-- Returning visitor → /play. Runs before render to avoid landing flash.
-     Bypass with ?welcome=1 (e.g. from in-app "Home" link) or first visit. -->
-<script>
-/* ── i18n: auto-detect from navigator.language, fallback EN ── */
-(function i18n() {
-  const LANGS = {"EN":{"nav.openApp":"Open app →","hero.h1a":"Music becomes painting.","hero.h1b":"Painting becomes music.","hero.lede":"Sing it. Hum it. Drop a photo. Watch the canvas fill as the music plays — then take both home.","hero.cta":"Try Paintiano","hero.scroll":"scroll","cards.eyebrow":"What it does","cards.h2":"Three doors. Same room.","cards.c1.title":"Music → painting","cards.c1.body":"Sing, hum, drop an MP3 or MIDI. Every note becomes a brushstroke. Same input, same painting, every time.","cards.c2.title":"Image → music","cards.c2.body":"Drop in a photo, a Rothko, your grandmother's portrait. Its colours become a piano piece. Hear what it sounds like.","cards.c3.title":"18 artist styles","cards.c3.body":"Picasso, Pollock, Kusama, Klimt, Mondrian, Kandinsky… The same song rewritten in eighteen hands.","demo.eyebrow":"Watch it grow","demo.h2":"Tile by tile, the song becomes a painting.","demo.lede":"\"The Scientist\" by Coldplay — painted live in the Million Dollar Home Page style. Every song has its own painting — in every style.","demo.overlay":"The Scientist · Coldplay · Million Dollar Home Page","gallery.eyebrow":"Showcase","gallery.h2":"Made by users.","gallery.lede":"Yours could be next. Tag <a href=\"https://instagram.com/explore/tags/paintiano\" target=\"_blank\" rel=\"noopener\">#paintiano</a> on Instagram.","concept.eyebrow":"The idea","concept.quote":"Music and painting share the same wheel.<br>Scriabin saw it. Newton saw it.<br>Now you can hold it in your hand.","concept.prose":"Every note gets a colour: <strong>hue</strong> from its pitch, <strong>lightness</strong> from its octave, <strong>saturation</strong> from how hard it was played. Notes drop into a golden-ratio grid — the same proportion behind seashells, flower spirals, the Parthenon. Read the grid back and the music returns. One language, two surfaces.","pricing.eyebrow":"Pricing","pricing.h2":"Pay once. Keep forever.","pricing.lede":"No subscriptions. No renewals. Art shouldn't rent.","pricing.free.name":"Free","pricing.free.tag":"Forever free","pricing.free.f1":"9 unlocked artists","pricing.free.f2":"2 paint variants each","pricing.free.f3":"5 colour palettes","pricing.free.f4":"Custom palette read-only","pricing.free.f5":"3 AI trial credits","pricing.free.f6":"Watermark on exports","pricing.free.f7":"No 300 DPI print","pricing.free.cta":"Start free","pricing.popular":"★ Most popular","pricing.pro.name":"Pro","pricing.pro.once":"once","pricing.pro.tag":"Lifetime · 5 devices","pricing.pro.f1":"All 18 artists","pricing.pro.f2":"All paint variants","pricing.pro.f3":"Editable Custom palette","pricing.pro.f4":"No watermark","pricing.pro.f5":"300 DPI gallery-grade print","pricing.pro.f6":"Score export (MusicXML)","pricing.pro.f7":"3 AI trial credits","pricing.pro.cta":"Upgrade to Pro","pricing.proai.name":"Pro AI","pricing.proai.once":"once","pricing.proai.tag":"Lifetime · 5 devices","pricing.proai.f1":"Everything in Pro","pricing.proai.f2":"Unlimited AI moods","pricing.proai.f3":"AI Compose from image","pricing.proai.f4":"AI Atmosphere reads","pricing.proai.f5":"Morph between moods","pricing.proai.f6":"Vary (key shift)","pricing.proai.f7":"Mood from image","pricing.proai.cta":"Go Pro AI","pricing.note":"One-time payment. Works on up to 5 devices.","faq.eyebrow":"Questions","faq.h2":"Before you tap.","faq.q1":"Does it actually work?","faq.a1":"Yes. Try the demo above, or tap \"Try Paintiano\". No signup. No card. Free forever for what most people need.","faq.q2":"Why one-time, not subscription?","faq.a2":"Because art shouldn't rent. You bought the colours once. We did too. The deal makes sense.","faq.q3":"Mobile or desktop?","faq.a3":"Both. Mobile is the daily driver — install it from your browser's \"Add to Home Screen\" and it behaves like a native app. Desktop has the full piano + keyboard shortcuts.","faq.q4":"What happens to my data with AI features?","faq.a4":"Mood text goes to the AI provider for the call only, then is discarded. No accounts. No tracking pixels. No selling your creations.","faq.q5":"I don't know music theory.","faq.a5":"You don't need any. Type a feeling, hum, drop a photo. The app handles the chords. It might even teach you a few.","faq.q6":"Can I use the paintings commercially?","faq.a6":"With Pro or Pro AI, yes. Free exports carry a watermark and are limited to personal use.","final.h2":"Your turn.","final.cta":"Open Paintiano","final.notify":"Notify me","footer.concept":"Concept","footer.blog":"Blog","footer.press":"Press kit","footer.privacy":"Privacy","footer.terms":"Terms","footer.contact":"Contact","footer.made":"Made by Raf Fel","sticky.cta":"Try Paintiano"},"SK":{"nav.openApp":"Otvoriť app →","hero.h1a":"Hudba sa stáva obrazom.","hero.h1b":"Obraz sa stáva hudbou.","hero.lede":"Zaspievaj. Zabrumkaj. Hoď fotku. Sleduj ako sa plátno plní, kým hrá hudba — a oboje si vezmi domov.","hero.cta":"Vyskúšaj Paintiano","hero.scroll":"posúvaj","cards.eyebrow":"Čo to robí","cards.h2":"Tri dvere. Tá istá izba.","cards.c1.title":"Hudba → obraz","cards.c1.body":"Spievaj, brumkaj, hoď MP3 alebo MIDI. Každá nota sa stane ťahom štetca. Rovnaký vstup, rovnaký obraz, vždy.","cards.c2.title":"Obraz → hudba","cards.c2.body":"Hoď sem fotku, Rothka, portrét tvojej babičky. Jeho farby sa stanú klavírnou skladbou. Počuj ako znie.","cards.c3.title":"18 štýlov umelcov","cards.c3.body":"Picasso, Pollock, Kusama, Klimt, Mondrian, Kandinsky… Tá istá skladba prepísaná v osemnástich rukách.","demo.eyebrow":"Sleduj ako rastie","demo.h2":"Dlaždica po dlaždici, skladba sa stáva obrazom.","demo.lede":"„The Scientist\" od Coldplay — maľovaný naživo v štýle Million Dollar Home Page. Každá skladba má svoj obraz — v každom štýle.","demo.overlay":"The Scientist · Coldplay · Million Dollar Home Page","gallery.eyebrow":"Galéria","gallery.h2":"Tvorené používateľmi.","gallery.lede":"Tvoj môže byť ďalší. Označ <a href=\"https://instagram.com/explore/tags/paintiano\" target=\"_blank\" rel=\"noopener\">#paintiano</a> na Instagrame.","concept.eyebrow":"Myšlienka","concept.quote":"Hudba a maliarstvo zdieľajú to isté koleso.<br>Skriabin to videl. Newton to videl.<br>Teraz to môžeš držať v ruke.","concept.prose":"Každá nota dostane farbu: <strong>tón</strong> z výšky, <strong>jas</strong> z oktávy, <strong>sýtosť</strong> z toho, ako silno bola zahraná. Noty padajú do mriežky zlatého rezu — tej istej proporcie, ktorá je za lastúrami, špirálami kvetov, Parthenónom. Prečítaj mriežku späť a hudba sa vráti. Jeden jazyk, dva povrchy.","pricing.eyebrow":"Cenník","pricing.h2":"Zaplať raz. Vlastni navždy.","pricing.lede":"Žiadne predplatné. Žiadne obnovy. Umenie sa nemá prenajímať.","pricing.free.name":"Zdarma","pricing.free.tag":"Navždy zadarmo","pricing.free.f1":"9 odomknutých umelcov","pricing.free.f2":"2 varianty maľby každý","pricing.free.f3":"5 farebných palet","pricing.free.f4":"Vlastná paleta len na čítanie","pricing.free.f5":"3 AI skúšobné kredity","pricing.free.f6":"Vodoznak na exportoch","pricing.free.f7":"Bez 300 DPI tlače","pricing.free.cta":"Začni zadarmo","pricing.popular":"★ Najobľúbenejšie","pricing.pro.name":"Pro","pricing.pro.once":"jednorazovo","pricing.pro.tag":"Doživotne · 5 zariadení","pricing.pro.f1":"Všetkých 18 umelcov","pricing.pro.f2":"Všetky varianty maľby","pricing.pro.f3":"Upraviteľná vlastná paleta","pricing.pro.f4":"Bez vodoznaku","pricing.pro.f5":"300 DPI galerijná tlač","pricing.pro.f6":"Export nôt (MusicXML)","pricing.pro.f7":"3 AI skúšobné kredity","pricing.pro.cta":"Prejsť na Pro","pricing.proai.name":"Pro AI","pricing.proai.once":"jednorazovo","pricing.proai.tag":"Doživotne · 5 zariadení","pricing.proai.f1":"Všetko v Pro","pricing.proai.f2":"Neobmedzené AI nálady","pricing.proai.f3":"AI skladba z obrazu","pricing.proai.f4":"AI Atmosphere čítanie","pricing.proai.f5":"Morph medzi náladami","pricing.proai.f6":"Vary (posun tóniny)","pricing.proai.f7":"Nálada z obrazu","pricing.proai.cta":"Prejsť na Pro AI","pricing.note":"Jednorazová platba. Funguje až na 5 zariadeniach.","faq.eyebrow":"Otázky","faq.h2":"Pred tým, než klikneš.","faq.q1":"Naozaj to funguje?","faq.a1":"Áno. Vyskúšaj demo vyššie, alebo klikni „Vyskúšaj Paintiano\". Bez registrácie. Bez karty. Navždy zadarmo pre to, čo väčšina ľudí potrebuje.","faq.q2":"Prečo jednorazovo, nie predplatné?","faq.a2":"Lebo umenie sa nemá prenajímať. Farby si kúpil raz. My tiež. Tak to dáva zmysel.","faq.q3":"Mobil alebo desktop?","faq.a3":"Oboje. Mobil je každodenný driver — nainštaluj cez „Pridať na domovskú obrazovku\" v prehliadači a správa sa ako natívna app. Desktop má plný klavír + klávesové skratky.","faq.q4":"Čo sa stane s mojimi dátami pri AI funkciách?","faq.a4":"Text nálady ide poskytovateľovi AI len pre dané volanie, potom sa zahodí. Žiadne účty. Žiadne tracking pixely. Tvoje výtvory nepredávame.","faq.q5":"Nepoznám hudobnú teóriu.","faq.a5":"Nemusíš. Napíš pocit, zabrumkaj, hoď fotku. App sa postará o akordy. Možno ťa pár aj naučí.","faq.q6":"Môžem obrazy použiť komerčne?","faq.a6":"S Pro alebo Pro AI áno. Bezplatné exporty majú vodoznak a sú obmedzené na osobné použitie.","final.h2":"Si na rade.","final.cta":"Otvoriť Paintiano","final.notify":"Daj mi vedieť","footer.concept":"Koncept","footer.blog":"Blog","footer.press":"Pre tlač","footer.privacy":"Súkromie","footer.terms":"Podmienky","footer.contact":"Kontakt","footer.made":"Vytvoril Raf Fel","sticky.cta":"Vyskúšaj Paintiano"},"DE":{"nav.openApp":"App öffnen →","hero.h1a":"Musik wird Gemälde.","hero.h1b":"Gemälde wird Musik.","hero.lede":"Sing es. Summe es. Wirf ein Foto rein. Schau zu, wie sich die Leinwand füllt, während die Musik spielt — und nimm beides mit nach Hause.","hero.cta":"Paintiano testen","hero.scroll":"scrollen","cards.eyebrow":"Was es macht","cards.h2":"Drei Türen. Derselbe Raum.","cards.c1.title":"Musik → Gemälde","cards.c1.body":"Sing, summe, wirf eine MP3 oder MIDI rein. Jeder Ton wird ein Pinselstrich. Gleiche Eingabe, gleiches Bild, jedes Mal.","cards.c2.title":"Bild → Musik","cards.c2.body":"Wirf ein Foto rein, einen Rothko, das Porträt deiner Großmutter. Seine Farben werden zu einem Klavierstück. Hör, wie es klingt.","cards.c3.title":"18 Künstler-Stile","cards.c3.body":"Picasso, Pollock, Kusama, Klimt, Mondrian, Kandinsky… Das gleiche Lied, neu geschrieben in achtzehn Händen.","demo.eyebrow":"Schau es wachsen","demo.h2":"Kachel für Kachel wird das Lied zum Gemälde.","demo.lede":"„The Scientist\" von Coldplay — live gemalt im Million-Dollar-Home-Page-Stil. Jedes Lied hat sein eigenes Bild — in jedem Stil.","demo.overlay":"The Scientist · Coldplay · Million Dollar Home Page","gallery.eyebrow":"Galerie","gallery.h2":"Von Nutzern gemacht.","gallery.lede":"Deins könnte das nächste sein. Markiere <a href=\"https://instagram.com/explore/tags/paintiano\" target=\"_blank\" rel=\"noopener\">#paintiano</a> auf Instagram.","concept.eyebrow":"Die Idee","concept.quote":"Musik und Malerei teilen dasselbe Rad.<br>Skrjabin sah es. Newton sah es.<br>Jetzt kannst du es in der Hand halten.","concept.prose":"Jeder Ton bekommt eine Farbe: <strong>Farbton</strong> aus der Tonhöhe, <strong>Helligkeit</strong> aus der Oktave, <strong>Sättigung</strong> aus der Anschlagstärke. Die Töne fallen in ein Raster des Goldenen Schnitts — derselbe Anteil hinter Muscheln, Blütenspiralen, dem Parthenon. Lies das Raster zurück und die Musik kehrt wieder. Eine Sprache, zwei Oberflächen.","pricing.eyebrow":"Preise","pricing.h2":"Einmal zahlen. Für immer behalten.","pricing.lede":"Keine Abos. Keine Verlängerungen. Kunst sollte nicht gemietet werden.","pricing.free.name":"Kostenlos","pricing.free.tag":"Für immer kostenlos","pricing.free.f1":"9 freigeschaltete Künstler","pricing.free.f2":"2 Maltechniken je Künstler","pricing.free.f3":"5 Farbpaletten","pricing.free.f4":"Eigene Palette schreibgeschützt","pricing.free.f5":"3 KI-Testkredite","pricing.free.f6":"Wasserzeichen beim Export","pricing.free.f7":"Kein 300-DPI-Druck","pricing.free.cta":"Kostenlos starten","pricing.popular":"★ Am beliebtesten","pricing.pro.name":"Pro","pricing.pro.once":"einmalig","pricing.pro.tag":"Lebenslang · 5 Geräte","pricing.pro.f1":"Alle 18 Künstler","pricing.pro.f2":"Alle Maltechniken","pricing.pro.f3":"Bearbeitbare eigene Palette","pricing.pro.f4":"Kein Wasserzeichen","pricing.pro.f5":"300 DPI Galerie-Druck","pricing.pro.f6":"Noten-Export (MusicXML)","pricing.pro.f7":"3 KI-Testkredite","pricing.pro.cta":"Auf Pro upgraden","pricing.proai.name":"Pro KI","pricing.proai.once":"einmalig","pricing.proai.tag":"Lebenslang · 5 Geräte","pricing.proai.f1":"Alles aus Pro","pricing.proai.f2":"Unbegrenzte KI-Stimmungen","pricing.proai.f3":"KI-Komposition aus Bild","pricing.proai.f4":"KI-Atmosphäre erkennen","pricing.proai.f5":"Morph zwischen Stimmungen","pricing.proai.f6":"Vary (Tonart wechseln)","pricing.proai.f7":"Stimmung aus Bild","pricing.proai.cta":"Pro KI holen","pricing.note":"Einmalige Zahlung. Funktioniert auf bis zu 5 Geräten.","faq.eyebrow":"Fragen","faq.h2":"Bevor du tippst.","faq.q1":"Funktioniert es wirklich?","faq.a1":"Ja. Probier die Demo oben oder tippe auf „Paintiano testen\". Kein Konto. Keine Karte. Für die meisten Bedürfnisse für immer kostenlos.","faq.q2":"Warum einmalig, nicht im Abo?","faq.a2":"Weil Kunst nicht gemietet werden sollte. Du hast die Farben einmal gekauft. Wir auch. Der Deal ergibt Sinn.","faq.q3":"Mobil oder Desktop?","faq.a3":"Beides. Mobil ist der tägliche Begleiter — installiere es über „Zum Home-Bildschirm hinzufügen\" deines Browsers und es verhält sich wie eine native App. Desktop hat das volle Klavier + Tastaturkürzel.","faq.q4":"Was passiert mit meinen Daten bei KI-Funktionen?","faq.a4":"Der Stimmungstext geht nur für den jeweiligen Aufruf an den KI-Anbieter und wird dann verworfen. Keine Konten. Keine Tracking-Pixel. Wir verkaufen deine Werke nicht.","faq.q5":"Ich kenne keine Musiktheorie.","faq.a5":"Brauchst du auch nicht. Tippe ein Gefühl, summe, wirf ein Foto rein. Die App kümmert sich um die Akkorde. Sie bringt dir vielleicht sogar ein paar bei.","faq.q6":"Darf ich die Gemälde kommerziell nutzen?","faq.a6":"Mit Pro oder Pro KI ja. Kostenlose Exporte tragen ein Wasserzeichen und sind nur für den privaten Gebrauch bestimmt.","final.h2":"Du bist dran.","final.cta":"Paintiano öffnen","final.notify":"Benachrichtige mich","footer.concept":"Konzept","footer.blog":"Blog","footer.press":"Pressemappe","footer.privacy":"Datenschutz","footer.terms":"AGB","footer.contact":"Kontakt","footer.made":"Erstellt von Raf Fel","sticky.cta":"Paintiano testen"},"FR":{"nav.openApp":"Ouvrir l'app →","hero.h1a":"La musique devient peinture.","hero.h1b":"La peinture devient musique.","hero.lede":"Chante-la. Fredonne-la. Dépose une photo. Regarde la toile se remplir pendant que la musique joue — puis ramène les deux chez toi.","hero.cta":"Essayer Paintiano","hero.scroll":"défiler","cards.eyebrow":"Ce qu'il fait","cards.h2":"Trois portes. Même pièce.","cards.c1.title":"Musique → peinture","cards.c1.body":"Chante, fredonne, dépose un MP3 ou un MIDI. Chaque note devient un coup de pinceau. Même entrée, même tableau, à chaque fois.","cards.c2.title":"Image → musique","cards.c2.body":"Dépose une photo, un Rothko, le portrait de ta grand-mère. Ses couleurs deviennent une pièce pour piano. Écoute ce que ça donne.","cards.c3.title":"18 styles d'artistes","cards.c3.body":"Picasso, Pollock, Kusama, Klimt, Mondrian, Kandinsky… La même chanson réécrite à dix-huit mains.","demo.eyebrow":"Regarde-la grandir","demo.h2":"Carreau après carreau, la chanson devient une peinture.","demo.lede":"« The Scientist » de Coldplay — peint en direct dans le style Million Dollar Home Page. Chaque chanson a son propre tableau — dans chaque style.","demo.overlay":"The Scientist · Coldplay · Million Dollar Home Page","gallery.eyebrow":"Galerie","gallery.h2":"Faits par les utilisateurs.","gallery.lede":"Le tien pourrait être le prochain. Tague <a href=\"https://instagram.com/explore/tags/paintiano\" target=\"_blank\" rel=\"noopener\">#paintiano</a> sur Instagram.","concept.eyebrow":"L'idée","concept.quote":"La musique et la peinture partagent la même roue.<br>Scriabine le voyait. Newton le voyait.<br>Maintenant tu peux la tenir dans ta main.","concept.prose":"Chaque note reçoit une couleur : <strong>la teinte</strong> selon la hauteur, <strong>la luminosité</strong> selon l'octave, <strong>la saturation</strong> selon l'intensité du jeu. Les notes tombent dans une grille au nombre d'or — la même proportion derrière les coquillages, les spirales de fleurs, le Parthénon. Relis la grille et la musique revient. Une langue, deux surfaces.","pricing.eyebrow":"Tarifs","pricing.h2":"Paie une fois. Garde pour toujours.","pricing.lede":"Pas d'abonnement. Pas de renouvellement. L'art ne se loue pas.","pricing.free.name":"Gratuit","pricing.free.tag":"Gratuit pour toujours","pricing.free.f1":"9 artistes débloqués","pricing.free.f2":"2 variantes de peinture chacun","pricing.free.f3":"5 palettes de couleurs","pricing.free.f4":"Palette personnalisée en lecture seule","pricing.free.f5":"3 crédits d'essai IA","pricing.free.f6":"Filigrane sur les exports","pricing.free.f7":"Pas d'impression 300 DPI","pricing.free.cta":"Commencer gratuit","pricing.popular":"★ Le plus populaire","pricing.pro.name":"Pro","pricing.pro.once":"une fois","pricing.pro.tag":"À vie · 5 appareils","pricing.pro.f1":"Les 18 artistes","pricing.pro.f2":"Toutes les variantes","pricing.pro.f3":"Palette personnalisée modifiable","pricing.pro.f4":"Sans filigrane","pricing.pro.f5":"Impression 300 DPI galerie","pricing.pro.f6":"Export partition (MusicXML)","pricing.pro.f7":"3 crédits d'essai IA","pricing.pro.cta":"Passer à Pro","pricing.proai.name":"Pro IA","pricing.proai.once":"une fois","pricing.proai.tag":"À vie · 5 appareils","pricing.proai.f1":"Tout ce qui est dans Pro","pricing.proai.f2":"Ambiances IA illimitées","pricing.proai.f3":"Composition IA à partir d'image","pricing.proai.f4":"Lecture IA Atmosphere","pricing.proai.f5":"Morph entre ambiances","pricing.proai.f6":"Vary (changement de tonalité)","pricing.proai.f7":"Ambiance à partir d'image","pricing.proai.cta":"Passer à Pro IA","pricing.note":"Paiement unique. Fonctionne jusqu'à 5 appareils.","faq.eyebrow":"Questions","faq.h2":"Avant d'appuyer.","faq.q1":"Ça marche vraiment ?","faq.a1":"Oui. Essaie la démo ci-dessus, ou appuie sur « Essayer Paintiano ». Pas d'inscription. Pas de carte. Gratuit pour toujours pour ce dont la plupart des gens ont besoin.","faq.q2":"Pourquoi un paiement unique, pas un abonnement ?","faq.a2":"Parce que l'art ne se loue pas. Tu as acheté les couleurs une fois. Nous aussi. L'arrangement a du sens.","faq.q3":"Mobile ou desktop ?","faq.a3":"Les deux. Mobile est le pilote quotidien — installe-le via « Ajouter à l'écran d'accueil » de ton navigateur et il se comporte comme une app native. Desktop a le piano complet + raccourcis clavier.","faq.q4":"Que deviennent mes données avec les fonctions IA ?","faq.a4":"Le texte d'ambiance est envoyé au fournisseur IA uniquement pour l'appel, puis effacé. Pas de comptes. Pas de pixels de suivi. On ne vend pas tes créations.","faq.q5":"Je ne connais pas la théorie musicale.","faq.a5":"Tu n'en as pas besoin. Tape un sentiment, fredonne, dépose une photo. L'app gère les accords. Elle pourrait même t'en apprendre quelques-uns.","faq.q6":"Puis-je utiliser les peintures commercialement ?","faq.a6":"Avec Pro ou Pro IA, oui. Les exports gratuits portent un filigrane et sont limités à un usage personnel.","final.h2":"À toi.","final.cta":"Ouvrir Paintiano","final.notify":"Préviens-moi","footer.concept":"Concept","footer.blog":"Blog","footer.press":"Kit presse","footer.privacy":"Confidentialité","footer.terms":"Conditions","footer.contact":"Contact","footer.made":"Créé par Raf Fel","sticky.cta":"Essayer Paintiano"},"ES":{"nav.openApp":"Abrir app →","hero.h1a":"La música se vuelve pintura.","hero.h1b":"La pintura se vuelve música.","hero.lede":"Cántala. Tararéala. Suelta una foto. Mira cómo se llena el lienzo mientras suena la música — y llévate ambas a casa.","hero.cta":"Probar Paintiano","hero.scroll":"desplazar","cards.eyebrow":"Qué hace","cards.h2":"Tres puertas. La misma sala.","cards.c1.title":"Música → pintura","cards.c1.body":"Canta, tararea, suelta un MP3 o MIDI. Cada nota se vuelve un trazo. Misma entrada, misma pintura, cada vez.","cards.c2.title":"Imagen → música","cards.c2.body":"Suelta una foto, un Rothko, el retrato de tu abuela. Sus colores se vuelven una pieza de piano. Escucha cómo suena.","cards.c3.title":"18 estilos de artistas","cards.c3.body":"Picasso, Pollock, Kusama, Klimt, Mondrian, Kandinsky… La misma canción reescrita a dieciocho manos.","demo.eyebrow":"Mírala crecer","demo.h2":"Mosaico a mosaico, la canción se vuelve pintura.","demo.lede":"«The Scientist» de Coldplay — pintado en vivo en el estilo Million Dollar Home Page. Cada canción tiene su propia pintura — en cada estilo.","demo.overlay":"The Scientist · Coldplay · Million Dollar Home Page","gallery.eyebrow":"Galería","gallery.h2":"Hechas por usuarios.","gallery.lede":"La tuya podría ser la próxima. Etiqueta <a href=\"https://instagram.com/explore/tags/paintiano\" target=\"_blank\" rel=\"noopener\">#paintiano</a> en Instagram.","concept.eyebrow":"La idea","concept.quote":"La música y la pintura comparten la misma rueda.<br>Scriabin lo vio. Newton lo vio.<br>Ahora puedes sostenerla en tu mano.","concept.prose":"Cada nota recibe un color: <strong>el tono</strong> de su altura, <strong>la luminosidad</strong> de su octava, <strong>la saturación</strong> de la fuerza con que se tocó. Las notas caen en una rejilla de proporción áurea — la misma proporción detrás de conchas, espirales de flores, el Partenón. Lee la rejilla al revés y la música regresa. Un idioma, dos superficies.","pricing.eyebrow":"Precios","pricing.h2":"Paga una vez. Guarda para siempre.","pricing.lede":"Sin suscripciones. Sin renovaciones. El arte no se alquila.","pricing.free.name":"Gratis","pricing.free.tag":"Gratis para siempre","pricing.free.f1":"9 artistas desbloqueados","pricing.free.f2":"2 variantes de pintura cada uno","pricing.free.f3":"5 paletas de colores","pricing.free.f4":"Paleta personalizada de solo lectura","pricing.free.f5":"3 créditos de prueba IA","pricing.free.f6":"Marca de agua en exportaciones","pricing.free.f7":"Sin impresión 300 DPI","pricing.free.cta":"Empezar gratis","pricing.popular":"★ Más popular","pricing.pro.name":"Pro","pricing.pro.once":"una vez","pricing.pro.tag":"De por vida · 5 dispositivos","pricing.pro.f1":"Los 18 artistas","pricing.pro.f2":"Todas las variantes","pricing.pro.f3":"Paleta personalizada editable","pricing.pro.f4":"Sin marca de agua","pricing.pro.f5":"Impresión galería 300 DPI","pricing.pro.f6":"Exportar partitura (MusicXML)","pricing.pro.f7":"3 créditos de prueba IA","pricing.pro.cta":"Pasar a Pro","pricing.proai.name":"Pro IA","pricing.proai.once":"una vez","pricing.proai.tag":"De por vida · 5 dispositivos","pricing.proai.f1":"Todo lo de Pro","pricing.proai.f2":"Ánimos IA ilimitados","pricing.proai.f3":"IA compone desde imagen","pricing.proai.f4":"Lectura IA Atmosphere","pricing.proai.f5":"Morph entre ánimos","pricing.proai.f6":"Vary (cambio de tonalidad)","pricing.proai.f7":"Ánimo desde imagen","pricing.proai.cta":"Pasar a Pro IA","pricing.note":"Pago único. Funciona en hasta 5 dispositivos.","faq.eyebrow":"Preguntas","faq.h2":"Antes de tocar.","faq.q1":"¿Funciona de verdad?","faq.a1":"Sí. Prueba la demo arriba, o toca «Probar Paintiano». Sin registro. Sin tarjeta. Gratis para siempre para lo que la mayoría necesita.","faq.q2":"¿Por qué pago único y no suscripción?","faq.a2":"Porque el arte no se alquila. Compraste los colores una vez. Nosotros también. El trato tiene sentido.","faq.q3":"¿Móvil o escritorio?","faq.a3":"Ambos. El móvil es el día a día — instálalo desde «Añadir a pantalla de inicio» del navegador y se comporta como una app nativa. El escritorio tiene el piano completo + atajos de teclado.","faq.q4":"¿Qué pasa con mis datos en las funciones IA?","faq.a4":"El texto de ánimo va al proveedor de IA solo para esa llamada, luego se descarta. Sin cuentas. Sin píxeles de seguimiento. No vendemos tus creaciones.","faq.q5":"No sé teoría musical.","faq.a5":"No la necesitas. Escribe un sentimiento, tararea, suelta una foto. La app se encarga de los acordes. Hasta podría enseñarte algunos.","faq.q6":"¿Puedo usar las pinturas comercialmente?","faq.a6":"Con Pro o Pro IA, sí. Las exportaciones gratuitas llevan marca de agua y son solo para uso personal.","final.h2":"Tu turno.","final.cta":"Abrir Paintiano","final.notify":"Avísame","footer.concept":"Concepto","footer.blog":"Blog","footer.press":"Kit de prensa","footer.privacy":"Privacidad","footer.terms":"Términos","footer.contact":"Contacto","footer.made":"Hecho por Raf Fel","sticky.cta":"Probar Paintiano"},"PT":{"nav.openApp":"Abrir app →","hero.h1a":"A música vira pintura.","hero.h1b":"A pintura vira música.","hero.lede":"Canta. Cantarola. Solta uma foto. Vê a tela encher-se enquanto a música toca — e leva ambas para casa.","hero.cta":"Experimentar Paintiano","hero.scroll":"rolar","cards.eyebrow":"O que faz","cards.h2":"Três portas. A mesma sala.","cards.c1.title":"Música → pintura","cards.c1.body":"Canta, cantarola, solta um MP3 ou MIDI. Cada nota vira uma pincelada. Mesma entrada, mesma pintura, sempre.","cards.c2.title":"Imagem → música","cards.c2.body":"Solta uma foto, um Rothko, o retrato da tua avó. As cores viram uma peça de piano. Ouve como soa.","cards.c3.title":"18 estilos de artistas","cards.c3.body":"Picasso, Pollock, Kusama, Klimt, Mondrian, Kandinsky… A mesma canção reescrita a dezoito mãos.","demo.eyebrow":"Vê crescer","demo.h2":"Peça a peça, a canção vira pintura.","demo.lede":"«The Scientist» dos Coldplay — pintado ao vivo no estilo Million Dollar Home Page. Cada canção tem a sua própria pintura — em cada estilo.","demo.overlay":"The Scientist · Coldplay · Million Dollar Home Page","gallery.eyebrow":"Galeria","gallery.h2":"Feitas por utilizadores.","gallery.lede":"A tua pode ser a próxima. Marca <a href=\"https://instagram.com/explore/tags/paintiano\" target=\"_blank\" rel=\"noopener\">#paintiano</a> no Instagram.","concept.eyebrow":"A ideia","concept.quote":"A música e a pintura partilham a mesma roda.<br>Skriabin viu-a. Newton viu-a.<br>Agora podes segurá-la na mão.","concept.prose":"Cada nota recebe uma cor: <strong>matiz</strong> da altura, <strong>luminosidade</strong> da oitava, <strong>saturação</strong> da força com que foi tocada. As notas caem numa grelha de proporção áurea — a mesma proporção atrás das conchas, espirais de flores, do Pártenon. Lê a grelha ao contrário e a música regressa. Uma linguagem, duas superfícies.","pricing.eyebrow":"Preços","pricing.h2":"Paga uma vez. Guarda para sempre.","pricing.lede":"Sem assinaturas. Sem renovações. A arte não se aluga.","pricing.free.name":"Grátis","pricing.free.tag":"Sempre grátis","pricing.free.f1":"9 artistas desbloqueados","pricing.free.f2":"2 variantes de pintura cada","pricing.free.f3":"5 paletas de cores","pricing.free.f4":"Paleta personalizada só leitura","pricing.free.f5":"3 créditos de teste IA","pricing.free.f6":"Marca de água nas exportações","pricing.free.f7":"Sem impressão 300 DPI","pricing.free.cta":"Começar grátis","pricing.popular":"★ Mais popular","pricing.pro.name":"Pro","pricing.pro.once":"uma vez","pricing.pro.tag":"Vitalício · 5 dispositivos","pricing.pro.f1":"Todos os 18 artistas","pricing.pro.f2":"Todas as variantes","pricing.pro.f3":"Paleta personalizada editável","pricing.pro.f4":"Sem marca de água","pricing.pro.f5":"Impressão galeria 300 DPI","pricing.pro.f6":"Exportar partitura (MusicXML)","pricing.pro.f7":"3 créditos de teste IA","pricing.pro.cta":"Passar a Pro","pricing.proai.name":"Pro IA","pricing.proai.once":"uma vez","pricing.proai.tag":"Vitalício · 5 dispositivos","pricing.proai.f1":"Tudo no Pro","pricing.proai.f2":"Humores IA ilimitados","pricing.proai.f3":"Compor IA de imagem","pricing.proai.f4":"IA Atmosphere","pricing.proai.f5":"Morph entre humores","pricing.proai.f6":"Vary (mudar tom)","pricing.proai.f7":"Humor de imagem","pricing.proai.cta":"Passar a Pro IA","pricing.note":"Pagamento único. Funciona em até 5 dispositivos.","faq.eyebrow":"Perguntas","faq.h2":"Antes de tocares.","faq.q1":"Funciona mesmo?","faq.a1":"Sim. Experimenta a demo acima ou toca em «Experimentar Paintiano». Sem registo. Sem cartão. Grátis para sempre para o que a maioria precisa.","faq.q2":"Porquê pagamento único, não assinatura?","faq.a2":"Porque a arte não se aluga. Compraste as cores uma vez. Nós também. O acordo faz sentido.","faq.q3":"Móvel ou desktop?","faq.a3":"Ambos. O móvel é o do dia-a-dia — instala via «Adicionar ao ecrã principal» do navegador e comporta-se como uma app nativa. O desktop tem o piano completo + atalhos de teclado.","faq.q4":"O que acontece aos meus dados nas funções IA?","faq.a4":"O texto de humor vai para o fornecedor IA só para a chamada, depois é descartado. Sem contas. Sem pixels de rastreio. Não vendemos as tuas criações.","faq.q5":"Não sei teoria musical.","faq.a5":"Não precisas. Escreve um sentimento, cantarola, solta uma foto. A app trata dos acordes. Até pode ensinar-te alguns.","faq.q6":"Posso usar as pinturas comercialmente?","faq.a6":"Com Pro ou Pro IA, sim. As exportações grátis levam marca de água e são limitadas a uso pessoal.","final.h2":"A tua vez.","final.cta":"Abrir Paintiano","final.notify":"Avisa-me","footer.concept":"Conceito","footer.blog":"Blog","footer.press":"Kit de imprensa","footer.privacy":"Privacidade","footer.terms":"Termos","footer.contact":"Contacto","footer.made":"Feito por Raf Fel","sticky.cta":"Experimentar Paintiano"},"ZH":{"nav.openApp":"打开应用 →","hero.h1a":"音乐变成画。","hero.h1b":"画变成音乐。","hero.lede":"唱出来。哼出来。丢一张照片。看着画布随音乐填满 — 然后把两者都带回家。","hero.cta":"试用 Paintiano","hero.scroll":"滚动","cards.eyebrow":"它的功能","cards.h2":"三扇门。同一个房间。","cards.c1.title":"音乐 → 画","cards.c1.body":"唱、哼，或丢一段 MP3 或 MIDI。每个音符化作一道笔触。相同的输入，每次都是同一幅画。","cards.c2.title":"图像 → 音乐","cards.c2.body":"丢一张照片、一幅罗斯科、你祖母的肖像。它的颜色化作一首钢琴曲。听听它的声音。","cards.c3.title":"18 种艺术家风格","cards.c3.body":"毕加索、波洛克、草间、克林姆特、蒙德里安、康定斯基…… 同一首歌，由十八只手重写。","demo.eyebrow":"看它生长","demo.h2":"一格一格，歌曲化作绘画。","demo.lede":"Coldplay 的《The Scientist》— 以百万美元主页风格实时绘制。每首歌都有自己的画——在每一种风格中。","demo.overlay":"The Scientist · Coldplay · 百万美元主页","gallery.eyebrow":"展示","gallery.h2":"由用户创作。","gallery.lede":"你的作品可能是下一个。在 Instagram 上标记 <a href=\"https://instagram.com/explore/tags/paintiano\" target=\"_blank\" rel=\"noopener\">#paintiano</a>。","concept.eyebrow":"理念","concept.quote":"音乐与绘画共享同一个色轮。<br>斯克里亚宾看见了。牛顿看见了。<br>现在你可以握在手中。","concept.prose":"每个音符获得一种颜色：<strong>色相</strong> 来自音高，<strong>明度</strong> 来自八度，<strong>饱和度</strong> 来自演奏力度。音符落入黄金比例网格 — 同样的比例藏在贝壳、花朵螺旋、帕台农神庙背后。回读网格，音乐便回来。一种语言，两种载体。","pricing.eyebrow":"价格","pricing.h2":"一次付款，永久拥有。","pricing.lede":"没有订阅。没有续费。艺术不该出租。","pricing.free.name":"免费","pricing.free.tag":"永久免费","pricing.free.f1":"9 位解锁艺术家","pricing.free.f2":"每位 2 种绘画变体","pricing.free.f3":"5 种调色板","pricing.free.f4":"自定义调色板（只读）","pricing.free.f5":"3 次 AI 试用","pricing.free.f6":"导出有水印","pricing.free.f7":"无 300 DPI 打印","pricing.free.cta":"免费开始","pricing.popular":"★ 最受欢迎","pricing.pro.name":"Pro","pricing.pro.once":"一次","pricing.pro.tag":"终身 · 5 台设备","pricing.pro.f1":"全部 18 位艺术家","pricing.pro.f2":"全部绘画变体","pricing.pro.f3":"可编辑自定义调色板","pricing.pro.f4":"无水印","pricing.pro.f5":"300 DPI 画廊级打印","pricing.pro.f6":"乐谱导出（MusicXML）","pricing.pro.f7":"3 次 AI 试用","pricing.pro.cta":"升级到 Pro","pricing.proai.name":"Pro AI","pricing.proai.once":"一次","pricing.proai.tag":"终身 · 5 台设备","pricing.proai.f1":"包含 Pro 所有功能","pricing.proai.f2":"无限 AI 心情","pricing.proai.f3":"AI 从图像作曲","pricing.proai.f4":"AI 氛围识别","pricing.proai.f5":"心情之间 Morph","pricing.proai.f6":"Vary（移调）","pricing.proai.f7":"从图像读取心情","pricing.proai.cta":"升级到 Pro AI","pricing.note":"一次性付款。支持最多 5 台设备。","faq.eyebrow":"常见问题","faq.h2":"点击之前。","faq.q1":"真的有用吗？","faq.a1":"是的。试试上面的演示，或点击「试用 Paintiano」。无需注册。无需信用卡。大多数人需要的功能永久免费。","faq.q2":"为何是一次付款而非订阅？","faq.a2":"因为艺术不该出租。你买颜料只买一次。我们也是。这样的交易才合理。","faq.q3":"手机还是桌面？","faq.a3":"都可以。手机是日常主力 — 通过浏览器的「添加到主屏幕」安装，使用起来像原生应用。桌面端有完整的钢琴 + 键盘快捷键。","faq.q4":"AI 功能会如何处理我的数据？","faq.a4":"心情文本仅在那次调用时发送给 AI 服务商，之后即丢弃。无账号。无跟踪像素。不出售你的作品。","faq.q5":"我不懂乐理。","faq.a5":"不需要懂。输入一种感觉，哼唱，丢一张照片。应用会处理和弦。说不定还能教你几个。","faq.q6":"我可以将画作商用吗？","faq.a6":"使用 Pro 或 Pro AI 可以。免费导出带水印且仅限个人使用。","final.h2":"到你了。","final.cta":"打开 Paintiano","final.notify":"提醒我","footer.concept":"理念","footer.blog":"博客","footer.press":"媒体资料","footer.privacy":"隐私","footer.terms":"条款","footer.contact":"联系","footer.made":"由 Raf Fel 制作","sticky.cta":"试用 Paintiano"},"ZHTW":{"nav.openApp":"開啟應用 →","hero.h1a":"音樂變成畫。","hero.h1b":"畫變成音樂。","hero.lede":"唱出來。哼出來。丟一張照片。看著畫布隨音樂填滿 — 然後把兩者都帶回家。","hero.cta":"試用 Paintiano","hero.scroll":"滾動","cards.eyebrow":"它的功能","cards.h2":"三扇門。同一個房間。","cards.c1.title":"音樂 → 畫","cards.c1.body":"唱、哼，或丟一段 MP3 或 MIDI。每個音符化作一道筆觸。相同的輸入，每次都是同一幅畫。","cards.c2.title":"圖像 → 音樂","cards.c2.body":"丟一張照片、一幅羅斯科、你祖母的肖像。它的顏色化作一首鋼琴曲。聽聽它的聲音。","cards.c3.title":"18 種藝術家風格","cards.c3.body":"畢卡索、波洛克、草間、克林姆、蒙德里安、康丁斯基…… 同一首歌，由十八隻手重寫。","demo.eyebrow":"看它生長","demo.h2":"一格一格，歌曲化作繪畫。","demo.lede":"Coldplay 的《The Scientist》— 以百萬美元主頁風格即時繪製。每首歌都有自己的畫——在每一種風格中。","demo.overlay":"The Scientist · Coldplay · 百萬美元主頁","gallery.eyebrow":"展示","gallery.h2":"由使用者創作。","gallery.lede":"你的作品可能是下一個。在 Instagram 上標記 <a href=\"https://instagram.com/explore/tags/paintiano\" target=\"_blank\" rel=\"noopener\">#paintiano</a>。","concept.eyebrow":"理念","concept.quote":"音樂與繪畫共享同一個色輪。<br>斯克里亞賓看見了。牛頓看見了。<br>現在你可以握在手中。","concept.prose":"每個音符獲得一種顏色：<strong>色相</strong> 來自音高，<strong>明度</strong> 來自八度，<strong>飽和度</strong> 來自演奏力度。音符落入黃金比例網格 — 同樣的比例藏在貝殼、花朵螺旋、帕德嫩神廟背後。回讀網格，音樂便回來。一種語言，兩種載體。","pricing.eyebrow":"價格","pricing.h2":"一次付款，永久擁有。","pricing.lede":"沒有訂閱。沒有續費。藝術不該出租。","pricing.free.name":"免費","pricing.free.tag":"永久免費","pricing.free.f1":"9 位解鎖藝術家","pricing.free.f2":"每位 2 種繪畫變體","pricing.free.f3":"5 種調色盤","pricing.free.f4":"自訂調色盤（唯讀）","pricing.free.f5":"3 次 AI 試用","pricing.free.f6":"匯出有浮水印","pricing.free.f7":"無 300 DPI 列印","pricing.free.cta":"免費開始","pricing.popular":"★ 最受歡迎","pricing.pro.name":"Pro","pricing.pro.once":"一次","pricing.pro.tag":"終身 · 5 台裝置","pricing.pro.f1":"全部 18 位藝術家","pricing.pro.f2":"全部繪畫變體","pricing.pro.f3":"可編輯自訂調色盤","pricing.pro.f4":"無浮水印","pricing.pro.f5":"300 DPI 畫廊級列印","pricing.pro.f6":"樂譜匯出（MusicXML）","pricing.pro.f7":"3 次 AI 試用","pricing.pro.cta":"升級到 Pro","pricing.proai.name":"Pro AI","pricing.proai.once":"一次","pricing.proai.tag":"終身 · 5 台裝置","pricing.proai.f1":"包含 Pro 所有功能","pricing.proai.f2":"無限 AI 心情","pricing.proai.f3":"AI 從圖像作曲","pricing.proai.f4":"AI 氛圍辨識","pricing.proai.f5":"心情之間 Morph","pricing.proai.f6":"Vary（移調）","pricing.proai.f7":"從圖像讀取心情","pricing.proai.cta":"升級到 Pro AI","pricing.note":"一次性付款。支援最多 5 台裝置。","faq.eyebrow":"常見問題","faq.h2":"點擊之前。","faq.q1":"真的有用嗎？","faq.a1":"是的。試試上面的演示，或點擊「試用 Paintiano」。無需註冊。無需信用卡。大多數人需要的功能永久免費。","faq.q2":"為何是一次付款而非訂閱？","faq.a2":"因為藝術不該出租。你買顏料只買一次。我們也是。這樣的交易才合理。","faq.q3":"手機還是桌面？","faq.a3":"都可以。手機是日常主力 — 透過瀏覽器的「加入主畫面」安裝，使用起來像原生應用。桌面端有完整的鋼琴 + 鍵盤快速鍵。","faq.q4":"AI 功能會如何處理我的資料？","faq.a4":"心情文字僅在那次呼叫時傳送給 AI 服務商，之後即丟棄。無帳號。無追蹤像素。不出售你的作品。","faq.q5":"我不懂樂理。","faq.a5":"不需要懂。輸入一種感覺，哼唱，丟一張照片。應用會處理和弦。說不定還能教你幾個。","faq.q6":"我可以將畫作商用嗎？","faq.a6":"使用 Pro 或 Pro AI 可以。免費匯出帶浮水印且僅限個人使用。","final.h2":"到你了。","final.cta":"開啟 Paintiano","final.notify":"提醒我","footer.concept":"理念","footer.blog":"部落格","footer.press":"媒體資料","footer.privacy":"隱私","footer.terms":"條款","footer.contact":"聯絡","footer.made":"由 Raf Fel 製作","sticky.cta":"試用 Paintiano"},"JA":{"nav.openApp":"アプリを開く →","hero.h1a":"音楽が絵画になる。","hero.h1b":"絵画が音楽になる。","hero.lede":"歌う。ハミングする。写真を入れる。音楽が鳴る間にキャンバスが埋まるのを見る — そして両方を持ち帰る。","hero.cta":"Paintiano を試す","hero.scroll":"スクロール","cards.eyebrow":"何ができるか","cards.h2":"3 つの扉、同じ部屋。","cards.c1.title":"音楽 → 絵画","cards.c1.body":"歌う、ハミング、MP3 や MIDI を入れる。すべての音が一筆になる。同じ入力、同じ絵、毎回。","cards.c2.title":"画像 → 音楽","cards.c2.body":"写真、ロスコ、おばあちゃんの肖像を入れる。その色がピアノ曲になる。どんな音か聴く。","cards.c3.title":"18 のアーティストスタイル","cards.c3.body":"ピカソ、ポロック、草間、クリムト、モンドリアン、カンディンスキー…… 同じ曲が 18 の手で書き直される。","demo.eyebrow":"育つのを見る","demo.h2":"タイル一つずつ、歌は絵になる。","demo.lede":"Coldplay の「The Scientist」— Million Dollar Home Page スタイルでライブ描画。どの曲にも、それぞれの絵がある——どのスタイルでも。","demo.overlay":"The Scientist · Coldplay · Million Dollar Home Page","gallery.eyebrow":"ショーケース","gallery.h2":"ユーザーが作る。","gallery.lede":"あなたの作品が次かもしれない。Instagram で <a href=\"https://instagram.com/explore/tags/paintiano\" target=\"_blank\" rel=\"noopener\">#paintiano</a> をタグ付け。","concept.eyebrow":"アイデア","concept.quote":"音楽と絵画は同じ円盤を共有する。<br>スクリャービンが見た。ニュートンが見た。<br>今、あなたの手の中に。","concept.prose":"すべての音は色を得る:<strong>色相</strong>は音高から、<strong>明度</strong>はオクターブから、<strong>彩度</strong>は打鍵の強さから。音は黄金比のグリッドに落ちる — 貝殻、花の螺旋、パルテノン神殿の背後にある同じ比率。グリッドを逆に読めば、音楽が戻る。一つの言語、二つの表面。","pricing.eyebrow":"料金","pricing.h2":"一度払えば、永久に。","pricing.lede":"サブスクなし。更新なし。芸術はレンタルすべきではない。","pricing.free.name":"Free","pricing.free.tag":"永久に無料","pricing.free.f1":"9 人のアーティスト解放","pricing.free.f2":"各 2 種の描き方","pricing.free.f3":"5 つのパレット","pricing.free.f4":"Custom パレットは読み取り専用","pricing.free.f5":"AI 試用 3 クレジット","pricing.free.f6":"エクスポートにウォーターマーク","pricing.free.f7":"300 DPI 印刷なし","pricing.free.cta":"無料で始める","pricing.popular":"★ 最も人気","pricing.pro.name":"Pro","pricing.pro.once":"一回","pricing.pro.tag":"永久 · 5 デバイス","pricing.pro.f1":"全 18 人のアーティスト","pricing.pro.f2":"全ての描き方","pricing.pro.f3":"編集可能な Custom パレット","pricing.pro.f4":"ウォーターマークなし","pricing.pro.f5":"300 DPI ギャラリー級印刷","pricing.pro.f6":"楽譜エクスポート (MusicXML)","pricing.pro.f7":"AI 試用 3 クレジット","pricing.pro.cta":"Pro にアップグレード","pricing.proai.name":"Pro AI","pricing.proai.once":"一回","pricing.proai.tag":"永久 · 5 デバイス","pricing.proai.f1":"Pro のすべて","pricing.proai.f2":"無制限の AI ムード","pricing.proai.f3":"画像から AI Compose","pricing.proai.f4":"AI Atmosphere 読み取り","pricing.proai.f5":"ムード間の Morph","pricing.proai.f6":"Vary(調変更)","pricing.proai.f7":"画像からムード","pricing.proai.cta":"Pro AI へ","pricing.note":"一回払い。最大 5 デバイスで動作。","faq.eyebrow":"質問","faq.h2":"タップする前に。","faq.q1":"本当に動く?","faq.a1":"はい。上のデモを試す、または「Paintiano を試す」をタップ。サインアップなし、カードなし。ほとんどの人が必要とする機能は永久に無料。","faq.q2":"なぜ一回払い、サブスクではない?","faq.a2":"芸術はレンタルすべきではないから。あなたは絵の具を一度買った。我々もそう。取引が筋が通る。","faq.q3":"モバイルかデスクトップ?","faq.a3":"両方。モバイルが日常 — ブラウザの「ホーム画面に追加」でインストールするとネイティブアプリのように動く。デスクトップにはフルピアノ + キーボードショートカット。","faq.q4":"AI 機能で私のデータはどうなる?","faq.a4":"ムードのテキストは AI プロバイダにその呼び出しの間だけ送られ、その後破棄される。アカウントなし。トラッキングピクセルなし。あなたの作品を売らない。","faq.q5":"音楽理論を知らない。","faq.a5":"必要ない。気持ちを書く、ハミング、写真を入れる。アプリが和音を処理する。いくつか教えてくれるかも。","faq.q6":"絵を商用利用できる?","faq.a6":"Pro か Pro AI でなら。Free エクスポートにはウォーターマークがあり個人使用に限定。","final.h2":"あなたの番。","final.cta":"Paintiano を開く","final.notify":"通知して","footer.concept":"コンセプト","footer.blog":"ブログ","footer.press":"プレスキット","footer.privacy":"プライバシー","footer.terms":"利用規約","footer.contact":"お問い合わせ","footer.made":"Raf Fel が制作","sticky.cta":"Paintiano を試す"}};
-  function pickLang() {
-    // 1) URL query override: ?lang=SK (also ?lang=zh, ?lang=zhTW)
-    try {
-      const q = new URLSearchParams(location.search).get('lang');
-      if (q) {
-        const norm = q.toLowerCase();
-        const overrides = { en:'EN', de:'DE', fr:'FR', es:'ES', sk:'SK', pt:'PT', zh:'ZH', 'zh-tw':'ZHTW', zhtw:'ZHTW', 'zh-hant':'ZHTW', ja:'JA' };
-        if (overrides[norm]) return overrides[norm];
-      }
-    } catch(_) {}
-    // 2) Auto-detect from browser preferred languages
-    const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en']);
-    for (const raw of langs) {
-      if (!raw) continue;
-      const lower = raw.toLowerCase();
-      if (lower.startsWith('zh') && (lower.includes('tw') || lower.includes('hk') || lower.includes('hant') || lower.includes('mo'))) return 'ZHTW';
-      if (lower.startsWith('zh')) return 'ZH';
-      const two = lower.slice(0, 2);
-      const map = { en: 'EN', de: 'DE', fr: 'FR', es: 'ES', sk: 'SK', pt: 'PT', ja: 'JA' };
-      if (map[two]) return map[two];
-    }
-    return 'EN';
-  }
-
-  function applyLang() {
-    const lang = pickLang();
-    const dict = LANGS[lang] || LANGS.EN;
-    const htmlLang = lang === 'ZHTW' ? 'zh-Hant' : (lang === 'ZH' ? 'zh-Hans' : lang.toLowerCase());
-    document.documentElement.lang = htmlLang;
-    let nText = 0, nHtml = 0;
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-      const v = dict[el.getAttribute('data-i18n')];
-      if (v != null) { el.textContent = v; nText++; }
-    });
-    document.querySelectorAll('[data-i18n-html]').forEach(el => {
-      const v = dict[el.getAttribute('data-i18n-html')];
-      if (v != null) { el.innerHTML = v; nHtml++; }
-    });
-    window.__paintianoLang = lang;
-    console.log('[paintiano i18n] navigator.languages =', navigator.languages || navigator.language,
-                ' → picked', lang, ' applied', nText, 'text +', nHtml, 'html');
-  }
-
-  // Wait for DOM if needed (script is in <head>)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyLang);
-  } else {
-    applyLang();
-  }
-})();
-</script>
-<script>
-(function() {
-  try {
-    var url = new URL(location.href);
-    if (url.searchParams.has('welcome')) return;
-    var seen = document.cookie.indexOf('paintiano_seen=1') !== -1;
-    if (seen) {
-      location.replace('/play' + url.search + url.hash);
-    }
-  } catch (e) {}
-})();
-</script>
-
-<!-- Open Graph / social -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://paintiano.app/">
-<meta property="og:title" content="Paintiano — Music becomes painting. Painting becomes music.">
-<meta property="og:description" content="Same colour wheel, both directions. Sing it, see it, take both home.">
-<meta property="og:image" content="https://paintiano.app/og.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Paintiano — Music becomes painting">
-<meta name="twitter:description" content="Sing it, see it, take both home.">
-<meta name="twitter:image" content="https://paintiano.app/og.png">
-
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%230a0612'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='serif' font-style='italic' fill='%23c9a84c' font-size='18'%3EP%3C/text%3E%3C/svg%3E">
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paintiano — Your favorite song, made visible</title>
+<meta name="description" content="Paintiano turns music into painting. Drop in a track or hum a melody — every note, key and chord is painted by a fixed system, the same way every time. Not a random visualizer: your song made visible.">
+  <meta name="theme-color" content="#06060c">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/paintiano-icon.png">
+  <!-- Open Graph (Facebook, LinkedIn, Slack, iMessage, WhatsApp…) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Paintiano">
+  <meta property="og:title" content="Your favorite song, made visible — Paintiano">
+  <meta property="og:description" content="Drop in a track or hum a melody. Paintiano paints it note for note — the same painting every time. Not a random visualizer: your song made visible.">
+  <meta property="og:url" content="https://paintiano.app/">
+  <meta property="og:image" content="https://paintiano.app/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="A Paintiano golden-ratio colour painting made from a song">
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Your favorite song, made visible — Paintiano">
+  <meta name="twitter:description" content="Paintiano turns a song into a painting — note for note, the same every time.">
+  <meta name="twitter:image" content="https://paintiano.app/og-cover.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #0a0612;
-  --bg-2: #14101e;
-  --bg-3: #1c1830;
-  --gold: #c9a84c;
-  --gold-2: #e5c87a;
-  --gold-soft: rgba(201,168,76,.55);
-  --text: rgba(247,243,236,.92);
-  --text-dim: rgba(230,222,196,.7);
-  --text-faint: rgba(230,222,196,.4);
-  --border: rgba(201,168,76,.15);
-  --border-strong: rgba(201,168,76,.4);
-  --shadow: 0 12px 40px rgba(0,0,0,.45);
-  --serif: 'Cormorant Garamond', Georgia, serif;
-  --sans: 'Outfit', system-ui, -apple-system, Arial, sans-serif;
-  --maxw: 1140px;
-}
+  :root{
+    --bg:#06060c; --bg2:#0e0b16; --card:#161320; --card2:#1d1929; --card3:#231f31;
+    --line:rgba(242,238,232,.08); --line2:rgba(242,238,232,.14);
+    --cream:#f2eee8; --muted:rgba(242,238,232,.5); --faint:rgba(242,238,232,.34);
+    --gold:#f0c040; --goldq:#c9a84c; --goldg:#ffd96e; --goldRGB:201,168,76;
+    --blue:#5b9cf6; --purple:#a97ff5; --green:#4ecb8d; --orange:#f47c3c; --pink:#f06292;
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,Helvetica,Arial,sans-serif;
+    --maxw:1080px;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--cream);
+    font-family:var(--sans); font-size:16px; line-height:1.6;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    background-image:radial-gradient(ellipse at 50% -8%, #0e0b16 0%, #06060c 58%);
+    background-attachment:fixed;
+  }
+  a{color:inherit; text-decoration:none;}
+  img,svg{display:block; max-width:100%;}
+  ::selection{background:rgba(var(--goldRGB),.3); color:var(--cream);}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  font-weight: 400;
-  line-height: 1.55;
-  font-size: 17px;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-}
-a { color: inherit; text-decoration: none; }
-button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
-img { display: block; max-width: 100%; }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 22px;}
+  .eyebrow{
+    font-family:var(--sans); font-size:.66rem; font-weight:600;
+    letter-spacing:.26em; text-transform:uppercase; color:var(--goldq);
+    margin:0 0 18px;
+  }
+  .serif{font-family:var(--serif);}
 
-/* ── ambient background ── */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background:
-    radial-gradient(ellipse 1200px 800px at 20% -10%, rgba(201,168,76,.08), transparent 60%),
-    radial-gradient(ellipse 900px 700px at 80% 30%, rgba(120,80,200,.07), transparent 60%),
-    radial-gradient(ellipse 1100px 800px at 50% 120%, rgba(80,130,180,.06), transparent 60%);
-  pointer-events: none;
-  z-index: 0;
-}
-main, header, footer, section { position: relative; z-index: 1; }
+  /* ── Buttons ── */
+  .btn{
+    display:inline-flex; align-items:center; gap:9px; cursor:pointer;
+    font-family:var(--sans); font-size:.94rem; font-weight:600; letter-spacing:.01em;
+    padding:14px 26px; border-radius:40px; border:1px solid transparent;
+    transition:transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+  }
+  .btn-gold{
+    background:linear-gradient(135deg,var(--goldg),var(--goldq));
+    color:#1a1505; box-shadow:0 6px 26px rgba(var(--goldRGB),.28);
+  }
+  .btn-gold:hover{transform:translateY(-2px); box-shadow:0 10px 34px rgba(var(--goldRGB),.4);}
+  .btn-ghost{
+    background:transparent; color:var(--cream);
+    border-color:var(--line2);
+  }
+  .btn-ghost:hover{transform:translateY(-2px); border-color:rgba(var(--goldRGB),.6); color:var(--goldg);}
+  .btn:focus-visible{outline:2px solid var(--goldg); outline-offset:3px;}
+  .note{font-size:.8rem; color:var(--faint); letter-spacing:.01em;}
 
-/* ── nav ── */
-.nav {
-  position: fixed; top: 0; left: 0; right: 0;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 32px;
-  z-index: 50;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  background: rgba(10,6,18,.55);
-  transition: padding .25s ease, background .25s ease;
-}
-.nav.scrolled { padding: 10px 32px; background: rgba(10,6,18,.85); }
-.nav-logo {
-  font-family: var(--serif); font-style: italic;
-  font-size: 1.6rem; color: var(--gold-2);
-  letter-spacing: .02em; cursor: pointer;
-}
-.nav-cta {
-  padding: 9px 22px; border-radius: 22px;
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
-  color: #1a1208; font-weight: 600; font-size: .9rem;
-  letter-spacing: .04em;
-  box-shadow: 0 4px 18px rgba(201,168,76,.35);
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-.nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(201,168,76,.5); }
+  /* ── Header ── */
+  header.site{
+    position:sticky; top:0; z-index:50;
+    backdrop-filter:saturate(140%) blur(10px);
+    background:rgba(6,6,12,.62);
+    border-bottom:1px solid var(--line);
+  }
+  .site .wrap{display:flex; align-items:center; justify-content:space-between; height:64px;}
+  .brand{
+    font-family:var(--serif); font-weight:600; font-size:1.5rem; letter-spacing:.02em;
+    background:linear-gradient(135deg,var(--goldg),var(--gold) 55%,var(--goldq));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .site .btn{padding:10px 20px; font-size:.86rem;}
 
-/* ── hero ── */
-.hero {
-  min-height: 100vh; min-height: 100dvh;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center;
-  padding: 110px 24px 80px;
-  position: relative;
-  overflow: hidden;
-}
-.hero-canvas {
-  position: absolute; inset: 0;
-  z-index: 0;
-  opacity: .35;
-  filter: blur(1px);
-}
-.hero-inner { position: relative; z-index: 2; max-width: 900px; }
-.hero h1 {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 500;
-  font-size: clamp(2.4rem, 7vw, 5.4rem);
-  line-height: 1.05;
-  letter-spacing: -.01em;
-  color: var(--gold-2);
-  margin-bottom: 22px;
-  background: linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 30px rgba(201,168,76,.25));
-}
-.hero h1 span { display: block; }
-.hero h1 span + span { opacity: .75; }
-.hero-sub {
-  font-family: var(--sans);
-  font-size: clamp(.95rem, 1.6vw, 1.15rem);
-  color: var(--text-dim);
-  letter-spacing: .04em;
-  margin-bottom: 42px;
-  max-width: 620px;
-  margin-left: auto; margin-right: auto;
-}
-.cta-primary {
-  display: inline-flex; align-items: center; gap: 10px;
-  padding: 16px 36px; border-radius: 36px;
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
-  color: #1a1208;
-  font-family: var(--sans); font-weight: 600;
-  font-size: 1.05rem; letter-spacing: .06em;
-  box-shadow: 0 8px 30px rgba(201,168,76,.45), inset 0 1px 0 rgba(255,255,255,.25);
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-.cta-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(201,168,76,.6), inset 0 1px 0 rgba(255,255,255,.25); }
-.cta-primary span { transition: transform .2s ease; }
-.cta-primary:hover span { transform: translateX(4px); }
+  /* ── Hero ── */
+  .hero{padding:64px 0 36px;}
+  .hero-grid{display:grid; grid-template-columns:1.15fr .85fr; gap:44px; align-items:center;}
+  .hero h1{
+    font-family:var(--serif); font-weight:500; letter-spacing:.005em;
+    font-size:clamp(2.6rem,6.4vw,4.4rem); line-height:1.02; margin:0 0 22px;
+    color:var(--cream);
+  }
+  .hero h1 em{font-style:italic; color:var(--goldg);}
+  .hero p.lede{font-size:1.12rem; color:var(--muted); max-width:34ch; margin:0 0 30px;}
+  .hero p.lede b{color:var(--cream); font-weight:600;}
+  .hero .cta-row{display:flex; flex-wrap:wrap; align-items:center; gap:14px;}
+  .hero .note{margin-top:14px; width:100%;}
 
-.hero-scroll-hint {
-  position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-  color: var(--text-faint);
-  font-size: .7rem; letter-spacing: .3em; text-transform: uppercase;
-  animation: pulse 2.4s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%,100% { opacity: .3; transform: translate(-50%, 0); }
-  50% { opacity: .7; transform: translate(-50%, 6px); }
-}
+  /* ── Signature: circle-of-fifths colour wheel ── */
+  .wheel-wrap{display:flex; justify-content:center;}
+  .wheel{position:relative; width:min(360px,78vw); aspect-ratio:1;}
+  .wheel .ring{
+    position:absolute; inset:0; border-radius:50%;
+    background:conic-gradient(from -90deg,
+      #e23b3b,#e0742f,#e0a92f,#dcd23a,#9fcf3a,#4ec06a,
+      #3ab3a0,#3a9bd2,#3a64d2,#7a4ed2,#b23ad2,#d23a8e,#e23b3b);
+    -webkit-mask:radial-gradient(circle, transparent 0 49%, #000 49.6% 76%, transparent 76.6%);
+            mask:radial-gradient(circle, transparent 0 49%, #000 49.6% 76%, transparent 76.6%);
+    animation:spin 64s linear infinite; opacity:.92;
+    filter:saturate(.92);
+  }
+  .wheel .ticks{position:absolute; inset:0;}
+  .wheel .core{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; gap:6px;
+  }
+  .wheel .core .phi{font-family:var(--serif); font-size:2.6rem; line-height:1; color:var(--goldg); font-style:italic;}
+  .wheel .core small{font-size:.6rem; letter-spacing:.24em; text-transform:uppercase; color:var(--faint);}
+  .tick-label{font-family:var(--sans); font-size:10px; font-weight:600; letter-spacing:.04em; fill:rgba(242,238,232,.62);}
+  @keyframes spin{to{transform:rotate(360deg);}}
 
-/* ── sections ── */
-.section {
-  padding: 110px 24px;
-  max-width: var(--maxw);
-  margin: 0 auto;
-}
-.section-eyebrow {
-  font-family: var(--sans);
-  font-weight: 600;
-  font-size: .72rem;
-  letter-spacing: .3em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 14px;
-  text-align: center;
-}
-.section h2 {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 500;
-  font-size: clamp(2rem, 4.5vw, 3.4rem);
-  line-height: 1.1;
-  text-align: center;
-  margin-bottom: 24px;
-  color: var(--gold-2);
-}
-.section-lede {
-  text-align: center;
-  font-size: clamp(1rem, 1.4vw, 1.2rem);
-  color: var(--text-dim);
-  max-width: 660px;
-  margin: 0 auto 60px;
-}
+  /* ── Section scaffolding ── */
+  section.band{padding:54px 0; border-top:1px solid var(--line);}
+  .center{text-align:center;}
+  h2.sec{
+    font-family:var(--serif); font-weight:500; letter-spacing:.005em;
+    font-size:clamp(1.9rem,4.2vw,2.9rem); line-height:1.08; margin:0 0 16px; color:var(--cream);
+  }
+  .sec-lede{color:var(--muted); max-width:56ch; margin:0 auto;}
 
-/* ── demo ── */
-.demo-frame {
-  max-width: 900px;
-  margin: 0 auto;
-  aspect-ratio: 16/10;
-  border-radius: 18px;
-  background: #0a0612;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.04);
-  position: relative;
-  overflow: hidden;
-}
-.demo-stack { position: absolute; inset: 0; }
-.demo-img {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  object-position: center;
-  opacity: 0;
-  transition: opacity 0.85s cubic-bezier(.4,0,.2,1);
-  will-change: opacity;
-}
-.demo-img.active { opacity: 1; }
-.demo-overlay {
-  position: absolute; bottom: 16px; left: 16px;
-  padding: 8px 14px; border-radius: 18px;
-  background: rgba(10,6,18,.75); backdrop-filter: blur(8px);
-  font-family: var(--serif); font-style: italic;
-  font-size: .85rem;
-  letter-spacing: .02em;
-  color: var(--gold-2);
-  z-index: 2;
-}
+  /* ── Reason to believe ── */
+  .rtb{padding:50px 0;}
+  .rtb-inner{
+    max-width:760px; margin:0 auto; text-align:center;
+    font-family:var(--serif); font-size:clamp(1.35rem,2.8vw,1.85rem);
+    line-height:1.5; font-style:italic; color:rgba(242,238,232,.86); font-weight:400;
+  }
+  .rtb-inner b{font-style:normal; font-weight:600; color:var(--goldg);}
+  .rtb-rule{width:48px; height:1px; background:rgba(var(--goldRGB),.5); margin:0 auto 28px;}
 
-/* ── 3-card features ── */
-.cards-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 22px;
-  margin-top: 32px;
-}
-.card {
-  padding: 36px 28px;
-  border-radius: 16px;
-  background: rgba(28,24,48,.4);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: transform .25s ease, border-color .25s ease, background .25s ease;
-}
-.card:hover {
-  transform: translateY(-4px);
-  border-color: var(--border-strong);
-  background: rgba(28,24,48,.55);
-}
-.card-glyph {
-  font-size: 2.6rem;
-  margin-bottom: 18px;
-  display: inline-block;
-  filter: drop-shadow(0 2px 16px rgba(201,168,76,.3));
-}
-.card h3 {
-  font-family: var(--serif); font-style: italic;
-  font-weight: 500;
-  font-size: 1.5rem;
-  color: var(--gold-2);
-  margin-bottom: 14px;
-  line-height: 1.2;
-}
-.card p {
-  color: var(--text-dim);
-  font-size: .95rem;
-  line-height: 1.6;
-}
+  /* ── How it works ── */
+  .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:36px;}
+  .step{
+    background:var(--card); border:1px solid var(--line); border-radius:18px; padding:26px 22px;
+    position:relative; overflow:hidden;
+  }
+  .step .num{
+    font-family:var(--serif); font-size:1.05rem; font-weight:600; letter-spacing:.18em;
+    color:var(--accent,var(--goldq)); opacity:.95;
+  }
+  .step .bar{height:2px; width:30px; background:var(--accent,var(--goldq)); border-radius:2px; margin:10px 0 16px;}
+  .step h3{font-family:var(--serif); font-size:1.35rem; font-weight:600; margin:0 0 8px; color:var(--cream);}
+  .step p{margin:0; color:var(--muted); font-size:.95rem;}
 
-/* ── gallery ── */
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-top: 12px;
-}
-.gallery-tile {
-  aspect-ratio: 1;
-  border-radius: 10px;
-  overflow: hidden;
-  position: relative;
-  background: var(--bg-3);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  transition: transform .25s ease, border-color .25s ease;
-}
-.gallery-tile:hover { transform: scale(1.025); border-color: var(--border-strong); }
-.gallery-tile img {
-  width: 100%; height: 100%;
-  display: block;
-  object-fit: cover;
-  object-position: center;
-  transition: transform .35s cubic-bezier(.2,.8,.2,1);
-}
-.gallery-tile:hover img { transform: scale(1.04); }
-.gallery-tile-meta {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  padding: 22px 14px 12px;
-  background: linear-gradient(180deg, transparent 0%, rgba(10,6,18,.55) 45%, rgba(10,6,18,.92) 100%);
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: .92rem;
-  letter-spacing: .02em;
-  color: var(--gold-2);
-  text-shadow: 0 1px 2px rgba(0,0,0,.6);
-  pointer-events: none;
-}
+  /* ── Use-case cards ── */
+  .cases{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:36px;}
+  .case{
+    background:linear-gradient(180deg,var(--card),rgba(22,19,32,.4));
+    border:1px solid var(--line); border-radius:18px; padding:24px 20px;
+    transition:transform .2s ease, border-color .2s ease;
+  }
+  .case:hover{transform:translateY(-3px); border-color:var(--line2);}
+  .case .dot{width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent); margin-bottom:16px;}
+  .case h3{font-family:var(--serif); font-size:1.3rem; font-weight:600; margin:0 0 8px; color:var(--cream);}
+  .case p{margin:0; color:var(--muted); font-size:.92rem; line-height:1.5;}
 
-/* ── concept ── */
-.concept-block {
-  text-align: center;
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 80px 0;
-}
-.concept-quote {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 400;
-  font-size: clamp(1.4rem, 3vw, 2.2rem);
-  line-height: 1.4;
-  color: var(--gold-2);
-  margin-bottom: 32px;
-  background: linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.concept-prose {
-  font-size: 1.05rem;
-  color: var(--text-dim);
-  line-height: 1.75;
-  max-width: 620px;
-  margin: 0 auto;
-}
-.concept-prose strong {
-  color: var(--gold);
-  font-weight: 500;
-}
+  /* ── Showcase ── */
+  .gallery{display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:36px;}
+  .piece{background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden;}
+  .piece .art{aspect-ratio:1; background:#0c0a12;}
+  .piece .meta{padding:18px 18px 20px;}
+  .piece .src{font-family:var(--serif); font-size:1.18rem; font-weight:600; color:var(--cream); margin:0 0 3px;}
+  .piece .src span{color:var(--muted); font-style:italic; font-weight:400;}
+  .piece .style{font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--goldq); margin:0 0 12px;}
+  .piece .why{font-size:.9rem; color:var(--muted); margin:0; line-height:1.5;}
+  .piece .why b{color:rgba(242,238,232,.78); font-weight:600; font-style:italic;}
 
-/* ── pricing ── */
-.pricing {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin-top: 30px;
-}
-.tier {
-  padding: 36px 28px;
-  border-radius: 16px;
-  background: rgba(28,24,48,.4);
-  border: 1px solid var(--border);
-  display: flex; flex-direction: column;
-  position: relative;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.tier.featured {
-  background: linear-gradient(180deg, rgba(201,168,76,.08), rgba(28,24,48,.45));
-  border: 1px solid var(--border-strong);
-  transform: scale(1.04);
-  box-shadow: 0 10px 36px rgba(201,168,76,.18), inset 0 1px 0 rgba(255,255,255,.04);
-}
-.tier-badge {
-  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-  padding: 5px 14px; border-radius: 12px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-2));
-  color: #1a1208;
-  font-size: .65rem; font-weight: 700;
-  letter-spacing: .18em; text-transform: uppercase;
-  box-shadow: 0 4px 14px rgba(201,168,76,.4);
-}
-.tier-name {
-  font-family: var(--serif); font-style: italic;
-  font-size: 1.6rem;
-  color: var(--gold-2);
-  margin-bottom: 6px;
-}
-.tier-price {
-  font-family: var(--sans);
-  font-size: 2.2rem; font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-  letter-spacing: -.01em;
-}
-.tier-price small { font-size: 1rem; color: var(--text-dim); font-weight: 400; }
-.tier-tag {
-  font-size: .78rem;
-  color: var(--text-faint);
-  letter-spacing: .06em;
-  margin-bottom: 22px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--border);
-}
-.tier-features {
-  list-style: none;
-  margin-bottom: 28px;
-  flex: 1;
-}
-.tier-features li {
-  padding: 7px 0 7px 24px;
-  position: relative;
-  font-size: .92rem;
-  color: var(--text-dim);
-}
-.tier-features li::before {
-  content: '✓';
-  position: absolute; left: 0;
-  color: var(--gold);
-  font-weight: 600;
-}
-.tier-features li.dim { color: var(--text-faint); }
-.tier-features li.dim::before { content: '·'; color: var(--text-faint); }
-.tier-cta {
-  display: block; text-align: center;
-  padding: 12px;
-  border-radius: 26px;
-  font-weight: 600; font-size: .92rem;
-  letter-spacing: .06em;
-  border: 1px solid var(--border-strong);
-  color: var(--gold);
-  transition: all .15s ease;
-}
-.tier-cta:hover { background: rgba(201,168,76,.1); }
-.tier.featured .tier-cta {
-  background: linear-gradient(135deg, var(--gold), var(--gold-2));
-  color: #1a1208;
-  border: 1px solid transparent;
-}
-.tier.featured .tier-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(201,168,76,.35); }
+  /* ── Pricing ── */
+  .tiers{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:38px; align-items:stretch;}
+  .tier{
+    background:var(--card); border:1px solid var(--line); border-radius:20px; padding:30px 26px;
+    display:flex; flex-direction:column;
+  }
+  .tier.pro{border-color:rgba(var(--goldRGB),.5);}
+  .tier.ai{border-color:rgba(169,127,245,.5); background:linear-gradient(180deg,rgba(169,127,245,.07),var(--card));}
+  .tier .tname{font-family:var(--serif); font-size:1.5rem; font-weight:600; color:var(--cream); margin:0 0 4px;}
+  .tier.pro .tname{color:var(--goldg);}
+  .tier.ai .tname{color:#cdb2ff;}
+  .tier .badge{display:inline-block; font-size:.62rem; letter-spacing:.16em; text-transform:uppercase; padding:3px 10px; border-radius:20px; margin-bottom:14px;}
+  .tier.pro .badge{background:rgba(var(--goldRGB),.16); color:var(--goldg);}
+  .tier.ai .badge{background:rgba(169,127,245,.18); color:#cdb2ff;}
+  .tier .price{font-family:var(--serif); font-size:2.5rem; font-weight:600; color:var(--cream); line-height:1; margin:6px 0 2px;}
+  .tier .price small{font-family:var(--sans); font-size:.95rem; color:var(--muted); font-weight:400;}
+  .tier .was{font-size:.82rem; color:var(--faint); margin:0 0 18px;}
+  .tier ul{list-style:none; padding:0; margin:6px 0 24px; flex:1;}
+  .tier li{font-size:.92rem; color:var(--muted); padding:7px 0 7px 22px; position:relative; border-top:1px solid var(--line);}
+  .tier li:first-child{border-top:none;}
+  .tier li::before{content:"·"; position:absolute; left:6px; color:var(--goldq); font-weight:700;}
+  .tier .btn{width:100%; justify-content:center;}
 
-.pricing-note {
-  text-align: center;
-  margin-top: 38px;
-  font-size: .95rem;
-  color: var(--text-dim);
-  font-style: italic;
-}
+  /* ── Proof + final ── */
+  .proof{display:flex; flex-wrap:wrap; gap:14px 28px; justify-content:center; align-items:center; color:var(--faint); font-size:.86rem;}
+  .proof .ph{display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border:1px dashed var(--line2); border-radius:10px;}
+  .final{text-align:center; padding:72px 0;}
+  .final h2{font-size:clamp(2.2rem,5vw,3.4rem); margin-bottom:14px;}
+  .final p{color:var(--muted); margin:0 0 28px;}
 
-/* ── FAQ ── */
-.faq {
-  max-width: 760px;
-  margin: 0 auto;
-}
-.faq-item {
-  border-bottom: 1px solid var(--border);
-  padding: 18px 0;
-}
-.faq-item summary {
-  font-family: var(--sans);
-  font-weight: 500;
-  font-size: 1.08rem;
-  color: var(--text);
-  cursor: pointer;
-  list-style: none;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 0;
-  transition: color .15s ease;
-}
-.faq-item summary::-webkit-details-marker { display: none; }
-.faq-item summary::after {
-  content: '+';
-  color: var(--gold);
-  font-size: 1.3rem;
-  font-weight: 300;
-  transition: transform .2s ease;
-}
-.faq-item[open] summary::after { transform: rotate(45deg); }
-.faq-item summary:hover { color: var(--gold-2); }
-.faq-item p {
-  margin-top: 14px;
-  color: var(--text-dim);
-  font-size: .96rem;
-  line-height: 1.7;
-  padding-right: 32px;
-}
+  /* ── Footer ── */
+  footer.site{border-top:1px solid var(--line); padding:34px 0 44px;}
+  footer .wrap{display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;}
+  .foot-mark{font-size:.7rem; letter-spacing:.24em; text-transform:uppercase; color:rgba(var(--goldRGB),.8);}
+  .foot-links{display:flex; gap:18px; flex-wrap:wrap; justify-content:center; font-size:.86rem; color:var(--muted);}
+  .foot-links a:hover{color:var(--goldg);}
 
-/* ── final CTA ── */
-.final-cta {
-  text-align: center;
-  padding: 110px 24px 90px;
-}
-.final-cta h2 {
-  font-family: var(--serif); font-style: italic;
-  font-weight: 500;
-  font-size: clamp(2rem, 5vw, 3.6rem);
-  margin-bottom: 30px;
-  color: var(--gold-2);
-}
+  /* ── Reveal animation ── */
+  .reveal{opacity:0; transform:translateY(16px); transition:opacity .7s ease, transform .7s ease;}
+  .reveal.in{opacity:1; transform:none;}
 
-/* ── newsletter ── */
-.newsletter {
-  max-width: 460px;
-  margin: 32px auto 0;
-  display: flex; gap: 8px;
-}
-.newsletter input {
-  flex: 1;
-  padding: 13px 18px;
-  border-radius: 24px;
-  background: rgba(28,24,48,.55);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: .95rem;
-  outline: none;
-  transition: border-color .15s ease;
-}
-.newsletter input:focus { border-color: var(--gold-soft); }
-.newsletter button {
-  padding: 13px 22px;
-  border-radius: 24px;
-  background: var(--gold);
-  color: #1a1208;
-  font-weight: 600;
-  font-size: .9rem;
-  letter-spacing: .04em;
-  transition: background .15s ease;
-}
-.newsletter button:hover { background: var(--gold-2); }
-
-/* ── socials ── */
-.socials {
-  display: flex; justify-content: center; gap: 16px;
-  margin-top: 40px;
-}
-.socials a {
-  width: 42px; height: 42px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  transition: all .15s ease;
-}
-.socials a:hover {
-  border-color: var(--border-strong);
-  color: var(--gold);
-  transform: translateY(-2px);
-}
-
-/* ── footer ── */
-footer {
-  border-top: 1px solid var(--border);
-  padding: 40px 24px 36px;
-  text-align: center;
-  color: var(--text-faint);
-  font-size: .85rem;
-  letter-spacing: .04em;
-}
-.footer-links {
-  display: flex; flex-wrap: wrap; justify-content: center;
-  gap: 6px 20px;
-  margin-bottom: 18px;
-}
-.footer-links a { color: var(--text-dim); transition: color .15s ease; }
-.footer-links a:hover { color: var(--gold); }
-.footer-credit {
-  font-family: var(--serif);
-  font-style: italic;
-  color: var(--text-faint);
-  margin-top: 14px;
-}
-
-/* ── sticky mobile CTA ── */
-.sticky-cta {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  padding: 12px 16px env(safe-area-inset-bottom, 12px);
-  background: rgba(10,6,18,.92);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid var(--border);
-  display: none;
-  z-index: 60;
-  transform: translateY(100%);
-  transition: transform .3s ease;
-}
-.sticky-cta.visible { transform: translateY(0); }
-.sticky-cta .cta-primary {
-  display: flex; justify-content: center;
-  width: 100%;
-  padding: 14px 24px;
-}
-
-/* ── scroll reveal ── */
-.reveal {
-  opacity: 0;
-  transform: translateY(28px);
-  transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1);
-}
-.reveal.in {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ── mobile ── */
-@media (max-width: 880px) {
-  .nav { padding: 14px 20px; }
-  .nav.scrolled { padding: 10px 20px; }
-  .nav-cta { display: none; }
-  .section { padding: 80px 20px; }
-  .cards-3 { grid-template-columns: 1fr; }
-  .gallery { grid-template-columns: repeat(2, 1fr); }
-  .pricing { grid-template-columns: 1fr; gap: 14px; }
-  .tier.featured { transform: none; }
-  .tier-badge { top: -10px; }
-  .sticky-cta { display: block; }
-  .hero { padding: 110px 20px 100px; }
-  .hero-scroll-hint { display: none; }
-  .final-cta { padding: 80px 20px 90px; }
-  .newsletter { flex-direction: column; }
-  .newsletter button { width: 100%; }
-  body { padding-bottom: 70px; }
-}
-@media (max-width: 520px) {
-  .gallery { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .gallery-tile:nth-child(3n) { aspect-ratio: 1; }
-  .gallery-tile:nth-child(5n) { aspect-ratio: 1; }
-}
+  /* ── Responsive ── */
+  @media (max-width:860px){
+    .hero-grid{grid-template-columns:1fr; gap:36px; text-align:center;}
+    .hero p.lede{margin-left:auto; margin-right:auto;}
+    .hero .cta-row{justify-content:center;}
+    .steps{grid-template-columns:1fr;}
+    .cases{grid-template-columns:1fr 1fr;}
+    .gallery{grid-template-columns:1fr;}
+    .tiers{grid-template-columns:1fr;}
+  }
+  @media (max-width:480px){
+    .cases{grid-template-columns:1fr;}
+    .hero{padding-top:40px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important; scroll-behavior:auto !important;}
+    .reveal{opacity:1; transform:none; transition:none;}
+  }
 </style>
 </head>
 <body>
 
-<!-- ─── NAV ─── -->
-<header class="nav" id="nav">
-  <div class="nav-logo" onclick="window.scrollTo({top:0,behavior:'smooth'})">Paintiano</div>
-  <a href="/play" class="nav-cta" data-try data-i18n="nav.openApp">Open app →</a>
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top">Paintiano</a>
+    <a class="btn btn-gold" href="/play">Try free</a>
+  </div>
 </header>
 
-<!-- ─── HERO ─── -->
+<a id="top"></a>
+
+<!-- ── HERO ── -->
 <section class="hero">
-  <canvas class="hero-canvas" id="heroCanvas"></canvas>
-  <div class="hero-inner">
-    <h1>
-      <span data-i18n="hero.h1a">Music becomes painting.</span>
-      <span data-i18n="hero.h1b">Painting becomes music.</span>
-    </h1>
-    <p class="hero-sub" data-i18n="hero.lede">Sing it. Hum it. Drop a photo. Watch the canvas fill as the music plays — then take both home.</p>
-    <a href="/play" class="cta-primary" data-try><span data-i18n="hero.cta">Try Paintiano</span> <span>→</span></a>
-  </div>
-  <div class="hero-scroll-hint" data-i18n="hero.scroll">scroll</div>
-</section>
+  <div class="wrap hero-grid">
+    <div class="reveal">
+      <p class="eyebrow">Music, made visible</p>
+      <h1>Your favorite song,<br><em>made visible.</em></h1>
+      <p class="lede">Drop in a track — or just hum one — and watch Paintiano paint it, note for note. Play the same song twice and you get the same painting: <b>not a random visualizer</b>, but your music turned into art worth framing.</p>
+      <div class="cta-row">
+        <a class="btn btn-gold" href="/play">See your song →</a>
+        <a class="btn btn-ghost" href="#showcase">See examples</a>
+      </div>
+      <p class="note">Free to try. No signup, no card.</p>
+    </div>
 
-<!-- ─── 3 CARDS ─── -->
-<section class="section">
-  <div class="section-eyebrow reveal" data-i18n="cards.eyebrow">What it does</div>
-  <h2 class="reveal" data-i18n="cards.h2">Three doors. Same room.</h2>
-  <div class="cards-3">
-    <div class="card reveal">
-      <div class="card-glyph">🎵</div>
-      <h3 data-i18n="cards.c1.title">Music → painting</h3>
-      <p data-i18n="cards.c1.body">Sing, hum, drop an MP3 or MIDI. Every note becomes a brushstroke. Same input, same painting, every time.</p>
-    </div>
-    <div class="card reveal">
-      <div class="card-glyph">📷</div>
-      <h3 data-i18n="cards.c2.title">Image → music</h3>
-      <p data-i18n="cards.c2.body">Drop in a photo, a Rothko, your grandmother's portrait. Its colours become a piano piece. Hear what it sounds like.</p>
-    </div>
-    <div class="card reveal">
-      <div class="card-glyph">🎨</div>
-      <h3 data-i18n="cards.c3.title">18 artist styles</h3>
-      <p data-i18n="cards.c3.body">Picasso, Pollock, Kusama, Klimt, Mondrian, Kandinsky… The same song rewritten in eighteen hands.</p>
+    <div class="reveal wheel-wrap" aria-hidden="true">
+      <div class="wheel">
+        <div class="ring"></div>
+        <svg class="ticks" viewBox="0 0 360 360">
+          <!-- 12 note labels in circle-of-fifths order, placed around the ring -->
+          <g id="tickset"></g>
+        </svg>
+        <div class="core">
+          <span class="phi">&#966;</span>
+          <small>note &middot; colour</small>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ─── DEMO ─── -->
-<section class="section" id="demo">
-  <div class="section-eyebrow reveal" data-i18n="demo.eyebrow">Watch it grow</div>
-  <h2 class="reveal" data-i18n="demo.h2">Tile by tile, the song becomes a painting.</h2>
-  <p class="section-lede reveal" data-i18n="demo.lede">"The Scientist" by Coldplay — painted live in the Million Dollar Home Page style. Every song has its own painting — in every style.</p>
-  <div class="demo-frame reveal">
-    <div class="demo-stack" id="demoStack">
-      <img class="demo-img active" src="/demo/demo-frame-1.webp" alt="Paintiano painting — early stage" loading="eager" decoding="async">
-      <img class="demo-img" src="/demo/demo-frame-2.webp" alt="Paintiano painting — building up" loading="eager" decoding="async">
-      <img class="demo-img" src="/demo/demo-frame-3.webp" alt="Paintiano painting — nearly full" loading="eager" decoding="async">
-      <img class="demo-img" src="/demo/demo-frame-4.webp" alt="Paintiano painting — complete" loading="eager" decoding="async">
+<!-- ── REASON TO BELIEVE ── -->
+<section class="rtb">
+  <div class="wrap reveal">
+    <div class="rtb-rule"></div>
+    <p class="rtb-inner">Colour and sound share one wheel. Newton tuned the spectrum to the octave; Scriabin heard keys as colour. Paintiano builds the bridge <b>for real</b> — every note mapped to colour through the circle of fifths and the golden ratio. A Paintiano piece isn't decoration over music. In a true sense, <b>it is the music.</b></p>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="band">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">How it works</p>
+      <h2 class="sec">Three steps. One painting.</h2>
     </div>
-    <div class="demo-overlay" data-i18n="demo.overlay">The Scientist · Coldplay · Million Dollar Home Page</div>
-  </div>
-</section>
-
-<!-- ─── GALLERY ─── -->
-<section class="section">
-  <div class="section-eyebrow reveal" data-i18n="gallery.eyebrow">Showcase</div>
-  <h2 class="reveal" data-i18n="gallery.h2">Made by users.</h2>
-  <p class="section-lede reveal" data-i18n-html="gallery.lede">Yours could be next. Tag <strong style="color:var(--gold)">#paintiano</strong> on Instagram.</p>
-  <div class="gallery reveal" id="gallery">
-    <a href="/play" data-try class="gallery-tile">
-      <img src="/gallery/gallery-01-pollock.webp" alt="Paintiano painting inspired by Pollock" loading="lazy" decoding="async">
-      <div class="gallery-tile-meta">inspired by Pollock</div>
-    </a>
-    <a href="/play" data-try class="gallery-tile">
-      <img src="/gallery/gallery-02-mondrian.webp" alt="Paintiano painting inspired by Mondrian" loading="lazy" decoding="async">
-      <div class="gallery-tile-meta">inspired by Mondrian</div>
-    </a>
-    <a href="/play" data-try class="gallery-tile">
-      <img src="/gallery/gallery-03-kandinsky.webp" alt="Paintiano painting inspired by Kandinsky" loading="lazy" decoding="async">
-      <div class="gallery-tile-meta">inspired by Kandinsky</div>
-    </a>
-    <a href="/play" data-try class="gallery-tile">
-      <img src="/gallery/gallery-05-kusama.webp" alt="Paintiano painting inspired by Kusama" loading="lazy" decoding="async">
-      <div class="gallery-tile-meta">inspired by Kusama</div>
-    </a>
-    <a href="/play" data-try class="gallery-tile">
-      <img src="/gallery/gallery-06-stella.webp" alt="Paintiano painting inspired by Frank Stella" loading="lazy" decoding="async">
-      <div class="gallery-tile-meta">inspired by Frank Stella</div>
-    </a>
-    <a href="/play" data-try class="gallery-tile">
-      <img src="/gallery/gallery-07-afklint.webp" alt="Paintiano painting inspired by Hilma af Klint" loading="lazy" decoding="async">
-      <div class="gallery-tile-meta">inspired by Hilma af Klint</div>
-    </a>
-    <a href="/play" data-try class="gallery-tile">
-      <img src="/gallery/gallery-08-samfrancis.webp" alt="Paintiano painting inspired by Sam Francis" loading="lazy" decoding="async">
-      <div class="gallery-tile-meta">inspired by Sam Francis</div>
-    </a>
-    <a href="/play" data-try class="gallery-tile">
-      <img src="/gallery/gallery-09-vasarely.webp" alt="Paintiano painting inspired by Vasarely" loading="lazy" decoding="async">
-      <div class="gallery-tile-meta">inspired by Vasarely</div>
-    </a>
-  </div>
-</section>
-
-<!-- ─── CONCEPT ─── -->
-<section class="section">
-  <div class="concept-block">
-    <div class="section-eyebrow reveal" data-i18n="concept.eyebrow">The idea</div>
-    <p class="concept-quote reveal" data-i18n-html="concept.quote">
-      Music and painting share the same wheel.<br>
-      Scriabin saw it. Newton saw it.<br>
-      Now you can hold it in your hand.
-    </p>
-    <p class="concept-prose reveal" data-i18n-html="concept.prose">
-      Every note gets a colour: <strong>hue</strong> from its pitch, <strong>lightness</strong> from its octave, <strong>saturation</strong> from how hard it was played. Notes drop into a golden-ratio grid — the same proportion behind seashells, flower spirals, the Parthenon. Read the grid back and the music returns. One language, two surfaces.
-    </p>
-  </div>
-</section>
-
-<!-- ─── PRICING ─── -->
-<section class="section" id="pricing">
-  <div class="section-eyebrow reveal" data-i18n="pricing.eyebrow">Pricing</div>
-  <h2 class="reveal" data-i18n="pricing.h2">Pay once. Keep forever.</h2>
-  <p class="section-lede reveal" data-i18n="pricing.lede">No subscriptions. No renewals. Art shouldn't rent.</p>
-  <div class="pricing">
-
-    <div class="tier reveal">
-      <div class="tier-name" data-i18n="pricing.free.name">Free</div>
-      <div class="tier-price">€0</div>
-      <div class="tier-tag" data-i18n="pricing.free.tag">Forever free</div>
-      <ul class="tier-features">
-        <li data-i18n="pricing.free.f1">9 unlocked artists</li>
-        <li data-i18n="pricing.free.f2">2 paint variants each</li>
-        <li data-i18n="pricing.free.f3">5 colour palettes</li>
-        <li data-i18n="pricing.free.f4">Custom palette read-only</li>
-        <li data-i18n="pricing.free.f5">3 AI trial credits</li>
-        <li class="dim" data-i18n="pricing.free.f6">Watermark on exports</li>
-        <li class="dim" data-i18n="pricing.free.f7">No 300 DPI print</li>
-      </ul>
-      <a href="/play" class="tier-cta" data-try data-i18n="pricing.free.cta">Start free</a>
+    <div class="steps">
+      <div class="step reveal" style="--accent:var(--blue)">
+        <div class="num">01</div><div class="bar"></div>
+        <h3>Bring the music</h3>
+        <p>Upload a track, hum a melody, or start from a photo's mood. Whatever you've got.</p>
+      </div>
+      <div class="step reveal" style="--accent:var(--green)">
+        <div class="num">02</div><div class="bar"></div>
+        <h3>Paintiano reads it</h3>
+        <p>Every note, key and chord drives the colour and the brush — by a fixed system, the same way every time.</p>
+      </div>
+      <div class="step reveal" style="--accent:var(--orange)">
+        <div class="num">03</div><div class="bar"></div>
+        <h3>Watch it paint</h3>
+        <p>The painting builds as the music plays. Keep it, frame it, share it.</p>
+      </div>
     </div>
-
-    <div class="tier featured reveal">
-      <div class="tier-badge" data-i18n="pricing.popular">★ Most popular</div>
-      <div class="tier-name" data-i18n="pricing.pro.name">Pro</div>
-      <div class="tier-price">€9.99 <small data-i18n="pricing.pro.once">once</small></div>
-      <div class="tier-tag" data-i18n="pricing.pro.tag">Lifetime · 5 devices</div>
-      <ul class="tier-features">
-        <li data-i18n="pricing.pro.f1">All 18 artists</li>
-        <li data-i18n="pricing.pro.f2">All paint variants</li>
-        <li data-i18n="pricing.pro.f3">Editable Custom palette</li>
-        <li data-i18n="pricing.pro.f4">No watermark</li>
-        <li data-i18n="pricing.pro.f5">300 DPI gallery-grade print</li>
-        <li data-i18n="pricing.pro.f6">Score export (MusicXML)</li>
-        <li class="dim" data-i18n="pricing.pro.f7">3 AI trial credits</li>
-      </ul>
-      <a href="/play?upgrade=pro" class="tier-cta" data-i18n="pricing.pro.cta">Upgrade to Pro</a>
-    </div>
-
-    <div class="tier reveal">
-      <div class="tier-name" data-i18n="pricing.proai.name">Pro AI</div>
-      <div class="tier-price">€19.99 <small data-i18n="pricing.proai.once">once</small></div>
-      <div class="tier-tag" data-i18n="pricing.proai.tag">Lifetime · 5 devices</div>
-      <ul class="tier-features">
-        <li data-i18n="pricing.proai.f1">Everything in Pro</li>
-        <li data-i18n="pricing.proai.f2">Unlimited AI moods</li>
-        <li data-i18n="pricing.proai.f3">AI Compose from image</li>
-        <li data-i18n="pricing.proai.f4">AI Atmosphere reads</li>
-        <li data-i18n="pricing.proai.f5">Morph between moods</li>
-        <li data-i18n="pricing.proai.f6">Vary (key shift)</li>
-        <li data-i18n="pricing.proai.f7">Mood from image</li>
-      </ul>
-      <a href="/play?upgrade=proai" class="tier-cta" data-i18n="pricing.proai.cta">Go Pro AI</a>
-    </div>
-
-  </div>
-  <p class="pricing-note reveal" data-i18n="pricing.note">One-time payment. Works on up to 5 devices.</p>
-</section>
-
-<!-- ─── FAQ ─── -->
-<section class="section">
-  <div class="section-eyebrow reveal" data-i18n="faq.eyebrow">Questions</div>
-  <h2 class="reveal" data-i18n="faq.h2">Before you tap.</h2>
-  <div class="faq" style="margin-top:40px">
-
-    <details class="faq-item reveal">
-      <summary data-i18n="faq.q1">Does it actually work?</summary>
-      <p data-i18n="faq.a1">Yes. Try the demo above, or tap "Try Paintiano". No signup. No card. Free forever for what most people need.</p>
-    </details>
-
-    <details class="faq-item reveal">
-      <summary data-i18n="faq.q2">Why one-time, not subscription?</summary>
-      <p data-i18n="faq.a2">Because art shouldn't rent. You bought the colours once. We did too. The deal makes sense.</p>
-    </details>
-
-    <details class="faq-item reveal">
-      <summary data-i18n="faq.q3">Mobile or desktop?</summary>
-      <p data-i18n="faq.a3">Both. Mobile is the daily driver — install it from your browser's "Add to Home Screen" and it behaves like a native app. Desktop has the full piano + keyboard shortcuts.</p>
-    </details>
-
-    <details class="faq-item reveal">
-      <summary data-i18n="faq.q4">What happens to my data with AI features?</summary>
-      <p data-i18n="faq.a4">Mood text goes to the AI provider for the call only, then is discarded. No accounts. No tracking pixels. No selling your creations.</p>
-    </details>
-
-    <details class="faq-item reveal">
-      <summary data-i18n="faq.q5">I don't know music theory.</summary>
-      <p data-i18n="faq.a5">You don't need any. Type a feeling, hum, drop a photo. The app handles the chords. It might even teach you a few.</p>
-    </details>
-
-    <details class="faq-item reveal">
-      <summary data-i18n="faq.q6">Can I use the paintings commercially?</summary>
-      <p data-i18n="faq.a6">With Pro or Pro AI, yes. Free exports carry a watermark and are limited to personal use.</p>
-    </details>
-
   </div>
 </section>
 
-<!-- ─── FINAL CTA ─── -->
-<section class="final-cta">
-  <h2 class="reveal" data-i18n="final.h2">Your turn.</h2>
-  <a href="/play" class="cta-primary reveal" data-try><span data-i18n="final.cta">Open Paintiano</span> <span>→</span></a>
+<!-- ── USE CASES ── -->
+<section class="band">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">What people make</p>
+      <h2 class="sec">One song. Many reasons.</h2>
+    </div>
+    <div class="cases">
+      <div class="case reveal" style="--accent:var(--pink)">
+        <div class="dot"></div>
+        <h3>For your walls</h3>
+        <p>The first-dance song, a road-trip anthem, a rainy Sunday — turned into something you'll actually frame.</p>
+      </div>
+      <div class="case reveal" style="--accent:var(--gold)">
+        <div class="dot"></div>
+        <h3>As a gift</h3>
+        <p>A wedding song, a lullaby, <em>their</em> song — printed and given. No one can ever make the same one.</p>
+      </div>
+      <div class="case reveal" style="--accent:var(--blue)">
+        <div class="dot"></div>
+        <h3>For musicians</h3>
+        <p>Cover art and visuals straight from your own track — consistent with the sound, because they're born from it.</p>
+      </div>
+      <div class="case reveal" style="--accent:var(--purple)">
+        <div class="dot"></div>
+        <h3>From a feeling</h3>
+        <p>No track in mind? Drop a photo. Paintiano reads its mood, then composes and paints to match.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- ─── FOOTER ─── -->
-<footer>
-  © 2026 Paintiano · paintiano.app
-  <div class="footer-credit" data-i18n="footer.made">Made by Raf Fel</div>
+<!-- ── SHOWCASE ── -->
+<section class="band" id="showcase">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">From the gallery</p>
+      <h2 class="sec">Every piece, from a real piece of music.</h2>
+      <p class="sec-lede">Not abstract noise — each painting traces a specific song. Here's where the music shows up on the canvas.</p>
+    </div>
+    <div class="gallery">
+      <div class="piece reveal">
+        <svg class="art" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <rect width="100" height="100" fill="#f3efe4"/>
+          <path d="M8 86 C26 60 22 36 40 12" stroke="#3a64d2" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+          <path d="M20 92 C40 70 36 40 58 18" stroke="#5b9cf6" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".8"/>
+          <path d="M60 90 C72 64 84 58 92 30" stroke="#3ab3a0" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".85"/>
+          <circle cx="40" cy="14" r="3.4" fill="#3a64d2"/><circle cx="73" cy="48" r="2.2" fill="#5b9cf6"/>
+          <circle cx="30" cy="60" r="1.6" fill="#3ab3a0"/><circle cx="86" cy="78" r="2" fill="#3a64d2" opacity=".7"/>
+        </svg>
+        <div class="meta">
+          <p class="src">Clair de Lune <span>— Debussy</span></p>
+          <p class="style">Harmony · Pollock</p>
+          <p class="why"><b>Why:</b> the rising arpeggio at 0:48 is the pale-blue thread climbing the left edge.</p>
+        </div>
+      </div>
+      <div class="piece reveal">
+        <svg class="art" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <rect width="100" height="100" fill="#f3efe4"/>
+          <g fill="none" stroke-width="2">
+            <circle cx="50" cy="50" r="10" stroke="#e0742f"/><circle cx="50" cy="50" r="20" stroke="#e0a92f"/>
+            <circle cx="50" cy="50" r="30" stroke="#9fcf3a"/><circle cx="50" cy="50" r="40" stroke="#4ec06a"/>
+            <circle cx="50" cy="50" r="49" stroke="#3ab3a0" opacity=".7"/>
+          </g>
+        </svg>
+        <div class="meta">
+          <p class="src">A hummed melody</p>
+          <p class="style">Spectral · Riley</p>
+          <p class="why"><b>Why:</b> a steady 4-note loop becomes the even rings; the key sets where the spectrum starts.</p>
+        </div>
+      </div>
+      <div class="piece reveal">
+        <svg class="art" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <rect width="100" height="100" fill="#f3efe4"/>
+          <g>
+            <circle cx="24" cy="28" r="9" fill="#d23a8e"/><circle cx="60" cy="20" r="6" fill="#7a4ed2"/>
+            <circle cx="80" cy="40" r="11" fill="#e0a92f"/><circle cx="38" cy="58" r="7" fill="#3a9bd2"/>
+            <circle cx="68" cy="70" r="9" fill="#e23b3b"/><circle cx="20" cy="78" r="6" fill="#4ec06a"/>
+            <circle cx="50" cy="44" r="4" fill="#b23ad2"/><circle cx="88" cy="80" r="5" fill="#3a64d2"/>
+          </g>
+        </svg>
+        <div class="meta">
+          <p class="src">A photo's mood <span>— warm dusk</span></p>
+          <p class="style">Harmony · Kusama</p>
+          <p class="why"><b>Why:</b> the photo set a warm, scattered mood — so Paintiano composed and dotted to match.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section class="band" id="try">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">Pricing</p>
+      <h2 class="sec">Start free. Pay once you're hooked.</h2>
+      <p class="sec-lede">No signup and no card to try it. Early-bird prices below while we're new.</p>
+    </div>
+    <div class="tiers">
+      <div class="tier reveal">
+        <p class="tname">Free</p>
+        <p class="price">€0</p>
+        <p class="was">No signup, no card.</p>
+        <ul>
+          <li>Turn songs into paintings</li>
+          <li>Hum, upload, or play live</li>
+          <li>Core colour modes &amp; styles</li>
+        </ul>
+        <a class="btn btn-ghost" href="/play">Try it free</a>
+      </div>
+      <div class="tier pro reveal">
+        <p class="tname">Pro</p>
+        <span class="badge">Early bird</span>
+        <p class="price">€9.99 <small>once</small></p>
+        <p class="was">€14.99 after early-bird</p>
+        <ul>
+          <li>Every style &amp; artist</li>
+          <li>Full-resolution exports</li>
+          <li>Made for framing &amp; print</li>
+        </ul>
+        <a class="btn btn-gold" href="/play?upgrade=pro">Get Pro</a>
+      </div>
+      <div class="tier ai reveal">
+        <p class="tname">Pro AI</p>
+        <span class="badge">Early bird</span>
+        <p class="price">€19.99 <small>once</small></p>
+        <p class="was">€24.99 after early-bird</p>
+        <ul>
+          <li>Everything in Pro</li>
+          <li>AI mood &amp; atmosphere</li>
+          <li>Paint from a photo's feeling</li>
+          <li>Trial: 3 AI compositions</li>
+        </ul>
+        <a class="btn btn-gold" href="/play?upgrade=proai">Get Pro AI</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PROOF ── -->
+<section class="band">
+  <div class="wrap center reveal">
+    <p class="eyebrow">Made with Paintiano</p>
+    <h2 class="sec">A gallery that's growing.</h2>
+    <p class="sec-lede" style="margin-bottom:26px;">Every piece here was made from a real song by a real person. We'll show numbers when they're worth showing — no invented counts.</p>
+    <div class="proof">
+      <span class="ph">★ Coming to Product Hunt</span>
+      <span class="ph">◫ Curated "Made with Paintiano" gallery</span>
+      <span class="ph">♪ Each piece names its source track</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── FINAL CTA ── -->
+<section class="final">
+  <div class="wrap reveal">
+    <h2 class="sec serif">Hear it. See it. Keep it.</h2>
+    <p>Your song is already a painting. Come find out which one.</p>
+    <a class="btn btn-gold" href="/play">Try Paintiano free →</a>
+    <p class="note" style="margin-top:16px;">No signup, no card.</p>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="foot-mark">Paintiano · v2.2</div>
+    <div class="foot-links">
+      <a href="/pricing.html">Pricing</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/refunds.html">Refunds</a>
+    </div>
+    <div class="note">Music becomes painting. Made by Raf Fel.</div>
+  </div>
 </footer>
 
-<!-- ─── STICKY MOBILE CTA ─── -->
-<div class="sticky-cta" id="stickyCta">
-  <a href="/play" class="cta-primary" data-try><span data-i18n="sticky.cta">Try Paintiano</span> <span>→</span></a>
-</div>
-
 <script>
-/* ── try-it cookie ── set paintiano_seen=1 on first CTA tap so the
-   Vercel edge middleware can redirect future root visits straight to /play */
-document.querySelectorAll('[data-try]').forEach(el => {
-  el.addEventListener('click', () => {
-    document.cookie = 'paintiano_seen=1; max-age=31536000; path=/; samesite=lax';
-  });
-});
-
-/* ── nav scroll state ── */
-const nav = document.getElementById('nav');
-const sticky = document.getElementById('stickyCta');
-let lastY = 0;
-window.addEventListener('scroll', () => {
-  const y = window.scrollY;
-  nav.classList.toggle('scrolled', y > 40);
-  // Sticky bottom CTA: appear after passing hero (≈one viewport)
-  if (window.innerWidth < 880) {
-    sticky.classList.toggle('visible', y > window.innerHeight * 0.7);
-  }
-  lastY = y;
-}, {passive: true});
-
-/* ── reveal on scroll ── */
-const io = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('in');
-      io.unobserve(e.target);
+  // Build the 12 circle-of-fifths note labels around the wheel.
+  (function(){
+    var fifths = ['C','G','D','A','E','B','F#','C#','G#','D#','A#','F'];
+    var g = document.getElementById('tickset');
+    if(!g) return;
+    var cx=180, cy=180, r=132;
+    for(var i=0;i<12;i++){
+      var ang = (-90 + i*30) * Math.PI/180;
+      var x = cx + r*Math.cos(ang);
+      var y = cy + r*Math.sin(ang) + 3.5;
+      var t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', x.toFixed(1));
+      t.setAttribute('y', y.toFixed(1));
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('class','tick-label');
+      t.textContent = fifths[i];
+      g.appendChild(t);
     }
-  });
-}, {threshold: 0.12, rootMargin: '0px 0px -40px 0px'});
-document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  })();
 
-/* ── hero canvas: subtle painting animation ── */
-(function heroAnim() {
-  const c = document.getElementById('heroCanvas');
-  const ctx = c.getContext('2d');
-  let dpr = window.devicePixelRatio || 1;
-  const dots = [];
-  function size() {
-    dpr = window.devicePixelRatio || 1;
-    c.width = c.offsetWidth * dpr;
-    c.height = c.offsetHeight * dpr;
-    ctx.scale(dpr, dpr);
-  }
-  size();
-  window.addEventListener('resize', () => {
-    ctx.setTransform(1,0,0,1,0,0);
-    size();
-  });
-  const palette = ['#c9a84c','#e5c87a','#8a6cdb','#5c8fbd','#d68a5c','#7da872','#c87aa3'];
-  function rand(min, max) { return min + Math.random() * (max - min); }
-  function spawn() {
-    dots.push({
-      x: rand(0, c.offsetWidth),
-      y: rand(0, c.offsetHeight),
-      r: rand(8, 60),
-      color: palette[Math.floor(Math.random() * palette.length)],
-      alpha: 0,
-      maxAlpha: rand(.06, .18),
-      growing: true,
-      life: 0,
-      maxLife: rand(120, 280)
-    });
-  }
-  let frame = 0;
-  function loop() {
-    frame++;
-    if (frame % 8 === 0 && dots.length < 50) spawn();
-    ctx.clearRect(0, 0, c.offsetWidth, c.offsetHeight);
-    for (let i = dots.length - 1; i >= 0; i--) {
-      const d = dots[i];
-      d.life++;
-      if (d.growing) {
-        d.alpha += d.maxAlpha / 60;
-        if (d.alpha >= d.maxAlpha) d.growing = false;
-      }
-      if (d.life > d.maxLife * 0.6) {
-        d.alpha -= d.maxAlpha / 100;
-      }
-      if (d.life > d.maxLife || d.alpha <= 0) {
-        dots.splice(i, 1);
-        continue;
-      }
-      ctx.fillStyle = d.color;
-      ctx.globalAlpha = d.alpha;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-      ctx.fill();
-      // inner ring (φ ratio)
-      ctx.globalAlpha = d.alpha * 0.4;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r * 0.382, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    requestAnimationFrame(loop);
-  }
-  loop();
-})();
-
-/* ── demo: 4-stage cross-fade build-up of a real Paintiano painting ── */
-(function demoCycler() {
-  const frames = document.querySelectorAll('#demoStack .demo-img');
-  if (!frames.length) return;
-  let i = 0;
-  // Each stage held ~2.4s, with 0.85s fade between (matches CSS transition)
-  function next() {
-    frames[i].classList.remove('active');
-    i = (i + 1) % frames.length;
-    frames[i].classList.add('active');
-  }
-  // First frame is active in HTML. Start cycling.
-  setInterval(next, 2400);
-})();
-
-/* ── easter egg: Konami code ── */
-(function konami() {
-  const seq = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
-  let pos = 0;
-  document.addEventListener('keydown', e => {
-    if (e.key.toLowerCase() === seq[pos].toLowerCase()) {
-      pos++;
-      if (pos === seq.length) {
-        pos = 0;
-        document.documentElement.animate(
-          [{filter:'hue-rotate(0deg) saturate(1)'},{filter:'hue-rotate(360deg) saturate(2.2)'},{filter:'hue-rotate(0deg) saturate(1)'}],
-          {duration: 2400, iterations: 1}
-        );
-      }
-    } else pos = 0;
-  });
-})();
-
-/* ── easter egg: chord on logo click ── */
-(function logoChord() {
-  const logo = document.querySelector('.nav-logo');
-  let actx;
-  logo.addEventListener('click', e => {
-    e.stopPropagation();
-    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-    // C major 7: C E G B
-    const freqs = [261.63, 329.63, 392.00, 493.88];
-    freqs.forEach((f, i) => {
-      const osc = actx.createOscillator();
-      const gain = actx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = f;
-      gain.gain.value = 0;
-      gain.gain.linearRampToValueAtTime(0.08, actx.currentTime + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 1.6);
-      osc.connect(gain).connect(actx.destination);
-      osc.start();
-      osc.stop(actx.currentTime + 1.7);
-    });
-  });
-})();
+  // Gentle scroll reveal.
+  (function(){
+    var els = document.querySelectorAll('.reveal');
+    if(!('IntersectionObserver' in window)){ els.forEach(function(e){e.classList.add('in');}); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, {threshold:.12, rootMargin:'0px 0px -8% 0px'});
+    els.forEach(function(e){ io.observe(e); });
+  })();
 </script>
-
 </body>
 </html>
