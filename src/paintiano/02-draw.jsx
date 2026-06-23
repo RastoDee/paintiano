@@ -102,9 +102,17 @@ function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   for(let i=0;i<n;i++){
     const note=sorted[i];
     const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;
-    ctx.fillStyle=_rgbaStr(r,g,b,a*.18);
+    // Velocity -> saturation: pp fades toward neutral grey, ff stays vivid.
+    // Per-voice grey is the note's own luma, so lightness (octave) is preserved.
+    const vN=Math.max(0,Math.min(1,((note.v||80)-30)/90));
+    const satKeep=0.25+vN*0.75;
+    const grey=0.299*r+0.587*g+0.114*b;
+    const R=Math.round(grey+(r-grey)*satKeep);
+    const G=Math.round(grey+(g-grey)*satKeep);
+    const B=Math.round(grey+(b-grey)*satKeep);
+    ctx.fillStyle=_rgbaStr(R,G,B,a*.18);
     ctx.fillRect(bx-2,y-2,BW+4,bh+4);
-    ctx.fillStyle=_rgbaStr(r,g,b,a);
+    ctx.fillStyle=_rgbaStr(R,G,B,a);
     ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);
   }
   if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}
@@ -126,12 +134,20 @@ function drawBlockNotes(ctx,bx,by,notes,gc,BW,BH){
   for(let i=0;i<n;i++){
     const note=sorted[i];
     const[r,g,b,a]=gc(note.m,note.v);
+    // Velocity -> saturation on the tinted glyph: pp fades, ff burns.
+    // Higher floor (0.40) keeps glyphs legible on the dark canvas.
+    const vN=Math.max(0,Math.min(1,((note.v||80)-30)/90));
+    const satKeep=0.40+vN*0.60;
+    const grey=0.299*r+0.587*g+0.114*b;
+    const R=Math.round(grey+(r-grey)*satKeep);
+    const G=Math.round(grey+(g-grey)*satKeep);
+    const B=Math.round(grey+(b-grey)*satKeep);
     const cx=bx+BW/2, cy=by+i*bh+bh/2;
     const name=_midiToName[note.m]||'';
     // subtle dark halo for contrast against any colour, then the tinted glyph
     ctx.fillStyle='rgba(4,4,10,0.85)';
     ctx.fillText(name,cx+0.6,cy+0.6);
-    ctx.fillStyle=_rgbaStr(r,g,b,Math.max(0.85,a));
+    ctx.fillStyle=_rgbaStr(R,G,B,Math.max(0.85,a));
     ctx.fillText(name,cx,cy);
   }
   ctx.restore();
