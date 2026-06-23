@@ -490,6 +490,27 @@ const PF_STYLE = `
             height: 48px !important;
             box-sizing: border-box !important;
           }
+          /* DESKTOP-ONLY chip enlargement (3-class selector beats the 2-class
+             rule above; strict media excludes phone-landscape that the outer
+             block also matches via its (max-height:500) branch). */
+          @media (min-width: 1024px) and (min-height: 600px) {
+            .pf-app-root .pf-setup-create-import-wrap .pf-moodtile,
+            .pf-app-root .pf-setup-create-import-wrap .pf-mfitile,
+            .pf-app-root .pf-setup-create-import-wrap .pf-compose,
+            .pf-app-root .pf-setup-create-import-wrap .pf-mic,
+            .pf-app-root .pf-setup-create-import-wrap .pf-setup-import .pf-tool {
+              min-height: 96px !important;
+              height: 96px !important;
+            }
+            .pf-app-root .pf-setup-create-import-wrap .pf-setup-col-left,
+            .pf-app-root .pf-setup-create-import-wrap .pf-setup-col-right {
+              background: transparent !important;
+              border: none !important;
+              padding: 0 !important;
+            }
+            .pf-app-root .pf-setup-create-import-wrap .pf-chip-icon { font-size: 1.45rem !important; }
+            .pf-app-root .pf-setup-create-import-wrap .pf-chip-icon > svg { width: 1.45rem !important; height: 1.45rem !important; }
+          }
           .pf-app-root > .pf-stage-part {
             grid-area: stage;
             max-width: 100% !important;
@@ -1075,34 +1096,7 @@ const _rgbaStr=(r,g,b,a)=>{
   let A=Math.round((a*1000))/1000;
   if(!Number.isFinite(A)) A=1;
   else if(A<0) A=0; else if(A>1) A=1;
-  return `rgba(${r|0},${g|0},${b|0},${A})        /* ----------------------------------------------------------------
-           SOURCE-SCREEN CHIPS - DESKTOP ONLY
-           Condition is INTENTIONALLY strict (min-width:1024 AND min-height:600)
-           so it never matches a phone in landscape (max-height<=500), tablet
-           portrait, or any mobile size. Scoped to .pf-setup-create-import-wrap
-           so only the source-picker screen is affected - never colors/styles.
-           Effects: bigger chips (96px), remove the inner panel box, slightly
-           bigger icon.
-        ---------------------------------------------------------------- */
-        @media (min-width: 1024px) and (min-height: 600px) {
-          .pf-setup-create-import-wrap .pf-setup-col-left,
-          .pf-setup-create-import-wrap .pf-setup-col-right {
-            background: transparent !important;
-            border: none !important;
-            padding: 0 !important;
-          }
-          .pf-setup-create-import-wrap .pf-moodtile,
-          .pf-setup-create-import-wrap .pf-mfitile,
-          .pf-setup-create-import-wrap .pf-compose,
-          .pf-setup-create-import-wrap .pf-mic,
-          .pf-setup-create-import-wrap .pf-setup-import .pf-tool {
-            min-height: 96px !important;
-            height: 96px !important;
-          }
-          .pf-setup-create-import-wrap .pf-chip-icon { font-size: 1.45rem !important; }
-          .pf-setup-create-import-wrap .pf-chip-icon > svg { width: 1.45rem !important; height: 1.45rem !important; }
-        }
-`;
+  return `rgba(${r|0},${g|0},${b|0},${A})`;
 };
 const hexToRgb=(hex)=>{
   if(typeof hex!=='string')return[128,128,128];
