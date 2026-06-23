@@ -5519,60 +5519,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const energy = avgVel>=95?'high, forceful':avgVel>=70?'moderate':'soft, gentle';
     const tex = density>=3.2?'dense, chordal':density>=1.8?'mixed chords and lines':'sparse, melodic';
     const mood = (atmoOn && atmoMood) ? (currentMood||(atmoMood.v>0.2?'bright':atmoMood.v<-0.2?'dark':'neutral')) : null;
-    // ─── REAL COLOUR FINGERPRINT (from the actual pixels, not the scanned notes) ──
-    // The scanned-note stats (palette/energy/tex) compress very different paintings
-    // into the same few buckets, so the AI was getting near-identical input for
-    // different images → same title, similar music. We read the real pixels and
-    // build a distinctive colour description: dominant hue families, average
-    // brightness & saturation, warm/cool balance, and contrast. This is what makes
-    // a blue Starry Night read differently from a bright sunlit interior.
-    let colors=null;
-    try{
-      const _px=pixelRef.current;
-      if(_px && _px.px && _px.px.length){
-        const data=_px.px;
-        // Sample up to ~4000 pixels evenly for speed.
-        const step=Math.max(1, Math.floor(data.length/4000));
-        const hueFam={red:0,orange:0,yellow:0,green:0,teal:0,blue:0,purple:0,pink:0,neutral:0};
-        let lSum=0,sSum=0,n=0,warm=0,cool=0,dark=0,light=0;
-        let l2Sum=0; // for brightness spread (contrast)
-        for(let i=0;i<data.length;i+=step){
-          const p=data[i]; if(!p) continue;
-          const [h,s,l]=toHsl(p.r,p.g,p.b);
-          n++; lSum+=l; sSum+=s; l2Sum+=l*l;
-          if(l<26) dark++; else if(l>74) light++;
-          if(s<14){ hueFam.neutral++; }
-          else{
-            if(h<15||h>=345) hueFam.red++;
-            else if(h<45) hueFam.orange++;
-            else if(h<70) hueFam.yellow++;
-            else if(h<160) hueFam.green++;
-            else if(h<195) hueFam.teal++;
-            else if(h<255) hueFam.blue++;
-            else if(h<315) hueFam.purple++;
-            else hueFam.pink++;
-            // warm (red→yellow + pink) vs cool (green→purple)
-            if((h<70||h>=315)) warm++; else cool++;
-          }
-        }
-        if(n){
-          const avgL=lSum/n, avgS=sSum/n;
-          const sd=Math.sqrt(Math.max(0,l2Sum/n-avgL*avgL)); // brightness stddev
-          const top=Object.entries(hueFam).filter(([k])=>k!=='neutral').sort((a,b)=>b[1]-a[1]).filter(x=>x[1]>n*0.04).slice(0,3).map(x=>x[0]);
-          const neutralPct=Math.round(100*hueFam.neutral/n);
-          const bright = avgL>=66?'bright/luminous':avgL>=40?'mid-toned':'dark/shadowy';
-          const sat = avgS>=55?'vivid, saturated':avgS>=28?'moderately coloured':'muted/desaturated';
-          const temp = warm>cool*1.4?'warm-dominant':cool>warm*1.4?'cool-dominant':'balanced warm/cool';
-          const contrast = sd>=26?'high contrast (strong lights & darks)':sd>=15?'moderate contrast':'low contrast (even tones)';
-          colors={
-            dominant: top.length?top.join(', '):'largely neutral',
-            neutralPct, bright, sat, temp, contrast,
-            darkPct:Math.round(100*dark/n), lightPct:Math.round(100*light/n)
-          };
-        }
-      }
-    }catch(_){}
-    return { palette, noteRange, energy, tex, arc, mood, count:noteN, colors };
+    return { palette, noteRange, energy, tex, arc, mood, count:noteN };
   },[chords,atmoOn,atmoMood,currentMood]);
 
   // Compose a real piece FROM the image's note material (no painting — keeps the
@@ -5621,46 +5568,61 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
-      const _c=mat.colors;
-      const colourBlock=_c?`
-The image's ACTUAL COLOURS (your strongest cue — let these drive the key, mood, and especially the title; two different paintings must yield clearly different pieces):
-- Dominant hues: ${_c.dominant}${_c.neutralPct>40?` (with ${_c.neutralPct}% neutral/grey areas)`:''}
-- Brightness: ${_c.bright} (${_c.lightPct}% bright, ${_c.darkPct}% dark areas)
-- Saturation: ${_c.sat}
-- Temperature: ${_c.temp}
-- Contrast: ${_c.contrast}`:'';
-      const prompt=`A painting was scanned into raw musical material. Compose a beautiful, free-standing solo piano piece INSPIRED BY that material — do not replay it literally.
-Image material:
+      // VISION INPUT — send the actual image to Claude so the composition is
+      // driven by what's IN the picture (a child holding a painting, a sunlit
+      // street, a stormy sea) — not by abstract scan statistics that compress
+      // every image into the same few buckets. The scan-derived material is
+      // kept as a SECONDARY hint (palette/range), but the image itself is the
+      // primary signal. This is the same pattern MFI uses (mood-from-image).
+      const _src = originalImgUrl;
+      // Resize to ~384px (matches MFI) to keep base64 small and the request fast.
+      const dataUrl = await new Promise((res,rej)=>{
+        const im=new Image();
+        im.onload=()=>{
+          try{
+            const max=384;
+            let w=im.naturalWidth||384, h=im.naturalHeight||384;
+            const sc=Math.min(1, max/Math.max(w,h));
+            w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+            const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+            cv.getContext('2d').drawImage(im,0,0,w,h);
+            res(cv.toDataURL('image/jpeg',0.82));
+          }catch(e){ rej(e); }
+        };
+        im.onerror=()=>rej(new Error('img'));
+        im.src=_src;
+      });
+      const b64 = dataUrl.split(',')[1];
+      const prompt=`Look at this image. Identify WHAT is in it (a person, a landscape, a building, an abstract painting, a child, an animal, etc.) and its dominant EMOTION (e.g. joyful, calm, dramatic, melancholic, tense, eerie, tender, triumphant). Then compose a free-standing solo piano piece whose musical choices are DRIVEN by what you see and feel.
+The scanned musical material (a secondary hint — the image itself is the primary signal):
 - Pitch palette (most present pitch classes): ${mat.palette}
-- Range: ${mat.noteRange}
-- Energy: ${mat.energy}
-- Texture: ${mat.tex}
-- Energy arc: ${mat.arc}${mat.mood?`\n- Mood/atmosphere of the image: ${mat.mood}`:''}${colourBlock}
-Use this as raw clay: let the COLOURS lead the harmony, key and emotional character (warm bright colours → major / luminous; cool dark colours → minor / introspective; high contrast → dramatic dynamic range; muted → gentle), let the pitch palette tint the harmony, let the energy and arc shape dynamics and tempo, let the texture guide density. Then compose with genuine craft — a real melody, recurring motif, clear metre and rhythm, harmonic movement, and an emotional shape that matches the image's character.
+- Range of the scan: ${mat.noteRange}${mat.mood?`\n- Detected mood: ${mat.mood}`:''}
+Map what you see to the music — two DIFFERENT images MUST yield audibly DIFFERENT pieces (different key, tempo, density, dynamics):
+- KEY: bright/happy/triumphant/playful subjects → MAJOR; sad/melancholic/eerie/tense/yearning subjects → MINOR. Pick a SPECIFIC key, vary across pieces (do not default to C).
+- TEMPO: calm/tender/melancholic → slow (55-80); joyful/playful → medium (90-120); dramatic/tense/triumphant → driving (110-145); eerie → free and slow.
+- REGISTER & DENSITY: intimate/calm → sparse, mid-low register, lots of space; energetic/triumphant → fuller chords, wider range, more notes.
+- DYNAMICS: tender → soft (vel 40-65); triumphant/dramatic → loud (80-115); tense → uneven and accented.
+- ARTICULATION: playful → staccato and syncopated; melancholic → legato; tense → repeated ostinato.
 Output ONLY a single valid JSON object — no markdown, no prose.
-Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
-Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
-Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) that fits THIS image's specific colours and mood — make it distinctive, not a generic "quiet light" type phrase that could fit any picture.
+Schema: {"title":"...","tempo":<derived>,"key":"<derived>","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
+Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) describing THIS SPECIFIC image — must be distinctive, never a generic "quiet light" type phrase.
 Composition rules:
-- LENGTH: the piece MUST last at least 60 seconds of music — aim for 70–95 seconds. With the tempo you choose, make sure the LAST note's (startBeat + duration) reaches at least tempo beats (i.e. ≥ 60 seconds worth of beats). Do not stop early.
-- 90–150 notes total (enough to fill a full minute or more)
-- STYLE: Western tonal piano music in the spirit of Ludovico Einaudi, Yiruma, Max Richter, Yann Tiersen, Chopin's Nocturnes, or Debussy's quieter pieces. Lyrical, singable melodies over flowing accompaniment. Avoid sounding like East-Asian traditional music (no shakuhachi/koto/gamelan/erhu evocations) unless the image is unmistakably East Asian.
-- KEY: Pick a major or natural minor key that fits the mood. Stay strictly diatonic except for occasional tasteful chromatic colour (passing tones, secondary dominants, leading tones).
-- HARMONY: Use familiar functional chord progressions (I–V–vi–IV, ii–V–I, vi–IV–I–V; for minor: i–VI–III–VII, i–iv–V–i). NO pentatonic, modal (Dorian/Phrygian/Lydian), whole-tone, or quartal harmonies regardless of what the palette suggests — the palette colours the KEY choice, not the SCALE type.
-- Structure: intro (motif, sparse) → development (richer, busiest) → a contrasting middle section → return of the motif → close (quieter). Use the length for a real arc, not a loop.
-- Bass (octaves 2–3): harmonic grounding throughout, ≥20 notes
-- Melody (octaves 4–6): singable, recurring motif that develops over the full length
-- Dynamics via velocity: intro ~55–70, development ~80–110, close ~45–65
-- Vary durations (mix 0.25/0.5/1/2 beats) — clear rhythm, not uniform
-- Pitches like C4/F#3/Bb5 with octave number, sharps only (C#4 not Db4)`;
+- LENGTH: 60-90 seconds of music — the LAST note's (startBeat + duration) MUST reach at least tempo beats (= 60 seconds).
+- 90-150 notes total.
+- STYLE: Western tonal piano in the spirit of Einaudi, Yiruma, Max Richter, Chopin's Nocturnes, or Debussy. Lyrical melodies over flowing accompaniment. Avoid East-Asian-traditional evocations unless the image is unmistakably East Asian.
+- HARMONY: familiar functional progressions (I-V-vi-IV, ii-V-I; minor: i-VI-III-VII, i-iv-V-i). Diatonic with tasteful chromatic colour.
+- Structure: intro (motif, sparse) → development (richer) → contrasting middle → return of motif → close (quieter).
+- Bass (octaves 2-3): ≥20 notes. Melody (octaves 4-6): singable, recurring motif.
+- Vary durations (mix 0.25/0.5/1/2). Pitches with octave, sharps only (C#4 not Db4).`;
       setWPct(40);
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
       let resp=null,respText='',lastErr=null;
       for(const _ep of _endpoints){
         try{
-          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages})});
           const txt=await r.text();
           if(r.ok&&txt){ resp=r; respText=txt; break; }
           lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
