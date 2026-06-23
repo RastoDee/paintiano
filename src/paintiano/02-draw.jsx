@@ -10464,20 +10464,25 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // moods feel more rhythmically alive) and down by very negative valence (heavy,
   // grief-like moods stay broad and slow even if the canvas is busy).
   const rhythmDrive = Math.max(0, Math.min(1, energy + 0.15*valenceBias));
-  // Duration: calm → longer & slower planes, energetic → tighter & quicker. Bounded.
-  // Strong calm atmo ("pomaly letny sen") earns extra time — the ceiling stretches
-  // up to 4:00 so the mood can actually breathe in real seconds, not just per-cell.
+  // Duration: calm → longer & slower planes, energetic → tighter & quicker.
+  // Centre ceiling at 4:00 (240s) at neutral mood (was 3:00 — default was a guluomet);
+  // serene atmo stretches up to 5:00 (300s), agitato compresses down to 1:30 (90s).
   const DUR_MIN=75000;
-  const _calmStretch = (atmoE!=null) ? Math.max(0, 0.30 - atmoE) / 0.30 : 0; // 0..1 when atmoE<0.30
-  const DUR_MAX = 180000 + 60000*_calmStretch;     // 3:00 base, up to 4:00 for serene atmo
+  const _durAtmoShift = (atmoE!=null)
+    ? (atmoE<0.5 ? +60000*(0.5-atmoE)/0.5 : -150000*(atmoE-0.5)/0.5)
+    : 0;
+  const DUR_MAX = 240000 + _durAtmoShift;     // 4:00 base; 5:00 serene; 1:30 frantic
   // Inverse: more energy = shorter (faster feel). Calm spreads out.
   const targetMs=Math.round(DUR_MAX - (DUR_MAX-DUR_MIN)*energy);
   const msPerBlock=targetMs/(_nrBands*effCols);  // per-chord step now scales with energy
   // Sustain: calm pieces ring long & legato; lively ones articulate shorter.
-  // Base spread 4×–9× driven by rhythmDrive; strong-calm atmo ("pomaly letny sen")
-  // extends the ceiling up to ~12× so the dream really lingers.
-  const _sustainCalmBoost = (atmoE!=null) ? Math.max(0, 0.30 - atmoE) / 0.30 * 3 : 0;  // 0..+3
-  const sustainMul = (9 + _sustainCalmBoost) - 5*rhythmDrive;
+  // Centre 11× at neutral mood (was 9× — default scan was too clipped); calm atmo
+  // adds up to +2 (legato dream), agitato atmo subtracts up to −3 (crisp staccato).
+  // rhythmDrive (image-driven) still spreads the per-piece dynamic.
+  const _sustainAtmoShift = (atmoE!=null)
+    ? (atmoE<0.5 ? +2*(0.5-atmoE)/0.5 : -3*(atmoE-0.5)/0.5)
+    : 0;
+  const sustainMul = (11 + _sustainAtmoShift) - 5*rhythmDrive;
   const noteDur=Math.round(msPerBlock*sustainMul);
   // octaveShift in semitones: light image → shift down, dark → shift up. 70% of
   // the deviation from 50% lightness is compensated; 30% of the brightness
@@ -10944,12 +10949,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // the octave-shifted accompaniment, whole-tone scale and wide voicing, the two
   // colour modes now occupy distinctly different sonic worlds on the same image.
   const MEL_LIFT = isSpectral ? 7 : 0;
-  // Calm mood pulls the melody ceiling down (G5 → C5) so a serene tag stops the
-  // line piercing high; energetic mood keeps the full bright register.
+  // Mood reshapes the melody ceiling. Serene atmo pulls it down (G5→C5) so the line
+  // doesn't pierce; agitato atmo lifts it up (G5→C6) so the line can soar. Neutral
+  // mood (or no atmo) keeps the G5 default.
   const MEL_CEIL_BASE = 79;
-  const _melMoodDrop = (atmoE!=null) ? Math.round(7*(1-atmoE)) : 0;   // 0..7 down
+  const _melAtmoShift = (atmoE!=null)
+    ? (atmoE<0.5 ? -7*(0.5-atmoE)/0.5 : +5*(atmoE-0.5)/0.5)
+    : 0;
   const MEL_MIN=60+MEL_LIFT;                        // C4 (G4 in spectral) — melody floor
-  const MEL_MAX=(MEL_CEIL_BASE-_melMoodDrop)+MEL_LIFT;  // G5 default, down to C5 on serene atmo
+  const MEL_MAX=Math.round(MEL_CEIL_BASE+_melAtmoShift)+MEL_LIFT;  // 79 default; 72 serene; 84 frantic
   const MEL_SPAN=MEL_MAX-MEL_MIN;
   // Brightness range across the image's melody-source notes — used to map each
   // cell's brightness onto the melody register so the LINE TRACES THE IMAGE:
@@ -11500,11 +11508,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   //       so the piece arrives instead of being cut off mid-stream.
   // Rests advance a little quicker so silence doesn't drag.
   {
-    // Per-cell interval. Calm atmo widens the gap between events: a "pomaly letny
-    // sen" should really breathe, not just hold notes longer. 150ms default, up to
-    // ~220ms at strong-calm atmo (atmoE → 0); neutral and energetic stay at 150.
-    const _baseStepCalm = (atmoE!=null) ? Math.max(0, 0.30 - atmoE) / 0.30 * 70 : 0;  // 0..+70ms
-    const BASE_STEP = 150 + _baseStepCalm;
+    // Per-cell interval. Centre at 200ms (was 150 — default was a machine gun).
+    // Serene atmo widens up to 260ms (real breathing room); frantic atmo compresses
+    // down to 100ms (driving pulse). Neutral mood (or no atmo) stays at 200.
+    const _stepAtmoShift = (atmoE!=null)
+      ? (atmoE<0.5 ? +60*(0.5-atmoE)/0.5 : -100*(atmoE-0.5)/0.5)
+      : 0;
+    const BASE_STEP = 200 + _stepAtmoShift;
     const _nBars = Math.max(1, Math.ceil(evts.length / BAR_EVENTS));
     const _ritStart = Math.max(0, evts.length - Math.min(48, BAR_EVENTS*1.5)); // last ~1.5 bars
     for(let i=0;i<evts.length;i++){
