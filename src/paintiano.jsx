@@ -11985,24 +11985,28 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const eContrast=Math.max(0,Math.min(1, contrast/42));
   const eBusy=Math.max(0,Math.min(1, busyness/22));
   let energy=Math.max(0,Math.min(1, 0.45*eChroma + 0.35*eContrast + 0.20*eBusy));
-  // ─── DYNAMICS SCALE (loudness from restlessness, not colourfulness) ──────────
-  // A calm painting must play SOFT even when vivid: a Monet is full of colour yet
-  // quiet. Overall loudness is driven by the canvas's RESTLESSNESS (contrast +
-  // busyness), NOT its chroma — which made colourful-but-calm images blast forte.
-  // Calm → ~0.55x velocity, wild → ~1.10x. Applied to every voice in a final pass
-  // before return. Deterministic; mirrors the painting Mix on the reverse path.
-  const dynE = Math.max(0, Math.min(1, 0.55*eContrast + 0.45*eBusy));
-  let dynScale = 0.55 + 0.55*dynE;
-  if(atmoE!=null) dynScale *= (0.7 + 0.6*atmoE);
-  // ── ATMO ENERGY BLEND ──
-  // When AI ATM is on, the mood's own energy pulls the painting's energy toward
-  // it (60% image / 40% mood) so a "serene" tag calms a busy canvas and a
-  // "frantic" tag energises a calm one — the mood is heard in the rhythm, not
-  // just seen in the tint. valenceBias: +1 bright/playful … -1 heavy/dark, used
-  // to tip articulation & accent character (major-ish images already lean bright
-  // via warmth; this lets the atmo word push it further).
-  if(atmoE!=null) energy = Math.max(0,Math.min(1, 0.6*energy + 0.4*atmoE));
+  // ─── ATMO BLEND (first — mood is a peer input, not a cosmetic dochutź) ───────
+  // "A pokojny letny sen" should actually slow / soften / quieten the piece, not
+  // just nudge it. Mood gets equal weight (50:50), and when it's far from neutral
+  // it overrides the image's reading: a strong serene tag on a busy canvas still
+  // calms it (and a frantic tag on a calm one wakes it up). All downstream
+  // levers (dynE, dynScale, rhythmDrive, MEL_MAX, maxRestRun) are then computed
+  // from the blended energy so the mood ripples through tempo, loudness, register,
+  // density, and breathing — not just colour tint.
   const valenceBias = atmoV!=null ? atmoV : 0;
+  if(atmoE!=null){
+    // Equal blend, then a small extra pull toward mood when it's far from neutral.
+    const extreme = Math.abs(atmoE-0.5)*2;                  // 0 mid … 1 far
+    const moodW = 0.5 + 0.25*extreme;                        // 0.50 … 0.75
+    energy = Math.max(0,Math.min(1, (1-moodW)*energy + moodW*atmoE));
+  }
+  // ─── DYNAMICS SCALE (loudness from restlessness + mood) ──────────────────
+  // A calm painting must play SOFT even when vivid (Monet pitfall). Restlessness
+  // (contrast+busyness) sets the base; mood scales it harder than before so a
+  // serene tag really quiets things down (was 0.7+0.6*atmoE → now 0.55+0.9*atmoE).
+  const dynE = Math.max(0, Math.min(1, 0.55*eContrast + 0.45*eBusy));
+  let dynScale = 0.75 + 0.35*dynE;     // floor 0.75 so plain colour fields still play
+  if(atmoE!=null) dynScale *= (0.55 + 0.9*atmoE);
   // ── RHYTHM DRIVE ──
   // A single 0..1 knob that turns "calm/legato/sparse" into "lively/articulated/
   // dense" as it rises. Driven by energy, nudged up by positive valence (bright
@@ -12484,8 +12488,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // the octave-shifted accompaniment, whole-tone scale and wide voicing, the two
   // colour modes now occupy distinctly different sonic worlds on the same image.
   const MEL_LIFT = isSpectral ? 7 : 0;
+  // Calm mood pulls the melody ceiling down (G5 → C5) so a serene tag stops the
+  // line piercing high; energetic mood keeps the full bright register.
+  const MEL_CEIL_BASE = 79;
+  const _melMoodDrop = (atmoE!=null) ? Math.round(7*(1-atmoE)) : 0;   // 0..7 down
   const MEL_MIN=60+MEL_LIFT;                        // C4 (G4 in spectral) — melody floor
-  const MEL_MAX=79+MEL_LIFT;                        // G5 (D6 in spectral) — melody ceiling
+  const MEL_MAX=(MEL_CEIL_BASE-_melMoodDrop)+MEL_LIFT;  // G5 default, down to C5 on serene atmo
   const MEL_SPAN=MEL_MAX-MEL_MIN;
   // Brightness range across the image's melody-source notes — used to map each
   // cell's brightness onto the melody register so the LINE TRACES THE IMAGE:
@@ -12749,33 +12757,23 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       break;
     }
   }
-  // Merge consecutive chords with the SAME or NEAR-SAME pitch-class set. Strict
-  // equality misses Monet's case (one voice flows while the rest hold) — a soft
-  // 2/3 PC overlap captures that without inventing new harmony. After merging,
-  // the held chord's velocity = mean of the group's onsets, voicing = the union
+  // Merge consecutive chords with the SAME pitch-class set (strict). After merging,
+  // the held chord's velocity = mean of the group's onsets, voicing = the clean
   // pitch-class set (one voice per PC, nearest octave to group mean) so a long
-  // held plane isn't denser than any one source.
-  const pcSetOf=ns=>{ const pcs=new Set(); for(const n of ns) pcs.add(((n.m%12)+12)%12); return pcs; };
-  const chordKey=ns=>ns.length?[...pcSetOf(ns)].sort((a,b)=>a-b).join(','):'';
-  const pcsSimilar=(a,b)=>{
-    if(a.size===0||b.size===0) return false;
-    let inter=0; for(const p of a) if(b.has(p)) inter++;
-    const ratio = inter/Math.max(a.size,b.size);
-    return ratio>=0.66;
+  // held plane isn't denser than any one of its sources.
+  const chordKey=ns=>{
+    if(!ns.length) return '';
+    const pcs=new Set();
+    for(const n of ns) pcs.add(((n.m%12)+12)%12);
+    return [...pcs].sort((a,b)=>a-b).join(',');
   };
   const MAX_RUN=32;                                // up to ~6s held — real legato planes
   let mi=0;
   while(mi<evts.length){
     const key=chordKey(evts[mi].n);
     if(!key){mi++;continue;}
-    const headPcs=pcSetOf(evts[mi].n);
     let mj=mi+1;
-    while(mj<evts.length){
-      const curPcs=pcSetOf(evts[mj].n);
-      if(curPcs.size===0) break;
-      if(!pcsSimilar(headPcs,curPcs)) break;
-      mj++;
-    }
+    while(mj<evts.length&&chordKey(evts[mj].n)===key)mj++;
     let k=mi;
     while(k<mj){
       const groupLen=Math.min(MAX_RUN,mj-k);
@@ -12825,11 +12823,9 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const restPct = 0.50 - 0.36*rhythmDrive;       // calm→0.50, wild→0.14
   const lowSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length*Math.max(0.18,restPct))]:0;
   const medSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length/2)]:0;
-  // Calm paintings may hold long consecutive rests (the ambient, breath quality);
-  // lively ones cap at one so the line keeps moving. Quiet calmness (low dynE)
-  // is allowed even longer silences — a serene Monet should breathe in plain
-  // air between events, not patter.
-  const maxRestRun = rhythmDrive>0.6 ? 1 : rhythmDrive>0.35 ? 2 : (dynE<0.35 ? 5 : 3);
+  // Calm paintings may hold up to THREE consecutive rests; lively ones cap at one
+  // so the line keeps moving. (Atmo influence flows through rhythmDrive, not here.)
+  const maxRestRun = rhythmDrive>0.6 ? 1 : rhythmDrive>0.35 ? 2 : 3;
   let sinceSound=0;                              // consecutive-rest guard
   let lastSoundIdx=-99;                          // anti-telegraph: spacing of onsets
   for(let i=0;i<evts.length;i++){
