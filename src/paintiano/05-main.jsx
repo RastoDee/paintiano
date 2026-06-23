@@ -9763,7 +9763,7 @@ Composition rules:
         </div>
       )}
 
-      {working && (
+      {working && !is5Col && (
         <div style={{width:'100%',maxWidth:480,marginBottom:10}}>
           <div style={{fontSize:(0.7*effScale)+'rem',letterSpacing:'.06em',marginBottom:6,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
           <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
@@ -9791,7 +9791,16 @@ Composition rules:
         const _titleSpan = (<span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>);
         const _showAiBadge = (moodContext && composeSource==='ai') || _imgAtmo;
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : null;
-        return showTransport && (<>
+        return (<>
+        {working && is5Col && (
+          <div style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
+            <div style={{fontSize:(0.62*effScale)+'rem',letterSpacing:'.06em',marginBottom:5,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
+            <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
+              <div style={{height:'100%',width:wPct+'%',background:'rgba(210,140,255,.85)',borderRadius:2,transition:'width .3s'}}/>
+            </div>
+          </div>
+        )}
+        {showTransport && (<>
         {is5Col && (imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (
           <div className="pf-track-head" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:6,display:'flex',alignItems:'center',justifyContent:'center',gap:8,flexWrap:'wrap'}}>
             <img src={imgMoodThumb || originalImgUrl} alt="source" style={{width:44,height:44,objectFit:'cover',borderRadius:8,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 8px rgba(0,0,0,.4)',opacity:.88,flexShrink:0}}/>
@@ -9885,6 +9894,7 @@ Composition rules:
           </div>
           )}
         </div>
+        </>)}
         </>);
       })()}
 
