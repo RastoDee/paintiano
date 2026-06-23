@@ -23634,7 +23634,19 @@ Composition rules:
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
       const b64=dataUrl.split(',')[1];
       const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
-      const prompt='Look at this image and judge the EMOTION / atmosphere of the scene. Output ONLY a single JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."} where valence is -1 (sad/dark) to 1 (happy/bright), energy is 0 (calm/still) to 1 (intense/dramatic), and title is a short mood phrase in '+_langName+' (max 4 words, Title Case).';
+      const prompt=
+'You are judging the EMOTION / atmosphere of a single image. Output ONLY one JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."}.\n'+
+'valence: -1 (sad/dark/heavy) ... 0 (neutral) ... +1 (happy/bright/playful).\n'+
+'energy:   0 (calm/still/dreamy) ... 0.5 (moderate) ... 1 (intense/dramatic/turbulent).\n'+
+'CRITICAL: COMMIT to a strong reading. The MIDDLE band (0.40-0.60) is reserved for genuinely ambiguous scenes only. If the scene is clearly calm, output energy <= 0.20; if clearly serene/dreamy/quiet, energy <= 0.15. If clearly intense/dramatic/stormy, energy >= 0.80; if frantic/violent, energy >= 0.90. Same for valence: clearly sad/heavy <= -0.50; clearly joyful/bright >= +0.50.\n'+
+'Anchored examples (use as a guide for the strength of your numbers):\n'+
+'  A serene Monet pond at dawn          -> {"valence": 0.40, "energy": 0.10}\n'+
+'  A melancholic rainy street           -> {"valence": -0.55, "energy": 0.20}\n'+
+'  A bright sunny field, kids playing   -> {"valence": 0.85, "energy": 0.65}\n'+
+'  A stormy Turner seascape             -> {"valence": -0.20, "energy": 0.90}\n'+
+'  A neutral architectural drawing      -> {"valence": 0.05, "energy": 0.30}\n'+
+'Avoid the safe centre. Two different paintings MUST yield audibly different numbers.\n'+
+'title: short mood phrase in '+_langName+' (max 4 words, Title Case).';
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
