@@ -6056,7 +6056,17 @@ Composition rules:
           // old fixed 2:00 constant.
           const lastEv=evts[evts.length-1];
           const realDurMs=lastEv ? (lastEv.startMs + (lastEv.n?.[0]?.durMs||0)) : IMG_TARGET_MS;
-          const _imgTitle=file.name.replace(/\.[^.]+$/,'');
+          // Filename as title — but skip auto-generated junk names (GUIDs like
+          // 964FA674-3FA9-40D8-..., long hex blobs, camera codes like IMG_2317,
+          // pure numbers) which look ugly in the transport. For those, show no
+          // title; the AI compose path will set its own evocative title anyway.
+          const _rawName=file.name.replace(/\.[^.]+$/,'');
+          const _isJunkName = !_rawName
+            || /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(_rawName) // GUID
+            || /^[0-9a-fA-F]{16,}$/.test(_rawName.replace(/[-_]/g,''))                                        // long hex blob
+            || /^(IMG|DSC|PXL|Screenshot|image|photo)[-_ ]?\d+$/i.test(_rawName)                              // camera/auto codes
+            || /^\d{6,}$/.test(_rawName);                                                                      // pure long number
+          const _imgTitle = _isJunkName ? '' : _rawName;
           setInfo({title:_imgTitle,count:evts.length,dur:Math.round(realDurMs/1000)});
           // New piece → reset the save name to THIS image's filename so the SAVE
           // picker doesn't carry a stale name from a previous mood/piece.
@@ -9372,6 +9382,14 @@ Composition rules:
               direction. Colours stay in the left column, mirroring every mode. */}
           {loadedSource==='image' && !moodFromImg && (
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {working && isDesktop && (
+              <div style={{marginBottom:2}}>
+                <div style={{fontSize:(0.58*effScale)+'rem',letterSpacing:'.06em',marginBottom:5,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
+                <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
+                  <div style={{height:'100%',width:wPct+'%',background:'rgba(210,140,255,.85)',borderRadius:2,transition:'width .3s'}}/>
+                </div>
+              </div>
+            )}
             {isDesktop && <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('imgReadLabel')!=='imgReadLabel'?t('imgReadLabel'):(lang==='SK'?'čítanie':'reading')}</div>}
             <div style={{display:'flex',flexDirection:isDesktop?'column':'row',gap:6}}>
               <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
@@ -9824,7 +9842,7 @@ Composition rules:
         </div>
       )}
 
-      {working && !is5Col && (
+      {working && !(isDesktop && loadedSource==='image' && !moodFromImg) && (
         <div style={{width:'100%',maxWidth:480,marginBottom:10}}>
           <div style={{fontSize:(0.7*effScale)+'rem',letterSpacing:'.06em',marginBottom:6,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
           <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
@@ -9853,14 +9871,6 @@ Composition rules:
         const _showAiBadge = (moodContext && composeSource==='ai') || _imgAtmo;
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : null;
         return (<>
-        {working && is5Col && (
-          <div style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
-            <div style={{fontSize:(0.62*effScale)+'rem',letterSpacing:'.06em',marginBottom:5,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
-            <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
-              <div style={{height:'100%',width:wPct+'%',background:'rgba(210,140,255,.85)',borderRadius:2,transition:'width .3s'}}/>
-            </div>
-          </div>
-        )}
         {showTransport && (<>
         {is5Col && (imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (
           <div className="pf-track-head" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:6,display:'flex',alignItems:'center',justifyContent:'center',gap:8,flexWrap:'wrap'}}>
