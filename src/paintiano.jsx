@@ -25227,12 +25227,15 @@ Composition rules:
       }else{
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
-        chords.forEach(({n:notes,idx})=>{
+        _ensureEnergies(chords);
+        chords.forEach((chord)=>{
+          const {n:notes,idx}=chord; _setCurE(chord._E);
           const cell=grid.cells&&grid.cells[idx];
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
           else if(cell)drawBlock(hctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
           else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(hctx,col*BW,row*BH,notes,gc,BW,BH,style);}
         });
+        _setCurE(0.5);
         // Pollock global drip overlay — drawn over all rendered cells.
         // hctx is already scaled; pass canvas-space CW/CH so the splatters
         // span the painting at export resolution.
