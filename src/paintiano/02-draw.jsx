@@ -888,7 +888,7 @@ function drawMondrian(ctx,bx,by,notes,gc,BW,BH){
     rects.forEach((rc,i)=>{
       const [rx,ry,rw,rh]=rc, roll=rnd();
       if(roll<0.40 && sorted.length){
-        const note=sorted[i%sorted.length], [r0,g0,b0]=gc(note.m,note.v), [r,g,bl]=_velSat(r0,g0,b0,note.v,0.65), [pr,pg,pb]=bold(r,g,bl);
+        const note=sorted[i%sorted.length], [r,g,bl]=gc(note.m,note.v), [pr,pg,pb]=bold(r,g,bl);
         ctx.fillStyle=`rgb(${pr},${pg},${pb})`; ctx.fillRect(rx,ry,rw,rh);
       } else if(roll<0.47){ ctx.fillStyle='#141109'; ctx.fillRect(rx,ry,rw,rh); }
     });
@@ -905,7 +905,7 @@ function drawMondrian(ctx,bx,by,notes,gc,BW,BH){
   // LINE color = bold() of the brightest voice (Boogie's "yellow" lines become
   // whatever the dominant hue is; in B&W they read as light grey). BEADS and
   // SQUARES pull from individual voices, boosted bold.
-  const voiceBold=(i)=>{ const nt=sorted[i%Math.max(1,sorted.length)]||{m:60,v:80}; const[r0,g0,b0]=gc(nt.m,nt.v); const[r,g,bl]=_velSat(r0,g0,b0,nt.v,0.65); return bold(r,g,bl); };
+  const voiceBold=(i)=>{ const nt=sorted[i%Math.max(1,sorted.length)]||{m:60,v:80}; const[r,g,bl]=gc(nt.m,nt.v); return bold(r,g,bl); };
   const lineC = (()=>{ const c=voiceBold(0); return `rgb(${c[0]},${c[1]},${c[2]})`; })();
   // a few large off-white blocks first (the "buildings")
   const blocks=Math.min(3,1+Math.floor(n*0.4));

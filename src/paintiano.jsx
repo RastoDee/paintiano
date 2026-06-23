@@ -1643,6 +1643,18 @@ function _progressive(lim, cn, max){
   return Math.max(1, Math.round(max * t));
 }
 
+// Velocity -> saturation helper. Lerps an [r,g,b] toward its own grey based on
+// note velocity v (0..127). 'floor' is the lowest satKeep when v is tiny -- use
+// 0.25 in mosaic/notes (strong effect), 0.55-0.75 in artist styles (subtle, to
+// preserve each artist's signature palette). Returns [R,G,B] as integers.
+function _velSat(r,g,b,v,floor){
+  const vN=Math.max(0,Math.min(1,((v||80)-30)/90));
+  const f=(floor==null?0.25:floor);
+  const k=f + vN*(1-f);
+  const grey=0.299*r+0.587*g+0.114*b;
+  return [Math.round(grey+(r-grey)*k), Math.round(grey+(g-grey)*k), Math.round(grey+(b-grey)*k)];
+}
+
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
