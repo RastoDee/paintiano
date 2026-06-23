@@ -12757,23 +12757,33 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       break;
     }
   }
-  // Merge consecutive chords with the SAME pitch-class set (strict). After merging,
-  // the held chord's velocity = mean of the group's onsets, voicing = the clean
-  // pitch-class set (one voice per PC, nearest octave to group mean) so a long
-  // held plane isn't denser than any one of its sources.
-  const chordKey=ns=>{
-    if(!ns.length) return '';
-    const pcs=new Set();
-    for(const n of ns) pcs.add(((n.m%12)+12)%12);
-    return [...pcs].sort((a,b)=>a-b).join(',');
+  // Merge consecutive chords with the SAME or NEAR-SAME pitch-class set (≥ 2/3
+  // overlap). Strict equality misses Monet-style flow where one voice moves while
+  // the rest hold; a soft overlap captures that without inventing new harmony.
+  // Velocity of the held chord = mean of the group's onsets, voicing = the union
+  // PC set (one voice per PC, nearest octave to group mean) so a long held plane
+  // is never denser than any one source.
+  const pcSetOf=ns=>{ const pcs=new Set(); for(const n of ns) pcs.add(((n.m%12)+12)%12); return pcs; };
+  const chordKey=ns=>ns.length?[...pcSetOf(ns)].sort((a,b)=>a-b).join(','):'';
+  const pcsSimilar=(a,b)=>{
+    if(a.size===0||b.size===0) return false;
+    let inter=0; for(const p of a) if(b.has(p)) inter++;
+    const ratio = inter/Math.max(a.size,b.size);
+    return ratio>=0.66;
   };
   const MAX_RUN=32;                                // up to ~6s held — real legato planes
   let mi=0;
   while(mi<evts.length){
     const key=chordKey(evts[mi].n);
     if(!key){mi++;continue;}
+    const headPcs=pcSetOf(evts[mi].n);
     let mj=mi+1;
-    while(mj<evts.length&&chordKey(evts[mj].n)===key)mj++;
+    while(mj<evts.length){
+      const curPcs=pcSetOf(evts[mj].n);
+      if(curPcs.size===0) break;
+      if(!pcsSimilar(headPcs,curPcs)) break;
+      mj++;
+    }
     let k=mi;
     while(k<mj){
       const groupLen=Math.min(MAX_RUN,mj-k);
