@@ -11200,26 +11200,33 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       break;
     }
   }
-  // Merge consecutive chords with the SAME PITCH-CLASS SET (not just identical
-  // MIDI). Catches the Monet case: scan emits many adjacent cells with the same
-  // harmony but slightly different octaves/voices — they were the same chord
-  // held, not a machine-gun of repeated notes. After merging, the held chord's
-  // velocity = average of the group's onsets, and its voicing = the clean
-  // pitch-class set (one voice per PC, in the nearest octave to the group mean),
-  // so a long held plane isn't denser than any one of its sources.
-  const chordKey=ns=>{
-    if(!ns.length) return '';
-    const pcs=new Set();
-    for(const n of ns) pcs.add(((n.m%12)+12)%12);
-    return [...pcs].sort((a,b)=>a-b).join(',');
+  // Merge consecutive chords with the SAME or NEAR-SAME pitch-class set. Strict
+  // equality misses Monet's case (one voice flows while the rest hold) — a soft
+  // 2/3 PC overlap captures that without inventing new harmony. After merging,
+  // the held chord's velocity = mean of the group's onsets, voicing = the union
+  // pitch-class set (one voice per PC, nearest octave to group mean) so a long
+  // held plane isn't denser than any one source.
+  const pcSetOf=ns=>{ const pcs=new Set(); for(const n of ns) pcs.add(((n.m%12)+12)%12); return pcs; };
+  const chordKey=ns=>ns.length?[...pcSetOf(ns)].sort((a,b)=>a-b).join(','):'';
+  const pcsSimilar=(a,b)=>{
+    if(a.size===0||b.size===0) return false;
+    let inter=0; for(const p of a) if(b.has(p)) inter++;
+    const ratio = inter/Math.max(a.size,b.size);
+    return ratio>=0.66;
   };
   const MAX_RUN=32;                                // up to ~6s held — real legato planes
   let mi=0;
   while(mi<evts.length){
     const key=chordKey(evts[mi].n);
     if(!key){mi++;continue;}
+    const headPcs=pcSetOf(evts[mi].n);
     let mj=mi+1;
-    while(mj<evts.length&&chordKey(evts[mj].n)===key)mj++;
+    while(mj<evts.length){
+      const curPcs=pcSetOf(evts[mj].n);
+      if(curPcs.size===0) break;
+      if(!pcsSimilar(headPcs,curPcs)) break;
+      mj++;
+    }
     let k=mi;
     while(k<mj){
       const groupLen=Math.min(MAX_RUN,mj-k);
@@ -11269,10 +11276,11 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const restPct = 0.50 - 0.36*rhythmDrive;       // calm→0.50, wild→0.14
   const lowSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length*Math.max(0.18,restPct))]:0;
   const medSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length/2)]:0;
-  // Calm paintings may hold up to THREE consecutive rests (long ambient
-  // silences); lively ones cap at one so the line keeps moving. Range of held
-  // silence is part of what separates serene from driving.
-  const maxRestRun = rhythmDrive>0.6 ? 1 : rhythmDrive>0.35 ? 2 : 3;
+  // Calm paintings may hold long consecutive rests (the ambient, breath quality);
+  // lively ones cap at one so the line keeps moving. Quiet calmness (low dynE)
+  // is allowed even longer silences — a serene Monet should breathe in plain
+  // air between events, not patter.
+  const maxRestRun = rhythmDrive>0.6 ? 1 : rhythmDrive>0.35 ? 2 : (dynE<0.35 ? 5 : 3);
   let sinceSound=0;                              // consecutive-rest guard
   let lastSoundIdx=-99;                          // anti-telegraph: spacing of onsets
   for(let i=0;i<evts.length;i++){
