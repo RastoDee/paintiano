@@ -11242,6 +11242,53 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       break;
     }
   }
+
+  // ─── PIANO TECHNIQUE: TIED NOTES ───────────────────────────────────
+  // A real pianist does NOT re-strike a key that's already ringing. If a chord's
+  // note matches a previous chord's note (same MIDI, just struck), keep it tied:
+  // drop the new onset's velocity hard so it sounds like the previous note simply
+  // sustained through, instead of trieskanie (block-strike every chord). Signal:
+  // exact MIDI match against the most recent playable event.
+  for(let i=1;i<evts.length;i++){
+    const ev=evts[i]; if(!ev.n || !ev.n.length || ev._playable===false) continue;
+    // Find previous playable event
+    let prev=null; for(let k=i-1;k>=0;k--){ if(evts[k] && evts[k].n && evts[k].n.length && evts[k]._playable!==false){ prev=evts[k]; break; } }
+    if(!prev) continue;
+    const prevMidis=new Set(prev.n.map(n=>n.m));
+    ev.n=ev.n.map(n=>{
+      if(prevMidis.has(n.m)){
+        // Tied: barely audible re-attack (the previous note still rings). Keep
+        // duration so harmonic content remains in the cell.
+        return {...n, v:Math.max(6, Math.round((n.v||64)*0.10)), _tied:true};
+      }
+      return n;
+    });
+  }
+
+  // ─── PIANO TECHNIQUE: ARPEGGIO (per-note offsetMs) ─────────────────────
+  // Vivid / charged chords are rolled bottom-up (low note first, top last), the
+  // classic pianistic gesture. Speed scales with the cell's emotional charge:
+  // very vivid → fast roll (25ms gap, Lisztian), moderately vivid → slow roll
+  // (60ms, Chopin balada). Calm cells stay block-chord (no offset). Signal:
+  // chord size ≥ 3 AND _chroma above per-piece median. Bass+melody anchor (0ms).
+  {
+    // Per-piece chroma threshold: rolled chords are the upper half of charge.
+    const chromaVals=evts.map(e=>e._chroma||0).filter(c=>c>0).sort((a,b)=>a-b);
+    const chromaMed=chromaVals.length?chromaVals[Math.floor(chromaVals.length*0.55)]:0;
+    for(const ev of evts){
+      if(!ev.n || ev.n.length<3 || ev._playable===false) continue;
+      if((ev._chroma||0) < chromaMed) continue;
+      // Roll speed: fast on very vivid, slow on moderate.
+      const charge=Math.min(1, (ev._chroma||0)/(chromaMed*2));
+      const gap = Math.round(25 + (1-charge)*35);   // 25ms (vivid) … 60ms (moderate)
+      // Sort low→high. Melody (top voice) lands LAST so the line still sings on top.
+      const sorted=[...ev.n].sort((a,b)=>a.m-b.m);
+      const offsetByM=new Map();
+      sorted.forEach((n,idx)=>{ offsetByM.set(n.m, idx*gap); });
+      ev.n=ev.n.map(n=>({...n, offsetMs:offsetByM.get(n.m)||0}));
+    }
+  }
+
   // Merge consecutive chords with the SAME pitch-class set (strict). After merging,
   // velocity = mean of the group, voicing = clean PC set (one voice per PC at the
   // nearest octave to the group mean), so a long held plane isn't denser than any
