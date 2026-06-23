@@ -6402,9 +6402,20 @@ Composition rules:
           const velScale=liveChords[i]._runLen?1:0.75;
           try{
             const notes=liveChords[i].n;
-            const midis=notes.map(({m,v,durMs})=>{
+            // Per-note onset offset (offsetMs) supports piano techniques: arpeggio,
+            // tied notes, voice-specific timing. If absent or 0, fires immediately
+            // (identical to previous block-chord behaviour). When >0, schedules the
+            // playNote via setTimeout so the player honours the per-note timing.
+            const midis=notes.map(({m,v,durMs,offsetMs})=>{
               const scaledDur=Math.round(durMs*durMul/playbackSpeedRef.current);
-              playNote(m,Math.round(v*velScale),scaledDur);
+              const _off=(typeof offsetMs==='number' && offsetMs>0)
+                ? Math.max(0, Math.round(offsetMs/playbackSpeedRef.current))
+                : 0;
+              if(_off>0){
+                pushTimer(()=>{ try{ playNote(m,Math.round(v*velScale),scaledDur); }catch(_){}}, _off);
+              } else {
+                playNote(m,Math.round(v*velScale),scaledDur);
+              }
               return{m,scaledDur};
             });
             // Batch add all notes in this chord in one state update
