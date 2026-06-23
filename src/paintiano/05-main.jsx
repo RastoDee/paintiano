@@ -6412,44 +6412,52 @@ Composition rules:
             // and the global pushTimer cleanup (so stopping playback cancels it).
             const _trem=liveChords[i]._tremolo===true;
             if(_trem){
-              const gesture=liveChords[i]._planeGesture||'shimmer';
-              const gap=Math.max(90, Math.round((liveChords[i]._tremoloMs||180)/playbackSpeedRef.current));
+              const lc=liveChords[i];
+              const gesture=lc._planeGesture||'arc';
+              const gap0=Math.max(85, Math.round((lc._tremoloMs||180)/playbackSpeedRef.current));
               const fullSpan=Math.round((notes[0]?.durMs||300)*durMul/playbackSpeedRef.current);
-              const reps=Math.max(2, Math.min(40, Math.floor(fullSpan/gap)));
-              const segDur=Math.max(120, Math.round(fullSpan/reps));
-              // A sustained plane keeps itself alive with a gesture chosen (in the
-              // composer pass) from the plane's own content, so a big field morphs
-              // instead of looping one re-strike:
-              //   • shimmer — soft slow re-strike, notes together (calm patch)
-              //   • pulse   — firmer/faster re-strike, slight bottom-up lean (lively patch)
-              //   • roll    — each re-strike is ARPEGGIATED low→high (a fresh seam)
-              if(gesture==='roll'){
-                // Rolled re-articulation: every repetition rolls the chord bottom→top.
-                const sortedLo=[...notes].sort((a,b)=>a.m-b.m);
-                const rollStep=Math.max(14, Math.round(28/playbackSpeedRef.current));
-                for(let r=0;r<reps;r++){
-                  sortedLo.forEach(({m,v},vi)=>{
-                    const vv=Math.round(v*velScale*(r===0?0.92:0.7));
-                    const at=r*gap + vi*rollStep;
-                    if(at===0){ try{ playNote(m,vv,segDur); }catch(_){} }
-                    else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, at); }
-                  });
-                }
-              } else {
-                // shimmer / pulse: block re-strikes. Pulse hits a touch harder and
-                // leans the bottom voice slightly ahead for drive; shimmer is even.
-                const pulse=gesture==='pulse';
-                const lead=pulse?Math.max(8,Math.round(12/playbackSpeedRef.current)):0;
-                const baseV=pulse?0.85:0.72;          // re-strike loudness (first attack full)
-                const sortedLo=lead?[...notes].sort((a,b)=>a.m-b.m):notes;
-                sortedLo.forEach(({m,v},vi)=>{
-                  for(let r=0;r<reps;r++){
-                    const vv=Math.round(v*velScale*(r===0?1:baseV));
-                    const at=r*gap + (lead?vi*lead:0);
-                    if(at===0){ try{ playNote(m,vv,segDur); }catch(_){} }
-                    else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, at); }
-                  }
+              // The hold UNFOLDS an internal arc rather than repeating one gesture:
+              //   • tempo glides from gap0 → gap0*endRatio (accel if <1, rit if >1)
+              //   • the top voice periodically lifts by _tremLift semitones and falls
+              //     back — a slow shimmer of register across the held plane
+              //   • loudness breathes (swell) so the field never sits flat
+              // All params come from the composer pass (deterministic per block);
+              // neighbouring blocks carry different arcs so a big field keeps moving.
+              const endRatio=Math.max(0.5, Math.min(1.8, lc._tremEndRatio||1));
+              const lift=lc._tremLift||0;             // semitone lift of top voice (0/7/12)
+              const liftCycles=Math.max(1, lc._tremLiftCycles||1);
+              const swell=Math.max(0, Math.min(0.5, lc._tremSwell!=null?lc._tremSwell:0.25));
+              const rolled=(gesture==='roll');
+              const rollStep=Math.max(12, Math.round(26/playbackSpeedRef.current));
+              // Identify the top (melody) voice so the register lift moves the line,
+              // not the bass.
+              let topM=-Infinity; for(const n of notes){ if(n.m>topM) topM=n.m; }
+              // Walk re-strikes by CUMULATIVE time with a gliding gap, until we fill
+              // the held span. Cap the count so we never schedule a runaway list.
+              let t=0, r=0;
+              const maxReps=80;
+              while(t < fullSpan-20 && r < maxReps){
+                const prog = fullSpan>0 ? t/fullSpan : 0;         // 0..1 across the hold
+                const gNow = Math.max(70, Math.round(gap0*(1 + (endRatio-1)*prog)));
+                const segDur = Math.max(110, Math.round(gNow*1.6));
+                // Swell envelope: gentle rise to the middle, fall to the end.
+                const env = 1 - swell*0.5 + swell*Math.sin(Math.PI*prog);
+                // Register lift cycle: a smooth 0..1..0 that lifts the top voice.
+                const liftPhase = lift>0 ? (Math.sin(Math.PI*liftCycles*prog) > 0.55 ? 1 : 0) : 0;
+                const baseVel = r===0?1:(rolled?0.7:0.78);
+                const tAt=t;
+                // sort low→high only when rolling; otherwise strike together
+                const order = rolled ? [...notes].sort((a,b)=>a.m-b.m) : notes;
+                order.forEach((n,vi)=>{
+                  const isTop = n.m===topM;
+                  const mPlay = (isTop && liftPhase) ? n.m+lift : n.m;
+                  const vv = Math.max(14, Math.round((n.v||64)*velScale*baseVel*env));
+                  const at = Math.round(tAt + (rolled?vi*rollStep:0));
+                  if(at<=0){ try{ playNote(mPlay,vv,segDur); }catch(_){} }
+                  else { pushTimer(()=>{ try{ playNote(mPlay,vv,segDur); }catch(_){}}, at); }
                 });
+                t += gNow;
+                r++;
               }
               const tmid=notes.map(({m})=>({m,scaledDur:fullSpan}));
               setActive(p=>{const s=new Set(p);for(const x of tmid)s.add(x.m);return s;});
