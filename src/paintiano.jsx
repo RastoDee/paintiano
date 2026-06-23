@@ -11985,6 +11985,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const eContrast=Math.max(0,Math.min(1, contrast/42));
   const eBusy=Math.max(0,Math.min(1, busyness/22));
   let energy=Math.max(0,Math.min(1, 0.45*eChroma + 0.35*eContrast + 0.20*eBusy));
+  // ─── DYNAMICS SCALE (loudness from restlessness, not colourfulness) ──────────
+  // A calm painting must play SOFT even when vivid: a Monet is full of colour yet
+  // quiet. Overall loudness is driven by the canvas's RESTLESSNESS (contrast +
+  // busyness), NOT its chroma — which made colourful-but-calm images blast forte.
+  // Calm → ~0.55x velocity, wild → ~1.10x. Applied to every voice in a final pass
+  // before return. Deterministic; mirrors the painting Mix on the reverse path.
+  const dynE = Math.max(0, Math.min(1, 0.55*eContrast + 0.45*eBusy));
+  let dynScale = 0.55 + 0.55*dynE;
+  if(atmoE!=null) dynScale *= (0.7 + 0.6*atmoE);
   // ── ATMO ENERGY BLEND ──
   // When AI ATM is on, the mood's own energy pulls the painting's energy toward
   // it (60% image / 40% mood) so a "serene" tag calms a busy canvas and a
@@ -13038,6 +13047,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       let stepMs = BASE_STEP * darkFactor * accentFactor * breathFactor * ritardFactor * restFactor;
       // Safety clamp: never absurdly fast or slow per cell.
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
+    }
+  }
+  // ─── Final dynamics scaling: soften calm paintings, keep wild ones loud ──────
+  // Relative shaping above (accents, arc, phrasing) is preserved; only the overall
+  // level shifts. A calm Monet plays mp/p, a busy Picasso stays loud.
+  if(Math.abs(dynScale-1)>0.001){
+    for(const ev of evts){
+      if(!ev.n || !ev.n.length) continue;
+      ev.n = ev.n.map(n=>({...n, v: Math.max(20, Math.min(120, Math.round((n.v||64)*dynScale)))}));
     }
   }
   return evts;
