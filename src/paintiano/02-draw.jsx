@@ -11194,7 +11194,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     // (allBass) we deliberately add ONLY this single pedal root: the many low
     // source voices that used to pile up here (the "rumble") are dropped in
     // favour of one clean pedal under the lifted melody + mid-register chord.
-    if(bassNotes.length){
+    // Strong-calm atmo ("pomaly letny sen") skips the deep pedal entirely — a calm
+    // mood is vertical air & singing melody, not a low rumble. Even on a dark image,
+    // the dream's mood overrides the painting's literal black-dot bass. Mid/agitato
+    // moods keep the pedal as before.
+    const _suppressBass = (atmoE!=null && atmoE<0.30);
+    if(bassNotes.length && !_suppressBass){
       const darkBassM = Math.max(24, 24 + ((barPCs[0]-0+12)%12)); // C1 octave (deep but clear)
       const bv = Math.round(Math.min(...bassNotes.map(n=>n.v||70)) * 0.7); // softer than source
       if(!accomp.some(n=>n.m===darkBassM) && melActual!==darkBassM){
