@@ -10448,7 +10448,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   if(atmoE!=null){
     // Equal blend, then a small extra pull toward mood when it's far from neutral.
     const extreme = Math.abs(atmoE-0.5)*2;                  // 0 mid … 1 far
-    const moodW = 0.5 + 0.25*extreme;                        // 0.50 … 0.75
+    const moodW = 0.5 + 0.35*extreme;                        // 0.50 … 0.85 — strong mood prevails
     energy = Math.max(0,Math.min(1, (1-moodW)*energy + moodW*atmoE));
   }
   // ─── DYNAMICS SCALE (loudness from restlessness + mood) ──────────────────
@@ -10464,9 +10464,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // moods feel more rhythmically alive) and down by very negative valence (heavy,
   // grief-like moods stay broad and slow even if the canvas is busy).
   const rhythmDrive = Math.max(0, Math.min(1, energy + 0.15*valenceBias));
-  // Duration: calm → longer & slower planes (up to ~2:40), energetic → tighter &
-  // quicker (down to ~1:30). Bounded both ways so it's always a real, finite piece.
-  const DUR_MIN=75000, DUR_MAX=180000;   // 1:15 … 3:00 — wider spread so calm vs wild really differ
+  // Duration: calm → longer & slower planes, energetic → tighter & quicker. Bounded.
+  // Strong calm atmo ("pomaly letny sen") earns extra time — the ceiling stretches
+  // up to 4:00 so the mood can actually breathe in real seconds, not just per-cell.
+  const DUR_MIN=75000;
+  const _calmStretch = (atmoE!=null) ? Math.max(0, 0.30 - atmoE) / 0.30 : 0; // 0..1 when atmoE<0.30
+  const DUR_MAX = 180000 + 60000*_calmStretch;     // 3:00 base, up to 4:00 for serene atmo
   // Inverse: more energy = shorter (faster feel). Calm spreads out.
   const targetMs=Math.round(DUR_MAX - (DUR_MAX-DUR_MIN)*energy);
   const msPerBlock=targetMs/(_nrBands*effCols);  // per-chord step now scales with energy
@@ -11208,33 +11211,23 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       break;
     }
   }
-  // Merge consecutive chords with the SAME or NEAR-SAME pitch-class set (≥ 2/3
-  // overlap). Strict equality misses Monet-style flow where one voice moves while
-  // the rest hold; a soft overlap captures that without inventing new harmony.
-  // Velocity of the held chord = mean of the group's onsets, voicing = the union
-  // PC set (one voice per PC, nearest octave to group mean) so a long held plane
-  // is never denser than any one source.
-  const pcSetOf=ns=>{ const pcs=new Set(); for(const n of ns) pcs.add(((n.m%12)+12)%12); return pcs; };
-  const chordKey=ns=>ns.length?[...pcSetOf(ns)].sort((a,b)=>a-b).join(','):'';
-  const pcsSimilar=(a,b)=>{
-    if(a.size===0||b.size===0) return false;
-    let inter=0; for(const p of a) if(b.has(p)) inter++;
-    const ratio = inter/Math.max(a.size,b.size);
-    return ratio>=0.66;
+  // Merge consecutive chords with the SAME pitch-class set (strict). After merging,
+  // velocity = mean of the group, voicing = clean PC set (one voice per PC at the
+  // nearest octave to the group mean), so a long held plane isn't denser than any
+  // one of its sources. Soft (2/3) merge was tried and lost Liszt's harmonic motion.
+  const chordKey=ns=>{
+    if(!ns.length) return '';
+    const pcs=new Set();
+    for(const n of ns) pcs.add(((n.m%12)+12)%12);
+    return [...pcs].sort((a,b)=>a-b).join(',');
   };
   const MAX_RUN=32;                                // up to ~6s held — real legato planes
   let mi=0;
   while(mi<evts.length){
     const key=chordKey(evts[mi].n);
     if(!key){mi++;continue;}
-    const headPcs=pcSetOf(evts[mi].n);
     let mj=mi+1;
-    while(mj<evts.length){
-      const curPcs=pcSetOf(evts[mj].n);
-      if(curPcs.size===0) break;
-      if(!pcsSimilar(headPcs,curPcs)) break;
-      mj++;
-    }
+    while(mj<evts.length&&chordKey(evts[mj].n)===key)mj++;
     let k=mi;
     while(k<mj){
       const groupLen=Math.min(MAX_RUN,mj-k);
