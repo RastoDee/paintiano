@@ -5663,11 +5663,43 @@ Composition rules:
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return null; } }
     setMelodyBusy(true); setErr(''); setErrInfo(false);
     try{
+      // ATMO directive: when an atmosphere has been detected, project (v,e) into
+      // explicit musical instructions so Claude composes a mood-coherent line from
+      // the start — not just a generic melody that we later scale. (v,e) extremes
+      // trigger hard rules; mid values give a gentle suggestion.
+      const _atmoMood = (atmoOn && atmoMood) ? atmoMood : null;
+      let atmoBlock='';
+      if(_atmoMood){
+        const _av=_atmoMood.v, _ae=_atmoMood.e;
+        const lines=[];
+        if(_ae<=0.20){
+          lines.push('Energy is VERY LOW (calm/dreamy). MUST: slow tempo 50-70 BPM, legato long notes (mostly half/whole), soft dynamics (melody 60-85, chords 45-65), MID-LOW register (melody octaves 4-5, NOT 6), sparse texture, no leaps larger than a fifth, no syncopation, intro-able ambient feel.');
+        } else if(_ae>=0.80){
+          lines.push('Energy is VERY HIGH (intense/dramatic). MUST: tempo 115-150 BPM, articulated rhythms with staccato + syncopation, loud dynamics (melody 105-125, chords 88-108), full upper register (melody octave 5-6), denser chords, allow octave leaps and dramatic accents.');
+        } else if(_ae<=0.35){
+          lines.push('Energy is low. Prefer slow tempo 65-85 BPM, mostly legato, softer dynamics, mid register.');
+        } else if(_ae>=0.65){
+          lines.push('Energy is high. Prefer faster tempo 100-130 BPM, more articulation, brighter dynamics.');
+        }
+        if(_av<=-0.50){
+          lines.push('Valence is strongly negative (sad/heavy/melancholic). MUST: minor key, descending phrase shapes, dissonant suspensions resolved downward.');
+        } else if(_av>=0.50){
+          lines.push('Valence is strongly positive (joyful/bright). MUST: major key, ascending phrase shapes, plagal/authentic cadences that feel resolved and lifting.');
+        } else if(_av<=-0.20){
+          lines.push('Valence is slightly negative. Lean minor key.');
+        } else if(_av>=0.20){
+          lines.push('Valence is slightly positive. Lean major key.');
+        }
+        if(_atmoMood.title){ lines.push('Title hint: "'+_atmoMood.title+'".'); }
+        if(lines.length){
+          atmoBlock = '\nMOOD DIRECTIVE (this overrides defaults; commit to these choices, do not regress to the safe middle):\n- '+lines.join('\n- ')+'\n';
+        }
+      }
       const prompt=`A painting has been scanned into a musical TEXTURE (its colours played as notes). Compose a SECOND PIANO PART that a concert pianist would play over that texture — a full, two-handed, CHORDAL piece with a clear singing MELODY on top and real harmony underneath. NOT a thin one-finger line: this is a complete, rich piano voice that stands beside the texture as an equal. It must mirror and crown the scan, echoing the image's mood, colour and radiance.
 The image's musical material:
 - Pitch palette (colours → notes): ${mat.palette}
 - Range of the texture: ${mat.noteRange}
-- Energy: ${mat.energy}    Texture: ${mat.tex}    Arc: ${mat.arc}${mat.mood?`\n- Mood / atmosphere: ${mat.mood}`:''}
+- Energy: ${mat.energy}    Texture: ${mat.tex}    Arc: ${mat.arc}${mat.mood?`\n- Mood / atmosphere: ${mat.mood}`:''}${atmoBlock}
 Compose with real musical craft, following classical harmonization method:
 - KEY: let the pitch palette define the tonal centre; choose major or natural minor to fit the mood. Stay diatonic (tasteful passing/leading tones fine; no random chromaticism).
 - LENGTH: write ONE short, COMPLETE melodic phrase of about 8–16 bars (a self-contained tune that could loop seamlessly back to its start). Keep total length under ~24 beats. This cell will be REPEATED across the painting, so it must sound whole on its own and join cleanly to its own beginning.

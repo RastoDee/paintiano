@@ -1650,11 +1650,22 @@ function _melodyVoice(evts, mel, atmo){
   // (root + major/minor/lydian). Snap the melody + chords to the SAME scale so the
   // sung line stays in tune with the retuned texture instead of clashing.
   let snap=(m)=>m;
-  if(atmo && typeof atmo.root==='number'){
-    const v=typeof atmo.v==='number'?atmo.v:0, e=typeof atmo.e==='number'?atmo.e:0.5;
+  if(atmo && typeof atmo.v==='number' && typeof atmo.e==='number'){
+    const v=atmo.v, e=atmo.e;
     const sm=(v>=0.5&&e>0.7)?'lydian':(v>=0?'major':'minor');
     const SC=({major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],lydian:[0,2,4,6,7,9,11]})[sm];
-    const root=((atmo.root||0)%12+12)%12;
+    // ATMO root was historically hardcoded to 0 (always C) — a bug. If no usable
+    // root supplied, derive it from the scan texture's pitch-class histogram so the
+    // melody snaps to the same tonic the scan already chose (Krumhansl key detection).
+    let root;
+    if(typeof atmo.root==='number' && atmo.root>0){
+      root=((atmo.root|0)%12+12)%12;
+    } else {
+      const pcH=new Array(12).fill(0);
+      for(const ev of evts) for(const no of (ev.n||[])) pcH[((no.m%12)+12)%12]+=(no.v||64);
+      let bestPc=0,bestW=-1; for(let i=0;i<12;i++) if(pcH[i]>bestW){bestW=pcH[i];bestPc=i;}
+      root=bestPc;
+    }
     snap=(m)=>{ const pc=((m-root)%12+12)%12; let best=SC[0],bd=99; for(const d of SC){ const dd=Math.min(((pc-d)%12+12)%12,((d-pc)%12+12)%12); if(dd<bd){bd=dd;best=d;} } let delta=((best-pc)%12+12)%12; if(delta>6) delta-=12; return m+delta; };
   }
   // Texture ceiling (highest scan pitch) so the melody can sit just above it.
@@ -1680,11 +1691,23 @@ function _melodyVoice(evts, mel, atmo){
   if(!parsed.length||!isFinite(melMinBeat)||melMaxBeat<=melMinBeat) return empty;
   // Register lift: shift the melody up by whole octaves so it sits just above the
   // texture top — sings as a layer over it, stays singable.
+  // Register lift target: serene atmo wants the line low and intimate (just over
+  // the texture); agitato wants it soaring above. Floor offset shifts by -2..+4.
+  const _liftFloorShift = (_atmoE!=null)
+    ? (_atmoE<0.5 ? -2*(0.5-_atmoE)/0.5 : +4*(_atmoE-0.5)/0.5)
+    : 0;
   let lift=0;
-  const targetFloor=scanHi+4;
+  const targetFloor=scanHi+4+Math.round(_liftFloorShift);
   while(melLo+lift < targetFloor && (melHi+lift) < 94) lift+=12;
   while((melHi+lift) > 96 && (melLo+lift) > scanHi+4) lift-=12;
-  const leadVel=(v)=> Math.max(92, Math.min(120, Math.round(90 + (v/127)*30)));
+  // Lead velocity — default 92..120. Mood reshapes it: serene softens (down to
+  // ~78..104), agitato hardens (up to ~102..127), so the melody actually sings
+  // quieter on a calm tag and louder on a frantic one.
+  const _atmoE = (atmo && typeof atmo.e==='number') ? atmo.e : null;
+  const _velShift = (_atmoE!=null)
+    ? (_atmoE<0.5 ? -14*(0.5-_atmoE)/0.5 : +7*(_atmoE-0.5)/0.5)
+    : 0;
+  const leadVel=(v)=> Math.max(40, Math.min(127, Math.round(90 + (v/127)*30 + _velShift)));
 
   // ── LOOP MODEL ─────────────────────────────────────────────────────────────
   // The AI writes ONE short, continuous melodic cell (a real phrase, dense and
@@ -1732,7 +1755,9 @@ function _melodyVoice(evts, mel, atmo){
   const cellFrac = Math.min(0.5, Math.max(0.06, cellSec/scanSec));  // one cell's share of the timeline
   // How many entries the piece can host (leave room for intro + gaps + outro).
   const capacity = Math.floor((1 - 0.16 /*intro*/ - 0.12 /*outro*/) / (cellFrac*1.7 /*gap≈0.7·cell*/));
-  const entries = Math.max(1, Math.min(5, capacity));
+  // Serene atmo prefers fewer entries (more breath, fewer reps); agitato fills in.
+  const _entryBias = (_atmoE!=null) ? (_atmoE<0.5 ? -1 : (_atmoE>0.7 ? +1 : 0)) : 0;
+  const entries = Math.max(1, Math.min(5, capacity + _entryBias));
   // Distribute entry start-positions: first after a texture-only intro (~14%),
   // spread evenly, last finishing before a texture-only outro (~12%).
   const firstStart = 0.14;
@@ -1754,8 +1779,10 @@ function _melodyVoice(evts, mel, atmo){
     // an octave (when it stays in range), and later returns sing a touch brighter.
     // Entry 0 = theme; entry 1 = octave-up answer; entry 2 = theme (climax, full);
     // entry 3 = octave-up; … This is what keeps repeats from getting tiresome.
+    // Strong-calm atmo: no octave-up answer (no large leaps in a dream).
     let octShift = 0;
-    if(E>0 && (E%2===1) && cellHi+12 <= 96) octShift = 12;
+    const _noLeap = (_atmoE!=null && _atmoE<0.30);
+    if(!_noLeap && E>0 && (E%2===1) && cellHi+12 <= 96) octShift = 12;
     // #3 INTRA-PHRASE DYNAMICS: within each entry, swell toward the melodic peak
     // and ease off at the phrase ends, so the line breathes like a singer rather
     // than playing every note at one level.
