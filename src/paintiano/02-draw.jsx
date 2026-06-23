@@ -11427,29 +11427,39 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     longIdx.forEach((i,ord)=>{
       const ev=evts[i];
       ev._tremolo=true;
+      // Deterministic per-block seed from the block's CONTENT (its pitches +
+      // index + length). Same image → same seed → same "random" feel, but every
+      // block's seed differs, so the player's jitter never repeats a pattern.
+      let seed=(i*2654435761)>>>0;
+      seed=(seed^(ev._runLen||0)*40503)>>>0;
+      for(const n of ev.n){ seed=(seed^(((n.m|0)+131)*2246822519))>>>0; seed=(seed<<13|seed>>>19)>>>0; }
+      ev._tremSeed=seed>>>0;
+      // A small deterministic 0..1 from the seed, to de-pattern the arc params
+      // (so it's NOT just ord%2 alternation — that itself reads as a cycle).
+      const sr=((seed>>>8)&0xffff)/0xffff;          // 0..1
+      const sr2=((seed>>>20)&0xfff)/0xfff;          // 0..1 decorrelated
       // Position of this block within the whole piece (0..1) and within its run.
       const piecePos=longIdx.length>1?ord/(longIdx.length-1):0;
-      // A walk value that changes every block but smoothly — drives all arc params
-      // so neighbours differ yet the whole field has a slow overall contour.
-      const w=( Math.sin(ord*1.7)+1 )/2;              // 0..1, varies per block
-      const w2=( Math.sin(ord*0.9+1.3)+1 )/2;         // second decorrelated walk
-      // Base re-strike tempo glides across the piece: opening planes breathe slow,
-      // later ones a touch quicker — plus per-block jitter so no two are equal.
-      const baseMs = 230 - 70*piecePos - 40*w;        // ~120..230ms nominal
+      // Walk values blend a smooth contour with the content seed so neighbours
+      // differ AND the field has a slow overall drift (not a fixed 4-theme loop).
+      const w =0.5*((Math.sin(ord*1.7)+1)/2) + 0.5*sr;
+      const w2=0.5*((Math.sin(ord*0.9+1.3)+1)/2) + 0.5*sr2;
+      // Base re-strike tempo glides across the piece, plus seed jitter so no two
+      // blocks share a nominal tempo.
+      const baseMs = 230 - 70*piecePos - 50*w;        // ~110..230ms nominal
       ev._tremoloMs = Math.round(Math.max(95, baseMs));
-      // ACCEL or RIT across the hold: alternate the direction per block so the
-      // field pushes and relaxes. endRatio<1 = accelerando, >1 = ritardando.
-      ev._tremEndRatio = (ord%2===0) ? (0.62 + 0.18*w) : (1.25 + 0.35*w2); // ~0.62..0.8 | 1.25..1.6
-      // Register shimmer: how often (per hold) the top voice lifts, and by how
-      // much. Some blocks rock by a fifth, some by an octave, some stay put.
-      const liftPick = (w2>0.66) ? 12 : (w2>0.33) ? 7 : 0;   // octave / fifth / none
+      // ACCEL or RIT — direction chosen by the seed (not ord parity), magnitude
+      // varies, so the push/relax pattern is irregular across the field.
+      const accel = sr<0.5;
+      ev._tremEndRatio = accel ? (0.58 + 0.22*w) : (1.22 + 0.40*w2); // ~0.58..0.8 | 1.22..1.62
+      // Register shimmer: octave / fifth / none, chosen by seed.
+      const liftPick = (sr2>0.62) ? 12 : (sr2>0.30) ? 7 : 0;
       ev._tremLift = liftPick;
-      ev._tremLiftCycles = 1 + Math.round(2*w);              // 1..3 lifts across the hold
-      // Loudness breathing depth (how much the re-strikes swell & fade).
-      ev._tremSwell = 0.18 + 0.20*w;                          // 0.18..0.38
-      // A gesture tag kept for the player's rolled vs block choice: occasional
-      // blocks roll their re-strikes (arpeggiated) for textural contrast.
-      ev._planeGesture = (w>0.7) ? 'roll' : 'arc';
+      ev._tremLiftCycles = 1 + Math.round(2*w2);              // 1..3 lifts across the hold
+      // Loudness breathing depth.
+      ev._tremSwell = 0.16 + 0.24*w;                          // 0.16..0.40
+      // Rolled (arpeggiated) re-strikes on a seeded subset of blocks for texture.
+      ev._planeGesture = (sr>0.68) ? 'roll' : 'arc';
     });
   }
   // ─── Rhythmic phrasing pass (deterministic — driven by image content only) ──

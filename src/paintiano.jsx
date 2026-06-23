@@ -12976,29 +12976,39 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     longIdx.forEach((i,ord)=>{
       const ev=evts[i];
       ev._tremolo=true;
+      // Deterministic per-block seed from the block's CONTENT (its pitches +
+      // index + length). Same image → same seed → same "random" feel, but every
+      // block's seed differs, so the player's jitter never repeats a pattern.
+      let seed=(i*2654435761)>>>0;
+      seed=(seed^(ev._runLen||0)*40503)>>>0;
+      for(const n of ev.n){ seed=(seed^(((n.m|0)+131)*2246822519))>>>0; seed=(seed<<13|seed>>>19)>>>0; }
+      ev._tremSeed=seed>>>0;
+      // A small deterministic 0..1 from the seed, to de-pattern the arc params
+      // (so it's NOT just ord%2 alternation — that itself reads as a cycle).
+      const sr=((seed>>>8)&0xffff)/0xffff;          // 0..1
+      const sr2=((seed>>>20)&0xfff)/0xfff;          // 0..1 decorrelated
       // Position of this block within the whole piece (0..1) and within its run.
       const piecePos=longIdx.length>1?ord/(longIdx.length-1):0;
-      // A walk value that changes every block but smoothly — drives all arc params
-      // so neighbours differ yet the whole field has a slow overall contour.
-      const w=( Math.sin(ord*1.7)+1 )/2;              // 0..1, varies per block
-      const w2=( Math.sin(ord*0.9+1.3)+1 )/2;         // second decorrelated walk
-      // Base re-strike tempo glides across the piece: opening planes breathe slow,
-      // later ones a touch quicker — plus per-block jitter so no two are equal.
-      const baseMs = 230 - 70*piecePos - 40*w;        // ~120..230ms nominal
+      // Walk values blend a smooth contour with the content seed so neighbours
+      // differ AND the field has a slow overall drift (not a fixed 4-theme loop).
+      const w =0.5*((Math.sin(ord*1.7)+1)/2) + 0.5*sr;
+      const w2=0.5*((Math.sin(ord*0.9+1.3)+1)/2) + 0.5*sr2;
+      // Base re-strike tempo glides across the piece, plus seed jitter so no two
+      // blocks share a nominal tempo.
+      const baseMs = 230 - 70*piecePos - 50*w;        // ~110..230ms nominal
       ev._tremoloMs = Math.round(Math.max(95, baseMs));
-      // ACCEL or RIT across the hold: alternate the direction per block so the
-      // field pushes and relaxes. endRatio<1 = accelerando, >1 = ritardando.
-      ev._tremEndRatio = (ord%2===0) ? (0.62 + 0.18*w) : (1.25 + 0.35*w2); // ~0.62..0.8 | 1.25..1.6
-      // Register shimmer: how often (per hold) the top voice lifts, and by how
-      // much. Some blocks rock by a fifth, some by an octave, some stay put.
-      const liftPick = (w2>0.66) ? 12 : (w2>0.33) ? 7 : 0;   // octave / fifth / none
+      // ACCEL or RIT — direction chosen by the seed (not ord parity), magnitude
+      // varies, so the push/relax pattern is irregular across the field.
+      const accel = sr<0.5;
+      ev._tremEndRatio = accel ? (0.58 + 0.22*w) : (1.22 + 0.40*w2); // ~0.58..0.8 | 1.22..1.62
+      // Register shimmer: octave / fifth / none, chosen by seed.
+      const liftPick = (sr2>0.62) ? 12 : (sr2>0.30) ? 7 : 0;
       ev._tremLift = liftPick;
-      ev._tremLiftCycles = 1 + Math.round(2*w);              // 1..3 lifts across the hold
-      // Loudness breathing depth (how much the re-strikes swell & fade).
-      ev._tremSwell = 0.18 + 0.20*w;                          // 0.18..0.38
-      // A gesture tag kept for the player's rolled vs block choice: occasional
-      // blocks roll their re-strikes (arpeggiated) for textural contrast.
-      ev._planeGesture = (w>0.7) ? 'roll' : 'arc';
+      ev._tremLiftCycles = 1 + Math.round(2*w2);              // 1..3 lifts across the hold
+      // Loudness breathing depth.
+      ev._tremSwell = 0.16 + 0.24*w;                          // 0.16..0.40
+      // Rolled (arpeggiated) re-strikes on a seeded subset of blocks for texture.
+      ev._planeGesture = (sr>0.68) ? 'roll' : 'arc';
     });
   }
   // ─── Rhythmic phrasing pass (deterministic — driven by image content only) ──
@@ -20272,7 +20282,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     wrap.scrollLeft = Math.max(0, target);
   },[composeMode]);
 
-  const playNote = useCallback((midi,vel=88,durMs=500)=>{
+  const playNote = useCallback((midi,vel=88,durMs=500,tailScale=1)=>{
     // Spawn a visualizer ripple (skip in image mode — too busy with the photo)
     if (visualizerRef.current && viewModeRef.current !== 'image') {
       const c = visualizerRef.current;
@@ -20295,7 +20305,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // so even a flash-tap chord gets full piano-like decay. Live presses are
       // unaffected: releaseNote calls triggerRelease at the user's release
       // moment, cutting the note before this tail finishes.
-      const tailS=Math.min(Math.max(dur*0.4,1.5),3.0);
+      // tailScale (<1) shortens this on purpose for fast REPEATED strikes — a
+      // sustained-plane tremolo needs each re-attack to be a distinct attack, not
+      // a 1.5 s bloom that smears every re-strike into one held cloud. The floor
+      // and cap scale together so e.g. tailScale 0.12 → ~180 ms..360 ms tail.
+      const _ts=Math.max(0.05,Math.min(1,tailScale));
+      const tailS=Math.min(Math.max(dur*0.4,1.5*_ts),3.0*_ts);
       // Defensive context resume. Even when the sampler is loaded, scheduling
       // a triggerAttackRelease into a suspended context produces silence on
       // iOS — the symptom users see as "sound randomly disappears." Cheap to
@@ -24186,41 +24201,70 @@ Composition rules:
               //   • the top voice periodically lifts by _tremLift semitones and falls
               //     back — a slow shimmer of register across the held plane
               //   • loudness breathes (swell) so the field never sits flat
-              // All params come from the composer pass (deterministic per block);
-              // neighbouring blocks carry different arcs so a big field keeps moving.
+              //   • a DETERMINISTIC pseudo-random jitter (seeded from the block, so
+              //     identical for the same image) nudges every re-strike's timing,
+              //     loudness and register, and occasionally drops or doubles a hit,
+              //     so a big plane never settles into an audible repeating pattern.
+              // CRITICAL: each re-strike uses a SHORT tail (tailScale) so the
+              // attacks stay distinct — the full 1.5 s resonance would smear every
+              // re-strike into one held cloud (which is why a plain tremolo sounded
+              // like nothing changed).
               const endRatio=Math.max(0.5, Math.min(1.8, lc._tremEndRatio||1));
               const lift=lc._tremLift||0;             // semitone lift of top voice (0/7/12)
               const liftCycles=Math.max(1, lc._tremLiftCycles||1);
               const swell=Math.max(0, Math.min(0.5, lc._tremSwell!=null?lc._tremSwell:0.25));
               const rolled=(gesture==='roll');
               const rollStep=Math.max(12, Math.round(26/playbackSpeedRef.current));
-              // Identify the top (melody) voice so the register lift moves the line,
-              // not the bass.
+              // Deterministic PRNG (mulberry32) seeded from the block — same image →
+              // same "random" field, but no audible repeating cycle.
+              let _seed=(lc._tremSeed>>>0)||0x9e3779b9;
+              const rnd=()=>{ _seed|=0; _seed=_seed+0x6D2B79F5|0; let tt=Math.imul(_seed^_seed>>>15,1|_seed); tt=tt+Math.imul(tt^tt>>>7,61|tt)^tt; return ((tt^tt>>>14)>>>0)/4294967296; };
               let topM=-Infinity; for(const n of notes){ if(n.m>topM) topM=n.m; }
-              // Walk re-strikes by CUMULATIVE time with a gliding gap, until we fill
-              // the held span. Cap the count so we never schedule a runaway list.
+              // Scale-ish neighbour lifts the jitter can pick for the top voice so
+              // an occasional re-strike "colours" to an adjacent tone, not just the
+              // fixed octave/fifth — adds melodic life over a flat field.
+              const lifts=[0,0,0,lift||7,7,12,5,-5,3];
               let t=0, r=0;
-              const maxReps=80;
+              const maxReps=120;
               while(t < fullSpan-20 && r < maxReps){
                 const prog = fullSpan>0 ? t/fullSpan : 0;         // 0..1 across the hold
-                const gNow = Math.max(70, Math.round(gap0*(1 + (endRatio-1)*prog)));
-                const segDur = Math.max(110, Math.round(gNow*1.6));
-                // Swell envelope: gentle rise to the middle, fall to the end.
-                const env = 1 - swell*0.5 + swell*Math.sin(Math.PI*prog);
-                // Register lift cycle: a smooth 0..1..0 that lifts the top voice.
-                const liftPhase = lift>0 ? (Math.sin(Math.PI*liftCycles*prog) > 0.55 ? 1 : 0) : 0;
-                const baseVel = r===0?1:(rolled?0.7:0.78);
-                const tAt=t;
-                // sort low→high only when rolling; otherwise strike together
-                const order = rolled ? [...notes].sort((a,b)=>a.m-b.m) : notes;
-                order.forEach((n,vi)=>{
-                  const isTop = n.m===topM;
-                  const mPlay = (isTop && liftPhase) ? n.m+lift : n.m;
-                  const vv = Math.max(14, Math.round((n.v||64)*velScale*baseVel*env));
-                  const at = Math.round(tAt + (rolled?vi*rollStep:0));
-                  if(at<=0){ try{ playNote(mPlay,vv,segDur); }catch(_){} }
-                  else { pushTimer(()=>{ try{ playNote(mPlay,vv,segDur); }catch(_){}}, at); }
-                });
+                // Gliding base tempo + per-strike timing jitter (±28%).
+                const gGlide = gap0*(1 + (endRatio-1)*prog);
+                const jitT = 0.72 + 0.56*rnd();                   // 0.72..1.28
+                const gNow = Math.max(70, Math.round(gGlide*jitT));
+                const segDur = Math.max(95, Math.round(gNow*1.35));
+                // Occasionally skip a strike (a breath) — more likely mid-hold,
+                // never the very first strike. ~12% chance.
+                const skip = (r>0 && rnd()<0.12);
+                if(!skip){
+                  // Swell envelope + loudness jitter (±18%).
+                  const env = (1 - swell*0.5 + swell*Math.sin(Math.PI*prog)) * (0.82+0.36*rnd());
+                  // Register shimmer: smooth cycle OR an occasional random lift pick.
+                  const cyclePhase = lift>0 ? (Math.sin(Math.PI*liftCycles*prog) > 0.55) : false;
+                  const randLift = (rnd()<0.22) ? lifts[(rnd()*lifts.length)|0] : 0;
+                  const topShift = cyclePhase ? lift : randLift;
+                  const baseVel = r===0?1:(rolled?0.7:0.78);
+                  const tAt=t;
+                  // tail short for re-strikes so attacks read; first hit a touch longer.
+                  const tail = r===0?0.4:0.14;
+                  const order = rolled ? [...notes].sort((a,b)=>a.m-b.m) : notes;
+                  // rolled step itself jitters slightly so the arpeggio isn't a metronome.
+                  const rs = rolled ? Math.max(8, Math.round(rollStep*(0.7+0.6*rnd()))) : 0;
+                  order.forEach((n,vi)=>{
+                    const isTop = n.m===topM;
+                    const mPlay = (isTop && topShift) ? n.m+topShift : n.m;
+                    const vv = Math.max(12, Math.round((n.v||64)*velScale*baseVel*env));
+                    const at = Math.round(tAt + (rolled?vi*rs:0));
+                    if(at<=0){ try{ playNote(mPlay,vv,segDur,tail); }catch(_){} }
+                    else { pushTimer(()=>{ try{ playNote(mPlay,vv,segDur,tail); }catch(_){}}, at); }
+                  });
+                  // Occasional grace double-strike on the top voice (a flutter) — rare.
+                  if(rnd()<0.08 && topM>-Infinity){
+                    const gAt=Math.round(t+gNow*0.45);
+                    const gv=Math.max(12,Math.round((notes.find(n=>n.m===topM)?.v||64)*velScale*0.5));
+                    pushTimer(()=>{ try{ playNote(topM,gv,Math.round(segDur*0.6),0.1); }catch(_){}}, gAt);
+                  }
+                }
                 t += gNow;
                 r++;
               }
