@@ -2062,7 +2062,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           const{BW,BH,CW,CH}=grid;
           const colStep=px.colStep||1;
           const effCols=Math.ceil(nc/colStep);
-          const CHORD_SIZE=6;
+          const CHORD_SIZE=4;
           ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
           for(let i=0;i<disp && i<chords.length;i++){
             const _ev=chords[i]||{};
@@ -6324,7 +6324,7 @@ Composition rules:
       const{nc,nr,px}=pixelRef.current,{BW,BH,CW,CH}=grid,cv=canvasRef.current,ctx=cv?.getContext('2d'),gen=genRef.current;
       if(ctx&&fromIdx===0){ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);}
       let i=fromIdx;
-      const CHORD_SIZE=6;
+      const CHORD_SIZE=4;
       const colStep=pixelRef.current.colStep||1;
       const effCols=Math.ceil(nc/colStep);
       // MELODY dynamic tempo — DRIVEN BY THE IMAGE. With MELODY on we leave the

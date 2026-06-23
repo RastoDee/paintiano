@@ -10384,7 +10384,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // turning AI ATM on actually reshape the tempo & rhythm, not just the colour.
   const atmoV = atmoBias && typeof atmoBias.v==='number' ? Math.max(-1,Math.min(1,atmoBias.v)) : null;
   const atmoE = atmoBias && typeof atmoBias.e==='number' ? Math.max(0,Math.min(1,atmoBias.e)) : null;
-  const CHORD_SIZE=6;
+  const CHORD_SIZE=4;
   const COL_STEP=4;                              // merge 4 adjacent columns per time-event
   const _nrBands=Math.floor(nr/CHORD_SIZE);
   const effCols=Math.ceil(nc/COL_STEP);          // 192/4 = 48 events per band → 960 total

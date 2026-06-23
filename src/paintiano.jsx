@@ -11933,7 +11933,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // turning AI ATM on actually reshape the tempo & rhythm, not just the colour.
   const atmoV = atmoBias && typeof atmoBias.v==='number' ? Math.max(-1,Math.min(1,atmoBias.v)) : null;
   const atmoE = atmoBias && typeof atmoBias.e==='number' ? Math.max(0,Math.min(1,atmoBias.e)) : null;
-  const CHORD_SIZE=6;
+  const CHORD_SIZE=4;
   const COL_STEP=4;                              // merge 4 adjacent columns per time-event
   const _nrBands=Math.floor(nr/CHORD_SIZE);
   const effCols=Math.ceil(nc/COL_STEP);          // 192/4 = 48 events per band → 960 total
@@ -19837,7 +19837,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           const{BW,BH,CW,CH}=grid;
           const colStep=px.colStep||1;
           const effCols=Math.ceil(nc/colStep);
-          const CHORD_SIZE=6;
+          const CHORD_SIZE=4;
           ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
           for(let i=0;i<disp && i<chords.length;i++){
             const _ev=chords[i]||{};
@@ -24099,7 +24099,7 @@ Composition rules:
       const{nc,nr,px}=pixelRef.current,{BW,BH,CW,CH}=grid,cv=canvasRef.current,ctx=cv?.getContext('2d'),gen=genRef.current;
       if(ctx&&fromIdx===0){ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);}
       let i=fromIdx;
-      const CHORD_SIZE=6;
+      const CHORD_SIZE=4;
       const colStep=pixelRef.current.colStep||1;
       const effCols=Math.ceil(nc/colStep);
       // MELODY dynamic tempo — DRIVEN BY THE IMAGE. With MELODY on we leave the
