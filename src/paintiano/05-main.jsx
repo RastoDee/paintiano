@@ -5519,7 +5519,60 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const energy = avgVel>=95?'high, forceful':avgVel>=70?'moderate':'soft, gentle';
     const tex = density>=3.2?'dense, chordal':density>=1.8?'mixed chords and lines':'sparse, melodic';
     const mood = (atmoOn && atmoMood) ? (currentMood||(atmoMood.v>0.2?'bright':atmoMood.v<-0.2?'dark':'neutral')) : null;
-    return { palette, noteRange, energy, tex, arc, mood, count:noteN };
+    // ─── REAL COLOUR FINGERPRINT (from the actual pixels, not the scanned notes) ──
+    // The scanned-note stats (palette/energy/tex) compress very different paintings
+    // into the same few buckets, so the AI was getting near-identical input for
+    // different images → same title, similar music. We read the real pixels and
+    // build a distinctive colour description: dominant hue families, average
+    // brightness & saturation, warm/cool balance, and contrast. This is what makes
+    // a blue Starry Night read differently from a bright sunlit interior.
+    let colors=null;
+    try{
+      const _px=pixelRef.current;
+      if(_px && _px.px && _px.px.length){
+        const data=_px.px;
+        // Sample up to ~4000 pixels evenly for speed.
+        const step=Math.max(1, Math.floor(data.length/4000));
+        const hueFam={red:0,orange:0,yellow:0,green:0,teal:0,blue:0,purple:0,pink:0,neutral:0};
+        let lSum=0,sSum=0,n=0,warm=0,cool=0,dark=0,light=0;
+        let l2Sum=0; // for brightness spread (contrast)
+        for(let i=0;i<data.length;i+=step){
+          const p=data[i]; if(!p) continue;
+          const [h,s,l]=toHsl(p.r,p.g,p.b);
+          n++; lSum+=l; sSum+=s; l2Sum+=l*l;
+          if(l<26) dark++; else if(l>74) light++;
+          if(s<14){ hueFam.neutral++; }
+          else{
+            if(h<15||h>=345) hueFam.red++;
+            else if(h<45) hueFam.orange++;
+            else if(h<70) hueFam.yellow++;
+            else if(h<160) hueFam.green++;
+            else if(h<195) hueFam.teal++;
+            else if(h<255) hueFam.blue++;
+            else if(h<315) hueFam.purple++;
+            else hueFam.pink++;
+            // warm (red→yellow + pink) vs cool (green→purple)
+            if((h<70||h>=315)) warm++; else cool++;
+          }
+        }
+        if(n){
+          const avgL=lSum/n, avgS=sSum/n;
+          const sd=Math.sqrt(Math.max(0,l2Sum/n-avgL*avgL)); // brightness stddev
+          const top=Object.entries(hueFam).filter(([k])=>k!=='neutral').sort((a,b)=>b[1]-a[1]).filter(x=>x[1]>n*0.04).slice(0,3).map(x=>x[0]);
+          const neutralPct=Math.round(100*hueFam.neutral/n);
+          const bright = avgL>=66?'bright/luminous':avgL>=40?'mid-toned':'dark/shadowy';
+          const sat = avgS>=55?'vivid, saturated':avgS>=28?'moderately coloured':'muted/desaturated';
+          const temp = warm>cool*1.4?'warm-dominant':cool>warm*1.4?'cool-dominant':'balanced warm/cool';
+          const contrast = sd>=26?'high contrast (strong lights & darks)':sd>=15?'moderate contrast':'low contrast (even tones)';
+          colors={
+            dominant: top.length?top.join(', '):'largely neutral',
+            neutralPct, bright, sat, temp, contrast,
+            darkPct:Math.round(100*dark/n), lightPct:Math.round(100*light/n)
+          };
+        }
+      }
+    }catch(_){}
+    return { palette, noteRange, energy, tex, arc, mood, count:noteN, colors };
   },[chords,atmoOn,atmoMood,currentMood]);
 
   // Compose a real piece FROM the image's note material (no painting — keeps the
@@ -5568,18 +5621,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
+      const _c=mat.colors;
+      const colourBlock=_c?`
+The image's ACTUAL COLOURS (your strongest cue — let these drive the key, mood, and especially the title; two different paintings must yield clearly different pieces):
+- Dominant hues: ${_c.dominant}${_c.neutralPct>40?` (with ${_c.neutralPct}% neutral/grey areas)`:''}
+- Brightness: ${_c.bright} (${_c.lightPct}% bright, ${_c.darkPct}% dark areas)
+- Saturation: ${_c.sat}
+- Temperature: ${_c.temp}
+- Contrast: ${_c.contrast}`:'';
       const prompt=`A painting was scanned into raw musical material. Compose a beautiful, free-standing solo piano piece INSPIRED BY that material — do not replay it literally.
 Image material:
 - Pitch palette (most present pitch classes): ${mat.palette}
 - Range: ${mat.noteRange}
 - Energy: ${mat.energy}
 - Texture: ${mat.tex}
-- Energy arc: ${mat.arc}${mat.mood?`\n- Mood/atmosphere of the image: ${mat.mood}`:''}
-Use this as raw clay: let the pitch palette colour the harmony and key, let the energy and arc shape dynamics and tempo, let the texture guide density. Then compose with genuine craft — a real melody, recurring motif, clear metre and rhythm, harmonic movement, and an emotional shape that matches the image's character.
+- Energy arc: ${mat.arc}${mat.mood?`\n- Mood/atmosphere of the image: ${mat.mood}`:''}${colourBlock}
+Use this as raw clay: let the COLOURS lead the harmony, key and emotional character (warm bright colours → major / luminous; cool dark colours → minor / introspective; high contrast → dramatic dynamic range; muted → gentle), let the pitch palette tint the harmony, let the energy and arc shape dynamics and tempo, let the texture guide density. Then compose with genuine craft — a real melody, recurring motif, clear metre and rhythm, harmonic movement, and an emotional shape that matches the image's character.
 Output ONLY a single valid JSON object — no markdown, no prose.
 Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
 Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
-Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) that fits the resulting music.
+Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) that fits THIS image's specific colours and mood — make it distinctive, not a generic "quiet light" type phrase that could fit any picture.
 Composition rules:
 - LENGTH: the piece MUST last at least 60 seconds of music — aim for 70–95 seconds. With the tempo you choose, make sure the LAST note's (startBeat + duration) reaches at least tempo beats (i.e. ≥ 60 seconds worth of beats). Do not stop early.
 - 90–150 notes total (enough to fill a full minute or more)
