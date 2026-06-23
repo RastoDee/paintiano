@@ -3193,6 +3193,8 @@ function matissePhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   rects.forEach((rect,pIdx)=>{
     const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
     if(pIdx>=paintCount){ return; }
+    const _mci=Math.min(chords.length-1,Math.floor(pIdx*(chords.length/Math.max(1,MAX_RECTS))));
+    _setCurE(chords[_mci] && chords[_mci]._E);
     const rnd=_seedRnd(pIdx+2500,ss,0,0);
     const base=_rectChordColor(chords,pIdx,MAX_RECTS,gc);
 
@@ -3236,6 +3238,7 @@ function matissePhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     else if(kind===2) leaf(cx,cy,Math.min(BW,BH)*(1.3+rnd()*0.4),rad*0.6,(rnd()-0.5)*2.2);
     else algae(rnd,cx,cy,rad*(1.1+rnd()*0.3),(rnd()-0.5)*2.4);
   });
+  _setCurE(0.5);
 }
 
 // ── Matisse phase B: big free-form cut-out collage — his late "Jazz" / "The
@@ -10308,6 +10311,7 @@ function kusamaPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed){
     const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
     if(pIdx>=paintCount){ctx.fillStyle='#04040a';ctx.fillRect(bx,by,BW,BH);return;}
     const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/MAX_RECTS)))];
+    _setCurE(chord && chord._E);
     const[cR,cG,cB,cA,cV]=chordColor(chord);
     const energy=Math.max(0,Math.min(1,(cV-30)/90));
     const rnd=_seedRnd(pIdx+800,ss,0,0);
@@ -10330,6 +10334,7 @@ function kusamaPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed){
     if(rnd()<0.15&&Math.min(BW,BH)>15){const luma=0.299*cR+0.587*cG+0.114*cB;ctx.strokeStyle=luma>128?'rgba(12,8,18,0.62)':'rgba(245,240,228,0.62)';ctx.lineWidth=Math.max(0.8,Math.min(BW,BH)*0.007);ctx.lineCap='round';ctx.lineJoin='round';const ptCount=4+Math.floor(rnd()*3);ctx.beginPath();ctx.moveTo(bx+rnd()*BW*0.3,by+rnd()*BH);for(let pi=0;pi<ptCount;pi++){const t1=(pi+0.5)/ptCount,t2=(pi+1)/ptCount;ctx.quadraticCurveTo(bx+t1*BW,by+rnd()*BH,bx+t2*BW,by+rnd()*BH);}ctx.stroke();}
     ctx.strokeStyle='rgba(4,4,10,0.60)';ctx.lineWidth=Math.max(0.5,Math.min(CW,CH)*0.002);ctx.lineJoin='round';ctx.strokeRect(bx+0.5,by+0.5,BW-1,BH-1);
   });
+  _setCurE(0.5);
 }
 
 // ── Kusama phase B: "Dot field" — the iconic look. Thousands of discrete
