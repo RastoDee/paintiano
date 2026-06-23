@@ -12749,9 +12749,20 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       break;
     }
   }
-  // Merge identical consecutive chords for legato, capped at whole note
-  const chordKey=ns=>ns.length?ns.map(n=>n.m).sort((a,b)=>a-b).join(','):'';
-  const MAX_RUN=8;                                 // hold a repeated chord longer — long sustained planes
+  // Merge consecutive chords with the SAME PITCH-CLASS SET (not just identical
+  // MIDI). Catches the Monet case: scan emits many adjacent cells with the same
+  // harmony but slightly different octaves/voices — they were the same chord
+  // held, not a machine-gun of repeated notes. After merging, the held chord's
+  // velocity = average of the group's onsets, and its voicing = the clean
+  // pitch-class set (one voice per PC, in the nearest octave to the group mean),
+  // so a long held plane isn't denser than any one of its sources.
+  const chordKey=ns=>{
+    if(!ns.length) return '';
+    const pcs=new Set();
+    for(const n of ns) pcs.add(((n.m%12)+12)%12);
+    return [...pcs].sort((a,b)=>a-b).join(',');
+  };
+  const MAX_RUN=32;                                // up to ~6s held — real legato planes
   let mi=0;
   while(mi<evts.length){
     const key=chordKey(evts[mi].n);
@@ -12762,6 +12773,22 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     while(k<mj){
       const groupLen=Math.min(MAX_RUN,mj-k);
       if(groupLen>1){
+        // Mean velocity across the group, mean MIDI of each PC across the group
+        // (placed at the nearest octave to the group's anchor) — the held chord
+        // reflects the WHOLE plane, not just its first onset.
+        const meanVel=(()=>{ let s=0,c=0; for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){ s+=(n.v||64); c++; } return c?Math.round(s/c):64; })();
+        const pcMids=new Map(); // pc -> [midis...]
+        for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){ const pc=((n.m%12)+12)%12; if(!pcMids.has(pc)) pcMids.set(pc,[]); pcMids.get(pc).push(n.m); }
+        const template=evts[k].n[0]||{durMs:300};
+        const cleanN=[];
+        for(const [pc,mids] of pcMids){
+          const avgM=mids.reduce((a,b)=>a+b,0)/mids.length;
+          let m=Math.round(avgM); while(((m%12)+12)%12!==pc) m+=(((m%12)+12)%12<pc?1:-1);
+          const isBass=evts[k].n.some(n=>((n.m%12)+12)%12===pc && n.bass);
+          cleanN.push({...template, m, v:meanVel, bass:isBass});
+        }
+        cleanN.sort((a,b)=>b.m-a.m);
+        evts[k].n=cleanN;
         evts[k]._runLen=groupLen;
         for(let x=k+1;x<k+groupLen;x++)evts[x]._playable=false;
       }
