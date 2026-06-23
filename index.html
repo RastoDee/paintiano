@@ -250,6 +250,16 @@
     *{animation:none !important; scroll-behavior:auto !important;}
     .reveal{opacity:1; transform:none; transition:none;}
   }
+  /* off-the-screen visual proof */
+  .wall-feature{margin:0 0 22px; background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden;}
+  .wall-feature img{width:100%; display:block;}
+  .wall-feature figcaption{padding:14px 18px; font-size:.92rem; color:var(--muted); font-style:italic;}
+  .wall-mix{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; align-items:start;}
+  .wm{margin:0; background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden;}
+  .wm img{width:100%; display:block;}
+  .wm figcaption{padding:13px 16px 16px; font-size:.88rem; color:var(--muted); line-height:1.5;}
+  .wm figcaption b{display:block; color:var(--cream); font-weight:600; margin-bottom:2px;}
+  @media(max-width:760px){ .wall-mix{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -398,6 +408,35 @@
   </div>
 </section>
 
+<!-- ── OFF THE SCREEN (visual proof) ── -->
+<section class="band" id="onwall">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">Off the screen</p>
+      <h2 class="sec">Made to print, frame, and keep.</h2>
+      <p class="sec-lede">Every piece exports at full resolution — big enough to hang on a wall, wrap as a gift, or use as a cover.</p>
+    </div>
+    <figure class="wall-feature reveal">
+      <img src="/mockups/gallery-wall.jpg" alt="Three Paintiano paintings framed together on a wall" loading="lazy" decoding="async">
+      <figcaption>A wall of songs — each frame a different track, a different style.</figcaption>
+    </figure>
+    <div class="wall-mix">
+      <figure class="wm reveal">
+        <img src="/mockups/framed-wall.jpg" alt="A Paintiano painting framed on a wall" loading="lazy" decoding="async">
+        <figcaption><b>On your wall</b>Framed and matted, ready to hang.</figcaption>
+      </figure>
+      <figure class="wm reveal">
+        <img src="/mockups/album.jpg" alt="A Paintiano painting used as an album cover" loading="lazy" decoding="async">
+        <figcaption><b>As a cover</b>Art born from the track itself.</figcaption>
+      </figure>
+      <figure class="wm reveal">
+        <img src="/mockups/poster.jpg" alt="A Paintiano edition-print poster" loading="lazy" decoding="async">
+        <figcaption><b>As an edition print</b>Captioned with its source song.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
 <!-- ── PRICING ── -->
 <section class="band" id="try">
   <div class="wrap">
@@ -463,7 +502,7 @@
     <h2 class="sec">A gallery that's growing.</h2>
     <p class="sec-lede" style="margin-bottom:26px;">Every piece here was made from a real song by a real person. We'll show numbers when they're worth showing — no invented counts.</p>
     <div class="proof">
-      <span class="ph">★ Coming to Product Hunt</span>
+      <span class="ph">★ Launching on Product Hunt · July 8</span>
       <span class="ph">◫ Curated "Made with Paintiano" gallery</span>
       <span class="ph">♪ Each piece names its source track</span>
     </div>
