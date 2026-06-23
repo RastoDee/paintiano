@@ -12022,9 +12022,11 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // Inverse: more energy = shorter (faster feel). Calm spreads out.
   const targetMs=Math.round(DUR_MAX - (DUR_MAX-DUR_MIN)*energy);
   const msPerBlock=targetMs/(_nrBands*effCols);  // per-chord step now scales with energy
-  // Sustain: calm pieces ring long & legato; lively ones articulate shorter. Now
-  // a wider 4×–9× spread driven by rhythmDrive (was a narrow 5×–8× on energy).
-  const sustainMul=9 - 5*rhythmDrive;
+  // Sustain: calm pieces ring long & legato; lively ones articulate shorter.
+  // Base spread 4×–9× driven by rhythmDrive; strong-calm atmo ("pomaly letny sen")
+  // extends the ceiling up to ~12× so the dream really lingers.
+  const _sustainCalmBoost = (atmoE!=null) ? Math.max(0, 0.30 - atmoE) / 0.30 * 3 : 0;  // 0..+3
+  const sustainMul = (9 + _sustainCalmBoost) - 5*rhythmDrive;
   const noteDur=Math.round(msPerBlock*sustainMul);
   // octaveShift in semitones: light image → shift down, dark → shift up. 70% of
   // the deviation from 50% lightness is compensated; 30% of the brightness
@@ -13047,7 +13049,11 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   //       so the piece arrives instead of being cut off mid-stream.
   // Rests advance a little quicker so silence doesn't drag.
   {
-    const BASE_STEP = 150;                       // old fixed per-cell interval (ms)
+    // Per-cell interval. Calm atmo widens the gap between events: a "pomaly letny
+    // sen" should really breathe, not just hold notes longer. 150ms default, up to
+    // ~220ms at strong-calm atmo (atmoE → 0); neutral and energetic stay at 150.
+    const _baseStepCalm = (atmoE!=null) ? Math.max(0, 0.30 - atmoE) / 0.30 * 70 : 0;  // 0..+70ms
+    const BASE_STEP = 150 + _baseStepCalm;
     const _nBars = Math.max(1, Math.ceil(evts.length / BAR_EVENTS));
     const _ritStart = Math.max(0, evts.length - Math.min(48, BAR_EVENTS*1.5)); // last ~1.5 bars
     for(let i=0;i<evts.length;i++){
