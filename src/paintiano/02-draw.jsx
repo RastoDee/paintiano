@@ -10703,8 +10703,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   }
   const tempTotal=warmW+coolW;
   const warmth=tempTotal>0 ? (warmW-coolW)/tempTotal : 0; // -1 cool … +1 warm
-  const majBias=1+0.06*warmth;                // ≤±6% nudge — a tiebreaker, not an override
-  const minBias=1-0.06*warmth;
+  // Major/minor bias: warmth (image colour temperature) gives a tiny ±6% nudge —
+  // a tiebreaker, not an override. Mood valence (atmoV) adds a stronger ±20% lean
+  // so a sad/heavy tag can actually pull an ambiguous canvas into minor (and a
+  // playful/bright tag into major). Clear-cut tonal images still win on Krumhansl.
+  const majBias=1+0.06*warmth+0.20*valenceBias;
+  const minBias=1-0.06*warmth-0.20*valenceBias;
   let bestKey=0,bestModeIsMajor=true,bestCorr=-Infinity;
   for(let key=0;key<12;key++){
     for(const isMaj of[true,false]){
@@ -10733,9 +10737,16 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const isSpectral = colorMode==='spectral';
   // "Soft/pale" = muted colour OR bright, delicate wash. Tuned so a saturated,
   // mid-to-dark painting stays whole-tone while pastels switch to pentatonic.
+  // Mood override on Spectral scale: serene/dreamy/mysterious moods always pick
+  // pentatonic (sweet, no dissonance); frantic/harsh moods always pick whole-tone
+  // (weightless, untethered). Mid-mood (or no atmo) defers to the image's read.
   const spectralSoft = isSpectral && (avgChroma < 32 || avgLight > 66);
+  const _atmoSpectralPenta = isSpectral && atmoE!=null && atmoE<0.30;
+  const _atmoSpectralWhole = isSpectral && atmoE!=null && atmoE>0.70;
   const baseOffsets = isSpectral
-    ? (spectralSoft ? PENTA_OFFSETS : WHOLE_OFFSETS)
+    ? (_atmoSpectralPenta ? PENTA_OFFSETS
+       : _atmoSpectralWhole ? WHOLE_OFFSETS
+       : (spectralSoft ? PENTA_OFFSETS : WHOLE_OFFSETS))
     : (bestModeIsMajor ? MAJ_OFFSETS : MIN_OFFSETS);
   const scalePCs=baseOffsets.map(o=>(o+bestKey)%12);
   const SCALE_LEN=scalePCs.length;               // 7 diatonic / 6 whole-tone / 5 pentatonic
@@ -11157,11 +11168,16 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       const bassM=nearestPc(barPCs[0], 40);          // low root (~E2 region)
       if(!accomp.some(n=>n.m===bassM)) accomp.push({...melSrc, m:bassM, v:Math.max(34,Math.round((melSrc.v||64)*0.55))});
     }
-    // Voice density. Fewer simultaneous voices = more air and space between the
-    // notes, the open, uncluttered texture of ambient/post-rock. Even the busiest
-    // events stay leaner than before (was 5/3/2) so chords ring rather than pile
-    // up; calm events drop to a bare two-voice shimmer.
-    const voiceCap = intensity>0.6 ? 4 : intensity>0.3 ? 3 : 2;
+    // Voice density. Fewer simultaneous voices = more air and space; image
+    // 'intensity' (per-cell vividness) picks the base. Mood reshapes the texture:
+    // serene atmo thins by 1 (open, breathy), frantic atmo thickens by 1 (denser
+    // chord). Clamped 2..5 so a calm cell never falls below a usable duo and a
+    // frantic cell can reach a full triad + doubled bass.
+    const _voiceAtmoShift = (atmoE!=null)
+      ? (atmoE<0.5 ? -1*(0.5-atmoE)/0.5 : +1*(atmoE-0.5)/0.5)
+      : 0;
+    const _voiceBase = intensity>0.6 ? 4 : intensity>0.3 ? 3 : 2;
+    const voiceCap = Math.max(2, Math.min(5, Math.round(_voiceBase + _voiceAtmoShift)));
     // Velocity swell: intense chords play louder overall (up to +22%).
     const intGain = 1 + 0.12*intensity;              // gentler swell (was 0.22) — softer, rounder
     // Keep accompaniment below the melody and dedup.
