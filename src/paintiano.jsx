@@ -16247,7 +16247,14 @@ function _melodyVoice(evts, mel, atmo){
   // The cell occupies cellFrac of the whole timeline. We choose entry points (as
   // fractions 0..1) scaled to how many cells fit, so a short scan gets 1–2 entries
   // and a long one gets 4–5 — never wall-to-wall.
-  const cellFrac = Math.min(0.5, Math.max(0.06, cellSec/scanSec));  // one cell's share of the timeline
+  // ATMO cell stretch: serene atmo widens the melodic cell across more of the
+  // timeline so the notes spread out in real time (slow scan + dense melody used
+  // to feel like the song sped up when melody came on). Frantic slightly shrinks.
+  // Serene atmoE=0 → ×2.5; neutral → ×1.0; frantic atmoE=1 → ×0.85.
+  const _cellStretch = (_atmoE!=null)
+    ? (_atmoE<0.5 ? +1.5*(0.5-_atmoE)/0.5 : -0.15*(_atmoE-0.5)/0.5)
+    : 0;
+  const cellFrac = Math.min(0.7, Math.max(0.06, (cellSec/scanSec) * (1 + _cellStretch)));
   // How many entries the piece can host (leave room for intro + gaps + outro).
   const capacity = Math.floor((1 - 0.16 /*intro*/ - 0.12 /*outro*/) / (cellFrac*1.7 /*gap≈0.7·cell*/));
   // Serene atmo prefers fewer entries (more breath, fewer reps); agitato fills in.
