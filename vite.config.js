@@ -62,6 +62,11 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Force the new service worker to take over the page immediately on the next
+        // navigation, without waiting for all tabs to close. This is what makes
+        // background refresh actually happen on a returning visit with autoUpdate.
+        skipWaiting: true,
+        clientsClaim: true,
         // Embedded base64 samples push the JSX bundle above the default 2 MB precache limit
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         // Precache only the static front-end build — never anything under /api
