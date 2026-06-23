@@ -486,10 +486,19 @@ const PF_STYLE = `
           .pf-app-root .pf-compose,
           .pf-app-root .pf-mic,
           .pf-app-root .pf-setup-import .pf-tool {
-            min-height: 48px !important;
-            height: 48px !important;
+            min-height: 96px !important;
+            height: 96px !important;
             box-sizing: border-box !important;
           }
+          /* Source screen (desktop): bigger chips + remove the panel box-in-box. */
+          .pf-setup-create-import-wrap .pf-setup-col-left,
+          .pf-setup-create-import-wrap .pf-setup-col-right {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+          }
+          .pf-setup-create-import-wrap .pf-chip-icon { font-size: 1.45rem !important; }
+          .pf-setup-create-import-wrap .pf-chip-icon > svg { width: 1.45rem !important; height: 1.45rem !important; }
           .pf-app-root > .pf-stage-part {
             grid-area: stage;
             max-width: 100% !important;
