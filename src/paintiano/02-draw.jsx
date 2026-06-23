@@ -94,6 +94,18 @@ function _progressive(lim, cn, max){
   return Math.max(1, Math.round(max * t));
 }
 
+// Velocity -> saturation helper. Lerps an [r,g,b] toward its own grey based on
+// note velocity v (0..127). 'floor' is the lowest satKeep when v is tiny -- use
+// 0.25 in mosaic/notes (strong effect), 0.55-0.75 in artist styles (subtle, to
+// preserve each artist's signature palette). Returns [R,G,B] as integers.
+function _velSat(r,g,b,v,floor){
+  const vN=Math.max(0,Math.min(1,((v||80)-30)/90));
+  const f=(floor==null?0.25:floor);
+  const k=f + vN*(1-f);
+  const grey=0.299*r+0.587*g+0.114*b;
+  return [Math.round(grey+(r-grey)*k), Math.round(grey+(g-grey)*k), Math.round(grey+(b-grey)*k)];
+}
+
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
@@ -876,7 +888,7 @@ function drawMondrian(ctx,bx,by,notes,gc,BW,BH){
     rects.forEach((rc,i)=>{
       const [rx,ry,rw,rh]=rc, roll=rnd();
       if(roll<0.40 && sorted.length){
-        const note=sorted[i%sorted.length], [r,g,bl]=gc(note.m,note.v), [pr,pg,pb]=bold(r,g,bl);
+        const note=sorted[i%sorted.length], [r0,g0,b0]=gc(note.m,note.v), [r,g,bl]=_velSat(r0,g0,b0,note.v,0.65), [pr,pg,pb]=bold(r,g,bl);
         ctx.fillStyle=`rgb(${pr},${pg},${pb})`; ctx.fillRect(rx,ry,rw,rh);
       } else if(roll<0.47){ ctx.fillStyle='#141109'; ctx.fillRect(rx,ry,rw,rh); }
     });
@@ -893,7 +905,7 @@ function drawMondrian(ctx,bx,by,notes,gc,BW,BH){
   // LINE color = bold() of the brightest voice (Boogie's "yellow" lines become
   // whatever the dominant hue is; in B&W they read as light grey). BEADS and
   // SQUARES pull from individual voices, boosted bold.
-  const voiceBold=(i)=>{ const nt=sorted[i%Math.max(1,sorted.length)]||{m:60,v:80}; const[r,g,bl]=gc(nt.m,nt.v); return bold(r,g,bl); };
+  const voiceBold=(i)=>{ const nt=sorted[i%Math.max(1,sorted.length)]||{m:60,v:80}; const[r0,g0,b0]=gc(nt.m,nt.v); const[r,g,bl]=_velSat(r0,g0,b0,nt.v,0.65); return bold(r,g,bl); };
   const lineC = (()=>{ const c=voiceBold(0); return `rgb(${c[0]},${c[1]},${c[2]})`; })();
   // a few large off-white blocks first (the "buildings")
   const blocks=Math.min(3,1+Math.floor(n*0.4));
