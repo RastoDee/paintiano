@@ -106,6 +106,58 @@ function _velSat(r,g,b,v,floor){
   return [Math.round(grey+(r-grey)*k), Math.round(grey+(g-grey)*k), Math.round(grey+(b-grey)*k)];
 }
 
+// ── Mix palette (energy → saturation/lightness) ────────────────────────────
+// Built-in 'fourth axis': phrase energy modulates colour. Energy per chord =
+// 0.55*velocity + 0.25*density - 0.20*register, smoothed and normalised across
+// the song, then mapped continuously: low energy -> pastel (less saturated,
+// lighter), high energy -> dark (more saturated, deeper). Deterministic:
+// same song -> same energies -> same painting. Set per chord by the paint loop
+// via _setCurE; _energyTint is applied inside gc() so every style inherits it.
+let _curE = 0.5;
+function _setCurE(e){ _curE = (e==null||isNaN(e)) ? 0.5 : e; }
+
+let _enChords = null;
+function _ensureEnergies(chords){
+  if(!chords || !chords.length){ _enChords=chords; return; }
+  if(chords===_enChords && chords[chords.length-1]._E!==undefined) return;
+  _enChords = chords;
+  const raw = new Array(chords.length);
+  for(let i=0;i<chords.length;i++){
+    const ns=(chords[i]&&chords[i].n)||[]; const k=ns.length||1;
+    let sv=0, sm=0;
+    for(let j=0;j<ns.length;j++){ sv+=(ns[j].v||80); sm+=(ns[j].m||60); }
+    const velN=Math.max(0,Math.min(1,((sv/k)-30)/90));
+    const densN=Math.max(0,Math.min(1,(k-1)/3));
+    const regN=Math.max(0,Math.min(1,((sm/k)-36)/48));
+    raw[i]=0.55*velN + 0.25*densN - 0.20*regN;
+  }
+  const sm2=new Array(raw.length);
+  for(let i=0;i<raw.length;i++){
+    const a=(i>0?raw[i-1]:raw[i]), b=raw[i], c=(i<raw.length-1?raw[i+1]:raw[i]);
+    sm2[i]=0.25*a+0.5*b+0.25*c;
+  }
+  let lo=Infinity, hi=-Infinity;
+  for(let i=0;i<sm2.length;i++){ if(sm2[i]<lo)lo=sm2[i]; if(sm2[i]>hi)hi=sm2[i]; }
+  const span=hi-lo;
+  for(let i=0;i<chords.length;i++){ chords[i]._E = (span<1e-6) ? 0.5 : (sm2[i]-lo)/span; }
+}
+
+function _energyTint(r,g,b){
+  const d=(_curE-0.5)*2;
+  if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
+  let R=r/255, G=g/255, B=b/255;
+  const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
+  let h=0, sx=0;
+  if(mx!==mn){ const dl=mx-mn; sx=l>0.5?dl/(2-mx-mn):dl/(mx+mn);
+    if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
+  const S=Math.max(0,Math.min(1, sx*(1+d*0.45)));
+  const L=Math.max(0.04,Math.min(0.96, l - d*0.18));
+  if(S===0){ const g2=Math.round(L*255); return [g2,g2,g2]; }
+  const q=L<0.5?L*(1+S):L+S-L*S, pp=2*L-q;
+  const h2=(t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return pp+(q-pp)*6*t; if(t<1/2)return q; if(t<2/3)return pp+(q-pp)*(2/3-t)*6; return pp; };
+  return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
+}
+
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively

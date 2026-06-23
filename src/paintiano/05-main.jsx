@@ -1985,11 +1985,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const gc = useCallback((m,v)=>{
     if(mode==='bw') return bwCol(m,v);
-    if(mode==='custom') return customCol(m,v,activePalette);
-    if(mode==='spectral') return specCol(m,v);
-    if(mode==='phi') return phiCol(m,v);
-    if(mode==='kontra') return kontraCol(m,v);
-    return harmCol(m,v);
+    let _c;
+    if(mode==='custom') _c=customCol(m,v,activePalette);
+    else if(mode==='spectral') _c=specCol(m,v);
+    else if(mode==='phi') _c=phiCol(m,v);
+    else if(mode==='kontra') _c=kontraCol(m,v);
+    else _c=harmCol(m,v);
+    const _t=_energyTint(_c[0],_c[1],_c[2]);
+    return [_t[0],_t[1],_t[2],_c[3]];
   },[mode,activePalette]);
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
@@ -2110,6 +2113,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // incremental-append fast path below.
     const drawOne = (chord) => {
       if(!chord) return; // stale disp can index past chords → undefined chord
+      _setCurE(chord._E);
       const{n:notes,idx}=chord;
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
@@ -2188,6 +2192,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
       style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic' && style!=='monet' && style!=='hokusai' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
+      _ensureEnergies(chords);
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
       // Overlay styles repaint the whole canvas every frame. During active
@@ -2256,9 +2261,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
+        _ensureEnergies(chords);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
-            const chord=chords[i];if(!chord)break; // stale disp / lim past chords → bail, don't destructure undefined
+            const chord=chords[i];if(!chord)break; _setCurE(chord._E); // stale disp / lim past chords → bail, don't destructure undefined
             const{n:notes,idx}=chord;
             const cell=grid.cells&&grid.cells[idx];
             if(cell){
@@ -2270,6 +2276,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             }
           }
         }
+        _setCurE(0.5);
         sub.builtTo=Math.max(sub.builtTo,lim);
         // Blit the cached substrate to the visible canvas in one operation.
         ctx.clearRect(0,0,CW,CH);
@@ -2308,7 +2315,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
       ctx.strokeStyle='rgba(255,255,255,0.025)';ctx.lineWidth=.5;
       for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*BW,0);ctx.lineTo(i*BW,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*BH);ctx.lineTo(CW,i*BH);ctx.stroke();}
+      _ensureEnergies(chords);
       for(let i=0;i<lim;i++) drawOne(chords[i]);
+      _setCurE(0.5);
       // Pollock global drip overlay — runs AFTER all cells have rendered.
       // Drips ignore cell boundaries and unify the painting under the splatter.
       if(style==='pollock' && lim>0){
