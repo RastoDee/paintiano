@@ -2886,7 +2886,10 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const drawField=(f, rect, angle)=>{
     const rnd=_seedRnd(f+1500,ss,0,0);
     const sampled=_rectChordColor(chords, f, Math.max(1,FIELDS), gc);
-    const col=lume(sampled[0],sampled[1],sampled[2], 0.92+rnd()*0.14);
+    const _ci=Math.min(chords.length-1,Math.floor(f*(chords.length/Math.max(1,FIELDS))));
+    const _fe=(chords[_ci]&&chords[_ci]._E!=null)?chords[_ci]._E:0.5;
+    const _eb=0.74+_fe*0.40;
+    const col=lume(sampled[0],sampled[1],sampled[2], (0.92+rnd()*0.14)*_eb);
     const R=col[0]|0,G=col[1]|0,B=col[2]|0;
 
     ctx.save();
@@ -2899,7 +2902,7 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     const by=rect.y, bh=rect.h;
 
     // Halo bleed into the ground.
-    const halo=lume(sampled[0],sampled[1],sampled[2],0.55);
+    const halo=lume(sampled[0],sampled[1],sampled[2],0.55*_eb);
     ctx.fillStyle=`rgba(${halo[0]|0},${halo[1]|0},${halo[2]|0},0.5)`;
     ctx.fillRect(fx-fw*0.02, by-bh*0.06, fw*1.04, bh*1.12);
 
