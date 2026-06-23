@@ -12838,6 +12838,49 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     }
   }
 
+  // ─── PIANO TECHNIQUE: MELODY REPETITION ───────────────────────────────────
+  // Tied notes (above) make a repeated MELODY pitch sound like one sustained
+  // note. That is right for lyrical / calm passages — but in a VIVID passage a
+  // pianist instead RE-STRIKES the repeated melody note crisply (a deliberate
+  // repeated-note figure, think Liszt's repeated octaves). Signal: the top voice
+  // (highest non-bass = the melody) carries the SAME MIDI across two or more
+  // adjacent playable chords AND the cell is vivid (_chroma ≥ per-piece median).
+  // We OVERRIDE the tie on that top note only (restore a clear attack), leaving
+  // calm repeats tied. Runs AFTER tied notes (so it can override) and BEFORE the
+  // merge — and only where the chords are NOT identical PC-sets (identical sets
+  // are handled by merge/tremolo, not re-struck here). Inner/bass ties untouched.
+  {
+    const chromaVals2=evts.map(e=>e._chroma||0).filter(c=>c>0).sort((a,b)=>a-b);
+    const chromaMed2=chromaVals2.length?chromaVals2[Math.floor(chromaVals2.length*0.55)]:0;
+    const _topMel=ns=>{ const nb=ns.filter(n=>!n.bass); if(!nb.length) return null; return nb.reduce((a,b)=>b.m>a.m?b:a).m; };
+    const _pcKey=ns=>{ const s=new Set(); for(const n of ns) s.add(((n.m%12)+12)%12); return [...s].sort((a,b)=>a-b).join(','); };
+    // Walk playable events in order, tracking the previous playable event.
+    let prevEv=null;
+    for(let i=0;i<evts.length;i++){
+      const ev=evts[i];
+      if(!ev.n || !ev.n.length || ev._playable===false) continue;
+      if(prevEv){
+        const tm=_topMel(ev.n), pm=_topMel(prevEv.n);
+        const vivid=(ev._chroma||0)>=chromaMed2;
+        const sameChord=_pcKey(ev.n)===_pcKey(prevEv.n);   // identical → leave to merge
+        if(tm!=null && tm===pm && vivid && !sameChord){
+          // Re-strike the melody: restore a clear attack on the tied top note.
+          ev.n=ev.n.map(n=>{
+            if(n.m===tm && n._tied){
+              const {_tied,...rest}=n;
+              // crisp repeated note — slightly under a fresh strike so it reads
+              // as a repeat, not a new phrase. Recover a real velocity from the
+              // 10% tie (×8 ≈ back to ~0.8 of original), clamped.
+              return {...rest, v:Math.max(40,Math.min(118,Math.round((n.v||8)*8))), _melRepeat:true};
+            }
+            return n;
+          });
+        }
+      }
+      prevEv=ev;
+    }
+  }
+
   // Merge consecutive chords with the SAME pitch-class set (strict). After merging,
   // velocity = mean of the group, voicing = clean PC set (one voice per PC at the
   // nearest octave to the group mean), so a long held plane isn't denser than any
@@ -12881,6 +12924,25 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       k+=groupLen;
     }
     mi=mj;
+  }
+  // ─── PIANO TECHNIQUE: TREMOLO on long-held chords ─────────────────────────
+  // A single held chord that rings for 3+ seconds goes dead on a piano (no
+  // sustain that long). A pianist keeps such a plane alive by re-striking it —
+  // a slow tremolo / repeated attack. Signal: a merged run with _runLen ≥ 16
+  // (≈3+ s of holding). We flag the event (_tremolo) and remember how many
+  // re-attacks it should carry; the PLAYER converts that into evenly spaced
+  // re-strikes across the event's real (scaled) held duration, so timing stays
+  // correct under any playbackSpeed. We deliberately DON'T precompute absolute
+  // ms here (the held length is only known at playback, after speed scaling) —
+  // we keep a count, leaving _playable=false continuations untouched.
+  const TREMOLO_RUN=16;       // ≥ this run length → re-struck plane
+  const TREMOLO_MS=180;       // nominal gap between re-attacks (player honours real time)
+  for(const ev of evts){
+    if(ev._playable===false) continue;
+    if((ev._runLen||0)>=TREMOLO_RUN){
+      ev._tremolo=true;
+      ev._tremoloMs=TREMOLO_MS;   // target gap; player divides real held span by this
+    }
   }
   // ─── Rhythmic phrasing pass (deterministic — driven by image content only) ──
   // The raw scan emits a uniform 8th-note grid, which sounds mechanical. Without
@@ -12987,7 +13049,24 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     // Floor scales down with drive so staccato is actually short when lively, but
     // never a click. Calm keeps the old generous 140ms minimum.
     const durFloor = Math.round(140 - 70*rhythmDrive);  // 140ms calm … 70ms driving
-    ev.n=ev.n.map(n=>({...n, durMs:Math.max(durFloor, Math.round((n.durMs||250)*artMul))}));
+    // ─── PIANO TECHNIQUE: PER-VOICE ARTICULATION ──────────────────────────────
+    // A real pianist does not give every voice the same length. The MELODY (top
+    // voice) sings — held long, legato — while the BASS is plucked short and
+    // detached (staccato) so it punctuates without muddying the texture; inner
+    // (mid) voices stay neutral. Signal: a note's role within its own chord —
+    // the highest non-bass pitch is the melody, `n.bass` is the bass, the rest
+    // are mid. The per-voice factor multiplies ON TOP of the texture artMul, so
+    // a busy staccato patch still has a longer top line and a crisper bass.
+    const _nb=ev.n.filter(n=>!n.bass);
+    const _topM=_nb.length?Math.max(..._nb.map(n=>n.m)):-Infinity;
+    ev.n=ev.n.map(n=>{
+      let voiceMul=1;
+      if(n.bass)              voiceMul=0.55;   // bass: short, detached
+      else if(n.m===_topM)    voiceMul=1.4;    // melody (top voice): long, singing
+      // mid voices → 1 (neutral)
+      const durMs=Math.max(durFloor, Math.round((n.durMs||250)*artMul*voiceMul));
+      return {...n, durMs};
+    });
   }
   // ─── COMPOSITION PASS (form & dramaturgy) ──────────────────────────────────
   // Everything above shapes the piece LOCALLY (per cell / per bar). This final
@@ -24031,6 +24110,56 @@ Composition rules:
           const velScale=liveChords[i]._runLen?1:0.75;
           try{
             const notes=liveChords[i].n;
+            // PIANO TECHNIQUE: TREMOLO. A chord flagged _tremolo (a long merged
+            // plane, _runLen ≥ 16) is kept alive by RE-STRIKING it across its
+            // held span instead of letting one attack decay into silence. We
+            // split the real (speed-scaled) held duration into segments of
+            // ~_tremoloMs and re-attack every note at each segment boundary, each
+            // re-strike lasting one segment. Velocity dips slightly on the
+            // re-strikes so the first attack still leads. Honours playbackSpeed
+            // and the global pushTimer cleanup (so stopping playback cancels it).
+            const _trem=liveChords[i]._tremolo===true;
+            if(_trem){
+              const gap=Math.max(90, Math.round((liveChords[i]._tremoloMs||180)/playbackSpeedRef.current));
+              const fullSpan=Math.round((notes[0]?.durMs||300)*durMul/playbackSpeedRef.current);
+              const reps=Math.max(2, Math.min(40, Math.floor(fullSpan/gap)));
+              const segDur=Math.max(120, Math.round(fullSpan/reps));
+              notes.forEach(({m,v})=>{
+                for(let r=0;r<reps;r++){
+                  const vv=Math.round(v*velScale*(r===0?1:0.78));
+                  if(r===0){ try{ playNote(m,vv,segDur); }catch(_){} }
+                  else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, r*gap); }
+                }
+              });
+              const tmid=notes.map(({m})=>({m,scaledDur:fullSpan}));
+              setActive(p=>{const s=new Set(p);for(const x of tmid)s.add(x.m);return s;});
+              pushTimer(()=>setActive(p=>{const s=new Set(p);tmid.forEach(x=>s.delete(x.m));return s;}),fullSpan);
+              const wrap=kbScrollRef.current;
+              if(wrap){
+                const xs=notes.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
+                if(xs.length){
+                  const cx=xs.reduce((a,b)=>a+b,0)/xs.length;
+                  const target=Math.max(0,cx - wrap.clientWidth/2 + 13);
+                  wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});
+                }
+              }
+              setDisp(i+1); i++;
+              {
+                let _gapMs2;
+                if(melodyOnRef.current !== _melStepsOn || liveChords.length !== _melStepsLen){
+                  _melSteps=_computeMelSteps(liveChords);
+                  _melStepsLen=liveChords.length;
+                  _melStepsOn=melodyOnRef.current;
+                }
+                if(melodyOnRef.current && _melSteps && _melSteps.length){
+                  _gapMs2 = Math.max(8, Math.min(1400, _melSteps[i-1] || 150));
+                } else {
+                  _gapMs2 = (liveChords[i-1] && liveChords[i-1]._stepMs) || 150;
+                }
+                pushTimer(step, Math.round(_gapMs2/playbackSpeedRef.current));
+              }
+              return;
+            }
             // Per-note onset offset (offsetMs) supports piano techniques: arpeggio,
             // tied notes, voice-specific timing. If absent or 0, fires immediately
             // (identical to previous block-chord behaviour). When >0, schedules the

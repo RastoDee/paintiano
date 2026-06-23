@@ -6402,6 +6402,56 @@ Composition rules:
           const velScale=liveChords[i]._runLen?1:0.75;
           try{
             const notes=liveChords[i].n;
+            // PIANO TECHNIQUE: TREMOLO. A chord flagged _tremolo (a long merged
+            // plane, _runLen ≥ 16) is kept alive by RE-STRIKING it across its
+            // held span instead of letting one attack decay into silence. We
+            // split the real (speed-scaled) held duration into segments of
+            // ~_tremoloMs and re-attack every note at each segment boundary, each
+            // re-strike lasting one segment. Velocity dips slightly on the
+            // re-strikes so the first attack still leads. Honours playbackSpeed
+            // and the global pushTimer cleanup (so stopping playback cancels it).
+            const _trem=liveChords[i]._tremolo===true;
+            if(_trem){
+              const gap=Math.max(90, Math.round((liveChords[i]._tremoloMs||180)/playbackSpeedRef.current));
+              const fullSpan=Math.round((notes[0]?.durMs||300)*durMul/playbackSpeedRef.current);
+              const reps=Math.max(2, Math.min(40, Math.floor(fullSpan/gap)));
+              const segDur=Math.max(120, Math.round(fullSpan/reps));
+              notes.forEach(({m,v})=>{
+                for(let r=0;r<reps;r++){
+                  const vv=Math.round(v*velScale*(r===0?1:0.78));
+                  if(r===0){ try{ playNote(m,vv,segDur); }catch(_){} }
+                  else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, r*gap); }
+                }
+              });
+              const tmid=notes.map(({m})=>({m,scaledDur:fullSpan}));
+              setActive(p=>{const s=new Set(p);for(const x of tmid)s.add(x.m);return s;});
+              pushTimer(()=>setActive(p=>{const s=new Set(p);tmid.forEach(x=>s.delete(x.m));return s;}),fullSpan);
+              const wrap=kbScrollRef.current;
+              if(wrap){
+                const xs=notes.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
+                if(xs.length){
+                  const cx=xs.reduce((a,b)=>a+b,0)/xs.length;
+                  const target=Math.max(0,cx - wrap.clientWidth/2 + 13);
+                  wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});
+                }
+              }
+              setDisp(i+1); i++;
+              {
+                let _gapMs2;
+                if(melodyOnRef.current !== _melStepsOn || liveChords.length !== _melStepsLen){
+                  _melSteps=_computeMelSteps(liveChords);
+                  _melStepsLen=liveChords.length;
+                  _melStepsOn=melodyOnRef.current;
+                }
+                if(melodyOnRef.current && _melSteps && _melSteps.length){
+                  _gapMs2 = Math.max(8, Math.min(1400, _melSteps[i-1] || 150));
+                } else {
+                  _gapMs2 = (liveChords[i-1] && liveChords[i-1]._stepMs) || 150;
+                }
+                pushTimer(step, Math.round(_gapMs2/playbackSpeedRef.current));
+              }
+              return;
+            }
             // Per-note onset offset (offsetMs) supports piano techniques: arpeggio,
             // tied notes, voice-specific timing. If absent or 0, fires immediately
             // (identical to previous block-chord behaviour). When >0, schedules the
