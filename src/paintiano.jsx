@@ -12899,6 +12899,8 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     let mj=mi+1;
     while(mj<evts.length&&chordKey(evts[mj].n)===key)mj++;
     let k=mi;
+    let _prevBlockBright=null;                      // for block-to-block micro-drift within this plane
+    let _planeBlockIdx=0;                            // ordinal of this merged block inside the plane
     while(k<mj){
       const groupLen=Math.min(MAX_RUN,mj-k);
       if(groupLen>1){
@@ -12919,29 +12921,93 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         cleanN.sort((a,b)=>b.m-a.m);
         evts[k].n=cleanN;
         evts[k]._runLen=groupLen;
+        // ─── PLANE TEXTURE (drives technique variation downstream) ────────────
+        // A big "same" plane (Chagall's blue field) is never perfectly uniform —
+        // its cells drift in brightness/chroma. Capture each merged BLOCK's own
+        // average brightness + chroma + saliency, and how much it DRIFTED from
+        // the previous block of this plane. Downstream the tremolo/roll pass uses
+        // these so consecutive blocks of one field don't all play the identical
+        // gesture — the technique morphs as the plane's own micro-variation does
+        // (fully deterministic: same image → same drift → same morph).
+        {
+          let bs=0,bc=0,cs=0,ss=0;
+          for(let x=k;x<k+groupLen;x++){
+            const e=evts[x];
+            if(e._bright!=null){ bs+=e._bright; bc++; }
+            cs+=(e._chroma||0);
+            ss+=(rawInt[x]||0);
+          }
+          const blockBright=bc?bs/bc:0;
+          evts[k]._planeBright=blockBright;
+          evts[k]._planeChroma=cs/groupLen;
+          evts[k]._planeSal=ss/groupLen;
+          evts[k]._planeBlockIdx=_planeBlockIdx;
+          evts[k]._planeDrift=(_prevBlockBright==null)?0:(blockBright-_prevBlockBright);
+          _prevBlockBright=blockBright;
+          _planeBlockIdx++;
+        }
         for(let x=k+1;x<k+groupLen;x++)evts[x]._playable=false;
       }
       k+=groupLen;
     }
     mi=mj;
   }
-  // ─── PIANO TECHNIQUE: TREMOLO on long-held chords ─────────────────────────
-  // A single held chord that rings for 3+ seconds goes dead on a piano (no
-  // sustain that long). A pianist keeps such a plane alive by re-striking it —
-  // a slow tremolo / repeated attack. Signal: a merged run with _runLen ≥ 16
-  // (≈3+ s of holding). We flag the event (_tremolo) and remember how many
-  // re-attacks it should carry; the PLAYER converts that into evenly spaced
-  // re-strikes across the event's real (scaled) held duration, so timing stays
-  // correct under any playbackSpeed. We deliberately DON'T precompute absolute
-  // ms here (the held length is only known at playback, after speed scaling) —
-  // we keep a count, leaving _playable=false continuations untouched.
-  const TREMOLO_RUN=16;       // ≥ this run length → re-struck plane
-  const TREMOLO_MS=180;       // nominal gap between re-attacks (player honours real time)
-  for(const ev of evts){
-    if(ev._playable===false) continue;
-    if((ev._runLen||0)>=TREMOLO_RUN){
+  // ─── PIANO TECHNIQUE: SUSTAINED-PLANE VARIATION ───────────────────────────
+  // A single held chord that rings for 3+ seconds goes dead on a piano. A
+  // pianist keeps such a plane alive by re-articulating it. But on a BIG plane
+  // (Chagall's blue field) that means many long blocks in a row — playing the
+  // identical gesture each time sounds like a loop. So instead of one fixed
+  // tremolo, each block of the plane chooses HOW to stay alive FROM ITS OWN
+  // CONTENT: brightness, chroma and saliency captured per block (_plane*), plus
+  // how much it drifted from the previous block (_planeDrift). The result morphs
+  // the way the field itself subtly shifts — never schematic, always the same
+  // for the same image (deterministic). Three gestures (the player reads _planeGesture):
+  //   • 'shimmer' — slow, soft re-strike (calm, dim, stable patches)
+  //   • 'pulse'   — faster, firmer re-strike (brighter / more saturated patches)
+  //   • 'roll'    — a rolled (arpeggiated) re-voicing, used where the plane just
+  //                 DRIFTED noticeably (a seam in the field) — a fresh colour.
+  // Tempo of the re-strike also flows continuously with saliency, so even two
+  // 'shimmer' blocks differ slightly. The player converts the nominal gap into
+  // real re-strikes across the scaled held span (timing stays speed-correct).
+  const TREMOLO_RUN=16;       // ≥ this run length → a sustained plane to keep alive
+  {
+    // Per-piece references so 'bright'/'saturated'/'drifted' are relative to THIS
+    // image, not absolutes — a dim painting still gets its own internal contrast.
+    const pbVals=evts.filter(e=>e._planeBright!=null && (e._runLen||0)>=TREMOLO_RUN).map(e=>e._planeBright).sort((a,b)=>a-b);
+    const pcVals=evts.filter(e=>e._planeChroma!=null && (e._runLen||0)>=TREMOLO_RUN).map(e=>e._planeChroma).sort((a,b)=>a-b);
+    const psVals=evts.filter(e=>e._planeSal!=null && (e._runLen||0)>=TREMOLO_RUN).map(e=>e._planeSal).sort((a,b)=>a-b);
+    const q=(arr,f)=>arr.length?arr[Math.floor(arr.length*f)]:0;
+    const pbMed=q(pbVals,0.5), pcMed=q(pcVals,0.5);
+    const psLo=q(psVals,0.15), psHi=q(psVals,0.85), psRange=(psHi-psLo)||1;
+    // Drift magnitude reference: a "seam" is a drift in the upper part of the
+    // per-piece drift distribution (so flat fields rarely roll, varied ones do).
+    const drVals=evts.filter(e=>(e._runLen||0)>=TREMOLO_RUN).map(e=>Math.abs(e._planeDrift||0)).sort((a,b)=>a-b);
+    const drHi=q(drVals,0.7);
+    for(const ev of evts){
+      if(ev._playable===false) continue;
+      if((ev._runLen||0)<TREMOLO_RUN) continue;
       ev._tremolo=true;
-      ev._tremoloMs=TREMOLO_MS;   // target gap; player divides real held span by this
+      const pb=ev._planeBright!=null?ev._planeBright:pbMed;
+      const pc=ev._planeChroma!=null?ev._planeChroma:pcMed;
+      const ps=ev._planeSal!=null?ev._planeSal:(psLo+psHi)/2;
+      const drift=Math.abs(ev._planeDrift||0);
+      // saliency position 0..1 within the piece → continuous tempo lean.
+      const sPos=Math.max(0,Math.min(1,(ps-psLo)/psRange));
+      // Choose the gesture from content (no counter / modulo):
+      if(drift>0 && drift>=drHi && drHi>0){
+        // The field just shifted here — articulate the change as a fresh roll.
+        ev._planeGesture='roll';
+        // roll speed leans faster when the block is also bright/lively.
+        ev._tremoloMs=Math.round(150 - 50*sPos);       // ~100..150ms between voices
+      } else if(pb>=pbMed || pc>=pcMed){
+        // Brighter / more saturated stretch → firmer, faster pulse.
+        ev._planeGesture='pulse';
+        ev._tremoloMs=Math.round(150 - 45*sPos);        // ~105..150ms
+      } else {
+        // Calm, dim, stable stretch → slow soft shimmer.
+        ev._planeGesture='shimmer';
+        ev._tremoloMs=Math.round(230 - 50*sPos);        // ~180..230ms
+      }
     }
   }
   // ─── Rhythmic phrasing pass (deterministic — driven by image content only) ──
@@ -24120,17 +24186,45 @@ Composition rules:
             // and the global pushTimer cleanup (so stopping playback cancels it).
             const _trem=liveChords[i]._tremolo===true;
             if(_trem){
+              const gesture=liveChords[i]._planeGesture||'shimmer';
               const gap=Math.max(90, Math.round((liveChords[i]._tremoloMs||180)/playbackSpeedRef.current));
               const fullSpan=Math.round((notes[0]?.durMs||300)*durMul/playbackSpeedRef.current);
               const reps=Math.max(2, Math.min(40, Math.floor(fullSpan/gap)));
               const segDur=Math.max(120, Math.round(fullSpan/reps));
-              notes.forEach(({m,v})=>{
+              // A sustained plane keeps itself alive with a gesture chosen (in the
+              // composer pass) from the plane's own content, so a big field morphs
+              // instead of looping one re-strike:
+              //   • shimmer — soft slow re-strike, notes together (calm patch)
+              //   • pulse   — firmer/faster re-strike, slight bottom-up lean (lively patch)
+              //   • roll    — each re-strike is ARPEGGIATED low→high (a fresh seam)
+              if(gesture==='roll'){
+                // Rolled re-articulation: every repetition rolls the chord bottom→top.
+                const sortedLo=[...notes].sort((a,b)=>a.m-b.m);
+                const rollStep=Math.max(14, Math.round(28/playbackSpeedRef.current));
                 for(let r=0;r<reps;r++){
-                  const vv=Math.round(v*velScale*(r===0?1:0.78));
-                  if(r===0){ try{ playNote(m,vv,segDur); }catch(_){} }
-                  else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, r*gap); }
+                  sortedLo.forEach(({m,v},vi)=>{
+                    const vv=Math.round(v*velScale*(r===0?0.92:0.7));
+                    const at=r*gap + vi*rollStep;
+                    if(at===0){ try{ playNote(m,vv,segDur); }catch(_){} }
+                    else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, at); }
+                  });
                 }
-              });
+              } else {
+                // shimmer / pulse: block re-strikes. Pulse hits a touch harder and
+                // leans the bottom voice slightly ahead for drive; shimmer is even.
+                const pulse=gesture==='pulse';
+                const lead=pulse?Math.max(8,Math.round(12/playbackSpeedRef.current)):0;
+                const baseV=pulse?0.85:0.72;          // re-strike loudness (first attack full)
+                const sortedLo=lead?[...notes].sort((a,b)=>a.m-b.m):notes;
+                sortedLo.forEach(({m,v},vi)=>{
+                  for(let r=0;r<reps;r++){
+                    const vv=Math.round(v*velScale*(r===0?1:baseV));
+                    const at=r*gap + (lead?vi*lead:0);
+                    if(at===0){ try{ playNote(m,vv,segDur); }catch(_){} }
+                    else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, at); }
+                  }
+                });
+              }
               const tmid=notes.map(({m})=>({m,scaledDur:fullSpan}));
               setActive(p=>{const s=new Set(p);for(const x of tmid)s.add(x.m);return s;});
               pushTimer(()=>setActive(p=>{const s=new Set(p);tmid.forEach(x=>s.delete(x.m));return s;}),fullSpan);

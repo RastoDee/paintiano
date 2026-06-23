@@ -6412,17 +6412,45 @@ Composition rules:
             // and the global pushTimer cleanup (so stopping playback cancels it).
             const _trem=liveChords[i]._tremolo===true;
             if(_trem){
+              const gesture=liveChords[i]._planeGesture||'shimmer';
               const gap=Math.max(90, Math.round((liveChords[i]._tremoloMs||180)/playbackSpeedRef.current));
               const fullSpan=Math.round((notes[0]?.durMs||300)*durMul/playbackSpeedRef.current);
               const reps=Math.max(2, Math.min(40, Math.floor(fullSpan/gap)));
               const segDur=Math.max(120, Math.round(fullSpan/reps));
-              notes.forEach(({m,v})=>{
+              // A sustained plane keeps itself alive with a gesture chosen (in the
+              // composer pass) from the plane's own content, so a big field morphs
+              // instead of looping one re-strike:
+              //   • shimmer — soft slow re-strike, notes together (calm patch)
+              //   • pulse   — firmer/faster re-strike, slight bottom-up lean (lively patch)
+              //   • roll    — each re-strike is ARPEGGIATED low→high (a fresh seam)
+              if(gesture==='roll'){
+                // Rolled re-articulation: every repetition rolls the chord bottom→top.
+                const sortedLo=[...notes].sort((a,b)=>a.m-b.m);
+                const rollStep=Math.max(14, Math.round(28/playbackSpeedRef.current));
                 for(let r=0;r<reps;r++){
-                  const vv=Math.round(v*velScale*(r===0?1:0.78));
-                  if(r===0){ try{ playNote(m,vv,segDur); }catch(_){} }
-                  else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, r*gap); }
+                  sortedLo.forEach(({m,v},vi)=>{
+                    const vv=Math.round(v*velScale*(r===0?0.92:0.7));
+                    const at=r*gap + vi*rollStep;
+                    if(at===0){ try{ playNote(m,vv,segDur); }catch(_){} }
+                    else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, at); }
+                  });
                 }
-              });
+              } else {
+                // shimmer / pulse: block re-strikes. Pulse hits a touch harder and
+                // leans the bottom voice slightly ahead for drive; shimmer is even.
+                const pulse=gesture==='pulse';
+                const lead=pulse?Math.max(8,Math.round(12/playbackSpeedRef.current)):0;
+                const baseV=pulse?0.85:0.72;          // re-strike loudness (first attack full)
+                const sortedLo=lead?[...notes].sort((a,b)=>a.m-b.m):notes;
+                sortedLo.forEach(({m,v},vi)=>{
+                  for(let r=0;r<reps;r++){
+                    const vv=Math.round(v*velScale*(r===0?1:baseV));
+                    const at=r*gap + (lead?vi*lead:0);
+                    if(at===0){ try{ playNote(m,vv,segDur); }catch(_){} }
+                    else { pushTimer(()=>{ try{ playNote(m,vv,segDur); }catch(_){}}, at); }
+                  }
+                });
+              }
               const tmid=notes.map(({m})=>({m,scaledDur:fullSpan}));
               setActive(p=>{const s=new Set(p);for(const x of tmid)s.add(x.m);return s;});
               pushTimer(()=>setActive(p=>{const s=new Set(p);tmid.forEach(x=>s.delete(x.m));return s;}),fullSpan);
