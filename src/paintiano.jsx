@@ -19376,6 +19376,10 @@ export default function Paintiano() {
   // internally on tap, but the family is shown/hidden as a unit.
   const ALL_PALETTE_KEYS = ['harmony','spectral','phi','kontra','custom'];
   const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','comic','monet','hokusai'];
+  // Tones available in the active canvas Tone selector. Users can pre-filter
+  // which tones appear in the main panel via Setup (same chip-list UI as
+  // palettes/artists). Default: all three on.
+  const ALL_TONE_KEYS    = ['pure','real','pastel'];
   const [setupPalettes, setSetupPalettes] = useState(() => {
     try {
       const raw = localStorage.getItem('paintiano_setup_palettes');
@@ -19411,6 +19415,28 @@ export default function Paintiano() {
   useEffect(() => {
     try { localStorage.setItem('paintiano_setup_artists', JSON.stringify(setupArtists)); } catch(_) {}
   }, [setupArtists]);
+  const [setupTones, setSetupTones] = useState(() => {
+    try {
+      const raw = localStorage.getItem('paintiano_setup_tones');
+      if(!raw) return ALL_TONE_KEYS.slice();
+      const arr = JSON.parse(raw);
+      if(!Array.isArray(arr)) return ALL_TONE_KEYS.slice();
+      const valid = arr.filter(k => ALL_TONE_KEYS.includes(k));
+      return valid.length ? valid : ALL_TONE_KEYS.slice();
+    } catch(_) { return ALL_TONE_KEYS.slice(); }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('paintiano_setup_tones', JSON.stringify(setupTones)); } catch(_) {}
+  }, [setupTones]);
+  // If the current tone is no longer in setupTones (user disabled it), fall
+  // back to the first enabled tone — keeps the active selection valid without
+  // forcing the user to manually re-pick after editing Setup.
+  useEffect(() => {
+    if(!setupTones.includes(tone)){
+      const fb = setupTones[0] || 'pure';
+      setTone(fb);
+    }
+  }, [setupTones, tone]);
   // Landing-page deep link: /play?upgrade=pro|proai opens the paywall straight
   // away on the matching tier. 'pro' → reason 'settings' (Pro card on top);
   // 'proai' → reason 'ai_trial' (Pro AI card on top, recommended). Runs once on
@@ -28403,18 +28429,26 @@ Composition rules:
               _setPastelOn so any visible chord re-renders immediately. */}
           <div style={{marginTop:10,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
-              {[
+            {(()=>{
+              const allTones = [
                 {k:'pure',   label:({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure'},
                 {k:'real',   label:({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real'},
                 {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'}
-              ].map(o=>{
-                const sel = tone===o.k;
-                return (
-                <button key={o.k} onClick={()=>setTone(o.k)} style={{padding:'8px 0',textAlign:'center',borderRadius:10,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:sel?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:sel?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:sel?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{o.label}</button>
-                );
-              })}
-            </div>
+              ];
+              const visTones = allTones.filter(o => setupTones.includes(o.k));
+              if(!visTones.length) return null;   // user turned all tones off (shouldn't normally happen)
+              const cols = visTones.length;
+              return (
+              <div style={{display:'grid',gridTemplateColumns:`repeat(${cols}, 1fr)`,gap:6}}>
+                {visTones.map(o=>{
+                  const sel = tone===o.k;
+                  return (
+                  <button key={o.k} onClick={()=>setTone(o.k)} style={{padding:'8px 0',textAlign:'center',borderRadius:10,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:sel?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:sel?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:sel?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{o.label}</button>
+                  );
+                })}
+              </div>
+              );
+            })()}
           </div>
           </>
           )}
@@ -30308,9 +30342,15 @@ Composition rules:
       {showSetupModal && (()=>{
         const _palLabels = {harmony:t('harmony'), spectral:t('spectral'), phi:t('phi'), kontra:t('kontra'), custom:t('custom')};
         const _artistLabels = (()=>{ const m={mosaicFamily:(ts('setupMosaicFamily','Mosaic family'))}; ALL_ARTIST_KEYS.forEach(k=>{ if(k!=='mosaicFamily') m[k]=STYLE_INSPIRED[k]||k; }); return m; })();
+        const _toneLabels = {
+          pure:   ({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure',
+          real:   ({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real',
+          pastel: ({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'
+        };
         const togglePal = (k)=> setSetupPalettes(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
         const toggleArt = (k)=> setSetupArtists(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
-        const okMin = setupPalettes.length>=1 && setupArtists.length>=1;
+        const toggleTone = (k)=> setSetupTones(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
+        const okMin = setupPalettes.length>=1 && setupArtists.length>=1 && setupTones.length>=1;
         const isFree = proStatus==='free';
         return (
         <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) closeSetup(); }} style={{position:'fixed',inset:0,zIndex:100000,background:'rgba(8,6,14,0.96)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',display:'flex',justifyContent:'center'}}>
@@ -30342,6 +30382,26 @@ Composition rules:
                 </div>
                 <div className="pf-setup-done-pal" style={{display:'none'}}>
                   <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
+                </div>
+              </div>
+              <div className="pf-setup-tones">
+                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
+                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupTonesTitle',({EN:'Tones',SK:'Tóny',DE:'Töne',FR:'Tonalités',ES:'Tonos',PT:'Tons',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tones')}</span>
+                  <span style={{display:'inline-flex',gap:14,fontSize:(.6*effScale)+'rem',letterSpacing:0}}>
+                    <span onClick={()=>setSetupTones(ALL_TONE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupTones(ALL_TONE_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.7)'}}>{_sent(ts('setupAll','All'))}</span>
+                    <span onClick={()=>setSetupTones(['pure'])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupTones(['pure']);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.45)'}}>{_sent(ts('setupNone','None'))}</span>
+                  </span>
+                </div>
+                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
+                  {ALL_TONE_KEYS.map(k=>{
+                    const on = setupTones.includes(k);
+                    return (
+                    <button key={k} onClick={()=>toggleTone(k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
+                      <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:6,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'1rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
+                      <span style={{flex:1,textAlign:'left'}}>{_sent(_toneLabels[k])}</span>
+                    </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="pf-setup-artists">
