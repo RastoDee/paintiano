@@ -2557,7 +2557,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const sub=substrateRef.current;
         // Cache key: anything that invalidates the whole substrate. Note `lim`
         // is intentionally NOT in the key — growth is handled incrementally.
-        const subKey=`${CW}x${CH}|${style}|${mode}|${stamp}|${pollockSessionSeed}`;
+        const subKey=`${CW}x${CH}|${style}|${mode}|${tone}|${stamp}|${pollockSessionSeed}`;
         let sctx=sub.ctx;
         if(sub.key!==subKey||sub.CW!==CW||sub.CH!==CH||sub.SS!==SS||!sub.canvas){
           if(!sub.canvas||sub.CW!==CW||sub.CH!==CH||sub.SS!==SS){
