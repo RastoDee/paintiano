@@ -220,10 +220,21 @@ const PF_STYLE = `
         .pf-setup-body {
           display: grid !important;
           grid-template-columns: 1fr 1fr !important;
+          grid-template-areas: "pal art" "tone art" "done art" !important;
           gap: 0 16px !important;
           align-items: start !important;
         }
-        .pf-setup-palettes { display: flex; flex-direction: column; }
+        .pf-setup-palettes { grid-area: pal; display: flex; flex-direction: column; }
+        .pf-setup-tone     { grid-area: tone; display: flex; flex-direction: column; margin-top: 22px; }
+        .pf-setup-artists  { grid-area: art; }
+        /* Tone column inherits the same look as palettes: text right-aligned,
+           radio circle at the left edge. Mirrors .pf-setup-palettes rules. */
+        .pf-setup-tone .pf-setup-grid { grid-template-columns: 1fr !important; }
+        .pf-setup-tone .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
+        .pf-setup-tone > div:first-child {
+          justify-content: flex-start !important;
+          gap: 16px !important;
+        }
         .pf-setup-palettes .pf-setup-grid,
         .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
         /* PALETTES col: text right-aligned (toward center), checkbox at left edge */
@@ -690,23 +701,50 @@ const PF_STYLE = `
              wider screens. The base 2-col layout + 2-thumb rules apply
              globally; here we just swap to 3-col grid and pin DONE. */
           .pf-setup-dialog { max-width: 860px !important; }
+          /* Desktop + tablet portrait/landscape: 2-col layout. Tone sits under
+             Palettes in the left column; HOTOVO chip sits inside Tone column,
+             right under the radio buttons. Artists fill the right column. */
           .pf-setup-body {
-            grid-template-columns: 1fr 1fr 1fr !important;
-            grid-template-areas: "pal mid art" !important;
+            grid-template-columns: 1fr 1fr !important;
+            grid-template-areas: "pal art" "tone art" !important;
             gap: 0 28px !important;
           }
-          .pf-setup-palettes { grid-area: pal; height: 100%; }
+          .pf-setup-palettes { grid-area: pal; height: auto; }
+          .pf-setup-tone     { grid-area: tone; }
           .pf-setup-artists  { grid-area: art; }
-          /* DONE moves out of the modal footer and sits at the bottom of the left
-             column. Hide the original footer; show a left-column DONE instead. */
+          /* Hide the modal footer in this layout; show the in-Tone DONE chip. */
           .pf-setup-footer { display: none !important; }
-          .pf-setup-palettes .pf-setup-done {
+          .pf-setup-tone .pf-setup-done {
             display: flex !important;
-            justify-content: center;
-            margin-top: auto;
-            padding-top: 22px;
+            justify-content: flex-start;
+            margin-top: 22px;
           }
-          .pf-setup-palettes .pf-setup-done > button { width: auto; }
+          .pf-setup-tone .pf-setup-done > button { width: auto; }
+          /* Palette-column DONE stays hidden in 2-col. */
+          .pf-setup-done-pal { display: none !important; }
+          /* MOBILE LANDSCAPE override — phone held sideways: 3-col layout
+             (Palettes | Tone | Artists). Use the chip inside Palettes
+             (pf-setup-done-pal) so it sits under Palettes; hide the
+             in-Tone chip in this layout. */
+          @media (max-height: 500px) and (orientation: landscape) {
+            .pf-setup-body {
+              grid-template-columns: 1fr 1fr 1fr !important;
+              grid-template-areas: "pal tone art" !important;
+              gap: 0 16px !important;
+            }
+            .pf-setup-tone { margin-top: 0; }
+            /* In 3-col mode, text in the Tone column is center-aligned. */
+            .pf-setup-tone .pf-setup-grid > button > :last-child { text-align: center !important; }
+            /* Swap which DONE chip is visible: hide in-Tone chip, show
+               in-Palettes chip so it sits under Palettes in the left column. */
+            .pf-setup-tone .pf-setup-done { display: none !important; }
+            .pf-setup-done-pal {
+              display: flex !important;
+              justify-content: flex-start;
+              margin-top: 22px;
+            }
+            .pf-setup-done-pal > button { width: auto; }
+          }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */
@@ -1643,6 +1681,102 @@ function _progressive(lim, cn, max){
   return Math.max(1, Math.round(max * t));
 }
 
+// Velocity -> saturation helper. Lerps an [r,g,b] toward its own grey based on
+// note velocity v (0..127). 'floor' is the lowest satKeep when v is tiny -- use
+// 0.25 in mosaic/notes (strong effect), 0.55-0.75 in artist styles (subtle, to
+// preserve each artist's signature palette). Returns [R,G,B] as integers.
+function _velSat(r,g,b,v,floor){
+  const vN=Math.max(0,Math.min(1,((v||80)-30)/90));
+  const f=(floor==null?0.25:floor);
+  const k=f + vN*(1-f);
+  const grey=0.299*r+0.587*g+0.114*b;
+  return [Math.round(grey+(r-grey)*k), Math.round(grey+(g-grey)*k), Math.round(grey+(b-grey)*k)];
+}
+
+// ── Mix palette (energy → saturation/lightness) ────────────────────────────
+// Built-in 'fourth axis': phrase energy modulates colour. Energy per chord =
+// 0.55*velocity + 0.25*density - 0.20*register, smoothed and normalised across
+// the song, then mapped continuously: low energy -> pastel (less saturated,
+// lighter), high energy -> dark (more saturated, deeper). Deterministic:
+// same song -> same energies -> same painting. Set per chord by the paint loop
+// via _setCurE; _energyTint is applied inside gc() so every style inherits it.
+// Toggled by the Tone selector in Setup: Normal turns it off (raw palette
+// colours), Mix and Pastel both turn it on.
+let _curE = 0.5;
+function _setCurE(e){ _curE = (e==null||isNaN(e)) ? 0.5 : e; }
+let _mixOn = false;
+function _setMixOn(b){ _mixOn = !!b; }
+
+let _enChords = null;
+function _ensureEnergies(chords){
+  if(!chords || !chords.length){ _enChords=chords; return; }
+  if(chords===_enChords && chords[chords.length-1]._E!==undefined) return;
+  _enChords = chords;
+  const raw = new Array(chords.length);
+  for(let i=0;i<chords.length;i++){
+    const ns=(chords[i]&&chords[i].n)||[]; const k=ns.length||1;
+    let sv=0, sm=0;
+    for(let j=0;j<ns.length;j++){ sv+=(ns[j].v||80); sm+=(ns[j].m||60); }
+    const velN=Math.max(0,Math.min(1,((sv/k)-30)/90));
+    const densN=Math.max(0,Math.min(1,(k-1)/3));
+    const regN=Math.max(0,Math.min(1,((sm/k)-36)/48));
+    raw[i]=0.55*velN + 0.25*densN - 0.20*regN;
+  }
+  const sm2=new Array(raw.length);
+  for(let i=0;i<raw.length;i++){
+    const a=(i>0?raw[i-1]:raw[i]), b=raw[i], c=(i<raw.length-1?raw[i+1]:raw[i]);
+    sm2[i]=0.25*a+0.5*b+0.25*c;
+  }
+  let lo=Infinity, hi=-Infinity;
+  for(let i=0;i<sm2.length;i++){ if(sm2[i]<lo)lo=sm2[i]; if(sm2[i]>hi)hi=sm2[i]; }
+  const span=hi-lo;
+  for(let i=0;i<chords.length;i++){ chords[i]._E = (span<1e-6) ? 0.5 : (sm2[i]-lo)/span; }
+}
+
+function _energyTint(r,g,b){
+  // Tone switch — when Mix is off (Normal tone), the energy modulation is
+  // bypassed entirely so the palette's raw colours are used as-is. Mix and
+  // Pastel tones both turn this on.
+  if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
+  const d=(_curE-0.5)*2;
+  if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
+  let R=r/255, G=g/255, B=b/255;
+  const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
+  let h=0, sx=0;
+  if(mx!==mn){ const dl=mx-mn; sx=l>0.5?dl/(2-mx-mn):dl/(mx+mn);
+    if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
+  const S=Math.max(0,Math.min(1, sx*(1+d*0.45)));
+  const L=Math.max(0.04,Math.min(0.96, l - d*0.18));
+  if(S===0){ const g2=Math.round(L*255); return [g2,g2,g2]; }
+  const q=L<0.5?L*(1+S):L+S-L*S, pp=2*L-q;
+  const h2=(t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return pp+(q-pp)*6*t; if(t<1/2)return q; if(t<2/3)return pp+(q-pp)*(2/3-t)*6; return pp; };
+  return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
+}
+
+// ── PASTEL mode ─────────────────────────────────────────────────────────────
+// Module-level flag toggled by _setPastelOn from 05-main. When on, _pastelTint
+// shifts every colour from gc() toward a soft pastel (lower saturation, lifted
+// lightness, hue preserved). Applied after _energyTint so dynamics still
+// modulate within the pastel range. Same gc() path = all artists + mosaic
+// stay visually coherent under pastel.
+let _pastelOn = false;
+function _setPastelOn(b){ _pastelOn = !!b; }
+function _pastelTint(r,g,b){
+  if(!_pastelOn) return [Math.round(r),Math.round(g),Math.round(b)];
+  const R=r/255, G=g/255, B=b/255;
+  const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
+  let h=0, sx=0;
+  if(mx!==mn){ const dl=mx-mn; sx=l>0.5?dl/(2-mx-mn):dl/(mx+mn);
+    if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
+  const targetL = 0.80;
+  const L = l + (targetL - l) * 0.55;
+  const S = sx * 0.45;
+  if(S < 0.005){ const g2=Math.round(L*255); return [g2,g2,g2]; }
+  const q=L<0.5?L*(1+S):L+S-L*S, pp=2*L-q;
+  const h2=(t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return pp+(q-pp)*6*t; if(t<1/2)return q; if(t<2/3)return pp+(q-pp)*(2/3-t)*6; return pp; };
+  return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
+}
+
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
@@ -1651,9 +1785,17 @@ function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   for(let i=0;i<n;i++){
     const note=sorted[i];
     const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;
-    ctx.fillStyle=_rgbaStr(r,g,b,a*.18);
+    // Velocity -> saturation: pp fades toward neutral grey, ff stays vivid.
+    // Per-voice grey is the note's own luma, so lightness (octave) is preserved.
+    const vN=Math.max(0,Math.min(1,((note.v||80)-30)/90));
+    const satKeep=0.25+vN*0.75;
+    const grey=0.299*r+0.587*g+0.114*b;
+    const R=Math.round(grey+(r-grey)*satKeep);
+    const G=Math.round(grey+(g-grey)*satKeep);
+    const B=Math.round(grey+(b-grey)*satKeep);
+    ctx.fillStyle=_rgbaStr(R,G,B,a*.18);
     ctx.fillRect(bx-2,y-2,BW+4,bh+4);
-    ctx.fillStyle=_rgbaStr(r,g,b,a);
+    ctx.fillStyle=_rgbaStr(R,G,B,a);
     ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);
   }
   if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}
@@ -1675,12 +1817,20 @@ function drawBlockNotes(ctx,bx,by,notes,gc,BW,BH){
   for(let i=0;i<n;i++){
     const note=sorted[i];
     const[r,g,b,a]=gc(note.m,note.v);
+    // Velocity -> saturation on the tinted glyph: pp fades, ff burns.
+    // Higher floor (0.40) keeps glyphs legible on the dark canvas.
+    const vN=Math.max(0,Math.min(1,((note.v||80)-30)/90));
+    const satKeep=0.40+vN*0.60;
+    const grey=0.299*r+0.587*g+0.114*b;
+    const R=Math.round(grey+(r-grey)*satKeep);
+    const G=Math.round(grey+(g-grey)*satKeep);
+    const B=Math.round(grey+(b-grey)*satKeep);
     const cx=bx+BW/2, cy=by+i*bh+bh/2;
     const name=_midiToName[note.m]||'';
     // subtle dark halo for contrast against any colour, then the tinted glyph
     ctx.fillStyle='rgba(4,4,10,0.85)';
     ctx.fillText(name,cx+0.6,cy+0.6);
-    ctx.fillStyle=_rgbaStr(r,g,b,Math.max(0.85,a));
+    ctx.fillStyle=_rgbaStr(R,G,B,Math.max(0.85,a));
     ctx.fillText(name,cx,cy);
   }
   ctx.restore();
@@ -3113,6 +3263,8 @@ function matissePhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   rects.forEach((rect,pIdx)=>{
     const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
     if(pIdx>=paintCount){ return; }
+    const _mci=Math.min(chords.length-1,Math.floor(pIdx*(chords.length/Math.max(1,MAX_RECTS))));
+    _setCurE(chords[_mci] && chords[_mci]._E);
     const rnd=_seedRnd(pIdx+2500,ss,0,0);
     const base=_rectChordColor(chords,pIdx,MAX_RECTS,gc);
 
@@ -3156,6 +3308,7 @@ function matissePhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     else if(kind===2) leaf(cx,cy,Math.min(BW,BH)*(1.3+rnd()*0.4),rad*0.6,(rnd()-0.5)*2.2);
     else algae(rnd,cx,cy,rad*(1.1+rnd()*0.3),(rnd()-0.5)*2.4);
   });
+  _setCurE(0.5);
 }
 
 // ── Matisse phase B: big free-form cut-out collage — his late "Jazz" / "The
@@ -10228,6 +10381,7 @@ function kusamaPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed){
     const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
     if(pIdx>=paintCount){ctx.fillStyle='#04040a';ctx.fillRect(bx,by,BW,BH);return;}
     const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/MAX_RECTS)))];
+    _setCurE(chord && chord._E);
     const[cR,cG,cB,cA,cV]=chordColor(chord);
     const energy=Math.max(0,Math.min(1,(cV-30)/90));
     const rnd=_seedRnd(pIdx+800,ss,0,0);
@@ -10250,6 +10404,7 @@ function kusamaPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed){
     if(rnd()<0.15&&Math.min(BW,BH)>15){const luma=0.299*cR+0.587*cG+0.114*cB;ctx.strokeStyle=luma>128?'rgba(12,8,18,0.62)':'rgba(245,240,228,0.62)';ctx.lineWidth=Math.max(0.8,Math.min(BW,BH)*0.007);ctx.lineCap='round';ctx.lineJoin='round';const ptCount=4+Math.floor(rnd()*3);ctx.beginPath();ctx.moveTo(bx+rnd()*BW*0.3,by+rnd()*BH);for(let pi=0;pi<ptCount;pi++){const t1=(pi+0.5)/ptCount,t2=(pi+1)/ptCount;ctx.quadraticCurveTo(bx+t1*BW,by+rnd()*BH,bx+t2*BW,by+rnd()*BH);}ctx.stroke();}
     ctx.strokeStyle='rgba(4,4,10,0.60)';ctx.lineWidth=Math.max(0.5,Math.min(CW,CH)*0.002);ctx.lineJoin='round';ctx.strokeRect(bx+0.5,by+0.5,BW-1,BH-1);
   });
+  _setCurE(0.5);
 }
 
 // ── Kusama phase B: "Dot field" — the iconic look. Thousands of discrete
@@ -11848,7 +12003,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // turning AI ATM on actually reshape the tempo & rhythm, not just the colour.
   const atmoV = atmoBias && typeof atmoBias.v==='number' ? Math.max(-1,Math.min(1,atmoBias.v)) : null;
   const atmoE = atmoBias && typeof atmoBias.e==='number' ? Math.max(0,Math.min(1,atmoBias.e)) : null;
-  const CHORD_SIZE=6;
+  const CHORD_SIZE=4;
   const COL_STEP=4;                              // merge 4 adjacent columns per time-event
   const _nrBands=Math.floor(nr/CHORD_SIZE);
   const effCols=Math.ceil(nc/COL_STEP);          // 192/4 = 48 events per band → 960 total
@@ -11900,30 +12055,53 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const eContrast=Math.max(0,Math.min(1, contrast/42));
   const eBusy=Math.max(0,Math.min(1, busyness/22));
   let energy=Math.max(0,Math.min(1, 0.45*eChroma + 0.35*eContrast + 0.20*eBusy));
-  // ── ATMO ENERGY BLEND ──
-  // When AI ATM is on, the mood's own energy pulls the painting's energy toward
-  // it (60% image / 40% mood) so a "serene" tag calms a busy canvas and a
-  // "frantic" tag energises a calm one — the mood is heard in the rhythm, not
-  // just seen in the tint. valenceBias: +1 bright/playful … -1 heavy/dark, used
-  // to tip articulation & accent character (major-ish images already lean bright
-  // via warmth; this lets the atmo word push it further).
-  if(atmoE!=null) energy = Math.max(0,Math.min(1, 0.6*energy + 0.4*atmoE));
+  // ─── ATMO BLEND (first — mood is a peer input, not a cosmetic dochutź) ───────
+  // "A pokojny letny sen" should actually slow / soften / quieten the piece, not
+  // just nudge it. Mood gets equal weight (50:50), and when it's far from neutral
+  // it overrides the image's reading: a strong serene tag on a busy canvas still
+  // calms it (and a frantic tag on a calm one wakes it up). All downstream
+  // levers (dynE, dynScale, rhythmDrive, MEL_MAX, maxRestRun) are then computed
+  // from the blended energy so the mood ripples through tempo, loudness, register,
+  // density, and breathing — not just colour tint.
   const valenceBias = atmoV!=null ? atmoV : 0;
+  if(atmoE!=null){
+    // Equal blend, then a small extra pull toward mood when it's far from neutral.
+    const extreme = Math.abs(atmoE-0.5)*2;                  // 0 mid … 1 far
+    const moodW = 0.5 + 0.35*extreme;                        // 0.50 … 0.85 — strong mood prevails
+    energy = Math.max(0,Math.min(1, (1-moodW)*energy + moodW*atmoE));
+  }
+  // ─── DYNAMICS SCALE (loudness from restlessness + mood) ──────────────────
+  // A calm painting must play SOFT even when vivid (Monet pitfall). Restlessness
+  // (contrast+busyness) sets the base; mood scales it harder than before so a
+  // serene tag really quiets things down (was 0.7+0.6*atmoE → now 0.55+0.9*atmoE).
+  const dynE = Math.max(0, Math.min(1, 0.55*eContrast + 0.45*eBusy));
+  let dynScale = 0.75 + 0.35*dynE;     // floor 0.75 so plain colour fields still play
+  if(atmoE!=null) dynScale *= (0.55 + 0.9*atmoE);
   // ── RHYTHM DRIVE ──
   // A single 0..1 knob that turns "calm/legato/sparse" into "lively/articulated/
   // dense" as it rises. Driven by energy, nudged up by positive valence (bright
   // moods feel more rhythmically alive) and down by very negative valence (heavy,
   // grief-like moods stay broad and slow even if the canvas is busy).
   const rhythmDrive = Math.max(0, Math.min(1, energy + 0.15*valenceBias));
-  // Duration: calm → longer & slower planes (up to ~2:40), energetic → tighter &
-  // quicker (down to ~1:30). Bounded both ways so it's always a real, finite piece.
-  const DUR_MIN=75000, DUR_MAX=180000;   // 1:15 … 3:00 — wider spread so calm vs wild really differ
+  // Duration: calm → longer & slower planes, energetic → tighter & quicker.
+  // Centre ceiling at 4:00 (240s) at neutral mood (was 3:00 — default was a guluomet);
+  // serene atmo stretches up to 5:00 (300s), agitato compresses down to 1:30 (90s).
+  const DUR_MIN=75000;
+  const _durAtmoShift = (atmoE!=null)
+    ? (atmoE<0.5 ? +60000*(0.5-atmoE)/0.5 : -150000*(atmoE-0.5)/0.5)
+    : 0;
+  const DUR_MAX = 240000 + _durAtmoShift;     // 4:00 base; 5:00 serene; 1:30 frantic
   // Inverse: more energy = shorter (faster feel). Calm spreads out.
   const targetMs=Math.round(DUR_MAX - (DUR_MAX-DUR_MIN)*energy);
   const msPerBlock=targetMs/(_nrBands*effCols);  // per-chord step now scales with energy
-  // Sustain: calm pieces ring long & legato; lively ones articulate shorter. Now
-  // a wider 4×–9× spread driven by rhythmDrive (was a narrow 5×–8× on energy).
-  const sustainMul=9 - 5*rhythmDrive;
+  // Sustain: calm pieces ring long & legato; lively ones articulate shorter.
+  // Centre 11× at neutral mood (was 9× — default scan was too clipped); calm atmo
+  // adds up to +2 (legato dream), agitato atmo subtracts up to −3 (crisp staccato).
+  // rhythmDrive (image-driven) still spreads the per-piece dynamic.
+  const _sustainAtmoShift = (atmoE!=null)
+    ? (atmoE<0.5 ? +2*(0.5-atmoE)/0.5 : -3*(atmoE-0.5)/0.5)
+    : 0;
+  const sustainMul = (11 + _sustainAtmoShift) - 5*rhythmDrive;
   const noteDur=Math.round(msPerBlock*sustainMul);
   // octaveShift in semitones: light image → shift down, dark → shift up. 70% of
   // the deviation from 50% lightness is compensated; 30% of the brightness
@@ -12144,8 +12322,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   }
   const tempTotal=warmW+coolW;
   const warmth=tempTotal>0 ? (warmW-coolW)/tempTotal : 0; // -1 cool … +1 warm
-  const majBias=1+0.06*warmth;                // ≤±6% nudge — a tiebreaker, not an override
-  const minBias=1-0.06*warmth;
+  // Major/minor bias: warmth (image colour temperature) gives a tiny ±6% nudge —
+  // a tiebreaker, not an override. Mood valence (atmoV) adds a stronger ±20% lean
+  // so a sad/heavy tag can actually pull an ambiguous canvas into minor (and a
+  // playful/bright tag into major). Clear-cut tonal images still win on Krumhansl.
+  const majBias=1+0.06*warmth+0.20*valenceBias;
+  const minBias=1-0.06*warmth-0.20*valenceBias;
   let bestKey=0,bestModeIsMajor=true,bestCorr=-Infinity;
   for(let key=0;key<12;key++){
     for(const isMaj of[true,false]){
@@ -12174,9 +12356,16 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const isSpectral = colorMode==='spectral';
   // "Soft/pale" = muted colour OR bright, delicate wash. Tuned so a saturated,
   // mid-to-dark painting stays whole-tone while pastels switch to pentatonic.
+  // Mood override on Spectral scale: serene/dreamy/mysterious moods always pick
+  // pentatonic (sweet, no dissonance); frantic/harsh moods always pick whole-tone
+  // (weightless, untethered). Mid-mood (or no atmo) defers to the image's read.
   const spectralSoft = isSpectral && (avgChroma < 32 || avgLight > 66);
+  const _atmoSpectralPenta = isSpectral && atmoE!=null && atmoE<0.30;
+  const _atmoSpectralWhole = isSpectral && atmoE!=null && atmoE>0.70;
   const baseOffsets = isSpectral
-    ? (spectralSoft ? PENTA_OFFSETS : WHOLE_OFFSETS)
+    ? (_atmoSpectralPenta ? PENTA_OFFSETS
+       : _atmoSpectralWhole ? WHOLE_OFFSETS
+       : (spectralSoft ? PENTA_OFFSETS : WHOLE_OFFSETS))
     : (bestModeIsMajor ? MAJ_OFFSETS : MIN_OFFSETS);
   const scalePCs=baseOffsets.map(o=>(o+bestKey)%12);
   const SCALE_LEN=scalePCs.length;               // 7 diatonic / 6 whole-tone / 5 pentatonic
@@ -12390,8 +12579,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // the octave-shifted accompaniment, whole-tone scale and wide voicing, the two
   // colour modes now occupy distinctly different sonic worlds on the same image.
   const MEL_LIFT = isSpectral ? 7 : 0;
+  // Mood reshapes the melody ceiling. Serene atmo pulls it down (G5→C5) so the line
+  // doesn't pierce; agitato atmo lifts it up (G5→C6) so the line can soar. Neutral
+  // mood (or no atmo) keeps the G5 default.
+  const MEL_CEIL_BASE = 79;
+  const _melAtmoShift = (atmoE!=null)
+    ? (atmoE<0.5 ? -7*(0.5-atmoE)/0.5 : +5*(atmoE-0.5)/0.5)
+    : 0;
   const MEL_MIN=60+MEL_LIFT;                        // C4 (G4 in spectral) — melody floor
-  const MEL_MAX=79+MEL_LIFT;                        // G5 (D6 in spectral) — melody ceiling
+  const MEL_MAX=Math.round(MEL_CEIL_BASE+_melAtmoShift)+MEL_LIFT;  // 79 default; 72 serene; 84 frantic
   const MEL_SPAN=MEL_MAX-MEL_MIN;
   // Brightness range across the image's melody-source notes — used to map each
   // cell's brightness onto the melody register so the LINE TRACES THE IMAGE:
@@ -12591,11 +12787,16 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       const bassM=nearestPc(barPCs[0], 40);          // low root (~E2 region)
       if(!accomp.some(n=>n.m===bassM)) accomp.push({...melSrc, m:bassM, v:Math.max(34,Math.round((melSrc.v||64)*0.55))});
     }
-    // Voice density. Fewer simultaneous voices = more air and space between the
-    // notes, the open, uncluttered texture of ambient/post-rock. Even the busiest
-    // events stay leaner than before (was 5/3/2) so chords ring rather than pile
-    // up; calm events drop to a bare two-voice shimmer.
-    const voiceCap = intensity>0.6 ? 4 : intensity>0.3 ? 3 : 2;
+    // Voice density. Fewer simultaneous voices = more air and space; image
+    // 'intensity' (per-cell vividness) picks the base. Mood reshapes the texture:
+    // serene atmo thins by 1 (open, breathy), frantic atmo thickens by 1 (denser
+    // chord). Clamped 2..5 so a calm cell never falls below a usable duo and a
+    // frantic cell can reach a full triad + doubled bass.
+    const _voiceAtmoShift = (atmoE!=null)
+      ? (atmoE<0.5 ? -1*(0.5-atmoE)/0.5 : +1*(atmoE-0.5)/0.5)
+      : 0;
+    const _voiceBase = intensity>0.6 ? 4 : intensity>0.3 ? 3 : 2;
+    const voiceCap = Math.max(2, Math.min(5, Math.round(_voiceBase + _voiceAtmoShift)));
     // Velocity swell: intense chords play louder overall (up to +22%).
     const intGain = 1 + 0.12*intensity;              // gentler swell (was 0.22) — softer, rounder
     // Keep accompaniment below the melody and dedup.
@@ -12612,7 +12813,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     // (allBass) we deliberately add ONLY this single pedal root: the many low
     // source voices that used to pile up here (the "rumble") are dropped in
     // favour of one clean pedal under the lifted melody + mid-register chord.
-    if(bassNotes.length){
+    // Strong-calm atmo ("pomaly letny sen") skips the deep pedal entirely — a calm
+    // mood is vertical air & singing melody, not a low rumble. Even on a dark image,
+    // the dream's mood overrides the painting's literal black-dot bass. Mid/agitato
+    // moods keep the pedal as before.
+    const _suppressBass = (atmoE!=null && atmoE<0.30);
+    if(bassNotes.length && !_suppressBass){
       const darkBassM = Math.max(24, 24 + ((barPCs[0]-0+12)%12)); // C1 octave (deep but clear)
       const bv = Math.round(Math.min(...bassNotes.map(n=>n.v||70)) * 0.7); // softer than source
       if(!accomp.some(n=>n.m===darkBassM) && melActual!==darkBassM){
@@ -12655,9 +12861,107 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       break;
     }
   }
-  // Merge identical consecutive chords for legato, capped at whole note
-  const chordKey=ns=>ns.length?ns.map(n=>n.m).sort((a,b)=>a-b).join(','):'';
-  const MAX_RUN=8;                                 // hold a repeated chord longer — long sustained planes
+
+  // ─── PIANO TECHNIQUE: TIED NOTES ───────────────────────────────────
+  // A real pianist does NOT re-strike a key that's already ringing. If a chord's
+  // note matches a previous chord's note (same MIDI, just struck), keep it tied:
+  // drop the new onset's velocity hard so it sounds like the previous note simply
+  // sustained through, instead of trieskanie (block-strike every chord). Signal:
+  // exact MIDI match against the most recent playable event.
+  for(let i=1;i<evts.length;i++){
+    const ev=evts[i]; if(!ev.n || !ev.n.length || ev._playable===false) continue;
+    // Find previous playable event
+    let prev=null; for(let k=i-1;k>=0;k--){ if(evts[k] && evts[k].n && evts[k].n.length && evts[k]._playable!==false){ prev=evts[k]; break; } }
+    if(!prev) continue;
+    const prevMidis=new Set(prev.n.map(n=>n.m));
+    ev.n=ev.n.map(n=>{
+      if(prevMidis.has(n.m)){
+        // Tied: barely audible re-attack (the previous note still rings). Keep
+        // duration so harmonic content remains in the cell.
+        return {...n, v:Math.max(6, Math.round((n.v||64)*0.10)), _tied:true};
+      }
+      return n;
+    });
+  }
+
+  // ─── PIANO TECHNIQUE: ARPEGGIO (per-note offsetMs) ─────────────────────
+  // Vivid / charged chords are rolled bottom-up (low note first, top last), the
+  // classic pianistic gesture. Speed scales with the cell's emotional charge:
+  // very vivid → fast roll (25ms gap, Lisztian), moderately vivid → slow roll
+  // (60ms, Chopin balada). Calm cells stay block-chord (no offset). Signal:
+  // chord size ≥ 3 AND _chroma above per-piece median. Bass+melody anchor (0ms).
+  {
+    // Per-piece chroma threshold: rolled chords are the upper half of charge.
+    const chromaVals=evts.map(e=>e._chroma||0).filter(c=>c>0).sort((a,b)=>a-b);
+    const chromaMed=chromaVals.length?chromaVals[Math.floor(chromaVals.length*0.55)]:0;
+    for(const ev of evts){
+      if(!ev.n || ev.n.length<3 || ev._playable===false) continue;
+      if((ev._chroma||0) < chromaMed) continue;
+      // Roll speed: fast on very vivid, slow on moderate.
+      const charge=Math.min(1, (ev._chroma||0)/(chromaMed*2));
+      const gap = Math.round(25 + (1-charge)*35);   // 25ms (vivid) … 60ms (moderate)
+      // Sort low→high. Melody (top voice) lands LAST so the line still sings on top.
+      const sorted=[...ev.n].sort((a,b)=>a.m-b.m);
+      const offsetByM=new Map();
+      sorted.forEach((n,idx)=>{ offsetByM.set(n.m, idx*gap); });
+      ev.n=ev.n.map(n=>({...n, offsetMs:offsetByM.get(n.m)||0}));
+    }
+  }
+
+  // ─── PIANO TECHNIQUE: MELODY REPETITION ───────────────────────────────────
+  // Tied notes (above) make a repeated MELODY pitch sound like one sustained
+  // note. That is right for lyrical / calm passages — but in a VIVID passage a
+  // pianist instead RE-STRIKES the repeated melody note crisply (a deliberate
+  // repeated-note figure, think Liszt's repeated octaves). Signal: the top voice
+  // (highest non-bass = the melody) carries the SAME MIDI across two or more
+  // adjacent playable chords AND the cell is vivid (_chroma ≥ per-piece median).
+  // We OVERRIDE the tie on that top note only (restore a clear attack), leaving
+  // calm repeats tied. Runs AFTER tied notes (so it can override) and BEFORE the
+  // merge — and only where the chords are NOT identical PC-sets (identical sets
+  // are handled by merge/tremolo, not re-struck here). Inner/bass ties untouched.
+  {
+    const chromaVals2=evts.map(e=>e._chroma||0).filter(c=>c>0).sort((a,b)=>a-b);
+    const chromaMed2=chromaVals2.length?chromaVals2[Math.floor(chromaVals2.length*0.55)]:0;
+    const _topMel=ns=>{ const nb=ns.filter(n=>!n.bass); if(!nb.length) return null; return nb.reduce((a,b)=>b.m>a.m?b:a).m; };
+    const _pcKey=ns=>{ const s=new Set(); for(const n of ns) s.add(((n.m%12)+12)%12); return [...s].sort((a,b)=>a-b).join(','); };
+    // Walk playable events in order, tracking the previous playable event.
+    let prevEv=null;
+    for(let i=0;i<evts.length;i++){
+      const ev=evts[i];
+      if(!ev.n || !ev.n.length || ev._playable===false) continue;
+      if(prevEv){
+        const tm=_topMel(ev.n), pm=_topMel(prevEv.n);
+        const vivid=(ev._chroma||0)>=chromaMed2;
+        const sameChord=_pcKey(ev.n)===_pcKey(prevEv.n);   // identical → leave to merge
+        if(tm!=null && tm===pm && vivid && !sameChord){
+          // Re-strike the melody: restore a clear attack on the tied top note.
+          ev.n=ev.n.map(n=>{
+            if(n.m===tm && n._tied){
+              const {_tied,...rest}=n;
+              // crisp repeated note — slightly under a fresh strike so it reads
+              // as a repeat, not a new phrase. Recover a real velocity from the
+              // 10% tie (×8 ≈ back to ~0.8 of original), clamped.
+              return {...rest, v:Math.max(40,Math.min(118,Math.round((n.v||8)*8))), _melRepeat:true};
+            }
+            return n;
+          });
+        }
+      }
+      prevEv=ev;
+    }
+  }
+
+  // Merge consecutive chords with the SAME pitch-class set (strict). After merging,
+  // velocity = mean of the group, voicing = clean PC set (one voice per PC at the
+  // nearest octave to the group mean), so a long held plane isn't denser than any
+  // one of its sources. Soft (2/3) merge was tried and lost Liszt's harmonic motion.
+  const chordKey=ns=>{
+    if(!ns.length) return '';
+    const pcs=new Set();
+    for(const n of ns) pcs.add(((n.m%12)+12)%12);
+    return [...pcs].sort((a,b)=>a-b).join(',');
+  };
+  const MAX_RUN=32;                                // up to ~6s held — real legato planes
   let mi=0;
   while(mi<evts.length){
     const key=chordKey(evts[mi].n);
@@ -12665,15 +12969,117 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     let mj=mi+1;
     while(mj<evts.length&&chordKey(evts[mj].n)===key)mj++;
     let k=mi;
+    let _prevBlockBright=null;                      // for block-to-block micro-drift within this plane
+    let _planeBlockIdx=0;                            // ordinal of this merged block inside the plane
     while(k<mj){
       const groupLen=Math.min(MAX_RUN,mj-k);
       if(groupLen>1){
+        // Mean velocity across the group, mean MIDI of each PC across the group
+        // (placed at the nearest octave to the group's anchor) — the held chord
+        // reflects the WHOLE plane, not just its first onset.
+        const meanVel=(()=>{ let s=0,c=0; for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){ s+=(n.v||64); c++; } return c?Math.round(s/c):64; })();
+        const pcMids=new Map(); // pc -> [midis...]
+        for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){ const pc=((n.m%12)+12)%12; if(!pcMids.has(pc)) pcMids.set(pc,[]); pcMids.get(pc).push(n.m); }
+        const template=evts[k].n[0]||{durMs:300};
+        const cleanN=[];
+        for(const [pc,mids] of pcMids){
+          const avgM=mids.reduce((a,b)=>a+b,0)/mids.length;
+          let m=Math.round(avgM); while(((m%12)+12)%12!==pc) m+=(((m%12)+12)%12<pc?1:-1);
+          const isBass=evts[k].n.some(n=>((n.m%12)+12)%12===pc && n.bass);
+          cleanN.push({...template, m, v:meanVel, bass:isBass});
+        }
+        cleanN.sort((a,b)=>b.m-a.m);
+        evts[k].n=cleanN;
         evts[k]._runLen=groupLen;
+        // ─── PLANE TEXTURE (drives technique variation downstream) ────────────
+        // A big "same" plane (Chagall's blue field) is never perfectly uniform —
+        // its cells drift in brightness/chroma. Capture each merged BLOCK's own
+        // average brightness + chroma + saliency, and how much it DRIFTED from
+        // the previous block of this plane. Downstream the tremolo/roll pass uses
+        // these so consecutive blocks of one field don't all play the identical
+        // gesture — the technique morphs as the plane's own micro-variation does
+        // (fully deterministic: same image → same drift → same morph).
+        {
+          let bs=0,bc=0,cs=0,ss=0;
+          for(let x=k;x<k+groupLen;x++){
+            const e=evts[x];
+            if(e._bright!=null){ bs+=e._bright; bc++; }
+            cs+=(e._chroma||0);
+            ss+=(rawInt[x]||0);
+          }
+          const blockBright=bc?bs/bc:0;
+          evts[k]._planeBright=blockBright;
+          evts[k]._planeChroma=cs/groupLen;
+          evts[k]._planeSal=ss/groupLen;
+          evts[k]._planeBlockIdx=_planeBlockIdx;
+          evts[k]._planeDrift=(_prevBlockBright==null)?0:(blockBright-_prevBlockBright);
+          _prevBlockBright=blockBright;
+          _planeBlockIdx++;
+        }
         for(let x=k+1;x<k+groupLen;x++)evts[x]._playable=false;
       }
       k+=groupLen;
     }
     mi=mj;
+  }
+  // ─── PIANO TECHNIQUE: SUSTAINED-PLANE VARIATION ───────────────────────────
+  // A long held plane (Chagall's blue field) sounds dead — and a per-block
+  // gesture that stays CONSTANT for ~6s still reads as "the same thing", because
+  // a monochrome field gives almost no internal brightness/chroma contrast to
+  // vary against. So we don't rely on image contrast here. Instead every long
+  // block gets an INTERNAL ARC the player unfolds OVER the hold: the re-strike
+  // tempo glides (accel or rit), the chord periodically lifts its top voice by an
+  // octave / fifth and falls back (a slow inner shimmer of register), and the
+  // loudness breathes. Adjacent blocks get DIFFERENT arcs (derived from the
+  // block's ordinal + its position in the piece), so one big blue field keeps
+  // moving and never repeats. Fully deterministic (same image → same arcs).
+  const TREMOLO_RUN=16;       // ≥ this run length → a sustained, evolving plane
+  {
+    // Collect the long blocks in order so each gets a distinct, evolving arc.
+    const longIdx=[];
+    for(let i=0;i<evts.length;i++){
+      const ev=evts[i];
+      if(ev._playable===false) continue;
+      if((ev._runLen||0)>=TREMOLO_RUN) longIdx.push(i);
+    }
+    const total=longIdx.length||1;
+    longIdx.forEach((i,ord)=>{
+      const ev=evts[i];
+      ev._tremolo=true;
+      // Deterministic per-block seed from the block's CONTENT (its pitches +
+      // index + length). Same image → same seed → same "random" feel, but every
+      // block's seed differs, so the player's jitter never repeats a pattern.
+      let seed=(i*2654435761)>>>0;
+      seed=(seed^(ev._runLen||0)*40503)>>>0;
+      for(const n of ev.n){ seed=(seed^(((n.m|0)+131)*2246822519))>>>0; seed=(seed<<13|seed>>>19)>>>0; }
+      ev._tremSeed=seed>>>0;
+      // A small deterministic 0..1 from the seed, to de-pattern the arc params
+      // (so it's NOT just ord%2 alternation — that itself reads as a cycle).
+      const sr=((seed>>>8)&0xffff)/0xffff;          // 0..1
+      const sr2=((seed>>>20)&0xfff)/0xfff;          // 0..1 decorrelated
+      // Position of this block within the whole piece (0..1) and within its run.
+      const piecePos=longIdx.length>1?ord/(longIdx.length-1):0;
+      // Walk values blend a smooth contour with the content seed so neighbours
+      // differ AND the field has a slow overall drift (not a fixed 4-theme loop).
+      const w =0.5*((Math.sin(ord*1.7)+1)/2) + 0.5*sr;
+      const w2=0.5*((Math.sin(ord*0.9+1.3)+1)/2) + 0.5*sr2;
+      // Base re-strike tempo glides across the piece, plus seed jitter so no two
+      // blocks share a nominal tempo.
+      const baseMs = 230 - 70*piecePos - 50*w;        // ~110..230ms nominal
+      ev._tremoloMs = Math.round(Math.max(95, baseMs));
+      // ACCEL or RIT — direction chosen by the seed (not ord parity), magnitude
+      // varies, so the push/relax pattern is irregular across the field.
+      const accel = sr<0.5;
+      ev._tremEndRatio = accel ? (0.58 + 0.22*w) : (1.22 + 0.40*w2); // ~0.58..0.8 | 1.22..1.62
+      // Register shimmer: octave / fifth / none, chosen by seed.
+      const liftPick = (sr2>0.62) ? 12 : (sr2>0.30) ? 7 : 0;
+      ev._tremLift = liftPick;
+      ev._tremLiftCycles = 1 + Math.round(2*w2);              // 1..3 lifts across the hold
+      // Loudness breathing depth.
+      ev._tremSwell = 0.16 + 0.24*w;                          // 0.16..0.40
+      // Rolled (arpeggiated) re-strikes on a seeded subset of blocks for texture.
+      ev._planeGesture = (sr>0.68) ? 'roll' : 'arc';
+    });
   }
   // ─── Rhythmic phrasing pass (deterministic — driven by image content only) ──
   // The raw scan emits a uniform 8th-note grid, which sounds mechanical. Without
@@ -12697,9 +13103,8 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const restPct = 0.50 - 0.36*rhythmDrive;       // calm→0.50, wild→0.14
   const lowSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length*Math.max(0.18,restPct))]:0;
   const medSal=onsetSal.length?onsetSal[Math.floor(onsetSal.length/2)]:0;
-  // Calm paintings may hold up to THREE consecutive rests (long ambient
-  // silences); lively ones cap at one so the line keeps moving. Range of held
-  // silence is part of what separates serene from driving.
+  // Calm paintings may hold up to THREE consecutive rests; lively ones cap at one
+  // so the line keeps moving. (Atmo influence flows through rhythmDrive, not here.)
   const maxRestRun = rhythmDrive>0.6 ? 1 : rhythmDrive>0.35 ? 2 : 3;
   let sinceSound=0;                              // consecutive-rest guard
   let lastSoundIdx=-99;                          // anti-telegraph: spacing of onsets
@@ -12781,7 +13186,24 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     // Floor scales down with drive so staccato is actually short when lively, but
     // never a click. Calm keeps the old generous 140ms minimum.
     const durFloor = Math.round(140 - 70*rhythmDrive);  // 140ms calm … 70ms driving
-    ev.n=ev.n.map(n=>({...n, durMs:Math.max(durFloor, Math.round((n.durMs||250)*artMul))}));
+    // ─── PIANO TECHNIQUE: PER-VOICE ARTICULATION ──────────────────────────────
+    // A real pianist does not give every voice the same length. The MELODY (top
+    // voice) sings — held long, legato — while the BASS is plucked short and
+    // detached (staccato) so it punctuates without muddying the texture; inner
+    // (mid) voices stay neutral. Signal: a note's role within its own chord —
+    // the highest non-bass pitch is the melody, `n.bass` is the bass, the rest
+    // are mid. The per-voice factor multiplies ON TOP of the texture artMul, so
+    // a busy staccato patch still has a longer top line and a crisper bass.
+    const _nb=ev.n.filter(n=>!n.bass);
+    const _topM=_nb.length?Math.max(..._nb.map(n=>n.m)):-Infinity;
+    ev.n=ev.n.map(n=>{
+      let voiceMul=1;
+      if(n.bass)              voiceMul=0.55;   // bass: short, detached
+      else if(n.m===_topM)    voiceMul=1.4;    // melody (top voice): long, singing
+      // mid voices → 1 (neutral)
+      const durMs=Math.max(durFloor, Math.round((n.durMs||250)*artMul*voiceMul));
+      return {...n, durMs};
+    });
   }
   // ─── COMPOSITION PASS (form & dramaturgy) ──────────────────────────────────
   // Everything above shapes the piece LOCALLY (per cell / per bar). This final
@@ -12919,7 +13341,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   //       so the piece arrives instead of being cut off mid-stream.
   // Rests advance a little quicker so silence doesn't drag.
   {
-    const BASE_STEP = 150;                       // old fixed per-cell interval (ms)
+    // Per-cell interval. Centre at 200ms (was 150 — default was a machine gun).
+    // Serene atmo widens up to 260ms (real breathing room); frantic atmo compresses
+    // down to 100ms (driving pulse). Neutral mood (or no atmo) stays at 200.
+    const _stepAtmoShift = (atmoE!=null)
+      ? (atmoE<0.5 ? +60*(0.5-atmoE)/0.5 : -100*(atmoE-0.5)/0.5)
+      : 0;
+    const BASE_STEP = 200 + _stepAtmoShift;
     const _nBars = Math.max(1, Math.ceil(evts.length / BAR_EVENTS));
     const _ritStart = Math.max(0, evts.length - Math.min(48, BAR_EVENTS*1.5)); // last ~1.5 bars
     for(let i=0;i<evts.length;i++){
@@ -12953,6 +13381,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       let stepMs = BASE_STEP * darkFactor * accentFactor * breathFactor * ritardFactor * restFactor;
       // Safety clamp: never absurdly fast or slow per cell.
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
+    }
+  }
+  // ─── Final dynamics scaling: soften calm paintings, keep wild ones loud ──────
+  // Relative shaping above (accents, arc, phrasing) is preserved; only the overall
+  // level shifts. A calm Monet plays mp/p, a busy Picasso stays loud.
+  if(Math.abs(dynScale-1)>0.001){
+    for(const ev of evts){
+      if(!ev.n || !ev.n.length) continue;
+      ev.n = ev.n.map(n=>({...n, v: Math.max(20, Math.min(120, Math.round((n.v||64)*dynScale)))}));
     }
   }
   return evts;
@@ -14353,8 +14790,13 @@ function fftMag(buf) {
   }
   const re = _FFT_RE, im = _FFT_IM;
   // Re-init the buffers for this call. im is fully zeroed; re is overwritten
-  // by the Hann-windowed input below.
-  for (let i = 0; i < N; i++) { re[i] = buf[i] * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / N)); im[i] = 0; }
+  // by the Hann-windowed input below. The window divides by (N-1) not N —
+  // the standard Hann definition has w[0] = w[N-1] = 0 exactly. Using N
+  // leaves a small non-zero value at the right edge, introducing a tiny DC
+  // bias and spectral leakage. The fix is mathematically clean: ~3-5% better
+  // peak isolation in the FFT.
+  const _winDen = N > 1 ? N - 1 : 1;
+  for (let i = 0; i < N; i++) { re[i] = buf[i] * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / _winDen)); im[i] = 0; }
   // Bit-reversal permutation
   for (let i = 1, j = 0; i < N; i++) {
     let bit = N >> 1;
@@ -14388,7 +14830,7 @@ function fftMag(buf) {
   for (let i = 0; i < N / 2; i++) mag[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]);
   return mag.subarray(0, N / 2);
 }
-function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
+function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(Math.abs(d)>1e-6?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
 
 // === Mic/Music chord-transcribe helpers ===
 // computeChroma: fold FFT magnitude into 12-bin pitch-class profile.
@@ -14478,13 +14920,29 @@ let _TRANS_FRAME = null;
 async function transcribeAudio(audioBuf, onP) {
   const sr = audioBuf.sampleRate;
   const ch0 = audioBuf.getChannelData(0);
-  // Mix to mono if stereo. Float32Array.from is still allocated once per file
-  // (and it's the decoded-PCM scratch, not per-frame), so it's not a hot path.
+  // Mix to mono if stereo. Use max(|L|, |R|) instead of (L+R)*0.5: simple
+  // averaging cancels anti-phase content (rare in mastered piano but happens
+  // with creative stereo placement), causing notes panned hard L vs hard R
+  // to disappear. Taking the channel-wise envelope max preserves every note
+  // that exists in either channel. The scratch float allocation cost is the
+  // same either way; this is the only hot-path mono mix step.
   const data = audioBuf.numberOfChannels > 1
-    ? Float32Array.from({length: ch0.length}, (_, i) => (ch0[i] + audioBuf.getChannelData(1)[i]) * 0.5)
+    ? (() => {
+        const c1 = audioBuf.getChannelData(1);
+        const out = new Float32Array(ch0.length);
+        for (let i = 0; i < ch0.length; i++) {
+          const a = ch0[i], b = c1[i];
+          out[i] = Math.abs(a) >= Math.abs(b) ? a : b;
+        }
+        return out;
+      })()
     : ch0;
   const FRAME = 2048, HOP = 512;
-  const total = Math.floor((data.length - FRAME) / HOP);
+  // Total frames = how many complete FRAME-sized windows fit, slid by HOP.
+  // The last full frame ends at sample (total-1)*HOP + FRAME, so any audio
+  // after that point was previously dropped (~10-20ms at the end). Adding +1
+  // covers the trailing tail when (data.length - FRAME) is HOP-aligned.
+  const total = Math.max(0, Math.floor((data.length - FRAME) / HOP) + 1);
   const active = {}, notes = [];
   if (_TRANS_FRAME === null) _TRANS_FRAME = new Float32Array(FRAME);
   const frame = _TRANS_FRAME;
@@ -14492,7 +14950,12 @@ async function transcribeAudio(audioBuf, onP) {
     // Copy the next FRAME samples into the reusable buffer — was data.slice()
     // per frame, which allocated and GC'd ~127MB on a 3-minute file.
     const off = f * HOP;
-    for (let i = 0; i < FRAME; i++) frame[i] = data[off + i];
+    // Guard: the +1 in total may cause the last frame to read past data.length.
+    // Pad with zeros (silence) rather than skip — keeps the analysis grid
+    // contiguous so timing math (f * HOP) remains correct downstream.
+    const lim = Math.min(FRAME, data.length - off);
+    for (let i = 0; i < lim; i++) frame[i] = data[off + i];
+    for (let i = lim; i < FRAME; i++) frame[i] = 0;
     const mag = fftMag(frame);
     const picks = pickPitches(mag, sr);
     const found = new Set();
@@ -14517,7 +14980,11 @@ async function transcribeAudio(audioBuf, onP) {
   const raw = notes
     .filter(n => f2ms(n.ef - n.sf) >= 60)
     .map(n => ({m: n.midi, startMs: f2ms(n.sf), durMs: Math.max(80, f2ms(n.ef - n.sf)), v: Math.max(40, Math.min(120, Math.round(n.mx * 110)))}))
-    .sort((a, b) => a.startMs - b.startMs);
+    // Secondary sort by midi pitch ensures notes with identical startMs always
+    // land in the same order — clustering becomes fully deterministic for the
+    // same input. Without it, V8's stable-sort tie-breaking could shift two
+    // simultaneous notes between CWIN-window boundaries on different runs.
+    .sort((a, b) => a.startMs - b.startMs || a.m - b.m);
   const evts = [];
   let i = 0;
   while (i < raw.length) {
@@ -15074,7 +15541,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> mode is yours: only colours close to your 12-swatch palette make sound. Filter Guernica through tropical pinks, see what survives.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Two ways to play.</strong> <strong>Scan</strong> reads the picture as a score, left-to-right. <strong style={{color:'rgba(228,178,255,.95)'}}>AI Compose</strong> (Pro) does something different: it takes the image\'s palette, energy and mood and writes a whole new piece inspired by it — the painting stays on screen while its music plays.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Save · Record — take it with you</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> exports your painting as a high-resolution PNG. <strong>Story</strong> (9:16) for IG/TikTok, <strong>Web/Social</strong> for the feed, or <strong>A1 · 300 DPI</strong> — properly print-ready, gallery-grade. Frame it. Hang it. Share it. It's yours.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> exports your painting as a high-resolution PNG. <strong>Story</strong> (9:16) for IG/TikTok, <strong>Web/Social</strong> for the feed, or <strong>A0 · 300+ DPI</strong> — properly print-ready, gallery-grade. Frame it. Hang it. Share it. It's yours.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Record</strong> captures the music while a painting plays back, as a shareable audio file. Plus <strong>♫ Score</strong> turns the painting's notes into a MusicXML you can open in MuseScore or Sibelius — actual sheet music, from a picture.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Posters from your favourite tracks. Songs from photos that matter. This is the part you take home.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Live tools</h3>
@@ -15105,7 +15572,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> ist deins: nur Farben nahe deiner 12-Feld-Palette klingen. Filtere Guernica durch tropisches Pink — was überlebt?</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Zwei Spielarten.</strong> <strong>Scan</strong> liest das Bild als Partitur. <strong style={{color:'rgba(228,178,255,.95)'}}>KI Komponieren</strong> (Pro) macht etwas anderes: Es nimmt Palette, Energie und Stimmung des Bildes und schreibt ein ganz neues Stück — das Gemälde bleibt sichtbar, während seine Musik spielt.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Speichern · Aufnehmen — nimm es mit</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Speichern</strong> exportiert dein Bild als hochauflösendes PNG. <strong>Story</strong> (9:16) für IG/TikTok, <strong>Web/Social</strong> für den Feed, oder <strong>A1 · 300 DPI</strong> — druckfertig, Galerie-Qualität. Rahmen. Aufhängen. Teilen. Es ist deins.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Speichern</strong> exportiert dein Bild als hochauflösendes PNG. <strong>Story</strong> (9:16) für IG/TikTok, <strong>Web/Social</strong> für den Feed, oder <strong>A0 · 300+ DPI</strong> — druckfertig, Galerie-Qualität. Rahmen. Aufhängen. Teilen. Es ist deins.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Aufnehmen</strong> fängt die Musik ein, während ein Bild abspielt — als teilbare Audio-Datei. Plus <strong>♫ Noten</strong> verwandelt die Noten des Bildes in MusicXML, das du in MuseScore oder Sibelius öffnen kannst — echte Notenblätter aus einem Bild.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Poster aus deinen Lieblingstracks. Songs aus Fotos, die zählen. Das ist der Teil, den du mit nach Hause nimmst.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Live-Tools</h3>
@@ -15136,7 +15603,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong>, c'est toi : seules les couleurs proches de tes 12 cases sonnent. Filtre Guernica à travers du rose tropical — qu'est-ce qui survit ?</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Deux façons de jouer.</strong> <strong>Scan</strong> lit l'image comme une partition. <strong style={{color:'rgba(228,178,255,.95)'}}>Composer IA</strong> (Pro) fait autre chose : il prend la palette, l'énergie et l'ambiance de l'image et écrit un morceau entièrement nouveau — la peinture reste à l'écran pendant que sa musique joue.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Enregistrer · Capturer — prends-le avec toi</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Enregistrer</strong> exporte ta peinture en PNG haute résolution. <strong>Story</strong> (9:16) pour IG/TikTok, <strong>Web/Social</strong> pour le feed, ou <strong>A1 · 300 DPI</strong> — prêt à imprimer, qualité galerie. Encadre. Accroche. Partage. C'est à toi.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Enregistrer</strong> exporte ta peinture en PNG haute résolution. <strong>Story</strong> (9:16) pour IG/TikTok, <strong>Web/Social</strong> pour le feed, ou <strong>A0 · 300+ DPI</strong> — prêt à imprimer, qualité galerie. Encadre. Accroche. Partage. C'est à toi.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Enregistrer</strong> capture la musique pendant qu'une peinture joue, en fichier audio partageable. Et <strong>♫ Partition</strong> convertit les notes de la peinture en MusicXML ouvrable dans MuseScore ou Sibelius — de vraies partitions, à partir d'une image.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Des posters depuis tes morceaux préférés. Des chansons depuis des photos qui comptent. C'est la partie que tu ramènes chez toi.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Outils live</h3>
@@ -15167,7 +15634,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> es tuyo: solo suenan los colores cerca de tus 12 casillas. Filtra Guernica por rosas tropicales — ¿qué sobrevive?</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Dos formas de tocar.</strong> <strong>Escanear</strong> lee la imagen como partitura. <strong style={{color:'rgba(228,178,255,.95)'}}>Componer IA</strong> (Pro) hace algo distinto: toma la paleta, la energía y el ánimo de la imagen y escribe una pieza nueva — la pintura permanece en pantalla mientras suena su música.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Guardar · Grabar — llévatelo contigo</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta tu pintura como PNG de alta resolución. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para el feed, o <strong>A1 · 300 DPI</strong> — listo para imprimir, calidad galería. Enmarca. Cuelga. Comparte. Es tuyo.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta tu pintura como PNG de alta resolución. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para el feed, o <strong>A0 · 300+ DPI</strong> — listo para imprimir, calidad galería. Enmarca. Cuelga. Comparte. Es tuyo.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Grabar</strong> captura la música mientras una pintura suena, como archivo audio compartible. Y <strong>♫ Partitura</strong> convierte las notas de la pintura en MusicXML abrible en MuseScore o Sibelius — partituras reales, desde una imagen.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Pósters desde tus tracks favoritos. Canciones desde fotos que importan. Esta es la parte que te llevas a casa.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Herramientas en vivo</h3>
@@ -15198,7 +15665,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> je tvoja: znejú len farby blízke tvojim 12 políčkam. Prefiltruj Guernicu cez tropické ružové — čo prežije?</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Dva spôsoby prehrávania.</strong> <strong>Sken</strong> číta obraz ako partitúru. <strong style={{color:'rgba(228,178,255,.95)'}}>AI skladba</strong> (Pro) robí niečo iné: vezme paletu, energiu a náladu obrazu a zloží úplne novú skladbu — obraz ostáva na obrazovke, kým hrá jeho hudba.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Uložiť · Nahrať — zober si to so sebou</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Uložiť</strong> exportuje tvoju maľbu ako PNG vo vysokom rozlíšení. <strong>Story</strong> (9:16) pre IG/TikTok, <strong>Web/Social</strong> pre feed, alebo <strong>A1 · 300 DPI</strong> — pripravené na tlač, galerijná kvalita. Zarámuj. Zaves. Zdieľaj. Je tvoja.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Uložiť</strong> exportuje tvoju maľbu ako PNG vo vysokom rozlíšení. <strong>Story</strong> (9:16) pre IG/TikTok, <strong>Web/Social</strong> pre feed, alebo <strong>A0 · 300+ DPI</strong> — pripravené na tlač, galerijná kvalita. Zarámuj. Zaves. Zdieľaj. Je tvoja.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Nahrať</strong> zachytí hudbu počas prehrávania maľby ako zdieľateľný audio súbor. Plus <strong>♫ Noty</strong> premení noty maľby na MusicXML, otvoriteľné v MuseScore alebo Sibelius — naozajstné noty, z obrázka.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Plagáty z tvojich obľúbených skladieb. Pesničky z fotiek, ktoré rátajú. To je tá časť, ktorú si odnesieš domov.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Live nástroje</h3>
@@ -15229,7 +15696,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> é teu: só as cores próximas da tua paleta de 12 amostras soam. Filtra Guernica por rosas tropicais, vê o que sobrevive.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Duas formas de tocar.</strong> <strong>Digitalizar</strong> lê a imagem como partitura. <strong style={{color:'rgba(228,178,255,.95)'}}>Compor IA</strong> (Pro) faz algo diferente: pega na paleta, energia e humor da imagem e escreve uma peça nova — a pintura fica no ecrã enquanto a sua música toca.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Guardar · Gravar — leva-o contigo</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta a tua pintura como PNG de alta resolução. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para o feed, ou <strong>A1 · 300 DPI</strong> — pronto para impressão, qualidade galeria. Emoldura. Pendura. Partilha. É teu.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta a tua pintura como PNG de alta resolução. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para o feed, ou <strong>A0 · 300+ DPI</strong> — pronto para impressão, qualidade galeria. Emoldura. Pendura. Partilha. É teu.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Gravar</strong> captura a música enquanto uma pintura toca, num ficheiro áudio partilhável. E <strong>♫ Partitura</strong> transforma as notas da pintura em MusicXML que abres no MuseScore ou Sibelius — partituras reais, a partir de uma imagem.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Pósters dos teus temas favoritos. Canções de fotos que importam. Esta é a parte que levas para casa.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Ferramentas ao vivo</h3>
@@ -15261,7 +15728,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> 模式属于你:只有接近你 12 色调色板的颜色才会发声。把《格尔尼卡》过滤通过热带粉,看看什么留下来。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>两种播放方式。</strong><strong>扫描</strong>把图像当作乐谱来读。<strong style={{color:'rgba(228,178,255,.95)'}}>AI 作曲</strong>(Pro)则不同:它取图像的色板、能量与情绪,谱写一首全新的曲子 — 播放时画作留在屏幕上。</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ 保存 · 录音 — 带走它</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 保存</strong> 把你的画导出为高分辨率 PNG。<strong>Story</strong>(9:16)给 IG/TikTok,<strong>Web/Social</strong> 给 Feed,或者 <strong>A1 · 300 DPI</strong> — 真正可印,画廊级。装裱。挂上。分享。是你的。</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 保存</strong> 把你的画导出为高分辨率 PNG。<strong>Story</strong>(9:16)给 IG/TikTok,<strong>Web/Social</strong> 给 Feed,或者 <strong>A0 · 300+ DPI</strong> — 真正可印,画廊级。装裱。挂上。分享。是你的。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ 录音</strong> 在画回放时捕捉音乐,作为可分享的音频文件。再加 <strong>♫ 乐谱</strong> 把画的音符变成 MusicXML,你可以在 MuseScore 或 Sibelius 里打开 — 真正的乐谱,从一张图里。</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>从你最爱的曲目里来的海报。从重要的照片里来的歌。这是你带回家的部分。</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>实时工具</h3>
@@ -15292,7 +15759,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> 模式屬於你:只有接近你 12 色調色盤的顏色才會發聲。把《格爾尼卡》過濾通過熱帶粉,看看什麼留下來。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>兩種播放方式。</strong><strong>掃描</strong>把圖像當作樂譜來讀。<strong style={{color:'rgba(228,178,255,.95)'}}>AI 作曲</strong>(Pro)則不同:它取圖像的色盤、能量與情緒,譜寫一首全新的曲子 — 播放時畫作留在螢幕上。</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ 儲存 · 錄音 — 帶走它</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 儲存</strong> 把你的畫匯出為高解析度 PNG。<strong>Story</strong>(9:16)給 IG/TikTok,<strong>Web/Social</strong> 給 Feed,或者 <strong>A1 · 300 DPI</strong> — 真正可印,畫廊級。裝裱。掛上。分享。是你的。</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 儲存</strong> 把你的畫匯出為高解析度 PNG。<strong>Story</strong>(9:16)給 IG/TikTok,<strong>Web/Social</strong> 給 Feed,或者 <strong>A0 · 300+ DPI</strong> — 真正可印,畫廊級。裝裱。掛上。分享。是你的。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ 錄音</strong> 在畫回放時擷取音樂,作為可分享的音訊檔。再加 <strong>♫ 樂譜</strong> 把畫的音符變成 MusicXML,你可以在 MuseScore 或 Sibelius 裡開啟 — 真正的樂譜,從一張圖裡。</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>從你最愛的曲目裡來的海報。從重要的照片裡來的歌。這是你帶回家的部分。</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>即時工具</h3>
@@ -15323,7 +15790,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> モードはあなたのもの:あなたの 12 色パレットに近い色だけが音を出す。《ゲルニカ》をトロピカル・ピンクで濾過してみる。何が残るか。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>2 つの再生方法。</strong><strong>Scan</strong> は画像を楽譜として読む。<strong style={{color:'rgba(228,178,255,.95)'}}>AI Compose</strong>(Pro)は違う:画像のパレット、エネルギー、ムードを取り、まったく新しい曲を書く — 再生中、絵は画面に残る。</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Save · Record — 持ち帰る</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> は絵を高解像度 PNG として書き出す。<strong>Story</strong>(9:16)は IG/TikTok 用、<strong>Web/Social</strong> はフィード用、または <strong>A1 · 300 DPI</strong> — 本当に印刷できる、ギャラリー級。額装。掛ける。シェア。あなたのもの。</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> は絵を高解像度 PNG として書き出す。<strong>Story</strong>(9:16)は IG/TikTok 用、<strong>Web/Social</strong> はフィード用、または <strong>A0 · 300+ DPI</strong> — 本当に印刷できる、ギャラリー級。額装。掛ける。シェア。あなたのもの。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Record</strong> は絵が再生される間に音楽を取り込み、共有可能な音声ファイルにする。さらに <strong>♫ Score</strong> は絵の音符を MusicXML に変える — MuseScore や Sibelius で開ける、本物の楽譜が、一枚の画像から。</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>お気に入りの曲から生まれたポスター。大切な写真から生まれた歌。それが持ち帰る部分。</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>ライブツール</h3>
@@ -15448,7 +15915,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio or score`, body:`One button for every musical file. MIDI, MP3/WAV/M4A, or MusicXML from MuseScore/Finale. Type detected automatically.`, more:`One button for every musical file. ◆ MIDI (.mid / .midi) — multi-track condenses into chords, tempo-mapped, painted. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decoded, pitch-detected, painted; best on clean monophonic or sparse material (solo piano, vocal, simple guitar) — dense mixes are harder. ◆ Score (.musicxml .xml .mxl from MuseScore, Finale, Dorico) — pitches, durations, dynamics and chords all come through exact; the most accurate input there is. Paintiano detects the type automatically. Open Music without a file for a built-in sample.`},
     {id:'image', glyph:'📷', cat:'music', title:`Photo → music → painting`, body:`Drop in an image. Its colours and energy become a piano piece, then paint in any artist style. Free does Scan, Pro adds AI Compose.`, more:`Upload any image. Paintiano reads it as a score — left to right, top to bottom; length scales with the image's energy (~1½–2¾ min). ◆ The app picks the reading from how colourful the work is: colourful → Harmony or Spectral (hue=pitch, lightness=octave, vividness=loudness); near-monochrome (Guernica, ink, sepia) → B/W. ◆ Custom is yours: only colours close to your 12 swatches sound, the rest fall silent — filter Guernica through tropical pinks and see what survives. ◆ Two ways to play: SCAN reads the picture left-to-right as a score (choose the direction). AI COMPOSE (Pro) writes a whole new piece from the image's palette, energy and mood — and keeps the picture on screen while it plays.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Name a feeling`, body:`Tap ✦ how do you feel? Type any feeling, any language. AI writes a piano piece. Then Morph into another mood, or Vary for a fresh key.`, more:`Tap ✦ "how do you feel?" and type any feeling, in any language — furious, saudade, 3am drive, summer crush. AI writes a piano piece for it and the canvas fills chord by chord as it plays. After: ◆ ✦ MORPH crossfades one mood into another — first half A, second half B, a velocity blend in the 40–60% zone. ◆ ✦ VARY shifts the tonality to a new key (often major ↔ minor): the rhythm and structure stay locked, only the chords — and so the colours — change. Keep tapping for new keys. ◆ Free gets 3 trial AI calls (shared across Mood, Mood-from-image and AI Compose); Pro AI = unlimited.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Take both home`, body:`Save → PNG of the painting + audio of the music. Story mode crops it for Instagram / TikTok. Pro removes the watermark and lifts to 300 DPI.`, more:`Two diamonds — the picture and the music. ◆ ↓ SAVE exports your painting as a high-resolution PNG: Story (9:16) for IG/TikTok, Web/Social (~4×, feed-ready), or Print A1 · 300 DPI (~20×, gallery-grade). Same song always gives the same painting — your songs have signatures now. ◆ ⏺ RECORD (image mode) captures the audio as the painting plays, straight to a shareable file; stops automatically when the piece ends. ◆ ♫ SCORE turns the painting's notes into a MusicXML file — open it in MuseScore, Sibelius or Finale; actual sheet music from a picture. ◆ Free exports carry a small watermark; Pro and Pro AI strip it and unlock the A1 · 300 DPI size.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Take both home`, body:`Save → PNG of the painting + audio of the music. Story mode crops it for Instagram / TikTok. Pro removes the watermark and lifts to 300 DPI.`, more:`Two diamonds — the picture and the music. ◆ ↓ SAVE exports your painting as a high-resolution PNG: Story (9:16) for IG/TikTok, Web/Social (~4×, feed-ready), or Print A0 · 300+ DPI (~20×, gallery-grade). Same song always gives the same painting — your songs have signatures now. ◆ ⏺ RECORD (image mode) captures the audio as the painting plays, straight to a shareable file; stops automatically when the piece ends. ◆ ♫ SCORE turns the painting's notes into a MusicXML file — open it in MuseScore, Sibelius or Finale; actual sheet music from a picture. ◆ Free exports carry a small watermark; Pro and Pro AI strip it and unlock the A0 · 300+ DPI size.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, speed, loop, mute, clear`, body:`Play/pause and seek the bar. Speed 0.5×–2×. ⟳ Loop repeats. 🔊 Mute paints in silence. Clear resets — smartly, per mode.`, more:`The playback controls. ◆ Play starts and pauses (Space too); tap the progress bar to jump, drag to scrub. ◆ Speed: a chip shows the rate (1× default); tap to snap back to 1×, press-and-hold to cycle 0.5× → 2× and wrap. ◆ ⟳ LOOP keeps a mood piece repeating; gold when on. ◆ 🔊 / 🔇 Mute silences all audio while the painting still renders — remembered across sessions. ◆ Clear is mode-aware: Compose wipes the canvas and stays; MIC drops only the active mode's draft; Image wipes the painted trace and the picture; MIDI/audio/score/text mood do a full reset. ◆ If status says "loading piano…", wait a few seconds (~5 MB sample); it falls back to a synth if that fails.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro unlocks all of it`, body:`Pro €9.99 → all 18 artists, editable Custom palette, no watermark, lifetime. Pro AI €19.99 adds unlimited AI moods, image compose, atmosphere.`, more:`Three tiers, all one-time payments. ◆ Free — 9 artists unlocked (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 paint types each; each has a Pro partner (tap an active artist again to see it). Custom palette is read-only, exports carry a watermark, AI features run on 3 trial credits. ◆ Pro €9.99 — all 18 artists, all paint types, editable Custom palette, 300 DPI exports without watermark, lifetime access; AI still from the shared 3-credit pool. ◆ Pro AI €19.99 — everything in Pro plus unlimited AI: text moods, Mood-from-image, AI Compose, AI Atmosphere. ◆ Credit costs: AI text & image compose = 1 each, Atmosphere = 0.5. ◆ Pay once, keep forever. No subscriptions. License works on up to 5 devices, one at a time.`}
   ],
@@ -15469,7 +15936,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, Audio oder Noten`, body:`Ein Knopf für jede Musikdatei. MIDI, MP3/WAV/M4A oder MusicXML aus MuseScore/Finale. Typ wird automatisch erkannt.`, more:`Ein Knopf für jede Musikdatei. ◆ MIDI (.mid / .midi) — Mehrspur kondensiert zu Akkorden, tempo-gemappt, gemalt. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekodiert, tonhöhenerkannt, gemalt; am besten bei klarem monophonem oder dünnem Material (Solo-Klavier, Gesang, einfache Gitarre) — dichte Mixe sind schwerer. ◆ Noten (.musicxml .xml .mxl aus MuseScore, Finale, Dorico) — Tonhöhen, Dauern, Dynamik und Akkorde kommen exakt durch; der genaueste Input überhaupt. Paintiano erkennt den Typ automatisch. Öffne Music ohne Datei für ein eingebautes Beispiel.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → Musik → Bild`, body:`Droppe ein Bild. Seine Farben und Energie werden ein Klavierstück, dann malt es in jedem Künstlerstil. Free macht Scan, Pro fügt AI Compose hinzu.`, more:`Lade ein beliebiges Bild. Paintiano liest es als Partitur — links nach rechts, oben nach unten; die Länge skaliert mit der Energie des Bildes (~1½–2¾ Min). ◆ Die App wählt die Lesart danach, wie farbig das Werk ist: farbig → Harmonie oder Spektral (Farbton=Tonhöhe, Helligkeit=Oktave, Lebendigkeit=Lautstärke); fast monochrom (Guernica, Tusche, Sepia) → S/W. ◆ Custom ist deins: nur Farben nah deinen 12 klingen, der Rest verstummt — filtere Guernica durch tropische Pinks und sieh, was überlebt. ◆ Zwei Arten zu spielen: SCAN liest das Bild links-nach-rechts als Partitur (wähle die Richtung). AI COMPOSE (Pro) schreibt ein ganz neues Stück aus Palette, Energie und Stimmung des Bildes — und behält das Bild auf dem Schirm, während es spielt.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nenn ein Gefühl`, body:`Tippe ✦ wie fühlst du dich? Tippe jedes Gefühl, jede Sprache. KI schreibt ein Klavierstück. Dann Morph in eine andere Stimmung, oder Vary für eine frische Tonart.`, more:`Tippe ✦ „wie fühlst du dich?" und tippe jedes Gefühl, in jeder Sprache — wütend, saudade, 3-Uhr-Fahrt, Sommerschwarm. KI schreibt ein Klavierstück dafür und die Leinwand füllt sich Akkord für Akkord, während es spielt. Danach: ◆ ✦ MORPH blendet eine Stimmung in eine andere — erste Hälfte A, zweite B, ein Velocity-Blend in der 40–60%-Zone. ◆ ✦ VARY verschiebt die Tonart auf eine neue (oft Dur ↔ Moll): Rhythmus und Struktur bleiben gesperrt, nur die Akkorde — und somit die Farben — ändern sich. Tippe weiter für neue Tonarten. ◆ Free bekommt 3 Test-KI-Aufrufe (geteilt über Mood, Mood-from-image und AI Compose); Pro KI = unbegrenzt.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Nimm beides mit`, body:`Save → PNG des Bildes + Audio der Musik. Story-Modus schneidet für Instagram / TikTok. Pro entfernt das Wasserzeichen und hebt auf 300 DPI.`, more:`Zwei Diamanten — das Bild und die Musik. ◆ ↓ SAVE exportiert dein Bild als hochauflösendes PNG: Story (9:16) für IG/TikTok, Web/Social (~4×, feed-fertig), oder Print A1 · 300 DPI (~20×, galeriereif). Gleicher Song gibt immer dasselbe Bild — deine Songs haben jetzt Signaturen. ◆ ⏺ RECORD (Bildmodus) nimmt das Audio auf, während das Bild spielt, direkt in eine teilbare Datei; stoppt automatisch am Stückende. ◆ ♫ SCORE wandelt die Noten des Bildes in eine MusicXML-Datei — öffne sie in MuseScore, Sibelius oder Finale; echte Noten aus einem Bild. ◆ Free-Exporte tragen ein kleines Wasserzeichen; Pro und Pro KI entfernen es und schalten die Größe A1 · 300 DPI frei.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Nimm beides mit`, body:`Save → PNG des Bildes + Audio der Musik. Story-Modus schneidet für Instagram / TikTok. Pro entfernt das Wasserzeichen und hebt auf 300 DPI.`, more:`Zwei Diamanten — das Bild und die Musik. ◆ ↓ SAVE exportiert dein Bild als hochauflösendes PNG: Story (9:16) für IG/TikTok, Web/Social (~4×, feed-fertig), oder Print A0 · 300+ DPI (~20×, galeriereif). Gleicher Song gibt immer dasselbe Bild — deine Songs haben jetzt Signaturen. ◆ ⏺ RECORD (Bildmodus) nimmt das Audio auf, während das Bild spielt, direkt in eine teilbare Datei; stoppt automatisch am Stückende. ◆ ♫ SCORE wandelt die Noten des Bildes in eine MusicXML-Datei — öffne sie in MuseScore, Sibelius oder Finale; echte Noten aus einem Bild. ◆ Free-Exporte tragen ein kleines Wasserzeichen; Pro und Pro KI entfernen es und schalten die Größe A0 · 300+ DPI frei.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, Tempo, Loop, Mute, Clear`, body:`Play/Pause und Leiste suchen. Tempo 0,5×–2×. ⟳ Loop wiederholt. 🔊 Mute malt in Stille. Clear setzt zurück — klug, je Modus.`, more:`Die Wiedergabe-Steuerung. ◆ Play startet und pausiert (auch Leertaste); tippe die Fortschrittsleiste zum Springen, ziehe zum Scrubben. ◆ Tempo: eine Kachel zeigt die Rate (1× Standard); tippen für zurück auf 1×, halten zum Zykeln 0,5× → 2× mit Umbruch. ◆ ⟳ LOOP lässt ein Stimmungsstück wiederholen; gold wenn an. ◆ 🔊 / 🔇 Mute stummschaltet alles Audio, während das Bild weiter entsteht — über Sitzungen gemerkt. ◆ Clear ist modusbewusst: Compose löscht die Leinwand und bleibt; MIC verwirft nur den Entwurf des aktiven Modus; Image löscht die gemalte Spur und das Bild; MIDI/Audio/Noten/Text-Stimmung machen einen vollen Reset. ◆ Steht da „loading piano…", warte ein paar Sekunden (~5 MB Sample); klappt das nicht, schaltet es auf ein Synth-Klavier.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro schaltet alles frei`, body:`Pro 9,99 € → alle 18 Künstler, editierbare Custom-Palette, kein Wasserzeichen, lebenslang. Pro KI 19,99 € fügt unbegrenzte KI-Stimmungen, Image-Compose, Atmosphäre hinzu.`, more:`Drei Stufen, alle Einmalzahlungen. ◆ Free — 9 Künstler freigeschaltet (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 Maltypen je; jeder hat einen Pro-Partner (aktiven Künstler erneut antippen). Custom-Palette schreibgeschützt, Exporte mit Wasserzeichen, KI-Features auf 3 Test-Credits. ◆ Pro 9,99 € — alle 18 Künstler, alle Maltypen, editierbare Custom-Palette, 300-DPI-Exporte ohne Wasserzeichen, lebenslanger Zugang; KI weiter aus dem geteilten 3-Credit-Pool. ◆ Pro KI 19,99 € — alles aus Pro plus unbegrenzte KI: Text-Stimmungen, Mood-from-image, AI Compose, AI Atmosphere. ◆ Credit-Kosten: KI Text & Image Compose = je 1, Atmosphere = 0,5. ◆ Einmal zahlen, für immer behalten. Keine Abos. Lizenz auf bis zu 5 Geräten, eines zur Zeit.`}
   ],
@@ -15490,7 +15957,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio ou partition`, body:`Un bouton pour tout fichier musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Type détecté automatiquement.`, more:`Un bouton pour tout fichier musical. ◆ MIDI (.mid / .midi) — le multipiste se condense en accords, mappé au tempo, peint. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — décodé, hauteurs détectées, peint ; mieux sur matériel monophonique propre ou clairsemé (piano solo, voix, guitare simple) — les mix denses sont plus durs. ◆ Partition (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — hauteurs, durées, dynamiques et accords passent exacts ; l'entrée la plus précise qui soit. Paintiano détecte le type automatiquement. Ouvre Music sans fichier pour un exemple intégré.`},
     {id:'image', glyph:'📷', cat:'music', title:`Photo → musique → peinture`, body:`Dépose une image. Ses couleurs et son énergie deviennent un morceau de piano, puis peint dans tout style d'artiste. Free fait Scan, Pro ajoute AI Compose.`, more:`Charge n'importe quelle image. Paintiano la lit comme une partition — de gauche à droite, de haut en bas ; la durée s'échelonne avec l'énergie de l'image (~1½–2¾ min). ◆ L'app choisit la lecture selon la couleur de l'œuvre : coloré → Harmonie ou Spectral (teinte=hauteur, luminosité=octave, vivacité=force) ; quasi monochrome (Guernica, encre, sépia) → N/B. ◆ Custom est à toi : seules les couleurs proches de tes 12 cases sonnent, le reste se tait — filtre Guernica par des roses tropicaux et vois ce qui survit. ◆ Deux façons de jouer : SCAN lit l'image de gauche à droite comme une partition (choisis le sens). AI COMPOSE (Pro) écrit un tout nouveau morceau à partir de la palette, l'énergie et l'humeur de l'image — et garde l'image à l'écran pendant qu'il joue.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nomme un ressenti`, body:`Tape ✦ comment tu te sens ? Tape n'importe quel ressenti, n'importe quelle langue. L'IA écrit un morceau. Puis Morph vers une autre humeur, ou Vary pour une tonalité neuve.`, more:`Tape ✦ « comment tu te sens ? » et tape n'importe quel ressenti, en n'importe quelle langue — furieux, saudade, virée à 3h, béguin d'été. L'IA écrit un morceau de piano pour lui et la toile se remplit accord par accord pendant qu'il joue. Après : ◆ ✦ MORPH fond une humeur dans une autre — première moitié A, seconde B, un mélange de vélocité dans la zone 40–60%. ◆ ✦ VARY décale la tonalité vers une nouvelle (souvent majeur ↔ mineur) : le rythme et la structure restent verrouillés, seuls les accords — et donc les couleurs — changent. Tape encore pour de nouvelles tonalités. ◆ Free reçoit 3 appels IA d'essai (partagés entre Mood, Mood-from-image et AI Compose) ; Pro IA = illimité.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Repars avec les deux`, body:`Save → PNG de la peinture + audio de la musique. Le mode Story recadre pour Instagram / TikTok. Pro retire le filigrane et monte à 300 DPI.`, more:`Deux diamants — l'image et la musique. ◆ ↓ SAVE exporte ta peinture en PNG haute résolution : Story (9:16) pour IG/TikTok, Web/Social (~4×, prêt pour le feed), ou Print A1 · 300 DPI (~20×, qualité galerie). Même morceau donne toujours la même peinture — tes morceaux ont des signatures maintenant. ◆ ⏺ RECORD (mode image) capture l'audio pendant que la peinture joue, droit vers un fichier partageable ; s'arrête seul à la fin. ◆ ♫ SCORE transforme les notes de la peinture en fichier MusicXML — ouvre-le dans MuseScore, Sibelius ou Finale ; de vraies partitions à partir d'une image. ◆ Les exports Free portent un petit filigrane ; Pro et Pro IA le retirent et débloquent la taille A1 · 300 DPI.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Repars avec les deux`, body:`Save → PNG de la peinture + audio de la musique. Le mode Story recadre pour Instagram / TikTok. Pro retire le filigrane et monte à 300 DPI.`, more:`Deux diamants — l'image et la musique. ◆ ↓ SAVE exporte ta peinture en PNG haute résolution : Story (9:16) pour IG/TikTok, Web/Social (~4×, prêt pour le feed), ou Print A0 · 300+ DPI (~20×, qualité galerie). Même morceau donne toujours la même peinture — tes morceaux ont des signatures maintenant. ◆ ⏺ RECORD (mode image) capture l'audio pendant que la peinture joue, droit vers un fichier partageable ; s'arrête seul à la fin. ◆ ♫ SCORE transforme les notes de la peinture en fichier MusicXML — ouvre-le dans MuseScore, Sibelius ou Finale ; de vraies partitions à partir d'une image. ◆ Les exports Free portent un petit filigrane ; Pro et Pro IA le retirent et débloquent la taille A0 · 300+ DPI.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, vitesse, loop, mute, clear`, body:`Play/pause et navigation. Vitesse 0,5×–2×. ⟳ Loop répète. 🔊 Mute peint en silence. Clear réinitialise — intelligemment, par mode.`, more:`Les commandes de lecture. ◆ Play démarre et met en pause (Espace aussi) ; tape la barre de progression pour sauter, glisse pour scruber. ◆ Vitesse : une tuile montre le taux (1× défaut) ; tape pour revenir à 1×, maintiens pour cycler 0,5× → 2× en boucle. ◆ ⟳ LOOP fait répéter une pièce d'humeur ; or quand actif. ◆ 🔊 / 🔇 Mute coupe tout l'audio pendant que la peinture continue — mémorisé entre sessions. ◆ Clear est sensible au mode : Compose efface la toile et reste ; MIC abandonne seulement le brouillon du mode actif ; Image efface la trace peinte et l'image ; MIDI/audio/partition/humeur texte font un reset complet. ◆ Si le statut dit « loading piano… », attends quelques secondes (~5 Mo d'échantillon) ; si ça échoue, il bascule sur un piano synthé.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro débloque tout`, body:`Pro 9,99 € → les 18 artistes, palette Custom éditable, sans filigrane, à vie. Pro IA 19,99 € ajoute humeurs IA illimitées, image compose, atmosphère.`, more:`Trois niveaux, tous en paiement unique. ◆ Free — 9 artistes débloqués (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 types de peinture chacun ; chacun a un partenaire Pro (retape un artiste actif). Palette Custom en lecture seule, exports avec filigrane, fonctions IA sur 3 crédits d'essai. ◆ Pro 9,99 € — les 18 artistes, tous les types de peinture, palette Custom éditable, exports 300 DPI sans filigrane, accès à vie ; l'IA vient toujours du pool partagé de 3 crédits. ◆ Pro IA 19,99 € — tout Pro plus IA illimitée : humeurs texte, Mood-from-image, AI Compose, AI Atmosphere. ◆ Coûts de crédit : IA texte & image compose = 1 chacun, Atmosphere = 0,5. ◆ Paie une fois, garde pour toujours. Aucun abonnement. La licence marche sur jusqu'à 5 appareils, un à la fois.`}
   ],
@@ -15511,7 +15978,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio o partitura`, body:`Un botón para todo archivo musical. MIDI, MP3/WAV/M4A, o MusicXML de MuseScore/Finale. Tipo detectado automáticamente.`, more:`Un botón para todo archivo musical. ◆ MIDI (.mid / .midi) — el multipista se condensa en acordes, mapeado al tempo, pintado. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decodificado, alturas detectadas, pintado; mejor en material monofónico limpio o escaso (piano solo, voz, guitarra simple) — las mezclas densas cuestan más. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, duraciones, dinámicas y acordes pasan exactos; la entrada más precisa que hay. Paintiano detecta el tipo automáticamente. Abre Music sin archivo para una muestra integrada.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Suelta una imagen. Sus colores y energía se vuelven una pieza de piano, luego pinta en cualquier estilo. Free hace Scan, Pro añade AI Compose.`, more:`Sube cualquier imagen. Paintiano la lee como partitura — de izquierda a derecha, de arriba abajo; la duración escala con la energía de la imagen (~1½–2¾ min). ◆ La app elige la lectura según lo colorida que sea: colorida → Armonía o Espectral (tono=altura, luminosidad=octava, viveza=volumen); casi monocroma (Guernica, tinta, sepia) → B/N. ◆ Custom es tuyo: solo suenan los colores cercanos a tus 12 muestras, el resto calla — filtra Guernica por rosas tropicales y mira qué sobrevive. ◆ Dos formas de tocar: SCAN lee la imagen de izquierda a derecha como partitura (elige la dirección). AI COMPOSE (Pro) escribe una pieza nueva a partir de la paleta, energía y ánimo de la imagen — y mantiene la imagen en pantalla mientras suena.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nombra un sentir`, body:`Toca ✦ ¿cómo te sientes? Escribe cualquier sentir, cualquier idioma. La IA escribe una pieza. Luego Morph a otro ánimo, o Vary para una tonalidad nueva.`, more:`Toca ✦ «¿cómo te sientes?» y escribe cualquier sentir, en cualquier idioma — furioso, saudade, manejar a las 3am, amor de verano. La IA escribe una pieza de piano para ello y el lienzo se llena acorde por acorde mientras suena. Después: ◆ ✦ MORPH funde un ánimo en otro — primera mitad A, segunda B, una mezcla de velocidad en la zona 40–60%. ◆ ✦ VARY desplaza la tonalidad a una nueva (a menudo mayor ↔ menor): el ritmo y la estructura quedan fijos, solo cambian los acordes — y por tanto los colores. Sigue tocando para nuevas tonalidades. ◆ Free recibe 3 llamadas IA de prueba (compartidas entre Mood, Mood-from-image y AI Compose); Pro IA = ilimitado.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Llévate ambos`, body:`Save → PNG de la pintura + audio de la música. El modo Story recorta para Instagram / TikTok. Pro quita la marca de agua y sube a 300 DPI.`, more:`Dos diamantes — la imagen y la música. ◆ ↓ SAVE exporta tu pintura como PNG de alta resolución: Story (9:16) para IG/TikTok, Web/Social (~4×, listo para el feed), o Print A1 · 300 DPI (~20×, calidad galería). La misma canción siempre da la misma pintura — tus canciones tienen firmas ahora. ◆ ⏺ RECORD (modo imagen) captura el audio mientras la pintura suena, directo a un archivo compartible; se detiene solo al acabar. ◆ ♫ SCORE convierte las notas de la pintura en un archivo MusicXML — ábrelo en MuseScore, Sibelius o Finale; partituras reales desde una imagen. ◆ Los exports Free llevan una pequeña marca de agua; Pro y Pro IA la quitan y desbloquean el tamaño A1 · 300 DPI.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Llévate ambos`, body:`Save → PNG de la pintura + audio de la música. El modo Story recorta para Instagram / TikTok. Pro quita la marca de agua y sube a 300 DPI.`, more:`Dos diamantes — la imagen y la música. ◆ ↓ SAVE exporta tu pintura como PNG de alta resolución: Story (9:16) para IG/TikTok, Web/Social (~4×, listo para el feed), o Print A0 · 300+ DPI (~20×, calidad galería). La misma canción siempre da la misma pintura — tus canciones tienen firmas ahora. ◆ ⏺ RECORD (modo imagen) captura el audio mientras la pintura suena, directo a un archivo compartible; se detiene solo al acabar. ◆ ♫ SCORE convierte las notas de la pintura en un archivo MusicXML — ábrelo en MuseScore, Sibelius o Finale; partituras reales desde una imagen. ◆ Los exports Free llevan una pequeña marca de agua; Pro y Pro IA la quitan y desbloquean el tamaño A0 · 300+ DPI.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, velocidad, loop, mute, clear`, body:`Play/pausa y navegar la barra. Velocidad 0,5×–2×. ⟳ Loop repite. 🔊 Mute pinta en silencio. Clear reinicia — listo, por modo.`, more:`Los controles de reproducción. ◆ Play inicia y pausa (Espacio también); toca la barra de progreso para saltar, arrastra para hacer scrub. ◆ Velocidad: una baldosa muestra la tasa (1× defecto); toca para volver a 1×, mantén para ciclar 0,5× → 2× y dar la vuelta. ◆ ⟳ LOOP mantiene una pieza de ánimo repitiendo; oro cuando está activo. ◆ 🔊 / 🔇 Mute silencia todo el audio mientras la pintura sigue generándose — recordado entre sesiones. ◆ Clear es consciente del modo: Compose borra el lienzo y se queda; MIC descarta solo el borrador del modo activo; Image borra el trazo pintado y la imagen; MIDI/audio/partitura/ánimo de texto hacen un reinicio completo. ◆ Si el estado dice «loading piano…», espera unos segundos (~5 MB de muestra); si falla, pasa a un piano sintético.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloquea todo`, body:`Pro 9,99 € → los 18 artistas, paleta Custom editable, sin marca de agua, de por vida. Pro IA 19,99 € añade ánimos IA ilimitados, image compose, atmósfera.`, more:`Tres niveles, todos pago único. ◆ Free — 9 artistas desbloqueados (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) más 2 tipos de pintura cada uno; cada uno tiene un socio Pro (toca de nuevo un artista activo). Paleta Custom de solo lectura, exports con marca de agua, funciones IA con 3 créditos de prueba. ◆ Pro 9,99 € — los 18 artistas, todos los tipos de pintura, paleta Custom editable, exports 300 DPI sin marca de agua, acceso de por vida; la IA sigue del pool compartido de 3 créditos. ◆ Pro IA 19,99 € — todo Pro más IA ilimitada: ánimos de texto, Mood-from-image, AI Compose, AI Atmosphere. ◆ Costes de crédito: IA texto e image compose = 1 cada uno, Atmosphere = 0,5. ◆ Paga una vez, quédatelo para siempre. Sin suscripciones. La licencia funciona en hasta 5 dispositivos, uno a la vez.`}
   ],
@@ -15532,7 +15999,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio či noty`, body:`Jedno tlačidlo pre každý hudobný súbor. MIDI, MP3/WAV/M4A, alebo MusicXML z MuseScore/Finale. Typ sa rozpozná automaticky.`, more:`Jedno tlačidlo pre každý hudobný súbor. ◆ MIDI (.mid / .midi) — multi-track sa zhustí na akordy, tempo-mapuje, maľuje. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekóduje, deteguje tóny, maľuje; najlepšie na čistý monofónny alebo riedky materiál (sólo klavír, vokál, jednoduchá gitara) — husté mixy sú ťažšie. ◆ Noty (.musicxml .xml .mxl z MuseScore, Finale, Dorico) — tóny, trvania, dynamika aj akordy prejdú presne; najpresnejší vstup, aký je. Paintiano rozpozná typ automaticky. Otvor Music bez súboru pre vstavanú ukážku.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → hudba → maľba`, body:`Hoď fotku. Jej farby a energia sa stanú klavírnou skladbou, potom maľuje v štýle umelca. Free robí Scan, Pro pridáva AI Compose.`, more:`Nahraj akýkoľvek obrázok. Paintiano ho číta ako partitúru — zľava doprava, zhora nadol; dĺžka škáluje s energiou obrázka (~1½–2¾ min). ◆ App vyberie čítanie podľa toho, aký farebný je: farebný → Harmónia alebo Spektrum (odtieň=tón, svetlosť=oktáva, živosť=hlasitosť); takmer monochromatický (Guernica, tuš, sépia) → B/W. ◆ Custom je tvoj: znejú len farby blízke tvojim 12, zvyšok stíchne — prefiltruj Guernicu cez tropické ružové a uvidíš, čo prežije. ◆ Dva spôsoby hry: SCAN číta obrázok zľava doprava ako partitúru (vyber smer). AI COMPOSE (Pro) napíše celkom novú skladbu z palety, energie a nálady obrázka — a nechá obraz na obrazovke, kým hrá.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Pomenuj pocit`, body:`Klikni ✦ ako sa cítiš? Napíš akýkoľvek pocit, akýkoľvek jazyk. AI napíše klavírnu skladbu. Potom Morph do inej nálady, alebo Vary pre novú tóninu.`, more:`Klikni ✦ „ako sa cítiš?" a napíš akýkoľvek pocit, v akomkoľvek jazyku — zúrivý, saudade, 3am drive, letná láska. AI preň napíše klavírnu skladbu a plátno sa plní akord po akorde, ako hrá. Potom: ◆ ✦ MORPH prelína jednu náladu do druhej — prvá polovica A, druhá B, dynamický blend v zóne 40–60%. ◆ ✦ VARY posunie tóninu na novú (často dur ↔ mol): rytmus a štruktúra ostávajú zamknuté, menia sa len akordy — a teda farby. Klikaj ďalej pre nové tóniny. ◆ Free dostane 3 skúšobné AI volania (zdieľané cez Mood, Mood-from-image a AI Compose); Pro AI = neobmedzene.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Odnes si oboje`, body:`Save → PNG maľby + audio piesne. Story mód oreže pre Instagram / TikTok. Pro odstráni watermark a zdvihne na 300 DPI.`, more:`Dva diamanty — obraz a hudba. ◆ ↓ SAVE exportuje maľbu ako PNG vo vysokom rozlíšení: Story (9:16) pre IG/TikTok, Web/Social (~4×, do feedu), alebo Print A1 · 300 DPI (~20×, galériová kvalita). Tá istá pieseň vždy dá tú istú maľbu — tvoje piesne majú teraz podpisy. ◆ ⏺ RECORD (image mód) zachytí audio, ako maľba hrá, rovno do zdieľateľného súboru; zastaví sa, keď skladba skončí. ◆ ♫ SCORE premení noty maľby na MusicXML — otvor ho v MuseScore, Sibelius či Finale; skutočné noty z obrázka. ◆ Free exporty nesú malý watermark; Pro a Pro AI ho odstránia a odomknú veľkosť A1 · 300 DPI.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Odnes si oboje`, body:`Save → PNG maľby + audio piesne. Story mód oreže pre Instagram / TikTok. Pro odstráni watermark a zdvihne na 300 DPI.`, more:`Dva diamanty — obraz a hudba. ◆ ↓ SAVE exportuje maľbu ako PNG vo vysokom rozlíšení: Story (9:16) pre IG/TikTok, Web/Social (~4×, do feedu), alebo Print A0 · 300+ DPI (~20×, galériová kvalita). Tá istá pieseň vždy dá tú istú maľbu — tvoje piesne majú teraz podpisy. ◆ ⏺ RECORD (image mód) zachytí audio, ako maľba hrá, rovno do zdieľateľného súboru; zastaví sa, keď skladba skončí. ◆ ♫ SCORE premení noty maľby na MusicXML — otvor ho v MuseScore, Sibelius či Finale; skutočné noty z obrázka. ◆ Free exporty nesú malý watermark; Pro a Pro AI ho odstránia a odomknú veľkosť A0 · 300+ DPI.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, rýchlosť, loop, mute, clear`, body:`Play/pauza a posun lišty. Rýchlosť 0,5×–2×. ⟳ Loop opakuje. 🔊 Mute maľuje v tichu. Clear resetuje — chytro, podľa módu.`, more:`Ovládanie prehrávania. ◆ Play spustí a pozastaví (aj Space); klik na lištu skočí, ťahaj na scrub. ◆ Rýchlosť: dlaždica ukáže rate (1× default); klik vráti na 1×, podrž a cykluj 0,5× → 2× s prebalením. ◆ ⟳ LOOP necháva náladovú skladbu opakovať; zlatá keď je zapnutá. ◆ 🔊 / 🔇 Mute stíši všetko audio, kým maľba stále vzniká — pamätá sa medzi sedeniami. ◆ Clear je mód-citlivý: Compose zmaže plátno a ostane; MIC zahodí len draft aktívneho módu; Image zmaže maľovanú stopu aj obrázok; MIDI/audio/noty/text mood spravia plný reset. ◆ Ak status hovorí „loading piano…", počkaj pár sekúnd (~5 MB sample); ak to zlyhá, prepne na syntetický klavír.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro odomkne všetko`, body:`Pro €9.99 → všetkých 18 umelcov, editovateľná Custom paleta, bez watermarku, doživotne. Pro AI €19.99 pridáva neobmedzené AI moody, image compose, atmosphere.`, more:`Tri úrovne, všetky jednorazové platby. ◆ Free — 9 umelcov odomknutých (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 typy maľby na každého; každý má Pro partnera (klikni aktívneho umelca znova). Custom paleta len na čítanie, exporty s watermarkom, AI funkcie na 3 skúšobné kredity. ◆ Pro €9.99 — všetkých 18 umelcov, všetky typy maľby, editovateľná Custom paleta, 300 DPI exporty bez watermarku, doživotný prístup; AI stále zo zdieľaného 3-kreditového poolu. ◆ Pro AI €19.99 — všetko z Pro plus neobmedzené AI: textové moody, Mood-from-image, AI Compose, AI Atmosphere. ◆ Ceny kreditov: AI text & image compose = 1 každý, Atmosphere = 0,5. ◆ Zaplať raz, maj navždy. Žiadne predplatné. Licencia funguje na max 5 zariadeniach, jedno naraz.`}
   ],
@@ -15553,7 +16020,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, áudio ou partitura`, body:`Um botão para todo ficheiro musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Tipo detetado automaticamente.`, more:`Um botão para todo ficheiro musical. ◆ MIDI (.mid / .midi) — multi-faixa condensa em acordes, mapeado ao tempo, pintado. ◆ Áudio (.mp3 .wav .m4a .ogg .aac) — descodificado, alturas detetadas, pintado; melhor em material monofónico limpo ou esparso (piano solo, voz, guitarra simples) — misturas densas são mais difíceis. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, durações, dinâmicas e acordes passam exatos; a entrada mais precisa que há. O Paintiano deteta o tipo automaticamente. Abre Music sem ficheiro para uma amostra integrada.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Larga uma imagem. As suas cores e energia tornam-se uma peça de piano, depois pinta em qualquer estilo. Free faz Scan, Pro adiciona AI Compose.`, more:`Carrega qualquer imagem. O Paintiano lê-a como partitura — da esquerda para a direita, de cima para baixo; a duração escala com a energia da imagem (~1½–2¾ min). ◆ A app escolhe a leitura pela cor da obra: colorida → Harmonia ou Espectral (tom=altura, luminosidade=oitava, vivacidade=volume); quase monocromática (Guernica, tinta, sépia) → P&B. ◆ Custom é teu: só soam as cores próximas das tuas 12 amostras, o resto cala — filtra a Guernica por rosas tropicais e vê o que sobrevive. ◆ Duas formas de tocar: SCAN lê a imagem da esquerda para a direita como partitura (escolhe a direção). AI COMPOSE (Pro) escreve uma peça nova a partir da paleta, energia e estado da imagem — e mantém a imagem no ecrã enquanto toca.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nomeia um sentir`, body:`Toca ✦ como te sentes? Escreve qualquer sentir, qualquer língua. A IA escreve uma peça. Depois Morph para outro estado, ou Vary para uma tonalidade nova.`, more:`Toca ✦ «como te sentes?» e escreve qualquer sentir, em qualquer língua — furioso, saudade, conduzir às 3 da manhã, paixão de verão. A IA escreve uma peça de piano para ele e a tela enche-se acorde a acorde enquanto toca. Depois: ◆ ✦ MORPH funde um estado noutro — primeira metade A, segunda B, uma mistura de velocidade na zona 40–60%. ◆ ✦ VARY desloca a tonalidade para uma nova (muitas vezes maior ↔ menor): o ritmo e a estrutura ficam travados, só os acordes — e portanto as cores — mudam. Continua a tocar para novas tonalidades. ◆ Free recebe 3 chamadas IA de teste (partilhadas entre Mood, Mood-from-image e AI Compose); Pro IA = ilimitado.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Leva os dois`, body:`Save → PNG da pintura + áudio da música. O modo Story recorta para Instagram / TikTok. Pro remove a marca de água e sobe para 300 DPI.`, more:`Dois diamantes — a imagem e a música. ◆ ↓ SAVE exporta a tua pintura como PNG de alta resolução: Story (9:16) para IG/TikTok, Web/Social (~4×, pronto para o feed), ou Print A1 · 300 DPI (~20×, qualidade de galeria). A mesma canção dá sempre a mesma pintura — as tuas canções têm assinaturas agora. ◆ ⏺ RECORD (modo imagem) captura o áudio enquanto a pintura toca, direto para um ficheiro partilhável; para sozinho ao terminar. ◆ ♫ SCORE transforma as notas da pintura num ficheiro MusicXML — abre-o no MuseScore, Sibelius ou Finale; partituras reais a partir de uma imagem. ◆ Os exports Free levam uma pequena marca de água; Pro e Pro IA removem-na e desbloqueiam o tamanho A1 · 300 DPI.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Leva os dois`, body:`Save → PNG da pintura + áudio da música. O modo Story recorta para Instagram / TikTok. Pro remove a marca de água e sobe para 300 DPI.`, more:`Dois diamantes — a imagem e a música. ◆ ↓ SAVE exporta a tua pintura como PNG de alta resolução: Story (9:16) para IG/TikTok, Web/Social (~4×, pronto para o feed), ou Print A0 · 300+ DPI (~20×, qualidade de galeria). A mesma canção dá sempre a mesma pintura — as tuas canções têm assinaturas agora. ◆ ⏺ RECORD (modo imagem) captura o áudio enquanto a pintura toca, direto para um ficheiro partilhável; para sozinho ao terminar. ◆ ♫ SCORE transforma as notas da pintura num ficheiro MusicXML — abre-o no MuseScore, Sibelius ou Finale; partituras reais a partir de uma imagem. ◆ Os exports Free levam uma pequena marca de água; Pro e Pro IA removem-na e desbloqueiam o tamanho A0 · 300+ DPI.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, velocidade, loop, mute, clear`, body:`Play/pausa e navegar a barra. Velocidade 0,5×–2×. ⟳ Loop repete. 🔊 Mute pinta em silêncio. Clear reinicia — esperto, por modo.`, more:`Os controlos de reprodução. ◆ Play inicia e pausa (Espaço também); toca a barra de progresso para saltar, arrasta para fazer scrub. ◆ Velocidade: um ladrilho mostra a taxa (1× padrão); toca para voltar a 1×, segura para ciclar 0,5× → 2× e dar a volta. ◆ ⟳ LOOP mantém uma peça de estado a repetir; dourado quando ligado. ◆ 🔊 / 🔇 Mute silencia todo o áudio enquanto a pintura continua a gerar-se — lembrado entre sessões. ◆ Clear é consciente do modo: Compose apaga a tela e fica; MIC descarta só o rascunho do modo ativo; Image apaga o traço pintado e a imagem; MIDI/áudio/partitura/estado de texto fazem um reset completo. ◆ Se o estado diz «loading piano…», espera uns segundos (~5 MB de amostra); se falhar, passa para um piano sintético.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloqueia tudo`, body:`Pro 9,99 € → todos os 18 artistas, paleta Custom editável, sem marca de água, vitalício. Pro IA 19,99 € adiciona estados IA ilimitados, image compose, atmosfera.`, more:`Três níveis, todos pagamento único. ◆ Free — 9 artistas desbloqueados (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) mais 2 tipos de pintura cada; cada um tem um parceiro Pro (toca de novo num artista ativo). Paleta Custom só de leitura, exports com marca de água, funções IA com 3 créditos de teste. ◆ Pro 9,99 € — todos os 18 artistas, todos os tipos de pintura, paleta Custom editável, exports 300 DPI sem marca de água, acesso vitalício; a IA continua do pool partilhado de 3 créditos. ◆ Pro IA 19,99 € — tudo do Pro mais IA ilimitada: estados de texto, Mood-from-image, AI Compose, AI Atmosphere. ◆ Custos de crédito: IA texto e image compose = 1 cada, Atmosphere = 0,5. ◆ Paga uma vez, fica para sempre. Sem subscrições. A licença funciona em até 5 dispositivos, um de cada vez.`}
   ],
@@ -15574,7 +16041,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音频或乐谱`, body:`一个按钮搞定每种音乐文件。MIDI、MP3/WAV/M4A,或来自 MuseScore/Finale 的 MusicXML。类型自动识别。`, more:`一个按钮搞定每种音乐文件。◆ MIDI(.mid / .midi)——多轨凝缩成和弦,按速度映射,作画。◆ 音频(.mp3 .wav .m4a .ogg .aac)——解码、检测音高、作画;在干净的单音或稀疏素材(独奏钢琴、人声、简单吉他)上最佳——密集混音更难。◆ 乐谱(.musicxml .xml .mxl 来自 MuseScore、Finale、Dorico)——音高、时值、力度、和弦全都精确通过;现有最准确的输入。Paintiano 自动识别类型。不带文件打开 Music 可得内置示例。`},
     {id:'image', glyph:'📷', cat:'music', title:`照片 → 音乐 → 绘画`, body:`丢入一张图。它的颜色和能量变成一段钢琴曲,然后以任一艺术家风格作画。Free 做 Scan,Pro 增加 AI Compose。`, more:`上传任意图像。Paintiano 把它当乐谱读——从左到右、从上到下;时长随图像能量缩放(约 1½–2¾ 分钟)。◆ 应用按作品有多彩来选读法:多彩 → 和声或光谱(色相=音高,明度=八度,鲜艳=响度);近单色(格尔尼卡、水墨、棕褐)→ 黑白。◆ 自定义是你的:只有接近你 12 格的颜色发声,其余静默——把格尔尼卡过滤成热带粉,看看什么存活。◆ 两种播放方式:SCAN 把图从左到右当乐谱读(选扫描方向)。AI COMPOSE(Pro)从图的调色、能量与情绪写一整首新曲——播放时把图留在屏上。`},
     {id:'moods', glyph:'✦', cat:'music', title:`说出一种感受`, body:`点 ✦ 你感觉如何?输入任何感受、任何语言。AI 写一段钢琴曲。然后 Morph 进另一种情绪,或 Vary 换一个新调。`, more:`点 ✦「你感觉如何?」,输入任何感受、用任何语言——愤怒、saudade、凌晨三点开车、夏日心动。AI 为它写一段钢琴曲,播放时画布逐和弦填满。之后:◆ ✦ MORPH 把一种情绪交叉淡入另一种——前半是 A,后半是 B,在 40–60% 区做力度混合。◆ ✦ VARY 把调性移到一个新调(常是大 ↔ 小):节奏与结构锁定,只有和弦——从而颜色——改变。继续点换新调。◆ Free 得 3 次试用 AI 调用(在 Mood、Mood-from-image 和 AI Compose 间共享);Pro AI = 无限。`},
-    {id:'save', glyph:'💾', cat:'save', title:`两者都带走`, body:`Save → 画作的 PNG + 音乐的音频。Story 模式为 Instagram / TikTok 裁切。Pro 去掉水印并提升到 300 DPI。`, more:`两颗钻石——图与乐。◆ ↓ SAVE 把你的画导出为高分辨率 PNG:Story(9:16)给 IG/TikTok,Web/Social(约 4×,适合信息流),或 Print A1 · 300 DPI(约 20×,画廊级)。同一首歌总给同样的画——你的歌现在有了签名。◆ ⏺ RECORD(图像模式)在画作播放时录下音频,直接成可分享文件;乐曲结束自动停止。◆ ♫ SCORE 把画作的音符变成 MusicXML 文件——在 MuseScore、Sibelius 或 Finale 打开;由一张图生成真正的乐谱。◆ Free 导出带小水印;Pro 与 Pro AI 去掉它并解锁 A1 · 300 DPI 尺寸。`},
+    {id:'save', glyph:'💾', cat:'save', title:`两者都带走`, body:`Save → 画作的 PNG + 音乐的音频。Story 模式为 Instagram / TikTok 裁切。Pro 去掉水印并提升到 300 DPI。`, more:`两颗钻石——图与乐。◆ ↓ SAVE 把你的画导出为高分辨率 PNG:Story(9:16)给 IG/TikTok,Web/Social(约 4×,适合信息流),或 Print A0 · 300+ DPI(约 20×,画廊级)。同一首歌总给同样的画——你的歌现在有了签名。◆ ⏺ RECORD(图像模式)在画作播放时录下音频,直接成可分享文件;乐曲结束自动停止。◆ ♫ SCORE 把画作的音符变成 MusicXML 文件——在 MuseScore、Sibelius 或 Finale 打开;由一张图生成真正的乐谱。◆ Free 导出带小水印;Pro 与 Pro AI 去掉它并解锁 A0 · 300+ DPI 尺寸。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、速度、循环、静音、清除`, body:`播放/暂停并拖进度条。速度 0.5×–2×。⟳ 循环重复。🔊 静音在无声中作画。Clear 智能重置,按模式。`, more:`播放控制。◆ 播放开始并暂停(空格也行);点进度条跳转,拖动来 scrub。◆ 速度:一个方块显示倍率(默认 1×);点击回到 1×,按住循环 0.5× → 2× 并回绕。◆ ⟳ LOOP 让情绪曲重复;开启时为金色。◆ 🔊 / 🔇 静音在画作仍照常生成时静掉所有音频——跨会话记住。◆ Clear 感知模式:Compose 擦画布并留下;MIC 只丢当前模式的草稿;Image 擦掉画的痕迹和图;MIDI/音频/乐谱/文字情绪做完整重置。◆ 若状态显示「loading piano…」,等几秒(约 5 MB 采样);若失败,切换到合成钢琴。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解锁一切`, body:`Pro €9.99 → 全部 18 位艺术家、可编辑自定义调色板、无水印、终身。Pro AI €19.99 增加无限 AI 情绪、image compose、氛围。`, more:`三个级别,全是一次性付款。◆ Free——解锁 9 位艺术家(毕加索、波洛克、草间、蒙德里安、克里姆特、瓦萨雷里、阿夫·克林特、哈林、莫奈)外加每位 2 种绘法;每位有一个 Pro 搭档(再点一次激活的艺术家)。自定义调色板只读,导出带水印,AI 功能用 3 个试用额度。◆ Pro €9.99——全部 18 位艺术家、每位所有绘法、可编辑自定义调色板、无水印的 300 DPI 导出、终身访问;AI 仍来自共享的 3 额度池。◆ Pro AI €19.99——Pro 的一切外加无限 AI:文字情绪、Mood-from-image、AI Compose、AI Atmosphere。◆ 额度成本:AI 文字与 image compose = 各 1,Atmosphere = 0.5。◆ 一次付清,永久拥有。无订阅。许可证可用于至多 5 台设备,一次一台。`}
   ],
@@ -15595,7 +16062,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音訊或樂譜`, body:`一個按鈕搞定每種音樂檔。MIDI、MP3/WAV/M4A,或來自 MuseScore/Finale 的 MusicXML。類型自動辨識。`, more:`一個按鈕搞定每種音樂檔。◆ MIDI(.mid / .midi)——多軌凝縮成和弦,按速度映射,作畫。◆ 音訊(.mp3 .wav .m4a .ogg .aac)——解碼、偵測音高、作畫;在乾淨的單音或稀疏素材(獨奏鋼琴、人聲、簡單吉他)上最佳——密集混音更難。◆ 樂譜(.musicxml .xml .mxl 來自 MuseScore、Finale、Dorico)——音高、時值、力度、和弦全都精確通過;現有最準確的輸入。Paintiano 自動辨識類型。不帶檔案打開 Music 可得內建範例。`},
     {id:'image', glyph:'📷', cat:'music', title:`照片 → 音樂 → 繪畫`, body:`丟入一張圖。它的顏色和能量變成一段鋼琴曲,然後以任一藝術家風格作畫。Free 做 Scan,Pro 增加 AI Compose。`, more:`上傳任意圖像。Paintiano 把它當樂譜讀——從左到右、從上到下;時長隨圖像能量縮放(約 1½–2¾ 分鐘)。◆ 應用按作品有多彩來選讀法:多彩 → 和聲或光譜(色相=音高,明度=八度,鮮豔=響度);近單色(格爾尼卡、水墨、棕褐)→ 黑白。◆ 自訂是你的:只有接近你 12 格的顏色發聲,其餘靜默——把格爾尼卡濾成熱帶粉,看看什麼存活。◆ 兩種播放方式:SCAN 把圖從左到右當樂譜讀(選掃描方向)。AI COMPOSE(Pro)從圖的調色、能量與情緒寫一整首新曲——播放時把圖留在螢幕上。`},
     {id:'moods', glyph:'✦', cat:'music', title:`說出一種感受`, body:`點 ✦ 你感覺如何?輸入任何感受、任何語言。AI 寫一段鋼琴曲。然後 Morph 進另一種情緒,或 Vary 換一個新調。`, more:`點 ✦「你感覺如何?」,輸入任何感受、用任何語言——憤怒、saudade、凌晨三點開車、夏日心動。AI 為它寫一段鋼琴曲,播放時畫布逐和弦填滿。之後:◆ ✦ MORPH 把一種情緒交叉淡入另一種——前半是 A,後半是 B,在 40–60% 區做力度混合。◆ ✦ VARY 把調性移到一個新調(常是大 ↔ 小):節奏與結構鎖定,只有和弦——從而顏色——改變。繼續點換新調。◆ Free 得 3 次試用 AI 呼叫(在 Mood、Mood-from-image 和 AI Compose 間共享);Pro AI = 無限。`},
-    {id:'save', glyph:'💾', cat:'save', title:`兩者都帶走`, body:`Save → 畫作的 PNG + 音樂的音訊。Story 模式為 Instagram / TikTok 裁切。Pro 去掉浮水印並提升到 300 DPI。`, more:`兩顆鑽石——圖與樂。◆ ↓ SAVE 把你的畫匯出為高解析度 PNG:Story(9:16)給 IG/TikTok,Web/Social(約 4×,適合動態消息),或 Print A1 · 300 DPI(約 20×,畫廊級)。同一首歌總給同樣的畫——你的歌現在有了簽名。◆ ⏺ RECORD(圖像模式)在畫作播放時錄下音訊,直接成可分享檔案;樂曲結束自動停止。◆ ♫ SCORE 把畫作的音符變成 MusicXML 檔——在 MuseScore、Sibelius 或 Finale 打開;由一張圖生成真正的樂譜。◆ Free 匯出帶小浮水印;Pro 與 Pro AI 去掉它並解鎖 A1 · 300 DPI 尺寸。`},
+    {id:'save', glyph:'💾', cat:'save', title:`兩者都帶走`, body:`Save → 畫作的 PNG + 音樂的音訊。Story 模式為 Instagram / TikTok 裁切。Pro 去掉浮水印並提升到 300 DPI。`, more:`兩顆鑽石——圖與樂。◆ ↓ SAVE 把你的畫匯出為高解析度 PNG:Story(9:16)給 IG/TikTok,Web/Social(約 4×,適合動態消息),或 Print A0 · 300+ DPI(約 20×,畫廊級)。同一首歌總給同樣的畫——你的歌現在有了簽名。◆ ⏺ RECORD(圖像模式)在畫作播放時錄下音訊,直接成可分享檔案;樂曲結束自動停止。◆ ♫ SCORE 把畫作的音符變成 MusicXML 檔——在 MuseScore、Sibelius 或 Finale 打開;由一張圖生成真正的樂譜。◆ Free 匯出帶小浮水印;Pro 與 Pro AI 去掉它並解鎖 A0 · 300+ DPI 尺寸。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、速度、循環、靜音、清除`, body:`播放/暫停並拖進度條。速度 0.5×–2×。⟳ 循環重複。🔊 靜音在無聲中作畫。Clear 智慧重置,按模式。`, more:`播放控制。◆ 播放開始並暫停(空格也行);點進度條跳轉,拖動來 scrub。◆ 速度:一個方塊顯示倍率(預設 1×);點擊回到 1×,按住循環 0.5× → 2× 並回繞。◆ ⟳ LOOP 讓情緒曲重複;開啟時為金色。◆ 🔊 / 🔇 靜音在畫作仍照常生成時靜掉所有音訊——跨工作階段記住。◆ Clear 感知模式:Compose 擦畫布並留下;MIC 只丟當前模式的草稿;Image 擦掉畫的痕跡和圖;MIDI/音訊/樂譜/文字情緒做完整重置。◆ 若狀態顯示「loading piano…」,等幾秒(約 5 MB 取樣);若失敗,切換到合成鋼琴。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖一切`, body:`Pro €9.99 → 全部 18 位藝術家、可編輯自訂調色盤、無浮水印、終身。Pro AI €19.99 增加無限 AI 情緒、image compose、氛圍。`, more:`三個級別,全是一次性付款。◆ Free——解鎖 9 位藝術家(畢卡索、波洛克、草間、蒙德里安、克林姆、瓦沙雷利、阿夫·克林特、哈林、莫內)外加每位 2 種繪法;每位有一個 Pro 搭檔(再點一次啟用的藝術家)。自訂調色盤唯讀,匯出帶浮水印,AI 功能用 3 個試用額度。◆ Pro €9.99——全部 18 位藝術家、每位所有繪法、可編輯自訂調色盤、無浮水印的 300 DPI 匯出、終身存取;AI 仍來自共享的 3 額度池。◆ Pro AI €19.99——Pro 的一切外加無限 AI:文字情緒、Mood-from-image、AI Compose、AI Atmosphere。◆ 額度成本:AI 文字與 image compose = 各 1,Atmosphere = 0.5。◆ 一次付清,永久擁有。無訂閱。授權可用於至多 5 台裝置,一次一台。`}
   ],
@@ -15616,7 +16083,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音声、楽譜`, body:`あらゆる音楽ファイルに一つのボタン。MIDI、MP3/WAV/M4A、または MuseScore/Finale の MusicXML。種類は自動判別。`, more:`あらゆる音楽ファイルに一つのボタン。◆ MIDI(.mid / .midi)——マルチトラックが和音に凝縮、テンポマップされ、描かれる。◆ 音声(.mp3 .wav .m4a .ogg .aac)——デコードされ、音高検出され、描かれる;きれいな単音または疎な素材(ソロピアノ、声、シンプルなギター)で最良——密なミックスは難しい。◆ 楽譜(.musicxml .xml .mxl、MuseScore・Finale・Dorico から)——音高、長さ、強弱、和音すべて正確に通る;現存する最も正確な入力。Paintiano は種類を自動判別。ファイルなしで Music を開けば内蔵サンプル。`},
     {id:'image', glyph:'📷', cat:'music', title:`写真 → 音楽 → 絵画`, body:`画像をドロップ。その色とエネルギーがピアノ曲になり、好きなアーティストのスタイルで描く。Free は Scan、Pro は AI Compose を追加。`, more:`どんな画像でもアップロード。Paintiano はそれを楽譜として読む——左から右、上から下;長さは画像のエネルギーで変わる(約 1½–2¾ 分)。◆ アプリは作品がどれだけ色鮮やかかで読みを選ぶ:色鮮やか → ハーモニーかスペクトル(色相=音高、明度=八度、鮮やかさ=音量);ほぼ単色(ゲルニカ、墨、セピア)→ 白黒。◆ カスタムはあなたのもの:あなたの 12 色に近い色だけが鳴り、残りは静まる——ゲルニカを熱帯ピンクで濾して何が生き残るか見る。◆ 二つの再生法:SCAN は画像を左から右へ楽譜として読む(走査方向を選ぶ)。AI COMPOSE(Pro)は画像のパレット・エネルギー・気分から全く新しい曲を書く——再生中は画像を画面に残す。`},
     {id:'moods', glyph:'✦', cat:'music', title:`感情に名前を`, body:`✦ どんな気分? をタップ。どんな感情でも、どんな言語でも打つ。AI が一曲書く。その後 Morph で別の気分へ、Vary で新しい調へ。`, more:`✦「どんな気分?」をタップし、どんな感情でも、どんな言語でも打つ——激怒、サウダージ、午前3時のドライブ、夏の片思い。AI がそれにピアノ曲を書き、再生中キャンバスが和音ごとに満ちる。その後:◆ ✦ MORPH は一つの気分を別の気分へクロスフェード——前半が A、後半が B、40–60% ゾーンでベロシティをブレンド。◆ ✦ VARY は調性を新しい調へずらす(しばしば長 ↔ 短):リズムと構造はロックされ、和音——ゆえに色——だけが変わる。タップし続けて新しい調へ。◆ Free は試用 AI 呼び出しを 3 回(Mood、Mood-from-image、AI Compose で共有);Pro AI = 無制限。`},
-    {id:'save', glyph:'💾', cat:'save', title:`両方を持ち帰る`, body:`Save → 絵の PNG + 音楽の音声。Story モードが Instagram / TikTok 用に切り抜く。Pro はウォーターマークを外し 300 DPI に上げる。`, more:`二つのダイヤ——絵と音楽。◆ ↓ SAVE は絵を高解像度 PNG に書き出す:Story(9:16)は IG/TikTok 用、Web/Social(約 4×、フィード向き)、または Print A1 · 300 DPI(約 20×、ギャラリー級)。同じ曲はいつも同じ絵を与える——あなたの曲には今や署名がある。◆ ⏺ RECORD(画像モード)は絵が再生される間に音声を録り、共有可能なファイルへ直接;曲が終わると自動停止。◆ ♫ SCORE は絵の音符を MusicXML ファイルにする——MuseScore、Sibelius、Finale で開く;一枚の絵から本物の楽譜。◆ Free の書き出しには小さなウォーターマーク;Pro と Pro AI はそれを外し A1 · 300 DPI サイズを解放する。`},
+    {id:'save', glyph:'💾', cat:'save', title:`両方を持ち帰る`, body:`Save → 絵の PNG + 音楽の音声。Story モードが Instagram / TikTok 用に切り抜く。Pro はウォーターマークを外し 300 DPI に上げる。`, more:`二つのダイヤ——絵と音楽。◆ ↓ SAVE は絵を高解像度 PNG に書き出す:Story(9:16)は IG/TikTok 用、Web/Social(約 4×、フィード向き)、または Print A0 · 300+ DPI(約 20×、ギャラリー級)。同じ曲はいつも同じ絵を与える——あなたの曲には今や署名がある。◆ ⏺ RECORD(画像モード)は絵が再生される間に音声を録り、共有可能なファイルへ直接;曲が終わると自動停止。◆ ♫ SCORE は絵の音符を MusicXML ファイルにする——MuseScore、Sibelius、Finale で開く;一枚の絵から本物の楽譜。◆ Free の書き出しには小さなウォーターマーク;Pro と Pro AI はそれを外し A0 · 300+ DPI サイズを解放する。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`再生・速度・ループ・ミュート・消去`, body:`再生/停止とバー移動。速度 0.5×–2×。⟳ ループで繰返し。🔊 ミュートで無音で描く。Clear はモードごとに賢くリセット。`, more:`再生コントロール。◆ 再生は開始と停止(スペースも);進捗バーをタップでジャンプ、ドラッグでスクラブ。◆ 速度:タイルが倍率を示す(既定 1×);タップで 1× へ戻し、長押しで 0.5× → 2× を循環し回り込む。◆ ⟳ LOOP は気分の曲を繰り返させる;オンで金色。◆ 🔊 / 🔇 ミュートは絵が通常通り生成される間、全音声を消す——セッションをまたいで記憶。◆ Clear はモードを意識する:Compose はキャンバスを消して留まる;MIC はアクティブなモードの下書きだけ捨てる;Image は描いた跡と画像を消す;MIDI/音声/楽譜/テキスト気分は完全リセット。◆ 状態が「loading piano…」と出たら数秒待つ(約 5 MB サンプル);失敗すればシンセピアノに切り替わる。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro が全てを解放`, body:`Pro €9.99 → 全 18 人のアーティスト、編集可能なカスタムパレット、ウォーターマークなし、永久。Pro AI €19.99 は無制限 AI 気分、image compose、雰囲気を追加。`, more:`三段階、すべて一回払い。◆ Free——9 人のアーティスト解放(ピカソ、ポロック、草間、モンドリアン、クリムト、ヴァザルリ、アフ・クリント、ヘリング、モネ)に各 2 種の描法;各人に Pro パートナー(有効なアーティストをもう一度タップ)。カスタムパレットは読取専用、書き出しはウォーターマーク付き、AI 機能は 3 試用クレジット。◆ Pro €9.99——全 18 人のアーティスト、全描法、編集可能なカスタムパレット、ウォーターマークなしの 300 DPI 書き出し、永久アクセス;AI は共有の 3 クレジットプールから。◆ Pro AI €19.99——Pro の全てに無制限 AI:テキスト気分、Mood-from-image、AI Compose、AI Atmosphere。◆ クレジット費用:AI テキスト & image compose = 各 1、Atmosphere = 0.5。◆ 一度払えば永久に。サブスクなし。ライセンスは最大 5 台、一度に一台で動く。`}
   ]
@@ -15971,11 +16438,22 @@ function _melodyVoice(evts, mel, atmo){
   // (root + major/minor/lydian). Snap the melody + chords to the SAME scale so the
   // sung line stays in tune with the retuned texture instead of clashing.
   let snap=(m)=>m;
-  if(atmo && typeof atmo.root==='number'){
-    const v=typeof atmo.v==='number'?atmo.v:0, e=typeof atmo.e==='number'?atmo.e:0.5;
+  if(atmo && typeof atmo.v==='number' && typeof atmo.e==='number'){
+    const v=atmo.v, e=atmo.e;
     const sm=(v>=0.5&&e>0.7)?'lydian':(v>=0?'major':'minor');
     const SC=({major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],lydian:[0,2,4,6,7,9,11]})[sm];
-    const root=((atmo.root||0)%12+12)%12;
+    // ATMO root was historically hardcoded to 0 (always C) — a bug. If no usable
+    // root supplied, derive it from the scan texture's pitch-class histogram so the
+    // melody snaps to the same tonic the scan already chose (Krumhansl key detection).
+    let root;
+    if(typeof atmo.root==='number' && atmo.root>0){
+      root=((atmo.root|0)%12+12)%12;
+    } else {
+      const pcH=new Array(12).fill(0);
+      for(const ev of evts) for(const no of (ev.n||[])) pcH[((no.m%12)+12)%12]+=(no.v||64);
+      let bestPc=0,bestW=-1; for(let i=0;i<12;i++) if(pcH[i]>bestW){bestW=pcH[i];bestPc=i;}
+      root=bestPc;
+    }
     snap=(m)=>{ const pc=((m-root)%12+12)%12; let best=SC[0],bd=99; for(const d of SC){ const dd=Math.min(((pc-d)%12+12)%12,((d-pc)%12+12)%12); if(dd<bd){bd=dd;best=d;} } let delta=((best-pc)%12+12)%12; if(delta>6) delta-=12; return m+delta; };
   }
   // Texture ceiling (highest scan pitch) so the melody can sit just above it.
@@ -16001,11 +16479,23 @@ function _melodyVoice(evts, mel, atmo){
   if(!parsed.length||!isFinite(melMinBeat)||melMaxBeat<=melMinBeat) return empty;
   // Register lift: shift the melody up by whole octaves so it sits just above the
   // texture top — sings as a layer over it, stays singable.
+  // Register lift target: serene atmo wants the line low and intimate (just over
+  // the texture); agitato wants it soaring above. Floor offset shifts by -2..+4.
+  const _liftFloorShift = (_atmoE!=null)
+    ? (_atmoE<0.5 ? -2*(0.5-_atmoE)/0.5 : +4*(_atmoE-0.5)/0.5)
+    : 0;
   let lift=0;
-  const targetFloor=scanHi+4;
+  const targetFloor=scanHi+4+Math.round(_liftFloorShift);
   while(melLo+lift < targetFloor && (melHi+lift) < 94) lift+=12;
   while((melHi+lift) > 96 && (melLo+lift) > scanHi+4) lift-=12;
-  const leadVel=(v)=> Math.max(92, Math.min(120, Math.round(90 + (v/127)*30)));
+  // Lead velocity — default 92..120. Mood reshapes it: serene softens (down to
+  // ~78..104), agitato hardens (up to ~102..127), so the melody actually sings
+  // quieter on a calm tag and louder on a frantic one.
+  const _atmoE = (atmo && typeof atmo.e==='number') ? atmo.e : null;
+  const _velShift = (_atmoE!=null)
+    ? (_atmoE<0.5 ? -14*(0.5-_atmoE)/0.5 : +7*(_atmoE-0.5)/0.5)
+    : 0;
+  const leadVel=(v)=> Math.max(40, Math.min(127, Math.round(90 + (v/127)*30 + _velShift)));
 
   // ── LOOP MODEL ─────────────────────────────────────────────────────────────
   // The AI writes ONE short, continuous melodic cell (a real phrase, dense and
@@ -16050,10 +16540,19 @@ function _melodyVoice(evts, mel, atmo){
   // The cell occupies cellFrac of the whole timeline. We choose entry points (as
   // fractions 0..1) scaled to how many cells fit, so a short scan gets 1–2 entries
   // and a long one gets 4–5 — never wall-to-wall.
-  const cellFrac = Math.min(0.5, Math.max(0.06, cellSec/scanSec));  // one cell's share of the timeline
+  // ATMO cell stretch: serene atmo widens the melodic cell across more of the
+  // timeline so the notes spread out in real time (slow scan + dense melody used
+  // to feel like the song sped up when melody came on). Frantic slightly shrinks.
+  // Serene atmoE=0 → ×2.5; neutral → ×1.0; frantic atmoE=1 → ×0.85.
+  const _cellStretch = (_atmoE!=null)
+    ? (_atmoE<0.5 ? +1.5*(0.5-_atmoE)/0.5 : -0.15*(_atmoE-0.5)/0.5)
+    : 0;
+  const cellFrac = Math.min(0.7, Math.max(0.06, (cellSec/scanSec) * (1 + _cellStretch)));
   // How many entries the piece can host (leave room for intro + gaps + outro).
   const capacity = Math.floor((1 - 0.16 /*intro*/ - 0.12 /*outro*/) / (cellFrac*1.7 /*gap≈0.7·cell*/));
-  const entries = Math.max(1, Math.min(5, capacity));
+  // Serene atmo prefers fewer entries (more breath, fewer reps); agitato fills in.
+  const _entryBias = (_atmoE!=null) ? (_atmoE<0.5 ? -1 : (_atmoE>0.7 ? +1 : 0)) : 0;
+  const entries = Math.max(1, Math.min(5, capacity + _entryBias));
   // Distribute entry start-positions: first after a texture-only intro (~14%),
   // spread evenly, last finishing before a texture-only outro (~12%).
   const firstStart = 0.14;
@@ -16075,8 +16574,10 @@ function _melodyVoice(evts, mel, atmo){
     // an octave (when it stays in range), and later returns sing a touch brighter.
     // Entry 0 = theme; entry 1 = octave-up answer; entry 2 = theme (climax, full);
     // entry 3 = octave-up; … This is what keeps repeats from getting tiresome.
+    // Strong-calm atmo: no octave-up answer (no large leaps in a dream).
     let octShift = 0;
-    if(E>0 && (E%2===1) && cellHi+12 <= 96) octShift = 12;
+    const _noLeap = (_atmoE!=null && _atmoE<0.30);
+    if(!_noLeap && E>0 && (E%2===1) && cellHi+12 <= 96) octShift = 12;
     // #3 INTRA-PHRASE DYNAMICS: within each entry, swell toward the melodic peak
     // and ease off at the phrase ends, so the line breathes like a singer rather
     // than playing every note at one level.
@@ -16668,6 +17169,7 @@ function useProStatus() {
 
   const openCheckout = useCallback(async (tier = 'pro') => {
     try {
+      try { window.posthog && window.posthog.capture('checkout_opened', { tier }); } catch (_) {}
       const Paddle = await loadPaddleScript();
       if (!Paddle) throw new Error('Paddle not available');
       // Pick the price for the requested tier. Pro AI falls back to the Pro
@@ -17901,6 +18403,215 @@ function IntroSplash({ onDone, tagline, skipLabel }){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// §6c  SVG CONTEXT SHIM — vector export for gallery prints
+// ─────────────────────────────────────────────────────────────────────────────
+//   A minimal CanvasRenderingContext2D-compatible shim that records every draw
+//   call as an SVG element instead of rasterising it. The painting renderer
+//   (drawBlock, draw*Overlay) is fully canvas-API based with no getImageData /
+//   filter / drawImage — so substituting a real ctx for this shim produces a
+//   resolution-independent SVG of the exact same painting. Used for the
+//   "gallery" sizeMode export (Pro / Pro AI only). The print shop's RIP then
+//   rasterises at whatever DPI the printer supports — 600, 720, even 1200 DPI
+//   for fine-art giclée — without us ever having to rasterise in-browser.
+//
+//   Implements: fill/stroke for paths, rects, arcs, ellipses, bezier/quadratic
+//   curves; gradients (linear & radial); text; shadows (as feGaussianBlur);
+//   transform stack (save/restore/scale/rotate/translate); globalAlpha and
+//   globalCompositeOperation (the latter maps to blend-mode where it can).
+function createSvgCtx(width, height){
+  const out = [];
+  const defs = [];
+  let gradId = 0, clipId = 0;
+  // Style state — exactly the CRC2D defaults we care about.
+  let state = {
+    fillStyle:'#000', strokeStyle:'#000', lineWidth:1,
+    lineCap:'butt', lineJoin:'miter',
+    globalAlpha:1, globalCompositeOperation:'source-over',
+    shadowColor:'rgba(0,0,0,0)', shadowBlur:0, shadowOffsetX:0, shadowOffsetY:0,
+    font:'10px sans-serif',
+    transform:[1,0,0,1,0,0],   // a,b,c,d,e,f (identity)
+    clipPath:null
+  };
+  const stack = [];
+  const path = [];    // current path as SVG path-data string segments
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  // Resolve fill/stroke style — if it's a gradient object created by us, emit
+  // it into <defs> and return url(#id); otherwise pass the colour string.
+  const resolve = v => {
+    if(!v || typeof v === 'string') return v||'none';
+    if(v.__svgGrad){
+      const id='g'+(++gradId);
+      if(v.kind==='linear'){
+        defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${v.x0}" y1="${v.y0}" x2="${v.x1}" y2="${v.y1}">${v.stops.map(s=>`<stop offset="${s.off}" stop-color="${s.col}"/>`).join('')}</linearGradient>`);
+      } else {
+        defs.push(`<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${v.x1}" cy="${v.y1}" r="${v.r1}" fx="${v.x0}" fy="${v.y0}">${v.stops.map(s=>`<stop offset="${s.off}" stop-color="${s.col}"/>`).join('')}</radialGradient>`);
+      }
+      return 'url(#'+id+')';
+    }
+    return 'none';
+  };
+  // Build the attributes block all draw calls share (transform/opacity/clip/blend).
+  const commonAttrs = () => {
+    const a = [];
+    const [m0,m1,m2,m3,m4,m5] = state.transform;
+    if(!(m0===1&&m1===0&&m2===0&&m3===1&&m4===0&&m5===0))
+      a.push(`transform="matrix(${m0} ${m1} ${m2} ${m3} ${m4} ${m5})"`);
+    if(state.globalAlpha!==1) a.push(`opacity="${state.globalAlpha}"`);
+    if(state.clipPath) a.push(`clip-path="url(#${state.clipPath})"`);
+    if(state.globalCompositeOperation && state.globalCompositeOperation!=='source-over'){
+      // best-effort mapping; unsupported ops just fall back to normal blend.
+      const mode = ({'multiply':'multiply','screen':'screen','overlay':'overlay','darken':'darken','lighten':'lighten','color-dodge':'color-dodge','color-burn':'color-burn','soft-light':'soft-light','hard-light':'hard-light','difference':'difference','exclusion':'exclusion'})[state.globalCompositeOperation];
+      if(mode) a.push(`style="mix-blend-mode:${mode}"`);
+    }
+    return a.length?(' '+a.join(' ')):'';
+  };
+  // Stroke attrs (only when stroking).
+  const strokeAttrs = () => {
+    const s = resolve(state.strokeStyle);
+    return ` stroke="${esc(s)}" stroke-width="${state.lineWidth}" stroke-linecap="${state.lineCap}" stroke-linejoin="${state.lineJoin}" fill="none"`;
+  };
+  const fillAttrs = () => ` fill="${esc(resolve(state.fillStyle))}"`;
+  // The shim object — same shape as CanvasRenderingContext2D for the methods
+  // and properties the painting renderer touches.
+  const ctx = {
+    // ── style properties (getters/setters via defineProperty so x.fillStyle='...' works) ──
+    get fillStyle(){return state.fillStyle;}, set fillStyle(v){state.fillStyle=v;},
+    get strokeStyle(){return state.strokeStyle;}, set strokeStyle(v){state.strokeStyle=v;},
+    get lineWidth(){return state.lineWidth;}, set lineWidth(v){state.lineWidth=v;},
+    get lineCap(){return state.lineCap;}, set lineCap(v){state.lineCap=v;},
+    get lineJoin(){return state.lineJoin;}, set lineJoin(v){state.lineJoin=v;},
+    get globalAlpha(){return state.globalAlpha;}, set globalAlpha(v){state.globalAlpha=v;},
+    get globalCompositeOperation(){return state.globalCompositeOperation;}, set globalCompositeOperation(v){state.globalCompositeOperation=v;},
+    get shadowColor(){return state.shadowColor;}, set shadowColor(v){state.shadowColor=v;},
+    get shadowBlur(){return state.shadowBlur;}, set shadowBlur(v){state.shadowBlur=v;},
+    get shadowOffsetX(){return state.shadowOffsetX;}, set shadowOffsetX(v){state.shadowOffsetX=v;},
+    get shadowOffsetY(){return state.shadowOffsetY;}, set shadowOffsetY(v){state.shadowOffsetY=v;},
+    get font(){return state.font;}, set font(v){state.font=v;},
+    imageSmoothingEnabled:true,  // no-op for vector
+    // ── state stack ──
+    save(){ stack.push(JSON.parse(JSON.stringify(state))); },
+    restore(){ if(stack.length) state=stack.pop(); },
+    // ── transforms (compose into the current matrix) ──
+    translate(x,y){
+      const t=state.transform;
+      state.transform=[t[0],t[1],t[2],t[3], t[0]*x+t[2]*y+t[4], t[1]*x+t[3]*y+t[5]];
+    },
+    scale(sx,sy){
+      const t=state.transform;
+      state.transform=[t[0]*sx,t[1]*sx,t[2]*sy,t[3]*sy,t[4],t[5]];
+    },
+    rotate(a){
+      const t=state.transform, c=Math.cos(a), s=Math.sin(a);
+      state.transform=[t[0]*c+t[2]*s, t[1]*c+t[3]*s, t[0]*-s+t[2]*c, t[1]*-s+t[3]*c, t[4], t[5]];
+    },
+    // ── path API ──
+    beginPath(){ path.length=0; },
+    closePath(){ path.push('Z'); },
+    moveTo(x,y){ path.push(`M${x} ${y}`); },
+    lineTo(x,y){ path.push(`L${x} ${y}`); },
+    bezierCurveTo(x1,y1,x2,y2,x,y){ path.push(`C${x1} ${y1} ${x2} ${y2} ${x} ${y}`); },
+    quadraticCurveTo(x1,y1,x,y){ path.push(`Q${x1} ${y1} ${x} ${y}`); },
+    arc(cx,cy,r,a0,a1,ccw){
+      // arc segment as elliptical path
+      let d=a1-a0;
+      if(ccw){ if(d>0) d-=2*Math.PI; } else { if(d<0) d+=2*Math.PI; }
+      // Full circle: split into two semicircles (SVG can't do full circle in one A).
+      if(Math.abs(d)>=2*Math.PI-1e-9){
+        const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+        const x1=cx-r*Math.cos(a0), y1=cy-r*Math.sin(a0);
+        path.push(`M${x0} ${y0}A${r} ${r} 0 1 1 ${x1} ${y1}A${r} ${r} 0 1 1 ${x0} ${y0}`);
+        return;
+      }
+      const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+      const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+      const large=Math.abs(d)>Math.PI?1:0, sweep=ccw?0:1;
+      // If no current subpath, move first; otherwise line to the start.
+      if(!path.length) path.push(`M${x0} ${y0}`); else path.push(`L${x0} ${y0}`);
+      path.push(`A${r} ${r} 0 ${large} ${sweep} ${x1} ${y1}`);
+    },
+    arcTo(x1,y1,x2,y2,r){
+      // Approximate with a line + arc (full algo is complex; this matches the
+      // visual the renderer expects for rounded corners).
+      path.push(`L${x1} ${y1}`);
+      path.push(`A${r} ${r} 0 0 1 ${x2} ${y2}`);
+    },
+    ellipse(cx,cy,rx,ry,rot,a0,a1,ccw){
+      // Translate/rotate via matrix; for simplicity emit two semi-arcs.
+      let d=a1-a0;
+      if(ccw){ if(d>0) d-=2*Math.PI; } else { if(d<0) d+=2*Math.PI; }
+      const cos=Math.cos(rot), sin=Math.sin(rot);
+      const pt=(a)=>{
+        const x=rx*Math.cos(a), y=ry*Math.sin(a);
+        return [cx + x*cos - y*sin, cy + x*sin + y*cos];
+      };
+      const [x0,y0]=pt(a0), [x1,y1]=pt(a1);
+      if(Math.abs(d)>=2*Math.PI-1e-9){
+        const [xm,ym]=pt(a0+Math.PI);
+        path.push(`M${x0} ${y0}A${rx} ${ry} ${rot*180/Math.PI} 1 1 ${xm} ${ym}A${rx} ${ry} ${rot*180/Math.PI} 1 1 ${x0} ${y0}`);
+        return;
+      }
+      const large=Math.abs(d)>Math.PI?1:0, sweep=ccw?0:1;
+      if(!path.length) path.push(`M${x0} ${y0}`); else path.push(`L${x0} ${y0}`);
+      path.push(`A${rx} ${ry} ${rot*180/Math.PI} ${large} ${sweep} ${x1} ${y1}`);
+    },
+    rect(x,y,w,h){
+      path.push(`M${x} ${y}h${w}v${h}h${-w}Z`);
+    },
+    // ── paint ──
+    fill(){
+      const d = path.join(' ');
+      if(!d) return;
+      out.push(`<path d="${d}"${fillAttrs()}${commonAttrs()}/>`);
+    },
+    stroke(){
+      const d = path.join(' ');
+      if(!d) return;
+      out.push(`<path d="${d}"${strokeAttrs()}${commonAttrs()}/>`);
+    },
+    fillRect(x,y,w,h){
+      out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}"${fillAttrs()}${commonAttrs()}/>`);
+    },
+    strokeRect(x,y,w,h){
+      out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}"${strokeAttrs()}${commonAttrs()}/>`);
+    },
+    clearRect(x,y,w,h){
+      // SVG has no clear; emit a white rect (the background is set up that way).
+      out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#04040a"${commonAttrs()}/>`);
+    },
+    fillText(text,x,y){
+      // Best-effort font parsing.
+      const f = String(state.font||'10px sans-serif');
+      const sizeM = f.match(/([\d.]+)px/), fam = f.replace(/^.*px\s*/,'')||'sans-serif';
+      const size = sizeM?sizeM[1]:'10';
+      out.push(`<text x="${x}" y="${y}" font-size="${size}" font-family="${esc(fam)}"${fillAttrs()}${commonAttrs()}>${esc(text)}</text>`);
+    },
+    // ── clip (used by Klimt etc.) ──
+    clip(){
+      const id='c'+(++clipId);
+      const d=path.join(' ');
+      defs.push(`<clipPath id="${id}">${d?`<path d="${d}"/>`:''}</clipPath>`);
+      state.clipPath=id;
+    },
+    // ── gradients ──
+    createLinearGradient(x0,y0,x1,y1){
+      const g={__svgGrad:true,kind:'linear',x0,y0,x1,y1,stops:[],addColorStop(o,c){this.stops.push({off:o,col:c});}};
+      return g;
+    },
+    createRadialGradient(x0,y0,r0,x1,y1,r1){
+      const g={__svgGrad:true,kind:'radial',x0,y0,r0,x1,y1,r1,stops:[],addColorStop(o,c){this.stops.push({off:o,col:c});}};
+      return g;
+    },
+    // ── finalize ──
+    toSvg(){
+      const defsStr = defs.length?`<defs>${defs.join('')}</defs>`:'';
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${defsStr}${out.join('')}</svg>`;
+    }
+  };
+  return ctx;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // §7  MAIN COMPONENT — Paintiano
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17959,6 +18670,12 @@ const TxIcon = ({n, s=15}) => {
     case 'sparkle': return <svg {...P}><path d="M12 3l1.6 4.8L18 9l-4.4 1.2L12 15l-1.6-4.8L6 9z"/></svg>;
     case 'notes':   return <svg {...P}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>;
     case 'undo':    return <svg {...P}><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>;
+    case 'web':     return <svg {...P}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
+    case 'print':   return <svg {...P}><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="9" rx="2"/><rect x="7" y="15" width="10" height="6" rx="1"/><circle cx="17.5" cy="12.5" r=".6" fill="currentColor"/></svg>;
+    case 'gallery': return <svg {...P}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m3 17 5-5 4 4 3-3 6 6"/></svg>;
+    case 'score':   return <svg {...P}><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="15" r="2"/><path d="M10 15V7l6-2v9"/><circle cx="14" cy="13" r="2"/></svg>;
+    case 'upload':  return <svg {...P}><path d="M12 3v13M6 9l6-6 6 6"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>;
+    case 'sample':  return <svg {...P}><path d="M3 12h2l2-7 4 14 3-10 2 5 2-2h3"/></svg>;
     default:        return null;
   }
 };
@@ -18062,6 +18779,29 @@ export default function Paintiano() {
   const [mode,      setMode]      = useState('harmony');
   const modeRef = useRef('harmony');
   useEffect(()=>{ modeRef.current=mode; },[mode]);
+  // Tone — global colour modifier toggled in Setup. Three modes:
+  //   'normal' = raw palette, no energy modulation
+  //   'mix'    = energy modulates saturation/lightness per chord
+  //   'pastel' = energy modulation PLUS pastel filter on top (soft, lighter)
+  // Declared near the top so the gc() useCallback (defined later) can list it
+  // as a dependency. Persisted via localStorage; the two booleans pushed into
+  // 02-draw module flags through a useEffect.
+  const [tone,setTone]=useState(()=>{
+    try{
+      const v=localStorage.getItem('paintiano_tone');
+      if(v==='normal'||v==='mix'||v==='pastel') return v;
+      // Legacy: paintiano_pastel '0'/'1' from the 2-state implementation.
+      if(localStorage.getItem('paintiano_pastel')==='1') return 'pastel';
+    }catch(_){}
+    return 'mix';   // default = current behaviour (energy modulation on)
+  });
+  useEffect(()=>{
+    const mixOn = (tone==='mix'||tone==='pastel');
+    const pastelOn = (tone==='pastel');
+    try{_setMixOn(mixOn);}catch(_){}
+    try{_setPastelOn(pastelOn);}catch(_){}
+    try{localStorage.setItem('paintiano_tone',tone);}catch(_){}
+  },[tone]);
   // The colour reading the app chose for the current image (harmony or bw), so
   // leaving Custom returns to it rather than always to harmony.
   const appModeRef = useRef('harmony');
@@ -18222,6 +18962,20 @@ export default function Paintiano() {
   // reconciliation when the parent re-renders for unrelated reasons.
   const closePaletteEditor = useCallback(()=>{setShowPaletteEditor(false);setCustomArmed(false);},[]);
   const [chords,    setChords]    = useState([]);
+  // ── PostHog funnel events ──
+  const firedCreateRef = useRef(false);
+  useEffect(() => {
+    if (!firedCreateRef.current && chords.length > 0) {
+      firedCreateRef.current = true;
+      try { window.posthog && window.posthog.capture('first_creation'); } catch (_) {}
+    }
+  }, [chords.length]);
+  useEffect(() => {
+    if (paywallReason) { try { window.posthog && window.posthog.capture('paywall_shown', { reason: paywallReason }); } catch (_) {} }
+  }, [paywallReason]);
+  useEffect(() => {
+    try { if (new URLSearchParams(window.location.search).get('paid') === '1') window.posthog && window.posthog.capture('purchase_return'); } catch (_) {}
+  }, []);
   const [disp,      setDisp]      = useState(0);
   const [active,    setActive]    = useState(new Set());
   const [pickMode,  setPickMode]  = useState(null); // 'midi' | 'audio' | null
@@ -18269,10 +19023,19 @@ export default function Paintiano() {
   // the CSS @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape).
   // Used to opt-in to layout changes that only make sense at this width.
   const [is5Col, setIs5Col] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)').matches;}catch(_){return false;}});
+  // isNotPhone \u2014 desktop + tablet portrait + tablet landscape (phones excluded in both orientations).
+  const [isNotPhone, setIsNotPhone] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px)').matches;}catch(_){return false;}});
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)');
     const onChange = (e)=>setIs5Col(e.matches);
+    try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
+    return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
+  },[]);
+  useEffect(()=>{
+    if(typeof window==='undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(min-width: 769px) and (min-height: 501px)');
+    const onChange = (e)=>setIsNotPhone(e.matches);
     try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
     return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
   },[]);
@@ -19047,7 +19810,7 @@ export default function Paintiano() {
   const _stripIcon = (s) => {
     if (!s || typeof s !== 'string') return s;
     return s
-      .replace(/^[✦♪♬♫𝄞🖼🎙♥◫✧✩✰🎵🎶🎨🎬🎤🖌📷📸🌈⭐]+\s*/u, '')
+      .replace(/^[✦♪♬♫𝄞🖼🎙♥◫✧✩✰🎵🎶🎨🎬🎤🖌📷📸🌈⭐▶▷►◉🎼📁📂📀💿🖨🖥⏺⏯⏵♫⏏↑⬆🗀]+\s*/u, '')
       .replace(/…\s*$/, '')
       .trim();
   };
@@ -19335,12 +20098,21 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const gc = useCallback((m,v)=>{
     if(mode==='bw') return bwCol(m,v);
-    if(mode==='custom') return customCol(m,v,activePalette);
-    if(mode==='spectral') return specCol(m,v);
-    if(mode==='phi') return phiCol(m,v);
-    if(mode==='kontra') return kontraCol(m,v);
-    return harmCol(m,v);
-  },[mode,activePalette]);
+    let _c;
+    if(mode==='custom') _c=customCol(m,v,activePalette);
+    else if(mode==='spectral') _c=specCol(m,v);
+    else if(mode==='phi') _c=phiCol(m,v);
+    else if(mode==='kontra') _c=kontraCol(m,v);
+    else _c=harmCol(m,v);
+    const _t=_energyTint(_c[0],_c[1],_c[2]);
+    // Apply pastel tint defensively — if _pastelTint isn't in this build
+    // (older fragment, broken bundle) we fall through with the energy-tinted
+    // colour unchanged. Pastel only shifts the painting when both the helper
+    // exists AND the module flag is on.
+    let _r=_t[0],_g=_t[1],_b=_t[2];
+    try{ if(typeof _pastelTint==='function'){ const _p=_pastelTint(_r,_g,_b); _r=_p[0]; _g=_p[1]; _b=_p[2]; } }catch(_){}
+    return [_r,_g,_b,_c[3]];
+  },[mode,activePalette,tone]);
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
   // colour previews under the Color tabs. B/W spreads the 12 classes across its
@@ -19401,6 +20173,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // away in Setup (the element unmounts/clears). Repaint the already-played
       // mosaic 0..disp from pixel data so returning via "← Canvas" shows the
       // progress that was on screen before, instead of a blank image overlay.
+      // BUT: if the user has never started playback yet (playedOnce=false),
+      // changing the colour palette must NOT pre-paint the raster grid over the
+      // original — at that point the user just expects to preview the source
+      // image. The raster only belongs there after Play has actually run.
+      if(!playedOnce) return;
       try{
         const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
         const px=pixelRef.current;
@@ -19409,7 +20186,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           const{BW,BH,CW,CH}=grid;
           const colStep=px.colStep||1;
           const effCols=Math.ceil(nc/colStep);
-          const CHORD_SIZE=6;
+          const CHORD_SIZE=4;
           ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
           for(let i=0;i<disp && i<chords.length;i++){
             const _ev=chords[i]||{};
@@ -19460,6 +20237,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // incremental-append fast path below.
     const drawOne = (chord) => {
       if(!chord) return; // stale disp can index past chords → undefined chord
+      _setCurE(chord._E);
       const{n:notes,idx}=chord;
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
@@ -19538,6 +20316,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
       style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='comic' && style!=='monet' && style!=='hokusai' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
+      _ensureEnergies(chords);
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
       // Overlay styles repaint the whole canvas every frame. During active
@@ -19606,9 +20385,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='comic'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
+        _ensureEnergies(chords);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
-            const chord=chords[i];if(!chord)break; // stale disp / lim past chords → bail, don't destructure undefined
+            const chord=chords[i];if(!chord)break; _setCurE(chord._E); // stale disp / lim past chords → bail, don't destructure undefined
             const{n:notes,idx}=chord;
             const cell=grid.cells&&grid.cells[idx];
             if(cell){
@@ -19620,6 +20400,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             }
           }
         }
+        _setCurE(0.5);
         sub.builtTo=Math.max(sub.builtTo,lim);
         // Blit the cached substrate to the visible canvas in one operation.
         ctx.clearRect(0,0,CW,CH);
@@ -19658,7 +20439,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
       ctx.strokeStyle='rgba(255,255,255,0.025)';ctx.lineWidth=.5;
       for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*BW,0);ctx.lineTo(i*BW,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*BH);ctx.lineTo(CW,i*BH);ctx.stroke();}
+      _ensureEnergies(chords);
       for(let i=0;i<lim;i++) drawOne(chords[i]);
+      _setCurE(0.5);
       // Pollock global drip overlay — runs AFTER all cells have rendered.
       // Drips ignore cell boundaries and unify the painting under the splatter.
       if(style==='pollock' && lim>0){
@@ -19848,7 +20631,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     wrap.scrollLeft = Math.max(0, target);
   },[composeMode]);
 
-  const playNote = useCallback((midi,vel=88,durMs=500)=>{
+  const playNote = useCallback((midi,vel=88,durMs=500,tailScale=1)=>{
     // Spawn a visualizer ripple (skip in image mode — too busy with the photo)
     if (visualizerRef.current && viewModeRef.current !== 'image') {
       const c = visualizerRef.current;
@@ -19871,7 +20654,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // so even a flash-tap chord gets full piano-like decay. Live presses are
       // unaffected: releaseNote calls triggerRelease at the user's release
       // moment, cutting the note before this tail finishes.
-      const tailS=Math.min(Math.max(dur*0.4,1.5),3.0);
+      // tailScale (<1) shortens this on purpose for fast REPEATED strikes — a
+      // sustained-plane tremolo needs each re-attack to be a distinct attack, not
+      // a 1.5 s bloom that smears every re-strike into one held cloud. The floor
+      // and cap scale together so e.g. tailScale 0.12 → ~180 ms..360 ms tail.
+      const _ts=Math.max(0.05,Math.min(1,tailScale));
+      const tailS=Math.min(Math.max(dur*0.4,1.5*_ts),3.0*_ts);
       // Defensive context resume. Even when the sampler is loaded, scheduling
       // a triggerAttackRelease into a suspended context produces silence on
       // iOS — the symptom users see as "sound randomly disappears." Cheap to
@@ -21816,7 +22604,46 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setWorking(true);setWLabel(t('transcribingAudio')||'transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
-      const buf=await file.arrayBuffer();
+      const rawBuf=await file.arrayBuffer();
+      // ── MP3 sanitizer ──────────────────────────────────────────────────────
+      // Some MP3s (often from converters like Freemake) declare their ID3v2
+      // tag size correctly but leave hundreds of bytes of 0x00 padding/junk
+      // between the tag end and the first real MP3 frame sync. Desktop Chrome
+      // tolerates the junk and finds the sync; iOS Safari is strict and throws
+      // EncodingError from decodeAudioData. We do what a strict parser would
+      // expect: locate the first valid MP3 sync and, if it isn't immediately
+      // after the ID3 tag, strip the junk and hand decodeAudioData a clean
+      // buffer. Untagged or correctly-padded files pass through unchanged.
+      const buf=(()=>{
+        try{
+          const u8=new Uint8Array(rawBuf);
+          if(u8.length<10 || u8[0]!==0x49 || u8[1]!==0x44 || u8[2]!==0x33) return rawBuf; // no ID3v2
+          const tagEnd=10+((u8[6]<<21)|(u8[7]<<14)|(u8[8]<<7)|u8[9]);
+          if(tagEnd>=u8.length) return rawBuf;
+          // Already sync at tag end? Nothing to fix.
+          const validSync=(b1,b2,b3)=>{
+            if(b1!==0xFF) return false;
+            if((b2&0xE0)!==0xE0) return false;
+            const mpeg=(b2>>3)&3; if(mpeg===1) return false;
+            const layer=(b2>>1)&3; if(layer===0) return false;
+            const br=(b3>>4)&0x0F; if(br===0||br===0x0F) return false;
+            const sr=(b3>>2)&3; if(sr===3) return false;
+            return true;
+          };
+          if(validSync(u8[tagEnd],u8[tagEnd+1],u8[tagEnd+2])) return rawBuf;
+          // Find first real sync within a reasonable window after the tag.
+          const limit=Math.min(u8.length-3, tagEnd+65536);
+          for(let i=tagEnd;i<limit;i++){
+            if(validSync(u8[i],u8[i+1],u8[i+2])){
+              // Strip everything before sync (incl. ID3 + junk). The frame
+              // data is identical bit-for-bit; we just lose metadata Paintiano
+              // doesn't use anyway.
+              return u8.buffer.slice(i, u8.length);
+            }
+          }
+          return rawBuf;
+        }catch(_){ return rawBuf; }
+      })();
       const blob=new Blob([buf],{type:file.type||'audio/mpeg'});
       const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -21884,7 +22711,33 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       applyEvents(evts,aName);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
-    }catch(e){if(loadTokenRef.current===myToken){setErr('Audio: '+e.message);setErrInfo(false);}}
+    }catch(e){
+      if(loadTokenRef.current===myToken){
+        // Decode failures on iOS most often come from MP3 files with broken
+        // headers (junk between ID3 tag and first frame sync) or unusual
+        // formats (VBR with bad Xing, exotic sample rates, M4A pretending to
+        // be MP3). The sanitizer above catches the common case; if we still
+        // failed, give the user something actionable instead of a stack trace.
+        const m=String(e&&e.message||e);
+        const isDecode=/decode|EncodingError|Unable to decode/i.test(m);
+        if(isDecode){
+          const ext=(file.name.match(/\.([^.]+)$/)||[])[1]||'';
+          const tip = lang==='SK'
+            ? `Súbor sa nedá dekódovať. Pravdepodobne má poškodenú hlavičku alebo neštandardný formát. Skús ho prekonvertovať (napr. v Audacity: File → Export → MP3, alebo online cez online-audio-converter.com).`
+            : lang==='DE'
+            ? `Datei kann nicht dekodiert werden. Vermutlich beschädigter Header oder ungewöhnliches Format. Konvertiere die Datei neu (z. B. in Audacity: File → Export → MP3, oder online via online-audio-converter.com).`
+            : lang==='FR'
+            ? `Impossible de décoder ce fichier. En-tête probablement corrompu ou format inhabituel. Reconvertis-le (par ex. dans Audacity : Fichier → Exporter → MP3, ou en ligne via online-audio-converter.com).`
+            : lang==='ES'
+            ? `No se puede decodificar el archivo. Cabecera dañada o formato inusual. Convierte el archivo (p. ej. en Audacity: Archivo → Exportar → MP3, o en línea via online-audio-converter.com).`
+            : `This file can't be decoded. Likely a broken header or unusual format. Try re-converting it (e.g. in Audacity: File → Export → MP3, or online via online-audio-converter.com).`;
+          setErr('Audio · '+(ext?ext.toUpperCase()+' · ':'')+tip);
+        } else {
+          setErr('Audio: '+m);
+        }
+        setErrInfo(false);
+      }
+    }
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
@@ -22904,38 +23757,61 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
-      const prompt=`A painting was scanned into raw musical material. Compose a beautiful, free-standing solo piano piece INSPIRED BY that material — do not replay it literally.
-Image material:
+      // VISION INPUT — send the actual image to Claude so the composition is
+      // driven by what's IN the picture (a child holding a painting, a sunlit
+      // street, a stormy sea) — not by abstract scan statistics that compress
+      // every image into the same few buckets. The scan-derived material is
+      // kept as a SECONDARY hint (palette/range), but the image itself is the
+      // primary signal. This is the same pattern MFI uses (mood-from-image).
+      const _src = originalImgUrl;
+      // Resize to ~384px (matches MFI) to keep base64 small and the request fast.
+      const dataUrl = await new Promise((res,rej)=>{
+        const im=new Image();
+        im.onload=()=>{
+          try{
+            const max=384;
+            let w=im.naturalWidth||384, h=im.naturalHeight||384;
+            const sc=Math.min(1, max/Math.max(w,h));
+            w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+            const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+            cv.getContext('2d').drawImage(im,0,0,w,h);
+            res(cv.toDataURL('image/jpeg',0.82));
+          }catch(e){ rej(e); }
+        };
+        im.onerror=()=>rej(new Error('img'));
+        im.src=_src;
+      });
+      const b64 = dataUrl.split(',')[1];
+      const prompt=`Look at this image. Identify WHAT is in it (a person, a landscape, a building, an abstract painting, a child, an animal, etc.) and its dominant EMOTION (e.g. joyful, calm, dramatic, melancholic, tense, eerie, tender, triumphant). Then compose a free-standing solo piano piece whose musical choices are DRIVEN by what you see and feel.
+The scanned musical material (a secondary hint — the image itself is the primary signal):
 - Pitch palette (most present pitch classes): ${mat.palette}
-- Range: ${mat.noteRange}
-- Energy: ${mat.energy}
-- Texture: ${mat.tex}
-- Energy arc: ${mat.arc}${mat.mood?`\n- Mood/atmosphere of the image: ${mat.mood}`:''}
-Use this as raw clay: let the pitch palette colour the harmony and key, let the energy and arc shape dynamics and tempo, let the texture guide density. Then compose with genuine craft — a real melody, recurring motif, clear metre and rhythm, harmonic movement, and an emotional shape that matches the image's character.
+- Range of the scan: ${mat.noteRange}${mat.mood?`\n- Detected mood: ${mat.mood}`:''}
+Map what you see to the music — two DIFFERENT images MUST yield audibly DIFFERENT pieces (different key, tempo, density, dynamics):
+- KEY: bright/happy/triumphant/playful subjects → MAJOR; sad/melancholic/eerie/tense/yearning subjects → MINOR. Pick a SPECIFIC key, vary across pieces (do not default to C).
+- TEMPO: calm/tender/melancholic → slow (55-80); joyful/playful → medium (90-120); dramatic/tense/triumphant → driving (110-145); eerie → free and slow.
+- REGISTER & DENSITY: intimate/calm → sparse, mid-low register, lots of space; energetic/triumphant → fuller chords, wider range, more notes.
+- DYNAMICS: tender → soft (vel 40-65); triumphant/dramatic → loud (80-115); tense → uneven and accented.
+- ARTICULATION: playful → staccato and syncopated; melancholic → legato; tense → repeated ostinato.
 Output ONLY a single valid JSON object — no markdown, no prose.
-Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
-Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
-Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) that fits the resulting music.
+Schema: {"title":"...","tempo":<derived>,"key":"<derived>","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
+Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) describing THIS SPECIFIC image — must be distinctive, never a generic "quiet light" type phrase.
 Composition rules:
-- LENGTH: the piece MUST last at least 60 seconds of music — aim for 70–95 seconds. With the tempo you choose, make sure the LAST note's (startBeat + duration) reaches at least tempo beats (i.e. ≥ 60 seconds worth of beats). Do not stop early.
-- 90–150 notes total (enough to fill a full minute or more)
-- STYLE: Western tonal piano music in the spirit of Ludovico Einaudi, Yiruma, Max Richter, Yann Tiersen, Chopin's Nocturnes, or Debussy's quieter pieces. Lyrical, singable melodies over flowing accompaniment. Avoid sounding like East-Asian traditional music (no shakuhachi/koto/gamelan/erhu evocations) unless the image is unmistakably East Asian.
-- KEY: Pick a major or natural minor key that fits the mood. Stay strictly diatonic except for occasional tasteful chromatic colour (passing tones, secondary dominants, leading tones).
-- HARMONY: Use familiar functional chord progressions (I–V–vi–IV, ii–V–I, vi–IV–I–V; for minor: i–VI–III–VII, i–iv–V–i). NO pentatonic, modal (Dorian/Phrygian/Lydian), whole-tone, or quartal harmonies regardless of what the palette suggests — the palette colours the KEY choice, not the SCALE type.
-- Structure: intro (motif, sparse) → development (richer, busiest) → a contrasting middle section → return of the motif → close (quieter). Use the length for a real arc, not a loop.
-- Bass (octaves 2–3): harmonic grounding throughout, ≥20 notes
-- Melody (octaves 4–6): singable, recurring motif that develops over the full length
-- Dynamics via velocity: intro ~55–70, development ~80–110, close ~45–65
-- Vary durations (mix 0.25/0.5/1/2 beats) — clear rhythm, not uniform
-- Pitches like C4/F#3/Bb5 with octave number, sharps only (C#4 not Db4)`;
+- LENGTH: 60-90 seconds of music — the LAST note's (startBeat + duration) MUST reach at least tempo beats (= 60 seconds).
+- 90-150 notes total.
+- STYLE: Western tonal piano in the spirit of Einaudi, Yiruma, Max Richter, Chopin's Nocturnes, or Debussy. Lyrical melodies over flowing accompaniment. Avoid East-Asian-traditional evocations unless the image is unmistakably East Asian.
+- HARMONY: familiar functional progressions (I-V-vi-IV, ii-V-I; minor: i-VI-III-VII, i-iv-V-i). Diatonic with tasteful chromatic colour.
+- Structure: intro (motif, sparse) → development (richer) → contrasting middle → return of motif → close (quieter).
+- Bass (octaves 2-3): ≥20 notes. Melody (octaves 4-6): singable, recurring motif.
+- Vary durations (mix 0.25/0.5/1/2). Pitches with octave, sharps only (C#4 not Db4).`;
       setWPct(40);
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
       let resp=null,respText='',lastErr=null;
       for(const _ep of _endpoints){
         try{
-          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages})});
           const txt=await r.text();
           if(r.ok&&txt){ resp=r; respText=txt; break; }
           lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
@@ -23004,11 +23880,43 @@ Composition rules:
     { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return null; } }
     setMelodyBusy(true); setErr(''); setErrInfo(false);
     try{
+      // ATMO directive: when an atmosphere has been detected, project (v,e) into
+      // explicit musical instructions so Claude composes a mood-coherent line from
+      // the start — not just a generic melody that we later scale. (v,e) extremes
+      // trigger hard rules; mid values give a gentle suggestion.
+      const _atmoMood = (atmoOn && atmoMood) ? atmoMood : null;
+      let atmoBlock='';
+      if(_atmoMood){
+        const _av=_atmoMood.v, _ae=_atmoMood.e;
+        const lines=[];
+        if(_ae<=0.20){
+          lines.push('Energy is VERY LOW (calm/dreamy). MUST: slow tempo 50-70 BPM, legato long notes (mostly half/whole), soft dynamics (melody 60-85, chords 45-65), MID-LOW register (melody octaves 4-5, NOT 6), sparse texture, no leaps larger than a fifth, no syncopation, intro-able ambient feel.');
+        } else if(_ae>=0.80){
+          lines.push('Energy is VERY HIGH (intense/dramatic). MUST: tempo 115-150 BPM, articulated rhythms with staccato + syncopation, loud dynamics (melody 105-125, chords 88-108), full upper register (melody octave 5-6), denser chords, allow octave leaps and dramatic accents.');
+        } else if(_ae<=0.35){
+          lines.push('Energy is low. Prefer slow tempo 65-85 BPM, mostly legato, softer dynamics, mid register.');
+        } else if(_ae>=0.65){
+          lines.push('Energy is high. Prefer faster tempo 100-130 BPM, more articulation, brighter dynamics.');
+        }
+        if(_av<=-0.50){
+          lines.push('Valence is strongly negative (sad/heavy/melancholic). MUST: minor key, descending phrase shapes, dissonant suspensions resolved downward.');
+        } else if(_av>=0.50){
+          lines.push('Valence is strongly positive (joyful/bright). MUST: major key, ascending phrase shapes, plagal/authentic cadences that feel resolved and lifting.');
+        } else if(_av<=-0.20){
+          lines.push('Valence is slightly negative. Lean minor key.');
+        } else if(_av>=0.20){
+          lines.push('Valence is slightly positive. Lean major key.');
+        }
+        if(_atmoMood.title){ lines.push('Title hint: "'+_atmoMood.title+'".'); }
+        if(lines.length){
+          atmoBlock = '\nMOOD DIRECTIVE (this overrides defaults; commit to these choices, do not regress to the safe middle):\n- '+lines.join('\n- ')+'\n';
+        }
+      }
       const prompt=`A painting has been scanned into a musical TEXTURE (its colours played as notes). Compose a SECOND PIANO PART that a concert pianist would play over that texture — a full, two-handed, CHORDAL piece with a clear singing MELODY on top and real harmony underneath. NOT a thin one-finger line: this is a complete, rich piano voice that stands beside the texture as an equal. It must mirror and crown the scan, echoing the image's mood, colour and radiance.
 The image's musical material:
 - Pitch palette (colours → notes): ${mat.palette}
 - Range of the texture: ${mat.noteRange}
-- Energy: ${mat.energy}    Texture: ${mat.tex}    Arc: ${mat.arc}${mat.mood?`\n- Mood / atmosphere: ${mat.mood}`:''}
+- Energy: ${mat.energy}    Texture: ${mat.tex}    Arc: ${mat.arc}${mat.mood?`\n- Mood / atmosphere: ${mat.mood}`:''}${atmoBlock}
 Compose with real musical craft, following classical harmonization method:
 - KEY: let the pitch palette define the tonal centre; choose major or natural minor to fit the mood. Stay diatonic (tasteful passing/leading tones fine; no random chromaticism).
 - LENGTH: write ONE short, COMPLETE melodic phrase of about 8–16 bars (a self-contained tune that could loop seamlessly back to its start). Keep total length under ~24 beats. This cell will be REPEATED across the painting, so it must sound whole on its own and join cleanly to its own beginning.
@@ -23299,7 +24207,17 @@ Composition rules:
           // old fixed 2:00 constant.
           const lastEv=evts[evts.length-1];
           const realDurMs=lastEv ? (lastEv.startMs + (lastEv.n?.[0]?.durMs||0)) : IMG_TARGET_MS;
-          const _imgTitle=file.name.replace(/\.[^.]+$/,'');
+          // Filename as title — but skip auto-generated junk names (GUIDs like
+          // 964FA674-3FA9-40D8-..., long hex blobs, camera codes like IMG_2317,
+          // pure numbers) which look ugly in the transport. For those, show no
+          // title; the AI compose path will set its own evocative title anyway.
+          const _rawName=file.name.replace(/\.[^.]+$/,'');
+          const _isJunkName = !_rawName
+            || /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(_rawName) // GUID
+            || /^[0-9a-fA-F]{16,}$/.test(_rawName.replace(/[-_]/g,''))                                        // long hex blob
+            || /^(IMG|DSC|PXL|Screenshot|image|photo)[-_ ]?\d+$/i.test(_rawName)                              // camera/auto codes
+            || /^\d{6,}$/.test(_rawName);                                                                      // pure long number
+          const _imgTitle = _isJunkName ? '' : _rawName;
           setInfo({title:_imgTitle,count:evts.length,dur:Math.round(realDurMs/1000)});
           // New piece → reset the save name to THIS image's filename so the SAVE
           // picker doesn't carry a stale name from a previous mood/piece.
@@ -23427,7 +24345,19 @@ Composition rules:
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
       const b64=dataUrl.split(',')[1];
       const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
-      const prompt='Look at this image and judge the EMOTION / atmosphere of the scene. Output ONLY a single JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."} where valence is -1 (sad/dark) to 1 (happy/bright), energy is 0 (calm/still) to 1 (intense/dramatic), and title is a short mood phrase in '+_langName+' (max 4 words, Title Case).';
+      const prompt=
+'You are judging the EMOTION / atmosphere of a single image. Output ONLY one JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."}.\n'+
+'valence: -1 (sad/dark/heavy) ... 0 (neutral) ... +1 (happy/bright/playful).\n'+
+'energy:   0 (calm/still/dreamy) ... 0.5 (moderate) ... 1 (intense/dramatic/turbulent).\n'+
+'CRITICAL: COMMIT to a strong reading. The MIDDLE band (0.40-0.60) is reserved for genuinely ambiguous scenes only. If the scene is clearly calm, output energy <= 0.20; if clearly serene/dreamy/quiet, energy <= 0.15. If clearly intense/dramatic/stormy, energy >= 0.80; if frantic/violent, energy >= 0.90. Same for valence: clearly sad/heavy <= -0.50; clearly joyful/bright >= +0.50.\n'+
+'Anchored examples (use as a guide for the strength of your numbers):\n'+
+'  A serene Monet pond at dawn          -> {"valence": 0.40, "energy": 0.10}\n'+
+'  A melancholic rainy street           -> {"valence": -0.55, "energy": 0.20}\n'+
+'  A bright sunny field, kids playing   -> {"valence": 0.85, "energy": 0.65}\n'+
+'  A stormy Turner seascape             -> {"valence": -0.20, "energy": 0.90}\n'+
+'  A neutral architectural drawing      -> {"valence": 0.05, "energy": 0.30}\n'+
+'Avoid the safe centre. Two different paintings MUST yield audibly different numbers.\n'+
+'title: short mood phrase in '+_langName+' (max 4 words, Title Case).';
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
@@ -23616,7 +24546,7 @@ Composition rules:
       const{nc,nr,px}=pixelRef.current,{BW,BH,CW,CH}=grid,cv=canvasRef.current,ctx=cv?.getContext('2d'),gen=genRef.current;
       if(ctx&&fromIdx===0){ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);}
       let i=fromIdx;
-      const CHORD_SIZE=6;
+      const CHORD_SIZE=4;
       const colStep=pixelRef.current.colStep||1;
       const effCols=Math.ceil(nc/colStep);
       // MELODY dynamic tempo — DRIVEN BY THE IMAGE. With MELODY on we leave the
@@ -23699,9 +24629,135 @@ Composition rules:
           const velScale=liveChords[i]._runLen?1:0.75;
           try{
             const notes=liveChords[i].n;
-            const midis=notes.map(({m,v,durMs})=>{
+            // PIANO TECHNIQUE: TREMOLO. A chord flagged _tremolo (a long merged
+            // plane, _runLen ≥ 16) is kept alive by RE-STRIKING it across its
+            // held span instead of letting one attack decay into silence. We
+            // split the real (speed-scaled) held duration into segments of
+            // ~_tremoloMs and re-attack every note at each segment boundary, each
+            // re-strike lasting one segment. Velocity dips slightly on the
+            // re-strikes so the first attack still leads. Honours playbackSpeed
+            // and the global pushTimer cleanup (so stopping playback cancels it).
+            const _trem=liveChords[i]._tremolo===true;
+            if(_trem){
+              const lc=liveChords[i];
+              const gesture=lc._planeGesture||'arc';
+              const gap0=Math.max(85, Math.round((lc._tremoloMs||180)/playbackSpeedRef.current));
+              const fullSpan=Math.round((notes[0]?.durMs||300)*durMul/playbackSpeedRef.current);
+              // The hold UNFOLDS an internal arc rather than repeating one gesture:
+              //   • tempo glides from gap0 → gap0*endRatio (accel if <1, rit if >1)
+              //   • the top voice periodically lifts by _tremLift semitones and falls
+              //     back — a slow shimmer of register across the held plane
+              //   • loudness breathes (swell) so the field never sits flat
+              //   • a DETERMINISTIC pseudo-random jitter (seeded from the block, so
+              //     identical for the same image) nudges every re-strike's timing,
+              //     loudness and register, and occasionally drops or doubles a hit,
+              //     so a big plane never settles into an audible repeating pattern.
+              // CRITICAL: each re-strike uses a SHORT tail (tailScale) so the
+              // attacks stay distinct — the full 1.5 s resonance would smear every
+              // re-strike into one held cloud (which is why a plain tremolo sounded
+              // like nothing changed).
+              const endRatio=Math.max(0.5, Math.min(1.8, lc._tremEndRatio||1));
+              const lift=lc._tremLift||0;             // semitone lift of top voice (0/7/12)
+              const liftCycles=Math.max(1, lc._tremLiftCycles||1);
+              const swell=Math.max(0, Math.min(0.5, lc._tremSwell!=null?lc._tremSwell:0.25));
+              const rolled=(gesture==='roll');
+              const rollStep=Math.max(12, Math.round(26/playbackSpeedRef.current));
+              // Deterministic PRNG (mulberry32) seeded from the block — same image →
+              // same "random" field, but no audible repeating cycle.
+              let _seed=(lc._tremSeed>>>0)||0x9e3779b9;
+              const rnd=()=>{ _seed|=0; _seed=_seed+0x6D2B79F5|0; let tt=Math.imul(_seed^_seed>>>15,1|_seed); tt=tt+Math.imul(tt^tt>>>7,61|tt)^tt; return ((tt^tt>>>14)>>>0)/4294967296; };
+              let topM=-Infinity; for(const n of notes){ if(n.m>topM) topM=n.m; }
+              // Scale-ish neighbour lifts the jitter can pick for the top voice so
+              // an occasional re-strike "colours" to an adjacent tone, not just the
+              // fixed octave/fifth — adds melodic life over a flat field.
+              const lifts=[0,0,0,lift||7,7,12,5,-5,3];
+              let t=0, r=0;
+              const maxReps=120;
+              while(t < fullSpan-20 && r < maxReps){
+                const prog = fullSpan>0 ? t/fullSpan : 0;         // 0..1 across the hold
+                // Gliding base tempo + per-strike timing jitter (±28%).
+                const gGlide = gap0*(1 + (endRatio-1)*prog);
+                const jitT = 0.72 + 0.56*rnd();                   // 0.72..1.28
+                const gNow = Math.max(70, Math.round(gGlide*jitT));
+                const segDur = Math.max(95, Math.round(gNow*1.35));
+                // Occasionally skip a strike (a breath) — more likely mid-hold,
+                // never the very first strike. ~12% chance.
+                const skip = (r>0 && rnd()<0.12);
+                if(!skip){
+                  // Swell envelope + loudness jitter (±18%).
+                  const env = (1 - swell*0.5 + swell*Math.sin(Math.PI*prog)) * (0.82+0.36*rnd());
+                  // Register shimmer: smooth cycle OR an occasional random lift pick.
+                  const cyclePhase = lift>0 ? (Math.sin(Math.PI*liftCycles*prog) > 0.55) : false;
+                  const randLift = (rnd()<0.22) ? lifts[(rnd()*lifts.length)|0] : 0;
+                  const topShift = cyclePhase ? lift : randLift;
+                  const baseVel = r===0?1:(rolled?0.7:0.78);
+                  const tAt=t;
+                  // tail short for re-strikes so attacks read; first hit a touch longer.
+                  const tail = r===0?0.4:0.14;
+                  const order = rolled ? [...notes].sort((a,b)=>a.m-b.m) : notes;
+                  // rolled step itself jitters slightly so the arpeggio isn't a metronome.
+                  const rs = rolled ? Math.max(8, Math.round(rollStep*(0.7+0.6*rnd()))) : 0;
+                  order.forEach((n,vi)=>{
+                    const isTop = n.m===topM;
+                    const mPlay = (isTop && topShift) ? n.m+topShift : n.m;
+                    const vv = Math.max(12, Math.round((n.v||64)*velScale*baseVel*env));
+                    const at = Math.round(tAt + (rolled?vi*rs:0));
+                    if(at<=0){ try{ playNote(mPlay,vv,segDur,tail); }catch(_){} }
+                    else { pushTimer(()=>{ try{ playNote(mPlay,vv,segDur,tail); }catch(_){}}, at); }
+                  });
+                  // Occasional grace double-strike on the top voice (a flutter) — rare.
+                  if(rnd()<0.08 && topM>-Infinity){
+                    const gAt=Math.round(t+gNow*0.45);
+                    const gv=Math.max(12,Math.round((notes.find(n=>n.m===topM)?.v||64)*velScale*0.5));
+                    pushTimer(()=>{ try{ playNote(topM,gv,Math.round(segDur*0.6),0.1); }catch(_){}}, gAt);
+                  }
+                }
+                t += gNow;
+                r++;
+              }
+              const tmid=notes.map(({m})=>({m,scaledDur:fullSpan}));
+              setActive(p=>{const s=new Set(p);for(const x of tmid)s.add(x.m);return s;});
+              pushTimer(()=>setActive(p=>{const s=new Set(p);tmid.forEach(x=>s.delete(x.m));return s;}),fullSpan);
+              const wrap=kbScrollRef.current;
+              if(wrap){
+                const xs=notes.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
+                if(xs.length){
+                  const cx=xs.reduce((a,b)=>a+b,0)/xs.length;
+                  const target=Math.max(0,cx - wrap.clientWidth/2 + 13);
+                  wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});
+                }
+              }
+              setDisp(i+1); i++;
+              {
+                let _gapMs2;
+                if(melodyOnRef.current !== _melStepsOn || liveChords.length !== _melStepsLen){
+                  _melSteps=_computeMelSteps(liveChords);
+                  _melStepsLen=liveChords.length;
+                  _melStepsOn=melodyOnRef.current;
+                }
+                if(melodyOnRef.current && _melSteps && _melSteps.length){
+                  _gapMs2 = Math.max(8, Math.min(1400, _melSteps[i-1] || 150));
+                } else {
+                  _gapMs2 = (liveChords[i-1] && liveChords[i-1]._stepMs) || 150;
+                }
+                pushTimer(step, Math.round(_gapMs2/playbackSpeedRef.current));
+              }
+              return;
+            }
+            // Per-note onset offset (offsetMs) supports piano techniques: arpeggio,
+            // tied notes, voice-specific timing. If absent or 0, fires immediately
+            // (identical to previous block-chord behaviour). When >0, schedules the
+            // playNote via setTimeout so the player honours the per-note timing.
+            const midis=notes.map(({m,v,durMs,offsetMs})=>{
               const scaledDur=Math.round(durMs*durMul/playbackSpeedRef.current);
-              playNote(m,Math.round(v*velScale),scaledDur);
+              const _off=(typeof offsetMs==='number' && offsetMs>0)
+                ? Math.max(0, Math.round(offsetMs/playbackSpeedRef.current))
+                : 0;
+              if(_off>0){
+                pushTimer(()=>{ try{ playNote(m,Math.round(v*velScale),scaledDur); }catch(_){}}, _off);
+              } else {
+                playNote(m,Math.round(v*velScale),scaledDur);
+              }
               return{m,scaledDur};
             });
             // Batch add all notes in this chord in one state update
@@ -25081,14 +26137,37 @@ Composition rules:
       // seed-derived draw, not the (null) user selection.
       const style = effectiveStyle;
       const{N,BW,BH,CW,CH}=grid;
-      // sizeMode: 'web' = 4× (good for screens/social), 'print' = A1 300dpi
+      // sizeMode: 'web' = 4× (good for screens/social), 'print' = A0 ≥300 DPI
       let SCALE, label, dpi;
       if(sizeMode==='print'){
-        const A1_MIN=7000;
-        const rawScale=Math.ceil(A1_MIN/Math.max(CW,CH));
-        SCALE=Math.max(rawScale,8);
-        dpi=Math.round((CW*SCALE)/23.39); // A1 width=23.39in
-        label='A1-print';
+        // A0 = 841 × 1189 mm = 33.11" × 46.81". At 300 DPI the long side is
+        // 14043 px and the short side 9933 px — but most paintings are
+        // landscape/square, so we target the SHORTER A0 dimension as the floor
+        // on the longer canvas side: ≥ 9933 px guarantees A0 at full 300 DPI
+        // regardless of orientation. We use 10000 for a tiny headroom (~302 DPI).
+        // CAP by absolute output pixels (12000 long side) instead of by SCALE —
+        // small source canvases get a higher SCALE to reach the A0 floor, while
+        // huge sources don't render a needlessly huge bitmap. 12000 px on the
+        // long side stays well inside browser canvas limits (16384 in Chrome).
+        const A0_MIN=10000;
+        const MAX_OUT=12000;
+        const maxSide=Math.max(CW,CH);
+        const minScaleForA0=Math.ceil(A0_MIN/maxSide);
+        const capScale=Math.floor(MAX_OUT/maxSide);
+        SCALE=Math.max(8, Math.min(capScale||8, minScaleForA0));
+        // DPI reported against A0's long side (33.11" for the short A0 edge,
+        // i.e. the floor we're guaranteeing).
+        dpi=Math.round((maxSide*SCALE)/33.11);
+        label='A0-print';
+      } else if(sizeMode==='gallery'){
+        // Vector SVG export — resolution-independent for fine-art / gallery prints.
+        // The print shop's RIP rasterises at whatever DPI it supports (giclée
+        // printers do 600-1200 DPI). The SVG file itself stays small (KB-MB),
+        // opens in Illustrator/Inkscape, and can be tiled to any size without
+        // pixelation. SCALE=1 means the SVG uses canvas-space coordinates.
+        SCALE=1;
+        dpi=null;
+        label='gallery-vector';
       } else if(sizeMode==='story'){
         SCALE=4;          // crisp source; composited onto the 1080×1920 story canvas below
         dpi=null;
@@ -25098,11 +26177,14 @@ Composition rules:
         dpi=null;
         label='web';
       }
-      const hi=document.createElement('canvas');
-      hi.width=Math.round(CW*SCALE);hi.height=Math.round(CH*SCALE);
-      const hctx=hi.getContext('2d');
-      hctx.imageSmoothingEnabled=false;
-      hctx.scale(SCALE,SCALE);
+      const _isGallery = sizeMode==='gallery';
+      const hi = _isGallery ? null : document.createElement('canvas');
+      if(hi){ hi.width=Math.round(CW*SCALE); hi.height=Math.round(CH*SCALE); }
+      const hctx = _isGallery ? createSvgCtx(CW, CH) : hi.getContext('2d');
+      if(!_isGallery){
+        hctx.imageSmoothingEnabled=false;
+        hctx.scale(SCALE,SCALE);
+      }
       hctx.fillStyle='#04040a';hctx.fillRect(0,0,CW,CH);
       if(viewMode==='image'&&pixelRef.current){
         const{nc,nr,px}=pixelRef.current;
@@ -25114,12 +26196,15 @@ Composition rules:
       }else{
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
-        chords.forEach(({n:notes,idx})=>{
+        _ensureEnergies(chords);
+        chords.forEach((chord)=>{
+          const {n:notes,idx}=chord; _setCurE(chord._E);
           const cell=grid.cells&&grid.cells[idx];
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
           else if(cell)drawBlock(hctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
           else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(hctx,col*BW,row*BH,notes,gc,BW,BH,style);}
         });
+        _setCurE(0.5);
         // Pollock global drip overlay — drawn over all rendered cells.
         // hctx is already scaled; pass canvas-space CW/CH so the splatters
         // span the painting at export resolution.
@@ -25181,6 +26266,21 @@ Composition rules:
         if(style==='oneM' && chords.length>0){
           drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
         }
+      }
+      // ── GALLERY (vector SVG) export: branch out here, before all the
+      // canvas-only postprocessing (watermark, source thumb overlay, story
+      // compositing). The SVG carries everything the renderer drew; print
+      // shops rasterise at whatever DPI they need. Watermark is skipped for
+      // Pro/Pro AI users (and gallery is Pro-only anyway).
+      if(_isGallery){
+        const svgStr = hctx.toSvg();
+        const blob = new Blob([svgStr], {type:'image/svg+xml'});
+        const url = URL.createObjectURL(blob);
+        const baseName = (info && info.title ? String(info.title).replace(/[^\w\u00C0-\u024F\u1E00-\u1EFF -]+/g,'').trim() : 'paintiano') || 'paintiano';
+        const filename = `${baseName}-gallery.svg`;
+        const file = new File([blob], filename, {type:'image/svg+xml'});
+        setPreview({url, filename, w:CW, h:CH, size:blob.size, file, dpi:null, label});
+        return;
       }
       // Watermark policy: stamp "paintiano.app" unless we KNOW the user is
       // Pro (or Pro AI). `isPro` here is `pro || pro_ai` and is `false` while
@@ -25910,7 +27010,7 @@ Composition rules:
               mood (how do you feel?) · compose · mic. */}
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('createLabel'))}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMoodDraft){ restoreMode('mood'); setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'#eafff4':'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
+            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMoodDraft){ restoreMode('mood'); setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'#eafff4':'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:sourcePickerLocked?0.4:1,position:'relative'}}>
               {(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dcb45a',boxShadow:'0 0 6px #dcb45a',flexShrink:0}}/>}
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-1.5A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></span>
               {_sent(t('moodHowFeel'))}
@@ -25948,7 +27048,7 @@ Composition rules:
                   setComposeMode(true);
                   setMicArmed(false);
                 } else setComposeMode(false);
-              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}<span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="1.5"/><line x1="9" y1="6" x2="9" y2="14"/><line x1="15" y1="6" x2="15" y2="14"/><line x1="6.5" y1="6" x2="6.5" y2="12"/><line x1="11.5" y1="6" x2="11.5" y2="12"/><line x1="17.5" y1="6" x2="17.5" y2="12"/></svg></span> {_sent(composeMode?t('composing'):t('compose'))}</button>
+              }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:isNotPhone?'40px 24px':14,height:isNotPhone?110:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}<span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="1.5"/><line x1="9" y1="6" x2="9" y2="14"/><line x1="15" y1="6" x2="15" y2="14"/><line x1="6.5" y1="6" x2="6.5" y2="12"/><line x1="11.5" y1="6" x2="11.5" y2="12"/><line x1="17.5" y1="6" x2="17.5" y2="12"/></svg></span> {_sent(composeMode?t('composing'):t('compose'))}</button>
               <button className="pf-mic" onClick={()=>{
                 if(busy && !micActive) return;
                 if(!micActive && composeMode) return;
@@ -25999,7 +27099,7 @@ Composition rules:
                 }
                 setMicArmed(true);
                 setStayActive(true);
-              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:14,minHeight:isDesktop?undefined:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,color:(micActive||hasMicDraft)?'#eafff4':'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':'transparent',border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>{(micActive||hasMicDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#f06aa6',boxShadow:'0 0 6px #f06aa6',flexShrink:0}}/>}<span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span> {_sent(micActive?t('micActive'):t('mic'))}</button>
+              }} disabled={!micActive && (busy || composeMode)} title={micActive?t('micActive'):busy?t('stopRecFirst'):hasMicDraft?t('mic')+' · draft saved':t('mic')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:isNotPhone?'40px 24px':14,height:isNotPhone?110:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,color:(micActive||hasMicDraft)?'#eafff4':'#f06aa6',background:micActive?(micPreset==='voice'?'rgba(255,80,80,.14)':'rgba(60,160,255,.14)'):hasMicDraft?'rgba(240,106,166,.14)':'transparent',border:'1px solid '+(micActive?(micPreset==='voice'?'rgba(255,120,120,.6)':'rgba(100,180,255,.6)'):'rgba(240,106,166,.4)'),opacity:(!micActive&&(busy||composeMode))?.4:1,transition:'all .18s'}}>{(micActive||hasMicDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#f06aa6',boxShadow:'0 0 6px #f06aa6',flexShrink:0}}/>}<span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span> {_sent(micActive?t('micActive'):t('mic'))}</button>
             </div>
           </div>
 
@@ -26013,7 +27113,7 @@ Composition rules:
               mood-from-image · music · image. */}
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('importLabel'))}</div>
-            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMfiDraft){ restoreMode('mfi'); setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isDesktop?'9px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':((moodFromImg&&chords.length>0||hasMfiDraft)?'#eafff4':'rgba(228,178,255,.95)')),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
+            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMfiDraft){ restoreMode('mfi'); setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':((moodFromImg&&chords.length>0||hasMfiDraft)?'#eafff4':'rgba(228,178,255,.95)')),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>
               {(moodFromImg&&chords.length>0||hasMfiDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dc96ff',boxShadow:'0 0 6px #dc96ff',flexShrink:0}}/>}
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}>{imgAiBusy?<span>⏳</span>:<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.5L21 19l-1.3.5L19 21l-.7-1.5L17 19l1.3-.5z"/><path d="M5 4l.6 1.2L7 6l-1.4.4L5 8l-.6-1.6L3 6l1.4-.4z"/></svg>}</span>
               {imgAiBusy?'…':_sent(t('imgMood')||'mood from image').replace(/^(\S+)\s+/, '$1\u00A0')}
@@ -26024,8 +27124,8 @@ Composition rules:
               {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
                   loadSound routes by file type. Active when any of the three
                   music sources is loaded. */}
-              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}if(hasMusicDraft){restoreMode('music');setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':((activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?'#eafff4':PF.blue),fontFamily:'inherit'}}>{(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#5b9cf6',boxShadow:'0 0 6px #5b9cf6',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':_sent(t('music')!=='music'?t('music'):'music')}</span></button>
-              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}if(hasImageDraft){restoreMode('image');setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,minHeight:isDesktop?48:undefined,padding:isDesktop?'9px 8px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg||hasImageDraft)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg||hasImageDraft)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':((activeSource==='image'&&!moodFromImg||hasImageDraft)?'#eafff4':PF.orange),fontFamily:'inherit'}}>{(activeSource==='image'&&!moodFromImg||hasImageDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#f47c3c',boxShadow:'0 0 6px #f47c3c',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{switchArmed==='image'?t('switchConfirm'):_sent(t('image').replace(/[^\p{L}]/gu,''))}</span></button>
+              <button className="pf-tool pf-midi" onClick={()=>{if(importTileLocked)return;if(activeSource==='midi'||activeSource==='audio'||activeSource==='score'){setForceSetup(false);return;}if(hasMusicDraft){restoreMode('music');setForceSetup(false);return;}setPickMode(pickMode==='sound'?null:'sound');}} disabled={importTileLocked} title={(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):recording?t('stopRecFirst'):t('music')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,height:isNotPhone?110:undefined,padding:isNotPhone?'40px 24px':'14px 8px',borderRadius:14,cursor:'pointer',background:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(220,90,90,.18)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?'rgba(91,156,246,.12)':'transparent',border:'1px solid '+((switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,90,90,.6)':(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?PF.blue:'rgba(91,156,246,.25)'),color:(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?'rgba(255,140,120,.95)':working&&(wLabel.includes('audio')||wLabel.includes('score'))?PF.blue:importTileLocked?'rgba(91,156,246,.3)':((activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)?'#eafff4':PF.blue),fontFamily:'inherit'}}>{(activeSource==='midi'||activeSource==='audio'||activeSource==='score'||hasMusicDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#5b9cf6',boxShadow:'0 0 6px #5b9cf6',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{(switchArmed==='midi'||switchArmed==='audio'||switchArmed==='score')?t('switchConfirm'):working&&(wLabel.includes('audio')||wLabel.includes('score'))?wPct+'%':_sent(t('music')!=='music'?t('music'):'music')}</span></button>
+              <button className="pf-tool pf-image" onClick={()=>{if(importTileLocked)return;if(activeSource==='image'&&!moodFromImg){setForceSetup(false);return;}if(hasImageDraft){restoreMode('image');setForceSetup(false);return;}setPickMode(pickMode==='image'?null:'image');}} disabled={importTileLocked} title={switchArmed==='image'?t('switchConfirm'):recording?t('stopRecFirst'):t('image')} style={{display:'flex',flexDirection:isDesktop?'row':'column',alignItems:'center',justifyContent:'center',gap:isDesktop?8:7,height:isNotPhone?110:undefined,padding:isNotPhone?'40px 24px':'14px 8px',borderRadius:14,cursor:'pointer',background:switchArmed==='image'?'rgba(220,90,90,.18)':(activeSource==='image'&&!moodFromImg||hasImageDraft)?'rgba(244,124,60,.12)':'transparent',border:'1px solid '+(switchArmed==='image'?'rgba(255,90,90,.6)':(activeSource==='image'&&!moodFromImg||hasImageDraft)?PF.orange:'rgba(244,124,60,.25)'),color:switchArmed==='image'?'rgba(255,140,120,.95)':importTileLocked?'rgba(244,124,60,.3)':((activeSource==='image'&&!moodFromImg||hasImageDraft)?'#eafff4':PF.orange),fontFamily:'inherit'}}>{(activeSource==='image'&&!moodFromImg||hasImageDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#f47c3c',boxShadow:'0 0 6px #f47c3c',flexShrink:0,marginRight:4}}/>}<span className="pf-glyph pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><span style={{fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{switchArmed==='image'?t('switchConfirm'):_sent(t('image').replace(/[^\p{L}]/gu,''))}</span></button>
             </div>
           </div>
 
@@ -26146,7 +27246,7 @@ Composition rules:
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); const _mc = _isMusic?'rgba(150,185,255,.85)':(srcBtn==='image'?'rgba(248,170,120,.9)':'rgba(230,222,196,.7)'); const _mbd = _isMusic?'rgba(91,156,246,.3)':(srcBtn==='image'?'rgba(244,124,60,.3)':'rgba(242,238,232,.15)'); return (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;const _target=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?'sound':srcBtn;if(pickMode===_target){setPickMode(null);return;}if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(_target);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+((srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':_mc,border:'1px solid '+(recording||sourcePickerLocked?'rgba(242,238,232,.15)':_mbd),borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;const _target=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?'sound':srcBtn;if(pickMode===_target){setPickMode(null);return;}if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(_target);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={(()=>{ const isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); const noun=isMusic?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''); /* SK grammar: 'hudba' is feminine -> 'Nová hudba', not 'Nový hudba' */ const prefix=(lang==='SK'&&isMusic)?'Nová':((t('newBy')||{})[srcBtn]||t('newSource')); return prefix+' '+noun; })()} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':_mc,border:'1px solid '+(recording||sourcePickerLocked?'rgba(242,238,232,.15)':_mbd),borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {(()=>{ const isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); const noun=isMusic?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''); const prefix=(lang==='SK'&&isMusic)?'Nová':((t('newBy')||{})[srcBtn]||t('newSource')); return prefix+' '+noun; })()}</button>
           ); })()}
           {/* New MOOD — opens an inline mood picker right over the canvas (no
               jump back to setup); picking one loads it immediately. Shown for the
@@ -26474,6 +27574,14 @@ Composition rules:
               direction. Colours stay in the left column, mirroring every mode. */}
           {loadedSource==='image' && !moodFromImg && (
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {working && isDesktop && (
+              <div style={{marginBottom:2}}>
+                <div style={{fontSize:(0.58*effScale)+'rem',letterSpacing:'.06em',marginBottom:5,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
+                <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
+                  <div style={{height:'100%',width:wPct+'%',background:'rgba(210,140,255,.85)',borderRadius:2,transition:'width .3s'}}/>
+                </div>
+              </div>
+            )}
             {isDesktop && <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('imgReadLabel')!=='imgReadLabel'?t('imgReadLabel'):(lang==='SK'?'čítanie':'reading')}</div>}
             <div style={{display:'flex',flexDirection:isDesktop?'column':'row',gap:6}}>
               <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
@@ -26875,8 +27983,8 @@ Composition rules:
                 setForceSetup(false);
                 setPickMode(null);
               }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
-                <span style={{display:'block',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}>{_sent(t('builtInSample'))}</span>
-                <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?SAMPLE_SCORE_NAME:pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}</span>
+                <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="play" s={14}/>{_sent(_stripIcon(t('builtInSample')))}</span>
+                <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?SAMPLE_SCORE_NAME:pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:'The Starry Night — Vincent van Gogh'}</span>
               </button>
 
               {/* FILE TILE — universal upload icon, gold accent, hint shows accepted formats. */}
@@ -26893,7 +28001,7 @@ Composition rules:
                 // loaders (loadMidi/loadAudio/loadScore/loadImage) close the modal
                 // via setPickMode(null) once a file is actually selected.
               }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
-                <span style={{display:'block',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}>{_sent(t('chooseFile'))}</span>
+                <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="upload" s={14}/>{_sent(_stripIcon(t('chooseFile')))}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'MIDI · audio · MusicXML':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'Audio · .mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'JPG · PNG · GIF · WEBP · HEIC'}</span>
               </button>
               {/* Recently AI generated — Pro feature. Free users see locked items;
@@ -26926,7 +28034,7 @@ Composition rules:
         </div>
       )}
 
-      {working && (
+      {working && !(isDesktop && loadedSource==='image' && !moodFromImg) && (
         <div style={{width:'100%',maxWidth:480,marginBottom:10}}>
           <div style={{fontSize:(0.7*effScale)+'rem',letterSpacing:'.06em',marginBottom:6,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
           <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
@@ -26951,20 +28059,19 @@ Composition rules:
         // inline in the seek row (default) or as a separate block above the
         // seek bar on the 5-col layout (desktop/tablet landscape) — there the
         // narrow tools column would otherwise truncate long morph chains.
-        const _titleSpan = (<span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>);
-        const _badgeSpan = (moodContext&&composeSource)?(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:composeSource==='ai'?'rgba(220,170,255,.95)':composeSource==='crafted'?'rgba(201,168,76,.95)':'rgba(207,197,168,.7)',border:'1px solid '+(composeSource==='ai'?'rgba(220,170,255,.4)':composeSource==='crafted'?'rgba(201,168,76,.4)':'rgba(207,197,168,.25)')}}>{composeSource==='ai'?'✦ AI':composeSource==='crafted'?'♪ library':'offline'}</span>):(_imgAtmo&&(<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>));
-        return showTransport && (<>
+        const _titleSpan = (<span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>);
+        const _showAiBadge = (moodContext && composeSource==='ai') || _imgAtmo;
+        const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : null;
+        return (<>
+        {showTransport && (<>
         {is5Col && (imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (
           <div className="pf-track-head" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:6,display:'flex',alignItems:'center',justifyContent:'center',gap:8,flexWrap:'wrap'}}>
             <img src={imgMoodThumb || originalImgUrl} alt="source" style={{width:44,height:44,objectFit:'cover',borderRadius:8,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 8px rgba(0,0,0,.4)',opacity:.88,flexShrink:0}}/>
           </div>
         )}
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
-          <div style={{display:'flex',justifyContent:'space-between',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
-            <span style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'72%',overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
-            <span style={{opacity:.75}}>
-              {playing&&disp>0&&disp<=chords.length?(()=>{const elapsedS=(chords[disp-1]?.startMs||0)/1000/playbackSpeed;const remS=Math.max(0,Math.round(seekDur/playbackSpeed-elapsedS));return remS+t('sLeft');})():seekDur+'s'}
-            </span>
+          <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
           </div>
           {(viewMode!=='image' || !(recording||!!recBlob)) && (
           <div
@@ -27050,6 +28157,7 @@ Composition rules:
           </div>
           )}
         </div>
+        </>)}
         </>);
       })()}
 
@@ -27407,7 +28515,7 @@ Composition rules:
                     if(recBlob && recName) exportImage('story', true, recBlob, recName, includeSourceThumb);
                     else { setRecordIntent('story'); startRecord(); }
                   }} style={{padding:'14px',background:'linear-gradient(135deg,rgba(255,215,120,.16),rgba(220,170,70,.08))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.4)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                    ✦ {t('sizeStory')||'Story'}
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="sparkle" s={14}/>{t('sizeStory')||'Story'}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(255,210,140,.55)',marginTop:4,letterSpacing:0,fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
                   </button>
                   <button onClick={()=>{
@@ -27424,11 +28532,11 @@ Composition rules:
                     }
                     else { setRecordIntent('audio'); startRecord(); }
                   }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                    ⏺ {t('saveAudioLabel')||'Audio'}
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="rec" s={14}/>{t('saveAudioLabel')||'Audio'}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{includeSourceThumb ? (t('saveAudioHintImg')!=='saveAudioHintImg'?t('saveAudioHintImg'):'image + audio · save to files') : (t('saveAudioHint')||'audio · save to files')}</div>
                   </button>
                   <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                    ♫ {t('scoreExport')}
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="notes" s={14}/>{t('scoreExport')}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
                   </button>
                 </>
@@ -27483,33 +28591,42 @@ Composition rules:
                       try{ await unlockAudio(); }catch(_){}
                       await exportImage('story', true, audioBlob, audioName, true);
                     }} style={{padding:'14px',background:'linear-gradient(135deg,rgba(255,215,120,.16),rgba(220,170,70,.08))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.4)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                      ✦ {t('sizeStory')||'Story'}
+                      <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="sparkle" s={14}/>{t('sizeStory')||'Story'}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(255,210,140,.55)',marginTop:4,letterSpacing:0,fontWeight:400}}>{isImportedMedia ? (t('storyImageHintNoAudio')||'painting · for IG / TikTok') : (t('storyImageHint')||'painting + audio · for IG / TikTok')}</div>
                     </button>
                   )}
                   <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                    🖥 {t('sizeWeb')}
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="web" s={14}/>{t('sizeWeb')}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizeWebHint')}</div>
                   </button>
                   <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('print', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                      🖨 {t('sizePrint')}
+                      <TxIcon n="print" s={14}/>
+                      {({EN:'Print A0 · 300+ DPI',SK:'Tlač A0 · 300+ DPI',DE:'Druck A0 · 300+ DPI',FR:'Impression A0 · 300+ DPI',ES:'Impresión A0 · 300+ DPI',PT:'Impressão A0 · 300+ DPI',zh:'打印 A0 · 300+ DPI',zhTW:'列印 A0 · 300+ DPI',ja:'印刷 A0 · 300+ DPI'})[lang]||'Print A0 · 300+ DPI'}
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
-                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizePrintHint')}</div>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'~20× · large file · print-ready',SK:'~20× · veľký súbor · pripravené na tlač',DE:'~20× · große Datei · druckfertig',FR:'~20× · gros fichier · prêt à imprimer',ES:'~20× · archivo grande · listo para imprimir',PT:'~20× · ficheiro grande · pronto a imprimir',zh:'~20× · 大文件 · 可印刷',zhTW:'~20× · 大檔案 · 可列印',ja:'~20× · 大きいファイル · 印刷可能'})[lang]||'~20× · large file · print-ready'}</div>
+                  </button>
+                  <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                      <TxIcon n="gallery" s={14}/>
+                      {({EN:'Gallery · vector',SK:'Galéria · vektor',DE:'Galerie · Vektor',FR:'Galerie · vectoriel',ES:'Galería · vector',PT:'Galeria · vetor',zh:'画廊 · 矢量',zhTW:'畫廊 · 向量',ja:'ギャラリー · ベクター'})[lang]||'Gallery · vector'}
+                      {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
+                    </span>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'SVG · fine-art print · any DPI',SK:'SVG · fine-art tlač · ľubovoľné DPI',DE:'SVG · Fine-Art-Druck · beliebige DPI',FR:'SVG · impression fine-art · DPI au choix',ES:'SVG · impresión fine-art · cualquier DPI',PT:'SVG · impressão fine-art · qualquer DPI',zh:'SVG · 美术级打印 · 任意 DPI',zhTW:'SVG · 美術級列印 · 任意 DPI',ja:'SVG · ファインアート印刷 · 任意の DPI'})[lang]||'SVG · fine-art print · any DPI'}</div>
                   </button>
                   {/* Audio + Score export hidden for MIDI/Audio/Score sources
                       (isImportedMedia) — exporting them back to the same file
                       format the user just imported is redundant. */}
                   {!isImportedMedia && (
                     <button onClick={()=>{ setShowSizePicker(false); saveAudio(true); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                      ⏺ {t('saveAudioLabel')||'Audio'}
+                      <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="rec" s={14}/>{t('saveAudioLabel')||'Audio'}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
                     </button>
                   )}
                   {!isImportedMedia && (
                     <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                      ♫ {t('scoreExport')}
+                      <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="notes" s={14}/>{t('scoreExport')}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
                     </button>
                   )}
@@ -28669,6 +29786,34 @@ Composition rules:
                     <button key={k} onClick={()=>togglePal(k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
                       <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:6,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'1rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left'}}>{_sent(_palLabels[k])}</span>
+                    </button>
+                    );
+                  })}
+                </div>
+                <div className="pf-setup-done-pal" style={{display:'none'}}>
+                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
+                </div>
+              </div>
+              <div className="pf-setup-tone">
+                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
+                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone'}</span>
+                </div>
+                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
+                  {[
+                    {k:'normal', label:({EN:'Normal',SK:'Normálny',DE:'Normal',FR:'Normal',ES:'Normal',PT:'Normal',zh:'正常',zhTW:'正常',ja:'ノーマル'})[lang]||'Normal',  hint:({EN:'Raw palette colours',SK:'Surové farby palety',DE:'Reine Palettenfarben',FR:'Couleurs brutes de la palette',ES:'Colores puros de la paleta',PT:'Cores puras da paleta',zh:'纯调色板色彩',zhTW:'純調色板色彩',ja:'パレットそのままの色'})[lang]||'Raw palette colours'},
+                    {k:'mix',    label:({EN:'Mix',SK:'Mix',DE:'Mix',FR:'Mix',ES:'Mix',PT:'Mix',zh:'混合',zhTW:'混合',ja:'ミックス'})[lang]||'Mix',                       hint:({EN:'Energy modulates saturation',SK:'Energia moduluje sýtosť',DE:'Energie moduliert die Sättigung',FR:'L\u2019énergie module la saturation',ES:'La energía modula la saturación',PT:'A energia modula a saturação',zh:'能量调节饱和度',zhTW:'能量調節飽和度',ja:'エネルギーが彩度を変調'})[lang]||'Energy modulates saturation'},
+                    {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel', hint:({EN:'Soft, lighter colours',SK:'Jemné, svetlejšie farby',DE:'Sanftere, hellere Farben',FR:'Couleurs douces, plus claires',ES:'Colores suaves, más claros',PT:'Cores suaves, mais claras',zh:'柔和浅淡的色彩',zhTW:'柔和淺淡的色彩',ja:'柔らかく明るい色'})[lang]||'Soft, lighter colours'}
+                  ].map(o=>{
+                    const sel = tone===o.k;
+                    return (
+                    <button key={o.k} onClick={()=>setTone(o.k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:sel?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'}}>
+                      <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(sel?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
+                        {sel && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
+                      </span>
+                      <span style={{flex:1,display:'flex',flexDirection:'column'}}>
+                        <span>{o.label}</span>
+                        <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{o.hint}</span>
+                      </span>
                     </button>
                     );
                   })}
