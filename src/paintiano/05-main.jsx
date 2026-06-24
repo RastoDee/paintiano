@@ -11896,7 +11896,10 @@ Composition rules:
               <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:okMin?'rgba(247,243,236,.85)':'rgba(247,243,236,.25)',width:34,height:34,borderRadius:'50%',cursor:okMin?'pointer':'default',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
             </div>
             <div className="pf-setup-body" style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:isDesktop?'row':'column',gap:isDesktop?32:22,alignItems:'flex-start'}}>
-              <div className="pf-setup-palettes" style={{flex:isDesktop?'1 1 0':'0 0 auto',minWidth:0,width:isDesktop?'auto':'100%'}}>
+              {/* LEFT COLUMN — Palettes on top, Tone underneath. Both share the
+                  same column width on desktop; both stack natural on mobile. */}
+              <div className="pf-setup-leftcol" style={{flex:isDesktop?'1 1 0':'0 0 auto',minWidth:0,width:isDesktop?'auto':'100%',display:'flex',flexDirection:'column',gap:22}}>
+              <div className="pf-setup-palettes">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupPalettesTitle','Palettes')}</span>
                   <span style={{display:'inline-flex',gap:14,fontSize:(.6*effScale)+'rem',letterSpacing:0}}>
@@ -11919,7 +11922,7 @@ Composition rules:
                   <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
                 </div>
               </div>
-              <div className="pf-setup-tone" style={{flex:isDesktop?'1 1 0':'0 0 auto',minWidth:0,width:isDesktop?'auto':'100%'}}>
+              <div className="pf-setup-tone">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone'}</span>
                 </div>
@@ -11944,6 +11947,7 @@ Composition rules:
                   })}
                 </div>
               </div>
+              </div>{/* /pf-setup-leftcol */}
               <div className="pf-setup-artists" style={{flex:isDesktop?'1 1 0':'0 0 auto',minWidth:0,width:isDesktop?'auto':'100%'}}>
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupArtistsTitle','Artists')}</span>
