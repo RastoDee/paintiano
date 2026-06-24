@@ -9397,21 +9397,37 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
     return [r,g,b];
   };
-  // Pick accent from gc() chord color. `rnd` is the element's seeded RNG so the
-  // chosen colour is STABLE across frames — Math.random() here made every repaint
-  // re-roll the colour, which read as constant blinking for most of the song.
+  // Pick accent from chord identity (pitch class) — NOT from the tone-shifted
+  // RGB, so Pure/Real/Pastel all assign the SAME accent slot to the same chord.
+  // Previously the snap decision branched on (r,g,b) of the chord-colour: in
+  // Pastel the colour was a soft rose/sage/cream which didn't trip any of the
+  // r>180&&g<100 etc. snap conditions, so the function fell to the default
+  // branch — which called rr() and consumed a seed step. Every downstream
+  // rnd() call then drew a different value, shifting positions and shape
+  // identities across the painting. Snap by pitch class instead: tone-stable.
   // chord param: setting _curE right before sampling lets Real mode route to
   // the right palette band (pastel for piano, dark for forte).
   const accent=(r,g,b,rnd,chord)=>{
-    const rr = (typeof rnd==='function') ? rnd : Math.random;
     const pick = (slot)=> chord ? _miroAccentRGB(slot, chord, gc, isBW) : _tonedRGB({RED,GRN,BLU,YEL,ORA,SKIN}[slot] || RED);
-    if(isBW){const p=['RED','BLU','YEL','ORA'];return pick(p[Math.floor(rr()*p.length)]);}
-    if(r>180&&g<100&&b<100) return pick('RED');
-    if(g>r&&g>b) return pick('GRN');
-    if(b>r&&b>g) return pick('BLU');
-    if(r>160&&g>140&&b<80) return pick('YEL');
-    if(r>160&&g>80&&b<80) return pick('ORA');
-    return pick(['RED','GRN','BLU','YEL','ORA'][Math.floor(rr()*5)]);
+    // First-note pitch class drives the accent slot deterministically.
+    const notes = chord && (chord.n || chord.notes);
+    const firstM = (notes && notes.length) ? (notes[0].m!=null?notes[0].m:notes[0]) : 60;
+    const pc = ((firstM|0) % 12 + 12) % 12;
+    if(isBW){
+      // BW: 4 slots cycling on pitch class (no RGB branching, no RNG).
+      const p = ['RED','BLU','YEL','ORA'];
+      return pick(p[pc % p.length]);
+    }
+    // Map 12 pitch classes to the 5 Miró slots — keeps the per-chord identity
+    // stable and gives a roughly even distribution across the canvas.
+    //  C, G       -> RED       (warm anchor of harmony)
+    //  E, A       -> GRN       (cool anchor)
+    //  D, B       -> BLU
+    //  F, F#      -> YEL
+    //  D#, G#, A# -> ORA
+    //  C#         -> RED again (12 → 5 fold, doesn't matter visually)
+    const SLOT = ['RED','RED','BLU','ORA','GRN','YEL','YEL','RED','ORA','GRN','ORA','BLU'];
+    return pick(SLOT[pc]);
   };
 
   // Chord color helper
@@ -9650,17 +9666,15 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     _setCurE(chord && chord._E);
     const notes=chord&&(chord.n||chord.notes||[]);
     const pick = (slot)=> chord ? _miroAccentRGB(slot, chord, gc, isBW) : _tonedRGB({RED,GRN,BLU,YEL,ORA,SKIN}[slot] || RED);
-    if(!notes||!notes.length) return pick(['RED','GRN','BLU','YEL','ORA'][idx%5]);
-    let aR=0,aG=0,aB=0,k=0; for(const n of notes){const m=n.m!==undefined?n.m:n,v=n.v!==undefined?n.v:80;const[r,g,b]=gc(m,v);aR+=r;aG+=g;aB+=b;k++;}
-    // snap to nearest Miró accent for that flat poster character
-    const r=aR/k,g=aG/k,b=aB/k;
-    if(isBW) return _tonedRGB(ACC[idx%ACC.length]);
-    if(r>180&&g<100&&b<100) return pick('RED');
-    if(g>r&&g>b) return pick('GRN');
-    if(b>r&&b>g) return pick('BLU');
-    if(r>160&&g>140&&b<80) return pick('YEL');
-    if(r>150&&g>80&&b<90) return pick('ORA');
-    return pick(['RED','GRN','BLU','YEL','ORA'][idx%5]);
+    // Snap by pitch class (tone-stable) instead of by RGB (tone-shifts).
+    // See phaseA accent() for the same fix. SLOT keeps the per-chord identity
+    // stable across Pure/Real/Pastel so structural decisions downstream don't
+    // shift between tones.
+    const firstM = (notes && notes.length) ? (notes[0].m!=null?notes[0].m:notes[0]) : 60;
+    const pc = ((firstM|0) % 12 + 12) % 12;
+    if(isBW) return _tonedRGB(ACC[pc % ACC.length]);
+    const SLOT = ['RED','RED','BLU','ORA','GRN','YEL','YEL','RED','ORA','GRN','ORA','BLU'];
+    return pick(SLOT[pc]);
   };
 
   for(let p=0;p<paintCount;p++){
