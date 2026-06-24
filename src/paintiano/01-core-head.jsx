@@ -220,20 +220,43 @@ const PF_STYLE = `
         .pf-setup-body {
           display: grid !important;
           grid-template-columns: 1fr 1fr !important;
-          grid-template-areas: "pal art" "tone art" "done art" !important;
+          grid-template-areas: "pal art" "tone tone" "done done" !important;
           gap: 0 16px !important;
           align-items: start !important;
         }
         .pf-setup-palettes { grid-area: pal; display: flex; flex-direction: column; }
-        .pf-setup-tone     { grid-area: tone; display: flex; flex-direction: column; margin-top: 22px; }
+        /* Tone goes full-width BELOW the two columns in a horizontal row of 3
+           buttons (Pure / Real / Pastel). Nice spacing from the last artist row. */
+        .pf-setup-tone     {
+          grid-area: tone;
+          display: flex;
+          flex-direction: column;
+          margin-top: 36px;
+          padding: 0 8px;
+        }
         .pf-setup-artists  { grid-area: art; }
-        /* Tone column inherits the same look as palettes: text right-aligned,
-           radio circle at the left edge. Mirrors .pf-setup-palettes rules. */
-        .pf-setup-tone .pf-setup-grid { grid-template-columns: 1fr !important; }
-        .pf-setup-tone .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
+        /* Tone row: 3 equal buttons side-by-side, label centered above. */
         .pf-setup-tone > div:first-child {
-          justify-content: flex-start !important;
+          justify-content: center !important;
           gap: 16px !important;
+          padding-bottom: 6px !important;
+        }
+        .pf-setup-tone .pf-setup-grid {
+          grid-template-columns: 1fr 1fr 1fr !important;
+          gap: 8px !important;
+        }
+        /* Each tone button: radio dot on top OR left, label centered. We keep
+           the existing button layout but center text and make the row compact. */
+        .pf-setup-tone .pf-setup-grid > button {
+          flex-direction: column !important;
+          align-items: center !important;
+          text-align: center !important;
+          padding: 10px 6px !important;
+          gap: 6px !important;
+        }
+        .pf-setup-tone .pf-setup-grid > button > :last-child {
+          text-align: center !important;
+          flex: initial !important;
         }
         .pf-setup-palettes .pf-setup-grid,
         .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
