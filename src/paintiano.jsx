@@ -29771,9 +29771,6 @@ Composition rules:
                     );
                   })}
                 </div>
-                <div className="pf-setup-done" style={{display:'none'}}>
-                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
-                </div>
               </div>
               <div className="pf-setup-tone" style={isMobileLandscape ? {flex:'1 1 0',minWidth:0} : undefined}>
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
@@ -29791,13 +29788,16 @@ Composition rules:
                       <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(sel?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
                         {sel && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
                       </span>
-                      <span style={{flex:1,display:'flex',flexDirection:'column'}}>
+                      <span style={{flex:1,display:'flex',flexDirection:'column',textAlign:isMobileLandscape?'center':'right'}}>
                         <span>{o.label}</span>
                         <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{o.hint}</span>
                       </span>
                     </button>
                     );
                   })}
+                </div>
+                <div className="pf-setup-done" style={{display:'none'}}>
+                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
                 </div>
               </div>
               </div>{/* /pf-setup-leftcol */}
