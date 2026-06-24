@@ -2269,6 +2269,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // away in Setup (the element unmounts/clears). Repaint the already-played
       // mosaic 0..disp from pixel data so returning via "← Canvas" shows the
       // progress that was on screen before, instead of a blank image overlay.
+      // BUT: if the user has never started playback yet (playedOnce=false),
+      // changing the colour palette must NOT pre-paint the raster grid over the
+      // original — at that point the user just expects to preview the source
+      // image. The raster only belongs there after Play has actually run.
+      if(!playedOnce) return;
       try{
         const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
         const px=pixelRef.current;
