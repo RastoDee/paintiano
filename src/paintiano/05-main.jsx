@@ -737,114 +737,6 @@ function createSvgCtx(width, height){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// §6d  AI COMPOSE PIANO-TECHNIQUE POST-PROCESSORS
-// ─────────────────────────────────────────────────────────────────────────────
-//   The AI returns raw notes [pitch, dur, startBeat, vel]; noteArr2events groups
-//   them into chord-events {n:[{m,v,startMs,durMs}], startMs}. Pretty good, but
-//   the music sounds flat without the same expressive layer the scan renderer
-//   applies in Phase 3 (per-voice articulation, tremolo on sustained chords,
-//   melody-repetition crispness). These three pure functions mirror that layer
-//   for AI events — no scan dependencies, no `band/cg/runLen/_chroma`. Each is
-//   idempotent and runs on events in place; safe to chain.
-//
-//   1) articulation — top voice (melody) gets +12% velocity, bottom voice
-//      (bass) gets −8%, so a singable line emerges over a settled foundation.
-//   2) melody repetition — when the top pitch repeats across adjacent chords,
-//      the SECOND and later strikes get a small velocity boost (re-articulates
-//      instead of fading into a tie) so the motif rings out.
-//   3) tremolo — long held chords (≥ ~700ms) get re-struck every ~180ms at
-//      slightly varying velocity for sustain that sounds like a real player
-//      keeping the note alive (piano can't actually sustain like strings).
-function _aiArticulation(evts){
-  for(const e of evts){
-    if(!e || !e.n || e.n.length<2) continue;
-    // Sort by midi pitch to find top and bottom voices.
-    const sorted=e.n.slice().sort((a,b)=>a.m-b.m);
-    const bass=sorted[0], top=sorted[sorted.length-1];
-    // Boost top voice (melody projection).
-    top.v=Math.min(127, Math.round(top.v*1.12));
-    // Settle bass voice (foundational, not competing).
-    bass.v=Math.max(20, Math.round(bass.v*0.92));
-  }
-  return evts;
-}
-function _aiMelodyRepetition(evts){
-  if(evts.length<2) return evts;
-  // Identify the "melody" pitch of each chord as its top voice.
-  const topOf=e=>{ if(!e||!e.n||!e.n.length) return null; let mx=-1; for(const n of e.n){ if(n.m>mx) mx=n.m; } return mx; };
-  let runStart=0;
-  for(let i=1;i<=evts.length;i++){
-    const cur=i<evts.length?topOf(evts[i]):null;
-    const prev=topOf(evts[i-1]);
-    if(cur!==prev || i===evts.length){
-      // End of a run of identical top pitches. If the run is ≥2, boost
-      // velocities of the 2nd..Nth strikes so the repeated note re-articulates
-      // crisply (a real player would re-attack, not let the tie fade).
-      if(i-runStart>=2 && prev!=null){
-        for(let j=runStart+1;j<i;j++){
-          const e=evts[j]; if(!e||!e.n) continue;
-          for(const n of e.n){
-            if(n.m===prev){
-              n.v=Math.min(118, Math.max(40, Math.round(n.v*1.08)));
-              // Slightly shorter duration so the re-strike feels deliberate,
-              // not smeared into the next chord.
-              n.durMs=Math.max(80, Math.round(n.durMs*0.88));
-            }
-          }
-        }
-      }
-      runStart=i;
-    }
-  }
-  return evts;
-}
-function _aiTremolo(evts){
-  // Insert intermediate re-strikes for any chord whose notes are sustained
-  // ≥ TREM_THRESHOLD_MS. New events go into a returned array in chronological
-  // order. Velocity jitters mildly so the re-strikes don't sound mechanical.
-  const TREM_THRESHOLD_MS=700;
-  const TREM_PERIOD_MS=180;
-  const out=[];
-  // Simple deterministic PRNG (mulberry32) seeded by the run's first event
-  // startMs so the same composition always gets the same tremolo pattern.
-  const seed0=evts[0]?(evts[0].startMs|0)+1:1;
-  let s=seed0>>>0; const rand=()=>{ s|=0; s=(s+0x6D2B79F5)|0; let t=Math.imul(s^(s>>>15),1|s); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; };
-  for(const e of evts){
-    out.push(e);
-    if(!e || !e.n || !e.n.length) continue;
-    // Use the LONGEST note duration in the chord to decide tremolo.
-    let maxDur=0; for(const n of e.n){ if(n.durMs>maxDur) maxDur=n.durMs; }
-    if(maxDur<TREM_THRESHOLD_MS) continue;
-    // How many extra re-strikes fit inside the held span? Leave a 120ms tail.
-    const span=maxDur-120;
-    const k=Math.floor(span/TREM_PERIOD_MS);
-    if(k<2) continue;
-    for(let i=1;i<=k;i++){
-      const offset=Math.round(i*TREM_PERIOD_MS + (rand()*60-30));
-      const restrikeNotes=e.n.map(n=>({
-        m:n.m,
-        v:Math.max(20, Math.min(127, Math.round(n.v * (0.7 + rand()*0.18)))),
-        startMs:e.startMs+offset,
-        durMs:Math.min(160, Math.round(TREM_PERIOD_MS*0.85))
-      }));
-      out.push({n:restrikeNotes, startMs:e.startMs+offset, _tremolo:true});
-    }
-  }
-  // Re-sort by startMs (the original event order plus interleaved re-strikes).
-  out.sort((a,b)=>a.startMs-b.startMs);
-  return out;
-}
-function _aiApplyTechniques(evts){
-  // Order matters: articulation first (sets baseline velocities), then melody
-  // repetition (post-articulation boost on repeated tops), then tremolo
-  // (operates on final velocities to seed its re-strikes).
-  let out=_aiArticulation(evts);
-  out=_aiMelodyRepetition(out);
-  out=_aiTremolo(out);
-  return out;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // §7  MAIN COMPONENT — Paintiano
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
@@ -5865,14 +5757,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // (REC path) we hand off to it instead of plain Play, so the recorder and the
     // composed playback start together — no silent lead-in while AI was thinking.
     const _applyComposition=(parsed)=>{
-      let evts=noteArr2events(parsed.notes,parsed.tempo,{keepLong:true});
+      const evts=noteArr2events(parsed.notes,parsed.tempo,{keepLong:true});
       if(!evts.length) throw new Error('Could not parse composition');
-      // Apply Phase-3 piano techniques (articulation + melody repetition +
-      // tremolo) so AI-composed pieces sound as alive as scan-rendered ones.
-      // These run on the grouped events, are pure/deterministic, and don't
-      // depend on any scan-derived structure — safe for both fresh AI output
-      // and cached replays.
-      try{ evts=_aiApplyTechniques(evts); }catch(_){}
       const _dispT=(parsed.title&&String(parsed.title).trim())||(t('imgComposition')!=='imgComposition'?t('imgComposition'):'Composition');
       pixelRef.current=null;
       imgComposeRef.current=true;
