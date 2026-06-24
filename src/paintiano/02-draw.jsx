@@ -117,6 +117,7 @@ function _velSat(r,g,b,v,floor){
 // colours), Mix and Pastel both turn it on.
 let _curE = 0.5;
 function _setCurE(e){ _curE = (e==null||isNaN(e)) ? 0.5 : e; }
+function _getCurE(){ return _curE; }
 let _mixOn = false;
 function _setMixOn(b){ _mixOn = !!b; }
 
@@ -163,6 +164,11 @@ function _energyTint(r,g,b){
   // A power-curve (|d|^0.55) sharpens the middle so chords at E ~ 0.3 / 0.7
   // already show clear pastel / deep shifts.
   if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
+  // Extreme bands (e<0.20 piano, e>0.80 forte) already have a palette-level
+  // pastel/dark variant applied in gc(), so this continuous-modulation step
+  // is a no-op there. Without this guard we'd over-pastelize and over-darken
+  // the band-switched colour, undoing the discrete palette choice.
+  if(_curE < 0.20 || _curE > 0.80) return [Math.round(r),Math.round(g),Math.round(b)];
   let d=(_curE-0.5)*2;
   if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
   d = Math.sign(d) * Math.pow(Math.abs(d), 0.55);

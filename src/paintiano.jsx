@@ -1080,7 +1080,34 @@ const customColPastel=(m,v=100,palette)=>{
   const[rr,gg,bb]=fromHsl(h0,sat,Math.max(50,Math.min(82,l)));
   return[rr,gg,bb,0.7+(v/127)*0.3];
 };
-// Custom default — Scriabin's Prometheus colour-tone mapping (1910). The
+// ── DARK palette variants ──────────────────────────────────────────────────
+// Mirror to Pastel: same hue identity per pitch class, but locked into a
+// deep/forte band. Used by Real mode for the extreme forte chord band
+// (only the loudest ~20 % of chords route here). Mezzo chords stay in the
+// Pure variant and get continuous _energyTint modulation; this dark
+// variant gives the visual punctuation Mosaic Real needs.
+//   • Saturation:  55-75 %  (slightly less than Pure so darks read as
+//                  "deep" rather than "vivid + dark")
+//   • Lightness:   18-38 %  (genuinely shadow band, but never crushed to
+//                  near-black — keeps the hue identifiable)
+//   • Octave + velocity still modulate within the dark window
+const _octLDark = m => 18 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*20;     // 18..38
+const _darkSat  = v => 55 + (v/127)*20;                                            // 55..75
+const harmColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],         _darkSat(v), _octLDark(m));return[r,g,b,0.72+(v/127)*0.28];};
+const specColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(SPEC_HUE[m%12],    _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
+const phiColDark   =(m,v=100)=>{const[r,g,b]=fromHsl(PHI_HUE[m%12],     _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
+const kontraColDark=(m,v=100)=>{const[r,g,b]=fromHsl(KONTRA_HUE[m%12],  _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
+const customColDark=(m,v=100,palette)=>{
+  const pc=m%12;
+  const hex=(palette&&palette[pc])||'#888888';
+  const[r0,g0,b0]=hexToRgb(hex);
+  const[h0,s0]=toHsl(r0,g0,b0);
+  const isGrey = s0<=0.5;
+  const sat = isGrey ? 0 : _darkSat(v);
+  const l = _octLDark(m) + (v/127-0.5)*4;
+  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(12,Math.min(42,l)));
+  return[rr,gg,bb,0.7+(v/127)*0.3];
+};
 // most famous synaesthete in music history actually saw each pitch class
 // as a specific colour. Follows the circle of fifths around a rainbow:
 //   C  → red                G → rose/orange       D  → yellow
@@ -1701,6 +1728,7 @@ function _velSat(r,g,b,v,floor){
 // colours), Mix and Pastel both turn it on.
 let _curE = 0.5;
 function _setCurE(e){ _curE = (e==null||isNaN(e)) ? 0.5 : e; }
+function _getCurE(){ return _curE; }
 let _mixOn = false;
 function _setMixOn(b){ _mixOn = !!b; }
 
@@ -1747,6 +1775,11 @@ function _energyTint(r,g,b){
   // A power-curve (|d|^0.55) sharpens the middle so chords at E ~ 0.3 / 0.7
   // already show clear pastel / deep shifts.
   if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
+  // Extreme bands (e<0.20 piano, e>0.80 forte) already have a palette-level
+  // pastel/dark variant applied in gc(), so this continuous-modulation step
+  // is a no-op there. Without this guard we'd over-pastelize and over-darken
+  // the band-switched colour, undoing the discrete palette choice.
+  if(_curE < 0.20 || _curE > 0.80) return [Math.round(r),Math.round(g),Math.round(b)];
   let d=(_curE-0.5)*2;
   if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
   d = Math.sign(d) * Math.pow(Math.abs(d), 0.55);
@@ -20463,23 +20496,55 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const gc = useCallback((m,v)=>{
     if(mode==='bw') return bwCol(m,v);
-    // PASTEL tone uses the per-palette pastel variant — a genuine pastel
-    // palette deterministically derived per pitch class, NOT a post-filter.
-    // This preserves hue identity (palette character intact) while locking
-    // saturation + lightness into the pastel band. _energyTint stays a no-op
-    // for pastel (mixOn=false), so pastel is a clean uniform-tone palette
-    // with no per-chord modulation — matching the design goal.
-    const pastel = (tone === 'pastel');
+    // Tone routing:
+    //   Pure   → pure palette variant (no modulation)
+    //   Pastel → pastel palette variant (uniform, no modulation)
+    //   Real   → HYBRID:
+    //     • _curE < 0.20 → pastel variant (extreme piano ~20% of chords)
+    //     • _curE > 0.80 → dark variant   (extreme forte ~20% of chords)
+    //     • 0.20 ≤ _curE ≤ 0.80 → pure variant + continuous _energyTint
+    //       (the mezzo majority ~60%, continuous modulation as before)
+    //   This gives Real the spectrum Mosaic shows: clear pastel accents for
+    //   the quietest moments, clear dark accents for the loudest, and a
+    //   continuous gradient in between. Critically the palette-level
+    //   pastel/dark accents survive overlay alpha-blending (Kandinsky's
+    //   prevailing translucent stacks washed out continuous-only modulation).
+    let band = 'pure';
+    if(tone === 'pastel') band = 'pastel';
+    else if(tone === 'real'){
+      const e = (typeof _getCurE === 'function') ? _getCurE() : 0.5;
+      if(e < 0.20) band = 'pastel';
+      else if(e > 0.80) band = 'dark';
+      else band = 'pure';   // _energyTint will still modulate this within the band
+    }
     let _c;
-    if(mode==='custom')        _c = pastel ? customColPastel(m,v,activePalette) : customCol(m,v,activePalette);
-    else if(mode==='spectral') _c = pastel ? specColPastel(m,v)                 : specCol(m,v);
-    else if(mode==='phi')      _c = pastel ? phiColPastel(m,v)                  : phiCol(m,v);
-    else if(mode==='kontra')   _c = pastel ? kontraColPastel(m,v)               : kontraCol(m,v);
-    else                       _c = pastel ? harmColPastel(m,v)                 : harmCol(m,v);
-    // _energyTint applies the Real tone (mixOn === true) per-chord modulation.
-    // For Pure and Pastel it returns the colour unchanged. _pastelTint is now
-    // a no-op shim (kept for any out-of-band call sites), since pastel is now
-    // a palette-level concept above.
+    if(mode==='custom'){
+      _c = band==='pastel' ? customColPastel(m,v,activePalette)
+         : band==='dark'   ? customColDark(m,v,activePalette)
+         :                   customCol(m,v,activePalette);
+    } else if(mode==='spectral'){
+      _c = band==='pastel' ? specColPastel(m,v)
+         : band==='dark'   ? specColDark(m,v)
+         :                   specCol(m,v);
+    } else if(mode==='phi'){
+      _c = band==='pastel' ? phiColPastel(m,v)
+         : band==='dark'   ? phiColDark(m,v)
+         :                   phiCol(m,v);
+    } else if(mode==='kontra'){
+      _c = band==='pastel' ? kontraColPastel(m,v)
+         : band==='dark'   ? kontraColDark(m,v)
+         :                   kontraCol(m,v);
+    } else {
+      _c = band==='pastel' ? harmColPastel(m,v)
+         : band==='dark'   ? harmColDark(m,v)
+         :                   harmCol(m,v);
+    }
+    // _energyTint applies continuous modulation only when band==='pure' AND
+    // tone==='real' (controlled by _mixOn). For pastel/dark bands _mixOn
+    // stays on but _energyTint passes through with negligible shift inside
+    // its 0.20-0.80 d-band — the band-switched palette is already at the
+    // target tone. For Pure mode and Pastel mode tone-effect-wise mixOn is
+    // off, so this is a no-op.
     const _t=_energyTint(_c[0],_c[1],_c[2]);
     let _r=_t[0],_g=_t[1],_b=_t[2];
     try{ if(typeof _pastelTint==='function'){ const _p=_pastelTint(_r,_g,_b); _r=_p[0]; _g=_p[1]; _b=_p[2]; } }catch(_){}
