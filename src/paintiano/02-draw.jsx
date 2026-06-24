@@ -1799,6 +1799,7 @@ function matissePhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // pure, bold tones. Pastel tone skips the stretch so the cut-outs stay soft.
   const flat=(idx)=>{
     const chord=chords[Math.min(cn-1,Math.floor((idx/Math.max(1,12))*cn))];
+    _setCurE(chord && chord._E);
     const notes=chord&&(chord.n||chord.notes||[]);
     let r=200,g=70,b=40;
     if(notes&&notes.length){let aR=0,aG=0,aB=0,k=0;for(const n of notes){const m=n.m!==undefined?n.m:n,v=n.v!==undefined?n.v:80;const[cr,cg,cb]=gc(m,v);aR+=cr;aG+=cg;aB+=cb;k++;}r=aR/k;g=aG/k;b=aB/k;}
@@ -2813,6 +2814,7 @@ function pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const f = figureSlots[fi];
     const ci = Math.min(cn-1, Math.floor(f.chordPos * cn));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const {rgb} = _picChord(chords, ci, gc, isBW);
     const W = CW*0.13*f.scale, H = CH*0.55*f.scale;
     ctx.save();
@@ -3110,13 +3112,23 @@ function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const grey=(r,g,b)=>{const v=Math.round(r*0.299+g*0.587+b*0.114);return[v,v,v];};
   const _pal=[[60,110,70],[200,55,40],[100,55,130],[50,90,150],[210,170,30],[220,200,170],[15,8,18],[180,80,50]];
   const pal=isBW?_pal.map(([r,g,b])=>grey(r,g,b)):_pal;
+  // Tone-adjust helper: feed colour through Real (energy) + Pastel filters so
+  // Picasso's hard-coded palette breathes with the music. No-op in Pure mode.
+  const _tonedRGB = (r,g,b)=>{
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return [r,g,b];
+  };
   const pickColor=(r,g,b,hint,rnd)=>{
     const lum=(r*0.299+g*0.587+b*0.114)/255;
     let c;
     if(hint%3===0){if(lum<0.25)c=pal[6];else if(lum<0.45)c=pal[3];else if(lum<0.65)c=pal[0];else if(lum<0.85)c=pal[4];else c=pal[5];}
     else if(hint%3===1){if(r>g&&r>b)c=pal[1];else if(g>r&&g>b)c=pal[0];else if(b>r&&b>g)c=pal[2];else c=pal[7];}
     else{c=pal[hint%pal.length];}
-    return[Math.max(0,Math.min(255,c[0]+Math.round((rnd()-0.5)*28))),Math.max(0,Math.min(255,c[1]+Math.round((rnd()-0.5)*28))),Math.max(0,Math.min(255,c[2]+Math.round((rnd()-0.5)*28)))];
+    const tr=Math.max(0,Math.min(255,c[0]+Math.round((rnd()-0.5)*28)));
+    const tg=Math.max(0,Math.min(255,c[1]+Math.round((rnd()-0.5)*28)));
+    const tb=Math.max(0,Math.min(255,c[2]+Math.round((rnd()-0.5)*28)));
+    return _tonedRGB(tr,tg,tb);
   };
   // MAX_PLANES grows with chord count and is capped to prevent runaway subdivision
   // (each plane = one subdivision step). Curve calibrated so short pieces stay
@@ -3146,6 +3158,7 @@ function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   planes.slice(0,paintCount).forEach((poly,pIdx)=>{
     const scaled=poly.map(v=>({x:v.x*CW,y:v.y*CH}));
     const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/MAX_PLANES)))];
+    _setCurE(chord && chord._E);
     const notes=chord.n||chord.notes||[];
     let aR=0,aG=0,aB=0,aA=0,aV=0,c=0;
     for(const note of notes){const m=note.m!==undefined?note.m:note;const v=note.v!==undefined?note.v:80;const[r,g,b,a]=gc(m,v);aR+=r;aG+=g;aB+=b;aA+=(a||0.9);aV+=v;c++;}
@@ -4237,6 +4250,7 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
     const gi = (row * COLS + col) % cn;
     const idx = Math.min(cn-1, gi);
     const chord = chords[idx];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) return [120,100,140];
     let R=0,G=0,B=0,c=0;
@@ -6430,6 +6444,7 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     const y0 = b*bandH, y1 = y0+bandH;
     // Wave params modulated by the chord at this band.
     const chord = chords[Math.min(cn-1, Math.floor((b/BANDS)*cn))];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     const topNote = notes && notes.length ? (notes[0].m!==undefined?notes[0].m:notes[0]) : 60;
     const vel = notes && notes.length && notes[0].v!==undefined ? notes[0].v : 80;
@@ -7484,6 +7499,7 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
   function sampleChordColor(t, lightLift){
     const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
     const note = notes[0];
     const m = note.m !== undefined ? note.m : note;
@@ -7544,6 +7560,7 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
     const w = 1 + rnd() * 3;
     const ci = Math.floor((x / CW) * Math.min(lim, cn)) % Math.max(1, cn);
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) continue;
     const note = notes[Math.floor(rnd() * notes.length)];
@@ -7585,6 +7602,7 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   function chordColor(t){
     const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
     const note = notes[0];
     const m = note.m !== undefined ? note.m : note;
@@ -7650,6 +7668,7 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
     const x = (rnd() - 0.3) * CW;
     const h = CH * (0.015 + rnd() * 0.04);
     const chord = chords[i % Math.max(1, cn)];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) continue;
     const note = notes[i % notes.length];
@@ -7728,6 +7747,7 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
   function chordCol(t){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
     const note = notes[0];
     const m = note.m !== undefined ? note.m : note;
@@ -7738,6 +7758,7 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
   function chordColIdx(i){
     const ci = Math.min(cn-1, Math.max(0, i%cn));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
     const note = notes[i % notes.length];
     const m = note.m !== undefined ? note.m : note;
@@ -7836,6 +7857,7 @@ function monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode){
   function chordCol(t){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
     const note = notes[0];
     const m = note.m !== undefined ? note.m : note;
@@ -7846,6 +7868,7 @@ function monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode){
   function chordColIdx(i){
     const ci = Math.min(cn-1, Math.max(0, i%cn));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
     const note = notes[i % notes.length];
     const m = note.m !== undefined ? note.m : note;
@@ -7938,6 +7961,7 @@ function monetPhaseBridgeMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   function chordCol(t){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
     const note = notes[0];
     const m = note.m !== undefined ? note.m : note;
@@ -7948,6 +7972,7 @@ function monetPhaseBridgeMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   function chordColIdx(i){
     const ci = Math.min(cn-1, Math.max(0, i%cn));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
     const note = notes[i % notes.length];
     const m = note.m !== undefined ? note.m : note;
@@ -8044,6 +8069,7 @@ function monetPhaseWisteria(ctx, CW, CH, chords, lim, gc, ss, mode){
   function chordCol(t){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
     const note = notes[0];
     const m = note.m !== undefined ? note.m : note;
@@ -8054,6 +8080,7 @@ function monetPhaseWisteria(ctx, CW, CH, chords, lim, gc, ss, mode){
   function chordColIdx(i){
     const ci = Math.min(cn-1, Math.max(0, i%cn));
     const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
     const note = notes[i % notes.length];
     const m = note.m !== undefined ? note.m : note;
@@ -8176,6 +8203,7 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
   let maxChordSize = 1;
   for(let i = 0; i < lim; i++){
     const chord = chords[i];
+    _setCurE(chord && chord._E);
     if(!chord) continue;
     const notes = chord.n || chord.notes;
     if(!notes || !notes.length) continue;
@@ -8334,6 +8362,7 @@ function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
   for(let i = 0; i < bands; i++){
     const ci = Math.floor((i / bands) * lim);
     const chord = chords[ci] || chords[0];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [];
     const note = notes[0] || {m:60,v:80};
     const m = note.m!==undefined?note.m:note;
@@ -8448,6 +8477,7 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
   for(let i = 0; i < blossomCount; i++){
     const ci = i % lim;
     const chord = chords[ci] || chords[0];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [];
     const note = notes[i % Math.max(1, notes.length)] || {m:60,v:80};
     const m = note.m!==undefined?note.m:note;
@@ -8506,6 +8536,7 @@ function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
   for(let i = 0; i < 4; i++){
     const ci = Math.floor((i / 4) * lim);
     const chord = chords[ci] || chords[0];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [];
     const note = notes[0] || {m:60,v:80};
     const m = note.m!==undefined?note.m:note;
@@ -8631,6 +8662,7 @@ function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
   for(let i = 0; i < houseCount; i++){
     const ci = Math.floor((i / houseCount) * lim);
     const chord = chords[ci] || chords[0];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [];
     const note = notes[0] || {m:60,v:80};
     const m = note.m!==undefined?note.m:note;
@@ -8755,6 +8787,7 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   for(let i = 0; i < reedCount; i++){
     const ci = i % lim;
     const chord = chords[ci] || chords[0];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [];
     const note = notes[0] || {m:60,v:80};
     const m = note.m !== undefined ? note.m : note;
@@ -9025,6 +9058,7 @@ function kusamaPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed){
 // Shared chord-colour sampler for new Kusama phases.
 function _kusChord(chords,idx,gc){
   const chord=chords[Math.min(chords.length-1,Math.max(0,idx))];
+  _setCurE(chord && chord._E);
   const notes=chord&&(chord.n||chord.notes||[]);
   let aR=0,aG=0,aB=0,aV=0,c=0;
   if(notes&&notes.length)for(const note of notes){const m=note.m!==undefined?note.m:note;const v=note.v!==undefined?note.v:80;const[r,g,b]=gc(m,v);aR+=r;aG+=g;aB+=b;aV+=v;c++;}
@@ -9269,6 +9303,7 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 
   // Chord color helper
   const chordRGB=(chord)=>{
+    _setCurE(chord && chord._E);
     const notes=chord.n||chord.notes||[];
     if(!notes.length) return[120,100,180];
     let aR=0,aG=0,aB=0,c=0;
@@ -9311,6 +9346,7 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     // Chord tied to the element's FIXED slot (p/TOTAL), NOT the moving playhead,
     // so each object keeps its colour for the whole song (no per-note recolour).
     const chord=chords[Math.floor((p/TOTAL)*_cnA)%_cnA];
+    _setCurE(chord && chord._E);
     const[cR,cG,cB]=chordRGB(chord);
     const ac=accent(cR,cG,cB,rnd);
     const ax=CW*(0.03+rnd()*0.94);
@@ -9489,20 +9525,28 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     return best;
   };
 
+  // Tone-adjust helper: Real -> energy modulates, Pastel -> soft filter.
+  const _tonedRGB = (c)=>{
+    let r=c[0], g=c[1], b=c[2];
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return [r,g,b];
+  };
   const chordRGB=(idx)=>{
     const chord=chords[Math.min(cn-1,Math.floor((idx/Math.max(1,paintCount))*cn))];
+    _setCurE(chord && chord._E);
     const notes=chord&&(chord.n||chord.notes||[]);
-    if(!notes||!notes.length) return ACC[idx%ACC.length];
+    if(!notes||!notes.length) return _tonedRGB(ACC[idx%ACC.length]);
     let aR=0,aG=0,aB=0,k=0; for(const n of notes){const m=n.m!==undefined?n.m:n,v=n.v!==undefined?n.v:80;const[r,g,b]=gc(m,v);aR+=r;aG+=g;aB+=b;k++;}
     // snap to nearest Miró accent for that flat poster character
     const r=aR/k,g=aG/k,b=aB/k;
-    if(isBW) return ACC[idx%ACC.length];
-    if(r>180&&g<100&&b<100) return RED;
-    if(g>r&&g>b) return GRN;
-    if(b>r&&b>g) return BLU;
-    if(r>160&&g>140&&b<80) return YEL;
-    if(r>150&&g>80&&b<90) return ORA;
-    return ACC[idx%ACC.length];
+    if(isBW) return _tonedRGB(ACC[idx%ACC.length]);
+    if(r>180&&g<100&&b<100) return _tonedRGB(RED);
+    if(g>r&&g>b) return _tonedRGB(GRN);
+    if(b>r&&b>g) return _tonedRGB(BLU);
+    if(r>160&&g>140&&b<80) return _tonedRGB(YEL);
+    if(r>150&&g>80&&b<90) return _tonedRGB(ORA);
+    return _tonedRGB(ACC[idx%ACC.length]);
   };
 
   for(let p=0;p<paintCount;p++){
@@ -9651,10 +9695,22 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const units=Math.max(10,Math.min(220,cn*2));
   const vis=Math.max(1,Math.ceil(N/cn*units));
   const cols=[P.RED,P.GRN,P.BLU,P.YEL,P.BLK,P.WHT];
+  // Tone-adjust helper: Real -> energy, Pastel -> soft. No-op in Pure.
+  const _tonedRGB = (c)=>{
+    let r=c[0], g=c[1], b=c[2];
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return [r,g,b];
+  };
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+701,ss,0,0);
+    // Set per-chord energy so the carnival's flat poster palette breathes
+    // with the music in Real tone (carnival pieces fixed colours otherwise).
+    const ci = Math.min(cn-1, Math.floor((i/vis)*cn));
+    const chord = chords[ci];
+    _setCurE(chord && chord._E);
     const x=rnd()*CW,y=rnd()*CH,s=Math.min(CW,CH)*(0.012+rnd()*0.03);
-    const col=cols[(rnd()*cols.length)|0];ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
+    const col=_tonedRGB(cols[(rnd()*cols.length)|0]);ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
     const kind=(rnd()*4)|0;
     if(kind===0){ctx.beginPath();ctx.arc(x,y,s,0,Math.PI*2);ctx.fill();}
     else if(kind===1){ctx.fillRect(x-s,y-s*0.4,s*2,s*0.8);}
