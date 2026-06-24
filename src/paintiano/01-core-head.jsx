@@ -220,10 +220,21 @@ const PF_STYLE = `
         .pf-setup-body {
           display: grid !important;
           grid-template-columns: 1fr 1fr !important;
+          grid-template-areas: "pal art" "tone art" "done art" !important;
           gap: 0 16px !important;
           align-items: start !important;
         }
-        .pf-setup-palettes { display: flex; flex-direction: column; }
+        .pf-setup-palettes { grid-area: pal; display: flex; flex-direction: column; }
+        .pf-setup-tone     { grid-area: tone; display: flex; flex-direction: column; margin-top: 22px; }
+        .pf-setup-artists  { grid-area: art; }
+        /* Tone column inherits the same look as palettes: text right-aligned,
+           radio circle at the left edge. Mirrors .pf-setup-palettes rules. */
+        .pf-setup-tone .pf-setup-grid { grid-template-columns: 1fr !important; }
+        .pf-setup-tone .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
+        .pf-setup-tone > div:first-child {
+          justify-content: flex-start !important;
+          gap: 16px !important;
+        }
         .pf-setup-palettes .pf-setup-grid,
         .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
         /* PALETTES col: text right-aligned (toward center), checkbox at left edge */
@@ -690,23 +701,42 @@ const PF_STYLE = `
              wider screens. The base 2-col layout + 2-thumb rules apply
              globally; here we just swap to 3-col grid and pin DONE. */
           .pf-setup-dialog { max-width: 860px !important; }
+          /* Desktop + tablet portrait/landscape: 2-col layout. Tone sits under
+             Palettes in the left column; HOTOVO chip gets its own row below
+             Tone; Artists fill the right column across all rows. */
           .pf-setup-body {
-            grid-template-columns: 1fr 1fr 1fr !important;
-            grid-template-areas: "pal mid art" !important;
+            grid-template-columns: 1fr 1fr !important;
+            grid-template-areas: "pal art" "tone art" "done art" !important;
             gap: 0 28px !important;
           }
-          .pf-setup-palettes { grid-area: pal; height: 100%; }
+          .pf-setup-palettes { grid-area: pal; height: auto; }
+          .pf-setup-tone     { grid-area: tone; }
           .pf-setup-artists  { grid-area: art; }
-          /* DONE moves out of the modal footer and sits at the bottom of the left
-             column. Hide the original footer; show a left-column DONE instead. */
+          /* DONE goes to its OWN grid row at the bottom of the left column.
+             Hide the modal footer; show a left-column DONE instead. */
           .pf-setup-footer { display: none !important; }
           .pf-setup-palettes .pf-setup-done {
             display: flex !important;
-            justify-content: center;
-            margin-top: auto;
-            padding-top: 22px;
+            justify-content: flex-start;
+            margin-top: 22px;
+            padding: 0;
+            grid-area: done;
           }
           .pf-setup-palettes .pf-setup-done > button { width: auto; }
+          /* MOBILE LANDSCAPE override — phone held sideways: 3-col layout
+             (Palettes | Tone | Artists) because there's no vertical room to
+             stack Tone under Palettes. HOTOVO sits under Palettes on the
+             left; Tone and Artists span both rows. */
+          @media (max-height: 500px) and (orientation: landscape) {
+            .pf-setup-body {
+              grid-template-columns: 1fr 1fr 1fr !important;
+              grid-template-areas: "pal tone art" "done tone art" !important;
+              gap: 0 16px !important;
+            }
+            .pf-setup-tone { margin-top: 0; }
+            /* In 3-col mode, text in the Tone column is center-aligned. */
+            .pf-setup-tone .pf-setup-grid > button > :last-child { text-align: center !important; }
+          }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */

@@ -1150,11 +1150,6 @@ export default function Paintiano() {
   const [is5Col, setIs5Col] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)').matches;}catch(_){return false;}});
   // isNotPhone \u2014 desktop + tablet portrait + tablet landscape (phones excluded in both orientations).
   const [isNotPhone, setIsNotPhone] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px)').matches;}catch(_){return false;}});
-  // isMobileLandscape — phone held sideways (low height + landscape). Used by
-  // the Setup screen to switch from the 2-column layout (Palettes+Tone left,
-  // Artists right) to a 3-column row, since on a phone in landscape there's
-  // enough width but not enough height to stack Tone under Palettes.
-  const [isMobileLandscape, setIsMobileLandscape] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;}catch(_){return false;}});
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)');
@@ -1173,13 +1168,6 @@ export default function Paintiano() {
     if(typeof window==='undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(min-width: 769px)');
     const onChange = (e)=>setIsDesktop(e.matches);
-    try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
-    return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
-  },[]);
-  useEffect(()=>{
-    if(typeof window==='undefined' || !window.matchMedia) return;
-    const mql = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
-    const onChange = (e)=>setIsMobileLandscape(e.matches);
     try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
     return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
   },[]);
@@ -11907,15 +11895,8 @@ Composition rules:
               <div style={{flex:1,textAlign:'center',letterSpacing:'.22em',color:'rgba(201,168,76,.85)',fontSize:(.65*effScale)+'rem',textTransform:'uppercase',fontWeight:600}}>{ts('setupPickerLabel','Setup')}</div>
               <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:okMin?'rgba(247,243,236,.85)':'rgba(247,243,236,.25)',width:34,height:34,borderRadius:'50%',cursor:okMin?'pointer':'default',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
             </div>
-            <div className="pf-setup-body" style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'row',gap:isMobileLandscape?16:(isDesktop?32:14),alignItems:'flex-start'}}>
-              {/* LEFT COLUMN — In every layout except mobile landscape, this
-                  wrapper holds Palettes on top and Tone underneath as one
-                  visual column. In mobile landscape we collapse the wrapper
-                  via display:contents so Palettes and Tone become direct
-                  children of pf-setup-body, producing a 3-column row
-                  (Palettes / Tone / Artists). */}
-              <div className="pf-setup-leftcol" style={isMobileLandscape ? {display:'contents'} : {flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',gap:22}}>
-              <div className="pf-setup-palettes" style={isMobileLandscape ? {flex:'1 1 0',minWidth:0} : undefined}>
+            <div className="pf-setup-body" style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
+              <div className="pf-setup-palettes">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupPalettesTitle','Palettes')}</span>
                   <span style={{display:'inline-flex',gap:14,fontSize:(.6*effScale)+'rem',letterSpacing:0}}>
@@ -11934,8 +11915,11 @@ Composition rules:
                     );
                   })}
                 </div>
+                <div className="pf-setup-done" style={{display:'none'}}>
+                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
+                </div>
               </div>
-              <div className="pf-setup-tone" style={isMobileLandscape ? {flex:'1 1 0',minWidth:0} : undefined}>
+              <div className="pf-setup-tone">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone'}</span>
                 </div>
@@ -11951,7 +11935,7 @@ Composition rules:
                       <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(sel?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
                         {sel && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
                       </span>
-                      <span style={{flex:1,display:'flex',flexDirection:'column',textAlign:isMobileLandscape?'center':'right'}}>
+                      <span style={{flex:1,display:'flex',flexDirection:'column'}}>
                         <span>{o.label}</span>
                         <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{o.hint}</span>
                       </span>
@@ -11959,12 +11943,8 @@ Composition rules:
                     );
                   })}
                 </div>
-                <div className="pf-setup-done" style={{display:'none'}}>
-                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
-                </div>
               </div>
-              </div>{/* /pf-setup-leftcol */}
-              <div className="pf-setup-artists" style={{flex:'1 1 0',minWidth:0}}>
+              <div className="pf-setup-artists">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupArtistsTitle','Artists')}</span>
                   <span style={{display:'inline-flex',gap:14,fontSize:(.6*effScale)+'rem',letterSpacing:0}}>
