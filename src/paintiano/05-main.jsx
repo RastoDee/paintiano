@@ -9702,23 +9702,6 @@ Composition rules:
             </div>
             );
           })() : (<>
-            {/* ── F2a TAB STRIP (visual preview only — no switching yet) ──
-                Three tabs (PALETA · UMELEC · TÓN) sit above the current content.
-                Active tab gets the gold underline. Tapping does nothing in this
-                phase; the existing palette-tabs + artist-grid + tone-row below
-                still all render together. F2b will wire the switching. */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:0,marginBottom:8,borderBottom:'1px solid rgba(242,238,232,.08)'}}>
-              {[
-                {k:'palette', label:({EN:'palette',SK:'paleta',DE:'palette',FR:'palette',ES:'paleta',PT:'paleta',zh:'调色板',zhTW:'調色板',ja:'パレット'})[lang]||'palette'},
-                {k:'artist',  label:({EN:'artist', SK:'umelec',DE:'künstler',FR:'artiste',ES:'artista',PT:'artista',zh:'艺术家',zhTW:'藝術家',ja:'アーティスト'})[lang]||'artist'},
-                {k:'tone',    label:({EN:'tone',   SK:'tón',   DE:'ton',     FR:'tonalité',ES:'tono',PT:'tom',  zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}
-              ].map((tb,i)=>{
-                const active = (i===0); // F2a: PALETA is static-active
-                return (
-                <button key={tb.k} type="button" onClick={()=>{/* F2a: no-op */}} style={{padding:'9px 0',background:'transparent',color:active?'rgba(220,180,90,.95)':'rgba(242,238,232,.45)',border:'none',borderBottom:active?'2px solid rgba(220,180,90,.85)':'2px solid transparent',marginBottom:-1,cursor:'pointer',fontFamily:'inherit',fontSize:(.52*effScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',transition:'color .18s, border-color .18s'}}>{tb.label}</button>
-                );
-              })}
-            </div>
             {(()=>{ const _allTabs = ['harmony','spectral','phi','kontra','custom']; const _tabs = _allTabs.filter(m => setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs; return (
             <div className="pf-color-tabs" style={{display:'grid',gridTemplateColumns:`repeat(${_shown.length},1fr)`,gap:6}}>
               {_shown.map(m=>{
