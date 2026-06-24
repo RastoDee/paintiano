@@ -961,6 +961,8 @@ function drawMondrian(ctx,bx,by,notes,gc,BW,BH){
   // Spectral / B&W / custom) exactly like Pollock and Kandinsky do, instead of
   // snapping to fixed primaries.
   const bold=(r,g,bl)=>{
+    // Pastel tone: skip the boost so the per-cell Mondrian stays soft.
+    if(_pastelOn) return [Math.round(r),Math.round(g),Math.round(bl)];
     // Greyscale (B/W mode, or a grey custom swatch) has no hue to boost — the
     // 255/mx stretch would blow every grey up to white, destroying the dark↔
     // light range. Detect near-grey and pass it through untouched.
@@ -1048,7 +1050,9 @@ function drawRothko(ctx,bx,by,notes,gc,BW,BH){
 
   // Saturation booster — opposite of muting: stretch the brightest channel to
   // full and deepen the others, so fields glow like Rothko's stained washes.
+  // Pastel tone: bypass and return gc colour as-is so the painting stays soft.
   const lume=(r,g,b,boost)=>{
+    if(_pastelOn) return [Math.round(r),Math.round(g),Math.round(b)];
     const mx=Math.max(r,g,b,1), k=(255*boost)/mx;
     let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);
     const pull=(c)=>c===m2?c:c*0.7;
@@ -1324,7 +1328,7 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
               : cn<=1200?10
               : cn<=1800?11
               : 12;
-  const lume=(r,g,b,boost)=>{const mx=Math.max(r,g,b,1),k=(255*boost)/mx;let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);const pull=(x)=>x===m2?x:x*0.7;return[Math.min(255,pull(R)),Math.min(255,pull(G)),Math.min(255,pull(B))];};
+  const lume=(r,g,b,boost)=>{if(_pastelOn) return [Math.round(r),Math.round(g),Math.round(b)];const mx=Math.max(r,g,b,1),k=(255*boost)/mx;let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);const pull=(x)=>x===m2?x:x*0.7;return[Math.min(255,pull(R)),Math.min(255,pull(G)),Math.min(255,pull(B))];};
 
   // Ground: a deep saturated wash sampled from the whole piece, darkened.
   const gBase=_rectChordColor(chords,0,Math.max(1,FIELDS),gc);
@@ -1767,13 +1771,14 @@ function matissePhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   ctx.fillRect(0,0,CW,CH);
 
   // Flat saturated cut-out colors (the Jazz palette): force chord colors toward
-  // pure, bold tones.
+  // pure, bold tones. Pastel tone skips the stretch so the cut-outs stay soft.
   const flat=(idx)=>{
     const chord=chords[Math.min(cn-1,Math.floor((idx/Math.max(1,12))*cn))];
     const notes=chord&&(chord.n||chord.notes||[]);
     let r=200,g=70,b=40;
     if(notes&&notes.length){let aR=0,aG=0,aB=0,k=0;for(const n of notes){const m=n.m!==undefined?n.m:n,v=n.v!==undefined?n.v:80;const[cr,cg,cb]=gc(m,v);aR+=cr;aG+=cg;aB+=cb;k++;}r=aR/k;g=aG/k;b=aB/k;}
     if(isBW){const lum=Math.round(0.299*r+0.587*g+0.114*b);return [lum,lum,lum];}
+    if(_pastelOn) return [Math.round(r),Math.round(g),Math.round(b)];
     // stretch to full saturation, preserve hue
     const mx=Math.max(r,g,b,1),k=255/mx;let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);
     const pull=ch=>ch===m2?ch:ch*0.5;
@@ -1830,8 +1835,8 @@ function matissePhaseFauve(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   for(let i=0;i<Math.min(nPatches,vis);i++){
     const rR=_seedRnd(i+40500,ss,0,0);
     const {rgb}=_picChord(chords,Math.floor(i*(cn/nPatches))%cn,gc,isBW);
-    // Saturation boost
-    const sat=1.2+rR()*0.3;
+    // Saturation boost — skipped in Pastel so the cut-outs stay soft.
+    const sat=_pastelOn ? 1 : (1.2+rR()*0.3);
     const r=Math.min(255,Math.round(rgb[0]*sat));
     const g=Math.min(255,Math.round(rgb[1]*sat));
     const b=Math.min(255,Math.round(rgb[2]*sat));
@@ -3620,7 +3625,10 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   const isBW=mode==='bw';
   const cream=isBW?'#ece9e2':'#f4f1e8';
   // Boost a gc() color toward Mondrian's flat saturated character, keeping hue.
+  // In Pastel tone the boost is SKIPPED — the painting should stay soft, so
+  // we return the gc colour as-is (which is already pastel-tinted by gc).
   const bold=(r,g,bl)=>{
+    if(_pastelOn) return [Math.round(r),Math.round(g),Math.round(bl)];
     if(Math.max(r,g,bl)-Math.min(r,g,bl)<=6) return [Math.round(r),Math.round(g),Math.round(bl)];
     const mx=Math.max(r,g,bl,1),k=255/mx;let R=r*k,G=g*k,B=bl*k,m2=Math.max(R,G,B);
     const pull=c=>c===m2?c:c*0.72;
@@ -3629,6 +3637,8 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   // For Mondrian, pick the MOST SATURATED single voice of a chord rather than
   // averaging (averaging spreads hues into a desaturated near-grey that reads as
   // cream). Then force it bold/saturated so blocks always pop against the cream.
+  // In Pastel tone we skip the final saturation push and just return the most
+  // saturated voice's gc colour — already pastel-softened.
   const chordCol=(pIdx,MAX)=>{
     const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/Math.max(1,MAX))))];
     const notes=chord && (chord.n||chord.notes||(Array.isArray(chord)?chord:null));
@@ -3645,10 +3655,12 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
     // If even the best voice is near-grey (e.g. B/W mode), keep it; otherwise
     // force full saturation so the block reads as a bold Mondrian color.
     if(bestSat<=6) return [Math.round(best[0]),Math.round(best[1]),Math.round(best[2])];
+    // Pastel tone: skip the force-saturation push, return the gc colour as-is.
+    if(_pastelOn) return [Math.round(best[0]),Math.round(best[1]),Math.round(best[2])];
     // Push toward a pure, vivid hue: stretch brightest channel to 255, deepen others hard.
     const mx=Math.max(best[0],best[1],best[2],1),k=255/mx;
     let R=best[0]*k,G=best[1]*k,B=best[2]*k,m2=Math.max(R,G,B);
-    const pull=c=>c===m2?c:c*0.55; // harder pull than bold() → more saturated
+    const pull=c=>c===m2?c:c*0.55; // harder pull than bold() -> more saturated
     return [Math.round(Math.min(255,pull(R))),Math.round(Math.min(255,pull(G))),Math.round(Math.min(255,pull(B)))];
   };
 
@@ -3843,6 +3855,7 @@ function _mondrianBlock(chords,idx,gc,isBW){
   if(notes&&notes.length)for(const note of notes){const m=note.m!==undefined?note.m:note,v=note.v!==undefined?note.v:80;const[r,g,b]=gc(m,v);const sat=Math.max(r,g,b)-Math.min(r,g,b);if(sat>bestSat){bestSat=sat;best=[r,g,b];}}
   if(!best)best=[150,40,30];
   if(isBW||bestSat<=6)return best.map(Math.round);
+  if(_pastelOn) return best.map(Math.round);
   const mx=Math.max(best[0],best[1],best[2],1),k=255/mx;let R=best[0]*k,G=best[1]*k,B=best[2]*k,m2=Math.max(R,G,B);
   const pull=c=>c===m2?c:c*0.55;
   return [Math.round(Math.min(255,pull(R))),Math.round(Math.min(255,pull(G))),Math.round(Math.min(255,pull(B)))];
@@ -6678,12 +6691,14 @@ function rileyPhaseStripes(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.fillRect(0,0,CW,CH);
 
   // Slight saturation boost so colours pop as pure bands.
+  // Pastel tone: skip the boost.
   for(let i=0;i<visStripes;i++){
     const t = i/stripes;
     const {rgb} = _picChord(chords, Math.floor(t * cn)%cn, gc, isBW);
-    const r = Math.min(255, rgb[0]*1.05);
-    const g = Math.min(255, rgb[1]*1.05);
-    const b = Math.min(255, rgb[2]*1.05);
+    const _k = _pastelOn ? 1 : 1.05;
+    const r = Math.min(255, rgb[0]*_k);
+    const g = Math.min(255, rgb[1]*_k);
+    const b = Math.min(255, rgb[2]*_k);
     ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
     ctx.fillRect(i*stripeW, 0, stripeW+1, CH);
   }
@@ -8877,8 +8892,9 @@ function kusamaPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed){
   const avgLum=aLum/c; // 0..255 — drives light vs dark ground
 
   // Force the family color to full saturation, preserving hue.
+  // Pastel tone: skip the push so the Kusama field stays soft.
   let fR=domR,fG=domG,fB=domB;
-  if(domSat>10){
+  if(domSat>10 && !_pastelOn){
     const mx=Math.max(domR,domG,domB,1),k=255/mx;
     let R=domR*k,G=domG*k,B=domB*k,m2=Math.max(R,G,B);
     const pull=ch=>ch===m2?ch:ch*0.55;
