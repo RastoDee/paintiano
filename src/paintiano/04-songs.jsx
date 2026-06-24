@@ -67,7 +67,37 @@ function fftMag(buf) {
   for (let i = 0; i < N / 2; i++) mag[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]);
   return mag.subarray(0, N / 2);
 }
-function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
+function pickPitches(mag,sr,minMag=0.12,maxPitches=4,strictHarmonics=false){
+  const N=mag.length*2,bin=sr/N;
+  let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];
+  if(mx<0.0005)return[];
+  const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));
+  for(let i=Math.max(1,lo);i<hi;i++){
+    if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){
+      const d=mag[i-1]-2*mag[i]+mag[i+1];
+      const freq=(i+(d!==0?0.5*(mag[i-1]-mag[i+1])/d:0))*bin;
+      const midi=Math.round(69+12*Math.log2(freq/440));
+      if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});
+    }
+  }
+  // Harmonic filter — if `q` is a lower note whose integer multiple of freq is
+  // close to `p.freq`, then `p` is likely an overtone of `q`. The original
+  // filter only matched ratios > 1.8 (i.e. roughly octave or above) which let
+  // 3x/5x overtones leak through on sustain-rich material (Glass, pedal piano).
+  // strictHarmonics also catches ratios from 1.4 (perfect 5th harmonic) up.
+  const ratioMin=strictHarmonics?1.4:1.8;
+  const ratioTol=strictHarmonics?0.08:0.06;
+  const magRatio=strictHarmonics?0.45:0.6;   // overtone must be at least this fraction of fundamental to be deemed an overtone (lower = more aggressive filter)
+  return hits.filter((p,_,a)=>!a.some(q=>{
+    if(q===p)return false;
+    const r=p.freq/q.freq;
+    if(r<=ratioMin)return false;
+    const nearest=Math.round(r);
+    if(nearest<2||nearest>6)return false;     // only check 2x-6x integer multiples
+    if(Math.abs(r-nearest)>ratioTol)return false;
+    return q.mag>=p.mag*magRatio;
+  })).sort((a,b)=>b.mag-a.mag).slice(0,maxPitches);
+}
 
 // === Mic/Music chord-transcribe helpers ===
 // computeChroma: fold FFT magnitude into 12-bin pitch-class profile.
@@ -154,7 +184,127 @@ function generateVoicing(root, quality) {
 // zero memory cost for it on page load.
 let _TRANS_FRAME = null;
 
+// === Adaptive MP3 transcription parameters ===========================
+// Different kinds of music need different FFT parameters for clean note
+// extraction. A Philip Glass minimalist piano piece with heavy pedal sustain
+// produces dense overtones that look like extra chord notes if we use the
+// same threshold as a Chopin nocturne. A dense orchestral piece needs MORE
+// pitches per frame (the cap of 4 is too low) but also MORE tolerance for
+// noise (otherwise quiet voices get dropped).
+//
+// We analyze the first ~5s of the audio (spectral centroid, onset density,
+// estimated polyphony, sustain index) and pick one of three presets:
+//   - 'sustained-sparse':  Glass, ambient, pedal-heavy piano, minimalism
+//   - 'standard-piano':    Chopin, Einaudi, Debussy, most solo piano
+//   - 'dense-polyphonic':  orchestral, pop/song with vocals, dense ensemble
+//
+// The presets all use the same _underlying_ FFT extraction, just with
+// different sensitivity / cap / harmonic-strictness settings. Deterministic:
+// same MP3 → same profile → same params → same mosaic.
+const _PROFILE_PRESETS = {
+  'sustained-sparse': { minMag:0.18, maxPitches:3, strictHarmonics:true,  minStability:2, minDurMs:80 },
+  'standard-piano':   { minMag:0.12, maxPitches:4, strictHarmonics:true,  minStability:1, minDurMs:60 },
+  'dense-polyphonic': { minMag:0.10, maxPitches:5, strictHarmonics:false, minStability:1, minDurMs:50 }
+};
+function analyzeSpectralProfile(audioBuf) {
+  const sr = audioBuf.sampleRate;
+  const ch0 = audioBuf.getChannelData(0);
+  // Skip the first ~10s (intros, fade-ins, sparse openings rarely represent
+  // the piece's character) and analyze the next ~15s of stable mid-section
+  // material. For short files (< 30s) fall back to "analyze from the start"
+  // so we still get a classification for tiny clips.
+  const totalSec = ch0.length / sr;
+  const SKIP_SEC = totalSec >= 30 ? 10 : 0;
+  const ANALYZE_SEC = 15;
+  const FRAME = 2048, HOP = 1024;     // coarser hop for speed (this is a survey, not the real transcription)
+  // Find non-silent start inside our window — skip leading silence within the
+  // probe range so a quiet sub-section doesn't bias the result.
+  const windowStart = Math.floor(SKIP_SEC * sr);
+  const windowEnd = Math.min(ch0.length, windowStart + Math.floor(ANALYZE_SEC * sr));
+  let startSample = windowStart;
+  for (let i = windowStart; i < windowEnd - FRAME; i += HOP) {
+    let e = 0;
+    for (let j = 0; j < FRAME; j += 8) { const v = ch0[i + j]; e += v * v; }
+    if (e / (FRAME / 8) > 0.005) { startSample = i; break; }
+  }
+  const probeEnd = Math.min(ch0.length, startSample + sr * ANALYZE_SEC);
+  const frames = [];
+  const scratch = new Float32Array(FRAME);
+  for (let off = startSample; off + FRAME < probeEnd; off += HOP) {
+    for (let j = 0; j < FRAME; j++) scratch[j] = ch0[off + j];
+    const mag = fftMag(scratch);
+    // We need a copy because fftMag reuses the underlying buffer.
+    frames.push(Float32Array.from(mag));
+  }
+  if (frames.length < 4) return 'standard-piano';   // too short to classify — default
+  const N = frames[0].length, bin = sr / (N * 2);
+  // Metric 1: spectral centroid (average frequency weighted by magnitude) —
+  // higher = brighter / more high-frequency content.
+  let centroidSum = 0, centroidN = 0;
+  for (const m of frames) {
+    let num = 0, den = 0;
+    for (let i = 1; i < m.length; i++) { num += i * bin * m[i]; den += m[i]; }
+    if (den > 0) { centroidSum += num / den; centroidN++; }
+  }
+  const centroid = centroidN ? centroidSum / centroidN : 1000;
+  // Metric 2: spectral flux (how fast the spectrum changes between frames) —
+  // higher = more onset / rhythmic activity.
+  let fluxSum = 0, fluxN = 0;
+  for (let f = 1; f < frames.length; f++) {
+    let d = 0;
+    const a = frames[f - 1], b = frames[f];
+    for (let i = 1; i < b.length; i++) { const x = b[i] - a[i]; if (x > 0) d += x; }
+    fluxSum += d; fluxN++;
+  }
+  const flux = fluxN ? fluxSum / fluxN : 0;
+  // Metric 3: polyphony estimate. Count significant peaks per frame.
+  let peakSum = 0;
+  for (const m of frames) {
+    let mx = 0;
+    for (let i = 0; i < m.length; i++) if (m[i] > mx) mx = m[i];
+    if (mx < 0.001) continue;
+    let peaks = 0;
+    for (let i = 2; i < m.length - 2; i++) {
+      if (m[i] > m[i - 1] && m[i] > m[i + 1] && m[i] / mx > 0.12) peaks++;
+    }
+    peakSum += peaks;
+  }
+  const polyphony = frames.length ? peakSum / frames.length : 0;
+  // Metric 4: sustain index — for each strong peak in frame N, how often does
+  // it survive into frame N+1? High sustain = pedal-rich material.
+  let sustHits = 0, sustTotal = 0;
+  for (let f = 0; f < frames.length - 1; f++) {
+    const m1 = frames[f], m2 = frames[f + 1];
+    let mx = 0; for (let i = 0; i < m1.length; i++) if (m1[i] > mx) mx = m1[i];
+    if (mx < 0.001) continue;
+    for (let i = 2; i < m1.length - 2; i++) {
+      if (m1[i] > m1[i - 1] && m1[i] > m1[i + 1] && m1[i] / mx > 0.2) {
+        sustTotal++;
+        if (m2[i] / mx > 0.15) sustHits++;
+      }
+    }
+  }
+  const sustain = sustTotal ? sustHits / sustTotal : 0;
+  // Classification: thresholds tuned against test corpus (Glass, Chopin, Einaudi,
+  // Beethoven orchestra, pop songs). Each metric is independent; we pick the
+  // most distinctive profile.
+  // Dense-polyphonic: high polyphony + bright centroid (lots of high content,
+  // many simultaneous notes — likely vocals/orchestra/dense pop).
+  if (polyphony >= 14 && centroid >= 1500) return 'dense-polyphonic';
+  // Sustained-sparse: high sustain + low polyphony + low centroid — Glass-type.
+  if (sustain >= 0.65 && polyphony < 10 && centroid < 1400) return 'sustained-sparse';
+  // High sustain alone (even with moderate polyphony) still leans sustained.
+  if (sustain >= 0.75 && centroid < 1600) return 'sustained-sparse';
+  // Default — classical/contemporary piano.
+  return 'standard-piano';
+}
+
+
 async function transcribeAudio(audioBuf, onP) {
+  // Classify the music type from the first ~5s and pick parameters tuned to it.
+  // Same MP3 → same profile → same parameters → same mosaic (deterministic).
+  const profile = analyzeSpectralProfile(audioBuf);
+  const P = _PROFILE_PRESETS[profile] || _PROFILE_PRESETS['standard-piano'];
   const sr = audioBuf.sampleRate;
   const ch0 = audioBuf.getChannelData(0);
   // Mix to mono if stereo. Float32Array.from is still allocated once per file
@@ -173,16 +323,23 @@ async function transcribeAudio(audioBuf, onP) {
     const off = f * HOP;
     for (let i = 0; i < FRAME; i++) frame[i] = data[off + i];
     const mag = fftMag(frame);
-    const picks = pickPitches(mag, sr);
+    const picks = pickPitches(mag, sr, P.minMag, P.maxPitches, P.strictHarmonics);
     const found = new Set();
     for (const p of picks) {
       found.add(p.midi);
-      if (!active[p.midi]) active[p.midi] = {sf: f, mx: p.mag};
-      else active[p.midi].mx = Math.max(active[p.midi].mx, p.mag);
+      if (!active[p.midi]) active[p.midi] = {sf: f, mx: p.mag, hits: 1};
+      else { active[p.midi].mx = Math.max(active[p.midi].mx, p.mag); active[p.midi].hits++; }
     }
     for (const m in active) {
       if (!found.has(+m)) {
-        notes.push({midi: +m, sf: active[m].sf, ef: f, mx: active[m].mx});
+        // Frame-stability filter: only accept the note if it was seen in at
+        // least P.minStability consecutive frames. Kills single-frame FFT
+        // spikes (transient noise, brief overtones) that the simpler magnitude
+        // threshold lets through. Real notes always span ≥ a few frames at
+        // HOP=512 (~12ms each).
+        if (active[m].hits >= P.minStability) {
+          notes.push({midi: +m, sf: active[m].sf, ef: f, mx: active[m].mx});
+        }
         delete active[m];
       }
     }
@@ -191,10 +348,14 @@ async function transcribeAudio(audioBuf, onP) {
       await new Promise(r => setTimeout(r, 0));
     }
   }
-  for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
+  for (const m in active) {
+    if (active[m].hits >= P.minStability) {
+      notes.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
+    }
+  }
   const f2ms = f => f * HOP / sr * 1000;
   const raw = notes
-    .filter(n => f2ms(n.ef - n.sf) >= 60)
+    .filter(n => f2ms(n.ef - n.sf) >= P.minDurMs)
     .map(n => ({m: n.midi, startMs: f2ms(n.sf), durMs: Math.max(80, f2ms(n.ef - n.sf)), v: Math.max(40, Math.min(120, Math.round(n.mx * 110)))}))
     .sort((a, b) => a.startMs - b.startMs);
   const evts = [];
