@@ -2207,9 +2207,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     else if(mode==='kontra') _c=kontraCol(m,v);
     else _c=harmCol(m,v);
     const _t=_energyTint(_c[0],_c[1],_c[2]);
-    const _p=_pastelTint(_t[0],_t[1],_t[2]);
-    return [_p[0],_p[1],_p[2],_c[3]];
-  },[mode,activePalette,pastelOn]);
+    return [_t[0],_t[1],_t[2],_c[3]];
+  },[mode,activePalette]);
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
   // colour previews under the Color tabs. B/W spreads the 12 classes across its
@@ -4155,15 +4154,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // the effect, micArmed remains stable across re-renders.
   const [atmoOn,setAtmoOn]=useState(false);       // image atmosphere effect on/off
   const [atmoMood,setAtmoMood]=useState(null);    // {v,e,root,title} detected from the image
-  // Pastel mode — global color modifier toggled in Setup. Applied uniformly
-  // to every artist + mosaic via gc() so the family stays visually coherent.
-  // Persisted to localStorage in the same settings blob as other Setup prefs.
-  const [pastelOn,setPastelOn]=useState(()=>{try{return localStorage.getItem('paintiano_pastel')==='1';}catch(_){return false;}});
-  // Push into the 02-draw module flag so the helper picks it up. The dependency
-  // ensures every Play/repaint after a toggle sees the new value (the helper
-  // is module-level, not React state, but the gc useCallback also depends on
-  // pastelOn so the painting reruns when toggled mid-piece).
-  useEffect(()=>{ _setPastelOn(pastelOn); try{localStorage.setItem('paintiano_pastel',pastelOn?'1':'0');}catch(_){} },[pastelOn]);
   // Mirror atmo into refs so the melody voice (scheduled from the stable startPlay
   // callback) can snap the sung line to the SAME mood scale the texture was
   // transformed into — otherwise turning ATM on retunes the texture but leaves the
@@ -11898,33 +11888,6 @@ Composition rules:
                 </div>
                 <div className="pf-setup-done" style={{display:'none'}}>
                   <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
-                </div>
-              </div>
-              {/* Color tone — global modifier applied uniformly across every
-                  artist + mosaic via gc(). Sits between palettes and artists
-                  because it's a global color choice, not a per-style toggle. */}
-              <div className="pf-setup-tone">
-                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
-                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{(()=>{ const tones={EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'}; return tones[lang]||'Tone'; })()}</span>
-                </div>
-                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
-                  {[
-                    {k:'normal', label:(({EN:'Normal',SK:'Normálny',DE:'Normal',FR:'Normal',ES:'Normal',PT:'Normal',zh:'正常',zhTW:'正常',ja:'ノーマル'})[lang]||'Normal'), hint:(({EN:'Full saturation',SK:'Plná sýtosť',DE:'Volle Sättigung',FR:'Saturation pleine',ES:'Saturación plena',PT:'Saturação plena',zh:'完整饱和度',zhTW:'完整飽和度',ja:'通常の彩度'})[lang]||'Full saturation')},
-                    {k:'pastel', label:(({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'), hint:(({EN:'Soft, lighter colors',SK:'Jemné, svetlejšie farby',DE:'Sanftere, hellere Farben',FR:'Couleurs douces, plus claires',ES:'Colores suaves, más claros',PT:'Cores suaves, mais claras',zh:'柔和浅淡的色彩',zhTW:'柔和淺淡的色彩',ja:'柔らかく明るい色'})[lang]||'Soft, lighter colors')}
-                  ].map(o=>{
-                    const sel = (o.k==='pastel') === pastelOn;
-                    return (
-                    <button key={o.k} onClick={()=>setPastelOn(o.k==='pastel')} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:sel?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'}}>
-                      <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(sel?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
-                        {sel && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
-                      </span>
-                      <span style={{flex:1,display:'flex',flexDirection:'column'}}>
-                        <span>{o.label}</span>
-                        <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{o.hint}</span>
-                      </span>
-                    </button>
-                    );
-                  })}
                 </div>
               </div>
               <div className="pf-setup-artists">
