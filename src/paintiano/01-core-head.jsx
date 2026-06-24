@@ -220,21 +220,12 @@ const PF_STYLE = `
         .pf-setup-body {
           display: grid !important;
           grid-template-columns: 1fr 1fr !important;
-          grid-template-areas: "pal art" "tone art" "done art" !important;
+          grid-template-areas: "pal art" "done art" !important;
           gap: 0 16px !important;
           align-items: start !important;
         }
         .pf-setup-palettes { grid-area: pal; display: flex; flex-direction: column; }
-        .pf-setup-tone     { grid-area: tone; display: flex; flex-direction: column; margin-top: 22px; }
         .pf-setup-artists  { grid-area: art; }
-        /* Tone column inherits the same look as palettes: text right-aligned,
-           radio circle at the left edge. Mirrors .pf-setup-palettes rules. */
-        .pf-setup-tone .pf-setup-grid { grid-template-columns: 1fr !important; }
-        .pf-setup-tone .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
-        .pf-setup-tone > div:first-child {
-          justify-content: flex-start !important;
-          gap: 16px !important;
-        }
         .pf-setup-palettes .pf-setup-grid,
         .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
         /* PALETTES col: text right-aligned (toward center), checkbox at left edge */
@@ -252,42 +243,6 @@ const PF_STYLE = `
         .pf-setup-artists  > div:first-child {
           justify-content: flex-start !important;
           gap: 16px !important;
-        }
-        /* ── MOBILE PORTRAIT ONLY ──────────────────────────────────────────
-           Phone in portrait: drop the Tone selector under both columns as a
-           full-width horizontal row of 3 buttons (Pure / Real / Pastel),
-           centered. Keeps a comfortable margin from the last artist row.
-           Desktop + mobile landscape are NOT affected (see the @media block
-           below this one which targets those layouts). */
-        @media (max-width: 768px) and (orientation: portrait) {
-          .pf-setup-body {
-            grid-template-areas: "pal art" "tone tone" !important;
-          }
-          .pf-setup-tone {
-            margin-top: 28px !important;
-            padding: 0 4px !important;
-          }
-          /* The "TÓN" label row: centered above the three buttons. */
-          .pf-setup-tone > div:first-child {
-            justify-content: center !important;
-          }
-          /* Three buttons across in one row, equal widths. */
-          .pf-setup-tone .pf-setup-grid {
-            grid-template-columns: 1fr 1fr 1fr !important;
-            gap: 8px !important;
-          }
-          /* Each button stacks: radio dot above the centered label. */
-          .pf-setup-tone .pf-setup-grid > button {
-            flex-direction: column !important;
-            align-items: center !important;
-            text-align: center !important;
-            padding: 10px 6px !important;
-            gap: 6px !important;
-          }
-          .pf-setup-tone .pf-setup-grid > button > :last-child {
-            text-align: center !important;
-            flex: initial !important;
-          }
         }
         @media (min-width: 769px) and (min-height: 501px),
                (max-height: 500px) and (orientation: landscape) {
@@ -737,50 +692,19 @@ const PF_STYLE = `
              wider screens. The base 2-col layout + 2-thumb rules apply
              globally; here we just swap to 3-col grid and pin DONE. */
           .pf-setup-dialog { max-width: 860px !important; }
-          /* Desktop + tablet portrait/landscape: 2-col layout. Tone sits under
-             Palettes in the left column; HOTOVO chip sits inside Tone column,
-             right under the radio buttons. Artists fill the right column. */
+          /* Desktop + tablet portrait/landscape: 2-col layout. Palettes on
+             the left, Artists on the right. HOTOVO chip stays in the modal
+             footer (the in-Tone variant was used when Tone lived in Setup
+             — that's now on the main canvas screen). */
           .pf-setup-body {
             grid-template-columns: 1fr 1fr !important;
-            grid-template-areas: "pal art" "tone art" !important;
+            grid-template-areas: "pal art" !important;
             gap: 0 28px !important;
           }
           .pf-setup-palettes { grid-area: pal; height: auto; }
-          .pf-setup-tone     { grid-area: tone; }
           .pf-setup-artists  { grid-area: art; }
-          /* Hide the modal footer in this layout; show the in-Tone DONE chip. */
-          .pf-setup-footer { display: none !important; }
-          .pf-setup-tone .pf-setup-done {
-            display: flex !important;
-            justify-content: flex-start;
-            margin-top: 22px;
-          }
-          .pf-setup-tone .pf-setup-done > button { width: auto; }
-          /* Palette-column DONE stays hidden in 2-col. */
+          /* Palette-column DONE stays hidden in 2-col (footer DONE is used). */
           .pf-setup-done-pal { display: none !important; }
-          /* MOBILE LANDSCAPE override — phone held sideways: 3-col layout
-             (Palettes | Tone | Artists). Use the chip inside Palettes
-             (pf-setup-done-pal) so it sits under Palettes; hide the
-             in-Tone chip in this layout. */
-          @media (max-height: 500px) and (orientation: landscape) {
-            .pf-setup-body {
-              grid-template-columns: 1fr 1fr 1fr !important;
-              grid-template-areas: "pal tone art" !important;
-              gap: 0 16px !important;
-            }
-            .pf-setup-tone { margin-top: 0; }
-            /* In 3-col mode, text in the Tone column is center-aligned. */
-            .pf-setup-tone .pf-setup-grid > button > :last-child { text-align: center !important; }
-            /* Swap which DONE chip is visible: hide in-Tone chip, show
-               in-Palettes chip so it sits under Palettes in the left column. */
-            .pf-setup-tone .pf-setup-done { display: none !important; }
-            .pf-setup-done-pal {
-              display: flex !important;
-              justify-content: flex-start;
-              margin-top: 22px;
-            }
-            .pf-setup-done-pal > button { width: auto; }
-          }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
              page foot — not floating in the middle of the layout). */

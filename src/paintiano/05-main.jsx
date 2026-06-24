@@ -980,7 +980,7 @@ export default function Paintiano() {
       // 2-state implementation.
       if(localStorage.getItem('paintiano_pastel')==='1') return 'pastel';
     }catch(_){}
-    return 'real';   // default — energy modulation on, matches historical behaviour
+    return 'pure';   // default — raw palette colours, no modulation
   });
   useEffect(()=>{
     // Pastel is a CLEAN filter: no energy/velocity modulation rides along.
@@ -10066,6 +10066,26 @@ Composition rules:
               </div>
             );
           })()}
+          {/* ── TONE picker ────────────────────────────────────────────
+              Lives right under the artist grid. Three pills matching the
+              palette/artist chip styling. Active tone = gold glow. Setting
+              applies live; useEffect in tone state pushes _setMixOn /
+              _setPastelOn so any visible chord re-renders immediately. */}
+          <div style={{marginTop:10,marginBottom:2}}>
+            <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
+              {[
+                {k:'pure',   label:({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure'},
+                {k:'real',   label:({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real'},
+                {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'}
+              ].map(o=>{
+                const sel = tone===o.k;
+                return (
+                <button key={o.k} onClick={()=>setTone(o.k)} style={{padding:'8px 0',textAlign:'center',borderRadius:10,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:sel?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:sel?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:sel?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{o.label}</button>
+                );
+              })}
+            </div>
+          </div>
           </>
           )}
           </div>
@@ -11991,40 +12011,6 @@ Composition rules:
                   })}
                 </div>
                 <div className="pf-setup-done-pal" style={{display:'none'}}>
-                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
-                </div>
-              </div>
-              <div className="pf-setup-tone" style={isMobilePortrait?{gridArea:'tone',marginTop:28,padding:'0 4px'}:undefined}>
-                <div style={{display:'flex',alignItems:'baseline',justifyContent:isMobilePortrait?'center':'space-between',marginBottom:10,gap:8}}>
-                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone'}</span>
-                </div>
-                <div className="pf-setup-grid" style={isMobilePortrait?{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}:{display:'flex',flexDirection:'column',gap:0}}>
-                  {[
-                    {k:'pure',   label:({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure',         hint:({EN:'Raw palette colours',SK:'Surové farby palety',DE:'Reine Palettenfarben',FR:'Couleurs brutes de la palette',ES:'Colores puros de la paleta',PT:'Cores puras da paleta',zh:'纯调色板色彩',zhTW:'純調色板色彩',ja:'パレットそのままの色'})[lang]||'Raw palette colours'},
-                    {k:'real',   label:({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real',           hint:({EN:'Energy modulates saturation',SK:'Energia moduluje sýtosť',DE:'Energie moduliert die Sättigung',FR:'L\u2019énergie module la saturation',ES:'La energía modula la saturación',PT:'A energia modula a saturação',zh:'能量调节饱和度',zhTW:'能量調節飽和度',ja:'エネルギーが彩度を変調'})[lang]||'Energy modulates saturation'},
-                    {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel', hint:({EN:'Soft, lighter colours',SK:'Jemné, svetlejšie farby',DE:'Sanftere, hellere Farben',FR:'Couleurs douces, plus claires',ES:'Colores suaves, más claros',PT:'Cores suaves, mais claras',zh:'柔和浅淡的色彩',zhTW:'柔和淺淡的色彩',ja:'柔らかく明るい色'})[lang]||'Soft, lighter colours'}
-                  ].map(o=>{
-                    const sel = tone===o.k;
-                    const btnStyle = isMobilePortrait
-                      ? {display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:8,padding:'12px 6px',background:sel?'rgba(220,180,90,.06)':'transparent',color:sel?'rgba(247,243,236,.85)':'rgba(247,243,236,.55)',border:'1px solid '+(sel?'rgba(220,180,90,.5)':'rgba(255,255,255,.08)'),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.85*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'center',transition:'color .18s, border-color .18s, background .18s'}
-                      : {display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:sel?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'};
-                    const labelWrapStyle = isMobilePortrait
-                      ? {display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center',gap:2}
-                      : {flex:1,display:'flex',flexDirection:'column'};
-                    return (
-                    <button key={o.k} onClick={()=>setTone(o.k)} className="pf-setup-row" style={btnStyle}>
-                      <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(sel?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
-                        {sel && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
-                      </span>
-                      <span style={labelWrapStyle}>
-                        <span>{o.label}</span>
-                        <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{o.hint}</span>
-                      </span>
-                    </button>
-                    );
-                  })}
-                </div>
-                <div className="pf-setup-done" style={{display:'none'}}>
                   <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
                 </div>
               </div>
