@@ -151,20 +151,19 @@ function _energyTint(r,g,b){
   // is bypassed entirely. In Real tone (_mixOn === true) the function maps the
   // current chord's energy across an asymmetric range:
   //
-  //   piano  (_curE = 0)  -> true pastel  (S * 0.30,  L blended to 0.80)
+  //   piano  (_curE = 0)  -> true pastel  (S * 0.30,  L blended to 0.85)
   //   mezzo  (_curE = 0.5) -> raw palette colour, no change
-  //   forte  (_curE = 1)   -> deep        (S * 1.55,  L * 0.78)
+  //   forte  (_curE = 1)   -> deep        (S boosted, L * 0.55)
   //
-  // A power-curve sharpens the middle so chords at E ~ 0.3 or 0.7 already show
-  // clear pastel/deep shifts. The whole piece therefore travels the full
-  // pastel-to-deep gamut on a single canvas — every artist + every variant —
-  // because every block goes through gc() and gc() calls _energyTint.
+  // The forte branch is deliberately strong: it darkens lightness all the way
+  // toward 0.55× and pushes saturation toward full. That widens the visible
+  // gap between quiet and loud passages so the piano/forte contrast reads on
+  // EVERY artist — Mosaic, Picasso, Klimt, Mondrian, etc. — not just the busy
+  // overlays. A power-curve (|d|^0.55) sharpens the middle so chords at
+  // E ~ 0.3 / 0.7 already show clear pastel / deep shifts.
   if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
   let d=(_curE-0.5)*2;
   if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
-  // Sharpening — after smoothing + min-max normalization most chords cluster
-  // around the middle of -1..+1. Without sharpening a linear mapping leaves
-  // the painting almost unchanged. |d|^0.55 pushes d toward the extremes.
   d = Math.sign(d) * Math.pow(Math.abs(d), 0.55);
   let R=r/255, G=g/255, B=b/255;
   const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
@@ -175,12 +174,16 @@ function _energyTint(r,g,b){
   if(d < 0){
     // Quieter than average -> ease toward pastel. k = |d|.
     const k = -d;
-    S = sx * (1 - 0.70 * k);            // 1 -> 0.30
-    L = l + (0.80 - l) * 0.55 * k;       // l -> blended toward 0.80
+    S = sx * (1 - 0.78 * k);            // sx -> 0.22 * sx at k=1
+    L = l + (0.85 - l) * 0.65 * k;       // l  -> blended toward 0.85
   } else {
-    // Louder than average -> ease toward deep.
-    S = Math.min(1, sx * (1 + 0.55 * d));
-    L = Math.max(0.04, l * (1 - 0.22 * d));
+    // Louder than average -> push toward deep. Wide range so colours actually
+    // darken visibly even when the source palette is already saturated.
+    // Saturation boost is asymmetric: weak palettes (sx low) get a strong
+    // multiplicative boost AND an additive floor; already-saturated palettes
+    // ride the multiplier near the 1.0 cap. Lightness drops to ~0.45 at forte.
+    S = Math.min(1, sx + (1 - sx) * 0.45 * d + sx * 0.30 * d);
+    L = Math.max(0.04, l * (1 - 0.55 * d));
   }
   S = Math.max(0, Math.min(1, S));
   L = Math.max(0.04, Math.min(0.96, L));
