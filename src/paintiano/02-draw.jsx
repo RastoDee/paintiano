@@ -151,16 +151,40 @@ function _energyTint(r,g,b){
   // bypassed entirely so the palette's raw colours are used as-is. Mix and
   // Pastel tones both turn this on.
   if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
-  const d=(_curE-0.5)*2;
+  const d=(_curE-0.5)*2;          // d in -1..+1; -1 = quietest, +1 = loudest
   if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
   let R=r/255, G=g/255, B=b/255;
   const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
   let h=0, sx=0;
   if(mx!==mn){ const dl=mx-mn; sx=l>0.5?dl/(2-mx-mn):dl/(mx+mn);
     if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
-  const S=Math.max(0,Math.min(1, sx*(1+d*0.45)));
-  const L=Math.max(0.04,Math.min(0.96, l - d*0.18));
-  if(S===0){ const g2=Math.round(L*255); return [g2,g2,g2]; }
+  // Mix modulation is asymmetric: low energy bends colours toward true pastel
+  // (matching what the Pastel tone produces), high energy bends them toward
+  // deeper/saturated. The full range from a quiet section to a loud climax
+  // therefore travels from akvarell-soft to deep-saturated within the SAME
+  // piece, so a Liszt étude that swings between pianissimo and fortissimo
+  // organically shows both palettes without the user switching tones.
+  //
+  //   d = -1  piano   ->  S = sx * 0.30,   L = blend l..0.80 by 0.55   pastel
+  //   d =  0  mezzo   ->  S = sx,          L = l                       original
+  //   d = +1  forte   ->  S = sx * 1.45,   L = l * 0.82                deep
+  let S, L;
+  if(d < 0){
+    // Quieter than average -> ease toward pastel. k = abs d.
+    const k = -d;
+    const sFactor = 1 - 0.70 * k;          // 1 -> 0.30
+    const lTarget = 0.80;
+    const lMix    = 0.55 * k;              // 0 -> 0.55
+    S = sx * sFactor;
+    L = l + (lTarget - l) * lMix;
+  } else {
+    // Louder than average -> ease toward deep.
+    S = Math.min(1, sx * (1 + 0.45 * d));
+    L = Math.max(0.04, l * (1 - 0.18 * d));
+  }
+  S = Math.max(0, Math.min(1, S));
+  L = Math.max(0.04, Math.min(0.96, L));
+  if(S < 0.005){ const g2=Math.round(L*255); return [g2,g2,g2]; }
   const q=L<0.5?L*(1+S):L+S-L*S, pp=2*L-q;
   const h2=(t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return pp+(q-pp)*6*t; if(t<1/2)return q; if(t<2/3)return pp+(q-pp)*(2/3-t)*6; return pp; };
   return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
