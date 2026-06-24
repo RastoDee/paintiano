@@ -904,6 +904,13 @@ export default function Paintiano() {
   const [mode,      setMode]      = useState('harmony');
   const modeRef = useRef('harmony');
   useEffect(()=>{ modeRef.current=mode; },[mode]);
+  // Pastel tone — global color modifier toggled in Setup. Declared near the
+  // top so the gc() useCallback (defined later in the component) can list it
+  // as a dependency. Persisted via localStorage; synced into the 02-draw
+  // module flag (_setPastelOn) through a useEffect so the cached helper
+  // picks up the new value on every toggle.
+  const [pastelOn,setPastelOn]=useState(()=>{try{return localStorage.getItem('paintiano_pastel')==='1';}catch(_){return false;}});
+  useEffect(()=>{ try{_setPastelOn(pastelOn);}catch(_){} try{localStorage.setItem('paintiano_pastel',pastelOn?'1':'0');}catch(_){} },[pastelOn]);
   // The colour reading the app chose for the current image (harmony or bw), so
   // leaving Custom returns to it rather than always to harmony.
   const appModeRef = useRef('harmony');
@@ -2207,8 +2214,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     else if(mode==='kontra') _c=kontraCol(m,v);
     else _c=harmCol(m,v);
     const _t=_energyTint(_c[0],_c[1],_c[2]);
-    return [_t[0],_t[1],_t[2],_c[3]];
-  },[mode,activePalette]);
+    // Apply pastel tint defensively — if _pastelTint isn't in this build
+    // (older fragment, broken bundle) we fall through with the energy-tinted
+    // colour unchanged. Pastel only shifts the painting when both the helper
+    // exists AND the module flag is on.
+    let _r=_t[0],_g=_t[1],_b=_t[2];
+    try{ if(typeof _pastelTint==='function'){ const _p=_pastelTint(_r,_g,_b); _r=_p[0]; _g=_p[1]; _b=_p[2]; } }catch(_){}
+    return [_r,_g,_b,_c[3]];
+  },[mode,activePalette,pastelOn]);
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
   // colour previews under the Color tabs. B/W spreads the 12 classes across its
@@ -11888,6 +11901,31 @@ Composition rules:
                 </div>
                 <div className="pf-setup-done" style={{display:'none'}}>
                   <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
+                </div>
+              </div>
+              <div className="pf-setup-tone">
+                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
+                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone'}</span>
+                </div>
+                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
+                  <button onClick={()=>setPastelOn(false)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:!pastelOn?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'}}>
+                    <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(!pastelOn?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
+                      {!pastelOn && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
+                    </span>
+                    <span style={{flex:1,display:'flex',flexDirection:'column'}}>
+                      <span>{({EN:'Normal',SK:'Normálny',DE:'Normal',FR:'Normal',ES:'Normal',PT:'Normal',zh:'正常',zhTW:'正常',ja:'ノーマル'})[lang]||'Normal'}</span>
+                      <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{({EN:'Full saturation',SK:'Plná sýtosť',DE:'Volle Sättigung',FR:'Saturation pleine',ES:'Saturación plena',PT:'Saturação plena',zh:'完整饱和度',zhTW:'完整飽和度',ja:'通常の彩度'})[lang]||'Full saturation'}</span>
+                    </span>
+                  </button>
+                  <button onClick={()=>setPastelOn(true)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:pastelOn?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'}}>
+                    <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(pastelOn?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
+                      {pastelOn && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
+                    </span>
+                    <span style={{flex:1,display:'flex',flexDirection:'column'}}>
+                      <span>{({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'}</span>
+                      <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{({EN:'Soft, lighter colors',SK:'Jemné, svetlejšie farby',DE:'Sanftere, hellere Farben',FR:'Couleurs douces, plus claires',ES:'Colores suaves, más claros',PT:'Cores suaves, mais claras',zh:'柔和浅淡的色彩',zhTW:'柔和淺淡的色彩',ja:'柔らかく明るい色'})[lang]||'Soft, lighter colors'}</span>
+                    </span>
+                  </button>
                 </div>
               </div>
               <div className="pf-setup-artists">

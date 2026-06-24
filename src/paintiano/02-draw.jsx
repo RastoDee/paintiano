@@ -158,6 +158,30 @@ function _energyTint(r,g,b){
   return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
 }
 
+// ── PASTEL mode ─────────────────────────────────────────────────────────────
+// Module-level flag toggled by _setPastelOn from 05-main. When on, _pastelTint
+// shifts every colour from gc() toward a soft pastel (lower saturation, lifted
+// lightness, hue preserved). Applied after _energyTint so dynamics still
+// modulate within the pastel range. Same gc() path = all artists + mosaic
+// stay visually coherent under pastel.
+let _pastelOn = false;
+function _setPastelOn(b){ _pastelOn = !!b; }
+function _pastelTint(r,g,b){
+  if(!_pastelOn) return [Math.round(r),Math.round(g),Math.round(b)];
+  const R=r/255, G=g/255, B=b/255;
+  const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
+  let h=0, sx=0;
+  if(mx!==mn){ const dl=mx-mn; sx=l>0.5?dl/(2-mx-mn):dl/(mx+mn);
+    if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
+  const targetL = 0.80;
+  const L = l + (targetL - l) * 0.55;
+  const S = sx * 0.45;
+  if(S < 0.005){ const g2=Math.round(L*255); return [g2,g2,g2]; }
+  const q=L<0.5?L*(1+S):L+S-L*S, pp=2*L-q;
+  const h2=(t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return pp+(q-pp)*6*t; if(t<1/2)return q; if(t<2/3)return pp+(q-pp)*(2/3-t)*6; return pp; };
+  return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
+}
+
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
