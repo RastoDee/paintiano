@@ -1761,15 +1761,15 @@ function _energyTint(r,g,b){
   // is bypassed entirely. In Real tone (_mixOn === true) the function maps the
   // current chord's energy across an asymmetric range:
   //
-  //   piano  (_curE = 0)  -> true pastel  (S → 0.18 * sx,  L blended to 0.88)
+  //   piano  (_curE = 0)  -> softened     (S → 0.55 * sx,  L blended to 0.75)
   //   mezzo  (_curE = 0.5) -> raw palette colour, no change
   //   forte  (_curE = 1)   -> deep        (S boosted hard, L * 0.40)
   //
-  // The forte branch is deliberately strong: it darkens lightness all the way
-  // toward 0.40× and pushes saturation toward full + an additive floor. That
-  // widens the visible gap between quiet and loud passages so the piano/forte
-  // contrast reads on EVERY artist — including alpha-heavy overlays like
-  // Picasso where lighter overdraw was previously washing the effect out.
+  // IMPORTANT: piano branch is intentionally less aggressive than Pastel tone
+  // (which sits at S * 0.45, L → 0.80). Pastel is the dedicated soft tone and
+  // must remain visually the softest option. Real at piano sits BETWEEN the
+  // original colour and Pastel — clearly lighter than the original, but never
+  // overshooting Pastel. Forte stays strong so the piano↔forte arc is wide.
   // A power-curve (|d|^0.55) sharpens the middle so chords at E ~ 0.3 / 0.7
   // already show clear pastel / deep shifts.
   if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
@@ -1783,10 +1783,11 @@ function _energyTint(r,g,b){
     if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
   let S, L;
   if(d < 0){
-    // Quieter than average -> ease toward pastel. k = |d|.
+    // Quieter than average -> soften toward pastel territory, but never
+    // overshoot Pastel mode (which uses S * 0.45, L → 0.80).
     const k = -d;
-    S = sx * (1 - 0.82 * k);            // sx -> 0.18 * sx at k=1
-    L = l + (0.88 - l) * 0.75 * k;       // l  -> blended toward 0.88
+    S = sx * (1 - 0.45 * k);            // sx -> 0.55 * sx at k=1 (vs Pastel 0.45)
+    L = l + (0.75 - l) * 0.55 * k;       // l  -> blended toward 0.75 (vs Pastel 0.80)
   } else {
     // Louder than average -> push toward deep. Strong dual-mode boost.
     S = Math.min(1, sx + (1 - sx) * 0.60 * d + sx * 0.40 * d);
