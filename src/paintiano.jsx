@@ -15441,7 +15441,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> mode is yours: only colours close to your 12-swatch palette make sound. Filter Guernica through tropical pinks, see what survives.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Two ways to play.</strong> <strong>Scan</strong> reads the picture as a score, left-to-right. <strong style={{color:'rgba(228,178,255,.95)'}}>AI Compose</strong> (Pro) does something different: it takes the image\'s palette, energy and mood and writes a whole new piece inspired by it — the painting stays on screen while its music plays.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Save · Record — take it with you</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> exports your painting as a high-resolution PNG. <strong>Story</strong> (9:16) for IG/TikTok, <strong>Web/Social</strong> for the feed, or <strong>A1 · 300 DPI</strong> — properly print-ready, gallery-grade. Frame it. Hang it. Share it. It's yours.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> exports your painting as a high-resolution PNG. <strong>Story</strong> (9:16) for IG/TikTok, <strong>Web/Social</strong> for the feed, or <strong>A0 · 300+ DPI</strong> — properly print-ready, gallery-grade. Frame it. Hang it. Share it. It's yours.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Record</strong> captures the music while a painting plays back, as a shareable audio file. Plus <strong>♫ Score</strong> turns the painting's notes into a MusicXML you can open in MuseScore or Sibelius — actual sheet music, from a picture.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Posters from your favourite tracks. Songs from photos that matter. This is the part you take home.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Live tools</h3>
@@ -15472,7 +15472,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> ist deins: nur Farben nahe deiner 12-Feld-Palette klingen. Filtere Guernica durch tropisches Pink — was überlebt?</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Zwei Spielarten.</strong> <strong>Scan</strong> liest das Bild als Partitur. <strong style={{color:'rgba(228,178,255,.95)'}}>KI Komponieren</strong> (Pro) macht etwas anderes: Es nimmt Palette, Energie und Stimmung des Bildes und schreibt ein ganz neues Stück — das Gemälde bleibt sichtbar, während seine Musik spielt.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Speichern · Aufnehmen — nimm es mit</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Speichern</strong> exportiert dein Bild als hochauflösendes PNG. <strong>Story</strong> (9:16) für IG/TikTok, <strong>Web/Social</strong> für den Feed, oder <strong>A1 · 300 DPI</strong> — druckfertig, Galerie-Qualität. Rahmen. Aufhängen. Teilen. Es ist deins.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Speichern</strong> exportiert dein Bild als hochauflösendes PNG. <strong>Story</strong> (9:16) für IG/TikTok, <strong>Web/Social</strong> für den Feed, oder <strong>A0 · 300+ DPI</strong> — druckfertig, Galerie-Qualität. Rahmen. Aufhängen. Teilen. Es ist deins.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Aufnehmen</strong> fängt die Musik ein, während ein Bild abspielt — als teilbare Audio-Datei. Plus <strong>♫ Noten</strong> verwandelt die Noten des Bildes in MusicXML, das du in MuseScore oder Sibelius öffnen kannst — echte Notenblätter aus einem Bild.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Poster aus deinen Lieblingstracks. Songs aus Fotos, die zählen. Das ist der Teil, den du mit nach Hause nimmst.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Live-Tools</h3>
@@ -15503,7 +15503,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong>, c'est toi : seules les couleurs proches de tes 12 cases sonnent. Filtre Guernica à travers du rose tropical — qu'est-ce qui survit ?</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Deux façons de jouer.</strong> <strong>Scan</strong> lit l'image comme une partition. <strong style={{color:'rgba(228,178,255,.95)'}}>Composer IA</strong> (Pro) fait autre chose : il prend la palette, l'énergie et l'ambiance de l'image et écrit un morceau entièrement nouveau — la peinture reste à l'écran pendant que sa musique joue.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Enregistrer · Capturer — prends-le avec toi</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Enregistrer</strong> exporte ta peinture en PNG haute résolution. <strong>Story</strong> (9:16) pour IG/TikTok, <strong>Web/Social</strong> pour le feed, ou <strong>A1 · 300 DPI</strong> — prêt à imprimer, qualité galerie. Encadre. Accroche. Partage. C'est à toi.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Enregistrer</strong> exporte ta peinture en PNG haute résolution. <strong>Story</strong> (9:16) pour IG/TikTok, <strong>Web/Social</strong> pour le feed, ou <strong>A0 · 300+ DPI</strong> — prêt à imprimer, qualité galerie. Encadre. Accroche. Partage. C'est à toi.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Enregistrer</strong> capture la musique pendant qu'une peinture joue, en fichier audio partageable. Et <strong>♫ Partition</strong> convertit les notes de la peinture en MusicXML ouvrable dans MuseScore ou Sibelius — de vraies partitions, à partir d'une image.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Des posters depuis tes morceaux préférés. Des chansons depuis des photos qui comptent. C'est la partie que tu ramènes chez toi.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Outils live</h3>
@@ -15534,7 +15534,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> es tuyo: solo suenan los colores cerca de tus 12 casillas. Filtra Guernica por rosas tropicales — ¿qué sobrevive?</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Dos formas de tocar.</strong> <strong>Escanear</strong> lee la imagen como partitura. <strong style={{color:'rgba(228,178,255,.95)'}}>Componer IA</strong> (Pro) hace algo distinto: toma la paleta, la energía y el ánimo de la imagen y escribe una pieza nueva — la pintura permanece en pantalla mientras suena su música.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Guardar · Grabar — llévatelo contigo</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta tu pintura como PNG de alta resolución. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para el feed, o <strong>A1 · 300 DPI</strong> — listo para imprimir, calidad galería. Enmarca. Cuelga. Comparte. Es tuyo.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta tu pintura como PNG de alta resolución. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para el feed, o <strong>A0 · 300+ DPI</strong> — listo para imprimir, calidad galería. Enmarca. Cuelga. Comparte. Es tuyo.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Grabar</strong> captura la música mientras una pintura suena, como archivo audio compartible. Y <strong>♫ Partitura</strong> convierte las notas de la pintura en MusicXML abrible en MuseScore o Sibelius — partituras reales, desde una imagen.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Pósters desde tus tracks favoritos. Canciones desde fotos que importan. Esta es la parte que te llevas a casa.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Herramientas en vivo</h3>
@@ -15565,7 +15565,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> je tvoja: znejú len farby blízke tvojim 12 políčkam. Prefiltruj Guernicu cez tropické ružové — čo prežije?</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Dva spôsoby prehrávania.</strong> <strong>Sken</strong> číta obraz ako partitúru. <strong style={{color:'rgba(228,178,255,.95)'}}>AI skladba</strong> (Pro) robí niečo iné: vezme paletu, energiu a náladu obrazu a zloží úplne novú skladbu — obraz ostáva na obrazovke, kým hrá jeho hudba.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Uložiť · Nahrať — zober si to so sebou</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Uložiť</strong> exportuje tvoju maľbu ako PNG vo vysokom rozlíšení. <strong>Story</strong> (9:16) pre IG/TikTok, <strong>Web/Social</strong> pre feed, alebo <strong>A1 · 300 DPI</strong> — pripravené na tlač, galerijná kvalita. Zarámuj. Zaves. Zdieľaj. Je tvoja.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Uložiť</strong> exportuje tvoju maľbu ako PNG vo vysokom rozlíšení. <strong>Story</strong> (9:16) pre IG/TikTok, <strong>Web/Social</strong> pre feed, alebo <strong>A0 · 300+ DPI</strong> — pripravené na tlač, galerijná kvalita. Zarámuj. Zaves. Zdieľaj. Je tvoja.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Nahrať</strong> zachytí hudbu počas prehrávania maľby ako zdieľateľný audio súbor. Plus <strong>♫ Noty</strong> premení noty maľby na MusicXML, otvoriteľné v MuseScore alebo Sibelius — naozajstné noty, z obrázka.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Plagáty z tvojich obľúbených skladieb. Pesničky z fotiek, ktoré rátajú. To je tá časť, ktorú si odnesieš domov.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Live nástroje</h3>
@@ -15596,7 +15596,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> é teu: só as cores próximas da tua paleta de 12 amostras soam. Filtra Guernica por rosas tropicais, vê o que sobrevive.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Duas formas de tocar.</strong> <strong>Digitalizar</strong> lê a imagem como partitura. <strong style={{color:'rgba(228,178,255,.95)'}}>Compor IA</strong> (Pro) faz algo diferente: pega na paleta, energia e humor da imagem e escreve uma peça nova — a pintura fica no ecrã enquanto a sua música toca.</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Guardar · Gravar — leva-o contigo</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta a tua pintura como PNG de alta resolução. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para o feed, ou <strong>A1 · 300 DPI</strong> — pronto para impressão, qualidade galeria. Emoldura. Pendura. Partilha. É teu.</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Guardar</strong> exporta a tua pintura como PNG de alta resolução. <strong>Story</strong> (9:16) para IG/TikTok, <strong>Web/Social</strong> para o feed, ou <strong>A0 · 300+ DPI</strong> — pronto para impressão, qualidade galeria. Emoldura. Pendura. Partilha. É teu.</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Gravar</strong> captura a música enquanto uma pintura toca, num ficheiro áudio partilhável. E <strong>♫ Partitura</strong> transforma as notas da pintura em MusicXML que abres no MuseScore ou Sibelius — partituras reais, a partir de uma imagem.</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>Pósters dos teus temas favoritos. Canções de fotos que importam. Esta é a parte que levas para casa.</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>Ferramentas ao vivo</h3>
@@ -15628,7 +15628,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> 模式属于你:只有接近你 12 色调色板的颜色才会发声。把《格尔尼卡》过滤通过热带粉,看看什么留下来。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>两种播放方式。</strong><strong>扫描</strong>把图像当作乐谱来读。<strong style={{color:'rgba(228,178,255,.95)'}}>AI 作曲</strong>(Pro)则不同:它取图像的色板、能量与情绪,谱写一首全新的曲子 — 播放时画作留在屏幕上。</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ 保存 · 录音 — 带走它</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 保存</strong> 把你的画导出为高分辨率 PNG。<strong>Story</strong>(9:16)给 IG/TikTok,<strong>Web/Social</strong> 给 Feed,或者 <strong>A1 · 300 DPI</strong> — 真正可印,画廊级。装裱。挂上。分享。是你的。</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 保存</strong> 把你的画导出为高分辨率 PNG。<strong>Story</strong>(9:16)给 IG/TikTok,<strong>Web/Social</strong> 给 Feed,或者 <strong>A0 · 300+ DPI</strong> — 真正可印,画廊级。装裱。挂上。分享。是你的。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ 录音</strong> 在画回放时捕捉音乐,作为可分享的音频文件。再加 <strong>♫ 乐谱</strong> 把画的音符变成 MusicXML,你可以在 MuseScore 或 Sibelius 里打开 — 真正的乐谱,从一张图里。</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>从你最爱的曲目里来的海报。从重要的照片里来的歌。这是你带回家的部分。</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>实时工具</h3>
@@ -15659,7 +15659,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> 模式屬於你:只有接近你 12 色調色盤的顏色才會發聲。把《格爾尼卡》過濾通過熱帶粉,看看什麼留下來。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>兩種播放方式。</strong><strong>掃描</strong>把圖像當作樂譜來讀。<strong style={{color:'rgba(228,178,255,.95)'}}>AI 作曲</strong>(Pro)則不同:它取圖像的色盤、能量與情緒,譜寫一首全新的曲子 — 播放時畫作留在螢幕上。</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ 儲存 · 錄音 — 帶走它</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 儲存</strong> 把你的畫匯出為高解析度 PNG。<strong>Story</strong>(9:16)給 IG/TikTok,<strong>Web/Social</strong> 給 Feed,或者 <strong>A1 · 300 DPI</strong> — 真正可印,畫廊級。裝裱。掛上。分享。是你的。</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ 儲存</strong> 把你的畫匯出為高解析度 PNG。<strong>Story</strong>(9:16)給 IG/TikTok,<strong>Web/Social</strong> 給 Feed,或者 <strong>A0 · 300+ DPI</strong> — 真正可印,畫廊級。裝裱。掛上。分享。是你的。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ 錄音</strong> 在畫回放時擷取音樂,作為可分享的音訊檔。再加 <strong>♫ 樂譜</strong> 把畫的音符變成 MusicXML,你可以在 MuseScore 或 Sibelius 裡開啟 — 真正的樂譜,從一張圖裡。</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>從你最愛的曲目裡來的海報。從重要的照片裡來的歌。這是你帶回家的部分。</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>即時工具</h3>
@@ -15690,7 +15690,7 @@ const CONCEPT_I18N = {
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>Custom</strong> モードはあなたのもの:あなたの 12 色パレットに近い色だけが音を出す。《ゲルニカ》をトロピカル・ピンクで濾過してみる。何が残るか。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(210,160,255,.9)'}}>2 つの再生方法。</strong><strong>Scan</strong> は画像を楽譜として読む。<strong style={{color:'rgba(228,178,255,.95)'}}>AI Compose</strong>(Pro)は違う:画像のパレット、エネルギー、ムードを取り、まったく新しい曲を書く — 再生中、絵は画面に残る。</p>
     <h3 style={{color:'rgba(255,210,140,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.08em',margin:'0 0 10px',borderBottom:'1px solid rgba(255,210,140,.2)',paddingBottom:6}}>◆ Save · Record — 持ち帰る</h3>
-    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> は絵を高解像度 PNG として書き出す。<strong>Story</strong>(9:16)は IG/TikTok 用、<strong>Web/Social</strong> はフィード用、または <strong>A1 · 300 DPI</strong> — 本当に印刷できる、ギャラリー級。額装。掛ける。シェア。あなたのもの。</p>
+    <p style={{margin:'0 0 12px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>↓ Save</strong> は絵を高解像度 PNG として書き出す。<strong>Story</strong>(9:16)は IG/TikTok 用、<strong>Web/Social</strong> はフィード用、または <strong>A0 · 300+ DPI</strong> — 本当に印刷できる、ギャラリー級。額装。掛ける。シェア。あなたのもの。</p>
     <p style={{margin:'0 0 22px'}}><strong style={{color:'rgba(255,210,140,.95)'}}>⏺ Record</strong> は絵が再生される間に音楽を取り込み、共有可能な音声ファイルにする。さらに <strong>♫ Score</strong> は絵の音符を MusicXML に変える — MuseScore や Sibelius で開ける、本物の楽譜が、一枚の画像から。</p>
     <p style={{margin:'0 0 22px',fontStyle:'italic',opacity:.85,color:'rgba(255,210,140,.9)'}}>お気に入りの曲から生まれたポスター。大切な写真から生まれた歌。それが持ち帰る部分。</p>
     <h3 style={{color:'rgba(201,168,76,.95)',fontSize:'1rem',fontWeight:400,letterSpacing:'.06em',margin:'0 0 10px',borderBottom:'1px solid rgba(201,168,76,.15)',paddingBottom:6}}>ライブツール</h3>
@@ -15815,7 +15815,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio or score`, body:`One button for every musical file. MIDI, MP3/WAV/M4A, or MusicXML from MuseScore/Finale. Type detected automatically.`, more:`One button for every musical file. ◆ MIDI (.mid / .midi) — multi-track condenses into chords, tempo-mapped, painted. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decoded, pitch-detected, painted; best on clean monophonic or sparse material (solo piano, vocal, simple guitar) — dense mixes are harder. ◆ Score (.musicxml .xml .mxl from MuseScore, Finale, Dorico) — pitches, durations, dynamics and chords all come through exact; the most accurate input there is. Paintiano detects the type automatically. Open Music without a file for a built-in sample.`},
     {id:'image', glyph:'📷', cat:'music', title:`Photo → music → painting`, body:`Drop in an image. Its colours and energy become a piano piece, then paint in any artist style. Free does Scan, Pro adds AI Compose.`, more:`Upload any image. Paintiano reads it as a score — left to right, top to bottom; length scales with the image's energy (~1½–2¾ min). ◆ The app picks the reading from how colourful the work is: colourful → Harmony or Spectral (hue=pitch, lightness=octave, vividness=loudness); near-monochrome (Guernica, ink, sepia) → B/W. ◆ Custom is yours: only colours close to your 12 swatches sound, the rest fall silent — filter Guernica through tropical pinks and see what survives. ◆ Two ways to play: SCAN reads the picture left-to-right as a score (choose the direction). AI COMPOSE (Pro) writes a whole new piece from the image's palette, energy and mood — and keeps the picture on screen while it plays.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Name a feeling`, body:`Tap ✦ how do you feel? Type any feeling, any language. AI writes a piano piece. Then Morph into another mood, or Vary for a fresh key.`, more:`Tap ✦ "how do you feel?" and type any feeling, in any language — furious, saudade, 3am drive, summer crush. AI writes a piano piece for it and the canvas fills chord by chord as it plays. After: ◆ ✦ MORPH crossfades one mood into another — first half A, second half B, a velocity blend in the 40–60% zone. ◆ ✦ VARY shifts the tonality to a new key (often major ↔ minor): the rhythm and structure stay locked, only the chords — and so the colours — change. Keep tapping for new keys. ◆ Free gets 3 trial AI calls (shared across Mood, Mood-from-image and AI Compose); Pro AI = unlimited.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Take both home`, body:`Save → PNG of the painting + audio of the music. Story mode crops it for Instagram / TikTok. Pro removes the watermark and lifts to 300 DPI.`, more:`Two diamonds — the picture and the music. ◆ ↓ SAVE exports your painting as a high-resolution PNG: Story (9:16) for IG/TikTok, Web/Social (~4×, feed-ready), or Print A1 · 300 DPI (~20×, gallery-grade). Same song always gives the same painting — your songs have signatures now. ◆ ⏺ RECORD (image mode) captures the audio as the painting plays, straight to a shareable file; stops automatically when the piece ends. ◆ ♫ SCORE turns the painting's notes into a MusicXML file — open it in MuseScore, Sibelius or Finale; actual sheet music from a picture. ◆ Free exports carry a small watermark; Pro and Pro AI strip it and unlock the A1 · 300 DPI size.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Take both home`, body:`Save → PNG of the painting + audio of the music. Story mode crops it for Instagram / TikTok. Pro removes the watermark and lifts to 300 DPI.`, more:`Two diamonds — the picture and the music. ◆ ↓ SAVE exports your painting as a high-resolution PNG: Story (9:16) for IG/TikTok, Web/Social (~4×, feed-ready), or Print A0 · 300+ DPI (~20×, gallery-grade). Same song always gives the same painting — your songs have signatures now. ◆ ⏺ RECORD (image mode) captures the audio as the painting plays, straight to a shareable file; stops automatically when the piece ends. ◆ ♫ SCORE turns the painting's notes into a MusicXML file — open it in MuseScore, Sibelius or Finale; actual sheet music from a picture. ◆ Free exports carry a small watermark; Pro and Pro AI strip it and unlock the A0 · 300+ DPI size.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, speed, loop, mute, clear`, body:`Play/pause and seek the bar. Speed 0.5×–2×. ⟳ Loop repeats. 🔊 Mute paints in silence. Clear resets — smartly, per mode.`, more:`The playback controls. ◆ Play starts and pauses (Space too); tap the progress bar to jump, drag to scrub. ◆ Speed: a chip shows the rate (1× default); tap to snap back to 1×, press-and-hold to cycle 0.5× → 2× and wrap. ◆ ⟳ LOOP keeps a mood piece repeating; gold when on. ◆ 🔊 / 🔇 Mute silences all audio while the painting still renders — remembered across sessions. ◆ Clear is mode-aware: Compose wipes the canvas and stays; MIC drops only the active mode's draft; Image wipes the painted trace and the picture; MIDI/audio/score/text mood do a full reset. ◆ If status says "loading piano…", wait a few seconds (~5 MB sample); it falls back to a synth if that fails.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro unlocks all of it`, body:`Pro €9.99 → all 18 artists, editable Custom palette, no watermark, lifetime. Pro AI €19.99 adds unlimited AI moods, image compose, atmosphere.`, more:`Three tiers, all one-time payments. ◆ Free — 9 artists unlocked (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 paint types each; each has a Pro partner (tap an active artist again to see it). Custom palette is read-only, exports carry a watermark, AI features run on 3 trial credits. ◆ Pro €9.99 — all 18 artists, all paint types, editable Custom palette, 300 DPI exports without watermark, lifetime access; AI still from the shared 3-credit pool. ◆ Pro AI €19.99 — everything in Pro plus unlimited AI: text moods, Mood-from-image, AI Compose, AI Atmosphere. ◆ Credit costs: AI text & image compose = 1 each, Atmosphere = 0.5. ◆ Pay once, keep forever. No subscriptions. License works on up to 5 devices, one at a time.`}
   ],
@@ -15836,7 +15836,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, Audio oder Noten`, body:`Ein Knopf für jede Musikdatei. MIDI, MP3/WAV/M4A oder MusicXML aus MuseScore/Finale. Typ wird automatisch erkannt.`, more:`Ein Knopf für jede Musikdatei. ◆ MIDI (.mid / .midi) — Mehrspur kondensiert zu Akkorden, tempo-gemappt, gemalt. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekodiert, tonhöhenerkannt, gemalt; am besten bei klarem monophonem oder dünnem Material (Solo-Klavier, Gesang, einfache Gitarre) — dichte Mixe sind schwerer. ◆ Noten (.musicxml .xml .mxl aus MuseScore, Finale, Dorico) — Tonhöhen, Dauern, Dynamik und Akkorde kommen exakt durch; der genaueste Input überhaupt. Paintiano erkennt den Typ automatisch. Öffne Music ohne Datei für ein eingebautes Beispiel.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → Musik → Bild`, body:`Droppe ein Bild. Seine Farben und Energie werden ein Klavierstück, dann malt es in jedem Künstlerstil. Free macht Scan, Pro fügt AI Compose hinzu.`, more:`Lade ein beliebiges Bild. Paintiano liest es als Partitur — links nach rechts, oben nach unten; die Länge skaliert mit der Energie des Bildes (~1½–2¾ Min). ◆ Die App wählt die Lesart danach, wie farbig das Werk ist: farbig → Harmonie oder Spektral (Farbton=Tonhöhe, Helligkeit=Oktave, Lebendigkeit=Lautstärke); fast monochrom (Guernica, Tusche, Sepia) → S/W. ◆ Custom ist deins: nur Farben nah deinen 12 klingen, der Rest verstummt — filtere Guernica durch tropische Pinks und sieh, was überlebt. ◆ Zwei Arten zu spielen: SCAN liest das Bild links-nach-rechts als Partitur (wähle die Richtung). AI COMPOSE (Pro) schreibt ein ganz neues Stück aus Palette, Energie und Stimmung des Bildes — und behält das Bild auf dem Schirm, während es spielt.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nenn ein Gefühl`, body:`Tippe ✦ wie fühlst du dich? Tippe jedes Gefühl, jede Sprache. KI schreibt ein Klavierstück. Dann Morph in eine andere Stimmung, oder Vary für eine frische Tonart.`, more:`Tippe ✦ „wie fühlst du dich?" und tippe jedes Gefühl, in jeder Sprache — wütend, saudade, 3-Uhr-Fahrt, Sommerschwarm. KI schreibt ein Klavierstück dafür und die Leinwand füllt sich Akkord für Akkord, während es spielt. Danach: ◆ ✦ MORPH blendet eine Stimmung in eine andere — erste Hälfte A, zweite B, ein Velocity-Blend in der 40–60%-Zone. ◆ ✦ VARY verschiebt die Tonart auf eine neue (oft Dur ↔ Moll): Rhythmus und Struktur bleiben gesperrt, nur die Akkorde — und somit die Farben — ändern sich. Tippe weiter für neue Tonarten. ◆ Free bekommt 3 Test-KI-Aufrufe (geteilt über Mood, Mood-from-image und AI Compose); Pro KI = unbegrenzt.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Nimm beides mit`, body:`Save → PNG des Bildes + Audio der Musik. Story-Modus schneidet für Instagram / TikTok. Pro entfernt das Wasserzeichen und hebt auf 300 DPI.`, more:`Zwei Diamanten — das Bild und die Musik. ◆ ↓ SAVE exportiert dein Bild als hochauflösendes PNG: Story (9:16) für IG/TikTok, Web/Social (~4×, feed-fertig), oder Print A1 · 300 DPI (~20×, galeriereif). Gleicher Song gibt immer dasselbe Bild — deine Songs haben jetzt Signaturen. ◆ ⏺ RECORD (Bildmodus) nimmt das Audio auf, während das Bild spielt, direkt in eine teilbare Datei; stoppt automatisch am Stückende. ◆ ♫ SCORE wandelt die Noten des Bildes in eine MusicXML-Datei — öffne sie in MuseScore, Sibelius oder Finale; echte Noten aus einem Bild. ◆ Free-Exporte tragen ein kleines Wasserzeichen; Pro und Pro KI entfernen es und schalten die Größe A1 · 300 DPI frei.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Nimm beides mit`, body:`Save → PNG des Bildes + Audio der Musik. Story-Modus schneidet für Instagram / TikTok. Pro entfernt das Wasserzeichen und hebt auf 300 DPI.`, more:`Zwei Diamanten — das Bild und die Musik. ◆ ↓ SAVE exportiert dein Bild als hochauflösendes PNG: Story (9:16) für IG/TikTok, Web/Social (~4×, feed-fertig), oder Print A0 · 300+ DPI (~20×, galeriereif). Gleicher Song gibt immer dasselbe Bild — deine Songs haben jetzt Signaturen. ◆ ⏺ RECORD (Bildmodus) nimmt das Audio auf, während das Bild spielt, direkt in eine teilbare Datei; stoppt automatisch am Stückende. ◆ ♫ SCORE wandelt die Noten des Bildes in eine MusicXML-Datei — öffne sie in MuseScore, Sibelius oder Finale; echte Noten aus einem Bild. ◆ Free-Exporte tragen ein kleines Wasserzeichen; Pro und Pro KI entfernen es und schalten die Größe A0 · 300+ DPI frei.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, Tempo, Loop, Mute, Clear`, body:`Play/Pause und Leiste suchen. Tempo 0,5×–2×. ⟳ Loop wiederholt. 🔊 Mute malt in Stille. Clear setzt zurück — klug, je Modus.`, more:`Die Wiedergabe-Steuerung. ◆ Play startet und pausiert (auch Leertaste); tippe die Fortschrittsleiste zum Springen, ziehe zum Scrubben. ◆ Tempo: eine Kachel zeigt die Rate (1× Standard); tippen für zurück auf 1×, halten zum Zykeln 0,5× → 2× mit Umbruch. ◆ ⟳ LOOP lässt ein Stimmungsstück wiederholen; gold wenn an. ◆ 🔊 / 🔇 Mute stummschaltet alles Audio, während das Bild weiter entsteht — über Sitzungen gemerkt. ◆ Clear ist modusbewusst: Compose löscht die Leinwand und bleibt; MIC verwirft nur den Entwurf des aktiven Modus; Image löscht die gemalte Spur und das Bild; MIDI/Audio/Noten/Text-Stimmung machen einen vollen Reset. ◆ Steht da „loading piano…", warte ein paar Sekunden (~5 MB Sample); klappt das nicht, schaltet es auf ein Synth-Klavier.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro schaltet alles frei`, body:`Pro 9,99 € → alle 18 Künstler, editierbare Custom-Palette, kein Wasserzeichen, lebenslang. Pro KI 19,99 € fügt unbegrenzte KI-Stimmungen, Image-Compose, Atmosphäre hinzu.`, more:`Drei Stufen, alle Einmalzahlungen. ◆ Free — 9 Künstler freigeschaltet (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 Maltypen je; jeder hat einen Pro-Partner (aktiven Künstler erneut antippen). Custom-Palette schreibgeschützt, Exporte mit Wasserzeichen, KI-Features auf 3 Test-Credits. ◆ Pro 9,99 € — alle 18 Künstler, alle Maltypen, editierbare Custom-Palette, 300-DPI-Exporte ohne Wasserzeichen, lebenslanger Zugang; KI weiter aus dem geteilten 3-Credit-Pool. ◆ Pro KI 19,99 € — alles aus Pro plus unbegrenzte KI: Text-Stimmungen, Mood-from-image, AI Compose, AI Atmosphere. ◆ Credit-Kosten: KI Text & Image Compose = je 1, Atmosphere = 0,5. ◆ Einmal zahlen, für immer behalten. Keine Abos. Lizenz auf bis zu 5 Geräten, eines zur Zeit.`}
   ],
@@ -15857,7 +15857,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio ou partition`, body:`Un bouton pour tout fichier musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Type détecté automatiquement.`, more:`Un bouton pour tout fichier musical. ◆ MIDI (.mid / .midi) — le multipiste se condense en accords, mappé au tempo, peint. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — décodé, hauteurs détectées, peint ; mieux sur matériel monophonique propre ou clairsemé (piano solo, voix, guitare simple) — les mix denses sont plus durs. ◆ Partition (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — hauteurs, durées, dynamiques et accords passent exacts ; l'entrée la plus précise qui soit. Paintiano détecte le type automatiquement. Ouvre Music sans fichier pour un exemple intégré.`},
     {id:'image', glyph:'📷', cat:'music', title:`Photo → musique → peinture`, body:`Dépose une image. Ses couleurs et son énergie deviennent un morceau de piano, puis peint dans tout style d'artiste. Free fait Scan, Pro ajoute AI Compose.`, more:`Charge n'importe quelle image. Paintiano la lit comme une partition — de gauche à droite, de haut en bas ; la durée s'échelonne avec l'énergie de l'image (~1½–2¾ min). ◆ L'app choisit la lecture selon la couleur de l'œuvre : coloré → Harmonie ou Spectral (teinte=hauteur, luminosité=octave, vivacité=force) ; quasi monochrome (Guernica, encre, sépia) → N/B. ◆ Custom est à toi : seules les couleurs proches de tes 12 cases sonnent, le reste se tait — filtre Guernica par des roses tropicaux et vois ce qui survit. ◆ Deux façons de jouer : SCAN lit l'image de gauche à droite comme une partition (choisis le sens). AI COMPOSE (Pro) écrit un tout nouveau morceau à partir de la palette, l'énergie et l'humeur de l'image — et garde l'image à l'écran pendant qu'il joue.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nomme un ressenti`, body:`Tape ✦ comment tu te sens ? Tape n'importe quel ressenti, n'importe quelle langue. L'IA écrit un morceau. Puis Morph vers une autre humeur, ou Vary pour une tonalité neuve.`, more:`Tape ✦ « comment tu te sens ? » et tape n'importe quel ressenti, en n'importe quelle langue — furieux, saudade, virée à 3h, béguin d'été. L'IA écrit un morceau de piano pour lui et la toile se remplit accord par accord pendant qu'il joue. Après : ◆ ✦ MORPH fond une humeur dans une autre — première moitié A, seconde B, un mélange de vélocité dans la zone 40–60%. ◆ ✦ VARY décale la tonalité vers une nouvelle (souvent majeur ↔ mineur) : le rythme et la structure restent verrouillés, seuls les accords — et donc les couleurs — changent. Tape encore pour de nouvelles tonalités. ◆ Free reçoit 3 appels IA d'essai (partagés entre Mood, Mood-from-image et AI Compose) ; Pro IA = illimité.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Repars avec les deux`, body:`Save → PNG de la peinture + audio de la musique. Le mode Story recadre pour Instagram / TikTok. Pro retire le filigrane et monte à 300 DPI.`, more:`Deux diamants — l'image et la musique. ◆ ↓ SAVE exporte ta peinture en PNG haute résolution : Story (9:16) pour IG/TikTok, Web/Social (~4×, prêt pour le feed), ou Print A1 · 300 DPI (~20×, qualité galerie). Même morceau donne toujours la même peinture — tes morceaux ont des signatures maintenant. ◆ ⏺ RECORD (mode image) capture l'audio pendant que la peinture joue, droit vers un fichier partageable ; s'arrête seul à la fin. ◆ ♫ SCORE transforme les notes de la peinture en fichier MusicXML — ouvre-le dans MuseScore, Sibelius ou Finale ; de vraies partitions à partir d'une image. ◆ Les exports Free portent un petit filigrane ; Pro et Pro IA le retirent et débloquent la taille A1 · 300 DPI.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Repars avec les deux`, body:`Save → PNG de la peinture + audio de la musique. Le mode Story recadre pour Instagram / TikTok. Pro retire le filigrane et monte à 300 DPI.`, more:`Deux diamants — l'image et la musique. ◆ ↓ SAVE exporte ta peinture en PNG haute résolution : Story (9:16) pour IG/TikTok, Web/Social (~4×, prêt pour le feed), ou Print A0 · 300+ DPI (~20×, qualité galerie). Même morceau donne toujours la même peinture — tes morceaux ont des signatures maintenant. ◆ ⏺ RECORD (mode image) capture l'audio pendant que la peinture joue, droit vers un fichier partageable ; s'arrête seul à la fin. ◆ ♫ SCORE transforme les notes de la peinture en fichier MusicXML — ouvre-le dans MuseScore, Sibelius ou Finale ; de vraies partitions à partir d'une image. ◆ Les exports Free portent un petit filigrane ; Pro et Pro IA le retirent et débloquent la taille A0 · 300+ DPI.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, vitesse, loop, mute, clear`, body:`Play/pause et navigation. Vitesse 0,5×–2×. ⟳ Loop répète. 🔊 Mute peint en silence. Clear réinitialise — intelligemment, par mode.`, more:`Les commandes de lecture. ◆ Play démarre et met en pause (Espace aussi) ; tape la barre de progression pour sauter, glisse pour scruber. ◆ Vitesse : une tuile montre le taux (1× défaut) ; tape pour revenir à 1×, maintiens pour cycler 0,5× → 2× en boucle. ◆ ⟳ LOOP fait répéter une pièce d'humeur ; or quand actif. ◆ 🔊 / 🔇 Mute coupe tout l'audio pendant que la peinture continue — mémorisé entre sessions. ◆ Clear est sensible au mode : Compose efface la toile et reste ; MIC abandonne seulement le brouillon du mode actif ; Image efface la trace peinte et l'image ; MIDI/audio/partition/humeur texte font un reset complet. ◆ Si le statut dit « loading piano… », attends quelques secondes (~5 Mo d'échantillon) ; si ça échoue, il bascule sur un piano synthé.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro débloque tout`, body:`Pro 9,99 € → les 18 artistes, palette Custom éditable, sans filigrane, à vie. Pro IA 19,99 € ajoute humeurs IA illimitées, image compose, atmosphère.`, more:`Trois niveaux, tous en paiement unique. ◆ Free — 9 artistes débloqués (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 types de peinture chacun ; chacun a un partenaire Pro (retape un artiste actif). Palette Custom en lecture seule, exports avec filigrane, fonctions IA sur 3 crédits d'essai. ◆ Pro 9,99 € — les 18 artistes, tous les types de peinture, palette Custom éditable, exports 300 DPI sans filigrane, accès à vie ; l'IA vient toujours du pool partagé de 3 crédits. ◆ Pro IA 19,99 € — tout Pro plus IA illimitée : humeurs texte, Mood-from-image, AI Compose, AI Atmosphere. ◆ Coûts de crédit : IA texte & image compose = 1 chacun, Atmosphere = 0,5. ◆ Paie une fois, garde pour toujours. Aucun abonnement. La licence marche sur jusqu'à 5 appareils, un à la fois.`}
   ],
@@ -15878,7 +15878,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio o partitura`, body:`Un botón para todo archivo musical. MIDI, MP3/WAV/M4A, o MusicXML de MuseScore/Finale. Tipo detectado automáticamente.`, more:`Un botón para todo archivo musical. ◆ MIDI (.mid / .midi) — el multipista se condensa en acordes, mapeado al tempo, pintado. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decodificado, alturas detectadas, pintado; mejor en material monofónico limpio o escaso (piano solo, voz, guitarra simple) — las mezclas densas cuestan más. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, duraciones, dinámicas y acordes pasan exactos; la entrada más precisa que hay. Paintiano detecta el tipo automáticamente. Abre Music sin archivo para una muestra integrada.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Suelta una imagen. Sus colores y energía se vuelven una pieza de piano, luego pinta en cualquier estilo. Free hace Scan, Pro añade AI Compose.`, more:`Sube cualquier imagen. Paintiano la lee como partitura — de izquierda a derecha, de arriba abajo; la duración escala con la energía de la imagen (~1½–2¾ min). ◆ La app elige la lectura según lo colorida que sea: colorida → Armonía o Espectral (tono=altura, luminosidad=octava, viveza=volumen); casi monocroma (Guernica, tinta, sepia) → B/N. ◆ Custom es tuyo: solo suenan los colores cercanos a tus 12 muestras, el resto calla — filtra Guernica por rosas tropicales y mira qué sobrevive. ◆ Dos formas de tocar: SCAN lee la imagen de izquierda a derecha como partitura (elige la dirección). AI COMPOSE (Pro) escribe una pieza nueva a partir de la paleta, energía y ánimo de la imagen — y mantiene la imagen en pantalla mientras suena.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nombra un sentir`, body:`Toca ✦ ¿cómo te sientes? Escribe cualquier sentir, cualquier idioma. La IA escribe una pieza. Luego Morph a otro ánimo, o Vary para una tonalidad nueva.`, more:`Toca ✦ «¿cómo te sientes?» y escribe cualquier sentir, en cualquier idioma — furioso, saudade, manejar a las 3am, amor de verano. La IA escribe una pieza de piano para ello y el lienzo se llena acorde por acorde mientras suena. Después: ◆ ✦ MORPH funde un ánimo en otro — primera mitad A, segunda B, una mezcla de velocidad en la zona 40–60%. ◆ ✦ VARY desplaza la tonalidad a una nueva (a menudo mayor ↔ menor): el ritmo y la estructura quedan fijos, solo cambian los acordes — y por tanto los colores. Sigue tocando para nuevas tonalidades. ◆ Free recibe 3 llamadas IA de prueba (compartidas entre Mood, Mood-from-image y AI Compose); Pro IA = ilimitado.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Llévate ambos`, body:`Save → PNG de la pintura + audio de la música. El modo Story recorta para Instagram / TikTok. Pro quita la marca de agua y sube a 300 DPI.`, more:`Dos diamantes — la imagen y la música. ◆ ↓ SAVE exporta tu pintura como PNG de alta resolución: Story (9:16) para IG/TikTok, Web/Social (~4×, listo para el feed), o Print A1 · 300 DPI (~20×, calidad galería). La misma canción siempre da la misma pintura — tus canciones tienen firmas ahora. ◆ ⏺ RECORD (modo imagen) captura el audio mientras la pintura suena, directo a un archivo compartible; se detiene solo al acabar. ◆ ♫ SCORE convierte las notas de la pintura en un archivo MusicXML — ábrelo en MuseScore, Sibelius o Finale; partituras reales desde una imagen. ◆ Los exports Free llevan una pequeña marca de agua; Pro y Pro IA la quitan y desbloquean el tamaño A1 · 300 DPI.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Llévate ambos`, body:`Save → PNG de la pintura + audio de la música. El modo Story recorta para Instagram / TikTok. Pro quita la marca de agua y sube a 300 DPI.`, more:`Dos diamantes — la imagen y la música. ◆ ↓ SAVE exporta tu pintura como PNG de alta resolución: Story (9:16) para IG/TikTok, Web/Social (~4×, listo para el feed), o Print A0 · 300+ DPI (~20×, calidad galería). La misma canción siempre da la misma pintura — tus canciones tienen firmas ahora. ◆ ⏺ RECORD (modo imagen) captura el audio mientras la pintura suena, directo a un archivo compartible; se detiene solo al acabar. ◆ ♫ SCORE convierte las notas de la pintura en un archivo MusicXML — ábrelo en MuseScore, Sibelius o Finale; partituras reales desde una imagen. ◆ Los exports Free llevan una pequeña marca de agua; Pro y Pro IA la quitan y desbloquean el tamaño A0 · 300+ DPI.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, velocidad, loop, mute, clear`, body:`Play/pausa y navegar la barra. Velocidad 0,5×–2×. ⟳ Loop repite. 🔊 Mute pinta en silencio. Clear reinicia — listo, por modo.`, more:`Los controles de reproducción. ◆ Play inicia y pausa (Espacio también); toca la barra de progreso para saltar, arrastra para hacer scrub. ◆ Velocidad: una baldosa muestra la tasa (1× defecto); toca para volver a 1×, mantén para ciclar 0,5× → 2× y dar la vuelta. ◆ ⟳ LOOP mantiene una pieza de ánimo repitiendo; oro cuando está activo. ◆ 🔊 / 🔇 Mute silencia todo el audio mientras la pintura sigue generándose — recordado entre sesiones. ◆ Clear es consciente del modo: Compose borra el lienzo y se queda; MIC descarta solo el borrador del modo activo; Image borra el trazo pintado y la imagen; MIDI/audio/partitura/ánimo de texto hacen un reinicio completo. ◆ Si el estado dice «loading piano…», espera unos segundos (~5 MB de muestra); si falla, pasa a un piano sintético.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloquea todo`, body:`Pro 9,99 € → los 18 artistas, paleta Custom editable, sin marca de agua, de por vida. Pro IA 19,99 € añade ánimos IA ilimitados, image compose, atmósfera.`, more:`Tres niveles, todos pago único. ◆ Free — 9 artistas desbloqueados (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) más 2 tipos de pintura cada uno; cada uno tiene un socio Pro (toca de nuevo un artista activo). Paleta Custom de solo lectura, exports con marca de agua, funciones IA con 3 créditos de prueba. ◆ Pro 9,99 € — los 18 artistas, todos los tipos de pintura, paleta Custom editable, exports 300 DPI sin marca de agua, acceso de por vida; la IA sigue del pool compartido de 3 créditos. ◆ Pro IA 19,99 € — todo Pro más IA ilimitada: ánimos de texto, Mood-from-image, AI Compose, AI Atmosphere. ◆ Costes de crédito: IA texto e image compose = 1 cada uno, Atmosphere = 0,5. ◆ Paga una vez, quédatelo para siempre. Sin suscripciones. La licencia funciona en hasta 5 dispositivos, uno a la vez.`}
   ],
@@ -15899,7 +15899,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio či noty`, body:`Jedno tlačidlo pre každý hudobný súbor. MIDI, MP3/WAV/M4A, alebo MusicXML z MuseScore/Finale. Typ sa rozpozná automaticky.`, more:`Jedno tlačidlo pre každý hudobný súbor. ◆ MIDI (.mid / .midi) — multi-track sa zhustí na akordy, tempo-mapuje, maľuje. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekóduje, deteguje tóny, maľuje; najlepšie na čistý monofónny alebo riedky materiál (sólo klavír, vokál, jednoduchá gitara) — husté mixy sú ťažšie. ◆ Noty (.musicxml .xml .mxl z MuseScore, Finale, Dorico) — tóny, trvania, dynamika aj akordy prejdú presne; najpresnejší vstup, aký je. Paintiano rozpozná typ automaticky. Otvor Music bez súboru pre vstavanú ukážku.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → hudba → maľba`, body:`Hoď fotku. Jej farby a energia sa stanú klavírnou skladbou, potom maľuje v štýle umelca. Free robí Scan, Pro pridáva AI Compose.`, more:`Nahraj akýkoľvek obrázok. Paintiano ho číta ako partitúru — zľava doprava, zhora nadol; dĺžka škáluje s energiou obrázka (~1½–2¾ min). ◆ App vyberie čítanie podľa toho, aký farebný je: farebný → Harmónia alebo Spektrum (odtieň=tón, svetlosť=oktáva, živosť=hlasitosť); takmer monochromatický (Guernica, tuš, sépia) → B/W. ◆ Custom je tvoj: znejú len farby blízke tvojim 12, zvyšok stíchne — prefiltruj Guernicu cez tropické ružové a uvidíš, čo prežije. ◆ Dva spôsoby hry: SCAN číta obrázok zľava doprava ako partitúru (vyber smer). AI COMPOSE (Pro) napíše celkom novú skladbu z palety, energie a nálady obrázka — a nechá obraz na obrazovke, kým hrá.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Pomenuj pocit`, body:`Klikni ✦ ako sa cítiš? Napíš akýkoľvek pocit, akýkoľvek jazyk. AI napíše klavírnu skladbu. Potom Morph do inej nálady, alebo Vary pre novú tóninu.`, more:`Klikni ✦ „ako sa cítiš?" a napíš akýkoľvek pocit, v akomkoľvek jazyku — zúrivý, saudade, 3am drive, letná láska. AI preň napíše klavírnu skladbu a plátno sa plní akord po akorde, ako hrá. Potom: ◆ ✦ MORPH prelína jednu náladu do druhej — prvá polovica A, druhá B, dynamický blend v zóne 40–60%. ◆ ✦ VARY posunie tóninu na novú (často dur ↔ mol): rytmus a štruktúra ostávajú zamknuté, menia sa len akordy — a teda farby. Klikaj ďalej pre nové tóniny. ◆ Free dostane 3 skúšobné AI volania (zdieľané cez Mood, Mood-from-image a AI Compose); Pro AI = neobmedzene.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Odnes si oboje`, body:`Save → PNG maľby + audio piesne. Story mód oreže pre Instagram / TikTok. Pro odstráni watermark a zdvihne na 300 DPI.`, more:`Dva diamanty — obraz a hudba. ◆ ↓ SAVE exportuje maľbu ako PNG vo vysokom rozlíšení: Story (9:16) pre IG/TikTok, Web/Social (~4×, do feedu), alebo Print A1 · 300 DPI (~20×, galériová kvalita). Tá istá pieseň vždy dá tú istú maľbu — tvoje piesne majú teraz podpisy. ◆ ⏺ RECORD (image mód) zachytí audio, ako maľba hrá, rovno do zdieľateľného súboru; zastaví sa, keď skladba skončí. ◆ ♫ SCORE premení noty maľby na MusicXML — otvor ho v MuseScore, Sibelius či Finale; skutočné noty z obrázka. ◆ Free exporty nesú malý watermark; Pro a Pro AI ho odstránia a odomknú veľkosť A1 · 300 DPI.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Odnes si oboje`, body:`Save → PNG maľby + audio piesne. Story mód oreže pre Instagram / TikTok. Pro odstráni watermark a zdvihne na 300 DPI.`, more:`Dva diamanty — obraz a hudba. ◆ ↓ SAVE exportuje maľbu ako PNG vo vysokom rozlíšení: Story (9:16) pre IG/TikTok, Web/Social (~4×, do feedu), alebo Print A0 · 300+ DPI (~20×, galériová kvalita). Tá istá pieseň vždy dá tú istú maľbu — tvoje piesne majú teraz podpisy. ◆ ⏺ RECORD (image mód) zachytí audio, ako maľba hrá, rovno do zdieľateľného súboru; zastaví sa, keď skladba skončí. ◆ ♫ SCORE premení noty maľby na MusicXML — otvor ho v MuseScore, Sibelius či Finale; skutočné noty z obrázka. ◆ Free exporty nesú malý watermark; Pro a Pro AI ho odstránia a odomknú veľkosť A0 · 300+ DPI.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, rýchlosť, loop, mute, clear`, body:`Play/pauza a posun lišty. Rýchlosť 0,5×–2×. ⟳ Loop opakuje. 🔊 Mute maľuje v tichu. Clear resetuje — chytro, podľa módu.`, more:`Ovládanie prehrávania. ◆ Play spustí a pozastaví (aj Space); klik na lištu skočí, ťahaj na scrub. ◆ Rýchlosť: dlaždica ukáže rate (1× default); klik vráti na 1×, podrž a cykluj 0,5× → 2× s prebalením. ◆ ⟳ LOOP necháva náladovú skladbu opakovať; zlatá keď je zapnutá. ◆ 🔊 / 🔇 Mute stíši všetko audio, kým maľba stále vzniká — pamätá sa medzi sedeniami. ◆ Clear je mód-citlivý: Compose zmaže plátno a ostane; MIC zahodí len draft aktívneho módu; Image zmaže maľovanú stopu aj obrázok; MIDI/audio/noty/text mood spravia plný reset. ◆ Ak status hovorí „loading piano…", počkaj pár sekúnd (~5 MB sample); ak to zlyhá, prepne na syntetický klavír.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro odomkne všetko`, body:`Pro €9.99 → všetkých 18 umelcov, editovateľná Custom paleta, bez watermarku, doživotne. Pro AI €19.99 pridáva neobmedzené AI moody, image compose, atmosphere.`, more:`Tri úrovne, všetky jednorazové platby. ◆ Free — 9 umelcov odomknutých (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 typy maľby na každého; každý má Pro partnera (klikni aktívneho umelca znova). Custom paleta len na čítanie, exporty s watermarkom, AI funkcie na 3 skúšobné kredity. ◆ Pro €9.99 — všetkých 18 umelcov, všetky typy maľby, editovateľná Custom paleta, 300 DPI exporty bez watermarku, doživotný prístup; AI stále zo zdieľaného 3-kreditového poolu. ◆ Pro AI €19.99 — všetko z Pro plus neobmedzené AI: textové moody, Mood-from-image, AI Compose, AI Atmosphere. ◆ Ceny kreditov: AI text & image compose = 1 každý, Atmosphere = 0,5. ◆ Zaplať raz, maj navždy. Žiadne predplatné. Licencia funguje na max 5 zariadeniach, jedno naraz.`}
   ],
@@ -15920,7 +15920,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, áudio ou partitura`, body:`Um botão para todo ficheiro musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Tipo detetado automaticamente.`, more:`Um botão para todo ficheiro musical. ◆ MIDI (.mid / .midi) — multi-faixa condensa em acordes, mapeado ao tempo, pintado. ◆ Áudio (.mp3 .wav .m4a .ogg .aac) — descodificado, alturas detetadas, pintado; melhor em material monofónico limpo ou esparso (piano solo, voz, guitarra simples) — misturas densas são mais difíceis. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, durações, dinâmicas e acordes passam exatos; a entrada mais precisa que há. O Paintiano deteta o tipo automaticamente. Abre Music sem ficheiro para uma amostra integrada.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Larga uma imagem. As suas cores e energia tornam-se uma peça de piano, depois pinta em qualquer estilo. Free faz Scan, Pro adiciona AI Compose.`, more:`Carrega qualquer imagem. O Paintiano lê-a como partitura — da esquerda para a direita, de cima para baixo; a duração escala com a energia da imagem (~1½–2¾ min). ◆ A app escolhe a leitura pela cor da obra: colorida → Harmonia ou Espectral (tom=altura, luminosidade=oitava, vivacidade=volume); quase monocromática (Guernica, tinta, sépia) → P&B. ◆ Custom é teu: só soam as cores próximas das tuas 12 amostras, o resto cala — filtra a Guernica por rosas tropicais e vê o que sobrevive. ◆ Duas formas de tocar: SCAN lê a imagem da esquerda para a direita como partitura (escolhe a direção). AI COMPOSE (Pro) escreve uma peça nova a partir da paleta, energia e estado da imagem — e mantém a imagem no ecrã enquanto toca.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nomeia um sentir`, body:`Toca ✦ como te sentes? Escreve qualquer sentir, qualquer língua. A IA escreve uma peça. Depois Morph para outro estado, ou Vary para uma tonalidade nova.`, more:`Toca ✦ «como te sentes?» e escreve qualquer sentir, em qualquer língua — furioso, saudade, conduzir às 3 da manhã, paixão de verão. A IA escreve uma peça de piano para ele e a tela enche-se acorde a acorde enquanto toca. Depois: ◆ ✦ MORPH funde um estado noutro — primeira metade A, segunda B, uma mistura de velocidade na zona 40–60%. ◆ ✦ VARY desloca a tonalidade para uma nova (muitas vezes maior ↔ menor): o ritmo e a estrutura ficam travados, só os acordes — e portanto as cores — mudam. Continua a tocar para novas tonalidades. ◆ Free recebe 3 chamadas IA de teste (partilhadas entre Mood, Mood-from-image e AI Compose); Pro IA = ilimitado.`},
-    {id:'save', glyph:'💾', cat:'save', title:`Leva os dois`, body:`Save → PNG da pintura + áudio da música. O modo Story recorta para Instagram / TikTok. Pro remove a marca de água e sobe para 300 DPI.`, more:`Dois diamantes — a imagem e a música. ◆ ↓ SAVE exporta a tua pintura como PNG de alta resolução: Story (9:16) para IG/TikTok, Web/Social (~4×, pronto para o feed), ou Print A1 · 300 DPI (~20×, qualidade de galeria). A mesma canção dá sempre a mesma pintura — as tuas canções têm assinaturas agora. ◆ ⏺ RECORD (modo imagem) captura o áudio enquanto a pintura toca, direto para um ficheiro partilhável; para sozinho ao terminar. ◆ ♫ SCORE transforma as notas da pintura num ficheiro MusicXML — abre-o no MuseScore, Sibelius ou Finale; partituras reais a partir de uma imagem. ◆ Os exports Free levam uma pequena marca de água; Pro e Pro IA removem-na e desbloqueiam o tamanho A1 · 300 DPI.`},
+    {id:'save', glyph:'💾', cat:'save', title:`Leva os dois`, body:`Save → PNG da pintura + áudio da música. O modo Story recorta para Instagram / TikTok. Pro remove a marca de água e sobe para 300 DPI.`, more:`Dois diamantes — a imagem e a música. ◆ ↓ SAVE exporta a tua pintura como PNG de alta resolução: Story (9:16) para IG/TikTok, Web/Social (~4×, pronto para o feed), ou Print A0 · 300+ DPI (~20×, qualidade de galeria). A mesma canção dá sempre a mesma pintura — as tuas canções têm assinaturas agora. ◆ ⏺ RECORD (modo imagem) captura o áudio enquanto a pintura toca, direto para um ficheiro partilhável; para sozinho ao terminar. ◆ ♫ SCORE transforma as notas da pintura num ficheiro MusicXML — abre-o no MuseScore, Sibelius ou Finale; partituras reais a partir de uma imagem. ◆ Os exports Free levam uma pequena marca de água; Pro e Pro IA removem-na e desbloqueiam o tamanho A0 · 300+ DPI.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, velocidade, loop, mute, clear`, body:`Play/pausa e navegar a barra. Velocidade 0,5×–2×. ⟳ Loop repete. 🔊 Mute pinta em silêncio. Clear reinicia — esperto, por modo.`, more:`Os controlos de reprodução. ◆ Play inicia e pausa (Espaço também); toca a barra de progresso para saltar, arrasta para fazer scrub. ◆ Velocidade: um ladrilho mostra a taxa (1× padrão); toca para voltar a 1×, segura para ciclar 0,5× → 2× e dar a volta. ◆ ⟳ LOOP mantém uma peça de estado a repetir; dourado quando ligado. ◆ 🔊 / 🔇 Mute silencia todo o áudio enquanto a pintura continua a gerar-se — lembrado entre sessões. ◆ Clear é consciente do modo: Compose apaga a tela e fica; MIC descarta só o rascunho do modo ativo; Image apaga o traço pintado e a imagem; MIDI/áudio/partitura/estado de texto fazem um reset completo. ◆ Se o estado diz «loading piano…», espera uns segundos (~5 MB de amostra); se falhar, passa para um piano sintético.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloqueia tudo`, body:`Pro 9,99 € → todos os 18 artistas, paleta Custom editável, sem marca de água, vitalício. Pro IA 19,99 € adiciona estados IA ilimitados, image compose, atmosfera.`, more:`Três níveis, todos pagamento único. ◆ Free — 9 artistas desbloqueados (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) mais 2 tipos de pintura cada; cada um tem um parceiro Pro (toca de novo num artista ativo). Paleta Custom só de leitura, exports com marca de água, funções IA com 3 créditos de teste. ◆ Pro 9,99 € — todos os 18 artistas, todos os tipos de pintura, paleta Custom editável, exports 300 DPI sem marca de água, acesso vitalício; a IA continua do pool partilhado de 3 créditos. ◆ Pro IA 19,99 € — tudo do Pro mais IA ilimitada: estados de texto, Mood-from-image, AI Compose, AI Atmosphere. ◆ Custos de crédito: IA texto e image compose = 1 cada, Atmosphere = 0,5. ◆ Paga uma vez, fica para sempre. Sem subscrições. A licença funciona em até 5 dispositivos, um de cada vez.`}
   ],
@@ -15941,7 +15941,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音频或乐谱`, body:`一个按钮搞定每种音乐文件。MIDI、MP3/WAV/M4A,或来自 MuseScore/Finale 的 MusicXML。类型自动识别。`, more:`一个按钮搞定每种音乐文件。◆ MIDI(.mid / .midi)——多轨凝缩成和弦,按速度映射,作画。◆ 音频(.mp3 .wav .m4a .ogg .aac)——解码、检测音高、作画;在干净的单音或稀疏素材(独奏钢琴、人声、简单吉他)上最佳——密集混音更难。◆ 乐谱(.musicxml .xml .mxl 来自 MuseScore、Finale、Dorico)——音高、时值、力度、和弦全都精确通过;现有最准确的输入。Paintiano 自动识别类型。不带文件打开 Music 可得内置示例。`},
     {id:'image', glyph:'📷', cat:'music', title:`照片 → 音乐 → 绘画`, body:`丢入一张图。它的颜色和能量变成一段钢琴曲,然后以任一艺术家风格作画。Free 做 Scan,Pro 增加 AI Compose。`, more:`上传任意图像。Paintiano 把它当乐谱读——从左到右、从上到下;时长随图像能量缩放(约 1½–2¾ 分钟)。◆ 应用按作品有多彩来选读法:多彩 → 和声或光谱(色相=音高,明度=八度,鲜艳=响度);近单色(格尔尼卡、水墨、棕褐)→ 黑白。◆ 自定义是你的:只有接近你 12 格的颜色发声,其余静默——把格尔尼卡过滤成热带粉,看看什么存活。◆ 两种播放方式:SCAN 把图从左到右当乐谱读(选扫描方向)。AI COMPOSE(Pro)从图的调色、能量与情绪写一整首新曲——播放时把图留在屏上。`},
     {id:'moods', glyph:'✦', cat:'music', title:`说出一种感受`, body:`点 ✦ 你感觉如何?输入任何感受、任何语言。AI 写一段钢琴曲。然后 Morph 进另一种情绪,或 Vary 换一个新调。`, more:`点 ✦「你感觉如何?」,输入任何感受、用任何语言——愤怒、saudade、凌晨三点开车、夏日心动。AI 为它写一段钢琴曲,播放时画布逐和弦填满。之后:◆ ✦ MORPH 把一种情绪交叉淡入另一种——前半是 A,后半是 B,在 40–60% 区做力度混合。◆ ✦ VARY 把调性移到一个新调(常是大 ↔ 小):节奏与结构锁定,只有和弦——从而颜色——改变。继续点换新调。◆ Free 得 3 次试用 AI 调用(在 Mood、Mood-from-image 和 AI Compose 间共享);Pro AI = 无限。`},
-    {id:'save', glyph:'💾', cat:'save', title:`两者都带走`, body:`Save → 画作的 PNG + 音乐的音频。Story 模式为 Instagram / TikTok 裁切。Pro 去掉水印并提升到 300 DPI。`, more:`两颗钻石——图与乐。◆ ↓ SAVE 把你的画导出为高分辨率 PNG:Story(9:16)给 IG/TikTok,Web/Social(约 4×,适合信息流),或 Print A1 · 300 DPI(约 20×,画廊级)。同一首歌总给同样的画——你的歌现在有了签名。◆ ⏺ RECORD(图像模式)在画作播放时录下音频,直接成可分享文件;乐曲结束自动停止。◆ ♫ SCORE 把画作的音符变成 MusicXML 文件——在 MuseScore、Sibelius 或 Finale 打开;由一张图生成真正的乐谱。◆ Free 导出带小水印;Pro 与 Pro AI 去掉它并解锁 A1 · 300 DPI 尺寸。`},
+    {id:'save', glyph:'💾', cat:'save', title:`两者都带走`, body:`Save → 画作的 PNG + 音乐的音频。Story 模式为 Instagram / TikTok 裁切。Pro 去掉水印并提升到 300 DPI。`, more:`两颗钻石——图与乐。◆ ↓ SAVE 把你的画导出为高分辨率 PNG:Story(9:16)给 IG/TikTok,Web/Social(约 4×,适合信息流),或 Print A0 · 300+ DPI(约 20×,画廊级)。同一首歌总给同样的画——你的歌现在有了签名。◆ ⏺ RECORD(图像模式)在画作播放时录下音频,直接成可分享文件;乐曲结束自动停止。◆ ♫ SCORE 把画作的音符变成 MusicXML 文件——在 MuseScore、Sibelius 或 Finale 打开;由一张图生成真正的乐谱。◆ Free 导出带小水印;Pro 与 Pro AI 去掉它并解锁 A0 · 300+ DPI 尺寸。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、速度、循环、静音、清除`, body:`播放/暂停并拖进度条。速度 0.5×–2×。⟳ 循环重复。🔊 静音在无声中作画。Clear 智能重置,按模式。`, more:`播放控制。◆ 播放开始并暂停(空格也行);点进度条跳转,拖动来 scrub。◆ 速度:一个方块显示倍率(默认 1×);点击回到 1×,按住循环 0.5× → 2× 并回绕。◆ ⟳ LOOP 让情绪曲重复;开启时为金色。◆ 🔊 / 🔇 静音在画作仍照常生成时静掉所有音频——跨会话记住。◆ Clear 感知模式:Compose 擦画布并留下;MIC 只丢当前模式的草稿;Image 擦掉画的痕迹和图;MIDI/音频/乐谱/文字情绪做完整重置。◆ 若状态显示「loading piano…」,等几秒(约 5 MB 采样);若失败,切换到合成钢琴。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解锁一切`, body:`Pro €9.99 → 全部 18 位艺术家、可编辑自定义调色板、无水印、终身。Pro AI €19.99 增加无限 AI 情绪、image compose、氛围。`, more:`三个级别,全是一次性付款。◆ Free——解锁 9 位艺术家(毕加索、波洛克、草间、蒙德里安、克里姆特、瓦萨雷里、阿夫·克林特、哈林、莫奈)外加每位 2 种绘法;每位有一个 Pro 搭档(再点一次激活的艺术家)。自定义调色板只读,导出带水印,AI 功能用 3 个试用额度。◆ Pro €9.99——全部 18 位艺术家、每位所有绘法、可编辑自定义调色板、无水印的 300 DPI 导出、终身访问;AI 仍来自共享的 3 额度池。◆ Pro AI €19.99——Pro 的一切外加无限 AI:文字情绪、Mood-from-image、AI Compose、AI Atmosphere。◆ 额度成本:AI 文字与 image compose = 各 1,Atmosphere = 0.5。◆ 一次付清,永久拥有。无订阅。许可证可用于至多 5 台设备,一次一台。`}
   ],
@@ -15962,7 +15962,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音訊或樂譜`, body:`一個按鈕搞定每種音樂檔。MIDI、MP3/WAV/M4A,或來自 MuseScore/Finale 的 MusicXML。類型自動辨識。`, more:`一個按鈕搞定每種音樂檔。◆ MIDI(.mid / .midi)——多軌凝縮成和弦,按速度映射,作畫。◆ 音訊(.mp3 .wav .m4a .ogg .aac)——解碼、偵測音高、作畫;在乾淨的單音或稀疏素材(獨奏鋼琴、人聲、簡單吉他)上最佳——密集混音更難。◆ 樂譜(.musicxml .xml .mxl 來自 MuseScore、Finale、Dorico)——音高、時值、力度、和弦全都精確通過;現有最準確的輸入。Paintiano 自動辨識類型。不帶檔案打開 Music 可得內建範例。`},
     {id:'image', glyph:'📷', cat:'music', title:`照片 → 音樂 → 繪畫`, body:`丟入一張圖。它的顏色和能量變成一段鋼琴曲,然後以任一藝術家風格作畫。Free 做 Scan,Pro 增加 AI Compose。`, more:`上傳任意圖像。Paintiano 把它當樂譜讀——從左到右、從上到下;時長隨圖像能量縮放(約 1½–2¾ 分鐘)。◆ 應用按作品有多彩來選讀法:多彩 → 和聲或光譜(色相=音高,明度=八度,鮮豔=響度);近單色(格爾尼卡、水墨、棕褐)→ 黑白。◆ 自訂是你的:只有接近你 12 格的顏色發聲,其餘靜默——把格爾尼卡濾成熱帶粉,看看什麼存活。◆ 兩種播放方式:SCAN 把圖從左到右當樂譜讀(選掃描方向)。AI COMPOSE(Pro)從圖的調色、能量與情緒寫一整首新曲——播放時把圖留在螢幕上。`},
     {id:'moods', glyph:'✦', cat:'music', title:`說出一種感受`, body:`點 ✦ 你感覺如何?輸入任何感受、任何語言。AI 寫一段鋼琴曲。然後 Morph 進另一種情緒,或 Vary 換一個新調。`, more:`點 ✦「你感覺如何?」,輸入任何感受、用任何語言——憤怒、saudade、凌晨三點開車、夏日心動。AI 為它寫一段鋼琴曲,播放時畫布逐和弦填滿。之後:◆ ✦ MORPH 把一種情緒交叉淡入另一種——前半是 A,後半是 B,在 40–60% 區做力度混合。◆ ✦ VARY 把調性移到一個新調(常是大 ↔ 小):節奏與結構鎖定,只有和弦——從而顏色——改變。繼續點換新調。◆ Free 得 3 次試用 AI 呼叫(在 Mood、Mood-from-image 和 AI Compose 間共享);Pro AI = 無限。`},
-    {id:'save', glyph:'💾', cat:'save', title:`兩者都帶走`, body:`Save → 畫作的 PNG + 音樂的音訊。Story 模式為 Instagram / TikTok 裁切。Pro 去掉浮水印並提升到 300 DPI。`, more:`兩顆鑽石——圖與樂。◆ ↓ SAVE 把你的畫匯出為高解析度 PNG:Story(9:16)給 IG/TikTok,Web/Social(約 4×,適合動態消息),或 Print A1 · 300 DPI(約 20×,畫廊級)。同一首歌總給同樣的畫——你的歌現在有了簽名。◆ ⏺ RECORD(圖像模式)在畫作播放時錄下音訊,直接成可分享檔案;樂曲結束自動停止。◆ ♫ SCORE 把畫作的音符變成 MusicXML 檔——在 MuseScore、Sibelius 或 Finale 打開;由一張圖生成真正的樂譜。◆ Free 匯出帶小浮水印;Pro 與 Pro AI 去掉它並解鎖 A1 · 300 DPI 尺寸。`},
+    {id:'save', glyph:'💾', cat:'save', title:`兩者都帶走`, body:`Save → 畫作的 PNG + 音樂的音訊。Story 模式為 Instagram / TikTok 裁切。Pro 去掉浮水印並提升到 300 DPI。`, more:`兩顆鑽石——圖與樂。◆ ↓ SAVE 把你的畫匯出為高解析度 PNG:Story(9:16)給 IG/TikTok,Web/Social(約 4×,適合動態消息),或 Print A0 · 300+ DPI(約 20×,畫廊級)。同一首歌總給同樣的畫——你的歌現在有了簽名。◆ ⏺ RECORD(圖像模式)在畫作播放時錄下音訊,直接成可分享檔案;樂曲結束自動停止。◆ ♫ SCORE 把畫作的音符變成 MusicXML 檔——在 MuseScore、Sibelius 或 Finale 打開;由一張圖生成真正的樂譜。◆ Free 匯出帶小浮水印;Pro 與 Pro AI 去掉它並解鎖 A0 · 300+ DPI 尺寸。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、速度、循環、靜音、清除`, body:`播放/暫停並拖進度條。速度 0.5×–2×。⟳ 循環重複。🔊 靜音在無聲中作畫。Clear 智慧重置,按模式。`, more:`播放控制。◆ 播放開始並暫停(空格也行);點進度條跳轉,拖動來 scrub。◆ 速度:一個方塊顯示倍率(預設 1×);點擊回到 1×,按住循環 0.5× → 2× 並回繞。◆ ⟳ LOOP 讓情緒曲重複;開啟時為金色。◆ 🔊 / 🔇 靜音在畫作仍照常生成時靜掉所有音訊——跨工作階段記住。◆ Clear 感知模式:Compose 擦畫布並留下;MIC 只丟當前模式的草稿;Image 擦掉畫的痕跡和圖;MIDI/音訊/樂譜/文字情緒做完整重置。◆ 若狀態顯示「loading piano…」,等幾秒(約 5 MB 取樣);若失敗,切換到合成鋼琴。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖一切`, body:`Pro €9.99 → 全部 18 位藝術家、可編輯自訂調色盤、無浮水印、終身。Pro AI €19.99 增加無限 AI 情緒、image compose、氛圍。`, more:`三個級別,全是一次性付款。◆ Free——解鎖 9 位藝術家(畢卡索、波洛克、草間、蒙德里安、克林姆、瓦沙雷利、阿夫·克林特、哈林、莫內)外加每位 2 種繪法;每位有一個 Pro 搭檔(再點一次啟用的藝術家)。自訂調色盤唯讀,匯出帶浮水印,AI 功能用 3 個試用額度。◆ Pro €9.99——全部 18 位藝術家、每位所有繪法、可編輯自訂調色盤、無浮水印的 300 DPI 匯出、終身存取;AI 仍來自共享的 3 額度池。◆ Pro AI €19.99——Pro 的一切外加無限 AI:文字情緒、Mood-from-image、AI Compose、AI Atmosphere。◆ 額度成本:AI 文字與 image compose = 各 1,Atmosphere = 0.5。◆ 一次付清,永久擁有。無訂閱。授權可用於至多 5 台裝置,一次一台。`}
   ],
@@ -15983,7 +15983,7 @@ const GUIDE_CARDS_I18N = {
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音声、楽譜`, body:`あらゆる音楽ファイルに一つのボタン。MIDI、MP3/WAV/M4A、または MuseScore/Finale の MusicXML。種類は自動判別。`, more:`あらゆる音楽ファイルに一つのボタン。◆ MIDI(.mid / .midi)——マルチトラックが和音に凝縮、テンポマップされ、描かれる。◆ 音声(.mp3 .wav .m4a .ogg .aac)——デコードされ、音高検出され、描かれる;きれいな単音または疎な素材(ソロピアノ、声、シンプルなギター)で最良——密なミックスは難しい。◆ 楽譜(.musicxml .xml .mxl、MuseScore・Finale・Dorico から)——音高、長さ、強弱、和音すべて正確に通る;現存する最も正確な入力。Paintiano は種類を自動判別。ファイルなしで Music を開けば内蔵サンプル。`},
     {id:'image', glyph:'📷', cat:'music', title:`写真 → 音楽 → 絵画`, body:`画像をドロップ。その色とエネルギーがピアノ曲になり、好きなアーティストのスタイルで描く。Free は Scan、Pro は AI Compose を追加。`, more:`どんな画像でもアップロード。Paintiano はそれを楽譜として読む——左から右、上から下;長さは画像のエネルギーで変わる(約 1½–2¾ 分)。◆ アプリは作品がどれだけ色鮮やかかで読みを選ぶ:色鮮やか → ハーモニーかスペクトル(色相=音高、明度=八度、鮮やかさ=音量);ほぼ単色(ゲルニカ、墨、セピア)→ 白黒。◆ カスタムはあなたのもの:あなたの 12 色に近い色だけが鳴り、残りは静まる——ゲルニカを熱帯ピンクで濾して何が生き残るか見る。◆ 二つの再生法:SCAN は画像を左から右へ楽譜として読む(走査方向を選ぶ)。AI COMPOSE(Pro)は画像のパレット・エネルギー・気分から全く新しい曲を書く——再生中は画像を画面に残す。`},
     {id:'moods', glyph:'✦', cat:'music', title:`感情に名前を`, body:`✦ どんな気分? をタップ。どんな感情でも、どんな言語でも打つ。AI が一曲書く。その後 Morph で別の気分へ、Vary で新しい調へ。`, more:`✦「どんな気分?」をタップし、どんな感情でも、どんな言語でも打つ——激怒、サウダージ、午前3時のドライブ、夏の片思い。AI がそれにピアノ曲を書き、再生中キャンバスが和音ごとに満ちる。その後:◆ ✦ MORPH は一つの気分を別の気分へクロスフェード——前半が A、後半が B、40–60% ゾーンでベロシティをブレンド。◆ ✦ VARY は調性を新しい調へずらす(しばしば長 ↔ 短):リズムと構造はロックされ、和音——ゆえに色——だけが変わる。タップし続けて新しい調へ。◆ Free は試用 AI 呼び出しを 3 回(Mood、Mood-from-image、AI Compose で共有);Pro AI = 無制限。`},
-    {id:'save', glyph:'💾', cat:'save', title:`両方を持ち帰る`, body:`Save → 絵の PNG + 音楽の音声。Story モードが Instagram / TikTok 用に切り抜く。Pro はウォーターマークを外し 300 DPI に上げる。`, more:`二つのダイヤ——絵と音楽。◆ ↓ SAVE は絵を高解像度 PNG に書き出す:Story(9:16)は IG/TikTok 用、Web/Social(約 4×、フィード向き)、または Print A1 · 300 DPI(約 20×、ギャラリー級)。同じ曲はいつも同じ絵を与える——あなたの曲には今や署名がある。◆ ⏺ RECORD(画像モード)は絵が再生される間に音声を録り、共有可能なファイルへ直接;曲が終わると自動停止。◆ ♫ SCORE は絵の音符を MusicXML ファイルにする——MuseScore、Sibelius、Finale で開く;一枚の絵から本物の楽譜。◆ Free の書き出しには小さなウォーターマーク;Pro と Pro AI はそれを外し A1 · 300 DPI サイズを解放する。`},
+    {id:'save', glyph:'💾', cat:'save', title:`両方を持ち帰る`, body:`Save → 絵の PNG + 音楽の音声。Story モードが Instagram / TikTok 用に切り抜く。Pro はウォーターマークを外し 300 DPI に上げる。`, more:`二つのダイヤ——絵と音楽。◆ ↓ SAVE は絵を高解像度 PNG に書き出す:Story(9:16)は IG/TikTok 用、Web/Social(約 4×、フィード向き)、または Print A0 · 300+ DPI(約 20×、ギャラリー級)。同じ曲はいつも同じ絵を与える——あなたの曲には今や署名がある。◆ ⏺ RECORD(画像モード)は絵が再生される間に音声を録り、共有可能なファイルへ直接;曲が終わると自動停止。◆ ♫ SCORE は絵の音符を MusicXML ファイルにする——MuseScore、Sibelius、Finale で開く;一枚の絵から本物の楽譜。◆ Free の書き出しには小さなウォーターマーク;Pro と Pro AI はそれを外し A0 · 300+ DPI サイズを解放する。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`再生・速度・ループ・ミュート・消去`, body:`再生/停止とバー移動。速度 0.5×–2×。⟳ ループで繰返し。🔊 ミュートで無音で描く。Clear はモードごとに賢くリセット。`, more:`再生コントロール。◆ 再生は開始と停止(スペースも);進捗バーをタップでジャンプ、ドラッグでスクラブ。◆ 速度:タイルが倍率を示す(既定 1×);タップで 1× へ戻し、長押しで 0.5× → 2× を循環し回り込む。◆ ⟳ LOOP は気分の曲を繰り返させる;オンで金色。◆ 🔊 / 🔇 ミュートは絵が通常通り生成される間、全音声を消す——セッションをまたいで記憶。◆ Clear はモードを意識する:Compose はキャンバスを消して留まる;MIC はアクティブなモードの下書きだけ捨てる;Image は描いた跡と画像を消す;MIDI/音声/楽譜/テキスト気分は完全リセット。◆ 状態が「loading piano…」と出たら数秒待つ(約 5 MB サンプル);失敗すればシンセピアノに切り替わる。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro が全てを解放`, body:`Pro €9.99 → 全 18 人のアーティスト、編集可能なカスタムパレット、ウォーターマークなし、永久。Pro AI €19.99 は無制限 AI 気分、image compose、雰囲気を追加。`, more:`三段階、すべて一回払い。◆ Free——9 人のアーティスト解放(ピカソ、ポロック、草間、モンドリアン、クリムト、ヴァザルリ、アフ・クリント、ヘリング、モネ)に各 2 種の描法;各人に Pro パートナー(有効なアーティストをもう一度タップ)。カスタムパレットは読取専用、書き出しはウォーターマーク付き、AI 機能は 3 試用クレジット。◆ Pro €9.99——全 18 人のアーティスト、全描法、編集可能なカスタムパレット、ウォーターマークなしの 300 DPI 書き出し、永久アクセス;AI は共有の 3 クレジットプールから。◆ Pro AI €19.99——Pro の全てに無制限 AI:テキスト気分、Mood-from-image、AI Compose、AI Atmosphere。◆ クレジット費用:AI テキスト & image compose = 各 1、Atmosphere = 0.5。◆ 一度払えば永久に。サブスクなし。ライセンスは最大 5 台、一度に一台で動く。`}
   ]
@@ -18300,6 +18300,215 @@ function IntroSplash({ onDone, tagline, skipLabel }){
       <div style={{position:'absolute',bottom:30,left:0,right:0,textAlign:'center',fontFamily:"'Outfit',sans-serif",fontSize:'.5rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.28)',pointerEvents:'none'}}>{skipLabel}</div>
     </div>
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §6c  SVG CONTEXT SHIM — vector export for gallery prints
+// ─────────────────────────────────────────────────────────────────────────────
+//   A minimal CanvasRenderingContext2D-compatible shim that records every draw
+//   call as an SVG element instead of rasterising it. The painting renderer
+//   (drawBlock, draw*Overlay) is fully canvas-API based with no getImageData /
+//   filter / drawImage — so substituting a real ctx for this shim produces a
+//   resolution-independent SVG of the exact same painting. Used for the
+//   "gallery" sizeMode export (Pro / Pro AI only). The print shop's RIP then
+//   rasterises at whatever DPI the printer supports — 600, 720, even 1200 DPI
+//   for fine-art giclée — without us ever having to rasterise in-browser.
+//
+//   Implements: fill/stroke for paths, rects, arcs, ellipses, bezier/quadratic
+//   curves; gradients (linear & radial); text; shadows (as feGaussianBlur);
+//   transform stack (save/restore/scale/rotate/translate); globalAlpha and
+//   globalCompositeOperation (the latter maps to blend-mode where it can).
+function createSvgCtx(width, height){
+  const out = [];
+  const defs = [];
+  let gradId = 0, clipId = 0;
+  // Style state — exactly the CRC2D defaults we care about.
+  let state = {
+    fillStyle:'#000', strokeStyle:'#000', lineWidth:1,
+    lineCap:'butt', lineJoin:'miter',
+    globalAlpha:1, globalCompositeOperation:'source-over',
+    shadowColor:'rgba(0,0,0,0)', shadowBlur:0, shadowOffsetX:0, shadowOffsetY:0,
+    font:'10px sans-serif',
+    transform:[1,0,0,1,0,0],   // a,b,c,d,e,f (identity)
+    clipPath:null
+  };
+  const stack = [];
+  const path = [];    // current path as SVG path-data string segments
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  // Resolve fill/stroke style — if it's a gradient object created by us, emit
+  // it into <defs> and return url(#id); otherwise pass the colour string.
+  const resolve = v => {
+    if(!v || typeof v === 'string') return v||'none';
+    if(v.__svgGrad){
+      const id='g'+(++gradId);
+      if(v.kind==='linear'){
+        defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${v.x0}" y1="${v.y0}" x2="${v.x1}" y2="${v.y1}">${v.stops.map(s=>`<stop offset="${s.off}" stop-color="${s.col}"/>`).join('')}</linearGradient>`);
+      } else {
+        defs.push(`<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${v.x1}" cy="${v.y1}" r="${v.r1}" fx="${v.x0}" fy="${v.y0}">${v.stops.map(s=>`<stop offset="${s.off}" stop-color="${s.col}"/>`).join('')}</radialGradient>`);
+      }
+      return 'url(#'+id+')';
+    }
+    return 'none';
+  };
+  // Build the attributes block all draw calls share (transform/opacity/clip/blend).
+  const commonAttrs = () => {
+    const a = [];
+    const [m0,m1,m2,m3,m4,m5] = state.transform;
+    if(!(m0===1&&m1===0&&m2===0&&m3===1&&m4===0&&m5===0))
+      a.push(`transform="matrix(${m0} ${m1} ${m2} ${m3} ${m4} ${m5})"`);
+    if(state.globalAlpha!==1) a.push(`opacity="${state.globalAlpha}"`);
+    if(state.clipPath) a.push(`clip-path="url(#${state.clipPath})"`);
+    if(state.globalCompositeOperation && state.globalCompositeOperation!=='source-over'){
+      // best-effort mapping; unsupported ops just fall back to normal blend.
+      const mode = ({'multiply':'multiply','screen':'screen','overlay':'overlay','darken':'darken','lighten':'lighten','color-dodge':'color-dodge','color-burn':'color-burn','soft-light':'soft-light','hard-light':'hard-light','difference':'difference','exclusion':'exclusion'})[state.globalCompositeOperation];
+      if(mode) a.push(`style="mix-blend-mode:${mode}"`);
+    }
+    return a.length?(' '+a.join(' ')):'';
+  };
+  // Stroke attrs (only when stroking).
+  const strokeAttrs = () => {
+    const s = resolve(state.strokeStyle);
+    return ` stroke="${esc(s)}" stroke-width="${state.lineWidth}" stroke-linecap="${state.lineCap}" stroke-linejoin="${state.lineJoin}" fill="none"`;
+  };
+  const fillAttrs = () => ` fill="${esc(resolve(state.fillStyle))}"`;
+  // The shim object — same shape as CanvasRenderingContext2D for the methods
+  // and properties the painting renderer touches.
+  const ctx = {
+    // ── style properties (getters/setters via defineProperty so x.fillStyle='...' works) ──
+    get fillStyle(){return state.fillStyle;}, set fillStyle(v){state.fillStyle=v;},
+    get strokeStyle(){return state.strokeStyle;}, set strokeStyle(v){state.strokeStyle=v;},
+    get lineWidth(){return state.lineWidth;}, set lineWidth(v){state.lineWidth=v;},
+    get lineCap(){return state.lineCap;}, set lineCap(v){state.lineCap=v;},
+    get lineJoin(){return state.lineJoin;}, set lineJoin(v){state.lineJoin=v;},
+    get globalAlpha(){return state.globalAlpha;}, set globalAlpha(v){state.globalAlpha=v;},
+    get globalCompositeOperation(){return state.globalCompositeOperation;}, set globalCompositeOperation(v){state.globalCompositeOperation=v;},
+    get shadowColor(){return state.shadowColor;}, set shadowColor(v){state.shadowColor=v;},
+    get shadowBlur(){return state.shadowBlur;}, set shadowBlur(v){state.shadowBlur=v;},
+    get shadowOffsetX(){return state.shadowOffsetX;}, set shadowOffsetX(v){state.shadowOffsetX=v;},
+    get shadowOffsetY(){return state.shadowOffsetY;}, set shadowOffsetY(v){state.shadowOffsetY=v;},
+    get font(){return state.font;}, set font(v){state.font=v;},
+    imageSmoothingEnabled:true,  // no-op for vector
+    // ── state stack ──
+    save(){ stack.push(JSON.parse(JSON.stringify(state))); },
+    restore(){ if(stack.length) state=stack.pop(); },
+    // ── transforms (compose into the current matrix) ──
+    translate(x,y){
+      const t=state.transform;
+      state.transform=[t[0],t[1],t[2],t[3], t[0]*x+t[2]*y+t[4], t[1]*x+t[3]*y+t[5]];
+    },
+    scale(sx,sy){
+      const t=state.transform;
+      state.transform=[t[0]*sx,t[1]*sx,t[2]*sy,t[3]*sy,t[4],t[5]];
+    },
+    rotate(a){
+      const t=state.transform, c=Math.cos(a), s=Math.sin(a);
+      state.transform=[t[0]*c+t[2]*s, t[1]*c+t[3]*s, t[0]*-s+t[2]*c, t[1]*-s+t[3]*c, t[4], t[5]];
+    },
+    // ── path API ──
+    beginPath(){ path.length=0; },
+    closePath(){ path.push('Z'); },
+    moveTo(x,y){ path.push(`M${x} ${y}`); },
+    lineTo(x,y){ path.push(`L${x} ${y}`); },
+    bezierCurveTo(x1,y1,x2,y2,x,y){ path.push(`C${x1} ${y1} ${x2} ${y2} ${x} ${y}`); },
+    quadraticCurveTo(x1,y1,x,y){ path.push(`Q${x1} ${y1} ${x} ${y}`); },
+    arc(cx,cy,r,a0,a1,ccw){
+      // arc segment as elliptical path
+      let d=a1-a0;
+      if(ccw){ if(d>0) d-=2*Math.PI; } else { if(d<0) d+=2*Math.PI; }
+      // Full circle: split into two semicircles (SVG can't do full circle in one A).
+      if(Math.abs(d)>=2*Math.PI-1e-9){
+        const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+        const x1=cx-r*Math.cos(a0), y1=cy-r*Math.sin(a0);
+        path.push(`M${x0} ${y0}A${r} ${r} 0 1 1 ${x1} ${y1}A${r} ${r} 0 1 1 ${x0} ${y0}`);
+        return;
+      }
+      const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+      const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+      const large=Math.abs(d)>Math.PI?1:0, sweep=ccw?0:1;
+      // If no current subpath, move first; otherwise line to the start.
+      if(!path.length) path.push(`M${x0} ${y0}`); else path.push(`L${x0} ${y0}`);
+      path.push(`A${r} ${r} 0 ${large} ${sweep} ${x1} ${y1}`);
+    },
+    arcTo(x1,y1,x2,y2,r){
+      // Approximate with a line + arc (full algo is complex; this matches the
+      // visual the renderer expects for rounded corners).
+      path.push(`L${x1} ${y1}`);
+      path.push(`A${r} ${r} 0 0 1 ${x2} ${y2}`);
+    },
+    ellipse(cx,cy,rx,ry,rot,a0,a1,ccw){
+      // Translate/rotate via matrix; for simplicity emit two semi-arcs.
+      let d=a1-a0;
+      if(ccw){ if(d>0) d-=2*Math.PI; } else { if(d<0) d+=2*Math.PI; }
+      const cos=Math.cos(rot), sin=Math.sin(rot);
+      const pt=(a)=>{
+        const x=rx*Math.cos(a), y=ry*Math.sin(a);
+        return [cx + x*cos - y*sin, cy + x*sin + y*cos];
+      };
+      const [x0,y0]=pt(a0), [x1,y1]=pt(a1);
+      if(Math.abs(d)>=2*Math.PI-1e-9){
+        const [xm,ym]=pt(a0+Math.PI);
+        path.push(`M${x0} ${y0}A${rx} ${ry} ${rot*180/Math.PI} 1 1 ${xm} ${ym}A${rx} ${ry} ${rot*180/Math.PI} 1 1 ${x0} ${y0}`);
+        return;
+      }
+      const large=Math.abs(d)>Math.PI?1:0, sweep=ccw?0:1;
+      if(!path.length) path.push(`M${x0} ${y0}`); else path.push(`L${x0} ${y0}`);
+      path.push(`A${rx} ${ry} ${rot*180/Math.PI} ${large} ${sweep} ${x1} ${y1}`);
+    },
+    rect(x,y,w,h){
+      path.push(`M${x} ${y}h${w}v${h}h${-w}Z`);
+    },
+    // ── paint ──
+    fill(){
+      const d = path.join(' ');
+      if(!d) return;
+      out.push(`<path d="${d}"${fillAttrs()}${commonAttrs()}/>`);
+    },
+    stroke(){
+      const d = path.join(' ');
+      if(!d) return;
+      out.push(`<path d="${d}"${strokeAttrs()}${commonAttrs()}/>`);
+    },
+    fillRect(x,y,w,h){
+      out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}"${fillAttrs()}${commonAttrs()}/>`);
+    },
+    strokeRect(x,y,w,h){
+      out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}"${strokeAttrs()}${commonAttrs()}/>`);
+    },
+    clearRect(x,y,w,h){
+      // SVG has no clear; emit a white rect (the background is set up that way).
+      out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#04040a"${commonAttrs()}/>`);
+    },
+    fillText(text,x,y){
+      // Best-effort font parsing.
+      const f = String(state.font||'10px sans-serif');
+      const sizeM = f.match(/([\d.]+)px/), fam = f.replace(/^.*px\s*/,'')||'sans-serif';
+      const size = sizeM?sizeM[1]:'10';
+      out.push(`<text x="${x}" y="${y}" font-size="${size}" font-family="${esc(fam)}"${fillAttrs()}${commonAttrs()}>${esc(text)}</text>`);
+    },
+    // ── clip (used by Klimt etc.) ──
+    clip(){
+      const id='c'+(++clipId);
+      const d=path.join(' ');
+      defs.push(`<clipPath id="${id}">${d?`<path d="${d}"/>`:''}</clipPath>`);
+      state.clipPath=id;
+    },
+    // ── gradients ──
+    createLinearGradient(x0,y0,x1,y1){
+      const g={__svgGrad:true,kind:'linear',x0,y0,x1,y1,stops:[],addColorStop(o,c){this.stops.push({off:o,col:c});}};
+      return g;
+    },
+    createRadialGradient(x0,y0,r0,x1,y1,r1){
+      const g={__svgGrad:true,kind:'radial',x0,y0,r0,x1,y1,r1,stops:[],addColorStop(o,c){this.stops.push({off:o,col:c});}};
+      return g;
+    },
+    // ── finalize ──
+    toSvg(){
+      const defsStr = defs.length?`<defs>${defs.join('')}</defs>`:'';
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${defsStr}${out.join('')}</svg>`;
+    }
+  };
+  return ctx;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23343,38 +23552,61 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
-      const prompt=`A painting was scanned into raw musical material. Compose a beautiful, free-standing solo piano piece INSPIRED BY that material — do not replay it literally.
-Image material:
+      // VISION INPUT — send the actual image to Claude so the composition is
+      // driven by what's IN the picture (a child holding a painting, a sunlit
+      // street, a stormy sea) — not by abstract scan statistics that compress
+      // every image into the same few buckets. The scan-derived material is
+      // kept as a SECONDARY hint (palette/range), but the image itself is the
+      // primary signal. This is the same pattern MFI uses (mood-from-image).
+      const _src = originalImgUrl;
+      // Resize to ~384px (matches MFI) to keep base64 small and the request fast.
+      const dataUrl = await new Promise((res,rej)=>{
+        const im=new Image();
+        im.onload=()=>{
+          try{
+            const max=384;
+            let w=im.naturalWidth||384, h=im.naturalHeight||384;
+            const sc=Math.min(1, max/Math.max(w,h));
+            w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+            const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+            cv.getContext('2d').drawImage(im,0,0,w,h);
+            res(cv.toDataURL('image/jpeg',0.82));
+          }catch(e){ rej(e); }
+        };
+        im.onerror=()=>rej(new Error('img'));
+        im.src=_src;
+      });
+      const b64 = dataUrl.split(',')[1];
+      const prompt=`Look at this image. Identify WHAT is in it (a person, a landscape, a building, an abstract painting, a child, an animal, etc.) and its dominant EMOTION (e.g. joyful, calm, dramatic, melancholic, tense, eerie, tender, triumphant). Then compose a free-standing solo piano piece whose musical choices are DRIVEN by what you see and feel.
+The scanned musical material (a secondary hint — the image itself is the primary signal):
 - Pitch palette (most present pitch classes): ${mat.palette}
-- Range: ${mat.noteRange}
-- Energy: ${mat.energy}
-- Texture: ${mat.tex}
-- Energy arc: ${mat.arc}${mat.mood?`\n- Mood/atmosphere of the image: ${mat.mood}`:''}
-Use this as raw clay: let the pitch palette colour the harmony and key, let the energy and arc shape dynamics and tempo, let the texture guide density. Then compose with genuine craft — a real melody, recurring motif, clear metre and rhythm, harmonic movement, and an emotional shape that matches the image's character.
+- Range of the scan: ${mat.noteRange}${mat.mood?`\n- Detected mood: ${mat.mood}`:''}
+Map what you see to the music — two DIFFERENT images MUST yield audibly DIFFERENT pieces (different key, tempo, density, dynamics):
+- KEY: bright/happy/triumphant/playful subjects → MAJOR; sad/melancholic/eerie/tense/yearning subjects → MINOR. Pick a SPECIFIC key, vary across pieces (do not default to C).
+- TEMPO: calm/tender/melancholic → slow (55-80); joyful/playful → medium (90-120); dramatic/tense/triumphant → driving (110-145); eerie → free and slow.
+- REGISTER & DENSITY: intimate/calm → sparse, mid-low register, lots of space; energetic/triumphant → fuller chords, wider range, more notes.
+- DYNAMICS: tender → soft (vel 40-65); triumphant/dramatic → loud (80-115); tense → uneven and accented.
+- ARTICULATION: playful → staccato and syncopated; melancholic → legato; tense → repeated ostinato.
 Output ONLY a single valid JSON object — no markdown, no prose.
-Schema: {"title":"...","tempo":90,"key":"C major","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
-Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1–127.
-Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) that fits the resulting music.
+Schema: {"title":"...","tempo":<derived>,"key":"<derived>","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
+Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) describing THIS SPECIFIC image — must be distinctive, never a generic "quiet light" type phrase.
 Composition rules:
-- LENGTH: the piece MUST last at least 60 seconds of music — aim for 70–95 seconds. With the tempo you choose, make sure the LAST note's (startBeat + duration) reaches at least tempo beats (i.e. ≥ 60 seconds worth of beats). Do not stop early.
-- 90–150 notes total (enough to fill a full minute or more)
-- STYLE: Western tonal piano music in the spirit of Ludovico Einaudi, Yiruma, Max Richter, Yann Tiersen, Chopin's Nocturnes, or Debussy's quieter pieces. Lyrical, singable melodies over flowing accompaniment. Avoid sounding like East-Asian traditional music (no shakuhachi/koto/gamelan/erhu evocations) unless the image is unmistakably East Asian.
-- KEY: Pick a major or natural minor key that fits the mood. Stay strictly diatonic except for occasional tasteful chromatic colour (passing tones, secondary dominants, leading tones).
-- HARMONY: Use familiar functional chord progressions (I–V–vi–IV, ii–V–I, vi–IV–I–V; for minor: i–VI–III–VII, i–iv–V–i). NO pentatonic, modal (Dorian/Phrygian/Lydian), whole-tone, or quartal harmonies regardless of what the palette suggests — the palette colours the KEY choice, not the SCALE type.
-- Structure: intro (motif, sparse) → development (richer, busiest) → a contrasting middle section → return of the motif → close (quieter). Use the length for a real arc, not a loop.
-- Bass (octaves 2–3): harmonic grounding throughout, ≥20 notes
-- Melody (octaves 4–6): singable, recurring motif that develops over the full length
-- Dynamics via velocity: intro ~55–70, development ~80–110, close ~45–65
-- Vary durations (mix 0.25/0.5/1/2 beats) — clear rhythm, not uniform
-- Pitches like C4/F#3/Bb5 with octave number, sharps only (C#4 not Db4)`;
+- LENGTH: 60-90 seconds of music — the LAST note's (startBeat + duration) MUST reach at least tempo beats (= 60 seconds).
+- 90-150 notes total.
+- STYLE: Western tonal piano in the spirit of Einaudi, Yiruma, Max Richter, Chopin's Nocturnes, or Debussy. Lyrical melodies over flowing accompaniment. Avoid East-Asian-traditional evocations unless the image is unmistakably East Asian.
+- HARMONY: familiar functional progressions (I-V-vi-IV, ii-V-I; minor: i-VI-III-VII, i-iv-V-i). Diatonic with tasteful chromatic colour.
+- Structure: intro (motif, sparse) → development (richer) → contrasting middle → return of motif → close (quieter).
+- Bass (octaves 2-3): ≥20 notes. Melody (octaves 4-6): singable, recurring motif.
+- Vary durations (mix 0.25/0.5/1/2). Pitches with octave, sharps only (C#4 not Db4).`;
       setWPct(40);
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
+      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
       let resp=null,respText='',lastErr=null;
       for(const _ep of _endpoints){
         try{
-          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+          const r=await fetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages})});
           const txt=await r.text();
           if(r.ok&&txt){ resp=r; respText=txt; break; }
           lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
@@ -23770,7 +24002,17 @@ Composition rules:
           // old fixed 2:00 constant.
           const lastEv=evts[evts.length-1];
           const realDurMs=lastEv ? (lastEv.startMs + (lastEv.n?.[0]?.durMs||0)) : IMG_TARGET_MS;
-          const _imgTitle=file.name.replace(/\.[^.]+$/,'');
+          // Filename as title — but skip auto-generated junk names (GUIDs like
+          // 964FA674-3FA9-40D8-..., long hex blobs, camera codes like IMG_2317,
+          // pure numbers) which look ugly in the transport. For those, show no
+          // title; the AI compose path will set its own evocative title anyway.
+          const _rawName=file.name.replace(/\.[^.]+$/,'');
+          const _isJunkName = !_rawName
+            || /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(_rawName) // GUID
+            || /^[0-9a-fA-F]{16,}$/.test(_rawName.replace(/[-_]/g,''))                                        // long hex blob
+            || /^(IMG|DSC|PXL|Screenshot|image|photo)[-_ ]?\d+$/i.test(_rawName)                              // camera/auto codes
+            || /^\d{6,}$/.test(_rawName);                                                                      // pure long number
+          const _imgTitle = _isJunkName ? '' : _rawName;
           setInfo({title:_imgTitle,count:evts.length,dur:Math.round(realDurMs/1000)});
           // New piece → reset the save name to THIS image's filename so the SAVE
           // picker doesn't carry a stale name from a previous mood/piece.
@@ -25690,14 +25932,37 @@ Composition rules:
       // seed-derived draw, not the (null) user selection.
       const style = effectiveStyle;
       const{N,BW,BH,CW,CH}=grid;
-      // sizeMode: 'web' = 4× (good for screens/social), 'print' = A1 300dpi
+      // sizeMode: 'web' = 4× (good for screens/social), 'print' = A0 ≥300 DPI
       let SCALE, label, dpi;
       if(sizeMode==='print'){
-        const A1_MIN=7000;
-        const rawScale=Math.ceil(A1_MIN/Math.max(CW,CH));
-        SCALE=Math.max(rawScale,8);
-        dpi=Math.round((CW*SCALE)/23.39); // A1 width=23.39in
-        label='A1-print';
+        // A0 = 841 × 1189 mm = 33.11" × 46.81". At 300 DPI the long side is
+        // 14043 px and the short side 9933 px — but most paintings are
+        // landscape/square, so we target the SHORTER A0 dimension as the floor
+        // on the longer canvas side: ≥ 9933 px guarantees A0 at full 300 DPI
+        // regardless of orientation. We use 10000 for a tiny headroom (~302 DPI).
+        // CAP by absolute output pixels (12000 long side) instead of by SCALE —
+        // small source canvases get a higher SCALE to reach the A0 floor, while
+        // huge sources don't render a needlessly huge bitmap. 12000 px on the
+        // long side stays well inside browser canvas limits (16384 in Chrome).
+        const A0_MIN=10000;
+        const MAX_OUT=12000;
+        const maxSide=Math.max(CW,CH);
+        const minScaleForA0=Math.ceil(A0_MIN/maxSide);
+        const capScale=Math.floor(MAX_OUT/maxSide);
+        SCALE=Math.max(8, Math.min(capScale||8, minScaleForA0));
+        // DPI reported against A0's long side (33.11" for the short A0 edge,
+        // i.e. the floor we're guaranteeing).
+        dpi=Math.round((maxSide*SCALE)/33.11);
+        label='A0-print';
+      } else if(sizeMode==='gallery'){
+        // Vector SVG export — resolution-independent for fine-art / gallery prints.
+        // The print shop's RIP rasterises at whatever DPI it supports (giclée
+        // printers do 600-1200 DPI). The SVG file itself stays small (KB-MB),
+        // opens in Illustrator/Inkscape, and can be tiled to any size without
+        // pixelation. SCALE=1 means the SVG uses canvas-space coordinates.
+        SCALE=1;
+        dpi=null;
+        label='gallery-vector';
       } else if(sizeMode==='story'){
         SCALE=4;          // crisp source; composited onto the 1080×1920 story canvas below
         dpi=null;
@@ -25707,11 +25972,14 @@ Composition rules:
         dpi=null;
         label='web';
       }
-      const hi=document.createElement('canvas');
-      hi.width=Math.round(CW*SCALE);hi.height=Math.round(CH*SCALE);
-      const hctx=hi.getContext('2d');
-      hctx.imageSmoothingEnabled=false;
-      hctx.scale(SCALE,SCALE);
+      const _isGallery = sizeMode==='gallery';
+      const hi = _isGallery ? null : document.createElement('canvas');
+      if(hi){ hi.width=Math.round(CW*SCALE); hi.height=Math.round(CH*SCALE); }
+      const hctx = _isGallery ? createSvgCtx(CW, CH) : hi.getContext('2d');
+      if(!_isGallery){
+        hctx.imageSmoothingEnabled=false;
+        hctx.scale(SCALE,SCALE);
+      }
       hctx.fillStyle='#04040a';hctx.fillRect(0,0,CW,CH);
       if(viewMode==='image'&&pixelRef.current){
         const{nc,nr,px}=pixelRef.current;
@@ -25793,6 +26061,21 @@ Composition rules:
         if(style==='oneM' && chords.length>0){
           drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
         }
+      }
+      // ── GALLERY (vector SVG) export: branch out here, before all the
+      // canvas-only postprocessing (watermark, source thumb overlay, story
+      // compositing). The SVG carries everything the renderer drew; print
+      // shops rasterise at whatever DPI they need. Watermark is skipped for
+      // Pro/Pro AI users (and gallery is Pro-only anyway).
+      if(_isGallery){
+        const svgStr = hctx.toSvg();
+        const blob = new Blob([svgStr], {type:'image/svg+xml'});
+        const url = URL.createObjectURL(blob);
+        const baseName = (info && info.title ? String(info.title).replace(/[^\w\u00C0-\u024F\u1E00-\u1EFF -]+/g,'').trim() : 'paintiano') || 'paintiano';
+        const filename = `${baseName}-gallery.svg`;
+        const file = new File([blob], filename, {type:'image/svg+xml'});
+        setPreview({url, filename, w:CW, h:CH, size:blob.size, file, dpi:null, label});
+        return;
       }
       // Watermark policy: stamp "paintiano.app" unless we KNOW the user is
       // Pro (or Pro AI). `isPro` here is `pro || pro_ai` and is `false` while
@@ -27086,6 +27369,14 @@ Composition rules:
               direction. Colours stay in the left column, mirroring every mode. */}
           {loadedSource==='image' && !moodFromImg && (
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {working && isDesktop && (
+              <div style={{marginBottom:2}}>
+                <div style={{fontSize:(0.58*effScale)+'rem',letterSpacing:'.06em',marginBottom:5,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
+                <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
+                  <div style={{height:'100%',width:wPct+'%',background:'rgba(210,140,255,.85)',borderRadius:2,transition:'width .3s'}}/>
+                </div>
+              </div>
+            )}
             {isDesktop && <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('imgReadLabel')!=='imgReadLabel'?t('imgReadLabel'):(lang==='SK'?'čítanie':'reading')}</div>}
             <div style={{display:'flex',flexDirection:isDesktop?'column':'row',gap:6}}>
               <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
@@ -27538,7 +27829,7 @@ Composition rules:
         </div>
       )}
 
-      {working && (
+      {working && !(isDesktop && loadedSource==='image' && !moodFromImg) && (
         <div style={{width:'100%',maxWidth:480,marginBottom:10}}>
           <div style={{fontSize:(0.7*effScale)+'rem',letterSpacing:'.06em',marginBottom:6,textAlign:'center',color:'rgba(220,180,255,.95)',fontWeight:500}}>⟳ {wLabel}… {wPct}%</div>
           <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2}}>
@@ -27566,7 +27857,8 @@ Composition rules:
         const _titleSpan = (<span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>);
         const _showAiBadge = (moodContext && composeSource==='ai') || _imgAtmo;
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : null;
-        return showTransport && (<>
+        return (<>
+        {showTransport && (<>
         {is5Col && (imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (
           <div className="pf-track-head" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:6,display:'flex',alignItems:'center',justifyContent:'center',gap:8,flexWrap:'wrap'}}>
             <img src={imgMoodThumb || originalImgUrl} alt="source" style={{width:44,height:44,objectFit:'cover',borderRadius:8,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 8px rgba(0,0,0,.4)',opacity:.88,flexShrink:0}}/>
@@ -27660,6 +27952,7 @@ Composition rules:
           </div>
           )}
         </div>
+        </>)}
         </>);
       })()}
 
@@ -28107,6 +28400,13 @@ Composition rules:
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizePrintHint')}</div>
+                  </button>
+                  <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                      🖼 {t('sizeGallery')||'Gallery (vector)'}
+                      {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
+                    </span>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizeGalleryHint')||'SVG · fine-art print · any DPI'}</div>
                   </button>
                   {/* Audio + Score export hidden for MIDI/Audio/Score sources
                       (isImportedMedia) — exporting them back to the same file

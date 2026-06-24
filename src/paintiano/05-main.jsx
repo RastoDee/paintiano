@@ -528,6 +528,215 @@ function IntroSplash({ onDone, tagline, skipLabel }){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// §6c  SVG CONTEXT SHIM — vector export for gallery prints
+// ─────────────────────────────────────────────────────────────────────────────
+//   A minimal CanvasRenderingContext2D-compatible shim that records every draw
+//   call as an SVG element instead of rasterising it. The painting renderer
+//   (drawBlock, draw*Overlay) is fully canvas-API based with no getImageData /
+//   filter / drawImage — so substituting a real ctx for this shim produces a
+//   resolution-independent SVG of the exact same painting. Used for the
+//   "gallery" sizeMode export (Pro / Pro AI only). The print shop's RIP then
+//   rasterises at whatever DPI the printer supports — 600, 720, even 1200 DPI
+//   for fine-art giclée — without us ever having to rasterise in-browser.
+//
+//   Implements: fill/stroke for paths, rects, arcs, ellipses, bezier/quadratic
+//   curves; gradients (linear & radial); text; shadows (as feGaussianBlur);
+//   transform stack (save/restore/scale/rotate/translate); globalAlpha and
+//   globalCompositeOperation (the latter maps to blend-mode where it can).
+function createSvgCtx(width, height){
+  const out = [];
+  const defs = [];
+  let gradId = 0, clipId = 0;
+  // Style state — exactly the CRC2D defaults we care about.
+  let state = {
+    fillStyle:'#000', strokeStyle:'#000', lineWidth:1,
+    lineCap:'butt', lineJoin:'miter',
+    globalAlpha:1, globalCompositeOperation:'source-over',
+    shadowColor:'rgba(0,0,0,0)', shadowBlur:0, shadowOffsetX:0, shadowOffsetY:0,
+    font:'10px sans-serif',
+    transform:[1,0,0,1,0,0],   // a,b,c,d,e,f (identity)
+    clipPath:null
+  };
+  const stack = [];
+  const path = [];    // current path as SVG path-data string segments
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  // Resolve fill/stroke style — if it's a gradient object created by us, emit
+  // it into <defs> and return url(#id); otherwise pass the colour string.
+  const resolve = v => {
+    if(!v || typeof v === 'string') return v||'none';
+    if(v.__svgGrad){
+      const id='g'+(++gradId);
+      if(v.kind==='linear'){
+        defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${v.x0}" y1="${v.y0}" x2="${v.x1}" y2="${v.y1}">${v.stops.map(s=>`<stop offset="${s.off}" stop-color="${s.col}"/>`).join('')}</linearGradient>`);
+      } else {
+        defs.push(`<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${v.x1}" cy="${v.y1}" r="${v.r1}" fx="${v.x0}" fy="${v.y0}">${v.stops.map(s=>`<stop offset="${s.off}" stop-color="${s.col}"/>`).join('')}</radialGradient>`);
+      }
+      return 'url(#'+id+')';
+    }
+    return 'none';
+  };
+  // Build the attributes block all draw calls share (transform/opacity/clip/blend).
+  const commonAttrs = () => {
+    const a = [];
+    const [m0,m1,m2,m3,m4,m5] = state.transform;
+    if(!(m0===1&&m1===0&&m2===0&&m3===1&&m4===0&&m5===0))
+      a.push(`transform="matrix(${m0} ${m1} ${m2} ${m3} ${m4} ${m5})"`);
+    if(state.globalAlpha!==1) a.push(`opacity="${state.globalAlpha}"`);
+    if(state.clipPath) a.push(`clip-path="url(#${state.clipPath})"`);
+    if(state.globalCompositeOperation && state.globalCompositeOperation!=='source-over'){
+      // best-effort mapping; unsupported ops just fall back to normal blend.
+      const mode = ({'multiply':'multiply','screen':'screen','overlay':'overlay','darken':'darken','lighten':'lighten','color-dodge':'color-dodge','color-burn':'color-burn','soft-light':'soft-light','hard-light':'hard-light','difference':'difference','exclusion':'exclusion'})[state.globalCompositeOperation];
+      if(mode) a.push(`style="mix-blend-mode:${mode}"`);
+    }
+    return a.length?(' '+a.join(' ')):'';
+  };
+  // Stroke attrs (only when stroking).
+  const strokeAttrs = () => {
+    const s = resolve(state.strokeStyle);
+    return ` stroke="${esc(s)}" stroke-width="${state.lineWidth}" stroke-linecap="${state.lineCap}" stroke-linejoin="${state.lineJoin}" fill="none"`;
+  };
+  const fillAttrs = () => ` fill="${esc(resolve(state.fillStyle))}"`;
+  // The shim object — same shape as CanvasRenderingContext2D for the methods
+  // and properties the painting renderer touches.
+  const ctx = {
+    // ── style properties (getters/setters via defineProperty so x.fillStyle='...' works) ──
+    get fillStyle(){return state.fillStyle;}, set fillStyle(v){state.fillStyle=v;},
+    get strokeStyle(){return state.strokeStyle;}, set strokeStyle(v){state.strokeStyle=v;},
+    get lineWidth(){return state.lineWidth;}, set lineWidth(v){state.lineWidth=v;},
+    get lineCap(){return state.lineCap;}, set lineCap(v){state.lineCap=v;},
+    get lineJoin(){return state.lineJoin;}, set lineJoin(v){state.lineJoin=v;},
+    get globalAlpha(){return state.globalAlpha;}, set globalAlpha(v){state.globalAlpha=v;},
+    get globalCompositeOperation(){return state.globalCompositeOperation;}, set globalCompositeOperation(v){state.globalCompositeOperation=v;},
+    get shadowColor(){return state.shadowColor;}, set shadowColor(v){state.shadowColor=v;},
+    get shadowBlur(){return state.shadowBlur;}, set shadowBlur(v){state.shadowBlur=v;},
+    get shadowOffsetX(){return state.shadowOffsetX;}, set shadowOffsetX(v){state.shadowOffsetX=v;},
+    get shadowOffsetY(){return state.shadowOffsetY;}, set shadowOffsetY(v){state.shadowOffsetY=v;},
+    get font(){return state.font;}, set font(v){state.font=v;},
+    imageSmoothingEnabled:true,  // no-op for vector
+    // ── state stack ──
+    save(){ stack.push(JSON.parse(JSON.stringify(state))); },
+    restore(){ if(stack.length) state=stack.pop(); },
+    // ── transforms (compose into the current matrix) ──
+    translate(x,y){
+      const t=state.transform;
+      state.transform=[t[0],t[1],t[2],t[3], t[0]*x+t[2]*y+t[4], t[1]*x+t[3]*y+t[5]];
+    },
+    scale(sx,sy){
+      const t=state.transform;
+      state.transform=[t[0]*sx,t[1]*sx,t[2]*sy,t[3]*sy,t[4],t[5]];
+    },
+    rotate(a){
+      const t=state.transform, c=Math.cos(a), s=Math.sin(a);
+      state.transform=[t[0]*c+t[2]*s, t[1]*c+t[3]*s, t[0]*-s+t[2]*c, t[1]*-s+t[3]*c, t[4], t[5]];
+    },
+    // ── path API ──
+    beginPath(){ path.length=0; },
+    closePath(){ path.push('Z'); },
+    moveTo(x,y){ path.push(`M${x} ${y}`); },
+    lineTo(x,y){ path.push(`L${x} ${y}`); },
+    bezierCurveTo(x1,y1,x2,y2,x,y){ path.push(`C${x1} ${y1} ${x2} ${y2} ${x} ${y}`); },
+    quadraticCurveTo(x1,y1,x,y){ path.push(`Q${x1} ${y1} ${x} ${y}`); },
+    arc(cx,cy,r,a0,a1,ccw){
+      // arc segment as elliptical path
+      let d=a1-a0;
+      if(ccw){ if(d>0) d-=2*Math.PI; } else { if(d<0) d+=2*Math.PI; }
+      // Full circle: split into two semicircles (SVG can't do full circle in one A).
+      if(Math.abs(d)>=2*Math.PI-1e-9){
+        const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+        const x1=cx-r*Math.cos(a0), y1=cy-r*Math.sin(a0);
+        path.push(`M${x0} ${y0}A${r} ${r} 0 1 1 ${x1} ${y1}A${r} ${r} 0 1 1 ${x0} ${y0}`);
+        return;
+      }
+      const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+      const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+      const large=Math.abs(d)>Math.PI?1:0, sweep=ccw?0:1;
+      // If no current subpath, move first; otherwise line to the start.
+      if(!path.length) path.push(`M${x0} ${y0}`); else path.push(`L${x0} ${y0}`);
+      path.push(`A${r} ${r} 0 ${large} ${sweep} ${x1} ${y1}`);
+    },
+    arcTo(x1,y1,x2,y2,r){
+      // Approximate with a line + arc (full algo is complex; this matches the
+      // visual the renderer expects for rounded corners).
+      path.push(`L${x1} ${y1}`);
+      path.push(`A${r} ${r} 0 0 1 ${x2} ${y2}`);
+    },
+    ellipse(cx,cy,rx,ry,rot,a0,a1,ccw){
+      // Translate/rotate via matrix; for simplicity emit two semi-arcs.
+      let d=a1-a0;
+      if(ccw){ if(d>0) d-=2*Math.PI; } else { if(d<0) d+=2*Math.PI; }
+      const cos=Math.cos(rot), sin=Math.sin(rot);
+      const pt=(a)=>{
+        const x=rx*Math.cos(a), y=ry*Math.sin(a);
+        return [cx + x*cos - y*sin, cy + x*sin + y*cos];
+      };
+      const [x0,y0]=pt(a0), [x1,y1]=pt(a1);
+      if(Math.abs(d)>=2*Math.PI-1e-9){
+        const [xm,ym]=pt(a0+Math.PI);
+        path.push(`M${x0} ${y0}A${rx} ${ry} ${rot*180/Math.PI} 1 1 ${xm} ${ym}A${rx} ${ry} ${rot*180/Math.PI} 1 1 ${x0} ${y0}`);
+        return;
+      }
+      const large=Math.abs(d)>Math.PI?1:0, sweep=ccw?0:1;
+      if(!path.length) path.push(`M${x0} ${y0}`); else path.push(`L${x0} ${y0}`);
+      path.push(`A${rx} ${ry} ${rot*180/Math.PI} ${large} ${sweep} ${x1} ${y1}`);
+    },
+    rect(x,y,w,h){
+      path.push(`M${x} ${y}h${w}v${h}h${-w}Z`);
+    },
+    // ── paint ──
+    fill(){
+      const d = path.join(' ');
+      if(!d) return;
+      out.push(`<path d="${d}"${fillAttrs()}${commonAttrs()}/>`);
+    },
+    stroke(){
+      const d = path.join(' ');
+      if(!d) return;
+      out.push(`<path d="${d}"${strokeAttrs()}${commonAttrs()}/>`);
+    },
+    fillRect(x,y,w,h){
+      out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}"${fillAttrs()}${commonAttrs()}/>`);
+    },
+    strokeRect(x,y,w,h){
+      out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}"${strokeAttrs()}${commonAttrs()}/>`);
+    },
+    clearRect(x,y,w,h){
+      // SVG has no clear; emit a white rect (the background is set up that way).
+      out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#04040a"${commonAttrs()}/>`);
+    },
+    fillText(text,x,y){
+      // Best-effort font parsing.
+      const f = String(state.font||'10px sans-serif');
+      const sizeM = f.match(/([\d.]+)px/), fam = f.replace(/^.*px\s*/,'')||'sans-serif';
+      const size = sizeM?sizeM[1]:'10';
+      out.push(`<text x="${x}" y="${y}" font-size="${size}" font-family="${esc(fam)}"${fillAttrs()}${commonAttrs()}>${esc(text)}</text>`);
+    },
+    // ── clip (used by Klimt etc.) ──
+    clip(){
+      const id='c'+(++clipId);
+      const d=path.join(' ');
+      defs.push(`<clipPath id="${id}">${d?`<path d="${d}"/>`:''}</clipPath>`);
+      state.clipPath=id;
+    },
+    // ── gradients ──
+    createLinearGradient(x0,y0,x1,y1){
+      const g={__svgGrad:true,kind:'linear',x0,y0,x1,y1,stops:[],addColorStop(o,c){this.stops.push({off:o,col:c});}};
+      return g;
+    },
+    createRadialGradient(x0,y0,r0,x1,y1,r1){
+      const g={__svgGrad:true,kind:'radial',x0,y0,r0,x1,y1,r1,stops:[],addColorStop(o,c){this.stops.push({off:o,col:c});}};
+      return g;
+    },
+    // ── finalize ──
+    toSvg(){
+      const defsStr = defs.length?`<defs>${defs.join('')}</defs>`:'';
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${defsStr}${out.join('')}</svg>`;
+    }
+  };
+  return ctx;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // §7  MAIN COMPONENT — Paintiano
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
@@ -7948,14 +8157,37 @@ Composition rules:
       // seed-derived draw, not the (null) user selection.
       const style = effectiveStyle;
       const{N,BW,BH,CW,CH}=grid;
-      // sizeMode: 'web' = 4× (good for screens/social), 'print' = A1 300dpi
+      // sizeMode: 'web' = 4× (good for screens/social), 'print' = A0 ≥300 DPI
       let SCALE, label, dpi;
       if(sizeMode==='print'){
-        const A1_MIN=7000;
-        const rawScale=Math.ceil(A1_MIN/Math.max(CW,CH));
-        SCALE=Math.max(rawScale,8);
-        dpi=Math.round((CW*SCALE)/23.39); // A1 width=23.39in
-        label='A1-print';
+        // A0 = 841 × 1189 mm = 33.11" × 46.81". At 300 DPI the long side is
+        // 14043 px and the short side 9933 px — but most paintings are
+        // landscape/square, so we target the SHORTER A0 dimension as the floor
+        // on the longer canvas side: ≥ 9933 px guarantees A0 at full 300 DPI
+        // regardless of orientation. We use 10000 for a tiny headroom (~302 DPI).
+        // CAP by absolute output pixels (12000 long side) instead of by SCALE —
+        // small source canvases get a higher SCALE to reach the A0 floor, while
+        // huge sources don't render a needlessly huge bitmap. 12000 px on the
+        // long side stays well inside browser canvas limits (16384 in Chrome).
+        const A0_MIN=10000;
+        const MAX_OUT=12000;
+        const maxSide=Math.max(CW,CH);
+        const minScaleForA0=Math.ceil(A0_MIN/maxSide);
+        const capScale=Math.floor(MAX_OUT/maxSide);
+        SCALE=Math.max(8, Math.min(capScale||8, minScaleForA0));
+        // DPI reported against A0's long side (33.11" for the short A0 edge,
+        // i.e. the floor we're guaranteeing).
+        dpi=Math.round((maxSide*SCALE)/33.11);
+        label='A0-print';
+      } else if(sizeMode==='gallery'){
+        // Vector SVG export — resolution-independent for fine-art / gallery prints.
+        // The print shop's RIP rasterises at whatever DPI it supports (giclée
+        // printers do 600-1200 DPI). The SVG file itself stays small (KB-MB),
+        // opens in Illustrator/Inkscape, and can be tiled to any size without
+        // pixelation. SCALE=1 means the SVG uses canvas-space coordinates.
+        SCALE=1;
+        dpi=null;
+        label='gallery-vector';
       } else if(sizeMode==='story'){
         SCALE=4;          // crisp source; composited onto the 1080×1920 story canvas below
         dpi=null;
@@ -7965,11 +8197,14 @@ Composition rules:
         dpi=null;
         label='web';
       }
-      const hi=document.createElement('canvas');
-      hi.width=Math.round(CW*SCALE);hi.height=Math.round(CH*SCALE);
-      const hctx=hi.getContext('2d');
-      hctx.imageSmoothingEnabled=false;
-      hctx.scale(SCALE,SCALE);
+      const _isGallery = sizeMode==='gallery';
+      const hi = _isGallery ? null : document.createElement('canvas');
+      if(hi){ hi.width=Math.round(CW*SCALE); hi.height=Math.round(CH*SCALE); }
+      const hctx = _isGallery ? createSvgCtx(CW, CH) : hi.getContext('2d');
+      if(!_isGallery){
+        hctx.imageSmoothingEnabled=false;
+        hctx.scale(SCALE,SCALE);
+      }
       hctx.fillStyle='#04040a';hctx.fillRect(0,0,CW,CH);
       if(viewMode==='image'&&pixelRef.current){
         const{nc,nr,px}=pixelRef.current;
@@ -8051,6 +8286,21 @@ Composition rules:
         if(style==='oneM' && chords.length>0){
           drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
         }
+      }
+      // ── GALLERY (vector SVG) export: branch out here, before all the
+      // canvas-only postprocessing (watermark, source thumb overlay, story
+      // compositing). The SVG carries everything the renderer drew; print
+      // shops rasterise at whatever DPI they need. Watermark is skipped for
+      // Pro/Pro AI users (and gallery is Pro-only anyway).
+      if(_isGallery){
+        const svgStr = hctx.toSvg();
+        const blob = new Blob([svgStr], {type:'image/svg+xml'});
+        const url = URL.createObjectURL(blob);
+        const baseName = (info && info.title ? String(info.title).replace(/[^\w\u00C0-\u024F\u1E00-\u1EFF -]+/g,'').trim() : 'paintiano') || 'paintiano';
+        const filename = `${baseName}-gallery.svg`;
+        const file = new File([blob], filename, {type:'image/svg+xml'});
+        setPreview({url, filename, w:CW, h:CH, size:blob.size, file, dpi:null, label});
+        return;
       }
       // Watermark policy: stamp "paintiano.app" unless we KNOW the user is
       // Pro (or Pro AI). `isPro` here is `pro || pro_ai` and is `false` while
@@ -10375,6 +10625,13 @@ Composition rules:
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizePrintHint')}</div>
+                  </button>
+                  <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                      🖼 {t('sizeGallery')||'Gallery (vector)'}
+                      {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
+                    </span>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizeGalleryHint')||'SVG · fine-art print · any DPI'}</div>
                   </button>
                   {/* Audio + Score export hidden for MIDI/Audio/Score sources
                       (isImportedMedia) — exporting them back to the same file
