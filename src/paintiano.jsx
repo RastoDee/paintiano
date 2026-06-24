@@ -19687,7 +19687,7 @@ export default function Paintiano() {
   const _stripIcon = (s) => {
     if (!s || typeof s !== 'string') return s;
     return s
-      .replace(/^[✦♪♬♫𝄞🖼🎙♥◫✧✩✰🎵🎶🎨🎬🎤🖌📷📸🌈⭐]+\s*/u, '')
+      .replace(/^[✦♪♬♫𝄞🖼🎙♥◫✧✩✰🎵🎶🎨🎬🎤🖌📷📸🌈⭐▶▷►◉🎼📁📂📀💿🖨🖥⏺⏯⏵♫⏏↑⬆🗀]+\s*/u, '')
       .replace(/…\s*$/, '')
       .trim();
   };
@@ -27784,8 +27784,7 @@ Composition rules:
                 setForceSetup(false);
                 setPickMode(null);
               }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
-                <span style={{display:'flex',alignItems:'center',justifyContent:'center',marginBottom:6,color:'rgba(220,180,255,.85)'}}><TxIcon n="sparkle" s={18}/></span>
-                <span style={{display:'block',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}>{_sent(t('builtInSample'))}</span>
+                <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="play" s={14}/>{_sent(_stripIcon(t('builtInSample')))}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?SAMPLE_SCORE_NAME:pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}</span>
               </button>
 
@@ -27803,8 +27802,7 @@ Composition rules:
                 // loaders (loadMidi/loadAudio/loadScore/loadImage) close the modal
                 // via setPickMode(null) once a file is actually selected.
               }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
-                <span style={{display:'flex',alignItems:'center',justifyContent:'center',marginBottom:6,color:'rgba(220,180,90,.85)'}}><TxIcon n="upload" s={18}/></span>
-                <span style={{display:'block',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}>{_sent(t('chooseFile'))}</span>
+                <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="upload" s={14}/>{_sent(_stripIcon(t('chooseFile')))}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'MIDI · audio · MusicXML':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'Audio · .mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'JPG · PNG · GIF · WEBP · HEIC'}</span>
               </button>
               {/* Recently AI generated — Pro feature. Free users see locked items;
