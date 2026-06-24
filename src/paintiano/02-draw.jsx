@@ -151,16 +151,17 @@ function _energyTint(r,g,b){
   // is bypassed entirely. In Real tone (_mixOn === true) the function maps the
   // current chord's energy across an asymmetric range:
   //
-  //   piano  (_curE = 0)  -> true pastel  (S * 0.30,  L blended to 0.85)
+  //   piano  (_curE = 0)  -> true pastel  (S → 0.18 * sx,  L blended to 0.88)
   //   mezzo  (_curE = 0.5) -> raw palette colour, no change
-  //   forte  (_curE = 1)   -> deep        (S boosted, L * 0.55)
+  //   forte  (_curE = 1)   -> deep        (S boosted hard, L * 0.40)
   //
   // The forte branch is deliberately strong: it darkens lightness all the way
-  // toward 0.55× and pushes saturation toward full. That widens the visible
-  // gap between quiet and loud passages so the piano/forte contrast reads on
-  // EVERY artist — Mosaic, Picasso, Klimt, Mondrian, etc. — not just the busy
-  // overlays. A power-curve (|d|^0.55) sharpens the middle so chords at
-  // E ~ 0.3 / 0.7 already show clear pastel / deep shifts.
+  // toward 0.40× and pushes saturation toward full + an additive floor. That
+  // widens the visible gap between quiet and loud passages so the piano/forte
+  // contrast reads on EVERY artist — including alpha-heavy overlays like
+  // Picasso where lighter overdraw was previously washing the effect out.
+  // A power-curve (|d|^0.55) sharpens the middle so chords at E ~ 0.3 / 0.7
+  // already show clear pastel / deep shifts.
   if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
   let d=(_curE-0.5)*2;
   if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
@@ -174,16 +175,12 @@ function _energyTint(r,g,b){
   if(d < 0){
     // Quieter than average -> ease toward pastel. k = |d|.
     const k = -d;
-    S = sx * (1 - 0.78 * k);            // sx -> 0.22 * sx at k=1
-    L = l + (0.85 - l) * 0.65 * k;       // l  -> blended toward 0.85
+    S = sx * (1 - 0.82 * k);            // sx -> 0.18 * sx at k=1
+    L = l + (0.88 - l) * 0.75 * k;       // l  -> blended toward 0.88
   } else {
-    // Louder than average -> push toward deep. Wide range so colours actually
-    // darken visibly even when the source palette is already saturated.
-    // Saturation boost is asymmetric: weak palettes (sx low) get a strong
-    // multiplicative boost AND an additive floor; already-saturated palettes
-    // ride the multiplier near the 1.0 cap. Lightness drops to ~0.45 at forte.
-    S = Math.min(1, sx + (1 - sx) * 0.45 * d + sx * 0.30 * d);
-    L = Math.max(0.04, l * (1 - 0.55 * d));
+    // Louder than average -> push toward deep. Strong dual-mode boost.
+    S = Math.min(1, sx + (1 - sx) * 0.60 * d + sx * 0.40 * d);
+    L = Math.max(0.04, l * (1 - 0.65 * d));
   }
   S = Math.max(0, Math.min(1, S));
   L = Math.max(0.04, Math.min(0.96, L));
@@ -2496,7 +2493,18 @@ function pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   // Drip count scales with chord count (~0.7×).
   const passes = Math.max(8, Math.min(220, Math.round(cn*0.7)));
   const vis = Math.max(1, Math.ceil(N/cn*passes));
+  // Tone-adjust helper: Real -> energy modulates, Pastel -> soft. No-op Pure.
+  const _tonedRGB = (col)=>{
+    let r=col[0], g=col[1], b=col[2];
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return [r,g,b];
+  };
   for(let i=0;i<vis;i++){
+    // Set energy from this pass's chord so Real mode breathes per-drip.
+    const _pi = Math.min(cn-1, Math.floor((i/Math.max(1,passes))*cn));
+    const _ch = chords[_pi];
+    _setCurE(_ch && _ch._E);
     const rnd = _seedRnd(i+3100, ss, 0, 0);
     // 65% theme, 30% supporting accent, 5% deep ink for definition
     const pick = rnd();
@@ -2516,6 +2524,8 @@ function pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       const v = Math.round(col[0]*0.299+col[1]*0.587+col[2]*0.114);
       col = [v,v,v];
     }
+    // Tone-adjust the picked colour with the current chord's energy.
+    col = _tonedRGB(col);
     const colStr = `rgba(${col[0]|0},${col[1]|0},${col[2]|0},`;
     // Drip from one edge to the other for span; some "loopy" stay central.
     const padding = Math.max(CW,CH)*0.3;
@@ -2764,11 +2774,20 @@ function pollockPhasePoles(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   for(let i=0;i<visP;i++){const rnd=_seedRnd(i+3600,ss,0,0);const {rgb}=_picChord(chords,Math.floor(i*(cn/passes)),gc,isBW);_pollDrip(ctx,rnd()*CW,rnd()*CH,rnd()*CW,rnd()*CH,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.55)`,Math.max(1,CW*0.005),ss,i+3650);}
   // the poles — 8 leaning vertical bars
   const poles=8, visPoles=Math.max(1,Math.ceil(N/cn*poles));
+  // Pre-compute signature blue tint adjusted for current tone.
+  const _pollPolesBase = isBW ? [30,30,40] : [20,30,120];
   for(let i=0;i<visPoles;i++){
     const rnd=_seedRnd(i+3700,ss,0,0);
     const x=CW*(0.08+i/poles*0.84)+(rnd()-0.5)*CW*0.04;
     const lean=(rnd()-0.5)*CW*0.06;
-    ctx.strokeStyle=isBW?'rgba(30,30,40,0.9)':'rgba(20,30,120,0.9)';
+    // Set per-pole chord energy so Real mode varies pole intensity.
+    const _pi = Math.min(cn-1, Math.floor((i/poles)*cn));
+    const _pch = chords[_pi];
+    _setCurE(_pch && _pch._E);
+    let [pr,pg,pb] = _pollPolesBase;
+    if(typeof _energyTint === 'function'){ const t=_energyTint(pr,pg,pb); pr=t[0]; pg=t[1]; pb=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(pr,pg,pb); pr=p[0]; pg=p[1]; pb=p[2]; }
+    ctx.strokeStyle=`rgba(${pr},${pg},${pb},0.9)`;
     ctx.lineWidth=Math.max(3,CW*0.014);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(x-lean,CH*0.08);ctx.lineTo(x+lean,CH*0.92);ctx.stroke();
   }
@@ -3212,6 +3231,7 @@ function picassoPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // Sample a chord's averaged color (same approach as phase A's fill).
   const chordColor=(pIdx)=>{
     const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(cn/shapeCount)))];
+    _setCurE(chord && chord._E);
     const notes=chord&&(chord.n||chord.notes||[]);
     let aR=0,aG=0,aB=0,aV=0,c=0;
     if(notes&&notes.length)for(const note of notes){const m=note.m!==undefined?note.m:note;const v=note.v!==undefined?note.v:80;const[r,g,b]=gc(m,v);aR+=r;aG+=g;aB+=b;aV+=v;c++;}
@@ -3361,15 +3381,25 @@ function picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const hatchAngleBase = -Math.PI/3 + (sR()-0.5)*0.4;       // per-song hatch direction
 
   // Cool blue ground (palette-independent so the mood reads as Blue Period).
+  // Tone-adjust each gradient stop so Pastel softens the whole blue mood and
+  // Real picks up the opening chord's energy.
+  const _adjHex = (hex)=>{
+    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgb(${r},${g},${b})`;
+  };
+  // Set energy from opening chord so Real mode reads the song's start.
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
   const grad = ctx.createLinearGradient(0,0,CW,CH);
   if(isBW){
-    grad.addColorStop(0, '#28282c');
-    grad.addColorStop(0.5, '#3a3a40');
-    grad.addColorStop(1, '#22222a');
+    grad.addColorStop(0, _adjHex('#28282c'));
+    grad.addColorStop(0.5, _adjHex('#3a3a40'));
+    grad.addColorStop(1, _adjHex('#22222a'));
   } else {
-    grad.addColorStop(0, '#1a2438');
-    grad.addColorStop(0.5, '#2a3e58');
-    grad.addColorStop(1, '#1a2230');
+    grad.addColorStop(0, _adjHex('#1a2438'));
+    grad.addColorStop(0.5, _adjHex('#2a3e58'));
+    grad.addColorStop(1, _adjHex('#1a2230'));
   }
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,CW,CH);
@@ -3439,15 +3469,22 @@ function picassoPhaseRoseAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const hatchAngleBase = Math.PI/4 + (sR()-0.5)*0.4;
 
   // Warm pink/ochre ground.
+  const _adjHex = (hex)=>{
+    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgb(${r},${g},${b})`;
+  };
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
   const grad = ctx.createLinearGradient(0,0,CW,CH);
   if(isBW){
-    grad.addColorStop(0, '#4a4038');
-    grad.addColorStop(0.5, '#6a5848');
-    grad.addColorStop(1, '#4a4038');
+    grad.addColorStop(0, _adjHex('#4a4038'));
+    grad.addColorStop(0.5, _adjHex('#6a5848'));
+    grad.addColorStop(1, _adjHex('#4a4038'));
   } else {
-    grad.addColorStop(0, '#7a3830');
-    grad.addColorStop(0.5, '#a05848');
-    grad.addColorStop(1, '#7a4030');
+    grad.addColorStop(0, _adjHex('#7a3830'));
+    grad.addColorStop(0.5, _adjHex('#a05848'));
+    grad.addColorStop(1, _adjHex('#7a4030'));
   }
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,CW,CH);
@@ -9330,18 +9367,27 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const SKIN = isBW?[180,170,155]:[205,165,120]; // warm tan/skin
   const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
+  // Tone-adjust helper for Miró fixed palette (RED/GRN/BLU/YEL/ORA/SKIN).
+  // Without this the snap-to-accent step bypasses _energyTint and the painting
+  // ignores per-chord dynamic in Real mode.
+  const _tonedRGB = (c)=>{
+    let r=c[0], g=c[1], b=c[2];
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return [r,g,b];
+  };
   // Pick accent from gc() chord color. `rnd` is the element's seeded RNG so the
   // chosen colour is STABLE across frames — Math.random() here made every repaint
   // re-roll the colour, which read as constant blinking for most of the song.
   const accent=(r,g,b,rnd)=>{
     const rr = (typeof rnd==='function') ? rnd : Math.random;
-    if(isBW){const p=[RED,BLU,YEL,ORA];return p[Math.floor(rr()*p.length)];}
-    if(r>180&&g<100&&b<100) return RED;
-    if(g>r&&g>b) return GRN;
-    if(b>r&&b>g) return BLU;
-    if(r>160&&g>140&&b<80) return YEL;
-    if(r>160&&g>80&&b<80) return ORA;
-    return [RED,GRN,BLU,YEL,ORA][Math.floor(rr()*5)];
+    if(isBW){const p=[RED,BLU,YEL,ORA];return _tonedRGB(p[Math.floor(rr()*p.length)]);}
+    if(r>180&&g<100&&b<100) return _tonedRGB(RED);
+    if(g>r&&g>b) return _tonedRGB(GRN);
+    if(b>r&&b>g) return _tonedRGB(BLU);
+    if(r>160&&g>140&&b<80) return _tonedRGB(YEL);
+    if(r>160&&g>80&&b<80) return _tonedRGB(ORA);
+    return _tonedRGB([RED,GRN,BLU,YEL,ORA][Math.floor(rr()*5)]);
   };
 
   // Chord color helper
@@ -10070,7 +10116,7 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
 }
 
-function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, phaseIndex, cn){
+function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, phaseIndex, cn, chords){
   if(chordCount === 0) return;
   const ss = sessionSeed|0;
   // ── Progress-stretch (per phase) ──
@@ -10099,17 +10145,17 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   // 7 phases: A Cosmic · B Bauhaus · Circles · Comp8 · Paris · Geom · Dense.
   // (Improvisation was retired; Geom + Dense added.)
   const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick===1){ kandinskyPhaseB(ctx, CW, CH, eff(60), ss, mode, palette); return; }
-  if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, eff(230), ss, mode, palette); return; }
-  if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, eff(255), ss, mode, palette); return; }
-  if(pick===4){ kandinskyPhaseParis(ctx, CW, CH, eff(180), ss, mode, palette); return; }
-  if(pick===5){ kandinskyPhaseGeom(ctx, CW, CH, eff(240), ss, mode, palette); return; }
-  if(pick===6){ kandinskyPhaseDense(ctx, CW, CH, eff(260), ss, mode, palette); return; }
-  kandinskyPhaseA(ctx, CW, CH, eff(280), ss, mode, palette);
+  if(pick===1){ kandinskyPhaseB(ctx, CW, CH, eff(60), ss, mode, palette, chords); return; }
+  if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, eff(230), ss, mode, palette, chords); return; }
+  if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, eff(255), ss, mode, palette, chords); return; }
+  if(pick===4){ kandinskyPhaseParis(ctx, CW, CH, eff(180), ss, mode, palette, chords); return; }
+  if(pick===5){ kandinskyPhaseGeom(ctx, CW, CH, eff(240), ss, mode, palette, chords); return; }
+  if(pick===6){ kandinskyPhaseDense(ctx, CW, CH, eff(260), ss, mode, palette, chords); return; }
+  kandinskyPhaseA(ctx, CW, CH, eff(280), ss, mode, palette, chords);
 }
 
 // ── Kandinsky phase A: the original free "cosmic scatter" composition. ──
-function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
+function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords){
   const ss = sessionSeed|0;
   const isBW = mode==='bw';
 
@@ -10139,6 +10185,28 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
     'rgba(50, 160, 80, 0.90)',     // forest green
     'rgba(240, 130, 40, 0.92)',    // orange
   ];
+  // Parse a palette string into [r,g,b,a]. Accepts rgb(...) and rgba(...).
+  const _parseCol = (s)=>{
+    const m=String(s).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s]+([\d.]+))?\)/);
+    if(!m) return [128,128,128,1];
+    return [+m[1], +m[2], +m[3], m[4]!=null?+m[4]:1];
+  };
+  // Pick a palette colour AND set per-element chord energy so Real tone
+  // modulates each line/triangle/ring with the corresponding chord's dynamic.
+  // i = element index (maps onto the chords array uniformly).
+  const _cn = chords && chords.length ? chords.length : 1;
+  const pickPalette = (i)=>{
+    if(chords && chords.length){
+      const ch = chords[i % _cn];
+      _setCurE(ch && ch._E);
+    }
+    const colStr = lineColors[i % lineColors.length];
+    const [pr,pg,pb,pa] = _parseCol(colStr);
+    let r=pr,g=pg,b=pb;
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgba(${r|0},${g|0},${b|0},${pa})`;
+  };
 
   // === 1. LARGE OUTLINED TRIANGLES ===
   const triCount = countFor(TH_TRI);
@@ -10155,7 +10223,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
       const a = rot + k*(Math.PI*2/3) + (rnd()-0.5)*0.4;
       v.push({ x: cx + Math.cos(a)*baseSize*elongate, y: cy + Math.sin(a)*baseSize });
     }
-    ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+    ctx.strokeStyle = pickPalette(i);
     ctx.lineWidth = Math.max(1.5, Math.min(CW,CH)*(0.004 + rnd()*0.004));
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
@@ -10176,8 +10244,8 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
     const outerR = Math.min(CW, CH) * (0.10 + rnd()*0.12);
     const nestedRings = 2 + Math.floor(rnd()*3); // 2-4 nested
     // Pick 2 colors and alternate
-    const c1 = lineColors[Math.floor(rnd()*lineColors.length)];
-    const c2 = lineColors[Math.floor(rnd()*lineColors.length)];
+    const c1 = pickPalette(i);
+    const c2 = pickPalette(i);
     for(let k=0; k<nestedRings; k++){
       const ringR = outerR * (1 - k * 0.65/nestedRings);
       ctx.strokeStyle = k % 2 === 0 ? c1 : c2;
@@ -10197,7 +10265,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
     const cx = rnd()*CW;
     const cy = rnd()*CH;
     const length = Math.max(CW, CH) * (0.5 + rnd()*0.7);
-    ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+    ctx.strokeStyle = pickPalette(i);
     ctx.lineWidth = Math.max(1, Math.min(CW,CH)*(0.0025 + rnd()*0.003));
     ctx.beginPath();
     ctx.moveTo(cx - Math.cos(angle)*length/2, cy - Math.sin(angle)*length/2);
@@ -10215,7 +10283,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
     const arcR = Math.min(CW, CH) * (0.12 + rnd()*0.15);
     const startA = rnd() * Math.PI * 2;
     const sweep = (0.4 + rnd()*0.8) * Math.PI;
-    ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+    ctx.strokeStyle = pickPalette(i);
     ctx.lineWidth = Math.max(2, Math.min(CW,CH)*(0.005 + rnd()*0.005));
     ctx.beginPath();
     ctx.arc(cx, cy, arcR, startA, startA + sweep);
@@ -10234,7 +10302,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
     const amp = segLen * 0.9;
     let zx = rnd()*CW;
     let zy = rnd()*CH;
-    ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+    ctx.strokeStyle = pickPalette(i);
     ctx.lineWidth = Math.max(1.8, Math.min(CW,CH)*(0.004 + rnd()*0.003));
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -10256,7 +10324,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
 // palette and seeded-rng discipline as phase A, but a structured composition
 // instead of a free scatter, so Vary/Random produces a genuinely different
 // Kandinsky rather than just reshuffled positions.
-function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
+function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords){
   const ss = sessionSeed|0;
   // Palette tuned to the active scheme when supplied (see drawKandinskyOverlay);
   // otherwise the classic fixed Bauhaus set.
@@ -10269,6 +10337,25 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
     'rgba(225, 60, 50, 0.85)', 'rgba(240, 180, 30, 0.85)', 'rgba(40, 70, 200, 0.82)',
     'rgba(180, 60, 200, 0.80)', 'rgba(50, 160, 80, 0.80)', 'rgba(240, 130, 40, 0.85)',
   ];
+  const _parseCol = (s)=>{
+    const m=String(s).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s]+([\d.]+))?\)/);
+    if(!m) return [128,128,128,1];
+    return [+m[1], +m[2], +m[3], m[4]!=null?+m[4]:1];
+  };
+  const _cn = chords && chords.length ? chords.length : 1;
+  const _toned = (s, ci)=>{
+    if(chords && chords.length){
+      const ch = chords[ci % _cn];
+      _setCurE(ch && ch._E);
+    }
+    const [pr,pg,pb,pa] = _parseCol(s);
+    let r=pr,g=pg,b=pb;
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgba(${r|0},${g|0},${b|0},${pa})`;
+  };
+  const pickLine = (ci)=> _toned(lineColors[ci % lineColors.length], ci);
+  const pickFill = (ci)=> _toned(fillColors[ci % fillColors.length], ci);
 
   // Grid dimensions scale with how much music there is: more chords → finer grid.
   const cols = chordCount < 8 ? 2 : chordCount < 24 ? 3 : chordCount < 60 ? 4 : 5;
@@ -10279,7 +10366,8 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
   // === 1. GRID CELLS — each holds concentric circles, a target, or a dot ===
   for(let r=0; r<rows; r++){
     for(let c=0; c<cols; c++){
-      const rnd = _seedRnd(7000 + r*cols + c, ss, 0, 0);
+      const cellIdx = r*cols + c;
+      const rnd = _seedRnd(7000 + cellIdx, ss, 0, 0);
       const cx = c*cellW + cellW*0.5;
       const cy = r*cellH + cellH*0.5;
       // A little jitter so the grid feels hand-placed, not mechanical.
@@ -10290,8 +10378,8 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
       if(kind < 0.50){
         // Concentric rings (2–4), alternating two colors.
         const nested = 2 + Math.floor(rnd()*3);
-        const c1 = lineColors[Math.floor(rnd()*lineColors.length)];
-        const c2 = lineColors[Math.floor(rnd()*lineColors.length)];
+        const c1 = pickLine(cellIdx);
+        const c2 = pickLine(cellIdx);
         for(let k=0; k<nested; k++){
           ctx.strokeStyle = k % 2 === 0 ? c1 : c2;
           ctx.lineWidth = Math.max(1.5, minCell*(0.018 + rnd()*0.01));
@@ -10301,17 +10389,17 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
         }
       } else if(kind < 0.80){
         // Filled target: solid disc with a contrasting ring + center dot.
-        ctx.fillStyle = fillColors[Math.floor(rnd()*fillColors.length)];
+        ctx.fillStyle = pickFill(cellIdx);
         ctx.beginPath(); ctx.arc(cx+jx, cy+jy, baseR, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+        ctx.strokeStyle = pickLine(cellIdx);
         ctx.lineWidth = Math.max(1.5, minCell*0.02);
         ctx.beginPath(); ctx.arc(cx+jx, cy+jy, baseR, 0, Math.PI*2); ctx.stroke();
-        ctx.fillStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+        ctx.fillStyle = pickLine(cellIdx);
         ctx.beginPath(); ctx.arc(cx+jx, cy+jy, baseR*0.28, 0, Math.PI*2); ctx.fill();
       } else {
         // A small triangle seated in the cell (Kandinsky's recurring triangle motif).
         const rot = rnd()*Math.PI*2;
-        ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+        ctx.strokeStyle = pickLine(cellIdx);
         ctx.lineWidth = Math.max(1.5, minCell*0.02);
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -10332,7 +10420,7 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
     const angle = rnd() * Math.PI;
     const cx = rnd()*CW, cy = rnd()*CH;
     const length = Math.max(CW, CH) * 1.4;
-    ctx.strokeStyle = lineColors[Math.floor(rnd()*lineColors.length)];
+    ctx.strokeStyle = pickLine(i);
     ctx.lineWidth = Math.max(1.5, Math.min(CW,CH)*(0.004 + rnd()*0.004));
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -10349,7 +10437,7 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
     const corner = Math.floor(rnd()*4);            // which corner
     const ox = (corner % 2 === 0) ? CW*0.04 : CW - CW*0.04 - n*sq;
     const oy = (corner < 2)        ? CH*0.04 : CH - CH*0.04 - n*sq;
-    const cA = fillColors[Math.floor(rnd()*fillColors.length)];
+    const cA = pickFill(0);
     const cB = lineColors[5]; // near-black
     for(let yy=0; yy<n; yy++) for(let xx=0; xx<n; xx++){
       ctx.fillStyle = (xx+yy) % 2 === 0 ? cA : cB;
@@ -10375,7 +10463,7 @@ function _kandAlpha(col,a){
 }
 
 // ── Kandinsky C: Several Circles — concentric translucent discs on dark. ──
-function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
+function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords){
   const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
   ctx.fillStyle=isBW?'#1a1a1a':'#0c0a14';ctx.fillRect(0,0,CW,CH);
   const TH=[2,5,9,14,20,28,38,50,65,82,100,125,155,190,230];
@@ -10393,7 +10481,7 @@ function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
 }
 
 // ── Kandinsky D: Composition VIII — geometric circles, lines, triangles cool. ──
-function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
+function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords){
   const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
   ctx.fillStyle=isBW?'#cac6be':'#e8e4d8';ctx.fillRect(0,0,CW,CH);
   const TH=[1,4,8,13,19,27,38,52,70,95,125,160,205,255];
@@ -10418,7 +10506,7 @@ function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
 }
 
 // ── Kandinsky E: Improvisation — loose colourful washes + black gesture lines. ──
-function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
+function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords){
   const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
   ctx.fillStyle=isBW?'#d8d4cc':'#f0ead8';ctx.fillRect(0,0,CW,CH);
   const TH=[2,6,11,18,27,40,56,76,100,130,170,215];
@@ -10443,7 +10531,7 @@ function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
 }
 
 // ── Kandinsky F: Paris biomorphic — soft organic shapes, late lighter palette. ──
-function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
+function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords){
   const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
   ctx.fillStyle=isBW?'#9a96a0':'#5a6a8a';ctx.fillRect(0,0,CW,CH);
   const TH=[2,5,9,15,23,33,46,62,82,108,140,180];
@@ -10469,7 +10557,7 @@ function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette){
 // Sharp shapes (triangles, outlined circles, a checkerboard), clean saturated
 // colours, bold black lines. Cleaner than Cosmic scatter, fuller plane. Element
 // counts scale LINEARLY with progress (chordCount is the eff(240) for this phase).
-function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
+function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords){
   const ss = sessionSeed|0, isBW = mode==='bw';
   const cols = _kandPal(palette);
   const ink = isBW ? '#1a1a1a' : '#0a060c';
@@ -10526,7 +10614,7 @@ function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette)
 // ── Kandinsky phase: Dense "Circles + radials" ──
 // A big concentric-circle nucleus, radial spokes, plus many small circles/dots
 // filling the whole plane — energetic cosmic density, no empty space. Progressive.
-function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette){
+function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords){
   const ss = sessionSeed|0, isBW = mode==='bw';
   const cols = _kandPal(palette);
   ctx.fillStyle = isBW ? '#ececec' : '#f4f0e6';
