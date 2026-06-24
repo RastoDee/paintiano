@@ -4700,7 +4700,46 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setWorking(true);setWLabel(t('transcribingAudio')||'transcribing audio');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
-      const buf=await file.arrayBuffer();
+      const rawBuf=await file.arrayBuffer();
+      // ── MP3 sanitizer ──────────────────────────────────────────────────────
+      // Some MP3s (often from converters like Freemake) declare their ID3v2
+      // tag size correctly but leave hundreds of bytes of 0x00 padding/junk
+      // between the tag end and the first real MP3 frame sync. Desktop Chrome
+      // tolerates the junk and finds the sync; iOS Safari is strict and throws
+      // EncodingError from decodeAudioData. We do what a strict parser would
+      // expect: locate the first valid MP3 sync and, if it isn't immediately
+      // after the ID3 tag, strip the junk and hand decodeAudioData a clean
+      // buffer. Untagged or correctly-padded files pass through unchanged.
+      const buf=(()=>{
+        try{
+          const u8=new Uint8Array(rawBuf);
+          if(u8.length<10 || u8[0]!==0x49 || u8[1]!==0x44 || u8[2]!==0x33) return rawBuf; // no ID3v2
+          const tagEnd=10+((u8[6]<<21)|(u8[7]<<14)|(u8[8]<<7)|u8[9]);
+          if(tagEnd>=u8.length) return rawBuf;
+          // Already sync at tag end? Nothing to fix.
+          const validSync=(b1,b2,b3)=>{
+            if(b1!==0xFF) return false;
+            if((b2&0xE0)!==0xE0) return false;
+            const mpeg=(b2>>3)&3; if(mpeg===1) return false;
+            const layer=(b2>>1)&3; if(layer===0) return false;
+            const br=(b3>>4)&0x0F; if(br===0||br===0x0F) return false;
+            const sr=(b3>>2)&3; if(sr===3) return false;
+            return true;
+          };
+          if(validSync(u8[tagEnd],u8[tagEnd+1],u8[tagEnd+2])) return rawBuf;
+          // Find first real sync within a reasonable window after the tag.
+          const limit=Math.min(u8.length-3, tagEnd+65536);
+          for(let i=tagEnd;i<limit;i++){
+            if(validSync(u8[i],u8[i+1],u8[i+2])){
+              // Strip everything before sync (incl. ID3 + junk). The frame
+              // data is identical bit-for-bit; we just lose metadata Paintiano
+              // doesn't use anyway.
+              return u8.buffer.slice(i, u8.length);
+            }
+          }
+          return rawBuf;
+        }catch(_){ return rawBuf; }
+      })();
       const blob=new Blob([buf],{type:file.type||'audio/mpeg'});
       const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -4768,7 +4807,33 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       applyEvents(evts,aName);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
-    }catch(e){if(loadTokenRef.current===myToken){setErr('Audio: '+e.message);setErrInfo(false);}}
+    }catch(e){
+      if(loadTokenRef.current===myToken){
+        // Decode failures on iOS most often come from MP3 files with broken
+        // headers (junk between ID3 tag and first frame sync) or unusual
+        // formats (VBR with bad Xing, exotic sample rates, M4A pretending to
+        // be MP3). The sanitizer above catches the common case; if we still
+        // failed, give the user something actionable instead of a stack trace.
+        const m=String(e&&e.message||e);
+        const isDecode=/decode|EncodingError|Unable to decode/i.test(m);
+        if(isDecode){
+          const ext=(file.name.match(/\.([^.]+)$/)||[])[1]||'';
+          const tip = lang==='SK'
+            ? `Súbor sa nedá dekódovať. Pravdepodobne má poškodenú hlavičku alebo neštandardný formát. Skús ho prekonvertovať (napr. v Audacity: File → Export → MP3, alebo online cez online-audio-converter.com).`
+            : lang==='DE'
+            ? `Datei kann nicht dekodiert werden. Vermutlich beschädigter Header oder ungewöhnliches Format. Konvertiere die Datei neu (z. B. in Audacity: File → Export → MP3, oder online via online-audio-converter.com).`
+            : lang==='FR'
+            ? `Impossible de décoder ce fichier. En-tête probablement corrompu ou format inhabituel. Reconvertis-le (par ex. dans Audacity : Fichier → Exporter → MP3, ou en ligne via online-audio-converter.com).`
+            : lang==='ES'
+            ? `No se puede decodificar el archivo. Cabecera dañada o formato inusual. Convierte el archivo (p. ej. en Audacity: Archivo → Exportar → MP3, o en línea via online-audio-converter.com).`
+            : `This file can't be decoded. Likely a broken header or unusual format. Try re-converting it (e.g. in Audacity: File → Export → MP3, or online via online-audio-converter.com).`;
+          setErr('Audio · '+(ext?ext.toUpperCase()+' · ':'')+tip);
+        } else {
+          setErr('Audio: '+m);
+        }
+        setErrInfo(false);
+      }
+    }
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
@@ -9277,7 +9342,7 @@ Composition rules:
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); const _mc = _isMusic?'rgba(150,185,255,.85)':(srcBtn==='image'?'rgba(248,170,120,.9)':'rgba(230,222,196,.7)'); const _mbd = _isMusic?'rgba(91,156,246,.3)':(srcBtn==='image'?'rgba(244,124,60,.3)':'rgba(242,238,232,.15)'); return (
-            <button onClick={()=>{if(recording||sourcePickerLocked)return;const _target=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?'sound':srcBtn;if(pickMode===_target){setPickMode(null);return;}if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(_target);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={((t('newBy')||{})[srcBtn]||t('newSource'))+' '+((srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':_mc,border:'1px solid '+(recording||sourcePickerLocked?'rgba(242,238,232,.15)':_mbd),borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {((t('newBy')||{})[srcBtn]||t('newSource'))} {(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,'')}</button>
+            <button onClick={()=>{if(recording||sourcePickerLocked)return;const _target=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score')?'sound':srcBtn;if(pickMode===_target){setPickMode(null);return;}if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(_target);}} disabled={recording||sourcePickerLocked} className="pf-lift" title={(()=>{ const isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); const noun=isMusic?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''); /* SK grammar: 'hudba' is feminine -> 'Nová hudba', not 'Nový hudba' */ const prefix=(lang==='SK'&&isMusic)?'Nová':((t('newBy')||{})[srcBtn]||t('newSource')); return prefix+' '+noun; })()} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording||sourcePickerLocked?'rgba(230,222,196,.25)':_mc,border:'1px solid '+(recording||sourcePickerLocked?'rgba(242,238,232,.15)':_mbd),borderRadius:22,cursor:recording||sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>+ {(()=>{ const isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); const noun=isMusic?(t('music')!=='music'?t('music'):'music'):t(srcBtn).replace(/[^\p{L}]/gu,''); const prefix=(lang==='SK'&&isMusic)?'Nová':((t('newBy')||{})[srcBtn]||t('newSource')); return prefix+' '+noun; })()}</button>
           ); })()}
           {/* New MOOD — opens an inline mood picker right over the canvas (no
               jump back to setup); picking one loads it immediately. Shown for the
