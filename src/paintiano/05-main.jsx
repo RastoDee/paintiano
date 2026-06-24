@@ -795,6 +795,12 @@ const TxIcon = ({n, s=15}) => {
     case 'sparkle': return <svg {...P}><path d="M12 3l1.6 4.8L18 9l-4.4 1.2L12 15l-1.6-4.8L6 9z"/></svg>;
     case 'notes':   return <svg {...P}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>;
     case 'undo':    return <svg {...P}><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>;
+    case 'web':     return <svg {...P}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
+    case 'print':   return <svg {...P}><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="9" rx="2"/><rect x="7" y="15" width="10" height="6" rx="1"/><circle cx="17.5" cy="12.5" r=".6" fill="currentColor"/></svg>;
+    case 'gallery': return <svg {...P}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m3 17 5-5 4 4 3-3 6 6"/></svg>;
+    case 'score':   return <svg {...P}><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="15" r="2"/><path d="M10 15V7l6-2v9"/><circle cx="14" cy="13" r="2"/></svg>;
+    case 'upload':  return <svg {...P}><path d="M12 3v13M6 9l6-6 6 6"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>;
+    case 'sample':  return <svg {...P}><path d="M3 12h2l2-7 4 14 3-10 2 5 2-2h3"/></svg>;
     default:        return null;
   }
 };
@@ -10003,6 +10009,7 @@ Composition rules:
                 setForceSetup(false);
                 setPickMode(null);
               }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
+                <span style={{display:'flex',alignItems:'center',justifyContent:'center',marginBottom:6,color:'rgba(220,180,255,.85)'}}><TxIcon n="sparkle" s={18}/></span>
                 <span style={{display:'block',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}>{_sent(t('builtInSample'))}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?SAMPLE_SCORE_NAME:pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:SAMPLE_IMAGE_NAME}</span>
               </button>
@@ -10021,6 +10028,7 @@ Composition rules:
                 // loaders (loadMidi/loadAudio/loadScore/loadImage) close the modal
                 // via setPickMode(null) once a file is actually selected.
               }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
+                <span style={{display:'flex',alignItems:'center',justifyContent:'center',marginBottom:6,color:'rgba(220,180,90,.85)'}}><TxIcon n="upload" s={18}/></span>
                 <span style={{display:'block',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}>{_sent(t('chooseFile'))}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'MIDI · audio · MusicXML':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'Audio · .mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'JPG · PNG · GIF · WEBP · HEIC'}</span>
               </button>
@@ -10535,7 +10543,7 @@ Composition rules:
                     if(recBlob && recName) exportImage('story', true, recBlob, recName, includeSourceThumb);
                     else { setRecordIntent('story'); startRecord(); }
                   }} style={{padding:'14px',background:'linear-gradient(135deg,rgba(255,215,120,.16),rgba(220,170,70,.08))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.4)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                    ✦ {t('sizeStory')||'Story'}
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="sparkle" s={14}/>{t('sizeStory')||'Story'}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(255,210,140,.55)',marginTop:4,letterSpacing:0,fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
                   </button>
                   <button onClick={()=>{
@@ -10552,11 +10560,11 @@ Composition rules:
                     }
                     else { setRecordIntent('audio'); startRecord(); }
                   }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                    ⏺ {t('saveAudioLabel')||'Audio'}
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="rec" s={14}/>{t('saveAudioLabel')||'Audio'}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{includeSourceThumb ? (t('saveAudioHintImg')!=='saveAudioHintImg'?t('saveAudioHintImg'):'image + audio · save to files') : (t('saveAudioHint')||'audio · save to files')}</div>
                   </button>
                   <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                    ♫ {t('scoreExport')}
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="notes" s={14}/>{t('scoreExport')}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
                   </button>
                 </>
@@ -10611,40 +10619,42 @@ Composition rules:
                       try{ await unlockAudio(); }catch(_){}
                       await exportImage('story', true, audioBlob, audioName, true);
                     }} style={{padding:'14px',background:'linear-gradient(135deg,rgba(255,215,120,.16),rgba(220,170,70,.08))',color:'rgba(255,220,140,.95)',border:'1px solid rgba(255,210,120,.4)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                      ✦ {t('sizeStory')||'Story'}
+                      <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="sparkle" s={14}/>{t('sizeStory')||'Story'}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(255,210,140,.55)',marginTop:4,letterSpacing:0,fontWeight:400}}>{isImportedMedia ? (t('storyImageHintNoAudio')||'painting · for IG / TikTok') : (t('storyImageHint')||'painting + audio · for IG / TikTok')}</div>
                     </button>
                   )}
                   <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                    🖥 {t('sizeWeb')}
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="web" s={14}/>{t('sizeWeb')}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizeWebHint')}</div>
                   </button>
                   <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('print', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                      🖨 {t('sizePrint')}
+                      <TxIcon n="print" s={14}/>
+                      {({EN:'Print A0 · 300+ DPI',SK:'Tlač A0 · 300+ DPI',DE:'Druck A0 · 300+ DPI',FR:'Impression A0 · 300+ DPI',ES:'Impresión A0 · 300+ DPI',PT:'Impressão A0 · 300+ DPI',zh:'打印 A0 · 300+ DPI',zhTW:'列印 A0 · 300+ DPI',ja:'印刷 A0 · 300+ DPI'})[lang]||'Print A0 · 300+ DPI'}
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
-                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizePrintHint')}</div>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'~20× · large file · print-ready',SK:'~20× · veľký súbor · pripravené na tlač',DE:'~20× · große Datei · druckfertig',FR:'~20× · gros fichier · prêt à imprimer',ES:'~20× · archivo grande · listo para imprimir',PT:'~20× · ficheiro grande · pronto a imprimir',zh:'~20× · 大文件 · 可印刷',zhTW:'~20× · 大檔案 · 可列印',ja:'~20× · 大きいファイル · 印刷可能'})[lang]||'~20× · large file · print-ready'}</div>
                   </button>
                   <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                      🖼 {t('sizeGallery')||'Gallery (vector)'}
+                      <TxIcon n="gallery" s={14}/>
+                      {({EN:'Gallery · vector',SK:'Galéria · vektor',DE:'Galerie · Vektor',FR:'Galerie · vectoriel',ES:'Galería · vector',PT:'Galeria · vetor',zh:'画廊 · 矢量',zhTW:'畫廊 · 向量',ja:'ギャラリー · ベクター'})[lang]||'Gallery · vector'}
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
-                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizeGalleryHint')||'SVG · fine-art print · any DPI'}</div>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'SVG · fine-art print · any DPI',SK:'SVG · fine-art tlač · ľubovoľné DPI',DE:'SVG · Fine-Art-Druck · beliebige DPI',FR:'SVG · impression fine-art · DPI au choix',ES:'SVG · impresión fine-art · cualquier DPI',PT:'SVG · impressão fine-art · qualquer DPI',zh:'SVG · 美术级打印 · 任意 DPI',zhTW:'SVG · 美術級列印 · 任意 DPI',ja:'SVG · ファインアート印刷 · 任意の DPI'})[lang]||'SVG · fine-art print · any DPI'}</div>
                   </button>
                   {/* Audio + Score export hidden for MIDI/Audio/Score sources
                       (isImportedMedia) — exporting them back to the same file
                       format the user just imported is redundant. */}
                   {!isImportedMedia && (
                     <button onClick={()=>{ setShowSizePicker(false); saveAudio(true); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                      ⏺ {t('saveAudioLabel')||'Audio'}
+                      <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="rec" s={14}/>{t('saveAudioLabel')||'Audio'}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
                     </button>
                   )}
                   {!isImportedMedia && (
                     <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
-                      ♫ {t('scoreExport')}
+                      <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="notes" s={14}/>{t('scoreExport')}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
                     </button>
                   )}
