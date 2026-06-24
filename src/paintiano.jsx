@@ -1787,12 +1787,20 @@ function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
     const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;
     // Velocity -> saturation: pp fades toward neutral grey, ff stays vivid.
     // Per-voice grey is the note's own luma, so lightness (octave) is preserved.
-    const vN=Math.max(0,Math.min(1,((note.v||80)-30)/90));
-    const satKeep=0.25+vN*0.75;
-    const grey=0.299*r+0.587*g+0.114*b;
-    const R=Math.round(grey+(r-grey)*satKeep);
-    const G=Math.round(grey+(g-grey)*satKeep);
-    const B=Math.round(grey+(b-grey)*satKeep);
+    // GATED by _mixOn: in Normal tone this modulation is skipped entirely and
+    // the raw palette colour from gc() is used, per the Paintiano pure-mode
+    // concept (Normal = no dynamic colour modulation of any kind).
+    let R, G, B;
+    if(_mixOn){
+      const vN=Math.max(0,Math.min(1,((note.v||80)-30)/90));
+      const satKeep=0.25+vN*0.75;
+      const grey=0.299*r+0.587*g+0.114*b;
+      R=Math.round(grey+(r-grey)*satKeep);
+      G=Math.round(grey+(g-grey)*satKeep);
+      B=Math.round(grey+(b-grey)*satKeep);
+    } else {
+      R=r; G=g; B=b;
+    }
     ctx.fillStyle=_rgbaStr(R,G,B,a*.18);
     ctx.fillRect(bx-2,y-2,BW+4,bh+4);
     ctx.fillStyle=_rgbaStr(R,G,B,a);
@@ -1819,12 +1827,19 @@ function drawBlockNotes(ctx,bx,by,notes,gc,BW,BH){
     const[r,g,b,a]=gc(note.m,note.v);
     // Velocity -> saturation on the tinted glyph: pp fades, ff burns.
     // Higher floor (0.40) keeps glyphs legible on the dark canvas.
-    const vN=Math.max(0,Math.min(1,((note.v||80)-30)/90));
-    const satKeep=0.40+vN*0.60;
-    const grey=0.299*r+0.587*g+0.114*b;
-    const R=Math.round(grey+(r-grey)*satKeep);
-    const G=Math.round(grey+(g-grey)*satKeep);
-    const B=Math.round(grey+(b-grey)*satKeep);
+    // GATED by _mixOn: in Normal tone this modulation is skipped and the raw
+    // palette colour is used (per Paintiano pure-mode concept).
+    let R, G, B;
+    if(_mixOn){
+      const vN=Math.max(0,Math.min(1,((note.v||80)-30)/90));
+      const satKeep=0.40+vN*0.60;
+      const grey=0.299*r+0.587*g+0.114*b;
+      R=Math.round(grey+(r-grey)*satKeep);
+      G=Math.round(grey+(g-grey)*satKeep);
+      B=Math.round(grey+(b-grey)*satKeep);
+    } else {
+      R=r; G=g; B=b;
+    }
     const cx=bx+BW/2, cy=by+i*bh+bh/2;
     const name=_midiToName[note.m]||'';
     // subtle dark halo for contrast against any colour, then the tinted glyph
