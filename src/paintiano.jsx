@@ -1734,20 +1734,44 @@ function _ensureEnergies(chords){
 }
 
 function _energyTint(r,g,b){
-  // Tone switch — when Mix is off (Normal tone), the energy modulation is
-  // bypassed entirely so the palette's raw colours are used as-is. Mix and
-  // Pastel tones both turn this on.
+  // Tone switch — when Mix is off (Pure or Pastel tones), the energy modulation
+  // is bypassed entirely. In Real tone (_mixOn === true) the function maps the
+  // current chord's energy across an asymmetric range:
+  //
+  //   piano  (_curE = 0)  -> true pastel  (S * 0.30,  L blended to 0.80)
+  //   mezzo  (_curE = 0.5) -> raw palette colour, no change
+  //   forte  (_curE = 1)   -> deep        (S * 1.55,  L * 0.78)
+  //
+  // A power-curve sharpens the middle so chords at E ~ 0.3 or 0.7 already show
+  // clear pastel/deep shifts. The whole piece therefore travels the full
+  // pastel-to-deep gamut on a single canvas — every artist + every variant —
+  // because every block goes through gc() and gc() calls _energyTint.
   if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
-  const d=(_curE-0.5)*2;
+  let d=(_curE-0.5)*2;
   if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
+  // Sharpening — after smoothing + min-max normalization most chords cluster
+  // around the middle of -1..+1. Without sharpening a linear mapping leaves
+  // the painting almost unchanged. |d|^0.55 pushes d toward the extremes.
+  d = Math.sign(d) * Math.pow(Math.abs(d), 0.55);
   let R=r/255, G=g/255, B=b/255;
   const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
   let h=0, sx=0;
   if(mx!==mn){ const dl=mx-mn; sx=l>0.5?dl/(2-mx-mn):dl/(mx+mn);
     if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
-  const S=Math.max(0,Math.min(1, sx*(1+d*0.45)));
-  const L=Math.max(0.04,Math.min(0.96, l - d*0.18));
-  if(S===0){ const g2=Math.round(L*255); return [g2,g2,g2]; }
+  let S, L;
+  if(d < 0){
+    // Quieter than average -> ease toward pastel. k = |d|.
+    const k = -d;
+    S = sx * (1 - 0.70 * k);            // 1 -> 0.30
+    L = l + (0.80 - l) * 0.55 * k;       // l -> blended toward 0.80
+  } else {
+    // Louder than average -> ease toward deep.
+    S = Math.min(1, sx * (1 + 0.55 * d));
+    L = Math.max(0.04, l * (1 - 0.22 * d));
+  }
+  S = Math.max(0, Math.min(1, S));
+  L = Math.max(0.04, Math.min(0.96, L));
+  if(S < 0.005){ const g2=Math.round(L*255); return [g2,g2,g2]; }
   const q=L<0.5?L*(1+S):L+S-L*S, pp=2*L-q;
   const h2=(t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return pp+(q-pp)*6*t; if(t<1/2)return q; if(t<2/3)return pp+(q-pp)*(2/3-t)*6; return pp; };
   return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
@@ -2860,6 +2884,7 @@ function _partitionCanvas(chords, lim, ss, seedBase, capScale){
 // onto a chord in the piece — same mapping Kusama uses.
 function _rectChordColor(chords, pIdx, MAX_RECTS, gc){
   const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/MAX_RECTS)))];
+  _setCurE(chord && chord._E);
   const notes=chord.n||chord.notes||(Array.isArray(chord)?chord:null);
   if(!notes||!notes.length) return [120,100,140];
   let R=0,G=0,B=0,c=0;
@@ -3706,21 +3731,23 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
     {col:'rgba(200,80,160,',  wt: 0.04, rgb:[200,80,160]},
   ];
   // B/W: keep red (wt:0.03) and yellow (wt:0.02) as rare accents, rest grey
-  let dripColors = isBW ? _dc.map((c,i)=>{
+  const dripColors = isBW ? _dc.map((c,i)=>{
     if(i===2) return{col:c.col,wt:0.03,rgb:c.rgb};
     if(i===3) return{col:c.col,wt:0.02,rgb:c.rgb};
     const[v]=toGrey(...c.rgb); return{col:`rgba(${v},${v},${v},`,wt:c.wt,rgb:[v,v,v]};
   }) : _dc;
-  // Tone-adjust the drip palette: in Pastel tone every pigment is softened
-  // (saturation reduced, lightness lifted) so Pollock's drip field reads as
-  // pastel like every other artist. _pastelTint is a no-op in Normal/Mix
-  // (it early-returns when _pastelOn is false), so this is safe everywhere.
-  if(typeof _pastelTint === 'function'){
-    dripColors = dripColors.map(c => {
-      const [pr,pg,pb] = _pastelTint(c.rgb[0], c.rgb[1], c.rgb[2]);
-      return { col:`rgba(${pr},${pg},${pb},`, wt:c.wt, rgb:[pr,pg,pb] };
-    });
-  }
+  // Tone the drip colour per-pass: feed every picked pigment through
+  // _energyTint (Real mode — energy modulates saturation/lightness) and
+  // _pastelTint (Pastel mode — soft filter). Both are no-ops in Pure mode.
+  // Doing this per-pass instead of once at build time lets Real mode mix
+  // soft drips for piano passages with deep drips for fortes on the SAME
+  // canvas, instead of every pass using the same baked palette.
+  const _tonedRGB = (rgb)=>{
+    let r=rgb[0], g=rgb[1], b=rgb[2];
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return [r,g,b];
+  };
 
   // Compute average RGB + velocity for a chord -- used to bias palette and scale thickness.
   const chordStats = (chord) => {
@@ -3778,11 +3805,15 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const pickColor = (rnd, weights) => {
     const total = weights.reduce((a,b)=>a+b, 0);
     let r = rnd() * total;
+    let pickedRGB = dripColors[0].rgb;
     for(let i=0; i<dripColors.length; i++){
       r -= weights[i];
-      if(r < 0) return dripColors[i].col;
+      if(r < 0){ pickedRGB = dripColors[i].rgb; break; }
     }
-    return dripColors[0].col;
+    // Apply tone per-pass: Real -> _energyTint with current chord energy;
+    // Pastel -> _pastelTint. Both no-ops in Pure mode.
+    const [tr,tg,tb] = _tonedRGB(pickedRGB);
+    return `rgba(${tr},${tg},${tb},`;
   };
 
   // Pass count grows with song length, and every chord adds a drip until the
@@ -3825,7 +3856,12 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
     // === CHORD-DRIVEN PROPERTIES ===
     // Each pass corresponds to a chord. Color is biased toward that chord's
     // averaged color; line thickness scales with that chord's velocity.
+    // Set per-chord energy so the drip palette (whose colours pass through
+    // _pastelTint at build time) picks up Real-mode energy modulation here —
+    // every drip across the canvas reads the local dynamic, so pianissimo
+    // chords lay down softer/lighter drips and forte chords lay down deeper.
     const chord = chordForPass(p);
+    _setCurE(chord && chord._E);
     const stats = chord ? chordStats(chord) : null;
     const weights = biasedWeights(stats);
     const colBase = pickColor(rnd, weights);
@@ -4850,6 +4886,11 @@ function picassoPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 function _picChord(chords,idx,gc,isBW){
   const grey=(r,g,b)=>{const v=Math.round(r*0.299+g*0.587+b*0.114);return[v,v,v];};
   const chord=chords[Math.min(chords.length-1,Math.max(0,idx))];
+  // Set the current chord's energy BEFORE calling gc so Real tone applies the
+  // local dynamic level to every voice we sample here. _picChord is called by
+  // ~all per-chord overlay sites (~99 callsites), so a single line here drives
+  // pastel-at-piano / deep-at-forte modulation across the whole artist family.
+  _setCurE(chord && chord._E);
   const notes=chord&&(chord.n||chord.notes||[]);
   let aR=0,aG=0,aB=0,aV=0,c=0;
   if(notes&&notes.length)for(const note of notes){const m=note.m!==undefined?note.m:note;const v=note.v!==undefined?note.v:80;const[r,g,b]=gc(m,v);aR+=r;aG+=g;aB+=b;aV+=v;c++;}
@@ -5228,6 +5269,10 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   // saturated voice's gc colour — already pastel-softened.
   const chordCol=(pIdx,MAX)=>{
     const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/Math.max(1,MAX))))];
+    // Set the current chord's energy so gc() -> _energyTint reads the local
+    // dynamic level (Real tone). Without this every Mondrian block defaults to
+    // mid-energy and the painting can't span pastel-to-deep across the canvas.
+    _setCurE(chord && chord._E);
     const notes=chord && (chord.n||chord.notes||(Array.isArray(chord)?chord:null));
     if(!notes||!notes.length){const[r,g,bl]=bold(150,40,30);return[r,g,bl];}
     // Find the voice whose gc() color is most saturated (largest channel spread).
@@ -6093,6 +6138,7 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
     const chord = chords[idx];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) return [120,100,140];
     let R=0,G=0,B=0,c=0;
@@ -6286,6 +6332,7 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
     const chord = chords[idx];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) return [120,100,200];
     let R=0,G=0,B=0,c=0;
@@ -6621,6 +6668,7 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
     const chord = chords[idx];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) return [200,150,120];
     let R=0,G=0,B=0,c=0;
@@ -7047,6 +7095,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
     const chord = chords[idx];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) return [180,140,60];
     let R=0,G=0,B=0,c=0;
@@ -7596,6 +7645,7 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
     const chord = chords[idx];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) return [240,80,80];
     let R=0,G=0,B=0,c=0;
@@ -7878,6 +7928,7 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
     const chord = chords[idx];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) return [30,30,30];
     let R=0,G=0,B=0,c=0;
@@ -8379,6 +8430,7 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
     const chord = chords[idx];
+    _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     if(!notes || !notes.length) return [240,210,40];
     let R=0,G=0,B=0,c=0;
