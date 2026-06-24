@@ -18975,6 +18975,62 @@ export default function Paintiano() {
   const [mode,      setMode]      = useState('harmony');
   const modeRef = useRef('harmony');
   useEffect(()=>{ modeRef.current=mode; },[mode]);
+
+  // ── PWA AUTO-UPDATE ────────────────────────────────────────────────────────
+  // The PWA manifest registers a service worker with autoUpdate strategy. That
+  // downloads the new build in the background, but a tab that's been sitting
+  // in the user's mobile tab switcher for days will keep showing the OLD JS
+  // in memory until it's reloaded. This effect closes that gap:
+  //  1. On mount we ask the active SW registration to check the network for
+  //     a fresh build (cheap, just compares hashes).
+  //  2. We watch the SW "controllerchange" event — that fires the moment a
+  //     new worker takes over (skipWaiting + clientsClaim trigger it). When
+  //     it fires we reload, but only if the tab is in the background (so we
+  //     don't yank the page out from under someone actively painting).
+  //  3. We also watch visibilitychange — every time the tab comes back to
+  //     the foreground we ask the SW to re-check for updates; if one has
+  //     already downloaded silently, the controllerchange handler above
+  //     will fire and the tab gets reloaded next time it's backgrounded.
+  // Net effect: tabs left open between mobile cards refresh into the latest
+  // build the next time the user briefly leaves Paintiano and comes back.
+  useEffect(()=>{
+    if(typeof navigator==='undefined' || !('serviceWorker' in navigator)) return;
+    let reloadArmed = false;
+    const tryReload = ()=>{
+      if(!reloadArmed) return;
+      // Only reload when the tab is hidden — avoids interrupting active painting.
+      if(document.visibilityState !== 'visible'){
+        try{ window.location.reload(); }catch(_){}
+      }
+    };
+    const onControllerChange = ()=>{
+      // A new SW just took control. Arm reload for the next background moment.
+      reloadArmed = true;
+      tryReload();
+    };
+    const onVisibility = ()=>{
+      if(document.visibilityState === 'visible'){
+        // Foreground: ask the SW to check the network for a new build.
+        navigator.serviceWorker.getRegistration()
+          .then(reg => { if(reg) reg.update().catch(()=>{}); })
+          .catch(()=>{});
+      } else {
+        // Background: if an update has already downloaded, take it now.
+        tryReload();
+      }
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+    document.addEventListener('visibilitychange', onVisibility);
+    // Kick an initial update check on mount.
+    navigator.serviceWorker.getRegistration()
+      .then(reg => { if(reg) reg.update().catch(()=>{}); })
+      .catch(()=>{});
+    return ()=>{
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  },[]);
+  // ────────────────────────────────────────────────────────────────────────────
   // Tone — global colour modifier toggled in Setup. Three modes:
   //   'pure'   = raw palette, no modulation of any kind (Paintiano "concept" tone)
   //   'real'   = energy modulates saturation/lightness per chord (dynamic)
