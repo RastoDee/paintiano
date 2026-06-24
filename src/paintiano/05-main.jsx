@@ -905,23 +905,31 @@ export default function Paintiano() {
   const modeRef = useRef('harmony');
   useEffect(()=>{ modeRef.current=mode; },[mode]);
   // Tone — global colour modifier toggled in Setup. Three modes:
-  //   'normal' = raw palette, no energy modulation
-  //   'mix'    = energy modulates saturation/lightness per chord
-  //   'pastel' = energy modulation PLUS pastel filter on top (soft, lighter)
-  // Declared near the top so the gc() useCallback (defined later) can list it
-  // as a dependency. Persisted via localStorage; the two booleans pushed into
+  //   'pure'   = raw palette, no modulation of any kind (Paintiano "concept" tone)
+  //   'real'   = energy modulates saturation/lightness per chord (dynamic)
+  //   'pastel' = pastel filter only — soft lighter spectrum, no dynamic modulation
+  // Each tone is "clean" in its own way: Pure stays exactly on the palette, Real
+  // breathes with the music, Pastel paints a uniformly soft picture. Declared
+  // near the top so the gc() useCallback (defined later) can list it as a
+  // dependency. Persisted via localStorage; the two booleans pushed into
   // 02-draw module flags through a useEffect.
   const [tone,setTone]=useState(()=>{
     try{
       const v=localStorage.getItem('paintiano_tone');
-      if(v==='normal'||v==='mix'||v==='pastel') return v;
-      // Legacy: paintiano_pastel '0'/'1' from the 2-state implementation.
+      if(v==='pure'||v==='real'||v==='pastel') return v;
+      // Legacy migration: previous name set { normal, mix, pastel }.
+      if(v==='normal') return 'pure';
+      if(v==='mix')    return 'real';
+      // Even older legacy: boolean paintiano_pastel '0'/'1' from the original
+      // 2-state implementation.
       if(localStorage.getItem('paintiano_pastel')==='1') return 'pastel';
     }catch(_){}
-    return 'mix';   // default = current behaviour (energy modulation on)
+    return 'real';   // default — energy modulation on, matches historical behaviour
   });
   useEffect(()=>{
-    const mixOn = (tone==='mix'||tone==='pastel');
+    // Pastel is a CLEAN filter: no energy/velocity modulation rides along.
+    // That keeps the pastel painting visually uniform across a whole piece.
+    const mixOn    = (tone==='real');
     const pastelOn = (tone==='pastel');
     try{_setMixOn(mixOn);}catch(_){}
     try{_setPastelOn(pastelOn);}catch(_){}
@@ -11925,8 +11933,8 @@ Composition rules:
                 </div>
                 <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
                   {[
-                    {k:'normal', label:({EN:'Normal',SK:'Normálny',DE:'Normal',FR:'Normal',ES:'Normal',PT:'Normal',zh:'正常',zhTW:'正常',ja:'ノーマル'})[lang]||'Normal',  hint:({EN:'Raw palette colours',SK:'Surové farby palety',DE:'Reine Palettenfarben',FR:'Couleurs brutes de la palette',ES:'Colores puros de la paleta',PT:'Cores puras da paleta',zh:'纯调色板色彩',zhTW:'純調色板色彩',ja:'パレットそのままの色'})[lang]||'Raw palette colours'},
-                    {k:'mix',    label:({EN:'Mix',SK:'Mix',DE:'Mix',FR:'Mix',ES:'Mix',PT:'Mix',zh:'混合',zhTW:'混合',ja:'ミックス'})[lang]||'Mix',                       hint:({EN:'Energy modulates saturation',SK:'Energia moduluje sýtosť',DE:'Energie moduliert die Sättigung',FR:'L\u2019énergie module la saturation',ES:'La energía modula la saturación',PT:'A energia modula a saturação',zh:'能量调节饱和度',zhTW:'能量調節飽和度',ja:'エネルギーが彩度を変調'})[lang]||'Energy modulates saturation'},
+                    {k:'pure',   label:({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure',         hint:({EN:'Raw palette colours',SK:'Surové farby palety',DE:'Reine Palettenfarben',FR:'Couleurs brutes de la palette',ES:'Colores puros de la paleta',PT:'Cores puras da paleta',zh:'纯调色板色彩',zhTW:'純調色板色彩',ja:'パレットそのままの色'})[lang]||'Raw palette colours'},
+                    {k:'real',   label:({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real',           hint:({EN:'Energy modulates saturation',SK:'Energia moduluje sýtosť',DE:'Energie moduliert die Sättigung',FR:'L\u2019énergie module la saturation',ES:'La energía modula la saturación',PT:'A energia modula a saturação',zh:'能量调节饱和度',zhTW:'能量調節飽和度',ja:'エネルギーが彩度を変調'})[lang]||'Energy modulates saturation'},
                     {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel', hint:({EN:'Soft, lighter colours',SK:'Jemné, svetlejšie farby',DE:'Sanftere, hellere Farben',FR:'Couleurs douces, plus claires',ES:'Colores suaves, más claros',PT:'Cores suaves, mais claras',zh:'柔和浅淡的色彩',zhTW:'柔和淺淡的色彩',ja:'柔らかく明るい色'})[lang]||'Soft, lighter colours'}
                   ].map(o=>{
                     const sel = tone===o.k;
