@@ -15002,16 +15002,98 @@ async function transcribeAudio(audioBuf, onP) {
     : ch0;
   const FRAME = 2048, HOP = 512;
   const total = Math.floor((data.length - FRAME) / HOP);
-  const active = {}, notes = [];
   if (_TRANS_FRAME === null) _TRANS_FRAME = new Float32Array(FRAME);
   const frame = _TRANS_FRAME;
+
+  // ── PASS 1 ── energy survey
+  // We need per-frame energy AND per-frame spectral flux up front so we can:
+  //   (a) gate silence so quiet passages don't generate phantom chords,
+  //   (b) adapt the max-pitches cap to actual signal density,
+  //   (c) detect note onsets (sudden energy jumps) for proper chord grouping.
+  // One survey pass is cheap (~10ms-window energy per frame, no FFT yet) — the
+  // real FFT only runs on frames that pass the gate.
+  const energy = new Float32Array(total);
+  let eMax = 0, eSum = 0;
   for (let f = 0; f < total; f++) {
-    // Copy the next FRAME samples into the reusable buffer — was data.slice()
-    // per frame, which allocated and GC'd ~127MB on a 3-minute file.
+    const off = f * HOP;
+    let e = 0;
+    for (let i = 0; i < FRAME; i += 4) { const v = data[off + i]; e += v * v; }
+    e = Math.sqrt(e / (FRAME / 4));   // RMS
+    energy[f] = e;
+    if (e > eMax) eMax = e;
+    eSum += e;
+  }
+  const eMean = total ? eSum / total : 0;
+  // Silence gate: a frame is "silent" if its energy is well below the median.
+  // Use mean as a robust proxy (median would need a sort). 25% of the running
+  // mean is a sensible floor — quiet ambient or pp passages still produce
+  // detectable energy, only true silence is below this.
+  const silenceGate = Math.max(eMax * 0.04, eMean * 0.25);
+
+  // ── PASS 2 ── spectral analysis on non-silent frames + onset detection
+  const active = {};
+  const noteFragments = [];   // per-pitch run fragments: {midi, sf, ef, mx}
+  // Spectral flux for onset detection — we compare each magnitude bin to the
+  // previous frame's magnitude. A big positive change = onset.
+  let prevMagSnapshot = null;
+  const onsetFrames = [];      // indices where we detected a note onset
+  let lastOnsetFrame = -10;
+  for (let f = 0; f < total; f++) {
+    const e = energy[f];
+    if (e < silenceGate) {
+      // Silent frame — close all active notes (they ended at the prior frame)
+      for (const m in active) {
+        if (active[m].hits >= P.minStability) {
+          noteFragments.push({midi: +m, sf: active[m].sf, ef: f, mx: active[m].mx});
+        }
+        delete active[m];
+      }
+      prevMagSnapshot = null;
+      if (f % 80 === 0) { onP(f / total); await new Promise(r => setTimeout(r, 0)); }
+      continue;
+    }
     const off = f * HOP;
     for (let i = 0; i < FRAME; i++) frame[i] = data[off + i];
     const mag = fftMag(frame);
-    const picks = pickPitches(mag, sr, P.minMag, P.maxPitches, P.strictHarmonics);
+
+    // Adaptive cap — louder frames get more allowed pitches, quieter frames
+    // fewer. This rescues 5-note chords in dense passages and prevents quiet
+    // sustains from producing phantom 4-pitch chords from overtone clouds.
+    // Range: [base-1, base+2] mapped from energy ratio.
+    const eRatio = eMax > 0 ? e / eMax : 0;
+    const adaptiveCap = Math.max(1, Math.min(6, Math.round(P.maxPitches + (eRatio - 0.45) * 3)));
+
+    const picks = pickPitches(mag, sr, P.minMag, adaptiveCap, P.strictHarmonics);
+
+    // Onset detection: spectral flux against the previous non-silent frame.
+    // A sudden positive jump in many bins = note onset (new attack). We use
+    // it later to chop the note stream into chord groups whose boundaries
+    // align with the actual attacks in the music.
+    if (prevMagSnapshot) {
+      let flux = 0;
+      const L = Math.min(mag.length, prevMagSnapshot.length);
+      for (let i = 1; i < L; i++) {
+        const d = mag[i] - prevMagSnapshot[i];
+        if (d > 0) flux += d;
+      }
+      // Normalize roughly by the previous frame's energy so the threshold
+      // scales with signal level. Onset = local rise in many bins.
+      const fluxThresh = e * 0.6;
+      if (flux > fluxThresh && f - lastOnsetFrame >= 3) {
+        onsetFrames.push(f);
+        lastOnsetFrame = f;
+      }
+    } else {
+      // First non-silent frame after silence: that IS an onset.
+      onsetFrames.push(f);
+      lastOnsetFrame = f;
+    }
+    // Snapshot magnitude for next iteration's flux computation.
+    if (!prevMagSnapshot || prevMagSnapshot.length !== mag.length) {
+      prevMagSnapshot = new Float32Array(mag.length);
+    }
+    prevMagSnapshot.set(mag);
+
     const found = new Set();
     for (const p of picks) {
       found.add(p.midi);
@@ -15020,41 +15102,63 @@ async function transcribeAudio(audioBuf, onP) {
     }
     for (const m in active) {
       if (!found.has(+m)) {
-        // Frame-stability filter: only accept the note if it was seen in at
-        // least P.minStability consecutive frames. Kills single-frame FFT
-        // spikes (transient noise, brief overtones) that the simpler magnitude
-        // threshold lets through. Real notes always span ≥ a few frames at
-        // HOP=512 (~12ms each).
         if (active[m].hits >= P.minStability) {
-          notes.push({midi: +m, sf: active[m].sf, ef: f, mx: active[m].mx});
+          noteFragments.push({midi: +m, sf: active[m].sf, ef: f, mx: active[m].mx});
         }
         delete active[m];
       }
     }
-    if (f % 80 === 0) {
-      onP(f / total);
-      await new Promise(r => setTimeout(r, 0));
-    }
+    if (f % 80 === 0) { onP(f / total); await new Promise(r => setTimeout(r, 0)); }
   }
   for (const m in active) {
     if (active[m].hits >= P.minStability) {
-      notes.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
+      noteFragments.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
     }
   }
+
+  // ── PASS 3 ── group note fragments by ONSET BOUNDARIES, not by time window
+  // Each chord event spans from one onset to the next (or to silence/end).
+  // A long held chord becomes ONE event with a long duration (one big tile
+  // in the mosaic), not 30 fragmented chunks. Silent gaps produce no events.
   const f2ms = f => f * HOP / sr * 1000;
-  const raw = notes
+  const fragments = noteFragments
     .filter(n => f2ms(n.ef - n.sf) >= P.minDurMs)
-    .map(n => ({m: n.midi, startMs: f2ms(n.sf), durMs: Math.max(80, f2ms(n.ef - n.sf)), v: Math.max(40, Math.min(120, Math.round(n.mx * 110)))}))
-    .sort((a, b) => a.startMs - b.startMs);
+    .sort((a, b) => a.sf - b.sf);
   const evts = [];
-  let i = 0;
-  while (i < raw.length) {
-    const bt = raw[i].startMs, g = [];
-    while (i < raw.length && raw[i].startMs - bt <= CWIN) g.push({m: raw[i].m, v: raw[i].v, durMs: raw[i++].durMs});
-    if (g.length) {
-      const md = Math.max(...g.map(n => n.durMs));
-      evts.push({n: g, startMs: bt, durQ: snapDurQ(md / 500)});
+  // Build onset boundaries: [onset_f, end_f) ranges. End = next onset, or last
+  // fragment's ef. Frames between fragments + outside any onset cluster get
+  // no events (silence preserved).
+  if (onsetFrames.length === 0) return evts;
+  // Cap event count at the original sliding-window result roughly — but
+  // really we want one event per actual attack.
+  for (let oi = 0; oi < onsetFrames.length; oi++) {
+    const startF = onsetFrames[oi];
+    const endF = oi + 1 < onsetFrames.length ? onsetFrames[oi + 1] : total;
+    // Collect fragments that overlap this onset-window: their start is within
+    // a small grace (so a note that began 1-2 frames before the detected onset
+    // still belongs to this chord), and they extend into the window.
+    const grace = 3;
+    const g = [];
+    let maxFragEf = startF;
+    for (const fr of fragments) {
+      if (fr.sf > endF) break;
+      if (fr.sf >= startF - grace && fr.sf < endF) {
+        g.push({m: fr.midi, v: Math.max(40, Math.min(120, Math.round(fr.mx * 110))), durMs: Math.max(80, f2ms(fr.ef - fr.sf))});
+        if (fr.ef > maxFragEf) maxFragEf = fr.ef;
+      }
     }
+    if (g.length === 0) continue;
+    // Event start time is the onset; event duration is until the next onset
+    // (capped by the longest fragment's end so a sustained chord that ran past
+    // the next onset still has a reasonable length).
+    const startMs = f2ms(startF);
+    const endMs = f2ms(Math.min(endF, maxFragEf));
+    const eventDurMs = Math.max(120, endMs - startMs);
+    // Replace each fragment's individual duration with the event's chord
+    // duration so the mosaic tile reflects the chord's HELD time, not the
+    // most-stable note's frame count.
+    for (const n of g) n.durMs = eventDurMs;
+    evts.push({n: g, startMs, durQ: snapDurQ(eventDurMs / 500)});
   }
   return evts;
 }
