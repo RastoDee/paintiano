@@ -10156,12 +10156,12 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   // 7 phases: A Cosmic · B Bauhaus · Circles · Comp8 · Paris · Geom · Dense.
   // (Improvisation was retired; Geom + Dense added.)
   const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick===1){ kandinskyPhaseB(ctx, CW, CH, eff(60), ss, mode, palette, chords); return; }
-  if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, eff(230), ss, mode, palette, chords); return; }
-  if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, eff(255), ss, mode, palette, chords); return; }
-  if(pick===4){ kandinskyPhaseParis(ctx, CW, CH, eff(180), ss, mode, palette, chords); return; }
-  if(pick===5){ kandinskyPhaseGeom(ctx, CW, CH, eff(240), ss, mode, palette, chords); return; }
-  if(pick===6){ kandinskyPhaseDense(ctx, CW, CH, eff(260), ss, mode, palette, chords); return; }
+  if(pick===1){ kandinskyPhaseB(ctx, CW, CH, eff(60), ss, mode, palette, chords, gc); return; }
+  if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, eff(230), ss, mode, palette, chords, gc); return; }
+  if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, eff(255), ss, mode, palette, chords, gc); return; }
+  if(pick===4){ kandinskyPhaseParis(ctx, CW, CH, eff(180), ss, mode, palette, chords, gc); return; }
+  if(pick===5){ kandinskyPhaseGeom(ctx, CW, CH, eff(240), ss, mode, palette, chords, gc); return; }
+  if(pick===6){ kandinskyPhaseDense(ctx, CW, CH, eff(260), ss, mode, palette, chords, gc); return; }
   kandinskyPhaseA(ctx, CW, CH, eff(280), ss, mode, palette, chords);
 }
 
@@ -10335,7 +10335,7 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette, ch
 // palette and seeded-rng discipline as phase A, but a structured composition
 // instead of a free scatter, so Vary/Random produces a genuinely different
 // Kandinsky rather than just reshuffled positions.
-function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords){
+function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords, gc){
   const ss = sessionSeed|0;
   // Palette tuned to the active scheme when supplied (see drawKandinskyOverlay);
   // otherwise the classic fixed Bauhaus set.
@@ -10354,19 +10354,31 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette, ch
     return [+m[1], +m[2], +m[3], m[4]!=null?+m[4]:1];
   };
   const _cn = chords && chords.length ? chords.length : 1;
-  const _toned = (s, ci)=>{
-    if(chords && chords.length){
-      const ch = chords[ci % _cn];
-      _setCurE(ch && ch._E);
+  // Per-cell colour: setCurE on the cell's chord BEFORE calling gc, so Real
+  // mode routes to the right palette band (pastel/pure/dark). Uses the
+  // shared _kandPickCol helper which samples gc at 8 fixed pitches.
+  const _alphaOf = (s)=>{ const m=String(s).match(/rgba\([^)]+,\s*([\d.]+)\)/); return m?+m[1]:0.9; };
+  const pickLine = (ci)=>{
+    if(typeof gc === 'function' && chords && chords.length){
+      const col = _kandPickCol(ci, Math.max(1, chordCount), chords, gc, palette);
+      // _kandPickCol returns "rgb(r,g,b)"; preserve the lineColors alpha.
+      const a = _alphaOf(lineColors[ci % lineColors.length]);
+      const m=String(col).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+      if(m) return `rgba(${m[1]},${m[2]},${m[3]},${a})`;
+      return col;
     }
-    const [pr,pg,pb,pa] = _parseCol(s);
-    let r=pr,g=pg,b=pb;
-    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgba(${r|0},${g|0},${b|0},${pa})`;
+    return lineColors[ci % lineColors.length];
   };
-  const pickLine = (ci)=> _toned(lineColors[ci % lineColors.length], ci);
-  const pickFill = (ci)=> _toned(fillColors[ci % fillColors.length], ci);
+  const pickFill = (ci)=>{
+    if(typeof gc === 'function' && chords && chords.length){
+      const col = _kandPickCol(ci, Math.max(1, chordCount), chords, gc, palette);
+      const a = _alphaOf(fillColors[ci % fillColors.length]);
+      const m=String(col).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+      if(m) return `rgba(${m[1]},${m[2]},${m[3]},${a})`;
+      return col;
+    }
+    return fillColors[ci % fillColors.length];
+  };
 
   // Grid dimensions scale with how much music there is: more chords → finer grid.
   const cols = chordCount < 8 ? 2 : chordCount < 24 ? 3 : chordCount < 60 ? 4 : 5;
@@ -10457,13 +10469,41 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette, ch
   }
 }
 
-// Default Kandinsky palette (used when no palette supplied).
+// Default Kandinsky palette (used when no palette supplied OR when gc/chords
+// missing — fallback static palette).
 function _kandPal(palette){
   return palette || [
     'rgba(225,60,50,0.92)','rgba(240,180,30,0.92)','rgba(40,70,200,0.92)',
     'rgba(180,60,200,0.90)','rgba(245,238,220,0.90)','rgba(8,4,12,0.92)',
     'rgba(50,160,80,0.90)','rgba(240,130,40,0.92)'
   ];
+}
+// Per-element Kandinsky colour picker — REPLACES static palette indexing in
+// phase loops. For element i of total n, it:
+//   1) maps i to a chord (i/n × chords.length)
+//   2) sets _curE so gc() can route to the band-correct palette variant
+//      (Real mode: pastel for piano chords, dark for forte chords)
+//   3) samples gc() at one of 8 fixed pitches (chosen by element index, so
+//      element identity is stable across re-renders and Vary)
+//   4) returns the colour as an "rgb(r,g,b)" string for direct fillStyle use
+// Falls back to _kandPal indexing when gc or chords are unavailable.
+function _kandPickCol(i, n, chords, gc, fallbackPalette){
+  if(typeof gc !== 'function' || !chords || !chords.length){
+    const pal = _kandPal(fallbackPalette);
+    return pal[Math.abs(i) % pal.length];
+  }
+  const cn = chords.length;
+  const chordIdx = Math.min(cn-1, Math.max(0, Math.floor((i/Math.max(1,n)) * cn)));
+  const chord = chords[chordIdx];
+  _setCurE(chord && chord._E);
+  // 8 fixed pitches spread across mid/low register (matches the original
+  // palette generation in drawKandinskyOverlay so the palette character is
+  // unchanged — only its energy band shifts per element).
+  const pitches = [60,64,67,71,74,77,55,48];
+  const m = pitches[Math.abs(i) % pitches.length];
+  const c = gc(m, 100);
+  if(!Array.isArray(c)) return c;
+  return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
 }
 // Robustly set the alpha of any colour string (rgb/rgba/hex) without throwing.
 function _kandAlpha(col,a){
@@ -10474,8 +10514,8 @@ function _kandAlpha(col,a){
 }
 
 // ── Kandinsky C: Several Circles — concentric translucent discs on dark. ──
-function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords){
-  const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
+function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords, gc){
+  const ss=sessionSeed|0,isBW=mode==='bw';
   ctx.fillStyle=isBW?'#1a1a1a':'#0c0a14';ctx.fillRect(0,0,CW,CH);
   const TH=[2,5,9,14,20,28,38,50,65,82,100,125,155,190,230];
   let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/230))*TH.length));
@@ -10484,16 +10524,19 @@ function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette, ch
     const rnd=_seedRnd(2200+i,ss, 0, 0);
     const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.05+rnd()*0.13);
     const rings=2+((rnd()*4)|0);
+    // One chord per concentric stack — every ring of this circle inherits
+    // the same chord's energy band, so Real mode reads as a coherent unit.
+    const baseCol = _kandPickCol(i, n, chords, gc, palette);
     for(let r=rings;r>=1;r--){
-      ctx.fillStyle=_kandAlpha(cols[(rnd()*cols.length)|0],(0.45+rnd()*0.4).toFixed(2));
+      ctx.fillStyle=_kandAlpha(baseCol,(0.45+rnd()*0.4).toFixed(2));
       ctx.beginPath();ctx.arc(cx,cy,R*(r/rings),0,Math.PI*2);ctx.fill();
     }
   }
 }
 
 // ── Kandinsky D: Composition VIII — geometric circles, lines, triangles cool. ──
-function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords){
-  const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
+function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords, gc){
+  const ss=sessionSeed|0,isBW=mode==='bw';
   ctx.fillStyle=isBW?'#cac6be':'#e8e4d8';ctx.fillRect(0,0,CW,CH);
   const TH=[1,4,8,13,19,27,38,52,70,95,125,160,205,255];
   let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/255))*TH.length));
@@ -10501,24 +10544,24 @@ function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chor
   for(let i=0;i<n;i++){
     const rnd=_seedRnd(2300+i,ss, 0, 0);
     const k=(rnd()*3)|0;
-    ctx.strokeStyle=cols[(rnd()*cols.length)|0];
+    ctx.strokeStyle=_kandPickCol(i, n, chords, gc, palette);
     ctx.lineWidth=Math.max(1,Math.min(CW,CH)*0.004);
     if(k===0){ // line
       ctx.beginPath();ctx.moveTo(rnd()*CW,rnd()*CH);ctx.lineTo(rnd()*CW,rnd()*CH);ctx.stroke();
     } else if(k===1){ // circle (sometimes haloed)
       const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.02+rnd()*0.06);
-      ctx.fillStyle=cols[(rnd()*cols.length)|0];ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=_kandPickCol(i, n, chords, gc, palette);ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
       if(rnd()<0.5){ctx.beginPath();ctx.arc(cx,cy,R*1.6,0,Math.PI*2);ctx.stroke();}
     } else { // small triangle
       const cx=rnd()*CW,cy=rnd()*CH,s=Math.min(CW,CH)*(0.02+rnd()*0.05);
-      ctx.fillStyle=cols[(rnd()*cols.length)|0];ctx.beginPath();ctx.moveTo(cx,cy-s);ctx.lineTo(cx+s,cy+s);ctx.lineTo(cx-s,cy+s);ctx.closePath();ctx.fill();
+      ctx.fillStyle=_kandPickCol(i, n, chords, gc, palette);ctx.beginPath();ctx.moveTo(cx,cy-s);ctx.lineTo(cx+s,cy+s);ctx.lineTo(cx-s,cy+s);ctx.closePath();ctx.fill();
     }
   }
 }
 
 // ── Kandinsky E: Improvisation — loose colourful washes + black gesture lines. ──
-function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords){
-  const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
+function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords, gc){
+  const ss=sessionSeed|0,isBW=mode==='bw';
   ctx.fillStyle=isBW?'#d8d4cc':'#f0ead8';ctx.fillRect(0,0,CW,CH);
   const TH=[2,6,11,18,27,40,56,76,100,130,170,215];
   let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/215))*TH.length));
@@ -10526,7 +10569,7 @@ function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette, cho
   for(let i=0;i<n;i++){
     const rnd=_seedRnd(2400+i,ss, 0, 0);
     const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.08+rnd()*0.18);
-    ctx.fillStyle=_kandAlpha(cols[(rnd()*cols.length)|0],'0.35');
+    ctx.fillStyle=_kandAlpha(_kandPickCol(i, n, chords, gc, palette),'0.35');
     ctx.beginPath();
     const pts=7;for(let p=0;p<=pts;p++){const a=p/pts*Math.PI*2,rr=R*(0.6+rnd()*0.6);const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;p?ctx.lineTo(x,y):ctx.moveTo(x,y);}
     ctx.closePath();ctx.fill();
@@ -10542,23 +10585,23 @@ function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette, cho
 }
 
 // ── Kandinsky F: Paris biomorphic — soft organic shapes, late lighter palette. ──
-function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords){
-  const ss=sessionSeed|0,isBW=mode==='bw',cols=_kandPal(palette);
+function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords, gc){
+  const ss=sessionSeed|0,isBW=mode==='bw';
   ctx.fillStyle=isBW?'#9a96a0':'#5a6a8a';ctx.fillRect(0,0,CW,CH);
   const TH=[2,5,9,15,23,33,46,62,82,108,140,180];
   let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/180))*TH.length));
   for(let i=0;i<n;i++){
     const rnd=_seedRnd(2500+i,ss, 0, 0);
     const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.04+rnd()*0.10);
-    ctx.fillStyle=cols[(rnd()*cols.length)|0];
+    ctx.fillStyle=_kandPickCol(i, n, chords, gc, palette);
     const k=(rnd()*3)|0;
     if(k===0){ // amoeba
       ctx.beginPath();const pts=8;for(let p=0;p<=pts;p++){const a=p/pts*Math.PI*2,rr=R*(0.6+rnd()*0.7);const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr*0.7;p?ctx.quadraticCurveTo(cx+Math.cos(a-0.3)*rr*1.1,cy+Math.sin(a-0.3)*rr*0.8,x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();
     } else if(k===1){ // wavy ribbon
-      ctx.strokeStyle=cols[(rnd()*cols.length)|0];ctx.lineWidth=Math.max(2,R*0.3);ctx.lineCap='round';
+      ctx.strokeStyle=_kandPickCol(i, n, chords, gc, palette);ctx.lineWidth=Math.max(2,R*0.3);ctx.lineCap='round';
       ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.quadraticCurveTo(cx,cy-R,cx+R,cy);ctx.quadraticCurveTo(cx+R*2,cy+R,cx+R*3,cy);ctx.stroke();
     } else { // ladder / comb sign
-      ctx.strokeStyle=cols[(rnd()*cols.length)|0];ctx.lineWidth=Math.max(1.5,R*0.16);
+      ctx.strokeStyle=_kandPickCol(i, n, chords, gc, palette);ctx.lineWidth=Math.max(1.5,R*0.16);
       ctx.beginPath();ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy+R);for(let b=-2;b<=2;b++){ctx.moveTo(cx,cy+b*R*0.4);ctx.lineTo(cx+R*0.7,cy+b*R*0.4);}ctx.stroke();
     }
   }
@@ -10568,9 +10611,8 @@ function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chor
 // Sharp shapes (triangles, outlined circles, a checkerboard), clean saturated
 // colours, bold black lines. Cleaner than Cosmic scatter, fuller plane. Element
 // counts scale LINEARLY with progress (chordCount is the eff(240) for this phase).
-function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords){
+function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords, gc){
   const ss = sessionSeed|0, isBW = mode==='bw';
-  const cols = _kandPal(palette);
   const ink = isBW ? '#1a1a1a' : '#0a060c';
   ctx.fillStyle = isBW ? '#e8e4dc' : '#f4f0e6';
   ctx.fillRect(0,0,CW,CH);
@@ -10580,7 +10622,7 @@ function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette,
   const grounds = Math.max(1, Math.round(p*4));
   for(let i=0;i<grounds;i++){
     const r=_seedRnd(2100+i, ss, 0, 0);
-    ctx.globalAlpha=.42; ctx.fillStyle=cols[(r()*cols.length)|0];
+    ctx.globalAlpha=.42; ctx.fillStyle=_kandPickCol(i, grounds, chords, gc, palette);
     ctx.beginPath();
     const cx=r()*CW, cy=r()*CH, s=minD*(0.28+r()*0.30), rot=r()*Math.PI*2;
     for(let k=0;k<3;k++){const a=rot+k*2.094+(r()-0.5)*0.5; ctx[k?'lineTo':'moveTo'](cx+Math.cos(a)*s, cy+Math.sin(a)*s);}
@@ -10592,7 +10634,7 @@ function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette,
   for(let i=0;i<circs;i++){
     const r=_seedRnd(2200+i, ss, 0, 0);
     const cx=r()*CW, cy=r()*CH, R=minD*(0.05+r()*0.10);
-    ctx.fillStyle=cols[(r()*cols.length)|0];
+    ctx.fillStyle=_kandPickCol(i+grounds, grounds+circs, chords, gc, palette);
     ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle=ink; ctx.lineWidth=Math.max(1.5,minD*0.006); ctx.stroke();
   }
@@ -10617,7 +10659,7 @@ function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette,
   for(let i=0;i<tris;i++){
     const r=_seedRnd(2500+i, ss, 0, 0);
     const cx=r()*CW, cy=r()*CH, s=minD*(0.03+r()*0.04);
-    ctx.fillStyle=cols[(r()*cols.length)|0];
+    ctx.fillStyle=_kandPickCol(i+grounds+circs, grounds+circs+tris, chords, gc, palette);
     ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx+s,cy+s); ctx.lineTo(cx-s,cy+s); ctx.closePath(); ctx.fill();
   }
 }
@@ -10625,9 +10667,8 @@ function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette,
 // ── Kandinsky phase: Dense "Circles + radials" ──
 // A big concentric-circle nucleus, radial spokes, plus many small circles/dots
 // filling the whole plane — energetic cosmic density, no empty space. Progressive.
-function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords){
+function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords, gc){
   const ss = sessionSeed|0, isBW = mode==='bw';
-  const cols = _kandPal(palette);
   ctx.fillStyle = isBW ? '#ececec' : '#f4f0e6';
   ctx.fillRect(0,0,CW,CH);
   const p = Math.max(0, Math.min(1, chordCount / 260));
@@ -10639,7 +10680,7 @@ function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette
   const rings = Math.max(2, Math.round(p*7));
   const Rmax = minD*0.34;
   for(let i=rings;i>=0;i--){
-    ctx.globalAlpha=.88; ctx.fillStyle=cols[i%cols.length];
+    ctx.globalAlpha=.88; ctx.fillStyle=_kandPickCol(i, rings+1, chords, gc, palette);
     ctx.beginPath(); ctx.arc(cx,cy,Rmax*(i+1)/(rings+1),0,Math.PI*2); ctx.fill();
   }
   ctx.globalAlpha=1;
@@ -10654,7 +10695,7 @@ function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette
   const dots = Math.round(p*44);
   for(let i=0;i<dots;i++){
     const r=_seedRnd(2700+i, ss, 0, 0);
-    ctx.globalAlpha=0.5+r()*0.5; ctx.fillStyle=cols[(r()*cols.length)|0];
+    ctx.globalAlpha=0.5+r()*0.5; ctx.fillStyle=_kandPickCol(i+rings+1, rings+1+dots, chords, gc, palette);
     ctx.beginPath(); ctx.arc(r()*CW, r()*CH, minD*(0.01+r()*0.035), 0, Math.PI*2); ctx.fill();
   }
   ctx.globalAlpha=1;
@@ -10662,7 +10703,7 @@ function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette
   if(p>0.5){
     [[0.82,0.80],[0.18,0.86]].forEach((f,si)=>{
       const sx=CW*f[0], sy=CH*f[1];
-      for(let i=3;i>=0;i--){ ctx.fillStyle=cols[(i+si)%cols.length]; ctx.beginPath(); ctx.arc(sx,sy,minD*0.02*(i+1)/4*2,0,Math.PI*2); ctx.fill(); }
+      for(let i=3;i>=0;i--){ ctx.fillStyle=_kandPickCol(i+si*10+rings+1+dots, rings+1+dots+20, chords, gc, palette); ctx.beginPath(); ctx.arc(sx,sy,minD*0.02*(i+1)/4*2,0,Math.PI*2); ctx.fill(); }
     });
   }
 }
