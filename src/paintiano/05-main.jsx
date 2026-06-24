@@ -983,16 +983,12 @@ export default function Paintiano() {
     return 'pure';   // default — raw palette colours, no modulation
   });
   useEffect(()=>{
-    // Tone is now palette-level for all three modes:
-    //   Pure   → pure variants
-    //   Pastel → pastel variants (uniform across the painting)
-    //   Real   → per-chord band selection (pastel/pure/dark) based on chord
-    //            energy thresholds, dispatched inside gc()
-    // _energyTint and _pastelTint are kept as defensive no-op shims; with the
-    // new band-routing system neither needs to shift colours, so both module
-    // flags stay off. Any draw site that still calls them gets the colour
-    // back unchanged.
-    try{_setMixOn(false);}catch(_){}
+    // Real → mixOn enables _energyTint per-chord modulation. Pastel is now a
+    // palette-level concept (custom palette variants in gc()), so _pastelTint
+    // stays disabled — it's only kept as a defensive no-op shim. Pure and
+    // Pastel both leave the colour from gc() unchanged at the tint stage.
+    const mixOn    = (tone==='real');
+    try{_setMixOn(mixOn);}catch(_){}
     try{_setPastelOn(false);}catch(_){}
     try{localStorage.setItem('paintiano_tone',tone);}catch(_){}
   },[tone]);
@@ -2303,50 +2299,23 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const gc = useCallback((m,v)=>{
     if(mode==='bw') return bwCol(m,v);
-    // Tone routing:
-    //   Pure   → pure palette variant
-    //   Pastel → pastel variant
-    //   Real   → DISCRETE per-chord band selection based on chord energy:
-    //              _curE < 0.30 → pastel variant (piano)
-    //              0.30 ≤ _curE ≤ 0.70 → pure variant (mezzo)
-    //              _curE > 0.70 → dark variant (forte)
-    // The chord energy is set per-chord by drawOne() / overlay loops via
-    // _setCurE BEFORE gc is called for that chord's notes, so each chord
-    // reaches its assigned palette band. This produces "real" paintings
-    // where the pastel/pure/dark ratio mirrors the song's piano/mezzo/
-    // forte profile — exactly what Mosaic Real already shows.
-    let band = 'pure';
-    if(tone === 'pastel') band = 'pastel';
-    else if(tone === 'real'){
-      const e = (typeof _getCurE === 'function') ? _getCurE() : 0.5;
-      if(e < 0.30) band = 'pastel';
-      else if(e > 0.70) band = 'dark';
-      else band = 'pure';
-    }
+    // PASTEL tone uses the per-palette pastel variant — a genuine pastel
+    // palette deterministically derived per pitch class, NOT a post-filter.
+    // This preserves hue identity (palette character intact) while locking
+    // saturation + lightness into the pastel band. _energyTint stays a no-op
+    // for pastel (mixOn=false), so pastel is a clean uniform-tone palette
+    // with no per-chord modulation — matching the design goal.
+    const pastel = (tone === 'pastel');
     let _c;
-    if(mode==='custom'){
-      _c = band==='pastel' ? customColPastel(m,v,activePalette)
-         : band==='dark'   ? customColDark(m,v,activePalette)
-         :                   customCol(m,v,activePalette);
-    } else if(mode==='spectral'){
-      _c = band==='pastel' ? specColPastel(m,v)
-         : band==='dark'   ? specColDark(m,v)
-         :                   specCol(m,v);
-    } else if(mode==='phi'){
-      _c = band==='pastel' ? phiColPastel(m,v)
-         : band==='dark'   ? phiColDark(m,v)
-         :                   phiCol(m,v);
-    } else if(mode==='kontra'){
-      _c = band==='pastel' ? kontraColPastel(m,v)
-         : band==='dark'   ? kontraColDark(m,v)
-         :                   kontraCol(m,v);
-    } else {
-      _c = band==='pastel' ? harmColPastel(m,v)
-         : band==='dark'   ? harmColDark(m,v)
-         :                   harmCol(m,v);
-    }
-    // _energyTint and _pastelTint remain in the pipeline as defensive no-op
-    // shims; with the new band-routing they shouldn't shift colours further.
+    if(mode==='custom')        _c = pastel ? customColPastel(m,v,activePalette) : customCol(m,v,activePalette);
+    else if(mode==='spectral') _c = pastel ? specColPastel(m,v)                 : specCol(m,v);
+    else if(mode==='phi')      _c = pastel ? phiColPastel(m,v)                  : phiCol(m,v);
+    else if(mode==='kontra')   _c = pastel ? kontraColPastel(m,v)               : kontraCol(m,v);
+    else                       _c = pastel ? harmColPastel(m,v)                 : harmCol(m,v);
+    // _energyTint applies the Real tone (mixOn === true) per-chord modulation.
+    // For Pure and Pastel it returns the colour unchanged. _pastelTint is now
+    // a no-op shim (kept for any out-of-band call sites), since pastel is now
+    // a palette-level concept above.
     const _t=_energyTint(_c[0],_c[1],_c[2]);
     let _r=_t[0],_g=_t[1],_b=_t[2];
     try{ if(typeof _pastelTint==='function'){ const _p=_pastelTint(_r,_g,_b); _r=_p[0]; _g=_p[1]; _b=_p[2]; } }catch(_){}

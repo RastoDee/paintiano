@@ -117,7 +117,6 @@ function _velSat(r,g,b,v,floor){
 // colours), Mix and Pastel both turn it on.
 let _curE = 0.5;
 function _setCurE(e){ _curE = (e==null||isNaN(e)) ? 0.5 : e; }
-function _getCurE(){ return _curE; }
 let _mixOn = false;
 function _setMixOn(b){ _mixOn = !!b; }
 

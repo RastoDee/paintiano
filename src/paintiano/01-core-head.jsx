@@ -1080,34 +1080,6 @@ const customColPastel=(m,v=100,palette)=>{
   const[rr,gg,bb]=fromHsl(h0,sat,Math.max(50,Math.min(82,l)));
   return[rr,gg,bb,0.7+(v/127)*0.3];
 };
-// ── DARK palette variants ──────────────────────────────────────────────────
-// Mirror to Pastel: same hue identity per pitch class, but locked into a
-// deep/forte band. Used by Real mode for the loudest chord band — dark
-// chords sit visibly under the canvas's mid-tone level, sit alongside pure
-// (mezzo) blocks and pastel (piano) blocks in the same painting.
-//   • Saturation:  55-75 %  (slightly less than Pure so darks read as
-//                  "deep" rather than "vivid + dark")
-//   • Lightness:   18-38 %  (genuinely shadow band, but never crushed to
-//                  near-black — keeps the hue identifiable)
-//   • Octave + velocity still modulate within the dark window so chord
-//     identity is preserved
-const _octLDark = m => 18 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*20;     // 18..38
-const _darkSat  = v => 55 + (v/127)*20;                                            // 55..75
-const harmColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],         _darkSat(v), _octLDark(m));return[r,g,b,0.72+(v/127)*0.28];};
-const specColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(SPEC_HUE[m%12],    _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
-const phiColDark   =(m,v=100)=>{const[r,g,b]=fromHsl(PHI_HUE[m%12],     _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
-const kontraColDark=(m,v=100)=>{const[r,g,b]=fromHsl(KONTRA_HUE[m%12],  _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
-const customColDark=(m,v=100,palette)=>{
-  const pc=m%12;
-  const hex=(palette&&palette[pc])||'#888888';
-  const[r0,g0,b0]=hexToRgb(hex);
-  const[h0,s0]=toHsl(r0,g0,b0);
-  const isGrey = s0<=0.5;
-  const sat = isGrey ? 0 : _darkSat(v);
-  const l = _octLDark(m) + (v/127-0.5)*4;
-  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(12,Math.min(42,l)));
-  return[rr,gg,bb,0.7+(v/127)*0.3];
-};
 // Custom default — Scriabin's Prometheus colour-tone mapping (1910). The
 // most famous synaesthete in music history actually saw each pitch class
 // as a specific colour. Follows the circle of fifths around a rainbow:
