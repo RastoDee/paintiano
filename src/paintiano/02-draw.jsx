@@ -3925,7 +3925,14 @@ function mondrianPhaseBroadway(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.fillStyle=isBW?'#ece9e2':'#f0eee4';ctx.fillRect(0,0,CW,CH);
   const lines=Math.max(4,Math.min(16,Math.round(Math.sqrt(cn))));
   const reveal=Math.max(0,Math.min(1,N/cn));
-  const lineCol=isBW?'#c8c4b8':'#f0c020';
+  // Broadway yellow tracks — Mondrian's signature. Tone-adjust so Pastel
+  // softens and Real picks up the opening chord's energy.
+  let lineColRgb = isBW ? [200,196,184] : [240,192,32];
+  if(!isBW){
+    if(typeof _energyTint === 'function'){ const t=_energyTint(lineColRgb[0],lineColRgb[1],lineColRgb[2]); lineColRgb=[t[0],t[1],t[2]]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(lineColRgb[0],lineColRgb[1],lineColRgb[2]); lineColRgb=[p[0],p[1],p[2]]; }
+  }
+  const lineCol=`rgb(${lineColRgb[0]},${lineColRgb[1]},${lineColRgb[2]})`;
   ctx.fillStyle=lineCol;
   const lw=Math.max(3,Math.min(CW,CH)*0.012);
   // vertical + horizontal yellow tracks
@@ -4090,17 +4097,24 @@ function mondrianPhaseTree(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   // Branch colour function — chord-tinted per variant
   function branchCol(i, n){
     const {rgb:c}=_picChord(chords,i%cn,gc,isBW);
+    let out;
     if(isBW){
       const lum=(c[0]+c[1]+c[2])/3;
-      if(variant===0) return [Math.round(180+lum*0.2),Math.round(40+lum*0.1),Math.round(30+lum*0.1)];
-      if(variant===1) return [Math.round(40+lum*0.15),Math.round(38+lum*0.15),Math.round(42+lum*0.15)];
-      if(variant===2) return [Math.round(150+lum*0.2),Math.round(80+lum*0.2),Math.round(90+lum*0.15)];
-      return [Math.round(30+lum*0.1),Math.round(60+lum*0.15),Math.round(130+lum*0.25)];
+      if(variant===0) out=[Math.round(180+lum*0.2),Math.round(40+lum*0.1),Math.round(30+lum*0.1)];
+      else if(variant===1) out=[Math.round(40+lum*0.15),Math.round(38+lum*0.15),Math.round(42+lum*0.15)];
+      else if(variant===2) out=[Math.round(150+lum*0.2),Math.round(80+lum*0.2),Math.round(90+lum*0.15)];
+      else out=[Math.round(30+lum*0.1),Math.round(60+lum*0.15),Math.round(130+lum*0.25)];
+      return out;
     }
-    if(variant===0) return [Math.min(255,Math.round(c[0]*0.6+140)),Math.round(c[1]*0.3+20),Math.round(c[2]*0.3+15)];
-    if(variant===1) return [Math.round(40+c[0]*0.15),Math.round(38+c[1]*0.15),Math.round(42+c[2]*0.15)];
-    if(variant===2) return [Math.min(255,Math.round(c[0]*0.4+150)),Math.round(c[1]*0.3+80),Math.round(c[2]*0.3+90)];
-    return [Math.round(c[0]*0.2+30),Math.round(c[1]*0.3+60),Math.min(255,Math.round(c[2]*0.5+130))];
+    if(variant===0) out=[Math.min(255,Math.round(c[0]*0.6+140)),Math.round(c[1]*0.3+20),Math.round(c[2]*0.3+15)];
+    else if(variant===1) out=[Math.round(40+c[0]*0.15),Math.round(38+c[1]*0.15),Math.round(42+c[2]*0.15)];
+    else if(variant===2) out=[Math.min(255,Math.round(c[0]*0.4+150)),Math.round(c[1]*0.3+80),Math.round(c[2]*0.3+90)];
+    else out=[Math.round(c[0]*0.2+30),Math.round(c[1]*0.3+60),Math.min(255,Math.round(c[2]*0.5+130))];
+    // Tone-adjust the variant-forced colour so Pastel softens and Real
+    // modulates per-chord (the picChord above already set _curE).
+    if(typeof _energyTint === 'function'){ const t=_energyTint(out[0],out[1],out[2]); out=[t[0],t[1],t[2]]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(out[0],out[1],out[2]); out=[p[0],p[1],p[2]]; }
+    return out;
   }
   // Render only revealed branches based on lim
   const vis=Math.max(1,Math.ceil(N/cn*branches.length*2.5));
@@ -7139,7 +7153,16 @@ function comicPhaseBubble(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const N=Math.max(1,Math.min(cn,lim));
   const sR=_seedRnd(25001,ss,0,0); sR(); sR();
   const {rgb:bg0}=_picChord(chords,0,gc,isBW);
-  ctx.fillStyle=isBW?'#ece8d8':'#f4e020'; ctx.fillRect(0,0,CW,CH);
+  // Lichtenstein's signature comic-yellow page background. Tone-adjust so
+  // Pastel softens it (and Real picks up the opening chord's energy).
+  const _bgYel = (()=>{
+    if(isBW) return '#ece8d8';
+    let r=244, g=224, b=32;
+    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgb(${r},${g},${b})`;
+  })();
+  ctx.fillStyle=_bgYel; ctx.fillRect(0,0,CW,CH);
   const INK='#0a0a0a';
   const sp=Math.max(10,Math.min(CW,CH)*0.04);
   const dotCol=isBW?'rgba(30,30,30,0.86)':`rgba(${Math.round(bg0[0]*0.7)},${Math.round(bg0[1]*0.5)},${Math.round(bg0[2]*0.5)},0.86)`;
@@ -7235,9 +7258,14 @@ function comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
   // Hair — chord-yellow band across the top.
   const hairChord=_picChord(chords,Math.floor(cn*0.15)%cn,gc,isBW).rgb;
-  const hair=isBW
+  let hair=isBW
     ? [220,220,220]
     : [Math.min(255,hairChord[0]*0.3+230),Math.min(255,hairChord[1]*0.5+180),Math.min(255,hairChord[2]*0.2+60)];
+  // The hair formula forces a yellow bias on top of the chord colour
+  // (Lichtenstein signature). Tone-adjust the final yellow so Pastel softens
+  // it and Real picks up the hair chord's energy.
+  if(typeof _energyTint === 'function'){ const t=_energyTint(hair[0],hair[1],hair[2]); hair=[t[0],t[1],t[2]]; }
+  if(typeof _pastelTint === 'function'){ const p=_pastelTint(hair[0],hair[1],hair[2]); hair=[p[0],p[1],p[2]]; }
   ctx.fillStyle=`rgb(${hair[0]|0},${hair[1]|0},${hair[2]|0})`;
   ctx.beginPath();
   ctx.moveTo(0,0); ctx.lineTo(CW,0); ctx.lineTo(CW,CH*0.25);
@@ -7299,9 +7327,12 @@ function comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   // Tear — chord-blue droplet, only appears after ~40% progress.
   if(progress>0.4){
     const tearChord=_picChord(chords,Math.floor(cn*0.70)%cn,gc,isBW).rgb;
-    const tear=isBW
+    let tear=isBW
       ? [180,180,180]
       : [Math.round(tearChord[0]*0.3+80),Math.round(tearChord[1]*0.4+140),Math.round(tearChord[2]*0.5+170)];
+    // Tone-adjust the forced blue.
+    if(typeof _energyTint === 'function'){ const t=_energyTint(tear[0],tear[1],tear[2]); tear=[t[0],t[1],t[2]]; }
+    if(typeof _pastelTint === 'function'){ const p=_pastelTint(tear[0],tear[1],tear[2]); tear=[p[0],p[1],p[2]]; }
     ctx.fillStyle=`rgb(${tear[0]},${tear[1]},${tear[2]})`;
     ctx.strokeStyle=INK; ctx.lineWidth=3;
     ctx.beginPath();
@@ -7313,9 +7344,12 @@ function comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
   // Lips — chord-red.
   const lipChord=_picChord(chords,Math.floor(cn*0.85)%cn,gc,isBW).rgb;
-  const lip=isBW
+  let lip=isBW
     ? [110,110,110]
     : [Math.min(255,lipChord[0]*0.7+80),Math.round(lipChord[1]*0.3+30),Math.round(lipChord[2]*0.3+40)];
+  // Tone-adjust like the hair — Pastel softens, Real picks up lip chord energy.
+  if(typeof _energyTint === 'function'){ const t=_energyTint(lip[0],lip[1],lip[2]); lip=[t[0],t[1],t[2]]; }
+  if(typeof _pastelTint === 'function'){ const p=_pastelTint(lip[0],lip[1],lip[2]); lip=[p[0],p[1],p[2]]; }
   ctx.fillStyle=`rgb(${lip[0]|0},${lip[1]|0},${lip[2]|0})`;
   ctx.strokeStyle=INK; ctx.lineWidth=3;
   ctx.beginPath();
@@ -7367,9 +7401,11 @@ function comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
   // Yellow sky background — chord-driven hue.
   const skyChord=_picChord(chords,Math.floor(cn*0.10)%cn,gc,isBW).rgb;
-  const sky=isBW
+  let sky=isBW
     ? [220,220,220]
     : [Math.min(255,skyChord[0]*0.3+220),Math.min(255,skyChord[1]*0.3+200),Math.min(255,skyChord[2]*0.2+50)];
+  if(typeof _energyTint === 'function'){ const t=_energyTint(sky[0],sky[1],sky[2]); sky=[t[0],t[1],t[2]]; }
+  if(typeof _pastelTint === 'function'){ const p=_pastelTint(sky[0],sky[1],sky[2]); sky=[p[0],p[1],p[2]]; }
   ctx.fillStyle=`rgb(${sky[0]|0},${sky[1]|0},${sky[2]|0})`;
   ctx.fillRect(0,0,CW,CH);
   // Halftone wash over sky.
@@ -7383,9 +7419,11 @@ function comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
   // OUTER LAYER — chord-red jagged starburst (24-point).
   const explChord=_picChord(chords,Math.floor(cn*0.30)%cn,gc,isBW).rgb;
-  const exp=isBW
+  let exp=isBW
     ? [180,180,180]
     : [Math.min(255,explChord[0]*0.7+80),Math.round(explChord[1]*0.3+30),Math.round(explChord[2]*0.3+30)];
+  if(typeof _energyTint === 'function'){ const t=_energyTint(exp[0],exp[1],exp[2]); exp=[t[0],t[1],t[2]]; }
+  if(typeof _pastelTint === 'function'){ const p=_pastelTint(exp[0],exp[1],exp[2]); exp=[p[0],p[1],p[2]]; }
   ctx.fillStyle=`rgb(${exp[0]|0},${exp[1]|0},${exp[2]|0})`;
   ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.lineJoin='round';
   ctx.beginPath();
@@ -7412,9 +7450,11 @@ function comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
   // INNER CORE — chord-yellow small starburst (10-point).
   const innerChord=_picChord(chords,Math.floor(cn*0.60)%cn,gc,isBW).rgb;
-  const inner=isBW
+  let inner=isBW
     ? [200,200,200]
     : [Math.min(255,innerChord[0]*0.5+170),Math.min(255,innerChord[1]*0.5+160),Math.round(innerChord[2]*0.3+50)];
+  if(typeof _energyTint === 'function'){ const t=_energyTint(inner[0],inner[1],inner[2]); inner=[t[0],t[1],t[2]]; }
+  if(typeof _pastelTint === 'function'){ const p=_pastelTint(inner[0],inner[1],inner[2]); inner=[p[0],p[1],p[2]]; }
   ctx.fillStyle=`rgb(${inner[0]|0},${inner[1]|0},${inner[2]|0})`;
   ctx.beginPath();
   const pts3=10;
