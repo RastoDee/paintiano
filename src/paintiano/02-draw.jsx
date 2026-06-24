@@ -2114,11 +2114,21 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
     {col:'rgba(200,80,160,',  wt: 0.04, rgb:[200,80,160]},
   ];
   // B/W: keep red (wt:0.03) and yellow (wt:0.02) as rare accents, rest grey
-  const dripColors = isBW ? _dc.map((c,i)=>{
+  let dripColors = isBW ? _dc.map((c,i)=>{
     if(i===2) return{col:c.col,wt:0.03,rgb:c.rgb};
     if(i===3) return{col:c.col,wt:0.02,rgb:c.rgb};
     const[v]=toGrey(...c.rgb); return{col:`rgba(${v},${v},${v},`,wt:c.wt,rgb:[v,v,v]};
   }) : _dc;
+  // Tone-adjust the drip palette: in Pastel tone every pigment is softened
+  // (saturation reduced, lightness lifted) so Pollock's drip field reads as
+  // pastel like every other artist. _pastelTint is a no-op in Normal/Mix
+  // (it early-returns when _pastelOn is false), so this is safe everywhere.
+  if(typeof _pastelTint === 'function'){
+    dripColors = dripColors.map(c => {
+      const [pr,pg,pb] = _pastelTint(c.rgb[0], c.rgb[1], c.rgb[2]);
+      return { col:`rgba(${pr},${pg},${pb},`, wt:c.wt, rgb:[pr,pg,pb] };
+    });
+  }
 
   // Compute average RGB + velocity for a chord -- used to bias palette and scale thickness.
   const chordStats = (chord) => {
