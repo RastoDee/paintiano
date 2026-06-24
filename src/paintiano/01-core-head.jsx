@@ -253,6 +253,42 @@ const PF_STYLE = `
           justify-content: flex-start !important;
           gap: 16px !important;
         }
+        /* ── MOBILE PORTRAIT ONLY ──────────────────────────────────────────
+           Phone in portrait: drop the Tone selector under both columns as a
+           full-width horizontal row of 3 buttons (Pure / Real / Pastel),
+           centered. Keeps a comfortable margin from the last artist row.
+           Desktop + mobile landscape are NOT affected (see the @media block
+           below this one which targets those layouts). */
+        @media (max-width: 768px) and (orientation: portrait) {
+          .pf-setup-body {
+            grid-template-areas: "pal art" "tone tone" !important;
+          }
+          .pf-setup-tone {
+            margin-top: 28px !important;
+            padding: 0 4px !important;
+          }
+          /* The "TÓN" label row: centered above the three buttons. */
+          .pf-setup-tone > div:first-child {
+            justify-content: center !important;
+          }
+          /* Three buttons across in one row, equal widths. */
+          .pf-setup-tone .pf-setup-grid {
+            grid-template-columns: 1fr 1fr 1fr !important;
+            gap: 8px !important;
+          }
+          /* Each button stacks: radio dot above the centered label. */
+          .pf-setup-tone .pf-setup-grid > button {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            padding: 10px 6px !important;
+            gap: 6px !important;
+          }
+          .pf-setup-tone .pf-setup-grid > button > :last-child {
+            text-align: center !important;
+            flex: initial !important;
+          }
+        }
         @media (min-width: 769px) and (min-height: 501px),
                (max-height: 500px) and (orientation: landscape) {
           html, body {
