@@ -904,13 +904,29 @@ export default function Paintiano() {
   const [mode,      setMode]      = useState('harmony');
   const modeRef = useRef('harmony');
   useEffect(()=>{ modeRef.current=mode; },[mode]);
-  // Pastel tone — global color modifier toggled in Setup. Declared near the
-  // top so the gc() useCallback (defined later in the component) can list it
-  // as a dependency. Persisted via localStorage; synced into the 02-draw
-  // module flag (_setPastelOn) through a useEffect so the cached helper
-  // picks up the new value on every toggle.
-  const [pastelOn,setPastelOn]=useState(()=>{try{return localStorage.getItem('paintiano_pastel')==='1';}catch(_){return false;}});
-  useEffect(()=>{ try{_setPastelOn(pastelOn);}catch(_){} try{localStorage.setItem('paintiano_pastel',pastelOn?'1':'0');}catch(_){} },[pastelOn]);
+  // Tone — global colour modifier toggled in Setup. Three modes:
+  //   'normal' = raw palette, no energy modulation
+  //   'mix'    = energy modulates saturation/lightness per chord
+  //   'pastel' = energy modulation PLUS pastel filter on top (soft, lighter)
+  // Declared near the top so the gc() useCallback (defined later) can list it
+  // as a dependency. Persisted via localStorage; the two booleans pushed into
+  // 02-draw module flags through a useEffect.
+  const [tone,setTone]=useState(()=>{
+    try{
+      const v=localStorage.getItem('paintiano_tone');
+      if(v==='normal'||v==='mix'||v==='pastel') return v;
+      // Legacy: paintiano_pastel '0'/'1' from the 2-state implementation.
+      if(localStorage.getItem('paintiano_pastel')==='1') return 'pastel';
+    }catch(_){}
+    return 'mix';   // default = current behaviour (energy modulation on)
+  });
+  useEffect(()=>{
+    const mixOn = (tone==='mix'||tone==='pastel');
+    const pastelOn = (tone==='pastel');
+    try{_setMixOn(mixOn);}catch(_){}
+    try{_setPastelOn(pastelOn);}catch(_){}
+    try{localStorage.setItem('paintiano_tone',tone);}catch(_){}
+  },[tone]);
   // The colour reading the app chose for the current image (harmony or bw), so
   // leaving Custom returns to it rather than always to harmony.
   const appModeRef = useRef('harmony');
@@ -2221,7 +2237,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     let _r=_t[0],_g=_t[1],_b=_t[2];
     try{ if(typeof _pastelTint==='function'){ const _p=_pastelTint(_r,_g,_b); _r=_p[0]; _g=_p[1]; _b=_p[2]; } }catch(_){}
     return [_r,_g,_b,_c[3]];
-  },[mode,activePalette,pastelOn]);
+  },[mode,activePalette,tone]);
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
   // colour previews under the Color tabs. B/W spreads the 12 classes across its
@@ -11908,24 +11924,24 @@ Composition rules:
                   <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone'}</span>
                 </div>
                 <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
-                  <button onClick={()=>setPastelOn(false)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:!pastelOn?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'}}>
-                    <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(!pastelOn?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
-                      {!pastelOn && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
-                    </span>
-                    <span style={{flex:1,display:'flex',flexDirection:'column'}}>
-                      <span>{({EN:'Normal',SK:'Normálny',DE:'Normal',FR:'Normal',ES:'Normal',PT:'Normal',zh:'正常',zhTW:'正常',ja:'ノーマル'})[lang]||'Normal'}</span>
-                      <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{({EN:'Full saturation',SK:'Plná sýtosť',DE:'Volle Sättigung',FR:'Saturation pleine',ES:'Saturación plena',PT:'Saturação plena',zh:'完整饱和度',zhTW:'完整飽和度',ja:'通常の彩度'})[lang]||'Full saturation'}</span>
-                    </span>
-                  </button>
-                  <button onClick={()=>setPastelOn(true)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:pastelOn?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'}}>
-                    <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(pastelOn?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
-                      {pastelOn && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
-                    </span>
-                    <span style={{flex:1,display:'flex',flexDirection:'column'}}>
-                      <span>{({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'}</span>
-                      <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{({EN:'Soft, lighter colors',SK:'Jemné, svetlejšie farby',DE:'Sanftere, hellere Farben',FR:'Couleurs douces, plus claires',ES:'Colores suaves, más claros',PT:'Cores suaves, mais claras',zh:'柔和浅淡的色彩',zhTW:'柔和淺淡的色彩',ja:'柔らかく明るい色'})[lang]||'Soft, lighter colors'}</span>
-                    </span>
-                  </button>
+                  {[
+                    {k:'normal', label:({EN:'Normal',SK:'Normálny',DE:'Normal',FR:'Normal',ES:'Normal',PT:'Normal',zh:'正常',zhTW:'正常',ja:'ノーマル'})[lang]||'Normal',  hint:({EN:'Raw palette colours',SK:'Surové farby palety',DE:'Reine Palettenfarben',FR:'Couleurs brutes de la palette',ES:'Colores puros de la paleta',PT:'Cores puras da paleta',zh:'纯调色板色彩',zhTW:'純調色板色彩',ja:'パレットそのままの色'})[lang]||'Raw palette colours'},
+                    {k:'mix',    label:({EN:'Mix',SK:'Mix',DE:'Mix',FR:'Mix',ES:'Mix',PT:'Mix',zh:'混合',zhTW:'混合',ja:'ミックス'})[lang]||'Mix',                       hint:({EN:'Energy modulates saturation',SK:'Energia moduluje sýtosť',DE:'Energie moduliert die Sättigung',FR:'L\u2019énergie module la saturation',ES:'La energía modula la saturación',PT:'A energia modula a saturação',zh:'能量调节饱和度',zhTW:'能量調節飽和度',ja:'エネルギーが彩度を変調'})[lang]||'Energy modulates saturation'},
+                    {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel', hint:({EN:'Soft, lighter colours',SK:'Jemné, svetlejšie farby',DE:'Sanftere, hellere Farben',FR:'Couleurs douces, plus claires',ES:'Colores suaves, más claros',PT:'Cores suaves, mais claras',zh:'柔和浅淡的色彩',zhTW:'柔和淺淡的色彩',ja:'柔らかく明るい色'})[lang]||'Soft, lighter colours'}
+                  ].map(o=>{
+                    const sel = tone===o.k;
+                    return (
+                    <button key={o.k} onClick={()=>setTone(o.k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:sel?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'}}>
+                      <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(sel?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
+                        {sel && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
+                      </span>
+                      <span style={{flex:1,display:'flex',flexDirection:'column'}}>
+                        <span>{o.label}</span>
+                        <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{o.hint}</span>
+                      </span>
+                    </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="pf-setup-artists" style={{flex:isDesktop?'1 1 0':'0 0 auto',minWidth:0,width:isDesktop?'auto':'100%'}}>

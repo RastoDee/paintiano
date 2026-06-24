@@ -113,8 +113,12 @@ function _velSat(r,g,b,v,floor){
 // lighter), high energy -> dark (more saturated, deeper). Deterministic:
 // same song -> same energies -> same painting. Set per chord by the paint loop
 // via _setCurE; _energyTint is applied inside gc() so every style inherits it.
+// Toggled by the Tone selector in Setup: Normal turns it off (raw palette
+// colours), Mix and Pastel both turn it on.
 let _curE = 0.5;
 function _setCurE(e){ _curE = (e==null||isNaN(e)) ? 0.5 : e; }
+let _mixOn = false;
+function _setMixOn(b){ _mixOn = !!b; }
 
 let _enChords = null;
 function _ensureEnergies(chords){
@@ -143,6 +147,10 @@ function _ensureEnergies(chords){
 }
 
 function _energyTint(r,g,b){
+  // Tone switch — when Mix is off (Normal tone), the energy modulation is
+  // bypassed entirely so the palette's raw colours are used as-is. Mix and
+  // Pastel tones both turn this on.
+  if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
   const d=(_curE-0.5)*2;
   if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
   let R=r/255, G=g/255, B=b/255;
