@@ -5570,12 +5570,22 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
 // Mondrian palette: pure primaries + cream/black, tinted by chord saturation.
 function _mondrianBlock(chords,idx,gc,isBW){
   const chord=chords[Math.min(chords.length-1,Math.max(0,idx))];
+  // Set chord energy BEFORE calling gc so Real mode routes to the correct
+  // palette band (pastel for piano chords, dark for forte chords).
+  _setCurE(chord && chord._E);
   const notes=chord&&(chord.n||chord.notes);
   let best=null,bestSat=-1;
   if(notes&&notes.length)for(const note of notes){const m=note.m!==undefined?note.m:note,v=note.v!==undefined?note.v:80;const[r,g,b]=gc(m,v);const sat=Math.max(r,g,b)-Math.min(r,g,b);if(sat>bestSat){bestSat=sat;best=[r,g,b];}}
   if(!best)best=[150,40,30];
   if(isBW||bestSat<=6)return best.map(Math.round);
   if(_pastelOn) return best.map(Math.round);
+  // Real mode at non-mezzo bands: pastel and dark variants have already been
+  // applied inside gc(). The pull-to-primary normalization below would erase
+  // their pastel-lightness or dark-shadow identity by re-saturating to 255
+  // and crushing non-dominant channels. Bypass for extreme bands so the
+  // band-aware colour reaches the canvas intact.
+  const e = (typeof _getCurE === 'function') ? _getCurE() : 0.5;
+  if(e < 0.20 || e > 0.80) return best.map(Math.round);
   const mx=Math.max(best[0],best[1],best[2],1),k=255/mx;let R=best[0]*k,G=best[1]*k,B=best[2]*k,m2=Math.max(R,G,B);
   const pull=c=>c===m2?c:c*0.55;
   return [Math.round(Math.min(255,pull(R))),Math.round(Math.min(255,pull(G))),Math.round(Math.min(255,pull(B)))];
@@ -11001,15 +11011,18 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // Pick accent from gc() chord color. `rnd` is the element's seeded RNG so the
   // chosen colour is STABLE across frames — Math.random() here made every repaint
   // re-roll the colour, which read as constant blinking for most of the song.
-  const accent=(r,g,b,rnd)=>{
+  // chord param: setting _curE right before sampling lets Real mode route to
+  // the right palette band (pastel for piano, dark for forte).
+  const accent=(r,g,b,rnd,chord)=>{
     const rr = (typeof rnd==='function') ? rnd : Math.random;
-    if(isBW){const p=[RED,BLU,YEL,ORA];return _tonedRGB(p[Math.floor(rr()*p.length)]);}
-    if(r>180&&g<100&&b<100) return _tonedRGB(RED);
-    if(g>r&&g>b) return _tonedRGB(GRN);
-    if(b>r&&b>g) return _tonedRGB(BLU);
-    if(r>160&&g>140&&b<80) return _tonedRGB(YEL);
-    if(r>160&&g>80&&b<80) return _tonedRGB(ORA);
-    return _tonedRGB([RED,GRN,BLU,YEL,ORA][Math.floor(rr()*5)]);
+    const pick = (slot)=> chord ? _miroAccentRGB(slot, chord, gc, isBW) : _tonedRGB({RED,GRN,BLU,YEL,ORA,SKIN}[slot] || RED);
+    if(isBW){const p=['RED','BLU','YEL','ORA'];return pick(p[Math.floor(rr()*p.length)]);}
+    if(r>180&&g<100&&b<100) return pick('RED');
+    if(g>r&&g>b) return pick('GRN');
+    if(b>r&&b>g) return pick('BLU');
+    if(r>160&&g>140&&b<80) return pick('YEL');
+    if(r>160&&g>80&&b<80) return pick('ORA');
+    return pick(['RED','GRN','BLU','YEL','ORA'][Math.floor(rr()*5)]);
   };
 
   // Chord color helper
@@ -11059,7 +11072,7 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     const chord=chords[Math.floor((p/TOTAL)*_cnA)%_cnA];
     _setCurE(chord && chord._E);
     const[cR,cG,cB]=chordRGB(chord);
-    const ac=accent(cR,cG,cB,rnd);
+    const ac=accent(cR,cG,cB,rnd,chord);
     const ax=CW*(0.03+rnd()*0.94);
     const ay=CH*(0.03+rnd()*0.94);
     const roll=rnd();
@@ -11247,17 +11260,18 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     const chord=chords[Math.min(cn-1,Math.floor((idx/Math.max(1,paintCount))*cn))];
     _setCurE(chord && chord._E);
     const notes=chord&&(chord.n||chord.notes||[]);
-    if(!notes||!notes.length) return _tonedRGB(ACC[idx%ACC.length]);
+    const pick = (slot)=> chord ? _miroAccentRGB(slot, chord, gc, isBW) : _tonedRGB({RED,GRN,BLU,YEL,ORA,SKIN}[slot] || RED);
+    if(!notes||!notes.length) return pick(['RED','GRN','BLU','YEL','ORA'][idx%5]);
     let aR=0,aG=0,aB=0,k=0; for(const n of notes){const m=n.m!==undefined?n.m:n,v=n.v!==undefined?n.v:80;const[r,g,b]=gc(m,v);aR+=r;aG+=g;aB+=b;k++;}
     // snap to nearest Miró accent for that flat poster character
     const r=aR/k,g=aG/k,b=aB/k;
     if(isBW) return _tonedRGB(ACC[idx%ACC.length]);
-    if(r>180&&g<100&&b<100) return _tonedRGB(RED);
-    if(g>r&&g>b) return _tonedRGB(GRN);
-    if(b>r&&b>g) return _tonedRGB(BLU);
-    if(r>160&&g>140&&b<80) return _tonedRGB(YEL);
-    if(r>150&&g>80&&b<90) return _tonedRGB(ORA);
-    return _tonedRGB(ACC[idx%ACC.length]);
+    if(r>180&&g<100&&b<100) return pick('RED');
+    if(g>r&&g>b) return pick('GRN');
+    if(b>r&&b>g) return pick('BLU');
+    if(r>160&&g>140&&b<80) return pick('YEL');
+    if(r>150&&g>80&&b<90) return pick('ORA');
+    return pick(['RED','GRN','BLU','YEL','ORA'][idx%5]);
   };
 
   for(let p=0;p<paintCount;p++){
@@ -11351,6 +11365,29 @@ function _miroPal(isBW, gc){
   };
 }
 
+// Per-element Miró accent picker — REPLACES the snap-to-fixed-palette flow.
+// For accent slot `slot` ("RED"/"GRN"/"BLU"/"YEL"/"ORA"/"SKIN") and chord
+// energy band, it:
+//   1) sets _curE for the chord
+//   2) samples gc at the pitch class anchoring that slot (C/E/G/A/Bb/F#)
+//   3) returns the resulting [r,g,b]
+// Real-mode palette switching (pastel/pure/dark) thus applies PER ACCENT —
+// piano-chord elements get pastel reds, forte-chord elements get dark reds,
+// instead of every accent being one fixed flat colour.
+// Falls back to the static _miroPal slot when gc/chord unavailable.
+function _miroAccentRGB(slot, chord, gc, isBW){
+  const fallback = _miroPal(isBW, gc);
+  if(!chord || typeof gc !== 'function' || isBW) return fallback[slot] || fallback.RED;
+  _setCurE(chord._E);
+  // Slot → pitch class anchor (matches the I-iii-V-vi family in _miroPal,
+  // plus extra anchors for the two non-pitch Miró fixed accents).
+  const slotPitch = { RED:60, GRN:64, BLU:67, YEL:69, ORA:70, SKIN:65 };
+  const m = slotPitch[slot] != null ? slotPitch[slot] : 60;
+  const c = gc(m, 100);
+  if(!Array.isArray(c)) return fallback[slot] || fallback.RED;
+  return [c[0]|0, c[1]|0, c[2]|0];
+}
+
 // ── Miró C: Blue triptych — a deep blue field with a few floating marks. ──
 function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
@@ -11360,14 +11397,17 @@ function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const vis=Math.max(1,Math.ceil(N/cn*marks));
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+501,ss,0,0);
-    const {rgb,energy}=_picChord(chords,Math.floor(i*(cn/marks)),gc,isBW);
+    const ci = Math.min(cn-1, Math.floor(i*(cn/marks)));
+    const chord = chords[ci];
+    const {rgb,energy}=_picChord(chords,ci,gc,isBW);
     const x=0.1*CW+rnd()*0.8*CW, y=0.1*CH+rnd()*0.8*CH;
     const kind=(rnd()*3)|0;
     if(kind===0){ // black gesture line
       ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.92)`;ctx.lineWidth=Math.max(2,CW*0.006);ctx.lineCap='round';
       ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+(rnd()-0.5)*CW*0.3,y+(rnd()-0.5)*CH*0.3,x+(rnd()-0.5)*CW*0.25,y+(rnd()-0.5)*CH*0.25);ctx.stroke();
-    } else if(kind===1){ // red/yellow disc
-      const col=rnd()<0.5?P.RED:P.YEL; ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
+    } else if(kind===1){ // red/yellow disc (band-aware via _miroAccentRGB)
+      const col = _miroAccentRGB(rnd()<0.5?'RED':'YEL', chord, gc, isBW);
+      ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
       ctx.beginPath();ctx.arc(x,y,Math.min(CW,CH)*(0.02+energy*0.04),0,Math.PI*2);ctx.fill();
     } else { // star
       ctx.fillStyle=`rgb(${P.WHT[0]},${P.WHT[1]},${P.WHT[2]})`;const R=Math.min(CW,CH)*0.025;
@@ -11405,23 +11445,17 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.fillStyle=isBW?'rgb(120,118,124)':'rgb(150,120,90)';ctx.fillRect(0,0,CW,CH);
   const units=Math.max(10,Math.min(220,cn*2));
   const vis=Math.max(1,Math.ceil(N/cn*units));
-  const cols=[P.RED,P.GRN,P.BLU,P.YEL,P.BLK,P.WHT];
-  // Tone-adjust helper: Real -> energy, Pastel -> soft. No-op in Pure.
-  const _tonedRGB = (c)=>{
-    let r=c[0], g=c[1], b=c[2];
-    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return [r,g,b];
-  };
+  // Accent slot ring — RED/GRN/BLU/YEL come from band-aware _miroAccentRGB
+  // (rebuilt per element). BLK/WHT stay fixed (universal anchors).
+  const slots = ['RED','GRN','BLU','YEL','BLK','WHT'];
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+701,ss,0,0);
-    // Set per-chord energy so the carnival's flat poster palette breathes
-    // with the music in Real tone (carnival pieces fixed colours otherwise).
     const ci = Math.min(cn-1, Math.floor((i/vis)*cn));
     const chord = chords[ci];
-    _setCurE(chord && chord._E);
     const x=rnd()*CW,y=rnd()*CH,s=Math.min(CW,CH)*(0.012+rnd()*0.03);
-    const col=_tonedRGB(cols[(rnd()*cols.length)|0]);ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
+    const slot = slots[(rnd()*slots.length)|0];
+    const col = (slot==='BLK') ? P.BLK : (slot==='WHT') ? P.WHT : _miroAccentRGB(slot, chord, gc, isBW);
+    ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
     const kind=(rnd()*4)|0;
     if(kind===0){ctx.beginPath();ctx.arc(x,y,s,0,Math.PI*2);ctx.fill();}
     else if(kind===1){ctx.fillRect(x-s,y-s*0.4,s*2,s*0.8);}
@@ -11437,12 +11471,16 @@ function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.fillStyle=isBW?'rgb(240,238,232)':'rgb(248,246,240)';ctx.fillRect(0,0,CW,CH);
   const signs=Math.max(3,Math.min(28,Math.round(cn/7)));
   const vis=Math.max(1,Math.ceil(N/cn*signs));
-  const cols=[P.RED,P.BLU,P.BLK,P.YEL];
+  const slots=['RED','BLU','BLK','YEL'];
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+801,ss,0,0);
-    const {energy}=_picChord(chords,Math.floor(i*(cn/signs)),gc,isBW);
+    const ci = Math.min(cn-1, Math.floor(i*(cn/signs)));
+    const chord = chords[ci];
+    const {energy}=_picChord(chords,ci,gc,isBW);
     const x=0.1*CW+rnd()*0.8*CW,y=0.1*CH+rnd()*0.8*CH;
-    const col=cols[(rnd()*cols.length)|0];const R=Math.min(CW,CH)*(0.02+energy*0.05);
+    const slot=slots[(rnd()*slots.length)|0];
+    const col = (slot==='BLK') ? P.BLK : _miroAccentRGB(slot, chord, gc, isBW);
+    const R=Math.min(CW,CH)*(0.02+energy*0.05);
     const kind=(rnd()*3)|0;
     if(kind===0){ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();}
     else if(kind===1){ctx.strokeStyle=`rgb(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]})`;ctx.lineWidth=Math.max(2,R*0.4);ctx.beginPath();ctx.moveTo(x,y-R*1.5);ctx.lineTo(x,y+R*1.5);ctx.moveTo(x-R,y);ctx.lineTo(x+R,y);ctx.stroke();}
