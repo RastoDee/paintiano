@@ -702,40 +702,48 @@ const PF_STYLE = `
              globally; here we just swap to 3-col grid and pin DONE. */
           .pf-setup-dialog { max-width: 860px !important; }
           /* Desktop + tablet portrait/landscape: 2-col layout. Tone sits under
-             Palettes in the left column; HOTOVO chip gets its own row below
-             Tone; Artists fill the right column across all rows. */
+             Palettes in the left column; HOTOVO chip sits inside Tone column,
+             right under the radio buttons. Artists fill the right column. */
           .pf-setup-body {
             grid-template-columns: 1fr 1fr !important;
-            grid-template-areas: "pal art" "tone art" "done art" !important;
+            grid-template-areas: "pal art" "tone art" !important;
             gap: 0 28px !important;
           }
           .pf-setup-palettes { grid-area: pal; height: auto; }
           .pf-setup-tone     { grid-area: tone; }
           .pf-setup-artists  { grid-area: art; }
-          /* DONE goes to its OWN grid row at the bottom of the left column.
-             Hide the modal footer; show a left-column DONE instead. */
+          /* Hide the modal footer in this layout; show the in-Tone DONE chip. */
           .pf-setup-footer { display: none !important; }
-          .pf-setup-palettes .pf-setup-done {
+          .pf-setup-tone .pf-setup-done {
             display: flex !important;
             justify-content: flex-start;
             margin-top: 22px;
-            padding: 0;
-            grid-area: done;
           }
-          .pf-setup-palettes .pf-setup-done > button { width: auto; }
+          .pf-setup-tone .pf-setup-done > button { width: auto; }
+          /* Palette-column DONE stays hidden in 2-col. */
+          .pf-setup-done-pal { display: none !important; }
           /* MOBILE LANDSCAPE override — phone held sideways: 3-col layout
-             (Palettes | Tone | Artists) because there's no vertical room to
-             stack Tone under Palettes. HOTOVO sits under Palettes on the
-             left; Tone and Artists span both rows. */
+             (Palettes | Tone | Artists). Use the chip inside Palettes
+             (pf-setup-done-pal) so it sits under Palettes; hide the
+             in-Tone chip in this layout. */
           @media (max-height: 500px) and (orientation: landscape) {
             .pf-setup-body {
               grid-template-columns: 1fr 1fr 1fr !important;
-              grid-template-areas: "pal tone art" "done tone art" !important;
+              grid-template-areas: "pal tone art" !important;
               gap: 0 16px !important;
             }
             .pf-setup-tone { margin-top: 0; }
             /* In 3-col mode, text in the Tone column is center-aligned. */
             .pf-setup-tone .pf-setup-grid > button > :last-child { text-align: center !important; }
+            /* Swap which DONE chip is visible: hide in-Tone chip, show
+               in-Palettes chip so it sits under Palettes in the left column. */
+            .pf-setup-tone .pf-setup-done { display: none !important; }
+            .pf-setup-done-pal {
+              display: flex !important;
+              justify-content: flex-start;
+              margin-top: 22px;
+            }
+            .pf-setup-done-pal > button { width: auto; }
           }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
@@ -29782,7 +29790,7 @@ Composition rules:
                     );
                   })}
                 </div>
-                <div className="pf-setup-done" style={{display:'none'}}>
+                <div className="pf-setup-done-pal" style={{display:'none'}}>
                   <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
                 </div>
               </div>
@@ -29809,6 +29817,9 @@ Composition rules:
                     </button>
                     );
                   })}
+                </div>
+                <div className="pf-setup-done" style={{display:'none'}}>
+                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
                 </div>
               </div>
               <div className="pf-setup-artists">
