@@ -11424,7 +11424,12 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     return best;
   };
   for(let i=0; i<bgCount && i<lim; i++){
-    const note = topNote(chords[i]); if(!note) continue;
+    const chord = chords[i];
+    // Set per-tile chord energy so gc() picks up Real-mode modulation here.
+    // Without this every tile reads default mid-energy and the OneM grid
+    // ignores dynamic changes in the piece.
+    _setCurE(chord && chord._E);
+    const note = topNote(chord); if(!note) continue;
     const m = note.m, v = note.v != null ? note.v : 100;
     const [r,g,b,a] = gc(m, v);
     const rect = rects[i]; if(!rect) continue;
@@ -11465,7 +11470,9 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   const ccx = CW/2, ccy = CH/2;
   const maxR = Math.min(CW, CH) * 0.46;
   for(let i=0; i<fgCount; i++){
-    const note = topNote(chords[bgCount + i]); if(!note) continue;
+    const chord = chords[bgCount + i];
+    _setCurE(chord && chord._E);
+    const note = topNote(chord); if(!note) continue;
     const m = note.m, v = note.v != null ? note.v : 100;
     const [r,g,b,a] = gc(m, v);
     const baseColor = _rgbaStr(r, g, b, Math.max(0.92, a));
