@@ -1043,6 +1043,43 @@ const phiCol=(m,v=100)=>{const h=PHI_HUE[m%12];const s=75+(v/127)*15;const[r,g,b
 // dissonant ones get CLOSE hues (the inverse of harmCol's circle-of-fifths).
 const KONTRA_HUE=[0, 30, 60, 240, 270, 210, 330, 180, 90, 120, 300, 150];
 const kontraCol=(m,v=100)=>{const h=KONTRA_HUE[m%12];const s=75+(v/127)*15;const[r,g,b]=fromHsl(h,s,octL(m));return[r,g,b,0.65+(v/127)*0.35];};
+// ── PASTEL palette variants ────────────────────────────────────────────────
+// For each palette mode (Harmony/Spectral/Phi/Kontra), a pastel variant uses
+// the SAME hue identity per pitch class but locks saturation + lightness into
+// a fixed pastel range. The result is a genuine pastel palette, not an HSL
+// post-filter: every pitch class keeps its harmonic relationship to the
+// others, but every colour reads as a true pastel ("Hokusai woodblock with
+// preserved hue, low chroma, lifted lightness" — best fit for Paintiano's
+// dark canvas + gold accent aesthetic).
+//   • Saturation:  30-45 % (vs Pure 75-90 %)        — modulated by velocity
+//   • Lightness:   range 58-78 % (vs Pure 12-88 %)  — keeps every block
+//                  comfortably above the dark canvas, no near-black pastels
+//   • Octave still modulates lightness within that pastel window so different
+//     octaves of the same pitch class are visually distinguishable
+//   • Alpha unchanged from Pure (consistent block density across tones)
+const _octLPastel = m => 58 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*20;   // 58..78
+const _pastelSat  = v => 30 + (v/127)*15;                                          // 30..45
+const harmColPastel  =(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],         _pastelSat(v), _octLPastel(m));return[r,g,b,0.72+(v/127)*0.28];};
+const specColPastel  =(m,v=100)=>{const[r,g,b]=fromHsl(SPEC_HUE[m%12],    _pastelSat(v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
+const phiColPastel   =(m,v=100)=>{const[r,g,b]=fromHsl(PHI_HUE[m%12],     _pastelSat(v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
+const kontraColPastel=(m,v=100)=>{const[r,g,b]=fromHsl(KONTRA_HUE[m%12],  _pastelSat(v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
+// Custom pastel: respects the user's hue choices (their picked hex per pitch
+// class is the artistic intent), but moves saturation + lightness into the
+// pastel band. Grey swatches stay grey (hue-less, same as Pure customCol).
+const customColPastel=(m,v=100,palette)=>{
+  const pc=m%12;
+  const hex=(palette&&palette[pc])||'#888888';
+  const[r0,g0,b0]=hexToRgb(hex);
+  const[h0,s0]=toHsl(r0,g0,b0);
+  // Grey hex (s≈0) → keep neutral, pastel lightness around mid range
+  const isGrey = s0<=0.5;
+  const sat = isGrey ? 0 : _pastelSat(v);
+  // Lightness anchored on the pastel octave curve, with velocity nudge so
+  // softer notes sit slightly lighter (matches Real piano direction).
+  const l = _octLPastel(m) + (v/127-0.5)*4;     // ±2 around pastel octave anchor
+  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(50,Math.min(82,l)));
+  return[rr,gg,bb,0.7+(v/127)*0.3];
+};
 // Custom default — Scriabin's Prometheus colour-tone mapping (1910). The
 // most famous synaesthete in music history actually saw each pitch class
 // as a specific colour. Follows the circle of fifths around a rainbow:

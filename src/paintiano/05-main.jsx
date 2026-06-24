@@ -983,12 +983,13 @@ export default function Paintiano() {
     return 'pure';   // default — raw palette colours, no modulation
   });
   useEffect(()=>{
-    // Pastel is a CLEAN filter: no energy/velocity modulation rides along.
-    // That keeps the pastel painting visually uniform across a whole piece.
+    // Real → mixOn enables _energyTint per-chord modulation. Pastel is now a
+    // palette-level concept (custom palette variants in gc()), so _pastelTint
+    // stays disabled — it's only kept as a defensive no-op shim. Pure and
+    // Pastel both leave the colour from gc() unchanged at the tint stage.
     const mixOn    = (tone==='real');
-    const pastelOn = (tone==='pastel');
     try{_setMixOn(mixOn);}catch(_){}
-    try{_setPastelOn(pastelOn);}catch(_){}
+    try{_setPastelOn(false);}catch(_){}
     try{localStorage.setItem('paintiano_tone',tone);}catch(_){}
   },[tone]);
   // The colour reading the app chose for the current image (harmony or bw), so
@@ -2298,17 +2299,24 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const gc = useCallback((m,v)=>{
     if(mode==='bw') return bwCol(m,v);
+    // PASTEL tone uses the per-palette pastel variant — a genuine pastel
+    // palette deterministically derived per pitch class, NOT a post-filter.
+    // This preserves hue identity (palette character intact) while locking
+    // saturation + lightness into the pastel band. _energyTint stays a no-op
+    // for pastel (mixOn=false), so pastel is a clean uniform-tone palette
+    // with no per-chord modulation — matching the design goal.
+    const pastel = (tone === 'pastel');
     let _c;
-    if(mode==='custom') _c=customCol(m,v,activePalette);
-    else if(mode==='spectral') _c=specCol(m,v);
-    else if(mode==='phi') _c=phiCol(m,v);
-    else if(mode==='kontra') _c=kontraCol(m,v);
-    else _c=harmCol(m,v);
+    if(mode==='custom')        _c = pastel ? customColPastel(m,v,activePalette) : customCol(m,v,activePalette);
+    else if(mode==='spectral') _c = pastel ? specColPastel(m,v)                 : specCol(m,v);
+    else if(mode==='phi')      _c = pastel ? phiColPastel(m,v)                  : phiCol(m,v);
+    else if(mode==='kontra')   _c = pastel ? kontraColPastel(m,v)               : kontraCol(m,v);
+    else                       _c = pastel ? harmColPastel(m,v)                 : harmCol(m,v);
+    // _energyTint applies the Real tone (mixOn === true) per-chord modulation.
+    // For Pure and Pastel it returns the colour unchanged. _pastelTint is now
+    // a no-op shim (kept for any out-of-band call sites), since pastel is now
+    // a palette-level concept above.
     const _t=_energyTint(_c[0],_c[1],_c[2]);
-    // Apply pastel tint defensively — if _pastelTint isn't in this build
-    // (older fragment, broken bundle) we fall through with the energy-tinted
-    // colour unchanged. Pastel only shifts the painting when both the helper
-    // exists AND the module flag is on.
     let _r=_t[0],_g=_t[1],_b=_t[2];
     try{ if(typeof _pastelTint==='function'){ const _p=_pastelTint(_r,_g,_b); _r=_p[0]; _g=_p[1]; _b=_p[2]; } }catch(_){}
     return [_r,_g,_b,_c[3]];

@@ -179,9 +179,13 @@ function _energyTint(r,g,b){
     S = sx * (1 - 0.45 * k);            // sx -> 0.55 * sx at k=1 (vs Pastel 0.45)
     L = l + (0.75 - l) * 0.55 * k;       // l  -> blended toward 0.75 (vs Pastel 0.80)
   } else {
-    // Louder than average -> push toward deep. Strong dual-mode boost.
-    S = Math.min(1, sx + (1 - sx) * 0.60 * d + sx * 0.40 * d);
-    L = Math.max(0.04, l * (1 - 0.65 * d));
+    // Louder than average -> push toward deep. Eased forte so forte chords
+    // don't crush to near-black: saturation boost 0.50/0.30 (was 0.60/0.40)
+    // and lightness multiplier 0.50 (was 0.65). Forte still reads clearly
+    // darker than mezzo, but stays in the dramatic-deep band rather than
+    // bottoming out into shadow.
+    S = Math.min(1, sx + (1 - sx) * 0.50 * d + sx * 0.30 * d);
+    L = Math.max(0.04, l * (1 - 0.50 * d));
   }
   S = Math.max(0, Math.min(1, S));
   L = Math.max(0.04, Math.min(0.96, L));
