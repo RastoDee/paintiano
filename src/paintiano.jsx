@@ -19413,6 +19413,10 @@ export default function Paintiano() {
   const [is5Col, setIs5Col] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)').matches;}catch(_){return false;}});
   // isNotPhone \u2014 desktop + tablet portrait + tablet landscape (phones excluded in both orientations).
   const [isNotPhone, setIsNotPhone] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px)').matches;}catch(_){return false;}});
+  // isMobilePortrait — phone held upright. Used by Setup to render the Tone
+  // selector as a full-width horizontal row of 3 buttons below the two
+  // columns, instead of the default vertical stack in the left column.
+  const [isMobilePortrait, setIsMobilePortrait] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(max-width: 768px) and (orientation: portrait)').matches;}catch(_){return false;}});
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)');
@@ -19431,6 +19435,13 @@ export default function Paintiano() {
     if(typeof window==='undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(min-width: 769px)');
     const onChange = (e)=>setIsDesktop(e.matches);
+    try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
+    return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
+  },[]);
+  useEffect(()=>{
+    if(typeof window==='undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(max-width: 768px) and (orientation: portrait)');
+    const onChange = (e)=>setIsMobilePortrait(e.matches);
     try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
     return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
   },[]);
@@ -20806,7 +20817,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, paintPhase);
         else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length);
+        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
         else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
@@ -20847,7 +20858,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Kandinsky canvas-wide contour overlay — large outlined shapes in
       // varied colors layered over the per-cell Kandinsky composition.
       if(style==='kandinsky' && lim>0){
-        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length);
+        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
       }
       if(style==='rothko' && lim>0){
         drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
@@ -26610,7 +26621,7 @@ Composition rules:
         }
         // Kandinsky canvas-wide contour overlay.
         if(style==='kandinsky' && chords.length>0){
-          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode, gc, paintPhase);
+          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
         }
         if(style==='rothko' && chords.length>0){
           drawRothkoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
@@ -30182,23 +30193,29 @@ Composition rules:
                   <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
                 </div>
               </div>
-              <div className="pf-setup-tone">
-                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
+              <div className="pf-setup-tone" style={isMobilePortrait?{gridArea:'tone',marginTop:28,padding:'0 4px'}:undefined}>
+                <div style={{display:'flex',alignItems:'baseline',justifyContent:isMobilePortrait?'center':'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone'}</span>
                 </div>
-                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
+                <div className="pf-setup-grid" style={isMobilePortrait?{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}:{display:'flex',flexDirection:'column',gap:0}}>
                   {[
                     {k:'pure',   label:({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure',         hint:({EN:'Raw palette colours',SK:'Surové farby palety',DE:'Reine Palettenfarben',FR:'Couleurs brutes de la palette',ES:'Colores puros de la paleta',PT:'Cores puras da paleta',zh:'纯调色板色彩',zhTW:'純調色板色彩',ja:'パレットそのままの色'})[lang]||'Raw palette colours'},
                     {k:'real',   label:({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real',           hint:({EN:'Energy modulates saturation',SK:'Energia moduluje sýtosť',DE:'Energie moduliert die Sättigung',FR:'L\u2019énergie module la saturation',ES:'La energía modula la saturación',PT:'A energia modula a saturação',zh:'能量调节饱和度',zhTW:'能量調節飽和度',ja:'エネルギーが彩度を変調'})[lang]||'Energy modulates saturation'},
                     {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel', hint:({EN:'Soft, lighter colours',SK:'Jemné, svetlejšie farby',DE:'Sanftere, hellere Farben',FR:'Couleurs douces, plus claires',ES:'Colores suaves, más claros',PT:'Cores suaves, mais claras',zh:'柔和浅淡的色彩',zhTW:'柔和淺淡的色彩',ja:'柔らかく明るい色'})[lang]||'Soft, lighter colours'}
                   ].map(o=>{
                     const sel = tone===o.k;
+                    const btnStyle = isMobilePortrait
+                      ? {display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:8,padding:'12px 6px',background:sel?'rgba(220,180,90,.06)':'transparent',color:sel?'rgba(247,243,236,.85)':'rgba(247,243,236,.55)',border:'1px solid '+(sel?'rgba(220,180,90,.5)':'rgba(255,255,255,.08)'),borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.85*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'center',transition:'color .18s, border-color .18s, background .18s'}
+                      : {display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:sel?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'};
+                    const labelWrapStyle = isMobilePortrait
+                      ? {display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center',gap:2}
+                      : {flex:1,display:'flex',flexDirection:'column'};
                     return (
-                    <button key={o.k} onClick={()=>setTone(o.k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:sel?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s'}}>
+                    <button key={o.k} onClick={()=>setTone(o.k)} className="pf-setup-row" style={btnStyle}>
                       <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:'50%',border:'1px solid '+(sel?'rgba(220,180,90,.6)':'rgba(255,255,255,.12)'),background:'transparent',flexShrink:0}}>
                         {sel && <span style={{display:'block',width:10,height:10,borderRadius:'50%',background:'rgba(220,180,90,.95)'}}/>}
                       </span>
-                      <span style={{flex:1,display:'flex',flexDirection:'column'}}>
+                      <span style={labelWrapStyle}>
                         <span>{o.label}</span>
                         <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',letterSpacing:0,marginTop:2}}>{o.hint}</span>
                       </span>
