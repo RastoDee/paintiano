@@ -158,6 +158,43 @@ function _energyTint(r,g,b){
   return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
 }
 
+// ── PASTEL mode ─────────────────────────────────────────────────────────────
+// Global color modifier toggled in the Setup menu. When on, every colour that
+// flows through gc() is shifted toward a soft pastel: reduced saturation (each
+// channel pulled toward grey, but the hue is preserved) and lifted lightness
+// (light wash, not chalky white). The hue and the relative differences between
+// notes stay intact, so the painting still "reads" the same — just gentler.
+//
+// Applied AFTER _energyTint so dynamic energy still modulates within pastel
+// range (a high-energy chord in pastel is still relatively warmer/deeper than
+// a quiet one). Applied to every artist + mosaic uniformly via gc(), so the
+// whole family stays consistent: Van Gogh ribbons, Kusama fields, Kandinsky
+// shapes, Pollock drips, all get pastel'd the same way. Fixed-color overlay
+// elements (e.g. Picasso's black contour outlines) are intentionally left
+// alone — they're structural, not part of the colour palette.
+let _pastelOn = false;
+function _setPastelOn(b){ _pastelOn = !!b; }
+function _pastelTint(r,g,b){
+  if(!_pastelOn) return [Math.round(r),Math.round(g),Math.round(b)];
+  // HSL conversion (same primitive as _energyTint).
+  const R=r/255, G=g/255, B=b/255;
+  const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
+  let h=0, sx=0;
+  if(mx!==mn){ const dl=mx-mn; sx=l>0.5?dl/(2-mx-mn):dl/(mx+mn);
+    if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
+  // Pastel transform: reduce saturation ~55%, raise lightness toward 0.80,
+  // but blend (don't clamp) so already-light colors don't all snap to white.
+  // The blend keeps the hue's character; ~0.7 mix toward target = audible
+  // softening without losing identity.
+  const targetL = 0.80;
+  const L = l + (targetL - l) * 0.55;
+  const S = sx * 0.45;
+  if(S < 0.005){ const g2=Math.round(L*255); return [g2,g2,g2]; }
+  const q=L<0.5?L*(1+S):L+S-L*S, pp=2*L-q;
+  const h2=(t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return pp+(q-pp)*6*t; if(t<1/2)return q; if(t<2/3)return pp+(q-pp)*(2/3-t)*6; return pp; };
+  return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
+}
+
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
