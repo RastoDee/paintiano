@@ -177,57 +177,10 @@ function _ensureEnergies(chords){
 }
 
 function _energyTint(r,g,b){
-  // Tone switch — when Mix is off (Pure or Pastel tones), the energy modulation
-  // is bypassed entirely. In Real tone (_mixOn === true) the function maps the
-  // current chord's energy across an asymmetric range:
-  //
-  //   piano  (_curE = 0)  -> softened     (S → 0.55 * sx,  L blended to 0.75)
-  //   mezzo  (_curE = 0.5) -> raw palette colour, no change
-  //   forte  (_curE = 1)   -> deep        (S boosted hard, L * 0.40)
-  //
-  // IMPORTANT: piano branch is intentionally less aggressive than Pastel tone
-  // (which sits at S * 0.45, L → 0.80). Pastel is the dedicated soft tone and
-  // must remain visually the softest option. Real at piano sits BETWEEN the
-  // original colour and Pastel — clearly lighter than the original, but never
-  // overshooting Pastel. Forte stays strong so the piano↔forte arc is wide.
-  // A power-curve (|d|^0.55) sharpens the middle so chords at E ~ 0.3 / 0.7
-  // already show clear pastel / deep shifts.
-  if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
-  // Extreme bands (e<0.20 piano, e>0.80 forte) already have a palette-level
-  // pastel/dark variant applied in gc(), so this continuous-modulation step
-  // is a no-op there. Without this guard we'd over-pastelize and over-darken
-  // the band-switched colour, undoing the discrete palette choice.
-  if(_curE < 0.20 || _curE > 0.80) return [Math.round(r),Math.round(g),Math.round(b)];
-  let d=(_curE-0.5)*2;
-  if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
-  d = Math.sign(d) * Math.pow(Math.abs(d), 0.55);
-  let R=r/255, G=g/255, B=b/255;
-  const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
-  let h=0, sx=0;
-  if(mx!==mn){ const dl=mx-mn; sx=l>0.5?dl/(2-mx-mn):dl/(mx+mn);
-    if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
-  let S, L;
-  if(d < 0){
-    // Quieter than average -> soften toward pastel territory, but never
-    // overshoot Pastel mode (which uses S * 0.45, L → 0.80).
-    const k = -d;
-    S = sx * (1 - 0.45 * k);            // sx -> 0.55 * sx at k=1 (vs Pastel 0.45)
-    L = l + (0.75 - l) * 0.55 * k;       // l  -> blended toward 0.75 (vs Pastel 0.80)
-  } else {
-    // Louder than average -> push toward deep. Eased forte so forte chords
-    // don't crush to near-black: saturation boost 0.50/0.30 (was 0.60/0.40)
-    // and lightness multiplier 0.50 (was 0.65). Forte still reads clearly
-    // darker than mezzo, but stays in the dramatic-deep band rather than
-    // bottoming out into shadow.
-    S = Math.min(1, sx + (1 - sx) * 0.50 * d + sx * 0.30 * d);
-    L = Math.max(0.04, l * (1 - 0.50 * d));
-  }
-  S = Math.max(0, Math.min(1, S));
-  L = Math.max(0.04, Math.min(0.96, L));
-  if(S < 0.005){ const g2=Math.round(L*255); return [g2,g2,g2]; }
-  const q=L<0.5?L*(1+S):L+S-L*S, pp=2*L-q;
-  const h2=(t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return pp+(q-pp)*6*t; if(t<1/2)return q; if(t<2/3)return pp+(q-pp)*(2/3-t)*6; return pp; };
-  return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
+  // No-op in all tones. Real tone's Pure↔Pastel mix is fully resolved in
+  // gc() (05-main) so the colour reaching this function is already correct.
+  // Kept as a pass-through shim so existing call sites stay stable.
+  return [Math.round(r),Math.round(g),Math.round(b)];
 }
 
 // ── PASTEL mode ─────────────────────────────────────────────────────────────

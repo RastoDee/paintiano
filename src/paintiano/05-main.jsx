@@ -983,13 +983,13 @@ export default function Paintiano() {
     return 'pure';   // default — raw palette colours, no modulation
   });
   useEffect(()=>{
-    // Option B: Real is palette-band-switching only — pastel/pure/dark per
-    // chord based on _curE thresholds inside gc(). No continuous _energyTint
-    // modulation: it was muddying mid-energy chords near the band edges
-    // (sat-red→brown, sat-green→olive, etc.). _setMixOn(false) keeps
-    // _energyTint a no-op for all tones; the three band-switched palettes
-    // alone deliver the dynamic range Mosaic Real shows.
-    try{_setMixOn(false);}catch(_){}
+    // Real tone uses a continuous Pure↔Pastel mix per chord energy (handled
+    // in gc()). _mixOn enables the per-voice velocity modulation inside
+    // drawBlockMosaic / drawBlockNotes — so within a single chord, louder
+    // notes lean a touch more pure and softer notes lean a touch more
+    // pastel, matching musical intuition for inner voicing. _energyTint
+    // and _pastelTint stay disabled — the mix is fully resolved in gc().
+    try{_setMixOn(tone==='real');}catch(_){}
     try{_setPastelOn(false);}catch(_){}
     try{localStorage.setItem('paintiano_tone',tone);}catch(_){}
   },[tone]);
@@ -2329,56 +2329,57 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Tone routing:
     //   Pure   → pure palette variant (no modulation)
     //   Pastel → pastel palette variant (uniform, no modulation)
-    //   Real   → HYBRID:
-    //     • _curE < 0.20 → pastel variant (extreme piano ~20% of chords)
-    //     • _curE > 0.80 → dark variant   (extreme forte ~20% of chords)
-    //     • 0.20 ≤ _curE ≤ 0.80 → pure variant + continuous _energyTint
-    //       (the mezzo majority ~60%, continuous modulation as before)
-    //   This gives Real the spectrum Mosaic shows: clear pastel accents for
-    //   the quietest moments, clear dark accents for the loudest, and a
-    //   continuous gradient in between. Critically the palette-level
-    //   pastel/dark accents survive overlay alpha-blending (Kandinsky's
-    //   prevailing translucent stacks washed out continuous-only modulation).
-    let band = 'pure';
-    if(tone === 'pastel') band = 'pastel';
-    else if(tone === 'real'){
-      const e = (typeof _getCurE === 'function') ? _getCurE() : 0.5;
-      if(e < 0.20) band = 'pastel';
-      else if(e > 0.80) band = 'dark';
-      else band = 'pure';   // _energyTint will still modulate this within the band
-    }
+    //   Real   → CONTINUOUS Pure↔Pastel mix per chord energy:
+    //     t = 0.15 + 0.75 * _curE      (range 0.15..0.90)
+    //     out = pastel*(1-t) + pure*t  (linear RGB interp)
+    //
+    //   At e=0 (piano) the colour is 85% pastel + 15% pure → soft but the
+    //   hue identity stays readable (pure C bumps red into the lavender
+    //   blur). At e=1 (forte) it's 90% pure + 10% pastel → vivid but never
+    //   crushing. At mezzo it's a 50/50 mix — visibly its own thing,
+    //   neither Pure nor Pastel. This is the defining character of Real:
+    //   it never reduces to either neighbour mode. Same hue across the
+    //   entire range (pastel C and pure C both have hue 0°), so no mud
+    //   from HSL rotation in the middle.
+    //
+    //   Note: Dark variant is no longer used by Real — it stays in the
+    //   code for possible future use but Real never routes to it.
+    const isReal = (tone === 'real');
+    const useBandPastel = (tone === 'pastel');
     let _c;
     if(mode==='custom'){
-      _c = band==='pastel' ? customColPastel(m,v,activePalette)
-         : band==='dark'   ? customColDark(m,v,activePalette)
-         :                   customCol(m,v,activePalette);
+      _c = useBandPastel ? customColPastel(m,v,activePalette)
+                         : customCol(m,v,activePalette);
     } else if(mode==='spectral'){
-      _c = band==='pastel' ? specColPastel(m,v)
-         : band==='dark'   ? specColDark(m,v)
-         :                   specCol(m,v);
+      _c = useBandPastel ? specColPastel(m,v) : specCol(m,v);
     } else if(mode==='phi'){
-      _c = band==='pastel' ? phiColPastel(m,v)
-         : band==='dark'   ? phiColDark(m,v)
-         :                   phiCol(m,v);
+      _c = useBandPastel ? phiColPastel(m,v)  : phiCol(m,v);
     } else if(mode==='kontra'){
-      _c = band==='pastel' ? kontraColPastel(m,v)
-         : band==='dark'   ? kontraColDark(m,v)
-         :                   kontraCol(m,v);
+      _c = useBandPastel ? kontraColPastel(m,v) : kontraCol(m,v);
     } else {
-      _c = band==='pastel' ? harmColPastel(m,v)
-         : band==='dark'   ? harmColDark(m,v)
-         :                   harmCol(m,v);
+      _c = useBandPastel ? harmColPastel(m,v) : harmCol(m,v);
     }
-    // _energyTint applies continuous modulation only when band==='pure' AND
-    // tone==='real' (controlled by _mixOn). For pastel/dark bands _mixOn
-    // stays on but _energyTint passes through with negligible shift inside
-    // its 0.20-0.80 d-band — the band-switched palette is already at the
-    // target tone. For Pure mode and Pastel mode tone-effect-wise mixOn is
-    // off, so this is a no-op.
-    const _t=_energyTint(_c[0],_c[1],_c[2]);
-    let _r=_t[0],_g=_t[1],_b=_t[2];
-    try{ if(typeof _pastelTint==='function'){ const _p=_pastelTint(_r,_g,_b); _r=_p[0]; _g=_p[1]; _b=_p[2]; } }catch(_){}
-    return [_r,_g,_b,_c[3]];
+    // Real: mix the pure colour above with its pastel sibling, weighted by
+    // the current chord energy. We compute the pastel variant on the fly so
+    // both hues stay identical (no HSL rotation = no mud).
+    if(isReal){
+      let _p;
+      if(mode==='custom')        _p = customColPastel(m,v,activePalette);
+      else if(mode==='spectral') _p = specColPastel(m,v);
+      else if(mode==='phi')      _p = phiColPastel(m,v);
+      else if(mode==='kontra')   _p = kontraColPastel(m,v);
+      else                       _p = harmColPastel(m,v);
+      const e = (typeof _getCurE === 'function') ? _getCurE() : 0.5;
+      const t = 0.15 + 0.75 * Math.max(0, Math.min(1, e));
+      const mt = 1 - t;
+      _c = [
+        Math.round(_p[0]*mt + _c[0]*t),
+        Math.round(_p[1]*mt + _c[1]*t),
+        Math.round(_p[2]*mt + _c[2]*t),
+        _c[3],
+      ];
+    }
+    return _c;
   },[mode,activePalette,tone]);
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
