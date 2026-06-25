@@ -1062,10 +1062,25 @@ const kontraCol=(m,v=100)=>{const h=KONTRA_HUE[m%12];const s=75+(v/127)*15;const
 //                  the reference card where the warm top row reads as
 //                  vivid-but-pastel coral/peach while the cool rows
 //                  (blues/greens) sit softer.
-//   • Octave modulates lightness within that pastel window so different
-//     octaves of the same pitch class are visually distinguishable
+//   • Lightness:   HUE-AWARE — warm hues anchor lower (~60 %), greens mid
+//                  (~65 %), cool hues higher (~74 %). Without this every
+//                  pastel pitch class read at the same lightness (~70 %)
+//                  and visually merged into a lavender-cream blur — warm
+//                  reds lost their identity. Octave + velocity still
+//                  modulate ±5 % around each hue's anchor.
 //   • Alpha unchanged from Pure (consistent block density across tones)
-const _octLPastel = m => 65 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*13;   // 65..78
+const _pastelHueL = h => {
+  // Warm zone (red/orange/yellow ~ h<60 or h>320) → 60 % anchor
+  // Green zone (h 60..180) → 65 % anchor
+  // Cool zone (h 180..320) → 74 % anchor
+  if(h < 60 || h > 320) return 60;
+  if(h < 180) return 65;
+  return 74;
+};
+const _octLPastel = (m, h) => {
+  const anchor = _pastelHueL(h);
+  return anchor + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*8;   // anchor..anchor+8
+};
 // Hue-aware saturation: warm side of the wheel (red→yellow, h<60 or h>320)
 // gets +15 boost; the rest follow the base curve. Velocity still modulates
 // inside each band so soft notes sit a little less saturated.
@@ -1075,10 +1090,10 @@ const _pastelSat  = (h, v) => {
   if(warm) base += 15;                                // warm bump → up to ~90 at vel=127
   return Math.min(95, base);
 };
-const harmColPastel  =(m,v=100)=>{const h=COF[m%12];        const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m));return[r,g,b,0.72+(v/127)*0.28];};
-const specColPastel  =(m,v=100)=>{const h=SPEC_HUE[m%12];   const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
-const phiColPastel   =(m,v=100)=>{const h=PHI_HUE[m%12];    const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
-const kontraColPastel=(m,v=100)=>{const h=KONTRA_HUE[m%12]; const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
+const harmColPastel  =(m,v=100)=>{const h=COF[m%12];        const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m,h));return[r,g,b,0.72+(v/127)*0.28];};
+const specColPastel  =(m,v=100)=>{const h=SPEC_HUE[m%12];   const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m,h));return[r,g,b,0.65+(v/127)*0.35];};
+const phiColPastel   =(m,v=100)=>{const h=PHI_HUE[m%12];    const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m,h));return[r,g,b,0.65+(v/127)*0.35];};
+const kontraColPastel=(m,v=100)=>{const h=KONTRA_HUE[m%12]; const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m,h));return[r,g,b,0.65+(v/127)*0.35];};
 // Custom pastel: respects the user's hue choices (their picked hex per pitch
 // class is the artistic intent), but moves saturation + lightness into the
 // pastel band. Grey swatches stay grey (hue-less, same as Pure customCol).
@@ -1090,10 +1105,11 @@ const customColPastel=(m,v=100,palette)=>{
   // Grey hex (s≈0) → keep neutral, pastel lightness around mid range
   const isGrey = s0<=0.5;
   const sat = isGrey ? 0 : _pastelSat(h0, v);
-  // Lightness anchored on the pastel octave curve, with velocity nudge so
-  // softer notes sit slightly lighter (matches Real piano direction).
-  const l = _octLPastel(m) + (v/127-0.5)*4;     // ±2 around pastel octave anchor
-  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(58,Math.min(82,l)));
+  // Lightness anchored on the pastel octave curve (hue-aware anchor), with
+  // velocity nudge so softer notes sit slightly lighter (matches Real piano
+  // direction).
+  const l = _octLPastel(m, h0) + (v/127-0.5)*4;     // ±2 around hue-aware anchor
+  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(54,Math.min(82,l)));
   return[rr,gg,bb,0.7+(v/127)*0.3];
 };
 // ── DARK palette variants ──────────────────────────────────────────────────
