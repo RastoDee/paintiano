@@ -983,12 +983,13 @@ export default function Paintiano() {
     return 'pure';   // default — raw palette colours, no modulation
   });
   useEffect(()=>{
-    // Real → mixOn enables _energyTint per-chord modulation. Pastel is now a
-    // palette-level concept (custom palette variants in gc()), so _pastelTint
-    // stays disabled — it's only kept as a defensive no-op shim. Pure and
-    // Pastel both leave the colour from gc() unchanged at the tint stage.
-    const mixOn    = (tone==='real');
-    try{_setMixOn(mixOn);}catch(_){}
+    // Option B: Real is palette-band-switching only — pastel/pure/dark per
+    // chord based on _curE thresholds inside gc(). No continuous _energyTint
+    // modulation: it was muddying mid-energy chords near the band edges
+    // (sat-red→brown, sat-green→olive, etc.). _setMixOn(false) keeps
+    // _energyTint a no-op for all tones; the three band-switched palettes
+    // alone deliver the dynamic range Mosaic Real shows.
+    try{_setMixOn(false);}catch(_){}
     try{_setPastelOn(false);}catch(_){}
     try{localStorage.setItem('paintiano_tone',tone);}catch(_){}
   },[tone]);
