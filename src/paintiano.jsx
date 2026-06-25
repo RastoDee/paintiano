@@ -14136,15 +14136,20 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         for(let k = i+1; k < j-1; k++){
           const ev = evts[k];
           if(!ev.n || !ev.n.length) continue;
-          // Top voice only (highest MIDI in the chord) — that's the shimmering note
-          let topIdx = 0;
-          for(let m=1; m<ev.n.length; m++) if(ev.n[m].m > ev.n[topIdx].m) topIdx = m;
-          const top = ev.n[topIdx];
-          ev.n = [{
+          // The shimmering note = melody if flagged, otherwise highest MIDI
+          let melIdx = ev.n.findIndex(n=>n._melody);
+          if(melIdx < 0){
+            melIdx = 0;
+            for(let m=1; m<ev.n.length; m++) if(ev.n[m].m > ev.n[melIdx].m) melIdx = m;
+          }
+          const top = ev.n[melIdx];
+          const note = {
             m: top.m,
             v: Math.max(20, Math.min(120, Math.round((top.v || 64) - 4))),
             durMs: Math.round((top.durMs || 600) * 0.5)
-          }];
+          };
+          if(top._melody) note._melody = true;
+          ev.n = [note];
           ev._alternation = true;
         }
         i = j;
@@ -14256,11 +14261,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         if(!target) break;
         const rotIdx = k % chordNotes.length;
         const src = chordNotes[rotIdx];
-        target.n = [{
+        const note = {
           m: src.m,
           v: SHIMMER_VEL,
           durMs: src.durMs
-        }];
+        };
+        if(src._melody) note._melody = true;
+        target.n = [note];
         target._playable = true;              // restore playable
         target._collapsedShimmer = true;
         if(k > 0) delete target._runLen;      // only the anchor event keeps the plane marker
