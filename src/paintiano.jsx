@@ -19652,6 +19652,11 @@ export default function Paintiano() {
   const canvasRef    = useRef(null);
   const canvasWrapRef = useRef(null); // wrapper around the canvas — scrolled into view when the strip closes
   const stripWrapRef = useRef(null); // wrapper around the Color·Style strip — scroll target on Play in mood-from-image so the strip + source thumbnail stay framed
+  // Set true when the Hear image chip transfers a Music-mode painting into
+  // Image mode. The ← Back handler reads this and routes back to Music
+  // (restoreMode('music')) instead of the default Setup screen. Single-use:
+  // cleared as soon as Back consumes it.
+  const _imageFromMusicRef = useRef(false);
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -28270,6 +28275,20 @@ Composition rules:
             flips isActiveView back to false. */}
         <div className="pf-controls-inner" style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?4:8,position:'relative'}}>
           <button onClick={()=>{if(demoReelOn){demoReelStop();return;}if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);
+            // Special return path: if we entered Image mode via the Hear image
+            // chip (canvas-from-music bridge), Back should restore the original
+            // Music piece instead of going to Setup. Single-use: consume the
+            // flag, then restoreMode('music') loads the stashed music draft.
+            if(_imageFromMusicRef.current && (loadedSource==='image' || viewMode==='image')){
+              _imageFromMusicRef.current = false;
+              try{ stopAll(); }catch(_){}
+              try{ wipeCanvasNow(); }catch(_){}
+              setShowMoodMenu(false);setShowMorphMenu(false);setShowComposeRecent(false);setShowMicRecent(false);setPickMode(null);
+              const ok = restoreMode('music');
+              if(ok){ return; }
+              // If for any reason the music draft is gone, fall through to the
+              // normal Back-to-Setup path so the user isn't stranded.
+            }
             // Leaving to Setup while a painting is playing/paused should PRESERVE
             // the position so "← Canvas" (Resume) picks up exactly where it left
             // off — capture disp into resumeFromRef and pause, instead of the full
@@ -28378,16 +28397,20 @@ Composition rules:
                     const file = new File([blob], 'painting.png', { type:'image/png', lastModified: Date.now() });
                     const dt = new DataTransfer();
                     dt.items.add(file);
+                    // Mark this transition so the next ← Back from image mode
+                    // returns to the original Music piece, not the Setup screen.
+                    _imageFromMusicRef.current = true;
                     loadImage({ target: { files: dt.files, value: '' } });
                   }catch(_){ /* DataTransfer not supported — fall back below */
                     try{
                       const fakeFiles = { 0: file, length: 1, item: (i)=>i===0?file:null };
+                      _imageFromMusicRef.current = true;
                       loadImage({ target: { files: fakeFiles, value: '' } });
                     }catch(__){}
                   }
                 }, 'image/png');
               }catch(_){}
-            }} disabled={_dis} className="pf-lift" title={_paintingDone?'Hear image':'Finish the painting first'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',marginLeft:'auto',marginRight:4,background:'rgba(28,24,40,.5)',color:_dis?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(_dis?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:_dis?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Hear image</button>
+            }} disabled={_dis} className="pf-lift" title={_paintingDone?'Hear image':'Finish the painting first'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',marginLeft:'auto',marginRight:6,background:'rgba(28,24,40,.5)',color:_dis?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(_dis?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:_dis?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Hear image</button>
           ); })()}
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
