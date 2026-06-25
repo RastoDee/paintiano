@@ -13919,6 +13919,41 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       v: Math.max(20, Math.min(120, (n.v||64) + (k===topIdx ? 15 : -3)))
     }));
   }
+  // ─── Octave doubling — forte bass gets a left-hand octave ────────────────
+  // In dramatic piano writing the left hand often doubles the bass at the
+  // octave below — Liszt, Rachmaninoff, the loud climaxes of Chopin — to
+  // give weight to forte moments. We replicate that here: when an event in
+  // the lower half of the image plays strong (vel ≥ 85), find its lowest
+  // MIDI note and add its octave-down sibling (m−12) at slightly softer
+  // velocity. Only fires below the band midpoint (bass register where
+  // doubling is musically meaningful — high treble doubling would crowd
+  // the melody) and only when the octave still sits in the audible piano
+  // range (≥ MIDI 24).
+  if(_nrBands >= 2){
+    const bassThreshold = Math.floor(_nrBands * 0.5);   // bottom half of image
+    for(const ev of evts){
+      if(!ev.n || !ev.n.length) continue;
+      if(typeof ev.band !== 'number' || ev.band < bassThreshold) continue;
+      // Find loudest note in the chord to test forte trigger
+      let maxV = 0;
+      for(const n of ev.n) if((n.v || 0) > maxV) maxV = n.v || 0;
+      if(maxV < 85) continue;
+      // Find lowest MIDI note (the bass line)
+      let lowIdx = 0;
+      for(let k=1; k<ev.n.length; k++) if(ev.n[k].m < ev.n[lowIdx].m) lowIdx = k;
+      const low = ev.n[lowIdx];
+      const octM = low.m - 12;
+      if(octM < 24) continue;
+      // Avoid duplicates (chord already contains the octave below)
+      if(ev.n.some(n => n.m === octM)) continue;
+      ev.n = [...ev.n, {
+        m: octM,
+        v: Math.max(20, Math.min(120, (low.v || 64) - 8)),
+        durMs: low.durMs
+      }];
+      ev._octaveDoubled = true;
+    }
+  }
   // ─── Final dynamics: ATMO as centre + range, not flat multiplier ────────
   // Older model: dynScale (~0.55 for serene) collapsed ALL velocities toward
   // zero in calm pieces — that's what made everything sound like a stuck
@@ -14117,6 +14152,71 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       } else {
         i++;
       }
+    }
+  }
+  // ─── Alberti bass — classical accompaniment in calm passages ─────────────
+  // Mozart, Haydn and early Beethoven render gentle harmonic sections with
+  // an "Alberti bass" — instead of hammering the chord straight, the left
+  // hand rotates through its notes in a fixed bass→top→middle→top cycle.
+  // The harmony hangs (because all notes belong to the same chord) but the
+  // music constantly moves, the classic ambient sparkle of the classical
+  // sonata slow movement.
+  //
+  // We detect short-to-medium runs (4–12 events) of identical chord
+  // signature with 3+ notes AND soft dynamic (max velocity < 55). These
+  // are the "calm chord plateaus" where Alberti makes sense. The chord's
+  // notes get sorted bass-to-top and the run rotates through them in
+  // [bass, top, mid, top] order, looping. Each event becomes a SINGLE
+  // note (one finger at a time), which is what the pattern requires.
+  //
+  // Longer runs (12+) still fall through to the existing shimmer-collapse
+  // pass — those are very large flat fields where a literal Alberti would
+  // become its own kind of mechanical pattern.
+  {
+    function sigOf(ev){
+      if(!ev || !ev.n || !ev.n.length) return '';
+      const pcs = ev.n.map(n => n.m%12);
+      pcs.sort((a,b)=>a-b);
+      const out=[]; for(const p of pcs) if(out[out.length-1]!==p) out.push(p);
+      return out.join(',');
+    }
+    const ALB_MIN = 4;
+    const ALB_MAX = 12;
+    let i = 0;
+    while(i < evts.length){
+      const sig = sigOf(evts[i]);
+      if(!sig){ i++; continue; }
+      // Find run end (skip events already reshaped by tremolo)
+      let j = i+1;
+      while(j < evts.length && sigOf(evts[j]) === sig && !evts[j]._tremolo) j++;
+      const runLen = j - i;
+      if(runLen >= ALB_MIN && runLen <= ALB_MAX && evts[i].n.length >= 3){
+        // Test softness: is the loudest note in this run < 55?
+        let maxV = 0;
+        for(let k=i; k<j; k++){
+          for(const n of evts[k].n) if((n.v||0) > maxV) maxV = n.v||0;
+        }
+        if(maxV < 55){
+          // Sort chord notes by pitch (low → high)
+          const sortedNotes = [...evts[i].n].sort((a,b) => a.m - b.m);
+          const bass = sortedNotes[0];
+          const top = sortedNotes[sortedNotes.length - 1];
+          const mid = sortedNotes[Math.floor(sortedNotes.length / 2)];
+          // Classic Alberti rotation: bass → top → mid → top
+          const cycle = [bass, top, mid, top];
+          for(let k=0; k<runLen; k++){
+            const src = cycle[k % cycle.length];
+            const ev = evts[i+k];
+            ev.n = [{
+              m: src.m,
+              v: Math.max(20, Math.min(120, (src.v || 50))),
+              durMs: src.durMs
+            }];
+            ev._alberti = true;
+          }
+        }
+      }
+      i = j;
     }
   }
   // ─── Run-length collapsing — kill the "plem plem" on flat surfaces ──────
