@@ -13812,13 +13812,115 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
     }
   }
-  // ─── Final dynamics scaling: soften calm paintings, keep wild ones loud ──────
-  // Relative shaping above (accents, arc, phrasing) is preserved; only the overall
-  // level shifts. A calm Monet plays mp/p, a busy Picasso stays loud.
-  if(Math.abs(dynScale-1)>0.001){
-    for(const ev of evts){
-      if(!ev.n || !ev.n.length) continue;
-      ev.n = ev.n.map(n=>({...n, v: Math.max(20, Math.min(120, Math.round((n.v||64)*dynScale)))}));
+  // ─── Final dynamics: ATMO as centre + range, not flat multiplier ────────
+  // Older model: dynScale (~0.55 for serene) collapsed ALL velocities toward
+  // zero in calm pieces — that's what made everything sound like a stuck
+  // slow-motion film. Forte accents got smashed down to the same range as
+  // piano background, so the piece lost its musical contour entirely.
+  //
+  // New model treats ATMO as a CENTRE-OF-GRAVITY for the dynamic range,
+  // plus a compression ratio that's gentler than the old flat scale:
+  //
+  //   calm   → centre = 50  (mp),  compress = 0.75  → forte still reaches ~85
+  //   neutral → centre = 70 (mf),  compress = 1.00  → full range untouched
+  //   intense → centre = 82 (f),   compress = 1.15  → expanded, dramatic
+  //
+  // The musical hierarchy survives because peaks stay relatively above the
+  // background — they just sit at a different absolute level. A calm Monet
+  // still has its visual climax painted as a clear musical climax, only
+  // mezzo-forte instead of fortissimo. An intense Picasso has its quiet
+  // moments still quieter than its loud ones, dramatically so.
+  // dynE (image's own restlessness from contrast+busyness) shifts the
+  // centre on top of ATMO so a calm-tagged BUSY painting lands slightly
+  // brighter than a calm-tagged FLAT painting (image still has a voice).
+  const _atmoCentre  = atmoE!=null ? (40 + atmoE*48) : 70;     // 40..88 by atmo
+  const _imgCentreAdj = (dynE - 0.5) * 12;                       // image busyness ±6
+  const dynCentre = Math.max(34, Math.min(92, Math.round(_atmoCentre + _imgCentreAdj)));
+  const dynCompress = atmoE!=null
+    ? (atmoE<0.5 ? (0.75 + 0.50*atmoE)            // 0.75 (serene) → 1.00 (neutral)
+                 : (1.00 + 0.30*(atmoE-0.5)/0.5)) // 1.00 (neutral) → 1.30 (frantic)
+    : 1.0;
+  // Reference centre = "what the per-event computation assumed before scaling".
+  // Without ATMO the per-pixel pipeline produces v ≈ 38..106 with avg ~70, so
+  // 70 is the natural pre-shift centre. We compress around that, then shift
+  // the result onto dynCentre.
+  const PRE_CENTRE = 70;
+  for(const ev of evts){
+    if(!ev.n || !ev.n.length) continue;
+    ev.n = ev.n.map(n => {
+      const raw = n.v || 64;
+      const compressed = PRE_CENTRE + (raw - PRE_CENTRE) * dynCompress;
+      const shifted = compressed + (dynCentre - PRE_CENTRE);
+      return {...n, v: Math.max(20, Math.min(120, Math.round(shifted)))};
+    });
+  }
+  // ─── Phrasing arc — micro-crescendos on natural image edges ──────────────
+  // Even with the centre+range fix above, ATMO calm could still feel
+  // monotone if every event sat near the new centre. Music breathes by
+  // ARCS — short crescendos building to a small peak, then easing back.
+  // We add that here by walking the event stream, detecting natural
+  // PHRASE BOUNDARIES (where the chord pitch-class set changes), and
+  // shaping each phrase as a gentle arc: starts at centre, swells ~+8
+  // velocity at the phrase's golden-section peak, eases back at end.
+  // The arc amplitude scales DOWN in calm pieces (so peaks stay tasteful,
+  // not jarring) and UP slightly in intense pieces (more dramatic).
+  // Accents (high-chroma events) get a small extra +4 on top so they
+  // stand out even within the arc — keeping the "mountains" of the image
+  // audible regardless of ATMO.
+  {
+    function chordSigForArc(ev){
+      if(!ev || !ev.n || !ev.n.length) return '';
+      const pcs = ev.n.map(n => n.m%12);
+      pcs.sort((a,b)=>a-b);
+      const out=[]; for(const p of pcs) if(out[out.length-1]!==p) out.push(p);
+      return out.join(',');
+    }
+    // Arc amplitude: calm = small swells (±5), neutral = ±8, intense = ±11.
+    const arcAmp = atmoE!=null ? (5 + 6*atmoE) : 8;
+    // Find phrase boundaries (sig change). Min phrase length 4 events so we
+    // don't try to arc tiny fragments.
+    const boundaries = [0];
+    let lastSig = chordSigForArc(evts[0]);
+    for(let i=1; i<evts.length; i++){
+      const s = chordSigForArc(evts[i]);
+      if(s && s !== lastSig && (i - boundaries[boundaries.length-1]) >= 4){
+        boundaries.push(i);
+        lastSig = s;
+      }
+    }
+    boundaries.push(evts.length);
+    // Shape each phrase as an arc using a smooth bell (sin) curve.
+    for(let pi=0; pi<boundaries.length-1; pi++){
+      const s = boundaries[pi], e = boundaries[pi+1];
+      const len = e - s;
+      if(len < 2) continue;
+      // Peak at the golden section (~0.618) of the phrase — natural musical
+      // weighting. Sin curve climbs from 0 (start) to 1 (peak) to 0 (end).
+      const peakIdx = Math.round(len * 0.618);
+      for(let k=0; k<len; k++){
+        let t;
+        if(k <= peakIdx) t = peakIdx>0 ? k/peakIdx : 0;
+        else t = (len-1-k) / Math.max(1, len-1-peakIdx);
+        // sin half-cycle 0→1→0 (with t already 0..1)
+        const arc = Math.sin(t * Math.PI/2);
+        const swell = arc * arcAmp;
+        const ev = evts[s+k];
+        if(!ev.n || !ev.n.length) continue;
+        ev.n = ev.n.map(n => ({...n, v: Math.max(20, Math.min(120, Math.round(n.v + swell)))}));
+      }
+    }
+    // Local accents: events with significantly higher chroma than their
+    // neighbours get a small +4 nudge so the image's mountains stay
+    // audible inside the arc shape.
+    for(let i=1; i<evts.length-1; i++){
+      const c0 = evts[i-1]._chroma || 0;
+      const c1 = evts[i]._chroma || 0;
+      const c2 = evts[i+1]._chroma || 0;
+      if(c1 > c0 + 18 && c1 > c2 + 18){
+        const ev = evts[i];
+        if(!ev.n || !ev.n.length) continue;
+        ev.n = ev.n.map(n => ({...n, v: Math.max(20, Math.min(120, Math.round(n.v + 4)))}));
+      }
     }
   }
   // ─── Run-length collapsing — kill the "plem plem" on flat surfaces ──────
