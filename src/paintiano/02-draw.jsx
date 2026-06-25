@@ -11064,16 +11064,42 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // painting is. Used later to decide chord fullness (vivid → full triad with
       // its mood-defining third; muted → open, airy voicing).
       let cellChroma=0, cellChN=0;
+      // FLATNESS metric: how monotonous is this cell's pixel area?
+      // Rothko-style colour fields (huge same-colour planes) generate
+      // mechanically identical chords across many cells → repetitive output.
+      // We compute per-cell lightness variance + hue spread; the post-loop
+      // variation pass uses this (plus neighbours) to decide which cells
+      // get rubato, jitter, voicing shift, or rests. Cheap to do here since
+      // we're already iterating these pixels.
+      let lSumC=0, lSqSumC=0, lNC=0;
+      let hueMinC=361, hueMaxC=-1;
       for(let sk=0;sk<COL_STEP;sk++){
         const col=cg*COL_STEP+sk; if(col>=nc) break;
         for(let j=0;j<CHORD_SIZE;j++){
           const row=band*CHORD_SIZE+j; if(row>=nr) break;
           const idx=row*nc+col;
-          const{r,g,b}=px[idx],[ ,ss,ll]=toHsl(r,g,b);
+          const{r,g,b}=px[idx],[hh,ss,ll]=toHsl(r,g,b);
           cellChroma += ss*Math.min(ll,100-ll)/50; cellChN++;
+          lSumC += ll; lSqSumC += ll*ll; lNC++;
+          if(ss > 8){ // ignore near-grey pixels for hue spread (their hue is noise)
+            if(hh < hueMinC) hueMinC = hh;
+            if(hh > hueMaxC) hueMaxC = hh;
+          }
           const n=pxToNote(idx);
           if(n&&!seenM.has(n.m)){seenM.add(n.m);notes.push(n);}
         }
+      }
+      // 0 = totally flat (one uniform colour), 1 = highly varied texture.
+      // varL ranges roughly 0..400 in practice; we normalise by 100 to land
+      // most cells in 0..2 then clamp. Hue spread (degrees) caps at ~60° for
+      // a noticeable rainbow gradient within a single cell.
+      let _flat = 0;
+      if(lNC>0){
+        const lMean = lSumC/lNC;
+        const lVar  = Math.max(0, lSqSumC/lNC - lMean*lMean);
+        const hueSpread = hueMaxC>=0 ? (hueMaxC-hueMinC) : 0;
+        const varScore = Math.min(1, lVar/100) * 0.65 + Math.min(1, hueSpread/60) * 0.35;
+        _flat = 1 - varScore;
       }
       // Fallback: grab the most vivid pixel anywhere in the column group
       if(notes.length===0){
@@ -11085,8 +11111,123 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       }
       // Store band+cg so the canvas mosaic can paint each event's exact cell in
       // traversal order (needed for non-row-major directions like vert/spiral).
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0});
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat});
       evIdx++;
+    }
+  }
+  // ─── ROTHKO PASS — flat-region variation injection ──
+  // Large monochrome color fields (Rothko, Reinhardt, Ad Reinhardt black-on-
+  // black, Yves Klein blue) generate mechanically identical chords across
+  // 60-80% of the canvas — same hue → same pitch class, same chroma → same
+  // velocity, same lightness → same voicing. Result: repetitive. This pass
+  // identifies cells in flat regions (high flatness + low chroma + flat
+  // neighbours) and injects deterministic micro-variation: velocity jitter,
+  // timing rubato, vertical voicing shift, and occasional rests. Cells that
+  // already have variance (Van Gogh brush-strokes, Picasso fragmentation,
+  // Kandinsky scatter) score low on _flat and stay completely untouched.
+  if(evts.length > 0){
+    // Build a band/cg lookup so we can sample neighbours regardless of
+    // traversal direction. Map from "band*effCols+cg" → evts index.
+    const cellMap = new Map();
+    for(let i=0;i<evts.length;i++){
+      const e = evts[i];
+      cellMap.set(e.band*effCols + e.cg, i);
+    }
+    // Image-wide chroma median — used as the "vivid threshold". A cell is
+    // a candidate for the Rothko pass ONLY if its chroma is below median;
+    // otherwise the variation would chew up texture in already-busy parts.
+    const chromaSorted = evts.map(e=>e._chroma||0).slice().sort((a,b)=>a-b);
+    const chromaMed = chromaSorted[Math.floor(chromaSorted.length*0.5)] || 0;
+    // Pass A: per-cell region detection. A cell is "in flat region" if its
+    // 5×3 neighbourhood (±2 horizontal, ±1 vertical) has mean flatness
+    // ≥ 0.55 and the cell itself has chroma below the image median.
+    for(let i=0;i<evts.length;i++){
+      const e = evts[i];
+      if((e._chroma||0) >= chromaMed){ e._inFlatRegion = false; continue; }
+      let sum=0, n=0;
+      for(let db=-1; db<=1; db++){
+        for(let dc=-2; dc<=2; dc++){
+          const key = (e.band+db)*effCols + (e.cg+dc);
+          const ni = cellMap.get(key);
+          if(ni!=null){ sum += (evts[ni]._flat||0); n++; }
+        }
+      }
+      const meanFlat = n>0 ? sum/n : 0;
+      e._inFlatRegion = meanFlat >= 0.55;
+    }
+    // Pass B: variation injection on flat-region cells. Determinism is
+    // critical (same painting must produce same output) — we hash (band, cg)
+    // into a pseudo-random 0..1 instead of Math.random.
+    const detRnd = (band, cg, salt)=>{
+      // Numerical Recipes LCG seeded with band/cg/salt.
+      let h = ((band*48271 + cg*16807 + salt*2654435761) >>> 0);
+      h = ((h*1103515245 + 12345) >>> 0);
+      return (h % 233280) / 233280;
+    };
+    // Track band extents per flat region so the voicing shift knows which
+    // cells are "top of region" vs "bottom of region". Simple per-band-column
+    // chain detection: if cell at (band, cg) is flat AND cells above
+    // (band-1, cg) and (band-2, cg) are also flat, this cell is "lower";
+    // mirror for upper.
+    const isFlat = (band, cg)=>{
+      const ni = cellMap.get(band*effCols + cg);
+      return ni!=null && evts[ni]._inFlatRegion === true;
+    };
+    let rotIdx = 0; // monotonic counter for rest pattern (every 6th flat cell)
+    for(let i=0;i<evts.length;i++){
+      const e = evts[i];
+      if(!e._inFlatRegion) continue;
+      const notes = e.n;
+      if(!notes || notes.length === 0) continue;
+      // (D) REST: every 6th flat cell becomes silent. Creates phrasing the
+      // chord stream wouldn't otherwise have. Skip the first/last cells in
+      // a row so the painting doesn't start or end on silence.
+      rotIdx++;
+      if(rotIdx % 6 === 0 && i > 4 && i < evts.length - 4){
+        e.n = []; // empty notes array = rest
+        continue; // skip further mods for this cell
+      }
+      // (B) Velocity jitter ±12% — same multiplier applied to all notes in
+      // this chord so internal balance is preserved.
+      const velMul = 0.88 + detRnd(e.band, e.cg, 1) * 0.24; // 0.88..1.12
+      // (B) Timing rubato ±20ms — small enough to feel like breath, not
+      // arrhythmia. Pure cosmetic offset on startMs.
+      const tJit = (detRnd(e.band, e.cg, 2) - 0.5) * 40; // -20..+20 ms
+      e.startMs = Math.max(0, e.startMs + tJit);
+      // (C) Voicing shift: vertical position within the region drives octave
+      // bias on the chord extremes. "Top of region" = highest band in this
+      // column's flat chain → push the top note up; "bottom of region" =
+      // lowest band → push the bass note down. Result: the colour field
+      // splits into upper/lower harmonic regions instead of one flat plane.
+      let topShift = 0, bassShift = 0;
+      const aboveFlat  = isFlat(e.band - 1, e.cg);
+      const above2Flat = isFlat(e.band - 2, e.cg);
+      const belowFlat  = isFlat(e.band + 1, e.cg);
+      const below2Flat = isFlat(e.band + 2, e.cg);
+      if(!aboveFlat && belowFlat){
+        // This cell is at the TOP of a multi-row flat region → lift top voice
+        topShift = below2Flat ? 7 : 5;
+      } else if(!belowFlat && aboveFlat){
+        // This cell is at the BOTTOM of a multi-row flat region → drop bass
+        bassShift = above2Flat ? -7 : -5;
+      }
+      // Apply velocity multiplier to ALL notes; apply pitch shifts to the
+      // extreme voices only (top → highest m, bass → lowest m).
+      let topI=0, bassI=0;
+      for(let k=1;k<notes.length;k++){
+        if(notes[k].m > notes[topI].m) topI=k;
+        if(notes[k].m < notes[bassI].m) bassI=k;
+      }
+      for(let k=0;k<notes.length;k++){
+        const baseV = notes[k].v != null ? notes[k].v : 80;
+        notes[k] = {...notes[k], v: Math.max(20, Math.min(127, Math.round(baseV * velMul)))};
+      }
+      if(topShift !== 0 && notes[topI]){
+        notes[topI] = {...notes[topI], m: Math.max(0, Math.min(127, notes[topI].m + topShift))};
+      }
+      if(bassShift !== 0 && notes[bassI] && bassI !== topI){
+        notes[bassI] = {...notes[bassI], m: Math.max(0, Math.min(127, notes[bassI].m + bassShift))};
+      }
     }
   }
   // ─── Music theory pass ──
