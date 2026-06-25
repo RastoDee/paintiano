@@ -28357,17 +28357,10 @@ Composition rules:
               canvas into Image mode and let the user replay it through the
               image-scan pipeline (same painting, different voice). Visible
               only in music sources where there's actually a painting to
-              hear. Orange accent (image modality) signals where the chip
-              leads. Step 1: UI only — onClick is a no-op placeholder. */}
+              hear. Styled identically to + NEW IMAGE (orange modality).
+              Step 1: UI only — onClick is a no-op placeholder. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; return (
-            <button onClick={()=>{ /* Step 1: no-op placeholder. Step 2 will: stop song, capture canvas, switch to image mode, inject as upload */ }} disabled={recording} className="pf-lift" title={t('hearImage')||'Hear image'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(244,124,60,.12)',color:recording?'rgba(230,222,196,.25)':'rgba(248,170,120,.95)',border:'1px solid '+(recording?'rgba(242,238,232,.15)':'rgba(248,170,120,.5)'),borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}>
-                <path d="M2 6 L2 10 L5 10 L9 13 L9 3 L5 6 Z" fill="currentColor"/>
-                <path d="M11 5.5 Q13 8 11 10.5" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-                <path d="M12.5 4 Q15.5 8 12.5 12" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-              </svg>
-              {t('hearImage')||'Hear image'}
-            </button>
+            <button onClick={()=>{ /* Step 1: no-op placeholder. Step 2 will: stop song, capture canvas, switch to image mode, inject as upload */ }} disabled={recording} className="pf-lift" title={t('hearImage')||'Hear image'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(recording?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{t('hearImage')||'Hear image'}</button>
           ); })()}
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
