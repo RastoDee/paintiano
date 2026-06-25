@@ -9515,9 +9515,11 @@ Composition rules:
               image-scan pipeline (same painting, different voice). Visible
               only in music sources where there's actually a painting to
               hear. Styled identically to + NEW IMAGE (orange modality).
+              Tight to + NEW MUSIC via negative right-margin — they form
+              a 'modality pair' (current music · target image).
               Step 1: UI only — onClick is a no-op placeholder. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; return (
-            <button onClick={()=>{ /* Step 1: no-op placeholder. Step 2 will: stop song, capture canvas, switch to image mode, inject as upload */ }} disabled={recording} className="pf-lift" title={t('hearImage')||'Hear image'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(recording?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{t('hearImage')||'Hear image'}</button>
+            <button onClick={()=>{ /* Step 1: no-op placeholder. Step 2 will: stop song, capture canvas, switch to image mode, inject as upload */ }} disabled={recording} className="pf-lift" title="Hear image" style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(recording?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Hear image</button>
           ); })()}
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
