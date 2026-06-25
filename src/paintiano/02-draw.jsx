@@ -12178,6 +12178,67 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       ev.n = ev.n.map(n=>({...n, v: Math.max(20, Math.min(120, Math.round((n.v||64)*dynScale)))}));
     }
   }
+  // ─── Run-length collapsing — kill the "plem plem" on flat surfaces ──────
+  // Large monochrome regions of a painting (Rothko-like fields, Chagall skies,
+  // big background areas in any composition) produce LONG RUNS of nearly-
+  // identical chords in the event stream. Played back literally that becomes
+  // a repeated hammered note pattern that ruins the music — meditation
+  // surfaces should breathe, not pulse.
+  //
+  // Fix: detect runs of consecutive events that share the SAME pitch-class
+  // set (octave-normalised so different voicings of the same chord still
+  // match). The first event of the run keeps its full attack — that's the
+  // harmonic "arrival". Subsequent events in the run get reshaped into
+  // QUIET ARPEGGIO SHIMMERS: one rotating note from the chord at very low
+  // velocity, so the surface still has motion and sparkle (not silence)
+  // but the harmonic field hangs as a single hovering colour. The moment
+  // the painting's colour actually changes, the next event hits a new
+  // chord at full attack again — that's where motion resumes.
+  //
+  // Threshold: 3 or more identical consecutive events triggers collapsing.
+  // A single repeat (2 identical events) reads as a beat and stays full.
+  {
+    const RUN_MIN = 3;                       // need this many identical in a row before we collapse
+    const SHIMMER_VEL = 26;                  // velocity for collapsed shimmer notes (very soft)
+    function chordSig(ev){
+      if(!ev || !ev.n || !ev.n.length) return '';
+      const pcs = ev.n.map(n => n.m%12);
+      pcs.sort((a,b)=>a-b);
+      // dedupe (same pitch class in multiple octaves only counts once)
+      const out = [];
+      for(const p of pcs) if(out[out.length-1] !== p) out.push(p);
+      return out.join(',');
+    }
+    let i = 0;
+    while(i < evts.length){
+      const sig = chordSig(evts[i]);
+      if(!sig){ i++; continue; }
+      // find run end
+      let j = i+1;
+      while(j < evts.length && chordSig(evts[j]) === sig) j++;
+      const runLen = j - i;
+      if(runLen >= RUN_MIN){
+        // First event of the run keeps full attack (the harmonic arrival).
+        // Remaining events 1..runLen-1 become quiet rotating shimmers.
+        const chordNotes = evts[i].n.slice();   // snapshot — same pitch material throughout the run
+        for(let k = 1; k < runLen; k++){
+          const ev = evts[i+k];
+          if(!ev) continue;
+          // Rotate which note of the chord plays — slow arpeggio illusion
+          // across the flat surface so it shimmers rather than throbs.
+          const rotIdx = k % chordNotes.length;
+          const src = chordNotes[rotIdx];
+          ev.n = [{
+            m: src.m,
+            v: SHIMMER_VEL,
+            durMs: src.durMs
+          }];
+          ev._collapsedShimmer = true;          // marker for downstream (paint/debug)
+        }
+      }
+      i = j;
+    }
+  }
   return evts;
 }
 
