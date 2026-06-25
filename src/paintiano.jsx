@@ -13729,65 +13729,6 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       }
     }
   }
-  // ─── TEMPO MODULATION (agogics) — per-event step time ───────────────────────
-  // The scan playback used to advance one cell every fixed 150 ms, so every
-  // painting played at one flat, mechanical pulse ("like a saw"). Real music
-  // breathes: it slows for weight, leans into accents, and eases at phrase ends.
-  // Here we give each event its OWN step interval (_stepMs) as a function of the
-  // IMAGE itself, so tempo becomes expressive while staying fully deterministic
-  // (same image → same rubato). The player reads _stepMs instead of the constant.
-  // Three layers, all multiplied onto a base step:
-  //   (1) DARK→SLOW: this strip's brightness (barLight). Dark/heavy strips stretch
-  //       out (broader, weightier), luminous strips move a touch quicker.
-  //   (2) VIVID ACCENT: a saturated, charged strip (barVivid) earns a small
-  //       agogic lean — the note is given a bit more time, like a played stress.
-  //   (3) PHRASE BREATH: the last cell of each bar is lengthened (a tiny caesura,
-  //       a breath between phrases); plus a closing RITARDANDO over the final bars
-  //       so the piece arrives instead of being cut off mid-stream.
-  // Rests advance a little quicker so silence doesn't drag.
-  {
-    // Per-cell interval. Centre at 200ms (was 150 — default was a machine gun).
-    // Serene atmo widens up to 260ms (real breathing room); frantic atmo compresses
-    // down to 100ms (driving pulse). Neutral mood (or no atmo) stays at 200.
-    const _stepAtmoShift = (atmoE!=null)
-      ? (atmoE<0.5 ? +60*(0.5-atmoE)/0.5 : -100*(atmoE-0.5)/0.5)
-      : 0;
-    const BASE_STEP = 200 + _stepAtmoShift;
-    const _nBars = Math.max(1, Math.ceil(evts.length / BAR_EVENTS));
-    const _ritStart = Math.max(0, evts.length - Math.min(48, BAR_EVENTS*1.5)); // last ~1.5 bars
-    for(let i=0;i<evts.length;i++){
-      const ev=evts[i];
-      const _bi = Math.floor(i / BAR_EVENTS);
-      // barLight/barVivid are 0..1 across THIS painting (computed above).
-      const _light = (typeof barLight!=='undefined' && barLight[_bi]!=null) ? barLight[_bi] : 0.5;
-      const _vivid = (typeof barVivid!=='undefined' && barVivid[_bi]!=null) ? barVivid[_bi] : 0.5;
-      // (1) Dark→slow: centre on 1.0 so mid-brightness is neutral. Dark strip
-      //     (light→0) up to +30% time; bright strip (light→1) down to ~-12%.
-      const darkFactor = 1 + 0.30*(1-_light) - 0.12*_light;
-      // (2) Vivid accent: a charged strip leans ~ up to +14% (agogic stress).
-      const accentFactor = 1 + 0.14*_vivid;
-      // (3a) Phrase breath: the LAST cell of a bar gets a caesura; the cell right
-      //      after (a downbeat / chord turn) also broadens slightly to settle.
-      const isBarEnd   = ((i+1)%BAR_EVENTS)===0;
-      const isBarStart = (i%BAR_EVENTS)===0;
-      let breathFactor = 1;
-      if(isBarEnd)        breathFactor = 1.35;   // breath between phrases
-      else if(isBarStart) breathFactor = 1.10;   // settle onto the new phrase
-      // (3b) Closing ritardando: ease the final ~1.5 bars from 1.0 → ~1.6.
-      let ritardFactor = 1;
-      if(i>=_ritStart && evts.length>BAR_EVENTS){
-        const t=(i-_ritStart)/Math.max(1,(evts.length-1-_ritStart)); // 0..1
-        ritardFactor = 1 + 0.6*t;
-      }
-      // Rests don't need the agogic weight — keep silence moving (but still let
-      // the bar-end breath and the closing ritard apply, so phrasing holds).
-      const isRest = (ev._rest || ev._melRest || ev._playable===false || !ev.n.length);
-      const restFactor = isRest ? 0.82 : 1;
-      let stepMs = BASE_STEP * darkFactor * accentFactor * breathFactor * ritardFactor * restFactor;
-      // Safety clamp: never absurdly fast or slow per cell.
-      ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
-    }
-  }
   // ─── Articulation — staccato on edges, legato on smooth passages ─────────
   // Image edges (where a chord-signature changes AND the chroma jumps) are
   // perceptually the "consonants" of the painting — sharp transitions that
@@ -14189,6 +14130,67 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       delete ev._planeBlockIdx;
       delete ev._planeDrift;
       i += rl - 1;                            // skip past the expanded plane
+    }
+  }
+  // ─── TEMPO MODULATION (agogics) — per-event step time ───────────────────────
+  // The scan playback used to advance one cell every fixed 150 ms, so every
+  // painting played at one flat, mechanical pulse ("like a saw"). Real music
+  // breathes: it slows for weight, leans into accents, and eases at phrase ends.
+  // Here we give each event its OWN step interval (_stepMs) as a function of the
+  // IMAGE itself, so tempo becomes expressive while staying fully deterministic
+  // (same image → same rubato). The player reads _stepMs instead of the constant.
+  // Three layers, all multiplied onto a base step:
+  //   (1) DARK→SLOW: this strip's brightness (barLight). Dark/heavy strips stretch
+  //       out (broader, weightier), luminous strips move a touch quicker.
+  //   (2) VIVID ACCENT: a saturated, charged strip (barVivid) earns a small
+  //       agogic lean — the note is given a bit more time, like a played stress.
+  //   (3) PHRASE BREATH: the last cell of each bar is lengthened (a tiny caesura,
+  //       a breath between phrases); plus a closing RITARDANDO over the final bars
+  //       so the piece arrives instead of being cut off mid-stream.
+  // Rests advance a little quicker so silence doesn't drag.
+  // Run LAST so the final event structure (after Alberti / Run-length / Tremolo
+  // expansions reflipping _playable) is what's reflected in _stepMs.
+  {
+    // Per-cell interval. Centre at 200ms (was 150 — default was a machine gun).
+    // Serene atmo widens up to 260ms (real breathing room); frantic atmo compresses
+    // down to 100ms (driving pulse). Neutral mood (or no atmo) stays at 200.
+    const _stepAtmoShift = (atmoE!=null)
+      ? (atmoE<0.5 ? +60*(0.5-atmoE)/0.5 : -100*(atmoE-0.5)/0.5)
+      : 0;
+    const BASE_STEP = 200 + _stepAtmoShift;
+    const _nBars = Math.max(1, Math.ceil(evts.length / BAR_EVENTS));
+    const _ritStart = Math.max(0, evts.length - Math.min(48, BAR_EVENTS*1.5)); // last ~1.5 bars
+    for(let i=0;i<evts.length;i++){
+      const ev=evts[i];
+      const _bi = Math.floor(i / BAR_EVENTS);
+      // barLight/barVivid are 0..1 across THIS painting (computed above).
+      const _light = (typeof barLight!=='undefined' && barLight[_bi]!=null) ? barLight[_bi] : 0.5;
+      const _vivid = (typeof barVivid!=='undefined' && barVivid[_bi]!=null) ? barVivid[_bi] : 0.5;
+      // (1) Dark→slow: centre on 1.0 so mid-brightness is neutral. Dark strip
+      //     (light→0) up to +30% time; bright strip (light→1) down to ~-12%.
+      const darkFactor = 1 + 0.30*(1-_light) - 0.12*_light;
+      // (2) Vivid accent: a charged strip leans ~ up to +14% (agogic stress).
+      const accentFactor = 1 + 0.14*_vivid;
+      // (3a) Phrase breath: the LAST cell of a bar gets a caesura; the cell right
+      //      after (a downbeat / chord turn) also broadens slightly to settle.
+      const isBarEnd   = ((i+1)%BAR_EVENTS)===0;
+      const isBarStart = (i%BAR_EVENTS)===0;
+      let breathFactor = 1;
+      if(isBarEnd)        breathFactor = 1.35;   // breath between phrases
+      else if(isBarStart) breathFactor = 1.10;   // settle onto the new phrase
+      // (3b) Closing ritardando: ease the final ~1.5 bars from 1.0 → ~1.6.
+      let ritardFactor = 1;
+      if(i>=_ritStart && evts.length>BAR_EVENTS){
+        const t=(i-_ritStart)/Math.max(1,(evts.length-1-_ritStart)); // 0..1
+        ritardFactor = 1 + 0.6*t;
+      }
+      // Rests don't need the agogic weight — keep silence moving (but still let
+      // the bar-end breath and the closing ritard apply, so phrasing holds).
+      const isRest = (ev._rest || ev._melRest || ev._playable===false || !ev.n.length);
+      const restFactor = isRest ? 0.82 : 1;
+      let stepMs = BASE_STEP * darkFactor * accentFactor * breathFactor * ritardFactor * restFactor;
+      // Safety clamp: never absurdly fast or slow per cell.
+      ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
     }
   }
   return evts;
