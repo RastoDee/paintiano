@@ -9514,12 +9514,12 @@ Composition rules:
               canvas into Image mode and let the user replay it through the
               image-scan pipeline (same painting, different voice). Visible
               only in music sources where there's actually a painting to
-              hear. Styled identically to + NEW IMAGE (orange modality).
-              Tight to + NEW MUSIC via negative right-margin — they form
-              a 'modality pair' (current music · target image).
-              Step 1: UI only — onClick is a no-op placeholder. */}
-          {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; return (
-            <button onClick={()=>{ /* Step 1: no-op placeholder. Step 2 will: stop song, capture canvas, switch to image mode, inject as upload */ }} disabled={recording} className="pf-lift" title="Hear image" style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(recording?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Hear image</button>
+              hear. ACTIVE only after the song has reached its end (chords
+              loaded, not playing, disp at the last chord) — half-finished
+              paintings are not yet ready to scan. Styled identically to
+              + NEW IMAGE (orange modality). */}
+          {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; const _paintingDone = chords.length>0 && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
+            <button onClick={()=>{ if(_dis) return; /* Step 2 hook lands here next: stop song (if any), capture canvas, switch to image mode, inject as upload */ }} disabled={_dis} className="pf-lift" title={_paintingDone?'Hear image':'Finish the painting first'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:_dis?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(_dis?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:_dis?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Hear image</button>
           ); })()}
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
