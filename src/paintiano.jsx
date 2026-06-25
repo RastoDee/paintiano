@@ -248,7 +248,7 @@ const PF_STYLE = `
           justify-content: flex-start !important;
           gap: 16px !important;
         }
-        @media (min-width: 1100px) and (min-height: 501px),
+        @media (min-width: 1100px) and (orientation: landscape) and (min-height: 501px),
                (min-width: 769px) and (orientation: landscape) and (min-height: 501px),
                (max-height: 500px) and (orientation: landscape) {
           html, body {
@@ -13812,6 +13812,26 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // Safety clamp: never absurdly fast or slow per cell.
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
     }
+  }
+  // ─── Voicing — bring the top voice forward as melody ─────────────────────
+  // Keyboard music is heard "top-voice-as-melody" by default: the brain
+  // picks the highest pitch in a chord and reads it as the tune, with the
+  // lower notes as accompaniment. Until now every note in an image chord
+  // sounded equally loud, so the whole thing read as a wash with no
+  // melodic thread. Here we lift the highest-MIDI note in each chord by
+  // +15 velocity and pull the rest down by -3 (small dip just to widen
+  // the contrast). The accent / arc / dynamics passes that follow still
+  // shape the piece normally; the melody just sits a little above the
+  // harmony at every step.
+  // Applied BEFORE dynamics so the voicing differential survives compression.
+  for(const ev of evts){
+    if(!ev.n || ev.n.length < 2) continue;
+    let topIdx = 0;
+    for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
+    ev.n = ev.n.map((n,k) => ({
+      ...n,
+      v: Math.max(20, Math.min(120, (n.v||64) + (k===topIdx ? 15 : -3)))
+    }));
   }
   // ─── Final dynamics: ATMO as centre + range, not flat multiplier ────────
   // Older model: dynScale (~0.55 for serene) collapsed ALL velocities toward
