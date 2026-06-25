@@ -13580,50 +13580,25 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       ev.n=ev.n.map(n=>({...n,v:Math.max(22,Math.min(120,Math.round((n.v||64)*mul)))}));
     }
   }
-  // ─── Articulation from texture (deterministic) ─────────────────────────────
-  // Smooth, uniform stretches of the image play LEGATO (longer, connected notes);
-  // busy, high-contrast stretches play STACCATO (short, detached). We measure
-  // local "busyness" as the average absolute change in saliency to neighbouring
-  // events, normalise it across the piece, and scale each note's durMs: calm
-  // areas breathe, detailed areas feel crisp and energetic.
-  const texture=evts.map((ev,i)=>{
-    if(!ev.n.length) return 0;
-    let d=0,c=0;
-    for(let k=Math.max(0,i-2);k<=Math.min(evts.length-1,i+2);k++){
-      if(k===i) continue; d+=Math.abs(sal[i]-sal[k]); c++;
-    }
-    return c?d/c:0;
-  });
-  const texSorted=texture.filter((_,i)=>evts[i].n.length).slice().sort((a,b)=>a-b);
-  const texLo=texSorted.length?texSorted[Math.floor(texSorted.length*0.2)]:0;
-  const texHi=texSorted.length?texSorted[Math.floor(texSorted.length*0.8)]:1;
-  const texRange=(texHi-texLo)||1;
+  // ─── Per-voice articulation (deterministic) ────────────────────────────────
+  // A real pianist does not give every voice the same length. The MELODY (top
+  // voice) sings — held long, legato — while the BASS is plucked short and
+  // detached (staccato) so it punctuates without muddying the texture; inner
+  // (mid) voices stay neutral. Signal: a note's role within its own chord —
+  // the highest non-bass pitch is the melody, `n.bass` is the bass, the rest
+  // are mid.
+  //
+  // The texture-driven artMul (smooth=legato, busy=staccato) that used to
+  // live here has been removed — the downstream Articulation pass detects
+  // edges with a music-theory signal (chord-sig change + chroma jump for
+  // staccato, same chord + low chroma delta for legato) which is more
+  // accurate than raw saliency delta. Stacking both was producing dur ×
+  // 0.45 × 0.45 = ×0.20 (inaudible) on busy edges and ×1.30 × 1.6 × 1.4 =
+  // ×2.91 (overlapping) on smooth top voices.
+  const durFloor = Math.round(140 - 70*rhythmDrive);  // 140ms calm … 70ms driving
   for(let i=0;i<evts.length;i++){
     const ev=evts[i];
     if(!ev.n.length||ev._playable===false) continue;
-    const t=Math.max(0,Math.min(1,(texture[i]-texLo)/texRange)); // 0 smooth … 1 busy
-    // Articulation = a COMPOSER'S mix, not a single global setting. Two axes:
-    //   • local texture t  — smooth patches sing long, busy patches clip short
-    //   • global rhythmDrive — a serene painting stays legato everywhere; a
-    //     driving one lets its busy patches become real STACCATO while its
-    //     smooth patches still ring. So one fierce canvas alternates long lyrical
-    //     notes and crisp detached ones (musical), instead of everything legato.
-    // legatoTop: longest ring on smooth cells (1.6× calm → 1.15× driving).
-    // stacMin: shortest on busy cells (1.1× calm = still legato → 0.45× driving = crisp).
-    const legatoTop = 1.6 - 0.45*rhythmDrive;
-    const stacMin   = 1.1 - 0.65*rhythmDrive;
-    const artMul = legatoTop - (legatoTop - stacMin)*t;
-    // Floor scales down with drive so staccato is actually short when lively, but
-    // never a click. Calm keeps the old generous 140ms minimum.
-    const durFloor = Math.round(140 - 70*rhythmDrive);  // 140ms calm … 70ms driving
-    // ─── PIANO TECHNIQUE: PER-VOICE ARTICULATION ──────────────────────────────
-    // A real pianist does not give every voice the same length. The MELODY (top
-    // voice) sings — held long, legato — while the BASS is plucked short and
-    // detached (staccato) so it punctuates without muddying the texture; inner
-    // (mid) voices stay neutral. Signal: a note's role within its own chord —
-    // the highest non-bass pitch is the melody, `n.bass` is the bass, the rest
-    // are mid. The per-voice factor multiplies ON TOP of the texture artMul, so
-    // a busy staccato patch still has a longer top line and a crisper bass.
     const _nb=ev.n.filter(n=>!n.bass);
     const _topM=_nb.length?Math.max(..._nb.map(n=>n.m)):-Infinity;
     ev.n=ev.n.map(n=>{
@@ -13631,7 +13606,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       if(n.bass)              voiceMul=0.55;   // bass: short, detached
       else if(n.m===_topM)    voiceMul=1.4;    // melody (top voice): long, singing
       // mid voices → 1 (neutral)
-      const durMs=Math.max(durFloor, Math.round((n.durMs||250)*artMul*voiceMul));
+      const durMs=Math.max(durFloor, Math.round((n.durMs||250)*voiceMul));
       return {...n, durMs};
     });
   }
