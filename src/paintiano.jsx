@@ -13862,13 +13862,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
         ev.n = ev.n.map((n,k) => ({
           ...n,
-          v: Math.max(20, Math.min(120, (n.v||64) + (k===topIdx ? 0 : -5)))
+          v: Math.max(20, Math.min(120, (n.v||64) + (k===topIdx ? 0 : -3)))
         }));
       } else if(ev.band >= bassCut){
         // Bass: full chord, slightly heavier overall (grounding weight)
         ev.n = ev.n.map(n => ({
           ...n,
-          v: Math.max(20, Math.min(120, (n.v||64) + 3))
+          v: Math.max(20, Math.min(120, (n.v||64) + 2))
         }));
       }
       // middle band: untouched
@@ -13880,10 +13880,9 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // lower notes as accompaniment. Until now every note in an image chord
   // sounded equally loud, so the whole thing read as a wash with no
   // melodic thread. Here we lift the highest-MIDI note in each chord by
-  // +15 velocity and pull the rest down by -3 (small dip just to widen
-  // the contrast). The accent / arc / dynamics passes that follow still
-  // shape the piece normally; the melody just sits a little above the
-  // harmony at every step.
+  // +10 velocity (was +15 — reduced in Phase 4 audit to leave headroom for
+  // the metric/composition/image-accent stack downstream) and pull the
+  // rest down by -3 to widen the contrast.
   // Applied BEFORE dynamics so the voicing differential survives compression.
   for(const ev of evts){
     if(!ev.n || ev.n.length < 2) continue;
@@ -13891,7 +13890,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
     ev.n = ev.n.map((n,k) => ({
       ...n,
-      v: Math.max(20, Math.min(120, (n.v||64) + (k===topIdx ? 15 : -3)))
+      v: Math.max(20, Math.min(120, (n.v||64) + (k===topIdx ? 10 : -3)))
     }));
   }
   // ─── Octave doubling — forte bass gets a left-hand octave ────────────────
@@ -13980,10 +13979,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // mountain in the painting should be heard as a musical stress, not
   // smoothed out by the metric grid.
   //
-  // Three tiers (kept gentle so they STACK safely with metric accents
-  // without clipping velocity to 120 in dense passages):
-  //   • delta > 30 vs lower neighbour → MARCATO  +6 velocity, +1 top voice
-  //   • delta 18..30                  → ACCENT   +3 velocity, +0 top voice (top already lifted)
+  // Three tiers (kept gentle so they STACK safely with metric accents +
+  // voicing without clipping velocity to 120 in dense passages). Top voice
+  // bonus removed in Phase 4 — Voicing already lifts the top voice by +10
+  // and per-voice articulation gives it ×1.4 duration, so further marcato
+  // bonus on top was redundant emphasis.
+  //   • delta > 30 vs lower neighbour → MARCATO  +6 velocity
+  //   • delta 18..30                  → ACCENT   +3 velocity
   //   • delta 8..18                   → touch    +1 velocity
   for(let i=1; i<evts.length-1; i++){
     const c0 = evts[i-1]._chroma || 0;
@@ -13993,15 +13995,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     if(delta < 8) continue;
     const ev = evts[i];
     if(!ev.n || !ev.n.length) continue;
-    let boost, topBonus, marker;
-    if(delta > 30){       boost = 6;  topBonus = 1; marker = 'marc'; }
-    else if(delta > 18){  boost = 3;  topBonus = 0; marker = 'acc';  }
-    else {                boost = 1;  topBonus = 0; marker = '';     }
-    let topIdx = 0;
-    for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
-    ev.n = ev.n.map((n,k) => ({
+    let boost, marker;
+    if(delta > 30){       boost = 6; marker = 'marc'; }
+    else if(delta > 18){  boost = 3; marker = 'acc';  }
+    else {                boost = 1; marker = '';     }
+    ev.n = ev.n.map(n => ({
       ...n,
-      v: Math.max(20, Math.min(120, Math.round(n.v + boost + (k===topIdx ? topBonus : 0))))
+      v: Math.max(20, Math.min(120, Math.round(n.v + boost)))
     }));
     if(marker) ev._accent = marker;
   }
