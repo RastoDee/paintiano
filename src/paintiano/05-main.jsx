@@ -2053,10 +2053,10 @@ export default function Paintiano() {
   // clear gold border and gold text. Lighter, more expensive-looking, and the
   // selected state still reads instantly. Idle chips stay on the dark card.
   const chipStyle = useCallback((on)=>({
-    color: on ? PF.gold2 : PF.cream,
-    background: on ? 'rgba(240,192,64,.14)' : PF.card2,
-    border: '1px solid '+(on ? 'rgba(240,192,64,.6)' : 'rgba(242,238,232,.08)'),
-    boxShadow: on ? '0 0 0 1px rgba(240,192,64,.25), 0 4px 14px rgba(240,192,64,.12)' : 'none',
+    color: on ? 'rgba(220,180,90,.98)' : PF.cream,
+    background: on ? 'rgba(201,168,76,.18)' : PF.card2,
+    border: '1px solid '+(on ? 'rgba(201,168,76,.45)' : 'rgba(242,238,232,.08)'),
+    boxShadow: on ? '0 0 0 1px rgba(201,168,76,.22)' : 'none',
   }),[]);
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
