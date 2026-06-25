@@ -1104,11 +1104,11 @@ const customColPastel=(m,v=100,palette)=>{
 // variant gives the visual punctuation Mosaic Real needs.
 //   • Saturation:  55-75 %  (slightly less than Pure so darks read as
 //                  "deep" rather than "vivid + dark")
-//   • Lightness:   18-38 %  (genuinely shadow band, but never crushed to
-//                  near-black — keeps the hue identifiable)
+//   • Lightness:   35-55 %  (rich shadow band, not crushed — chocolate /
+//                  burgundy / forest range, hue stays clearly identifiable)
 //   • Octave + velocity still modulate within the dark window
-const _octLDark = m => 18 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*20;     // 18..38
-const _darkSat  = v => 55 + (v/127)*20;                                            // 55..75
+const _octLDark = m => 35 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*20;     // 35..55
+const _darkSat  = v => 50 + (v/127)*15;                                            // 50..65
 const harmColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],         _darkSat(v), _octLDark(m));return[r,g,b,0.72+(v/127)*0.28];};
 const specColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(SPEC_HUE[m%12],    _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
 const phiColDark   =(m,v=100)=>{const[r,g,b]=fromHsl(PHI_HUE[m%12],     _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
@@ -1121,7 +1121,7 @@ const customColDark=(m,v=100,palette)=>{
   const isGrey = s0<=0.5;
   const sat = isGrey ? 0 : _darkSat(v);
   const l = _octLDark(m) + (v/127-0.5)*4;
-  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(12,Math.min(42,l)));
+  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(28,Math.min(58,l)));
   return[rr,gg,bb,0.7+(v/127)*0.3];
 };
 // most famous synaesthete in music history actually saw each pitch class
@@ -1743,8 +1743,32 @@ function _velSat(r,g,b,v,floor){
 // Toggled by the Tone selector in Setup: Normal turns it off (raw palette
 // colours), Mix and Pastel both turn it on.
 let _curE = 0.5;
+let _curOct = 4;   // 0..8, average chord octave (Middle C ≈ 4)
 function _setCurE(e){ _curE = (e==null||isNaN(e)) ? 0.5 : e; }
 function _getCurE(){ return _curE; }
+// Set the average octave of the current chord — used by Real mode to nudge
+// high-register chords toward Pastel and low-register chords toward Dark
+// (regardless of the chord's energy band). Call alongside _setCurE on each
+// chord. Accepts either a number (octave 0-8) or a chord object with .n
+// notes; if neither is usable, leaves the previous value untouched.
+function _setCurOct(chord){
+  if(typeof chord === 'number' && !isNaN(chord)){
+    _curOct = Math.max(0, Math.min(8, chord));
+    return;
+  }
+  const notes = chord && (chord.n || chord.notes);
+  if(!notes || !notes.length) return;
+  let sumM = 0, c = 0;
+  for(const n of notes){
+    const m = n.m != null ? n.m : n;
+    if(typeof m !== 'number' || isNaN(m)) continue;
+    sumM += m; c++;
+  }
+  if(!c) return;
+  const avgMidi = sumM / c;
+  _curOct = Math.max(0, Math.min(8, Math.floor(avgMidi/12) - 1));
+}
+function _getCurOct(){ return _curOct; }
 let _mixOn = false;
 function _setMixOn(b){ _mixOn = !!b; }
 
@@ -1761,7 +1785,12 @@ function _ensureEnergies(chords){
     const velN=Math.max(0,Math.min(1,((sv/k)-30)/90));
     const densN=Math.max(0,Math.min(1,(k-1)/3));
     const regN=Math.max(0,Math.min(1,((sm/k)-36)/48));
-    raw[i]=0.55*velN + 0.25*densN - 0.20*regN;
+    // Register-aware "perceived energy": treble chords feel airy → pastel band;
+    // bass chords feel weighty → dark band. The -0.40 register pull (vs the
+    // older -0.20) is strong enough that a high-treble passage drops _E below
+    // the pastel threshold (0.20) even at mezzo dynamics, and a low-bass
+    // passage at mezzo dynamics pushes above the dark threshold (0.80).
+    raw[i]=0.45*velN + 0.20*densN - 0.40*regN + 0.20;     // shift baseline so the range still spans well
   }
   const sm2=new Array(raw.length);
   for(let i=0;i<raw.length;i++){

@@ -1104,11 +1104,11 @@ const customColPastel=(m,v=100,palette)=>{
 // variant gives the visual punctuation Mosaic Real needs.
 //   • Saturation:  55-75 %  (slightly less than Pure so darks read as
 //                  "deep" rather than "vivid + dark")
-//   • Lightness:   18-38 %  (genuinely shadow band, but never crushed to
-//                  near-black — keeps the hue identifiable)
+//   • Lightness:   35-55 %  (rich shadow band, not crushed — chocolate /
+//                  burgundy / forest range, hue stays clearly identifiable)
 //   • Octave + velocity still modulate within the dark window
-const _octLDark = m => 18 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*20;     // 18..38
-const _darkSat  = v => 55 + (v/127)*20;                                            // 55..75
+const _octLDark = m => 35 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*20;     // 35..55
+const _darkSat  = v => 50 + (v/127)*15;                                            // 50..65
 const harmColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],         _darkSat(v), _octLDark(m));return[r,g,b,0.72+(v/127)*0.28];};
 const specColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(SPEC_HUE[m%12],    _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
 const phiColDark   =(m,v=100)=>{const[r,g,b]=fromHsl(PHI_HUE[m%12],     _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
@@ -1121,7 +1121,7 @@ const customColDark=(m,v=100,palette)=>{
   const isGrey = s0<=0.5;
   const sat = isGrey ? 0 : _darkSat(v);
   const l = _octLDark(m) + (v/127-0.5)*4;
-  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(12,Math.min(42,l)));
+  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(28,Math.min(58,l)));
   return[rr,gg,bb,0.7+(v/127)*0.3];
 };
 // most famous synaesthete in music history actually saw each pitch class
