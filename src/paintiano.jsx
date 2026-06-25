@@ -13063,10 +13063,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     const bright=(((ev._bright!=null?ev._bright:melSrc.m))-bMin)/bRange; // 0 dark … 1 bright
     const targetM=MEL_MIN + bright*MEL_SPAN;        // desired pitch height
     // Place melPc at the octave whose pitch is nearest the brightness target,
-    // then blend lightly toward the previous note so the line is smooth but
-    // still clearly follows the image (70% contour, 30% smoothing).
+    // then blend toward the previous note so the line is smooth but still
+    // follows the image. The contour/smoothing balance is ATMO-aware: calm
+    // pieces (atmoE→0) breathe at 50/50 — gentle line that doesn't jump on
+    // every brightness change; frantic pieces (atmoE→1) at 85/15 — sharp
+    // line that tracks the image's jolts; mid mood keeps the 70/30 default.
     let melM=melPc; while(melM<MEL_MIN) melM+=12; while(melM>MEL_MAX) melM-=12;
-    const aim = lastMel!=null ? (0.7*targetM + 0.3*lastMel) : targetM;
+    const _contourW = atmoE!=null ? (0.50 + 0.35*atmoE) : 0.70;       // 0.50…0.85
+    const aim = lastMel!=null ? (_contourW*targetM + (1-_contourW)*lastMel) : targetM;
     const cands=[melM-12,melM,melM+12].filter(m=>m>=MEL_MIN-12&&m<=MEL_MAX+12);
     melM=cands.reduce((a,b)=>Math.abs(b-aim)<Math.abs(a-aim)?b:a);
     melM=Math.max(MEL_MIN-12,Math.min(MEL_MAX+12,melM));
@@ -13174,9 +13178,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     // the chord beneath it and a longer ring (handled below). Velocity stays gentle.
     const heightFrac = Math.max(0, Math.min(1, (melM - MEL_MIN) / (MEL_SPAN||1)));
     const isWhiteMel = !!melSrc.white;
-    const rollOff = 0.34;                             // same soft high-end roll-off for all
+    // ATMO-aware roll-off: calm pieces soften the high register MORE (0.42)
+    // so soaring notes float airy; frantic pieces soften LESS (0.22) so the
+    // top register can ring bright and bold. Mid mood keeps 0.34.
+    const rollOff = atmoE!=null ? (0.42 - 0.20*atmoE) : 0.34;
     const melVel = Math.round((melSrc.v||80) * (0.90 - rollOff*heightFrac));
-    const melFloor = 48;
+    // ATMO-aware floor: calm lets the melody go down to a near-whisper (40);
+    // frantic keeps a higher presence floor (54) so even softest notes are
+    // heard against the busy texture. Mid mood keeps the original 48.
+    const melFloor = atmoE!=null ? Math.round(40 + 14*atmoE) : 48;
     const melody = melIsBass
       ? {...melSrc, _melody:true}                                          // keep its low pitch + velocity, mark as melody
       : {...melSrc, m:melM, v:Math.max(melFloor,Math.min(96,melVel)), bass:false, white:isWhiteMel, _melody:true};
