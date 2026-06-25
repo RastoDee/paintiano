@@ -14146,7 +14146,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
             v: Math.max(20, Math.min(120, Math.round((top.v || 64) - 4))),
             durMs: Math.round((top.durMs || 600) * 0.5)
           }];
-          ev._tremolo = true;
+          ev._alternation = true;
         }
         i = j;
       } else {
@@ -14162,122 +14162,110 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // music constantly moves, the classic ambient sparkle of the classical
   // sonata slow movement.
   //
-  // We detect short-to-medium runs (4–12 events) of identical chord
-  // signature with 3+ notes AND soft dynamic (max velocity < 55). These
-  // are the "calm chord plateaus" where Alberti makes sense. The chord's
-  // notes get sorted bass-to-top and the run rotates through them in
-  // [bass, top, mid, top] order, looping. Each event becomes a SINGLE
-  // note (one finger at a time), which is what the pattern requires.
+  // Reads MERGED plane blocks (events carrying _runLen from the upstream
+  // Merge pass): when a merged plane is 4–12 events long, has 3+ notes
+  // and a soft top velocity (< 55), we EXPAND it back into a flowing
+  // Alberti rotation. The remaining (still-merged) events keep their
+  // _playable=false flag flipped back on with their assigned cycle note
+  // so the player actually hears the rotation instead of one held chord.
   //
-  // Longer runs (12+) still fall through to the existing shimmer-collapse
-  // pass — those are very large flat fields where a literal Alberti would
-  // become its own kind of mechanical pattern.
+  // Longer or louder merged planes (12+, or louder than mp) keep their
+  // sustained-plane gesture from the existing pipeline — the SUSTAINED-
+  // PLANE VARIATION pass already shapes those tastefully.
   {
-    function sigOf(ev){
-      if(!ev || !ev.n || !ev.n.length) return '';
-      const pcs = ev.n.map(n => n.m%12);
-      pcs.sort((a,b)=>a-b);
-      const out=[]; for(const p of pcs) if(out[out.length-1]!==p) out.push(p);
-      return out.join(',');
-    }
-    const ALB_MIN = 4;
-    const ALB_MAX = 12;
-    let i = 0;
-    while(i < evts.length){
-      const sig = sigOf(evts[i]);
-      if(!sig){ i++; continue; }
-      // Find run end (skip events already reshaped by tremolo)
-      let j = i+1;
-      while(j < evts.length && sigOf(evts[j]) === sig && !evts[j]._tremolo) j++;
-      const runLen = j - i;
-      if(runLen >= ALB_MIN && runLen <= ALB_MAX && evts[i].n.length >= 3){
-        // Test softness: is the loudest note in this run < 55?
-        let maxV = 0;
-        for(let k=i; k<j; k++){
-          for(const n of evts[k].n) if((n.v||0) > maxV) maxV = n.v||0;
-        }
-        if(maxV < 55){
-          // Sort chord notes by pitch (low → high)
-          const sortedNotes = [...evts[i].n].sort((a,b) => a.m - b.m);
-          const bass = sortedNotes[0];
-          const top = sortedNotes[sortedNotes.length - 1];
-          const mid = sortedNotes[Math.floor(sortedNotes.length / 2)];
-          // Classic Alberti rotation: bass → top → mid → top
-          const cycle = [bass, top, mid, top];
-          for(let k=0; k<runLen; k++){
-            const src = cycle[k % cycle.length];
-            const ev = evts[i+k];
-            ev.n = [{
-              m: src.m,
-              v: Math.max(20, Math.min(120, (src.v || 50))),
-              durMs: src.durMs
-            }];
-            ev._alberti = true;
-          }
-        }
+    const ALB_MIN_RUN = 4;
+    const ALB_MAX_RUN = 12;
+    const ALB_VEL_MAX = 55;
+    for(let i=0; i<evts.length; i++){
+      const ev = evts[i];
+      const rl = ev._runLen || 0;
+      if(rl < ALB_MIN_RUN || rl > ALB_MAX_RUN) continue;
+      if(!ev.n || ev.n.length < 3) continue;
+      // Softness gate: loudest note in the merged chord
+      let maxV = 0;
+      for(const n of ev.n) if((n.v||0) > maxV) maxV = n.v||0;
+      if(maxV >= ALB_VEL_MAX) continue;
+      // Sort chord notes low→high
+      const sortedNotes = [...ev.n].sort((a,b) => a.m - b.m);
+      const bass = sortedNotes[0];
+      const top  = sortedNotes[sortedNotes.length - 1];
+      const mid  = sortedNotes[Math.floor(sortedNotes.length / 2)];
+      // Classic Alberti rotation: bass → top → mid → top
+      const cycle = [bass, top, mid, top];
+      // Expand: turn the merged plane back into runLen single-note events
+      const baseTemplate = {
+        v: Math.min(120, Math.max(20, Math.round((bass.v || 50)))),
+        durMs: bass.durMs || 250
+      };
+      for(let k=0; k<rl; k++){
+        const src = cycle[k % cycle.length];
+        const target = evts[i+k];
+        if(!target) break;
+        target.n = [{
+          ...baseTemplate,
+          m: src.m,
+          v: Math.min(120, Math.max(20, Math.round(src.v || baseTemplate.v))),
+          durMs: src.durMs || baseTemplate.durMs
+        }];
+        target._playable = true;          // restore playable (was false on merge continuations)
+        target._alberti = true;
+        if(k > 0) delete target._runLen;  // only first event keeps the plane marker
       }
-      i = j;
+      // First event no longer represents the whole plane — clear its plane flags
+      // so downstream sustained-plane gesture doesn't double-handle it
+      delete ev._runLen;
+      delete ev._planeBright;
+      delete ev._planeChroma;
+      delete ev._planeSal;
+      delete ev._planeBlockIdx;
+      delete ev._planeDrift;
+      i += rl - 1;                        // skip past the expanded plane
     }
   }
   // ─── Run-length collapsing — kill the "plem plem" on flat surfaces ──────
-  // Large monochrome regions of a painting (Rothko-like fields, Chagall skies,
-  // big background areas in any composition) produce LONG RUNS of nearly-
-  // identical chords in the event stream. Played back literally that becomes
-  // a repeated hammered note pattern that ruins the music — meditation
-  // surfaces should breathe, not pulse.
+  // Reads MERGED plane blocks (events carrying _runLen from the upstream
+  // Merge pass). For long flat planes that Alberti didn't claim (length
+  // 13+ OR loud enough that Alberti rejected them), we EXPAND the plane
+  // back into per-event quiet shimmer notes, rotating through the chord
+  // pitches so the surface gets motion + sparkle instead of one held
+  // note for the whole field. The merged event itself keeps its full
+  // attack as the harmonic "arrival"; expansion shimmer fills the rest.
   //
-  // Fix: detect runs of consecutive events that share the SAME pitch-class
-  // set (octave-normalised so different voicings of the same chord still
-  // match). The first event of the run keeps its full attack — that's the
-  // harmonic "arrival". Subsequent events in the run get reshaped into
-  // QUIET ARPEGGIO SHIMMERS: one rotating note from the chord at very low
-  // velocity, so the surface still has motion and sparkle (not silence)
-  // but the harmonic field hangs as a single hovering colour. The moment
-  // the painting's colour actually changes, the next event hits a new
-  // chord at full attack again — that's where motion resumes.
-  //
-  // Threshold: 3 or more identical consecutive events triggers collapsing.
-  // A single repeat (2 identical events) reads as a beat and stays full.
+  // Very long planes (≥ 24 events) are LEFT to the existing SUSTAINED-
+  // PLANE VARIATION gesture — that one already shapes them with built-in
+  // breath / register lift / rolled gestures, more nuanced than shimmer.
   {
-    const RUN_MIN = 3;                       // need this many identical in a row before we collapse
-    const SHIMMER_VEL = 26;                  // velocity for collapsed shimmer notes (very soft)
-    function chordSig(ev){
-      if(!ev || !ev.n || !ev.n.length) return '';
-      const pcs = ev.n.map(n => n.m%12);
-      pcs.sort((a,b)=>a-b);
-      // dedupe (same pitch class in multiple octaves only counts once)
-      const out = [];
-      for(const p of pcs) if(out[out.length-1] !== p) out.push(p);
-      return out.join(',');
-    }
-    let i = 0;
-    while(i < evts.length){
-      const sig = chordSig(evts[i]);
-      if(!sig){ i++; continue; }
-      // find run end
-      let j = i+1;
-      while(j < evts.length && chordSig(evts[j]) === sig) j++;
-      const runLen = j - i;
-      if(runLen >= RUN_MIN){
-        // First event of the run keeps full attack (the harmonic arrival).
-        // Remaining events 1..runLen-1 become quiet rotating shimmers.
-        const chordNotes = evts[i].n.slice();   // snapshot — same pitch material throughout the run
-        for(let k = 1; k < runLen; k++){
-          const ev = evts[i+k];
-          if(!ev) continue;
-          // Rotate which note of the chord plays — slow arpeggio illusion
-          // across the flat surface so it shimmers rather than throbs.
-          const rotIdx = k % chordNotes.length;
-          const src = chordNotes[rotIdx];
-          ev.n = [{
-            m: src.m,
-            v: SHIMMER_VEL,
-            durMs: src.durMs
-          }];
-          ev._collapsedShimmer = true;          // marker for downstream (paint/debug)
-        }
+    const RUN_MIN_COLLAPSE = 13;             // pick up where Alberti leaves off
+    const RUN_MAX_COLLAPSE = 23;             // beyond this, leave to sustained-plane
+    const SHIMMER_VEL = 26;
+    for(let i = 0; i < evts.length; i++){
+      const ev = evts[i];
+      const rl = ev._runLen || 0;
+      if(rl < RUN_MIN_COLLAPSE || rl > RUN_MAX_COLLAPSE) continue;
+      if(!ev.n || !ev.n.length) continue;
+      const chordNotes = ev.n.slice();        // snapshot of the merged chord
+      for(let k = 1; k < rl; k++){
+        const target = evts[i+k];
+        if(!target) break;
+        const rotIdx = k % chordNotes.length;
+        const src = chordNotes[rotIdx];
+        target.n = [{
+          m: src.m,
+          v: SHIMMER_VEL,
+          durMs: src.durMs
+        }];
+        target._playable = true;              // restore playable
+        target._collapsedShimmer = true;
+        if(k > 0) delete target._runLen;      // only the anchor event keeps the plane marker
       }
-      i = j;
+      // Clear plane flags on the anchor — collapsing handled this plane
+      delete ev._runLen;
+      delete ev._planeBright;
+      delete ev._planeChroma;
+      delete ev._planeSal;
+      delete ev._planeBlockIdx;
+      delete ev._planeDrift;
+      i += rl - 1;                            // skip past the expanded plane
     }
   }
   return evts;
