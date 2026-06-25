@@ -13996,91 +13996,39 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       return {...n, v: Math.max(20, Math.min(120, Math.round(shifted)))};
     });
   }
-  // ─── Phrasing arc — micro-crescendos on natural image edges ──────────────
-  // Even with the centre+range fix above, ATMO calm could still feel
-  // monotone if every event sat near the new centre. Music breathes by
-  // ARCS — short crescendos building to a small peak, then easing back.
-  // We add that here by walking the event stream, detecting natural
-  // PHRASE BOUNDARIES (where the chord pitch-class set changes), and
-  // shaping each phrase as a gentle arc: starts at centre, swells ~+8
-  // velocity at the phrase's golden-section peak, eases back at end.
-  // The arc amplitude scales DOWN in calm pieces (so peaks stay tasteful,
-  // not jarring) and UP slightly in intense pieces (more dramatic).
-  // Accents (high-chroma events) get a small extra +4 on top so they
-  // stand out even within the arc — keeping the "mountains" of the image
-  // audible regardless of ATMO.
-  {
-    function chordSigForArc(ev){
-      if(!ev || !ev.n || !ev.n.length) return '';
-      const pcs = ev.n.map(n => n.m%12);
-      pcs.sort((a,b)=>a-b);
-      const out=[]; for(const p of pcs) if(out[out.length-1]!==p) out.push(p);
-      return out.join(',');
-    }
-    // Arc amplitude: calm = small swells (±5), neutral = ±8, intense = ±11.
-    const arcAmp = atmoE!=null ? (5 + 6*atmoE) : 8;
-    // Find phrase boundaries (sig change). Min phrase length 4 events so we
-    // don't try to arc tiny fragments.
-    const boundaries = [0];
-    let lastSig = chordSigForArc(evts[0]);
-    for(let i=1; i<evts.length; i++){
-      const s = chordSigForArc(evts[i]);
-      if(s && s !== lastSig && (i - boundaries[boundaries.length-1]) >= 4){
-        boundaries.push(i);
-        lastSig = s;
-      }
-    }
-    boundaries.push(evts.length);
-    // Shape each phrase as an arc using a smooth bell (sin) curve.
-    for(let pi=0; pi<boundaries.length-1; pi++){
-      const s = boundaries[pi], e = boundaries[pi+1];
-      const len = e - s;
-      if(len < 2) continue;
-      // Peak at the golden section (~0.618) of the phrase — natural musical
-      // weighting. Sin curve climbs from 0 (start) to 1 (peak) to 0 (end).
-      const peakIdx = Math.round(len * 0.618);
-      for(let k=0; k<len; k++){
-        let t;
-        if(k <= peakIdx) t = peakIdx>0 ? k/peakIdx : 0;
-        else t = (len-1-k) / Math.max(1, len-1-peakIdx);
-        // sin half-cycle 0→1→0 (with t already 0..1)
-        const arc = Math.sin(t * Math.PI/2);
-        const swell = arc * arcAmp;
-        const ev = evts[s+k];
-        if(!ev.n || !ev.n.length) continue;
-        ev.n = ev.n.map(n => ({...n, v: Math.max(20, Math.min(120, Math.round(n.v + swell)))}));
-      }
-    }
-    // Local accents (three-tier marcato/accent/touch):
-    //   • delta > 30 vs both neighbours → MARCATO (^) +12 velocity, +2 extra on top voice
-    //   • delta 18..30                 → ACCENT (>) +6 velocity, +1 extra on top voice
-    //   • delta 8..18                  → touch       +2 velocity
-    // The image's "mountains" — sharp chromatic spikes — survive both the
-    // dynamics compression (calm pieces still have audible peaks) and the
-    // phrasing arc (peaks stand above the arc shape, not buried in it).
-    // The top-voice bonus keeps the melody perceptible in dense chord stacks
-    // exactly when the music gets dramatic.
-    for(let i=1; i<evts.length-1; i++){
-      const c0 = evts[i-1]._chroma || 0;
-      const c1 = evts[i]._chroma || 0;
-      const c2 = evts[i+1]._chroma || 0;
-      const delta = Math.min(c1 - c0, c1 - c2);   // peak above lower-of-two neighbours
-      if(delta < 8) continue;
-      const ev = evts[i];
-      if(!ev.n || !ev.n.length) continue;
-      let boost, topBonus, marker;
-      if(delta > 30){       boost = 12; topBonus = 2; marker = 'marc'; }
-      else if(delta > 18){  boost = 6;  topBonus = 1; marker = 'acc';  }
-      else {                boost = 2;  topBonus = 0; marker = '';     }
-      // Find top voice (highest MIDI) for the extra nudge
-      let topIdx = 0;
-      for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
-      ev.n = ev.n.map((n,k) => ({
-        ...n,
-        v: Math.max(20, Math.min(120, Math.round(n.v + boost + (k===topIdx ? topBonus : 0))))
-      }));
-      if(marker) ev._accent = marker;
-    }
+  // ─── Image-chroma accents — sharp colour peaks become musical accents ────
+  // The upstream COMPOSITION PASS already provides a whole-piece dynamic
+  // arc (cos curve, peak around 65 %) and the Rhythmic phrasing pass adds
+  // metric accents on downbeats/bar-starts. Both of those are RHYTHMIC /
+  // STRUCTURAL. What was still missing is IMAGE-DRIVEN accents — when a
+  // pixel cluster's saturation/chroma jumps far above its neighbours, that
+  // mountain in the painting should be heard as a musical stress, not
+  // smoothed out by the metric grid.
+  //
+  // Three tiers (kept gentle so they STACK safely with metric accents
+  // without clipping velocity to 120 in dense passages):
+  //   • delta > 30 vs lower neighbour → MARCATO  +6 velocity, +1 top voice
+  //   • delta 18..30                  → ACCENT   +3 velocity, +0 top voice (top already lifted)
+  //   • delta 8..18                   → touch    +1 velocity
+  for(let i=1; i<evts.length-1; i++){
+    const c0 = evts[i-1]._chroma || 0;
+    const c1 = evts[i]._chroma   || 0;
+    const c2 = evts[i+1]._chroma || 0;
+    const delta = Math.min(c1 - c0, c1 - c2);
+    if(delta < 8) continue;
+    const ev = evts[i];
+    if(!ev.n || !ev.n.length) continue;
+    let boost, topBonus, marker;
+    if(delta > 30){       boost = 6;  topBonus = 1; marker = 'marc'; }
+    else if(delta > 18){  boost = 3;  topBonus = 0; marker = 'acc';  }
+    else {                boost = 1;  topBonus = 0; marker = '';     }
+    let topIdx = 0;
+    for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
+    ev.n = ev.n.map((n,k) => ({
+      ...n,
+      v: Math.max(20, Math.min(120, Math.round(n.v + boost + (k===topIdx ? topBonus : 0))))
+    }));
+    if(marker) ev._accent = marker;
   }
   // ─── Tremolo — rapid 2-chord alternations on striped patterns ────────────
   // Op-art, Picasso stripes, Vasarely kinetic grids: paintings with rapid
