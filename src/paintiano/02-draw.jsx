@@ -12215,6 +12215,46 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       }
     }
   }
+  // ─── Bass-treble vertical character — left hand vs right hand feel ───────
+  // The image has a top-to-bottom axis the way a keyboard has bass-to-treble.
+  // Real piano writing exploits this: left hand grounds the harmony with full
+  // chords in the bass register, right hand sings the melody with a single
+  // line over light accompaniment in the treble. Our scan already maps the
+  // pixel's LIGHTNESS to an octave (dark→low, light→high), but every event
+  // gets voiced the same way regardless of WHERE on the canvas it sits.
+  //
+  // Fix: shape the voicing by vertical band position, leaving MIDI pitches
+  // alone (so harmony, scale snap and existing octave logic are not
+  // disturbed). Bottom third → bass character (full chord, +3 velocity for
+  // weight). Top third → treble character (only top voice + 1 below dominates;
+  // lower notes pulled −5 so the melody floats above thinner support). Middle
+  // third → untouched, keeps the natural blend. Applied BEFORE voicing so the
+  // top-voice +15 lift compounds on the treble band (melody really stands
+  // forward) and is balanced by the bass band's full chord (grounded harmony).
+  if(_nrBands >= 3){
+    const trebleCut = Math.floor(_nrBands * 0.33);
+    const bassCut   = Math.floor(_nrBands * 0.67);
+    for(const ev of evts){
+      if(!ev.n || ev.n.length < 2) continue;
+      if(typeof ev.band !== 'number') continue;
+      if(ev.band < trebleCut){
+        // Treble: thin out lower voices so the top sings above
+        let topIdx = 0;
+        for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
+        ev.n = ev.n.map((n,k) => ({
+          ...n,
+          v: Math.max(20, Math.min(120, (n.v||64) + (k===topIdx ? 0 : -5)))
+        }));
+      } else if(ev.band >= bassCut){
+        // Bass: full chord, slightly heavier overall (grounding weight)
+        ev.n = ev.n.map(n => ({
+          ...n,
+          v: Math.max(20, Math.min(120, (n.v||64) + 3))
+        }));
+      }
+      // middle band: untouched
+    }
+  }
   // ─── Voicing — bring the top voice forward as melody ─────────────────────
   // Keyboard music is heard "top-voice-as-melody" by default: the brain
   // picks the highest pitch in a chord and reads it as the tune, with the
