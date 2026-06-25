@@ -12169,6 +12169,52 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
     }
   }
+  // ─── Articulation — staccato on edges, legato on smooth passages ─────────
+  // Image edges (where a chord-signature changes AND the chroma jumps) are
+  // perceptually the "consonants" of the painting — sharp transitions that
+  // should sound like detached, articulated keystrokes (staccato). Smooth
+  // monochrome passages (same chord, low chroma delta) are the "vowels" —
+  // long sustained legato. Mid-edges read as natural portato (untouched).
+  // This shape gives the scan the breathing micro-articulation of a real
+  // pianist instead of every note being held for the same fixed sustain.
+  {
+    function chordSigArt(ev){
+      if(!ev || !ev.n || !ev.n.length) return '';
+      const pcs = ev.n.map(n => n.m%12);
+      pcs.sort((a,b)=>a-b);
+      const out=[]; for(const p of pcs) if(out[out.length-1]!==p) out.push(p);
+      return out.join(',');
+    }
+    const sigs = evts.map(chordSigArt);
+    const STAC_MUL = 0.45;          // hard edge → short, detached
+    const LEG_MUL  = 1.30;          // smooth gradient → long, connected
+    for(let i=0; i<evts.length; i++){
+      const ev = evts[i];
+      if(!ev.n || !ev.n.length) continue;
+      const c0 = i>0 ? (evts[i-1]._chroma || 0) : (ev._chroma || 0);
+      const c1 = ev._chroma || 0;
+      const c2 = i<evts.length-1 ? (evts[i+1]._chroma || 0) : c1;
+      const dChromaPrev = Math.abs(c1 - c0);
+      const dChromaNext = Math.abs(c2 - c1);
+      const maxDChroma = Math.max(dChromaPrev, dChromaNext);
+      const sigChangePrev = i>0 && sigs[i] && sigs[i] !== sigs[i-1];
+      const sigChangeNext = i<evts.length-1 && sigs[i] && sigs[i+1] && sigs[i] !== sigs[i+1];
+      let mul = 1.0;
+      // Staccato: real edge — both the harmony AND the chroma jump
+      if((sigChangePrev || sigChangeNext) && maxDChroma > 15){
+        mul = STAC_MUL;
+      }
+      // Legato: smooth — same chord on both sides AND low chroma delta
+      else if(!sigChangePrev && !sigChangeNext && maxDChroma < 8){
+        mul = LEG_MUL;
+      }
+      // else portato/normal — keep dur as-is
+      if(mul !== 1.0){
+        ev.n = ev.n.map(n => ({...n, durMs: Math.round((n.durMs || 600) * mul)}));
+        ev._articulation = (mul < 1) ? 'stac' : 'leg';   // marker for debug / future use
+      }
+    }
+  }
   // ─── Voicing — bring the top voice forward as melody ─────────────────────
   // Keyboard music is heard "top-voice-as-melody" by default: the brain
   // picks the highest pitch in a chord and reads it as the tune, with the
