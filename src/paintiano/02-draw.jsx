@@ -12363,6 +12363,78 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       if(marker) ev._accent = marker;
     }
   }
+  // ─── Tremolo — rapid 2-chord alternations on striped patterns ────────────
+  // Op-art, Picasso stripes, Vasarely kinetic grids: paintings with rapid
+  // alternation between two distinct colour regions. The literal scan plays
+  // that as A B A B A — five attacks all at the same length, which sounds
+  // like a marching beat. Real keyboard music renders this as TREMOLO: two
+  // notes alternating with sub-beat speed, the ear hearing them as ONE
+  // shimmering sound rather than five separate strokes.
+  //
+  // We detect runs of 4+ strict A-B-A-B alternations where the two
+  // signatures differ in at least 2 pitch classes (so we don't trip on a
+  // melody that happens to oscillate by a step). Anchors of the run (the
+  // first and last A/B events) keep their full attack so the harmonic
+  // motion reads cleanly; the events between get durMs ×0.5 and are
+  // reduced to the TOP voice only — that gives the shimmer character of
+  // a real piano tremolo (hands flickering between two notes), not the
+  // marching equal-attack pattern of the literal scan.
+  {
+    function sigOf(ev){
+      if(!ev || !ev.n || !ev.n.length) return '';
+      const pcs = ev.n.map(n => n.m%12);
+      pcs.sort((a,b)=>a-b);
+      const out=[]; for(const p of pcs) if(out[out.length-1]!==p) out.push(p);
+      return out.join(',');
+    }
+    function pcSetDiff(sigA, sigB){
+      if(!sigA || !sigB) return 0;
+      const a = new Set(sigA.split(',').map(Number));
+      const b = new Set(sigB.split(',').map(Number));
+      let diff = 0;
+      a.forEach(p => { if(!b.has(p)) diff++; });
+      b.forEach(p => { if(!a.has(p)) diff++; });
+      return diff;
+    }
+    const TREM_MIN_ALT = 4;            // need ABABA (at least 4 transitions = 5 events) to call it tremolo
+    const TREM_MIN_PC_DIFF = 2;        // signatures must differ in 2+ pitch classes
+    let i = 0;
+    while(i < evts.length - TREM_MIN_ALT){
+      const sigA = sigOf(evts[i]);
+      const sigB = sigOf(evts[i+1]);
+      if(!sigA || !sigB || sigA === sigB || pcSetDiff(sigA, sigB) < TREM_MIN_PC_DIFF){
+        i++; continue;
+      }
+      // Walk while strict ABAB alternation continues
+      let j = i + 2;
+      while(j < evts.length){
+        const expected = (j % 2 === i % 2) ? sigA : sigB;
+        if(sigOf(evts[j]) !== expected) break;
+        j++;
+      }
+      const runLen = j - i;
+      if(runLen >= TREM_MIN_ALT + 1){    // 5+ events of strict ABABA
+        // Reshape inner events (skip first and last anchors) to tremolo shimmer
+        for(let k = i+1; k < j-1; k++){
+          const ev = evts[k];
+          if(!ev.n || !ev.n.length) continue;
+          // Top voice only (highest MIDI in the chord) — that's the shimmering note
+          let topIdx = 0;
+          for(let m=1; m<ev.n.length; m++) if(ev.n[m].m > ev.n[topIdx].m) topIdx = m;
+          const top = ev.n[topIdx];
+          ev.n = [{
+            m: top.m,
+            v: Math.max(20, Math.min(120, Math.round((top.v || 64) - 4))),
+            durMs: Math.round((top.durMs || 600) * 0.5)
+          }];
+          ev._tremolo = true;
+        }
+        i = j;
+      } else {
+        i++;
+      }
+    }
+  }
   // ─── Run-length collapsing — kill the "plem plem" on flat surfaces ──────
   // Large monochrome regions of a painting (Rothko-like fields, Chagall skies,
   // big background areas in any composition) produce LONG RUNS of nearly-
