@@ -12332,18 +12332,35 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         ev.n = ev.n.map(n => ({...n, v: Math.max(20, Math.min(120, Math.round(n.v + swell)))}));
       }
     }
-    // Local accents: events with significantly higher chroma than their
-    // neighbours get a small +4 nudge so the image's mountains stay
-    // audible inside the arc shape.
+    // Local accents (three-tier marcato/accent/touch):
+    //   • delta > 30 vs both neighbours → MARCATO (^) +12 velocity, +2 extra on top voice
+    //   • delta 18..30                 → ACCENT (>) +6 velocity, +1 extra on top voice
+    //   • delta 8..18                  → touch       +2 velocity
+    // The image's "mountains" — sharp chromatic spikes — survive both the
+    // dynamics compression (calm pieces still have audible peaks) and the
+    // phrasing arc (peaks stand above the arc shape, not buried in it).
+    // The top-voice bonus keeps the melody perceptible in dense chord stacks
+    // exactly when the music gets dramatic.
     for(let i=1; i<evts.length-1; i++){
       const c0 = evts[i-1]._chroma || 0;
       const c1 = evts[i]._chroma || 0;
       const c2 = evts[i+1]._chroma || 0;
-      if(c1 > c0 + 18 && c1 > c2 + 18){
-        const ev = evts[i];
-        if(!ev.n || !ev.n.length) continue;
-        ev.n = ev.n.map(n => ({...n, v: Math.max(20, Math.min(120, Math.round(n.v + 4)))}));
-      }
+      const delta = Math.min(c1 - c0, c1 - c2);   // peak above lower-of-two neighbours
+      if(delta < 8) continue;
+      const ev = evts[i];
+      if(!ev.n || !ev.n.length) continue;
+      let boost, topBonus, marker;
+      if(delta > 30){       boost = 12; topBonus = 2; marker = 'marc'; }
+      else if(delta > 18){  boost = 6;  topBonus = 1; marker = 'acc';  }
+      else {                boost = 2;  topBonus = 0; marker = '';     }
+      // Find top voice (highest MIDI) for the extra nudge
+      let topIdx = 0;
+      for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
+      ev.n = ev.n.map((n,k) => ({
+        ...n,
+        v: Math.max(20, Math.min(120, Math.round(n.v + boost + (k===topIdx ? topBonus : 0))))
+      }));
+      if(marker) ev._accent = marker;
     }
   }
   // ─── Run-length collapsing — kill the "plem plem" on flat surfaces ──────
