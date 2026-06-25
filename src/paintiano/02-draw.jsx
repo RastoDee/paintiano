@@ -10846,7 +10846,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // just nudge it. Mood gets equal weight (50:50), and when it's far from neutral
   // it overrides the image's reading: a strong serene tag on a busy canvas still
   // calms it (and a frantic tag on a calm one wakes it up). All downstream
-  // levers (dynE, dynScale, rhythmDrive, MEL_MAX, maxRestRun) are then computed
+  // levers (dynE, rhythmDrive, MEL_MAX, maxRestRun, dynCentre) are then computed
   // from the blended energy so the mood ripples through tempo, loudness, register,
   // density, and breathing — not just colour tint.
   const valenceBias = atmoV!=null ? atmoV : 0;
@@ -10856,13 +10856,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     const moodW = 0.5 + 0.35*extreme;                        // 0.50 … 0.85 — strong mood prevails
     energy = Math.max(0,Math.min(1, (1-moodW)*energy + moodW*atmoE));
   }
-  // ─── DYNAMICS SCALE (loudness from restlessness + mood) ──────────────────
-  // A calm painting must play SOFT even when vivid (Monet pitfall). Restlessness
-  // (contrast+busyness) sets the base; mood scales it harder than before so a
-  // serene tag really quiets things down (was 0.7+0.6*atmoE → now 0.55+0.9*atmoE).
+  // ─── DYNAMICS RESTLESSNESS — image-driven loudness centre ─────────────────
+  // dynE captures how "restless" the painting is (contrast + busyness). It
+  // feeds the centre-of-gravity calculation in Final dynamics downstream
+  // (busy paintings shift velocity centre up, calm paintings shift it down).
+  // The old global dynScale multiplier that lived here was retired in the
+  // Phase 2 audit — the centre+compress model in Final dynamics replaces
+  // it without the slow-motion-film side effect of flat scaling.
   const dynE = Math.max(0, Math.min(1, 0.55*eContrast + 0.45*eBusy));
-  let dynScale = 0.75 + 0.35*dynE;     // floor 0.75 so plain colour fields still play
-  if(atmoE!=null) dynScale *= (0.55 + 0.9*atmoE);
   // ── RHYTHM DRIVE ──
   // A single 0..1 knob that turns "calm/legato/sparse" into "lively/articulated/
   // dense" as it rises. Driven by energy, nudged up by positive valence (bright
@@ -11372,7 +11373,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const _melAtmoShift = (atmoE!=null)
     ? (atmoE<0.5 ? -7*(0.5-atmoE)/0.5 : +5*(atmoE-0.5)/0.5)
     : 0;
-  const MEL_MIN=60+MEL_LIFT;                        // C4 (G4 in spectral) — melody floor
+  // Valence shifts the melody floor: positive valence (bright/playful) lifts
+  // the floor up to +3 semitones so the melody sits brighter; negative
+  // valence (heavy/grief) drops the floor up to −3 semitones so the line
+  // feels grounded. ATMO energy already moves the ceiling; valence moves
+  // the floor independently, so mood shapes both ends of the register.
+  const _melValShift = Math.round(valenceBias * 3);                 // -3..+3
+  const MEL_MIN=60+MEL_LIFT+_melValShift;           // C4 (G4 in spectral) — melody floor, valence-shifted
   const MEL_MAX=Math.round(MEL_CEIL_BASE+_melAtmoShift)+MEL_LIFT;  // 79 default; 72 serene; 84 frantic
   const MEL_SPAN=MEL_MAX-MEL_MIN;
   // Brightness range across the image's melody-source notes — used to map each
@@ -11851,18 +11858,35 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       const w2=0.5*((Math.sin(ord*0.9+1.3)+1)/2) + 0.5*sr2;
       // Base re-strike tempo glides across the piece, plus seed jitter so no two
       // blocks share a nominal tempo.
-      const baseMs = 230 - 70*piecePos - 50*w;        // ~110..230ms nominal
+      // ATMO-aware: calm pieces breathe slower (re-strikes spaced 1.4× wider —
+      // a serene plane sounds like a held bell, not a rapid tremolo). Frantic
+      // pieces compress to 0.80× (more urgent shimmer). Mid mood keeps the
+      // original nominal.
+      const _atmoTremScale = atmoE!=null
+        ? (atmoE<0.5 ? (1.0 + 0.4*(0.5-atmoE)/0.5)        // 1.0 → 1.4 toward serene
+                     : (1.0 - 0.2*(atmoE-0.5)/0.5))       // 1.0 → 0.8 toward frantic
+        : 1.0;
+      const baseMs = (230 - 70*piecePos - 50*w) * _atmoTremScale;
       ev._tremoloMs = Math.round(Math.max(95, baseMs));
       // ACCEL or RIT — direction chosen by the seed (not ord parity), magnitude
       // varies, so the push/relax pattern is irregular across the field.
       const accel = sr<0.5;
       ev._tremEndRatio = accel ? (0.58 + 0.22*w) : (1.22 + 0.40*w2); // ~0.58..0.8 | 1.22..1.62
       // Register shimmer: octave / fifth / none, chosen by seed.
-      const liftPick = (sr2>0.62) ? 12 : (sr2>0.30) ? 7 : 0;
+      // Calm ATMO biases away from aggressive octave jumps — a serene plane
+      // shimmers within a small interval, not by leaping a whole octave.
+      let liftPick = (sr2>0.62) ? 12 : (sr2>0.30) ? 7 : 0;
+      if(atmoE!=null && atmoE<0.30 && liftPick===12) liftPick = 7;    // octave → fifth in serene
+      if(atmoE!=null && atmoE<0.15 && liftPick===7)  liftPick = 0;    // fifth → none in very serene
       ev._tremLift = liftPick;
       ev._tremLiftCycles = 1 + Math.round(2*w2);              // 1..3 lifts across the hold
-      // Loudness breathing depth.
-      ev._tremSwell = 0.16 + 0.24*w;                          // 0.16..0.40
+      // Loudness breathing depth. ATMO-aware: calm planes breathe gently
+      // (depth ×0.6), frantic planes pulse harder (×1.2). Mid mood neutral.
+      const _atmoSwellScale = atmoE!=null
+        ? (atmoE<0.5 ? (1.0 - 0.4*(0.5-atmoE)/0.5)        // 1.0 → 0.6 toward serene
+                     : (1.0 + 0.2*(atmoE-0.5)/0.5))       // 1.0 → 1.2 toward frantic
+        : 1.0;
+      ev._tremSwell = (0.16 + 0.24*w) * _atmoSwellScale;
       // Rolled (arpeggiated) re-strikes on a seeded subset of blocks for texture.
       ev._planeGesture = (sr>0.68) ? 'roll' : 'arc';
     });
@@ -12200,7 +12224,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // doubling is musically meaningful — high treble doubling would crowd
   // the melody) and only when the octave still sits in the audible piano
   // range (≥ MIDI 24).
-  if(_nrBands >= 2){
+  //
+  // Calm ATMO override: strong-calm moods ("pomaly letny sen") already
+  // suppress the deep bass pedal upstream — adding octave doubling there
+  // would contradict the mood. Skip octave doubling when atmoE < 0.30 so
+  // the calm character stays vertical and airy, not grounded with weight.
+  if(_nrBands >= 2 && !(atmoE!=null && atmoE<0.30)){
     const bassThreshold = Math.floor(_nrBands * 0.5);   // bottom half of image
     for(const ev of evts){
       if(!ev.n || !ev.n.length) continue;
@@ -12284,6 +12313,11 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   //   • delta > 30 vs lower neighbour → MARCATO  +6 velocity
   //   • delta 18..30                  → ACCENT   +3 velocity
   //   • delta 8..18                   → touch    +1 velocity
+  //
+  // Valence scales accent intensity (0.7..1.3): positive valence makes
+  // peaks pop (bright/playful moods amplify dynamic variation), negative
+  // valence smooths them (heavy/grief stays even, no jolts).
+  const _accentValScale = 1 + 0.3 * valenceBias;
   for(let i=1; i<evts.length-1; i++){
     const c0 = evts[i-1]._chroma || 0;
     const c1 = evts[i]._chroma   || 0;
@@ -12296,6 +12330,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     if(delta > 30){       boost = 6; marker = 'marc'; }
     else if(delta > 18){  boost = 3; marker = 'acc';  }
     else {                boost = 1; marker = '';     }
+    boost = boost * _accentValScale;
     ev.n = ev.n.map(n => ({
       ...n,
       v: Math.max(20, Math.min(120, Math.round(n.v + boost)))
@@ -12548,6 +12583,23 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // Safety clamp: never absurdly fast or slow per cell.
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
     }
+  }
+  // ─── durMs ceiling vs step overlap — keep calm pieces from smearing ──────
+  // After all the durMs multipliers (per-voice articulation, edge-based
+  // staccato/legato, sustainMul from ATMO), a single note in a calm piece
+  // can ring 2-3 seconds while the next event starts in 260 ms. That stacks
+  // 5-10 notes simultaneously into a smeared pad instead of a sequence of
+  // distinct attacks. Cap each note's durMs at a multiple of its event's
+  // _stepMs so the legato is still rich (calm 4× 260ms = ~1s ring) but
+  // articulate (no infinite tails). Bass voices get a longer cap so they
+  // ground the harmony for the full beat.
+  for(const ev of evts){
+    if(!ev.n || !ev.n.length) continue;
+    const stepMs = ev._stepMs || 200;
+    ev.n = ev.n.map(n => {
+      const cap = (n.bass ? 6 : 4) * stepMs;
+      return n.durMs > cap ? {...n, durMs: cap} : n;
+    });
   }
   return evts;
 }
