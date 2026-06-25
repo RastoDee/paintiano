@@ -11392,6 +11392,8 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   if(!isFinite(bMin)){ bMin=0; bMax=1; }
   const bRange=(bMax-bMin)||1;
   let lastMel=null;                                 // mild smoothing of the contour
+  let lastLastMel=null;                             // for binary-chatter detection (A-B-A-B)
+  let altRun=0;                                     // consecutive A-B-A-B alternations
   let repeatRun=0;                                  // consecutive same-pitch counter (anti-telegraph)
   let darkRepeatLast=null;                          // dark-band lift: own anti-telegraph state
   let darkRepeatRun=0;                              // (kept separate so octave-wide global jumps don't apply)
@@ -11428,7 +11430,20 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     const _contourW = atmoE!=null ? (0.50 + 0.35*atmoE) : 0.70;       // 0.50…0.85
     const aim = lastMel!=null ? (_contourW*targetM + (1-_contourW)*lastMel) : targetM;
     const cands=[melM-12,melM,melM+12].filter(m=>m>=MEL_MIN-12&&m<=MEL_MAX+12);
-    melM=cands.reduce((a,b)=>Math.abs(b-aim)<Math.abs(a-aim)?b:a);
+    // Pick candidate by aim distance + a continuity penalty against lastMel.
+    // The penalty discourages random octave jumps when neighbouring cells
+    // share the same pitch class but lastMel sits in a particular octave.
+    // Penalty weight is ATMO-aware: calm pieces weight continuity HEAVIER
+    // (0.5 — almost matching the aim weight, so the line stays in register),
+    // frantic pieces lighter (0.15 — image jolts can still leap an octave).
+    const _smoothPenalty = lastMel!=null
+      ? (atmoE!=null ? (0.50 - 0.35*atmoE) : 0.30)                    // 0.50…0.15
+      : 0;
+    melM=cands.reduce((a,b)=>{
+      const ascore = Math.abs(a-aim) + (lastMel!=null ? _smoothPenalty*Math.abs(a-lastMel) : 0);
+      const bscore = Math.abs(b-aim) + (lastMel!=null ? _smoothPenalty*Math.abs(b-lastMel) : 0);
+      return bscore < ascore ? b : a;
+    });
     melM=Math.max(MEL_MIN-12,Math.min(MEL_MAX+12,melM));
     // Anti-repeat: a flat, uniform region maps every cell to the same pitch,
     // which re-strikes one note rapidly (a "telegraph beep"). When the melody
@@ -11454,6 +11469,33 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     } else {
       repeatRun=0;
     }
+    // Binary-chatter detector: A-B-A-B-A. The previous anti-repeat catches
+    // A-A but a stripe pattern toggling two pitches passes through. If melM
+    // matches the cell TWO back (i.e. we're alternating with lastMel), count
+    // it as binary chatter. After 2+ alternations, nudge the current note by
+    // a scale step so the line breaks the binary, and drop every 3rd to a
+    // rest the way the repeat handler does. lastLastMel and altRun reset
+    // whenever the pattern breaks naturally.
+    if(lastLastMel!=null && lastMel!=null && melM===lastLastMel && melM!==lastMel){
+      altRun++;
+      if(altRun>=2){
+        const stepToneCh=(from,dir)=>{
+          let m=from+dir;
+          for(let g=0;g<12;g++,m+=dir){
+            const pc=((m%12)+12)%12;
+            if(scalePCs.includes(pc) && m>=MEL_MIN-12 && m<=MEL_MAX+12) return m;
+          }
+          return null;
+        };
+        const dir2=(altRun%2===1)?1:-1;
+        const alt2=stepToneCh(melM,dir2) ?? stepToneCh(melM,-dir2);
+        if(alt2!=null) melM=alt2;
+        if(altRun>=3 && altRun%3===0) ev._melRest=true;
+      }
+    } else {
+      altRun=0;
+    }
+    lastLastMel=lastMel;
     lastMel=melM;
     const intensity=Math.max(0,Math.min(1,(rawInt[i]-intLo)/intRange)); // 0 calm … 1 intense
     // DARK-PASSAGE HANDLING. Two distinct situations where melSrc.bass is true:
@@ -11519,6 +11561,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         darkRepeatRun=0;
       }
       darkRepeatLast=melM;
+      lastLastMel=lastMel;
       lastMel=melM;
     }
     // Melody velocity: softer overall, and higher notes are softened MORE so the
@@ -11546,7 +11589,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     const melody = melIsBass
       ? {...melSrc, _melody:true}                                          // keep its low pitch + velocity, mark as melody
       : {...melSrc, m:melM, v:Math.max(melFloor,Math.min(96,melVel)), bass:false, white:isWhiteMel, _melody:true};
-    if(melIsBass){ lastMel=null; }                    // don't let it anchor the contour
+    if(melIsBass){ lastMel=null; lastLastMel=null; altRun=0; }     // don't let it anchor the contour
     // Accompaniment = the rest (minus the chosen melody note). Protected bass
     // notes (black dots) are pulled OUT here so the chord voicing can't lift
     // them up; they're re-added low at the end, fitting under the chord.
