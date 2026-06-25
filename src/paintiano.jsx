@@ -220,16 +220,19 @@ const PF_STYLE = `
         .pf-setup-body {
           display: grid !important;
           grid-template-columns: 1fr 1fr !important;
-          grid-template-areas: "pal art" "done art" !important;
+          grid-template-areas: "pal art" "tone art" "done art" !important;
           gap: 0 16px !important;
           align-items: start !important;
         }
         .pf-setup-palettes { grid-area: pal; display: flex; flex-direction: column; }
+        .pf-setup-tones    { grid-area: tone; display: flex; flex-direction: column; }
         .pf-setup-artists  { grid-area: art; }
         .pf-setup-palettes .pf-setup-grid,
+        .pf-setup-tones .pf-setup-grid,
         .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
-        /* PALETTES col: text right-aligned (toward center), checkbox at left edge */
-        .pf-setup-palettes .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
+        /* PALETTES + TONES col: text right-aligned (toward center), checkbox at left edge */
+        .pf-setup-palettes .pf-setup-grid > button > :last-child,
+        .pf-setup-tones    .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
         /* ARTISTS col: row reversed → checkbox at right edge, text+lock left-aligned (toward center) */
         .pf-setup-artists  .pf-setup-grid > button { flex-direction: row-reverse !important; }
         .pf-setup-artists  .pf-setup-grid > button > span:last-child { text-align: left !important; }
@@ -240,6 +243,7 @@ const PF_STYLE = `
            instead of justify-content: space-between (which pushed "None" off
            the right edge on narrow mobile portrait modals). */
         .pf-setup-palettes > div:first-child,
+        .pf-setup-tones    > div:first-child,
         .pf-setup-artists  > div:first-child {
           justify-content: flex-start !important;
           gap: 16px !important;
@@ -698,10 +702,11 @@ const PF_STYLE = `
              — that's now on the main canvas screen). */
           .pf-setup-body {
             grid-template-columns: 1fr 1fr !important;
-            grid-template-areas: "pal art" !important;
+            grid-template-areas: "pal art" "tone art" !important;
             gap: 0 28px !important;
           }
           .pf-setup-palettes { grid-area: pal; height: auto; }
+          .pf-setup-tones    { grid-area: tone; height: auto; }
           .pf-setup-artists  { grid-area: art; }
           /* Palette-column DONE stays hidden in 2-col (footer DONE is used). */
           .pf-setup-done-pal { display: none !important; }
@@ -1048,21 +1053,32 @@ const kontraCol=(m,v=100)=>{const h=KONTRA_HUE[m%12];const s=75+(v/127)*15;const
 // the SAME hue identity per pitch class but locks saturation + lightness into
 // a fixed pastel range. The result is a genuine pastel palette, not an HSL
 // post-filter: every pitch class keeps its harmonic relationship to the
-// others, but every colour reads as a true pastel ("Hokusai woodblock with
-// preserved hue, low chroma, lifted lightness" — best fit for Paintiano's
-// dark canvas + gold accent aesthetic).
-//   • Saturation:  30-45 % (vs Pure 75-90 %)        — modulated by velocity
-//   • Lightness:   range 58-78 % (vs Pure 12-88 %)  — keeps every block
-//                  comfortably above the dark canvas, no near-black pastels
-//   • Octave still modulates lightness within that pastel window so different
+// others, but every colour reads as a true pastel — calibrated against the
+// user-supplied 20-colour pastel reference card.
+//   • Lightness:   range 65-78 % (lifted band sitting comfortably above the
+//                  dark canvas, no near-black pastels)
+//   • Saturation:  HUE-AWARE — base 45-75 % (modulated by velocity), plus
+//                  +15 boost for warm hues (red/orange/yellow). This mirrors
+//                  the reference card where the warm top row reads as
+//                  vivid-but-pastel coral/peach while the cool rows
+//                  (blues/greens) sit softer.
+//   • Octave modulates lightness within that pastel window so different
 //     octaves of the same pitch class are visually distinguishable
 //   • Alpha unchanged from Pure (consistent block density across tones)
-const _octLPastel = m => 58 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*20;   // 58..78
-const _pastelSat  = v => 30 + (v/127)*15;                                          // 30..45
-const harmColPastel  =(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],         _pastelSat(v), _octLPastel(m));return[r,g,b,0.72+(v/127)*0.28];};
-const specColPastel  =(m,v=100)=>{const[r,g,b]=fromHsl(SPEC_HUE[m%12],    _pastelSat(v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
-const phiColPastel   =(m,v=100)=>{const[r,g,b]=fromHsl(PHI_HUE[m%12],     _pastelSat(v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
-const kontraColPastel=(m,v=100)=>{const[r,g,b]=fromHsl(KONTRA_HUE[m%12],  _pastelSat(v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
+const _octLPastel = m => 65 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*13;   // 65..78
+// Hue-aware saturation: warm side of the wheel (red→yellow, h<60 or h>320)
+// gets +15 boost; the rest follow the base curve. Velocity still modulates
+// inside each band so soft notes sit a little less saturated.
+const _pastelSat  = (h, v) => {
+  let base = 45 + (v/127)*30;                        // 45..75
+  const warm = (h < 60) || (h > 320);
+  if(warm) base += 15;                                // warm bump → up to ~90 at vel=127
+  return Math.min(95, base);
+};
+const harmColPastel  =(m,v=100)=>{const h=COF[m%12];        const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m));return[r,g,b,0.72+(v/127)*0.28];};
+const specColPastel  =(m,v=100)=>{const h=SPEC_HUE[m%12];   const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
+const phiColPastel   =(m,v=100)=>{const h=PHI_HUE[m%12];    const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
+const kontraColPastel=(m,v=100)=>{const h=KONTRA_HUE[m%12]; const[r,g,b]=fromHsl(h, _pastelSat(h,v), _octLPastel(m));return[r,g,b,0.65+(v/127)*0.35];};
 // Custom pastel: respects the user's hue choices (their picked hex per pitch
 // class is the artistic intent), but moves saturation + lightness into the
 // pastel band. Grey swatches stay grey (hue-less, same as Pure customCol).
@@ -1073,11 +1089,11 @@ const customColPastel=(m,v=100,palette)=>{
   const[h0,s0]=toHsl(r0,g0,b0);
   // Grey hex (s≈0) → keep neutral, pastel lightness around mid range
   const isGrey = s0<=0.5;
-  const sat = isGrey ? 0 : _pastelSat(v);
+  const sat = isGrey ? 0 : _pastelSat(h0, v);
   // Lightness anchored on the pastel octave curve, with velocity nudge so
   // softer notes sit slightly lighter (matches Real piano direction).
   const l = _octLPastel(m) + (v/127-0.5)*4;     // ±2 around pastel octave anchor
-  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(50,Math.min(82,l)));
+  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(58,Math.min(82,l)));
   return[rr,gg,bb,0.7+(v/127)*0.3];
 };
 // ── DARK palette variants ──────────────────────────────────────────────────
