@@ -13178,8 +13178,8 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     const melVel = Math.round((melSrc.v||80) * (0.90 - rollOff*heightFrac));
     const melFloor = 48;
     const melody = melIsBass
-      ? {...melSrc}                                   // keep its low pitch + velocity
-      : {...melSrc, m:melM, v:Math.max(melFloor,Math.min(96,melVel)), bass:false, white:isWhiteMel};
+      ? {...melSrc, _melody:true}                                          // keep its low pitch + velocity, mark as melody
+      : {...melSrc, m:melM, v:Math.max(melFloor,Math.min(96,melVel)), bass:false, white:isWhiteMel, _melody:true};
     if(melIsBass){ lastMel=null; }                    // don't let it anchor the contour
     // Accompaniment = the rest (minus the chosen melody note). Protected bass
     // notes (black dots) are pulled OUT here so the chord voicing can't lift
@@ -13289,12 +13289,16 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   for(let i=evts.length-1;i>=0;i--){
     if(evts[i].n.length){
       const tonicPc=scalePCs[0];
-      const mel=evts[i].n[0];
+      // Find the melody voice explicitly (not just n[0] which may be a
+      // top-voice accompaniment note after MERGE re-sorts by MIDI).
+      let melIdx = evts[i].n.findIndex(n=>n._melody);
+      if(melIdx < 0) melIdx = 0;                    // fallback: first note
+      const mel = evts[i].n[melIdx];
       let tm=tonicPc; while(tm<MEL_MIN) tm+=12; while(tm>MEL_MAX) tm-=12;
       // nearest tonic octave to where the melody currently is
       const cands=[tm-12,tm,tm+12].filter(m=>m>=MEL_MIN-12&&m<=MEL_MAX+12);
       tm=cands.reduce((a,b)=>Math.abs(b-mel.m)<Math.abs(a-mel.m)?b:a);
-      evts[i].n[0]={...mel, m:tm};
+      evts[i].n[melIdx]={...mel, m:tm};
       break;
     }
   }
@@ -13359,7 +13363,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   {
     const chromaVals2=evts.map(e=>e._chroma||0).filter(c=>c>0).sort((a,b)=>a-b);
     const chromaMed2=chromaVals2.length?chromaVals2[Math.floor(chromaVals2.length*0.55)]:0;
-    const _topMel=ns=>{ const nb=ns.filter(n=>!n.bass); if(!nb.length) return null; return nb.reduce((a,b)=>b.m>a.m?b:a).m; };
+    // Identify melody by explicit flag first; fall back to highest non-bass.
+    const _melMidi=ns=>{
+      const flagged=ns.find(n=>n._melody);
+      if(flagged) return flagged.m;
+      const nb=ns.filter(n=>!n.bass);
+      if(!nb.length) return null;
+      return nb.reduce((a,b)=>b.m>a.m?b:a).m;
+    };
     const _pcKey=ns=>{ const s=new Set(); for(const n of ns) s.add(((n.m%12)+12)%12); return [...s].sort((a,b)=>a-b).join(','); };
     // Walk playable events in order, tracking the previous playable event.
     let prevEv=null;
@@ -13367,11 +13378,11 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       const ev=evts[i];
       if(!ev.n || !ev.n.length || ev._playable===false) continue;
       if(prevEv){
-        const tm=_topMel(ev.n), pm=_topMel(prevEv.n);
+        const tm=_melMidi(ev.n), pm=_melMidi(prevEv.n);
         const vivid=(ev._chroma||0)>=chromaMed2;
         const sameChord=_pcKey(ev.n)===_pcKey(prevEv.n);   // identical → leave to merge
         if(tm!=null && tm===pm && vivid && !sameChord){
-          // Re-strike the melody: restore a clear attack on the tied top note.
+          // Re-strike the melody: restore a clear attack on the tied melody note.
           ev.n=ev.n.map(n=>{
             if(n.m===tm && n._tied){
               const {_tied,...rest}=n;
@@ -13416,14 +13427,22 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         // reflects the WHOLE plane, not just its first onset.
         const meanVel=(()=>{ let s=0,c=0; for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){ s+=(n.v||64); c++; } return c?Math.round(s/c):64; })();
         const pcMids=new Map(); // pc -> [midis...]
-        for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){ const pc=((n.m%12)+12)%12; if(!pcMids.has(pc)) pcMids.set(pc,[]); pcMids.get(pc).push(n.m); }
+        const pcIsMel=new Set();  // PCs that carried the _melody flag in any source event
+        for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){
+          const pc=((n.m%12)+12)%12;
+          if(!pcMids.has(pc)) pcMids.set(pc,[]);
+          pcMids.get(pc).push(n.m);
+          if(n._melody) pcIsMel.add(pc);
+        }
         const template=evts[k].n[0]||{durMs:300};
         const cleanN=[];
         for(const [pc,mids] of pcMids){
           const avgM=mids.reduce((a,b)=>a+b,0)/mids.length;
           let m=Math.round(avgM); while(((m%12)+12)%12!==pc) m+=(((m%12)+12)%12<pc?1:-1);
           const isBass=evts[k].n.some(n=>((n.m%12)+12)%12===pc && n.bass);
-          cleanN.push({...template, m, v:meanVel, bass:isBass});
+          const out={...template, m, v:meanVel, bass:isBass};
+          if(pcIsMel.has(pc)) out._melody = true;
+          cleanN.push(out);
         }
         cleanN.sort((a,b)=>b.m-a.m);
         evts[k].n=cleanN;
@@ -13623,12 +13642,20 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   for(let i=0;i<evts.length;i++){
     const ev=evts[i];
     if(!ev.n.length||ev._playable===false) continue;
-    const _nb=ev.n.filter(n=>!n.bass);
-    const _topM=_nb.length?Math.max(..._nb.map(n=>n.m)):-Infinity;
+    // Find the melody voice: prefer the explicit _melody marker, fall back
+    // to highest non-bass MIDI when none is flagged (Alberti expansion etc.).
+    const _melIdx = ev.n.findIndex(n=>n._melody);
+    let _melM = -Infinity;
+    if(_melIdx >= 0){
+      _melM = ev.n[_melIdx].m;
+    } else {
+      const _nb = ev.n.filter(n=>!n.bass);
+      _melM = _nb.length ? Math.max(..._nb.map(n=>n.m)) : -Infinity;
+    }
     ev.n=ev.n.map(n=>{
       let voiceMul=1;
       if(n.bass)              voiceMul=0.55;   // bass: short, detached
-      else if(n.m===_topM)    voiceMul=1.4;    // melody (top voice): long, singing
+      else if(n.m===_melM)    voiceMul=1.4;    // melody: long, singing
       // mid voices → 1 (neutral)
       const durMs=Math.max(durFloor, Math.round((n.durMs||250)*voiceMul));
       return {...n, durMs};
@@ -13653,7 +13680,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // — at the start of selected later bars. The line still follows the image,
       // but a familiar shape returns, giving the piece a theme rather than a drift.
       const MOTIF_LEN=4;
-      const motifSrc=soundIdx.slice(0,MOTIF_LEN).map(i=>evts[i].n[0].m);
+      // Helper: find the melody note index in an event (by flag, fallback to first)
+      const _melI = ns => {
+        const i = ns.findIndex(n=>n._melody);
+        return i >= 0 ? i : 0;
+      };
+      const motifSrc=soundIdx.slice(0,MOTIF_LEN).map(i=>{
+        const ns=evts[i].n;
+        return ns[_melI(ns)].m;
+      });
       // intervals between consecutive motif notes (semitones), snapped to scale later
       const motifIv=[]; for(let k=1;k<motifSrc.length;k++) motifIv.push(motifSrc[k]-motifSrc[k-1]);
       const totalBarsC=Math.max(1,Math.ceil(evts.length/BAR_EVENTS));
@@ -13666,10 +13701,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         for(const i of soundIdx){ if(Math.floor(i/BAR_EVENTS)===bar) barHeadEvents.push(i); if(barHeadEvents.length>=MOTIF_LEN) break; }
         if(barHeadEvents.length<2) continue;
         // anchor = the bar's first melody note (keeps it in the image's register)
-        let anchor=evts[barHeadEvents[0]].n[0].m, acc=anchor;
+        const _ai = _melI(evts[barHeadEvents[0]].n);
+        let anchor=evts[barHeadEvents[0]].n[_ai].m, acc=anchor;
         for(let k=0;k<barHeadEvents.length;k++){
           const ei=barHeadEvents[k];
-          const mel=evts[ei].n[0];
+          const mi = _melI(evts[ei].n);
+          const mel=evts[ei].n[mi];
           // target pitch = motif shape applied from the anchor, snapped to scale
           if(k>0 && motifIv[k-1]!=null){ acc=acc+motifIv[k-1]; }
           let target=snapToScale(acc);
@@ -13678,7 +13715,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           const snapped=snapToScale(blended);
           // keep within the melody band
           let mm=snapped; while(mm<MEL_MIN-12) mm+=12; while(mm>MEL_MAX+12) mm-=12;
-          evts[ei].n[0]={...mel, m:mm};
+          evts[ei].n[mi]={...mel, m:mm};
           acc=mm;
         }
       }
@@ -13822,12 +13859,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       if(!ev.n || ev.n.length < 2) continue;
       if(typeof ev.band !== 'number') continue;
       if(ev.band < trebleCut){
-        // Treble: thin out lower voices so the top sings above
-        let topIdx = 0;
-        for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
+        // Treble: thin out lower voices so the melody sings above
+        let melIdx = ev.n.findIndex(n => n._melody);
+        if(melIdx < 0){
+          melIdx = 0;
+          for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[melIdx].m) melIdx = k;
+        }
         ev.n = ev.n.map((n,k) => ({
           ...n,
-          v: Math.max(20, Math.min(120, (n.v||64) + (k===topIdx ? 0 : -3)))
+          v: Math.max(20, Math.min(120, (n.v||64) + (k===melIdx ? 0 : -3)))
         }));
       } else if(ev.band >= bassCut){
         // Bass: full chord, slightly heavier overall (grounding weight)
@@ -13842,20 +13882,27 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // ─── Voicing — bring the top voice forward as melody ─────────────────────
   // Keyboard music is heard "top-voice-as-melody" by default: the brain
   // picks the highest pitch in a chord and reads it as the tune, with the
-  // lower notes as accompaniment. Until now every note in an image chord
-  // sounded equally loud, so the whole thing read as a wash with no
-  // melodic thread. Here we lift the highest-MIDI note in each chord by
-  // +10 velocity (was +15 — reduced in Phase 4 audit to leave headroom for
-  // the metric/composition/image-accent stack downstream) and pull the
-  // rest down by -3 to widen the contrast.
+  // lower notes as accompaniment. Here we lift the melody by +10 velocity
+  // and pull the rest down by -3 to widen the contrast.
+  //
+  // Melody picking: prefer the explicit _melody flag set by MELODY
+  // EXTRACTION upstream. Fall back to highest-MIDI only when no marker
+  // exists (e.g. Alberti/shimmer expanded events that don't carry the
+  // flag). The flag-first approach ensures voicing always boosts the
+  // actual melodic line, never an accompaniment voice that happens to
+  // sit higher than the melody.
   // Applied BEFORE dynamics so the voicing differential survives compression.
   for(const ev of evts){
     if(!ev.n || ev.n.length < 2) continue;
-    let topIdx = 0;
-    for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[topIdx].m) topIdx = k;
+    let melIdx = ev.n.findIndex(n => n._melody);
+    if(melIdx < 0){
+      // Fallback: highest-MIDI voice
+      melIdx = 0;
+      for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[melIdx].m) melIdx = k;
+    }
     ev.n = ev.n.map((n,k) => ({
       ...n,
-      v: Math.max(20, Math.min(120, (n.v||64) + (k===topIdx ? 10 : -3)))
+      v: Math.max(20, Math.min(120, (n.v||64) + (k===melIdx ? 10 : -3)))
     }));
   }
   // ─── Octave doubling — forte bass gets a left-hand octave ────────────────
@@ -14086,10 +14133,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       if(maxV >= ALB_VEL_MAX) continue;
       // Sort chord notes low→high
       const sortedNotes = [...ev.n].sort((a,b) => a.m - b.m);
+      // Pick the melody note: prefer _melody flag from merged chord, else
+      // highest MIDI. This keeps Alberti's "top" cycle position aligned with
+      // the actual melodic line, not just whatever happens to be highest.
+      const melI = ev.n.findIndex(n=>n._melody);
+      const melNote = melI >= 0 ? ev.n[melI] : sortedNotes[sortedNotes.length - 1];
       const bass = sortedNotes[0];
-      const top  = sortedNotes[sortedNotes.length - 1];
+      const top  = melNote;
       const mid  = sortedNotes[Math.floor(sortedNotes.length / 2)];
-      // Classic Alberti rotation: bass → top → mid → top
+      // Classic Alberti rotation: bass → top → mid → top (top = melody)
       const cycle = [bass, top, mid, top];
       // Expand: turn the merged plane back into runLen single-note events
       const baseTemplate = {
@@ -14100,12 +14152,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         const src = cycle[k % cycle.length];
         const target = evts[i+k];
         if(!target) break;
-        target.n = [{
+        const isMel = (src === top);
+        const note = {
           ...baseTemplate,
           m: src.m,
           v: Math.min(120, Math.max(20, Math.round(src.v || baseTemplate.v))),
           durMs: src.durMs || baseTemplate.durMs
-        }];
+        };
+        if(isMel) note._melody = true;
+        target.n = [note];
         target._playable = true;          // restore playable (was false on merge continuations)
         target._alberti = true;
         if(k > 0) delete target._runLen;  // only first event keeps the plane marker
