@@ -28359,10 +28359,35 @@ Composition rules:
               only in music sources where there's actually a painting to
               hear. ACTIVE only after the song has reached its end (chords
               loaded, not playing, disp at the last chord) — half-finished
-              paintings are not yet ready to scan. Styled identically to
-              + NEW IMAGE (orange modality). */}
+              paintings are not yet ready to scan. Pushed rightward via
+              marginLeft:'auto' so it sits near + NEW MUSIC (modality pair). */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; const _paintingDone = chords.length>0 && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
-            <button onClick={()=>{ if(_dis) return; /* Step 2 hook lands here next: stop song (if any), capture canvas, switch to image mode, inject as upload */ }} disabled={_dis} className="pf-lift" title={_paintingDone?'Hear image':'Finish the painting first'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:_dis?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(_dis?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:_dis?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Hear image</button>
+            <button onClick={()=>{
+              if(_dis) return;
+              // Capture the current canvas as a PNG, wrap as a synthetic File,
+              // then feed it into the existing image-upload handler. That
+              // handler already does the heavy lifting: stops playback, wipes
+              // music state, pixelifies the image, switches viewMode to 'image'
+              // and sets loadedSource='image' — exactly the bridge we need.
+              try{
+                const cv = canvasRef.current;
+                if(!cv) return;
+                cv.toBlob((blob)=>{
+                  if(!blob) return;
+                  try{
+                    const file = new File([blob], 'painting.png', { type:'image/png', lastModified: Date.now() });
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    loadImage({ target: { files: dt.files, value: '' } });
+                  }catch(_){ /* DataTransfer not supported — fall back below */
+                    try{
+                      const fakeFiles = { 0: file, length: 1, item: (i)=>i===0?file:null };
+                      loadImage({ target: { files: fakeFiles, value: '' } });
+                    }catch(__){}
+                  }
+                }, 'image/png');
+              }catch(_){}
+            }} disabled={_dis} className="pf-lift" title={_paintingDone?'Hear image':'Finish the painting first'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',marginLeft:'auto',background:'rgba(28,24,40,.5)',color:_dis?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(_dis?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:_dis?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Hear image</button>
           ); })()}
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
