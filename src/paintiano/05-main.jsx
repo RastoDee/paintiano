@@ -809,11 +809,17 @@ export default function Paintiano() {
   const canvasRef    = useRef(null);
   const canvasWrapRef = useRef(null); // wrapper around the canvas — scrolled into view when the strip closes
   const stripWrapRef = useRef(null); // wrapper around the Color·Style strip — scroll target on Play in mood-from-image so the strip + source thumbnail stay framed
-  // Set true when the Hear image chip transfers a Music-mode painting into
-  // Image mode. The ← Back handler reads this and routes back to Music
-  // (restoreMode('music')) instead of the default Setup screen. Single-use:
-  // cleared as soon as Back consumes it.
+  // Music→Image bridge ("Hear image" chip). Two single-use flags so the
+  // post-load polish and the Back handler can fire independently:
+  //   • _imageFromMusicRef    — consumed by ← Back to route to Music
+  //   • _imageFromMusicPostRef — consumed by an effect after loadImage to
+  //                              clear the originalImgUrl overlay and mark
+  //                              playedOnce=true so seek scrubbing repaints
+  //                              the canvas (otherwise the canvas sits at
+  //                              opacity 0 under the static source image
+  //                              and seek visually does nothing).
   const _imageFromMusicRef = useRef(false);
+  const _imageFromMusicPostRef = useRef(false);
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -3951,6 +3957,18 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // inside a stable ([]) callback / at synchronous call sites.
   const loadedSourceRef = useRef(null);
   useEffect(()=>{ loadedSourceRef.current = loadedSource; },[loadedSource]);
+  // Music→Image bridge: after Hear image's synthetic loadImage finishes,
+  // clean up so seeking actually works visually. Without this the canvas
+  // sits at opacity 0 under the static source PNG and scrub events update
+  // disp invisibly. We drop the overlay and mark playedOnce so the seek
+  // repaint pass runs. Single-use: only when the bridge flag is armed.
+  useEffect(()=>{
+    if(_imageFromMusicPostRef.current && loadedSource==='image' && chords.length>0){
+      _imageFromMusicPostRef.current = false;
+      setOriginalImgUrl(null);
+      setPlayedOnce(true);
+    }
+  },[loadedSource, chords.length]);
   // Music source stash (midi / audio / score) — parallel to the Mood stash.
   // Lights the Music tile when a draft exists; tapping it restoreMode()s.
   const musicStashRef = useRef(null);
@@ -9557,11 +9575,16 @@ Composition rules:
                     // Mark this transition so the next ← Back from image mode
                     // returns to the original Music piece, not the Setup screen.
                     _imageFromMusicRef.current = true;
+                    // Mark for post-load polish: clear originalImgUrl overlay
+                    // and flip playedOnce=true so seek scrubbing repaints the
+                    // canvas immediately.
+                    _imageFromMusicPostRef.current = true;
                     loadImage({ target: { files: dt.files, value: '' } });
                   }catch(_){ /* DataTransfer not supported — fall back below */
                     try{
                       const fakeFiles = { 0: file, length: 1, item: (i)=>i===0?file:null };
                       _imageFromMusicRef.current = true;
+                      _imageFromMusicPostRef.current = true;
                       loadImage({ target: { files: fakeFiles, value: '' } });
                     }catch(__){}
                   }
