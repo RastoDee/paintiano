@@ -21464,6 +21464,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
 
   const gc = useCallback((m,v,pixelRGB)=>{
+    // ==== DEBUG TEMPORARY ====
+    if(typeof window!=='undefined'){
+      if(!window.__gcDbg || window.__gcDbg.mode!==mode || window.__gcDbg.tone!==tone){
+        window.__gcDbg = {mode, tone, n:0, samples:[]};
+        console.log('[gc-dbg] mode/tone change → reset:', mode, tone);
+      }
+    }
+    // ==== /DEBUG ====
     if(mode==='bw') return bwCol(m,v);
     // Tone routing:
     //   Pure   → pure palette variant (no modulation)
@@ -21541,6 +21549,32 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         _c[3],
       ];
     }
+    // ==== DEBUG TEMPORARY ====
+    if(typeof window!=='undefined' && window.__gcDbg && window.__gcDbg.n < 30){
+      const pc = ((m%12)+12)%12;
+      const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+      const [r,g,b] = _c;
+      // approximate hue from RGB for sanity
+      const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+      let h=0;
+      if(d>0){
+        if(mx===r) h=((g-b)/d)%6;
+        else if(mx===g) h=(b-r)/d+2;
+        else h=(r-g)/d+4;
+        h*=60; if(h<0) h+=360;
+      }
+      window.__gcDbg.samples.push({n:window.__gcDbg.n, m, pc, name:NAMES[pc], v, prgb:pixelRGB?`${pixelRGB.r},${pixelRGB.g},${pixelRGB.b}`:null, rgb:`${r},${g},${b}`, hue:Math.round(h)});
+      window.__gcDbg.n++;
+      if(window.__gcDbg.n===30){
+        console.log('[gc-dbg] First 30 calls in mode='+mode+' tone='+tone+':');
+        console.table(window.__gcDbg.samples);
+        // pc distribution
+        const dist=new Array(12).fill(0);
+        window.__gcDbg.samples.forEach(s=>dist[s.pc]++);
+        console.log('[gc-dbg] pc distribution:', dist.map((c,i)=>`${NAMES[i]}:${c}`).filter(s=>!s.endsWith(':0')).join(' '));
+      }
+    }
+    // ==== /DEBUG ====
     return _c;
   },[mode,activePalette,tone]);
 
@@ -22174,6 +22208,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     for(let i=0;i<lim;i++){
       if(colors[i]){ cur[i]._pixelRGB = colors[i]; sumR+=colors[i].r; sumG+=colors[i].g; sumB+=colors[i].b; nC++; }
     }
+    // ==== DEBUG TEMPORARY ====
+    console.log('[seemusic-dbg] post-load re-attach:', {
+      chordsCount: cur.length,
+      colorsCount: colors.length,
+      lim,
+      matched: nC,
+      avgRGB: nC>0 ? { r: Math.round(sumR/nC), g: Math.round(sumG/nC), b: Math.round(sumB/nC) } : null,
+      firstFewChordPCs: cur.slice(0, 10).map(c => c.n.map(n => n.m % 12)),
+      firstFewPixelRGBs: colors.slice(0, 10),
+    });
+    // ==== /DEBUG ====
     // Average source-pixel RGB across all chords — used as the gc() fallback
     // for canvas-wide overlay painters that don't pass an explicit per-chord
     // hint. Lets Picasso planes / Pollock drips / Klimt spirals still tint
@@ -28805,6 +28850,15 @@ Composition rules:
                 // the freshly parsed chord array). encodeMidi strips this
                 // metadata; the post-load effect re-injects it.
                 _imagePixelColorsRef.current = baked.map(c => c._pixelRGB || null);
+                // ==== DEBUG TEMPORARY ====
+                console.log('[seemusic-dbg] onClick bake:', {
+                  origChords: chords.length,
+                  bakedChords: baked.length,
+                  withPixelRGB: baked.filter(c => c._pixelRGB).length,
+                  firstFewBakedPCs: baked.slice(0, 10).map(c => c.n.map(n => n.m % 12)),
+                  firstFewPixelRGBs: baked.slice(0, 10).map(c => c._pixelRGB),
+                });
+                // ==== /DEBUG ====
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
