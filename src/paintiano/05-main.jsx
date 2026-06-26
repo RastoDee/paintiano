@@ -2454,20 +2454,52 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(viewMode==='image'&&pixelRef.current){
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
-      // Paused: detect via holdPausedRef, which is set synchronously the instant
-      // Pause is tapped (the state version hasn't flushed yet in the render that
-      // runs when playing flips false — that race is why the repaint still fired
-      // and wiped the freshly-painted blocks). When paused, leave the canvas
-      // exactly as the scan loop left it.
-      if(holdPaused || holdPausedRef.current) return;
-      // Fully stopped (not playing, not paused): the mosaic blocks belong ONLY
-      // to the live scan (during playback) and the paused state (to hold the
-      // position). Once playback ends — or the user returns via "← Canvas", or
-      // re-transcribes by changing the palette — the canvas must show the clean
-      // original <img> underneath, with NO blocks painted over it. So clear the
-      // canvas and bail. (Previously this repainted the played-so-far mosaic
-      // from pixel data whenever playedOnce was true, which made the blocks
-      // reappear over the artwork after a palette change — confusing.)
+      // Paused (incl. returning from Setup while paused): the canvas may have
+      // been blanked by the element remount, so REPAINT the played-so-far mosaic
+      // 0..disp from pixel data to restore the held position's blocks. Detect
+      // pause via holdPaused state, the synchronous holdPausedRef (set the
+      // instant Pause is tapped, before the state flush), OR resumeFromRef being
+      // set (the saved resume position — also set during the Resume race render,
+      // which must keep the blocks too).
+      const _paused = holdPaused || holdPausedRef.current || resumeFromRef.current!=null;
+      if(_paused){
+        try{
+          const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
+          const px=pixelRef.current;
+          if(ctx && px && disp>0){
+            const{nc,nr}=px, pdata=px.px;
+            const{BW,BH,CW,CH}=grid;
+            const colStep=px.colStep||1;
+            const effCols=Math.ceil(nc/colStep);
+            const CHORD_SIZE=4;
+            ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
+            for(let i=0;i<disp && i<chords.length;i++){
+              const _ev=chords[i]||{};
+              const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
+              const cg=_ev.cg!=null?_ev.cg:i%effCols;
+              const colStart=cg*colStep;
+              for(let sk=0;sk<colStep;sk++){
+                const col=colStart+sk; if(col>=nc) break;
+                for(let j=0;j<CHORD_SIZE;j++){
+                  const row=band*CHORD_SIZE+j; if(row>=nr) break;
+                  const p=pdata[row*nc+col];
+                  if(!p) continue;
+                  ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+                  ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
+                }
+              }
+            }
+          }
+        }catch(_){}
+        return;
+      }
+      // Truly idle: not playing, not paused, not mid-resume. The mosaic blocks
+      // belong ONLY to the live scan (during playback) and the paused state.
+      // Once playback ends, the user returns to a finished piece via "← Canvas",
+      // or a palette change re-transcribes, the canvas must show the clean
+      // original <img> with NO blocks over it. Clear and bail. (Previously this
+      // repainted the played-so-far mosaic whenever playedOnce was true, which
+      // made blocks reappear over the artwork after a palette change.)
       try{
         const cv2=canvasRef.current, ctx2=cv2&&cv2.getContext('2d');
         if(ctx2){ const{CW,CH}=grid; ctx2.clearRect(0,0,CW,CH); }
