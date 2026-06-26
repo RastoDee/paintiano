@@ -1236,9 +1236,13 @@ function drawMatisse(ctx,bx,by,notes,gc,BW,BH){
   });
 }
 function drawBlock(ctx,bx,by,notes,gc,BW,BH,style,pixelRGB){
-  if(style==='mondrian')return drawMondrian(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='rothko')return drawRothko(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='matisse')return drawMatisse(ctx,bx,by,notes,gc,BW,BH);
+  // When painting an image-derived chord (See music), wrap gc so per-note
+  // colours mix 70% toward the source pixel — every artist below paints
+  // with these tinted notes without needing to know about pixelRGB.
+  const _gc = pixelRGB ? ((m,v)=>gc(m,v,pixelRGB)) : gc;
+  if(style==='mondrian')return drawMondrian(ctx,bx,by,notes,_gc,BW,BH);
+  if(style==='rothko')return drawRothko(ctx,bx,by,notes,_gc,BW,BH);
+  if(style==='matisse')return drawMatisse(ctx,bx,by,notes,_gc,BW,BH);
   if(style==='picasso'){
     // Picasso has its own canvas-wide cubist plane overlay that supplies all
     // color. The per-block drawer just keeps the dark canvas underneath —
@@ -1247,12 +1251,12 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style,pixelRGB){
     ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2);
     return;
   }
-  if(style==='kusama')return drawKusama(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='kusama')return drawKusama(ctx,bx,by,notes,_gc,BW,BH);
+  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,_gc,BW,BH);
+  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,_gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
-  if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,gc,BW,BH);
-  return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH,pixelRGB); // implicit default
+  if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,_gc,BW,BH);
+  return drawBlockMosaic(ctx,bx,by,notes,_gc,BW,BH,pixelRGB); // implicit default
 }
 
 // ── Shared helper for the Kusama-style overlays (Rothko, Matisse) ──

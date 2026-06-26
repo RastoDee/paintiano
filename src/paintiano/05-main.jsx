@@ -824,6 +824,13 @@ export default function Paintiano() {
   // paint each cell in its source pixel colour — matching what the image-scan
   // canvas showed. Cleared after consumption.
   const _imagePixelColorsRef = useRef(null);
+  // Average source-pixel RGB across all chords from the See music transfer.
+  // gc() falls back to this when an overlay painter calls gc(m,v) without a
+  // per-chord pixelRGB hint — so canvas-wide overlays (Picasso planes,
+  // Pollock drips, Klimt spirals) still tint toward the source image's
+  // dominant colour, not the chord-class fallback. Set by the same effect
+  // that re-attaches per-chord _pixelRGB; cleared on subsequent loads.
+  const _currentImageAvgRGBRef = useRef(null);
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -2339,7 +2346,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
 
 
-  const gc = useCallback((m,v)=>{
+  const gc = useCallback((m,v,pixelRGB)=>{
     if(mode==='bw') return bwCol(m,v);
     // Tone routing:
     //   Pure   → pure palette variant (no modulation)
@@ -2391,6 +2398,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         Math.round(_p[0]*mt + _c[0]*t),
         Math.round(_p[1]*mt + _c[1]*t),
         Math.round(_p[2]*mt + _c[2]*t),
+        _c[3],
+      ];
+    }
+    // See music path: if a source-pixel RGB hint is supplied, mix the
+    // computed colour 70% toward it. The remaining 30% is the COF/scale
+    // colour so per-note lightness/saturation differentiation survives,
+    // but the dominant hue follows the source painting. Other artists call
+    // gc() through a wrapped callback in drawBlock — they don't need to
+    // know about this; they just get colours that match the source.
+    // Per-chord pixelRGB (passed explicitly) wins; canvas-wide overlay
+    // painters that call gc(m,v) without a hint fall back to the average
+    // image RGB so their tint still moves toward the source.
+    const _prgb = pixelRGB || _currentImageAvgRGBRef.current;
+    if(_prgb && Array.isArray(_c)){
+      const t = 0.7; // pixel weight; 0.3 stays with COF for harmonic differentiation
+      const mt = 1 - t;
+      _c = [
+        Math.round(_prgb.r * t + _c[0] * mt),
+        Math.round(_prgb.g * t + _c[1] * mt),
+        Math.round(_prgb.b * t + _c[2] * mt),
         _c[3],
       ];
     }
@@ -3012,7 +3039,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // canvas). Triggers exactly once after See music's loadMidi → applyEvents
   // completes, then clears the ref.
   useEffect(()=>{
-    if(!_musicFromImageRef.current) return;
+    if(!_musicFromImageRef.current){
+      // Not a See music transfer — clear stale image-average tint so a
+      // subsequent normal MIDI/audio/score load paints in its own colours.
+      if(_currentImageAvgRGBRef.current) _currentImageAvgRGBRef.current = null;
+      return;
+    }
     if(!_imagePixelColorsRef.current) return;
     if(loadedSource!=='midi') return;
     if(!chords || chords.length===0) return;
@@ -3021,9 +3053,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // map as many as we can — never crash on a partial match.
     const cur = chordsRef.current;
     const lim = Math.min(cur.length, colors.length);
+    let sumR=0,sumG=0,sumB=0,nC=0;
     for(let i=0;i<lim;i++){
-      if(colors[i]) cur[i]._pixelRGB = colors[i];
+      if(colors[i]){ cur[i]._pixelRGB = colors[i]; sumR+=colors[i].r; sumG+=colors[i].g; sumB+=colors[i].b; nC++; }
     }
+    // Average source-pixel RGB across all chords — used as the gc() fallback
+    // for canvas-wide overlay painters that don't pass an explicit per-chord
+    // hint. Lets Picasso planes / Pollock drips / Klimt spirals still tint
+    // toward the source image's dominant hue.
+    _currentImageAvgRGBRef.current = nC>0 ? { r: Math.round(sumR/nC), g: Math.round(sumG/nC), b: Math.round(sumB/nC) } : null;
     // Force a repaint so the substrate rebuilds with the new colours.
     setStamp(s=>s+1);
     _imagePixelColorsRef.current = null; // single-use
