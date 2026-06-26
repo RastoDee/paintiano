@@ -6496,12 +6496,18 @@ Composition rules:
           }
           const vividPct = considered ? (vivid/considered)*100 : 0;
           const autoMode = vividPct < 5 ? 'bw' : 'kontra';   // <5% colour ⇒ monochrome reading; colourful ⇒ Kontra (painter's reading) as the image default
-          appModeRef.current = autoMode;             // remember the app's pick for Custom→back
+          // Hear image (Music → Image bridge): the user already has a palette
+          // chosen in Music; carry it across instead of overriding with the
+          // image auto-pick (which would snap Harmony → Kontra on every cross).
+          // A genuinely fresh image (not from Music) still gets the auto read.
+          const _fromMusic = _imageFromMusicRef.current === true;
+          appModeRef.current = _fromMusic ? mode : autoMode; // remember the app's pick for Custom→back
           setSetupNoSel(false);                      // a fresh image re-enables the app's colour pick
           // Keep a manual Custom choice if the user already had it; otherwise apply
           // the app's pick. (spectral/other non-image modes fall back to autoMode.)
-          const startMode = mode==='custom' ? 'custom' : autoMode;
-          kontraAutoRef.current = (startMode==='kontra'); // flag auto-kontra so it doesn't leak to other sources
+          // When arriving from Music, keep the current palette verbatim.
+          const startMode = _fromMusic ? mode : (mode==='custom' ? 'custom' : autoMode);
+          kontraAutoRef.current = (!_fromMusic && startMode==='kontra'); // auto-kontra only on a fresh image, never when palette carried from Music
           if(startMode!==mode) setMode(startMode);
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
           scanPixelBackupRef.current=pixelRef.current; // keep scan data for Clear after a compose nulls pixelRef
@@ -6583,6 +6589,12 @@ Composition rules:
     // custom mode, OR changing the reading direction, forces a re-transcribe.
     const sig = mode + '|' + imgDir + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
+    // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
+    // change re-orders the scan, so playback must restart from the top rather
+    // than resume mid-stream (resuming would jump to an unrelated cell). A
+    // palette/mode change keeps the same order and resumes seamlessly.
+    const _dirChanged = pixelRef.current.lastDir !== undefined && pixelRef.current.lastDir !== imgDir;
+    pixelRef.current.lastDir=imgDir;
     pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
     const{nc,nr,px}=pixelRef.current;
@@ -6609,12 +6621,22 @@ Composition rules:
     // resume playback from that same index. Only when stopped do we reset to the
     // top (ready to play from the start in the new colour).
     if(playingRef.current){
+      // Direction change → re-ordered scan → restart from the top so the mosaic
+      // and audio build cleanly in the new order (resuming mid-stream would land
+      // on an unrelated cell).
+      if(_dirChanged){
+        setChords(evts);chordsRef.current=evts;
+        setDisp(0);
+        resumeFromRef.current=0;
+        setStamp(s=>s+1);
+        try{ startPlayRef.current?.(); }catch(_){}
+      }
       // Texture swaps live as before. But the MELODY voice is scheduled once at
       // startPlay (parallel timers), so a melody on/off toggle MID-PLAYBACK must
       // re-arm it: restart from the current position. _melodyTogglePlayingRef is
       // set true by the chip handler only when it flips melody during playback, so
       // a plain colour change still swaps seamlessly without a restart.
-      if(_melodyTogglePlayingRef.current){
+      else if(_melodyTogglePlayingRef.current){
         _melodyTogglePlayingRef.current=false;
         const keep=Math.min(dispRef.current||0, evts.length);
         setChords(evts);chordsRef.current=evts;
@@ -6632,7 +6654,9 @@ Composition rules:
       // Paused mid-piece: swap in the new colour's notes but KEEP the position so
       // pressing Resume continues from where it was, now in the new tones. Don't
       // restart playback (still paused) and don't reset disp to the end.
-      const keep=Math.min(dispRef.current||0, evts.length);
+      // EXCEPT a direction change re-orders the scan — keeping the old position
+      // would resume on an unrelated cell, so reset to the top.
+      const keep=_dirChanged ? 0 : Math.min(dispRef.current||0, evts.length);
       setChords(evts);chordsRef.current=evts;
       setDisp(keep);setStamp(s=>s+1);
       resumeFromRef.current=keep;
@@ -9501,6 +9525,11 @@ Composition rules:
             // flag, then restoreMode('music') loads the stashed music draft.
             if(_imageFromMusicRef.current && (loadedSource==='image' || viewMode==='image')){
               _imageFromMusicRef.current = false;
+              // Preserve the in-progress Image piece (position/pause) the user
+              // built here before jumping back to the Music source, so returning
+              // to Image later resumes where they left off instead of losing it.
+              // stashMode reads dispRef, so capture BEFORE stopAll resets it.
+              try{ stashMode('image'); }catch(_){}
               try{ stopAll(); }catch(_){}
               try{ wipeCanvasNow(); }catch(_){}
               setShowMoodMenu(false);setShowMorphMenu(false);setShowComposeRecent(false);setShowMicRecent(false);setPickMode(null);
@@ -9513,6 +9542,10 @@ Composition rules:
             // from image bridge), Back should restore the original Image piece.
             if(_musicFromImageRef.current && (loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score')){
               _musicFromImageRef.current = false;
+              // Preserve the in-progress Music piece (position/pause) the user
+              // built here before jumping back to the Image source, so returning
+              // to Music later resumes where they left off. Capture BEFORE stopAll.
+              try{ stashMode('music'); }catch(_){}
               try{ stopAll(); }catch(_){}
               try{ wipeCanvasNow(); }catch(_){}
               setShowMoodMenu(false);setShowMorphMenu(false);setShowComposeRecent(false);setShowMicRecent(false);setPickMode(null);
@@ -10069,7 +10102,13 @@ Composition rules:
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['lr','vert','spiralIn','spiralOut'].map(d=>{
                   const sel = imgDir===d;
-                  const locked = playing||holdPaused;
+                  // Direction may be changed during playback now: unlike a palette
+                  // swap (same scan order, just different tones → seamless), a
+                  // direction change re-orders the scan, so the re-transcribe
+                  // effect restarts it from the top. Only a load/export (working)
+                  // blocks it — note `busy` includes `playing`, so we must NOT use
+                  // it here or the button would stay locked during scan.
+                  const locked = working;
                   const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
                   return (
                     <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('dir_'+d)}</button>
@@ -10125,7 +10164,11 @@ Composition rules:
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
             {setupArtists.includes('mosaicFamily') && (()=>{
               const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
-              const mosaicOn = style===null && (!shuffleStyle || inFamilyShuffle);
+              // Manual mosaic = selected and NOT being driven by the dice. Like
+              // the artist pairs, a shuffle-hit shows the white frame (no gold
+              // glow); a manual pick shows the gold glow. Splitting these keeps
+              // the Mosaic family visually consistent with the other chips.
+              const mosaicManual = style===null && !shuffleStyle;
               // Sub-label reflects the current rendered family member.
               const subKind = (shuffleStyle==='notes') ? 'notes'
                             : (shuffleStyle==='oneM') ? 'oneM'
@@ -10155,7 +10198,7 @@ Composition rules:
                 else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
                 else { setOneMMode(false); setNotesMode(false); }
               }
-            }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn)}}>{subLabel}</button>
+            }} className={(mosaicManual?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicManual),...(!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{subLabel}</button>
             ); })()}
             {effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b)).map(([a,b], _pairIdx)=>{
               // Setup-picker integration: when only ONE side of the pair is in
