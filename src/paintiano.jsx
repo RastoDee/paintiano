@@ -21570,42 +21570,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // and wiped the freshly-painted blocks). When paused, leave the canvas
       // exactly as the scan loop left it.
       if(holdPaused || holdPausedRef.current) return;
-      // Fully stopped (not paused): the canvas may have been blanked while we were
-      // away in Setup (the element unmounts/clears). Repaint the already-played
-      // mosaic 0..disp from pixel data so returning via "← Canvas" shows the
-      // progress that was on screen before, instead of a blank image overlay.
-      // BUT: if the user has never started playback yet (playedOnce=false),
-      // changing the colour palette must NOT pre-paint the raster grid over the
-      // original — at that point the user just expects to preview the source
-      // image. The raster only belongs there after Play has actually run.
-      if(!playedOnce) return;
+      // Fully stopped (not playing, not paused): the mosaic blocks belong ONLY
+      // to the live scan (during playback) and the paused state (to hold the
+      // position). Once playback ends — or the user returns via "← Canvas", or
+      // re-transcribes by changing the palette — the canvas must show the clean
+      // original <img> underneath, with NO blocks painted over it. So clear the
+      // canvas and bail. (Previously this repainted the played-so-far mosaic
+      // from pixel data whenever playedOnce was true, which made the blocks
+      // reappear over the artwork after a palette change — confusing.)
       try{
-        const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
-        const px=pixelRef.current;
-        if(ctx && px && disp>0){
-          const{nc,nr}=px, pdata=px.px;
-          const{BW,BH,CW,CH}=grid;
-          const colStep=px.colStep||1;
-          const effCols=Math.ceil(nc/colStep);
-          const CHORD_SIZE=4;
-          ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
-          for(let i=0;i<disp && i<chords.length;i++){
-            const _ev=chords[i]||{};
-            const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
-            const cg=_ev.cg!=null?_ev.cg:i%effCols;
-            const colStart=cg*colStep;
-            for(let sk=0;sk<colStep;sk++){
-              const col=colStart+sk; if(col>=nc) break;
-              for(let j=0;j<CHORD_SIZE;j++){
-                const row=band*CHORD_SIZE+j; if(row>=nr) break;
-                const p=pdata[row*nc+col];
-                if(!p) continue;
-                ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
-                ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
-              }
-            }
-          }
-        }
+        const cv2=canvasRef.current, ctx2=cv2&&cv2.getContext('2d');
+        if(ctx2){ const{CW,CH}=grid; ctx2.clearRect(0,0,CW,CH); }
       }catch(_){}
       return;
     }
