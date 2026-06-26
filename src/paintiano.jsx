@@ -1853,25 +1853,16 @@ function _pastelTint(r,g,b){
 
 // Sharp φ-rectangle look — implicit default when no artist style selected.
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH,pixelRGB){
-  // SHORT-CIRCUIT for music-mode mosaic of image-derived chords. When a
-  // chord carries its source-pixel RGB (set by image-scan, preserved through
-  // the See music bake), paint the whole cell in that single colour so the
-  // music-mode mosaic looks like the image-scan canvas — same image, same
-  // colour, just a different sounding voice underneath.
-  if(pixelRGB){
-    const{r:R,g:G,b:B}=pixelRGB;
-    ctx.fillStyle=_rgbaStr(R,G,B,0.18);
-    ctx.fillRect(bx-2,by-2,BW+4,BH+4);
-    ctx.fillStyle=_rgbaStr(R,G,B,1);
-    ctx.fillRect(bx+.5,by+.5,BW-1,BH-1);
-    return;
-  }
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
   const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
   const n=sorted.length,bh=BH/n;
   for(let i=0;i<n;i++){
     const note=sorted[i];
-    const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;
+    // Pass pixelRGB through to gc so the See music tint mixes in. Without
+    // an explicit hint, gc still falls back to the canvas-wide average
+    // (_currentImageAvgRGBRef) if one was set. Either way, gc respects the
+    // active palette and tone — Mosaic no longer short-circuits past them.
+    const[r,g,b,a]=gc(note.m,note.v,pixelRGB),y=by+i*bh;
     // Velocity -> saturation: pp fades toward neutral grey, ff stays vivid.
     // Per-voice grey is the note's own luma, so lightness (octave) is preserved.
     // GATED by _mixOn: in Normal tone this modulation is skipped entirely and
@@ -21518,17 +21509,20 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       ];
     }
     // See music path: if a source-pixel RGB hint is supplied, mix the
-    // computed colour 70% toward it. The remaining 30% is the COF/scale
-    // colour so per-note lightness/saturation differentiation survives,
-    // but the dominant hue follows the source painting. Other artists call
-    // gc() through a wrapped callback in drawBlock — they don't need to
-    // know about this; they just get colours that match the source.
+    // computed colour toward it — BUT respect the active tone so palette
+    // and tone selections still feel meaningful. Pure tone gives the
+    // pixel the strongest pull (the user is asking for raw source colour);
+    // Real splits 50/50 (the painting's identity and the harmonic palette
+    // share the canvas); Pastel keeps the palette dominant so the soft
+    // wash stays soft and the pixel is just a faint hue drift.
     // Per-chord pixelRGB (passed explicitly) wins; canvas-wide overlay
     // painters that call gc(m,v) without a hint fall back to the average
     // image RGB so their tint still moves toward the source.
     const _prgb = pixelRGB || _currentImageAvgRGBRef.current;
     if(_prgb && Array.isArray(_c)){
-      const t = 0.7; // pixel weight; 0.3 stays with COF for harmonic differentiation
+      const t = tone === 'pure'   ? 0.70   // pixel dominates — image identity
+              : tone === 'pastel' ? 0.30   // palette dominates — soft wash
+              :                     0.50;  // real (or anything else): balanced
       const mt = 1 - t;
       _c = [
         Math.round(_prgb.r * t + _c[0] * mt),
