@@ -21634,46 +21634,36 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
     _setVariantCap(proStatus==='free' ? 2 : null);
-    // Paint-side chord array: when the chord array carries _paintPc on its
-    // notes (set by the See music post-load effect from the image scan's
-    // source-pixel pitch classes), build a transformed copy where each note
-    // m is rewritten to (oct*12 + _paintPc) — same octave, source-faithful
-    // pc. Canvas-wide overlay painters (Picasso/Pollock drip/Klimt/etc.)
-    // consume chords directly without going through drawBlock, so they get
-    // this paint-side array. drawBlock applies the same rewrite per-cell
-    // internally, so per-cell artists also see source-faithful colours.
-    // Audio engine never reads _chordsPaint — it plays the original chords.
-    const _hasPaintPc = chords && chords.length>0 && chords[0] && chords[0].n && chords[0].n.some && chords[0].n.some(n=>typeof n._paintPc==='number');
-    // ==== DEBUG TEMPORARY ====
-    if(typeof window!=='undefined' && chords && chords.length>0){
-      if(!window.__paintDbg || window.__paintDbg.lastChords !== chords){
-        window.__paintDbg = {lastChords: chords};
-        try{
-          console.log('[seemusic-dbg] PAINT:', {
-            chordsLen: chords.length,
-            _hasPaintPc,
-            firstChordNotes: chords[0]?.n?.map(n=>({m:n.m, _paintPc:n._paintPc})),
-            anyNoteWithPp: chords.some(c=>c.n.some(n=>typeof n._paintPc==='number')),
-          });
-        }catch(_){}
-      }
-    }
-    // ==== /DEBUG ====
+    // Paint-side chord array: when chords carry a chord-level _paintPc (set by
+    // the See music post-load effect from the image scan's source-pixel pitch
+    // classes), build a transformed copy where every note's m is rewritten to
+    // (oct*12 + chord._paintPc) — same octave, source-faithful pc. Canvas-wide
+    // overlay painters (Picasso/Pollock drip/Klimt/etc.) consume chords
+    // directly without going through drawBlock, so they get this paint-side
+    // array. drawBlock applies the same chord-level rewrite per-cell internally
+    // (it reads the chord-level pc off the first note we set here), so per-cell
+    // artists also see source-faithful colours. Audio engine never reads
+    // _chordsPaint — it plays the original chords.
+    const _hasPaintPc = chords && chords.length>0 && chords.some && chords.some(c=>typeof c._paintPc==='number');
     const _chordsPaint = _hasPaintPc
-      ? chords.map(c => ({
-          ...c,
-          n: c.n.map(n => typeof n._paintPc === 'number'
-            ? { ...n, m: Math.floor(n.m/12)*12 + n._paintPc }
-            : n
-          )
-        }))
+      ? chords.map(c => typeof c._paintPc === 'number'
+          ? { ...c, n: (c.n||[]).map(n => ({ ...n, m: Math.floor(n.m/12)*12 + c._paintPc, _paintPc: c._paintPc })) }
+          : c
+        )
       : chords;
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
       if(!chord) return; // stale disp can index past chords → undefined chord
       _setCurE(chord._E);
-      const{n:notes,idx}=chord;
+      const{idx}=chord;
+      // Per-cell artists (Mosaic/Mondrian/Rothko/...) colour from the notes
+      // passed here. On the See music path the source-faithful pitch classes
+      // live on _chordsPaint (chord-level _paintPc rewritten onto every note),
+      // so pull the paint-side notes for this chord when available; otherwise
+      // fall back to the chord's own notes. Same index/length as chords.
+      const _pc = (_chordsPaint && _chordsPaint!==chords) ? _chordsPaint[idx] : null;
+      const notes = (_pc && _pc.n) ? _pc.n : chord.n;
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
         if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
@@ -22166,36 +22156,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!_imagePaintPcsRef.current) return;
     if(loadedSource!=='midi') return;
     if(!chords || chords.length===0) return;
-    const maps = _imagePaintPcsRef.current;
-    const cur = chordsRef.current;
-    const lim = Math.min(cur.length, maps.length);
-    let matched=0, total=0;
-    for(let i=0;i<lim;i++){
-      const m2p = maps[i];
-      if(!m2p) continue;
-      for(const note of cur[i].n){
-        total++;
-        if(typeof m2p[note.m] === 'number'){
-          note._paintPc = m2p[note.m];
-          matched++;
-        }
-      }
+    const maps = _imagePaintPcsRef.current;       // length = baked chord count
+    const cur = chordsRef.current;                // length = music chord count
+    if(!cur || cur.length===0){ return; }
+    const srcLen = maps.length;
+    // Proportional position map: the MIDI round-trip collapses the baked chord
+    // count into a smaller music chord count (e.g. 1216 -> 674) and shifts note
+    // m values, so neither index-equality nor per-note m lookup survives. Each
+    // music chord i borrows the representative source pc from the baked chord
+    // that occupies the same RELATIVE position in the song. This is robust to
+    // any merge ratio and keeps the colour progression aligned left-to-right.
+    for(let i=0;i<cur.length;i++){
+      const srcIdx = srcLen>0 ? Math.min(srcLen-1, Math.floor(i * srcLen / cur.length)) : -1;
+      const pc = srcIdx>=0 ? maps[srcIdx] : null;
+      if(typeof pc === 'number') cur[i]._paintPc = pc;
     }
-    // ==== DEBUG TEMPORARY ====
-    try{
-      console.log('[seemusic-dbg] RE-ATTACH:', {
-        bakedChords: maps.length,
-        musicChords: cur.length,
-        lim,
-        totalNotesIterated: total,
-        notesMatched: matched,
-        firstChordMusicNotes: cur[0]?.n?.map(n=>({m:n.m, _paintPc:n._paintPc})),
-        firstChordBakedMap: maps[0],
-      });
-    }catch(_){}
-    // ==== /DEBUG ====
-    // Force a repaint so the substrate rebuilds with the source-faithful
-    // colour assignment.
+    // Force a fresh array reference so the paint effect re-runs against the
+    // chords now carrying _paintPc. In-place mutation alone wouldn't re-trigger
+    // a render; a stamp bump can be coalesced away. setChords with a new array
+    // guarantees the commit.
+    setChords(prev => (prev && prev.length ? prev.slice() : prev));
     setStamp(s=>s+1);
     _imagePaintPcsRef.current = null; // single-use
   },[chords, loadedSource]);
@@ -28806,32 +28786,21 @@ Composition rules:
                 // texture-less.
                 const baked = bakeImageChords(chords);
                 if(baked.length===0) return;
-                // Capture per-chord per-note _paintPc maps before encodeMidi
-                // strips this field. Each entry: { [m]: paintPc, ... } for the
-                // notes in that chord. The post-load effect re-attaches them
-                // by chord-position + per-note m lookup.
+                // Capture ONE representative _paintPc per baked chord before
+                // encodeMidi strips the field. Per-note m-keyed matching proved
+                // unusable: the MIDI round-trip re-quantizes and re-voices, so
+                // note m values shift and the baked chord count collapses to a
+                // smaller music chord count (e.g. 1216 -> 674). The post-load
+                // effect therefore re-attaches a single pc per chord,
+                // positionally (proportional index map), which survives the
+                // round-trip. The representative is the first note carrying a
+                // source-pixel pc; null if the chord has none.
                 _imagePaintPcsRef.current = baked.map(c => {
-                  const map = {};
                   for(const n of c.n){
-                    if(typeof n._paintPc === 'number') map[n.m] = n._paintPc;
+                    if(typeof n._paintPc === 'number') return n._paintPc;
                   }
-                  return map;
+                  return null;
                 });
-                // ==== DEBUG TEMPORARY ====
-                try{
-                  const totalNotes = baked.reduce((s,c)=>s+c.n.length,0);
-                  const notesWithPp = baked.reduce((s,c)=>s+c.n.filter(n=>typeof n._paintPc==='number').length,0);
-                  const chordsWithAnyPp = _imagePaintPcsRef.current.filter(m=>Object.keys(m).length>0).length;
-                  console.log('[seemusic-dbg] CAPTURE:', {
-                    bakedChords: baked.length,
-                    totalNotes,
-                    notesWithPaintPc: notesWithPp,
-                    chordsWithAnyPp,
-                    firstChordPaintMap: _imagePaintPcsRef.current[0],
-                    firstChordNotes: baked[0].n.map(n=>({m:n.m, _paintPc:n._paintPc})),
-                  });
-                }catch(_){}
-                // ==== /DEBUG ====
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
@@ -28853,11 +28822,10 @@ Composition rules:
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
                   _imagePaintPcsRef.current = baked.map(c => {
-                    const map = {};
                     for(const n of c.n){
-                      if(typeof n._paintPc === 'number') map[n.m] = n._paintPc;
+                      if(typeof n._paintPc === 'number') return n._paintPc;
                     }
-                    return map;
+                    return null;
                   });
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
