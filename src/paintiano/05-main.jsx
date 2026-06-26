@@ -3039,12 +3039,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // canvas). Triggers exactly once after See music's loadMidi → applyEvents
   // completes, then clears the ref.
   useEffect(()=>{
-    if(!_musicFromImageRef.current){
-      // Not a See music transfer — clear stale image-average tint so a
-      // subsequent normal MIDI/audio/score load paints in its own colours.
-      if(_currentImageAvgRGBRef.current) _currentImageAvgRGBRef.current = null;
-      return;
-    }
+    // See music post-load only runs when _imagePixelColorsRef has data.
+    // applyEvents has already cleared _currentImageAvgRGBRef for non-See-
+    // music loads, so nothing extra to do here on the inverse branch.
     if(!_imagePixelColorsRef.current) return;
     if(loadedSource!=='midi') return;
     if(!chords || chords.length===0) return;
@@ -4887,6 +4884,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // (Genuine MFI recall paths re-set moodContext/moodFromImg AFTER
     // applyEvents, so this doesn't break the recall flow.)
     setMoodFromImg(false); setMoodContext(false);
+    // See music tint cleanup. The See music bridge populates
+    // _imagePixelColorsRef in onClick right before encodeMidi → loadMidi →
+    // applyEvents. The presence of that ref is the signal that THIS
+    // applyEvents call carries image colours; any other path means a
+    // normal non-image load and must drop any lingering image tint so
+    // music plays in its own colours. (_musicFromImageRef is a SEPARATE
+    // flag for the Back handler — it persists until Back consumes it.)
+    if(!_imagePixelColorsRef.current){
+      _currentImageAvgRGBRef.current = null;
+    }
     // Stash any active creative draft before replacing the canvas with imported
     // content. The draft lives on in its mode's stash slot until the user
     // explicitly CLEARs it from inside that mode.
