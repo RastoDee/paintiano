@@ -11230,50 +11230,10 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       }
     }
   }
-  // ─── Palette ↔ COF permutation (See music round-trip) ─────────────────────
-  // Krumhansl-Schmuckler's MAJOR_P/MINOR_P profiles encode tonal Western music,
-  // which is built on the circle of fifths (COF). Running detection directly on
-  // pitch classes derived from a non-COF palette (Kontra/Spectral/Phi/Custom)
-  // makes it pick a wrong key — and the subsequent scale + bar progression
-  // overwrite the pixel-derived pitch classes with pcs that, when rendered
-  // back through the palette in Music mode, produce colours unrelated to the
-  // source painting. Fix: permute the pc distribution into COF space for the
-  // detection step, then permute the resulting scale PCs back into palette-
-  // native space. Music sounds the same (the underlying tonal logic is
-  // honoured) but the pitch classes that end up in the chord array are
-  // PALETTE-NATIVE, so a Kontra image, transferred via See music, rendered in
-  // Kontra in Music mode, restores the source's hue identity.
-  // For Harmony / bw the table IS COF (or COF-aligned), so both maps collapse
-  // to identity and the pipeline behaves exactly as before.
-  const _palToCof = new Array(12);  // palette pc i  → COF pc closest in hue
-  const _cofToPal = new Array(12);  // COF pc i      → palette pc closest in hue
-  for(let i=0;i<12;i++){
-    const hPal = table[i] != null ? table[i] : COF[i];
-    let bestJ=0, bestD=Infinity;
-    for(let j=0;j<12;j++){
-      const d=Math.min(Math.abs(hPal-COF[j]), 360-Math.abs(hPal-COF[j]));
-      if(d<bestD){bestD=d; bestJ=j;}
-    }
-    _palToCof[i] = bestJ;
-  }
-  for(let j=0;j<12;j++){
-    const hCof = COF[j];
-    let bestI=0, bestD=Infinity;
-    for(let i=0;i<12;i++){
-      const hPal = table[i] != null ? table[i] : COF[i];
-      const d=Math.min(Math.abs(hCof-hPal), 360-Math.abs(hCof-hPal));
-      if(d<bestD){bestD=d; bestI=i;}
-    }
-    _cofToPal[j] = bestI;
-  }
   // ─── Music theory pass ──
   // 1) Krumhansl-Schmuckler key detection
   const pcCounts=new Array(12).fill(0);
   evts.forEach(ev=>ev.n.forEach(n=>pcCounts[n.m%12]++));
-  // Permute pc distribution into COF space so Krumhansl's COF-aligned profile
-  // detects the key correctly even when the palette uses a non-COF hue table.
-  const pcCountsCOF=new Array(12).fill(0);
-  for(let i=0;i<12;i++) pcCountsCOF[_palToCof[i]] += pcCounts[i];
   const MAJOR_P=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
   const MINOR_P=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
   // Colour temperature → mood bias. Warm hues (reds/oranges/yellows, ~0–60° &
@@ -11301,7 +11261,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     for(const isMaj of[true,false]){
       const prof=isMaj?MAJOR_P:MINOR_P;
       let corr=0;
-      for(let i=0;i<12;i++)corr+=pcCountsCOF[(i+key)%12]*prof[i];
+      for(let i=0;i<12;i++)corr+=pcCounts[(i+key)%12]*prof[i];
       corr*=isMaj?majBias:minBias;             // colour-temperature mood tiebreaker
       if(corr>bestCorr){bestCorr=corr;bestKey=key;bestModeIsMajor=isMaj;}
     }
@@ -11335,13 +11295,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
        : _atmoSpectralWhole ? WHOLE_OFFSETS
        : (spectralSoft ? PENTA_OFFSETS : WHOLE_OFFSETS))
     : (bestModeIsMajor ? MAJ_OFFSETS : MIN_OFFSETS);
-  // bestKey + baseOffsets are in COF space (Krumhansl ran on COF-permuted
-  // pc counts). Compute scalePCs in COF space, then permute back into
-  // palette-native space so the rest of the pipeline produces pcs that
-  // round-trip cleanly when rendered through the active palette in Music
-  // (after a See music transfer). Harmony/bw: identity map → no-op.
-  const scalePCs_COF=baseOffsets.map(o=>(o+bestKey)%12);
-  const scalePCs=scalePCs_COF.map(pc=>_cofToPal[pc]);
+  const scalePCs=baseOffsets.map(o=>(o+bestKey)%12);
   const SCALE_LEN=scalePCs.length;               // 7 diatonic / 6 whole-tone / 5 pentatonic
   function snapToScale(midi){
     const oct=Math.floor(midi/12);
