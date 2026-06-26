@@ -818,19 +818,6 @@ export default function Paintiano() {
   // an Image-scan chord array into Music mode. The ← Back handler routes
   // back to Image (restoreMode('image')) instead of Setup. Single-use.
   const _musicFromImageRef = useRef(false);
-  // Per-chord source-pixel RGB array captured at See music time. After the
-  // async loadMidi → applyEvents pipeline produces a fresh chord array, an
-  // effect re-attaches these RGBs to chordsRef so the music-mode mosaic can
-  // paint each cell in its source pixel colour — matching what the image-scan
-  // canvas showed. Cleared after consumption.
-  const _imagePixelColorsRef = useRef(null);
-  // Average source-pixel RGB across all chords from the See music transfer.
-  // gc() falls back to this when an overlay painter calls gc(m,v) without a
-  // per-chord pixelRGB hint — so canvas-wide overlays (Picasso planes,
-  // Pollock drips, Klimt spirals) still tint toward the source image's
-  // dominant colour, not the chord-class fallback. Set by the same effect
-  // that re-attaches per-chord _pixelRGB; cleared on subsequent loads.
-  const _currentImageAvgRGBRef = useRef(null);
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -1475,15 +1462,10 @@ export default function Paintiano() {
     }
     if(mode==='kontra' && kontraAutoRef.current && viewMode!=='image' && loadedSource!=='image'){
       // EXCEPTION: after a See music transfer the music chord array still
-      // carries source-pixel colours. Kontra was the palette in which the
-      // image was scanned and remains meaningful because the painting is
-      // image-derived. Don't force Harmony — let the user see the piece in
-      // the palette it was born from. _imagePixelColorsRef is set in the
-      // See music onClick BEFORE loadMidi runs, so by the time this effect
-      // sees loadedSource flip away from 'image' the ref is already truthy.
-      // (_currentImageAvgRGBRef gets populated by the post-load effect which
-      // runs AFTER this one, so it's the wrong signal here.)
-      if(_imagePixelColorsRef.current || _currentImageAvgRGBRef.current) return;
+      // carries the palette in which the image was scanned. Kontra was
+      // chosen as the auto-mode for the source image and remains the
+      // palette in which the piece was born — don't force Harmony.
+      if(_musicFromImageRef.current) return;
       kontraAutoRef.current=false;
       setMode('harmony');
     }
@@ -2356,15 +2338,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
 
 
-  const gc = useCallback((m,v,pixelRGB)=>{
-    // ==== DEBUG TEMPORARY ====
-    if(typeof window!=='undefined'){
-      if(!window.__gcDbg || window.__gcDbg.mode!==mode || window.__gcDbg.tone!==tone){
-        window.__gcDbg = {mode, tone, n:0, samples:[]};
-        console.log('[gc-dbg] mode/tone change → reset:', mode, tone);
-      }
-    }
-    // ==== /DEBUG ====
+  const gc = useCallback((m,v)=>{
     if(mode==='bw') return bwCol(m,v);
     // Tone routing:
     //   Pure   → pure palette variant (no modulation)
@@ -2419,55 +2393,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         _c[3],
       ];
     }
-    // See music path: if a source-pixel RGB hint is supplied, mix the
-    // computed colour toward it — BUT respect the active tone so palette
-    // and tone selections still feel meaningful. Pure tone gives the
-    // pixel the strongest pull (the user is asking for raw source colour);
-    // Real splits 50/50 (the painting's identity and the harmonic palette
-    // share the canvas); Pastel keeps the palette dominant so the soft
-    // wash stays soft and the pixel is just a faint hue drift.
-    // Per-chord pixelRGB (passed explicitly) wins; canvas-wide overlay
-    // painters that call gc(m,v) without a hint fall back to the average
-    // image RGB so their tint still moves toward the source.
-    const _prgb = pixelRGB || _currentImageAvgRGBRef.current;
-    if(_prgb && Array.isArray(_c)){
-      const t = tone === 'pure'   ? 0.70   // pixel dominates — image identity
-              : tone === 'pastel' ? 0.30   // palette dominates — soft wash
-              :                     0.50;  // real (or anything else): balanced
-      const mt = 1 - t;
-      _c = [
-        Math.round(_prgb.r * t + _c[0] * mt),
-        Math.round(_prgb.g * t + _c[1] * mt),
-        Math.round(_prgb.b * t + _c[2] * mt),
-        _c[3],
-      ];
-    }
-    // ==== DEBUG TEMPORARY ====
-    if(typeof window!=='undefined' && window.__gcDbg && window.__gcDbg.n < 30){
-      const pc = ((m%12)+12)%12;
-      const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-      const [r,g,b] = _c;
-      // approximate hue from RGB for sanity
-      const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
-      let h=0;
-      if(d>0){
-        if(mx===r) h=((g-b)/d)%6;
-        else if(mx===g) h=(b-r)/d+2;
-        else h=(r-g)/d+4;
-        h*=60; if(h<0) h+=360;
-      }
-      window.__gcDbg.samples.push({n:window.__gcDbg.n, m, pc, name:NAMES[pc], v, prgb:pixelRGB?`${pixelRGB.r},${pixelRGB.g},${pixelRGB.b}`:null, rgb:`${r},${g},${b}`, hue:Math.round(h)});
-      window.__gcDbg.n++;
-      if(window.__gcDbg.n===30){
-        console.log('[gc-dbg] First 30 calls in mode='+mode+' tone='+tone+':');
-        console.table(window.__gcDbg.samples);
-        // pc distribution
-        const dist=new Array(12).fill(0);
-        window.__gcDbg.samples.forEach(s=>dist[s.pc]++);
-        console.log('[gc-dbg] pc distribution:', dist.map((c,i)=>`${NAMES[i]}:${c}`).filter(s=>!s.endsWith(':0')).join(' '));
-      }
-    }
-    // ==== /DEBUG ====
     return _c;
   },[mode,activePalette,tone]);
 
@@ -2596,11 +2521,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!chord) return; // stale disp can index past chords → undefined chord
       _setCurE(chord._E);
       const{n:notes,idx}=chord;
-      const _prgb=chord._pixelRGB; // source-pixel colour for music-mode mosaic of image-derived chords (See music)
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
-        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style,_prgb));
-        else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style,_prgb);
+        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
+        else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
       }else{
         // No precomputed cell yet (one-render gap between commit's setChords and
         // the grid-recompute effect's setGrid). Instead of the tiny default-grid
@@ -2609,7 +2533,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const total=Math.max(1,chords.length);
         const fw=Math.max(2,Math.floor(CW/total));
         const fx=idx*fw;
-        drawBlock(ctx,fx,0,notes,gc,fw,CH,style,_prgb);
+        drawBlock(ctx,fx,0,notes,gc,fw,CH,style);
       }
     };
     // Fast path: if only `disp` advanced during playback and every other input
@@ -2748,14 +2672,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           for(let i=sub.builtTo;i<lim;i++){
             const chord=chords[i];if(!chord)break; _setCurE(chord._E); // stale disp / lim past chords → bail, don't destructure undefined
             const{n:notes,idx}=chord;
-            const _prgb=chord._pixelRGB;
             const cell=grid.cells&&grid.cells[idx];
             if(cell){
-              if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style,_prgb));
-              else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style,_prgb);
+              if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style));
+              else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
             }else{
               const si=idx%(N*N),col=si%N,row=Math.floor(si/N);
-              drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style,_prgb);
+              drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style);
             }
           }
         }
@@ -3079,48 +3002,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[playing]);
   useEffect(()=>{ dispRef.current=disp; },[disp]);
   useEffect(()=>{ chordsRef.current=chords; },[chords]);
-  // See music post-load: re-attach per-chord source-pixel RGBs to the freshly
-  // parsed music-mode chord array. encodeMidi strips _pixelRGB; we kept it in
-  // _imagePixelColorsRef before encode and now position-map it back so the
-  // music-mode mosaic can render in source colours (matching the image-scan
-  // canvas). Triggers exactly once after See music's loadMidi → applyEvents
-  // completes, then clears the ref.
-  useEffect(()=>{
-    // See music post-load only runs when _imagePixelColorsRef has data.
-    // applyEvents has already cleared _currentImageAvgRGBRef for non-See-
-    // music loads, so nothing extra to do here on the inverse branch.
-    if(!_imagePixelColorsRef.current) return;
-    if(loadedSource!=='midi') return;
-    if(!chords || chords.length===0) return;
-    const colors = _imagePixelColorsRef.current;
-    // Position-map RGBs onto the live chord array. Mismatched lengths just
-    // map as many as we can — never crash on a partial match.
-    const cur = chordsRef.current;
-    const lim = Math.min(cur.length, colors.length);
-    let sumR=0,sumG=0,sumB=0,nC=0;
-    for(let i=0;i<lim;i++){
-      if(colors[i]){ cur[i]._pixelRGB = colors[i]; sumR+=colors[i].r; sumG+=colors[i].g; sumB+=colors[i].b; nC++; }
-    }
-    // ==== DEBUG TEMPORARY ====
-    console.log('[seemusic-dbg] post-load re-attach:', {
-      chordsCount: cur.length,
-      colorsCount: colors.length,
-      lim,
-      matched: nC,
-      avgRGB: nC>0 ? { r: Math.round(sumR/nC), g: Math.round(sumG/nC), b: Math.round(sumB/nC) } : null,
-      firstFewChordPCs: cur.slice(0, 10).map(c => c.n.map(n => n.m % 12)),
-      firstFewPixelRGBs: colors.slice(0, 10),
-    });
-    // ==== /DEBUG ====
-    // Average source-pixel RGB across all chords — used as the gc() fallback
-    // for canvas-wide overlay painters that don't pass an explicit per-chord
-    // hint. Lets Picasso planes / Pollock drips / Klimt spirals still tint
-    // toward the source image's dominant hue.
-    _currentImageAvgRGBRef.current = nC>0 ? { r: Math.round(sumR/nC), g: Math.round(sumG/nC), b: Math.round(sumB/nC) } : null;
-    // Force a repaint so the substrate rebuilds with the new colours.
-    setStamp(s=>s+1);
-    _imagePixelColorsRef.current = null; // single-use
-  },[chords, loadedSource]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
   useEffect(()=>{ gcRef.current=gc; },[gc]);
   const infoRef = useRef(null);
@@ -4931,16 +4812,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // (Genuine MFI recall paths re-set moodContext/moodFromImg AFTER
     // applyEvents, so this doesn't break the recall flow.)
     setMoodFromImg(false); setMoodContext(false);
-    // See music tint cleanup. The See music bridge populates
-    // _imagePixelColorsRef in onClick right before encodeMidi → loadMidi →
-    // applyEvents. The presence of that ref is the signal that THIS
-    // applyEvents call carries image colours; any other path means a
-    // normal non-image load and must drop any lingering image tint so
-    // music plays in its own colours. (_musicFromImageRef is a SEPARATE
-    // flag for the Back handler — it persists until Back consumes it.)
-    if(!_imagePixelColorsRef.current){
-      _currentImageAvgRGBRef.current = null;
-    }
     // Stash any active creative draft before replacing the canvas with imported
     // content. The draft lives on in its mode's stash slot until the user
     // explicitly CLEARs it from inside that mode.
@@ -9738,20 +9609,6 @@ Composition rules:
                 // texture-less.
                 const baked = bakeImageChords(chords);
                 if(baked.length===0) return;
-                // Capture per-chord source-pixel RGBs from the BAKED array
-                // (so position-based re-attach after loadMidi lines up with
-                // the freshly parsed chord array). encodeMidi strips this
-                // metadata; the post-load effect re-injects it.
-                _imagePixelColorsRef.current = baked.map(c => c._pixelRGB || null);
-                // ==== DEBUG TEMPORARY ====
-                console.log('[seemusic-dbg] onClick bake:', {
-                  origChords: chords.length,
-                  bakedChords: baked.length,
-                  withPixelRGB: baked.filter(c => c._pixelRGB).length,
-                  firstFewBakedPCs: baked.slice(0, 10).map(c => c.n.map(n => n.m % 12)),
-                  firstFewPixelRGBs: baked.slice(0, 10).map(c => c._pixelRGB),
-                });
-                // ==== /DEBUG ====
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
@@ -9772,7 +9629,6 @@ Composition rules:
                   if(!chords || chords.length===0) return;
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
-                  _imagePixelColorsRef.current = baked.map(c => c._pixelRGB || null);
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';

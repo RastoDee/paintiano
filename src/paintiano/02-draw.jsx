@@ -208,17 +208,13 @@ function _pastelTint(r,g,b){
 }
 
 // Sharp φ-rectangle look — implicit default when no artist style selected.
-function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH,pixelRGB){
+function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
   const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
   const n=sorted.length,bh=BH/n;
   for(let i=0;i<n;i++){
     const note=sorted[i];
-    // Pass pixelRGB through to gc so the See music tint mixes in. Without
-    // an explicit hint, gc still falls back to the canvas-wide average
-    // (_currentImageAvgRGBRef) if one was set. Either way, gc respects the
-    // active palette and tone — Mosaic no longer short-circuits past them.
-    const[r,g,b,a]=gc(note.m,note.v,pixelRGB),y=by+i*bh;
+    const[r,g,b,a]=gc(note.m,note.v),y=by+i*bh;
     // Velocity -> saturation: pp fades toward neutral grey, ff stays vivid.
     // Per-voice grey is the note's own luma, so lightness (octave) is preserved.
     // GATED by _mixOn: in Normal tone this modulation is skipped entirely and
@@ -1226,14 +1222,10 @@ function drawMatisse(ctx,bx,by,notes,gc,BW,BH){
     }
   });
 }
-function drawBlock(ctx,bx,by,notes,gc,BW,BH,style,pixelRGB){
-  // When painting an image-derived chord (See music), wrap gc so per-note
-  // colours mix 70% toward the source pixel — every artist below paints
-  // with these tinted notes without needing to know about pixelRGB.
-  const _gc = pixelRGB ? ((m,v)=>gc(m,v,pixelRGB)) : gc;
-  if(style==='mondrian')return drawMondrian(ctx,bx,by,notes,_gc,BW,BH);
-  if(style==='rothko')return drawRothko(ctx,bx,by,notes,_gc,BW,BH);
-  if(style==='matisse')return drawMatisse(ctx,bx,by,notes,_gc,BW,BH);
+function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
+  if(style==='mondrian')return drawMondrian(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='rothko')return drawRothko(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='matisse')return drawMatisse(ctx,bx,by,notes,gc,BW,BH);
   if(style==='picasso'){
     // Picasso has its own canvas-wide cubist plane overlay that supplies all
     // color. The per-block drawer just keeps the dark canvas underneath —
@@ -1242,12 +1234,12 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style,pixelRGB){
     ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2);
     return;
   }
-  if(style==='kusama')return drawKusama(ctx,bx,by,notes,_gc,BW,BH);
-  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,_gc,BW,BH);
-  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,_gc,BW,BH);
+  if(style==='kusama')return drawKusama(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
-  if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,_gc,BW,BH);
-  return drawBlockMosaic(ctx,bx,by,notes,_gc,BW,BH,pixelRGB); // implicit default
+  if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,gc,BW,BH);
+  return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
 }
 
 // ── Shared helper for the Kusama-style overlays (Rothko, Matisse) ──
@@ -11081,12 +11073,6 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // we're already iterating these pixels.
       let lSumC=0, lSqSumC=0, lNC=0;
       let hueMinC=361, hueMaxC=-1;
-      // Per-cell pixel-RGB accumulator. Mosaic paint in music mode (after a
-      // See music transfer) reads this so each cell can be rendered in the
-      // SOURCE PIXEL COLOUR rather than the chord-derived hue — keeping the
-      // music-mode mosaic visually close to what the image-scan canvas
-      // showed for the same painting.
-      let rSumC=0, gSumC=0, bSumC=0;
       for(let sk=0;sk<COL_STEP;sk++){
         const col=cg*COL_STEP+sk; if(col>=nc) break;
         for(let j=0;j<CHORD_SIZE;j++){
@@ -11095,7 +11081,6 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           const{r,g,b}=px[idx],[hh,ss,ll]=toHsl(r,g,b);
           cellChroma += ss*Math.min(ll,100-ll)/50; cellChN++;
           lSumC += ll; lSqSumC += ll*ll; lNC++;
-          rSumC += r; gSumC += g; bSumC += b;
           if(ss > 8){ // ignore near-grey pixels for hue spread (their hue is noise)
             if(hh < hueMinC) hueMinC = hh;
             if(hh > hueMaxC) hueMaxC = hh;
@@ -11126,10 +11111,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       }
       // Store band+cg so the canvas mosaic can paint each event's exact cell in
       // traversal order (needed for non-row-major directions like vert/spiral).
-      // _pixelRGB carries the cell's average source-pixel colour so music-mode
-      // mosaic (after See music) can match the image-scan canvas appearance.
-      const _pixelRGB = lNC > 0 ? { r: Math.round(rSumC/lNC), g: Math.round(gSumC/lNC), b: Math.round(bSumC/lNC) } : null;
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_pixelRGB});
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat});
       evIdx++;
     }
   }
@@ -12974,7 +12956,7 @@ function bakeImageChords(src){
             const m = isTop && topShift !== 0 ? Math.max(0, Math.min(127, n.m + topShift)) : n.m;
             return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)) };
           });
-          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ, _pixelRGB: c._pixelRGB });
+          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ });
         }
         t += gNow;
         r++;
@@ -12990,8 +12972,7 @@ function bakeImageChords(src){
         out.push({
           n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300) }],
           startMs: (c.startMs || 0) + off,
-          durQ: c.durQ,
-          _pixelRGB: c._pixelRGB
+          durQ: c.durQ
         });
       }
       continue;
@@ -13004,7 +12985,7 @@ function bakeImageChords(src){
       v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))),
       durMs: Math.max(80, Math.round((n.durMs || 300) * durMul))
     }));
-    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ, _pixelRGB: c._pixelRGB });
+    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ });
   }
   return out;
 }
