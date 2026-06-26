@@ -1223,9 +1223,24 @@ function drawMatisse(ctx,bx,by,notes,gc,BW,BH){
   });
 }
 function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
-  if(style==='mondrian')return drawMondrian(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='rothko')return drawRothko(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='matisse')return drawMatisse(ctx,bx,by,notes,gc,BW,BH);
+  // See music painting path: if any note carries _paintPc (the pixel-derived
+  // pitch class captured during image scan, before snap/bar progression
+  // overwrote n.m), rewrite each note's m to the same octave but with pc =
+  // _paintPc. Every artist below then paints in the source-faithful colour
+  // via gc(m,v) without needing to know about _paintPc. Audio engine
+  // bypasses this transform — it reads notes directly from the chord array,
+  // so the music still plays the harmonically-shaped pitches.
+  const _hasPaintPc = notes.some(n => typeof n._paintPc === 'number');
+  const _notes = _hasPaintPc
+    ? notes.map(n => {
+        if(typeof n._paintPc !== 'number') return n;
+        const oct = Math.floor(n.m / 12);
+        return { ...n, m: oct*12 + n._paintPc };
+      })
+    : notes;
+  if(style==='mondrian')return drawMondrian(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='rothko')return drawRothko(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='matisse')return drawMatisse(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='picasso'){
     // Picasso has its own canvas-wide cubist plane overlay that supplies all
     // color. The per-block drawer just keeps the dark canvas underneath —
@@ -1234,12 +1249,12 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
     ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2);
     return;
   }
-  if(style==='kusama')return drawKusama(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='kusama')return drawKusama(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
-  if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,gc,BW,BH);
-  return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
+  if(style==='notes')return drawBlockNotes(ctx,bx,by,_notes,gc,BW,BH);
+  return drawBlockMosaic(ctx,bx,by,_notes,gc,BW,BH); // implicit default
 }
 
 // ── Shared helper for the Kusama-style overlays (Rothko, Matisse) ──
@@ -11035,7 +11050,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     let v = Math.round(38 + (chroma/100) * 68);
     if (isBackgroundHue) v = Math.round(v * 0.6);
     else if (isNearBackground) v = Math.round(v * 0.82);
-    return{m:midi,v,durMs:noteDur};
+    // _paintPc = original pixel-derived pitch class (= midi%12 BEFORE snap +
+    // bar progression overwrite it). Travels alongside the note as a second
+    // channel: the audio engine ignores it, but the Music-mode painter (after
+    // a See music transfer) can use it to render the source-faithful colour
+    // while the audio still plays the harmonically-shaped pcs. Image canvas
+    // paints from pixelRef directly, so this field has no effect there.
+    return{m:midi,v,durMs:noteDur,_paintPc:midi%12};
   }
   // Pick the most vivid of three row-pixels at (band, col) — used when the
   // strict filter would have left this chord empty. Guarantees audible music.
@@ -12954,7 +12975,7 @@ function bakeImageChords(src){
             const isTop = (n.m === topM);
             const v = Math.max(20, Math.min(127, Math.round((n.v || 80) * env * baseVel * velScale)));
             const m = isTop && topShift !== 0 ? Math.max(0, Math.min(127, n.m + topShift)) : n.m;
-            return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)) };
+            return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)), _paintPc: n._paintPc };
           });
           out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ });
         }
@@ -12970,7 +12991,7 @@ function bakeImageChords(src){
       for(const n of c.n){
         const off = (typeof n.offsetMs === 'number' && n.offsetMs > 0) ? n.offsetMs : 0;
         out.push({
-          n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300) }],
+          n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300), _paintPc: n._paintPc }],
           startMs: (c.startMs || 0) + off,
           durQ: c.durQ
         });
@@ -12983,7 +13004,8 @@ function bakeImageChords(src){
     const baseNotes = c.n.map(n => ({
       m: n.m,
       v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))),
-      durMs: Math.max(80, Math.round((n.durMs || 300) * durMul))
+      durMs: Math.max(80, Math.round((n.durMs || 300) * durMul)),
+      _paintPc: n._paintPc
     }));
     out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ });
   }

@@ -2867,9 +2867,24 @@ function drawMatisse(ctx,bx,by,notes,gc,BW,BH){
   });
 }
 function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
-  if(style==='mondrian')return drawMondrian(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='rothko')return drawRothko(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='matisse')return drawMatisse(ctx,bx,by,notes,gc,BW,BH);
+  // See music painting path: if any note carries _paintPc (the pixel-derived
+  // pitch class captured during image scan, before snap/bar progression
+  // overwrote n.m), rewrite each note's m to the same octave but with pc =
+  // _paintPc. Every artist below then paints in the source-faithful colour
+  // via gc(m,v) without needing to know about _paintPc. Audio engine
+  // bypasses this transform — it reads notes directly from the chord array,
+  // so the music still plays the harmonically-shaped pitches.
+  const _hasPaintPc = notes.some(n => typeof n._paintPc === 'number');
+  const _notes = _hasPaintPc
+    ? notes.map(n => {
+        if(typeof n._paintPc !== 'number') return n;
+        const oct = Math.floor(n.m / 12);
+        return { ...n, m: oct*12 + n._paintPc };
+      })
+    : notes;
+  if(style==='mondrian')return drawMondrian(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='rothko')return drawRothko(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='matisse')return drawMatisse(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='picasso'){
     // Picasso has its own canvas-wide cubist plane overlay that supplies all
     // color. The per-block drawer just keeps the dark canvas underneath —
@@ -2878,12 +2893,12 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
     ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2);
     return;
   }
-  if(style==='kusama')return drawKusama(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='kusama')return drawKusama(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
-  if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,gc,BW,BH);
-  return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
+  if(style==='notes')return drawBlockNotes(ctx,bx,by,_notes,gc,BW,BH);
+  return drawBlockMosaic(ctx,bx,by,_notes,gc,BW,BH); // implicit default
 }
 
 // ── Shared helper for the Kusama-style overlays (Rothko, Matisse) ──
@@ -12679,7 +12694,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     let v = Math.round(38 + (chroma/100) * 68);
     if (isBackgroundHue) v = Math.round(v * 0.6);
     else if (isNearBackground) v = Math.round(v * 0.82);
-    return{m:midi,v,durMs:noteDur};
+    // _paintPc = original pixel-derived pitch class (= midi%12 BEFORE snap +
+    // bar progression overwrite it). Travels alongside the note as a second
+    // channel: the audio engine ignores it, but the Music-mode painter (after
+    // a See music transfer) can use it to render the source-faithful colour
+    // while the audio still plays the harmonically-shaped pcs. Image canvas
+    // paints from pixelRef directly, so this field has no effect there.
+    return{m:midi,v,durMs:noteDur,_paintPc:midi%12};
   }
   // Pick the most vivid of three row-pixels at (band, col) — used when the
   // strict filter would have left this chord empty. Guarantees audible music.
@@ -14598,7 +14619,7 @@ function bakeImageChords(src){
             const isTop = (n.m === topM);
             const v = Math.max(20, Math.min(127, Math.round((n.v || 80) * env * baseVel * velScale)));
             const m = isTop && topShift !== 0 ? Math.max(0, Math.min(127, n.m + topShift)) : n.m;
-            return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)) };
+            return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)), _paintPc: n._paintPc };
           });
           out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ });
         }
@@ -14614,7 +14635,7 @@ function bakeImageChords(src){
       for(const n of c.n){
         const off = (typeof n.offsetMs === 'number' && n.offsetMs > 0) ? n.offsetMs : 0;
         out.push({
-          n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300) }],
+          n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300), _paintPc: n._paintPc }],
           startMs: (c.startMs || 0) + off,
           durQ: c.durQ
         });
@@ -14627,7 +14648,8 @@ function bakeImageChords(src){
     const baseNotes = c.n.map(n => ({
       m: n.m,
       v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))),
-      durMs: Math.max(80, Math.round((n.durMs || 300) * durMul))
+      durMs: Math.max(80, Math.round((n.durMs || 300) * durMul)),
+      _paintPc: n._paintPc
     }));
     out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ });
   }
@@ -19906,6 +19928,15 @@ export default function Paintiano() {
   // an Image-scan chord array into Music mode. The ← Back handler routes
   // back to Image (restoreMode('image')) instead of Setup. Single-use.
   const _musicFromImageRef = useRef(false);
+  // See music second channel: per-chord per-note map of {m -> _paintPc}
+  // captured before encodeMidi strips the field. After loadMidi parses
+  // the MIDI back into chord events, a post-load effect re-attaches the
+  // paint pcs onto each note (matched by chord position + note m). Audio
+  // never reads _paintPc; the painter does, so the Music canvas can show
+  // the source painting's colours in the palette it was scanned in,
+  // independently of the harmonically-shaped pitch classes the audio
+  // engine plays.
+  const _imagePaintPcsRef = useRef(null);
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -21603,6 +21634,25 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
     _setVariantCap(proStatus==='free' ? 2 : null);
+    // Paint-side chord array: when the chord array carries _paintPc on its
+    // notes (set by the See music post-load effect from the image scan's
+    // source-pixel pitch classes), build a transformed copy where each note
+    // m is rewritten to (oct*12 + _paintPc) — same octave, source-faithful
+    // pc. Canvas-wide overlay painters (Picasso/Pollock drip/Klimt/etc.)
+    // consume chords directly without going through drawBlock, so they get
+    // this paint-side array. drawBlock applies the same rewrite per-cell
+    // internally, so per-cell artists also see source-faithful colours.
+    // Audio engine never reads _chordsPaint — it plays the original chords.
+    const _hasPaintPc = chords && chords.length>0 && chords[0] && chords[0].n && chords[0].n.some && chords[0].n.some(n=>typeof n._paintPc==='number');
+    const _chordsPaint = _hasPaintPc
+      ? chords.map(c => ({
+          ...c,
+          n: c.n.map(n => typeof n._paintPc === 'number'
+            ? { ...n, m: Math.floor(n.m/12)*12 + n._paintPc }
+            : n
+          )
+        }))
+      : chords;
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
@@ -21784,25 +21834,25 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         } else if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0,CW,CH);
         // Run the canvas-wide overlay on top (this is the only per-frame cost
         // that legitimately scales with lim).
-        if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, paintPhase);
-        else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
-        else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='bulge') drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='arcs') drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='bloom') drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='spiral') drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='gold') drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='monet') drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='hokusai') drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, 0);
+        if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, paintPhase);
+        else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, _chordsPaint.length, _chordsPaint);
+        else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='bulge') drawBulgeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='arcs') drawArcsOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='bloom') drawBloomOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='spiral') drawSpiralOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='gold') drawGoldOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='pop') drawPopOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='wave') drawWaveOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='comic') drawComicOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='monet') drawMonetOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='hokusai') drawHokusaiOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -21815,63 +21865,63 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Pollock global drip overlay — runs AFTER all cells have rendered.
       // Drips ignore cell boundaries and unify the painting under the splatter.
       if(style==='pollock' && lim>0){
-        drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawPollockOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='picasso' && lim>0){
-        drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawPicassoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='kusama' && lim>0){
-        drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, paintPhase);
+        drawKusamaOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, paintPhase);
       }
       if(style==='miro' && lim>0){
-        drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawMiroOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       // Kandinsky canvas-wide contour overlay — large outlined shapes in
       // varied colors layered over the per-cell Kandinsky composition.
       if(style==='kandinsky' && lim>0){
-        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
+        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, _chordsPaint.length, _chordsPaint);
       }
       if(style==='rothko' && lim>0){
-        drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawRothkoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='matisse' && lim>0){
-        drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawMatisseOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='mondrian' && lim>0){
-        drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawMondrianOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='bulge' && lim>0){
-        drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawBulgeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='arcs' && lim>0){
-        drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawArcsOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='bloom' && lim>0){
-        drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawBloomOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='spiral' && lim>0){
-        drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawSpiralOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='gold' && lim>0){
-        drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawGoldOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='pop' && lim>0){
-        drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawPopOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='wave' && lim>0){
-        drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawWaveOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='comic' && lim>0){
-        drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawComicOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='monet' && lim>0){
-        drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawMonetOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='hokusai' && lim>0){
-        drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawHokusaiOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='oneM' && lim>0){
-        drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, 0);
+        drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
       }
       if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='monet'&&style!=='hokusai'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
@@ -22090,6 +22140,32 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[playing]);
   useEffect(()=>{ dispRef.current=disp; },[disp]);
   useEffect(()=>{ chordsRef.current=chords; },[chords]);
+  // See music post-load: re-attach per-note _paintPc to the freshly parsed
+  // Music chord array. The capture happened in See music onClick before
+  // encodeMidi stripped the field; here we map back by chord position +
+  // note m. Audio engine ignores _paintPc; painter uses it (drawBlock
+  // rewrites m to keep octave but use _paintPc as the pc) to render the
+  // source painting's colours in the active palette — independently of
+  // the harmonically-shaped pcs the audio plays.
+  useEffect(()=>{
+    if(!_imagePaintPcsRef.current) return;
+    if(loadedSource!=='midi') return;
+    if(!chords || chords.length===0) return;
+    const maps = _imagePaintPcsRef.current;
+    const cur = chordsRef.current;
+    const lim = Math.min(cur.length, maps.length);
+    for(let i=0;i<lim;i++){
+      const m2p = maps[i];
+      if(!m2p) continue;
+      for(const note of cur[i].n){
+        if(typeof m2p[note.m] === 'number') note._paintPc = m2p[note.m];
+      }
+    }
+    // Force a repaint so the substrate rebuilds with the source-faithful
+    // colour assignment.
+    setStamp(s=>s+1);
+    _imagePaintPcsRef.current = null; // single-use
+  },[chords, loadedSource]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
   useEffect(()=>{ gcRef.current=gc; },[gc]);
   const infoRef = useRef(null);
@@ -28697,6 +28773,17 @@ Composition rules:
                 // texture-less.
                 const baked = bakeImageChords(chords);
                 if(baked.length===0) return;
+                // Capture per-chord per-note _paintPc maps before encodeMidi
+                // strips this field. Each entry: { [m]: paintPc, ... } for the
+                // notes in that chord. The post-load effect re-attaches them
+                // by chord-position + per-note m lookup.
+                _imagePaintPcsRef.current = baked.map(c => {
+                  const map = {};
+                  for(const n of c.n){
+                    if(typeof n._paintPc === 'number') map[n.m] = n._paintPc;
+                  }
+                  return map;
+                });
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
@@ -28717,6 +28804,13 @@ Composition rules:
                   if(!chords || chords.length===0) return;
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
+                  _imagePaintPcsRef.current = baked.map(c => {
+                    const map = {};
+                    for(const n of c.n){
+                      if(typeof n._paintPc === 'number') map[n.m] = n._paintPc;
+                    }
+                    return map;
+                  });
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
