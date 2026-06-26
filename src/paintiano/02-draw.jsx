@@ -11094,6 +11094,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // we're already iterating these pixels.
       let lSumC=0, lSqSumC=0, lNC=0;
       let hueMinC=361, hueMaxC=-1;
+      // Dominant-hue accumulator for the cell's CARRYING colour tone. Saturated
+      // pixels vote into 36 hue bins weighted by chroma; the winning bin becomes
+      // the cell's representative pitch class (_domPc) via the same hue->pc
+      // table pxToNote uses. This is RENDER-ONLY metadata for the Music canvas
+      // (paint a faithful carrying tone instead of the harmony-shuffled pc);
+      // the audio notes built below are never touched by it, so pure Image and
+      // pure Music playback are byte-for-byte unchanged.
+      const _domHueHist=new Float32Array(36);
       for(let sk=0;sk<COL_STEP;sk++){
         const col=cg*COL_STEP+sk; if(col>=nc) break;
         for(let j=0;j<CHORD_SIZE;j++){
@@ -11105,6 +11113,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           if(ss > 8){ // ignore near-grey pixels for hue spread (their hue is noise)
             if(hh < hueMinC) hueMinC = hh;
             if(hh > hueMaxC) hueMaxC = hh;
+            _domHueHist[Math.floor(hh/10)%36] += ss*Math.min(ll,100-ll)/50; // chroma-weighted vote
           }
           const n=pxToNote(idx);
           if(n&&!seenM.has(n.m)){seenM.add(n.m);notes.push(n);}
@@ -11130,9 +11139,25 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           if(fallback&&!seenM.has(fallback.m)){seenM.add(fallback.m);notes.push(fallback);}
         }
       }
+      // Dominant carrying pitch class for the cell (render-only). Pick the
+      // winning chroma-weighted hue bin and map it through the active hue->pc
+      // table (same table pxToNote uses), so the painted tone matches what the
+      // palette would show for that hue. null when the cell is essentially grey
+      // (no saturated vote) — then the Music canvas just keeps the harmonic pc.
+      let _domPc=null;
+      {
+        let bb=-1,bm=0;
+        for(let b2=0;b2<36;b2++){ if(_domHueHist[b2]>bm){ bm=_domHueHist[b2]; bb=b2; } }
+        if(bb>=0){
+          const domHue=bb*10+5;
+          let pc=0,minD=Infinity;
+          table.forEach((th,ti)=>{const d=Math.min(Math.abs(domHue-th),360-Math.abs(domHue-th));if(d<minD){minD=d;pc=ti;}});
+          _domPc=pc;
+        }
+      }
       // Store band+cg so the canvas mosaic can paint each event's exact cell in
       // traversal order (needed for non-row-major directions like vert/spiral).
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat});
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc});
       evIdx++;
     }
   }
@@ -12977,7 +13002,7 @@ function bakeImageChords(src){
             const m = isTop && topShift !== 0 ? Math.max(0, Math.min(127, n.m + topShift)) : n.m;
             return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)), _paintPc: n._paintPc };
           });
-          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ });
+          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ, _domPc: c._domPc });
         }
         t += gNow;
         r++;
@@ -12993,7 +13018,8 @@ function bakeImageChords(src){
         out.push({
           n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300), _paintPc: n._paintPc }],
           startMs: (c.startMs || 0) + off,
-          durQ: c.durQ
+          durQ: c.durQ,
+          _domPc: c._domPc
         });
       }
       continue;
@@ -13007,7 +13033,7 @@ function bakeImageChords(src){
       durMs: Math.max(80, Math.round((n.durMs || 300) * durMul)),
       _paintPc: n._paintPc
     }));
-    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ });
+    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ, _domPc: c._domPc });
   }
   return out;
 }
