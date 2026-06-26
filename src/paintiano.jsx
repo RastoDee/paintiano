@@ -1852,7 +1852,20 @@ function _pastelTint(r,g,b){
 }
 
 // Sharp φ-rectangle look — implicit default when no artist style selected.
-function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
+function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH,pixelRGB){
+  // SHORT-CIRCUIT for music-mode mosaic of image-derived chords. When a
+  // chord carries its source-pixel RGB (set by image-scan, preserved through
+  // the See music bake), paint the whole cell in that single colour so the
+  // music-mode mosaic looks like the image-scan canvas — same image, same
+  // colour, just a different sounding voice underneath.
+  if(pixelRGB){
+    const{r:R,g:G,b:B}=pixelRGB;
+    ctx.fillStyle=_rgbaStr(R,G,B,0.18);
+    ctx.fillRect(bx-2,by-2,BW+4,BH+4);
+    ctx.fillStyle=_rgbaStr(R,G,B,1);
+    ctx.fillRect(bx+.5,by+.5,BW-1,BH-1);
+    return;
+  }
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
   const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
   const n=sorted.length,bh=BH/n;
@@ -2866,7 +2879,7 @@ function drawMatisse(ctx,bx,by,notes,gc,BW,BH){
     }
   });
 }
-function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
+function drawBlock(ctx,bx,by,notes,gc,BW,BH,style,pixelRGB){
   if(style==='mondrian')return drawMondrian(ctx,bx,by,notes,gc,BW,BH);
   if(style==='rothko')return drawRothko(ctx,bx,by,notes,gc,BW,BH);
   if(style==='matisse')return drawMatisse(ctx,bx,by,notes,gc,BW,BH);
@@ -2883,7 +2896,7 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
   if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,gc,BW,BH);
-  return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
+  return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH,pixelRGB); // implicit default
 }
 
 // ── Shared helper for the Kusama-style overlays (Rothko, Matisse) ──
@@ -12717,6 +12730,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // we're already iterating these pixels.
       let lSumC=0, lSqSumC=0, lNC=0;
       let hueMinC=361, hueMaxC=-1;
+      // Per-cell pixel-RGB accumulator. Mosaic paint in music mode (after a
+      // See music transfer) reads this so each cell can be rendered in the
+      // SOURCE PIXEL COLOUR rather than the chord-derived hue — keeping the
+      // music-mode mosaic visually close to what the image-scan canvas
+      // showed for the same painting.
+      let rSumC=0, gSumC=0, bSumC=0;
       for(let sk=0;sk<COL_STEP;sk++){
         const col=cg*COL_STEP+sk; if(col>=nc) break;
         for(let j=0;j<CHORD_SIZE;j++){
@@ -12725,6 +12744,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           const{r,g,b}=px[idx],[hh,ss,ll]=toHsl(r,g,b);
           cellChroma += ss*Math.min(ll,100-ll)/50; cellChN++;
           lSumC += ll; lSqSumC += ll*ll; lNC++;
+          rSumC += r; gSumC += g; bSumC += b;
           if(ss > 8){ // ignore near-grey pixels for hue spread (their hue is noise)
             if(hh < hueMinC) hueMinC = hh;
             if(hh > hueMaxC) hueMaxC = hh;
@@ -12755,7 +12775,10 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       }
       // Store band+cg so the canvas mosaic can paint each event's exact cell in
       // traversal order (needed for non-row-major directions like vert/spiral).
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat});
+      // _pixelRGB carries the cell's average source-pixel colour so music-mode
+      // mosaic (after See music) can match the image-scan canvas appearance.
+      const _pixelRGB = lNC > 0 ? { r: Math.round(rSumC/lNC), g: Math.round(gSumC/lNC), b: Math.round(bSumC/lNC) } : null;
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_pixelRGB});
       evIdx++;
     }
   }
@@ -14600,7 +14623,7 @@ function bakeImageChords(src){
             const m = isTop && topShift !== 0 ? Math.max(0, Math.min(127, n.m + topShift)) : n.m;
             return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)) };
           });
-          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ });
+          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ, _pixelRGB: c._pixelRGB });
         }
         t += gNow;
         r++;
@@ -14616,7 +14639,8 @@ function bakeImageChords(src){
         out.push({
           n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300) }],
           startMs: (c.startMs || 0) + off,
-          durQ: c.durQ
+          durQ: c.durQ,
+          _pixelRGB: c._pixelRGB
         });
       }
       continue;
@@ -14629,7 +14653,7 @@ function bakeImageChords(src){
       v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))),
       durMs: Math.max(80, Math.round((n.durMs || 300) * durMul))
     }));
-    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ });
+    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ, _pixelRGB: c._pixelRGB });
   }
   return out;
 }
@@ -19906,6 +19930,12 @@ export default function Paintiano() {
   // an Image-scan chord array into Music mode. The ← Back handler routes
   // back to Image (restoreMode('image')) instead of Setup. Single-use.
   const _musicFromImageRef = useRef(false);
+  // Per-chord source-pixel RGB array captured at See music time. After the
+  // async loadMidi → applyEvents pipeline produces a fresh chord array, an
+  // effect re-attaches these RGBs to chordsRef so the music-mode mosaic can
+  // paint each cell in its source pixel colour — matching what the image-scan
+  // canvas showed. Cleared after consumption.
+  const _imagePixelColorsRef = useRef(null);
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -21604,10 +21634,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!chord) return; // stale disp can index past chords → undefined chord
       _setCurE(chord._E);
       const{n:notes,idx}=chord;
+      const _prgb=chord._pixelRGB; // source-pixel colour for music-mode mosaic of image-derived chords (See music)
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
-        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
-        else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
+        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style,_prgb));
+        else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style,_prgb);
       }else{
         // No precomputed cell yet (one-render gap between commit's setChords and
         // the grid-recompute effect's setGrid). Instead of the tiny default-grid
@@ -21616,7 +21647,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const total=Math.max(1,chords.length);
         const fw=Math.max(2,Math.floor(CW/total));
         const fx=idx*fw;
-        drawBlock(ctx,fx,0,notes,gc,fw,CH,style);
+        drawBlock(ctx,fx,0,notes,gc,fw,CH,style,_prgb);
       }
     };
     // Fast path: if only `disp` advanced during playback and every other input
@@ -21755,13 +21786,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           for(let i=sub.builtTo;i<lim;i++){
             const chord=chords[i];if(!chord)break; _setCurE(chord._E); // stale disp / lim past chords → bail, don't destructure undefined
             const{n:notes,idx}=chord;
+            const _prgb=chord._pixelRGB;
             const cell=grid.cells&&grid.cells[idx];
             if(cell){
-              if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style));
-              else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
+              if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style,_prgb));
+              else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style,_prgb);
             }else{
               const si=idx%(N*N),col=si%N,row=Math.floor(si/N);
-              drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style);
+              drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style,_prgb);
             }
           }
         }
@@ -22085,6 +22117,29 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[playing]);
   useEffect(()=>{ dispRef.current=disp; },[disp]);
   useEffect(()=>{ chordsRef.current=chords; },[chords]);
+  // See music post-load: re-attach per-chord source-pixel RGBs to the freshly
+  // parsed music-mode chord array. encodeMidi strips _pixelRGB; we kept it in
+  // _imagePixelColorsRef before encode and now position-map it back so the
+  // music-mode mosaic can render in source colours (matching the image-scan
+  // canvas). Triggers exactly once after See music's loadMidi → applyEvents
+  // completes, then clears the ref.
+  useEffect(()=>{
+    if(!_musicFromImageRef.current) return;
+    if(!_imagePixelColorsRef.current) return;
+    if(loadedSource!=='midi') return;
+    if(!chords || chords.length===0) return;
+    const colors = _imagePixelColorsRef.current;
+    // Position-map RGBs onto the live chord array. Mismatched lengths just
+    // map as many as we can — never crash on a partial match.
+    const cur = chordsRef.current;
+    const lim = Math.min(cur.length, colors.length);
+    for(let i=0;i<lim;i++){
+      if(colors[i]) cur[i]._pixelRGB = colors[i];
+    }
+    // Force a repaint so the substrate rebuilds with the new colours.
+    setStamp(s=>s+1);
+    _imagePixelColorsRef.current = null; // single-use
+  },[chords, loadedSource]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
   useEffect(()=>{ gcRef.current=gc; },[gc]);
   const infoRef = useRef(null);
@@ -28703,6 +28758,11 @@ Composition rules:
                 // texture-less.
                 const baked = bakeImageChords(chords);
                 if(baked.length===0) return;
+                // Capture per-chord source-pixel RGBs from the BAKED array
+                // (so position-based re-attach after loadMidi lines up with
+                // the freshly parsed chord array). encodeMidi strips this
+                // metadata; the post-load effect re-injects it.
+                _imagePixelColorsRef.current = baked.map(c => c._pixelRGB || null);
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
@@ -28723,6 +28783,7 @@ Composition rules:
                   if(!chords || chords.length===0) return;
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
+                  _imagePixelColorsRef.current = baked.map(c => c._pixelRGB || null);
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';

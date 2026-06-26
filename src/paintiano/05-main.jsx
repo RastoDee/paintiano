@@ -818,6 +818,12 @@ export default function Paintiano() {
   // an Image-scan chord array into Music mode. The ← Back handler routes
   // back to Image (restoreMode('image')) instead of Setup. Single-use.
   const _musicFromImageRef = useRef(false);
+  // Per-chord source-pixel RGB array captured at See music time. After the
+  // async loadMidi → applyEvents pipeline produces a fresh chord array, an
+  // effect re-attaches these RGBs to chordsRef so the music-mode mosaic can
+  // paint each cell in its source pixel colour — matching what the image-scan
+  // canvas showed. Cleared after consumption.
+  const _imagePixelColorsRef = useRef(null);
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -2516,10 +2522,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!chord) return; // stale disp can index past chords → undefined chord
       _setCurE(chord._E);
       const{n:notes,idx}=chord;
+      const _prgb=chord._pixelRGB; // source-pixel colour for music-mode mosaic of image-derived chords (See music)
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
-        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
-        else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
+        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style,_prgb));
+        else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style,_prgb);
       }else{
         // No precomputed cell yet (one-render gap between commit's setChords and
         // the grid-recompute effect's setGrid). Instead of the tiny default-grid
@@ -2528,7 +2535,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const total=Math.max(1,chords.length);
         const fw=Math.max(2,Math.floor(CW/total));
         const fx=idx*fw;
-        drawBlock(ctx,fx,0,notes,gc,fw,CH,style);
+        drawBlock(ctx,fx,0,notes,gc,fw,CH,style,_prgb);
       }
     };
     // Fast path: if only `disp` advanced during playback and every other input
@@ -2667,13 +2674,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           for(let i=sub.builtTo;i<lim;i++){
             const chord=chords[i];if(!chord)break; _setCurE(chord._E); // stale disp / lim past chords → bail, don't destructure undefined
             const{n:notes,idx}=chord;
+            const _prgb=chord._pixelRGB;
             const cell=grid.cells&&grid.cells[idx];
             if(cell){
-              if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style));
-              else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
+              if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style,_prgb));
+              else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style,_prgb);
             }else{
               const si=idx%(N*N),col=si%N,row=Math.floor(si/N);
-              drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style);
+              drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style,_prgb);
             }
           }
         }
@@ -2997,6 +3005,29 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[playing]);
   useEffect(()=>{ dispRef.current=disp; },[disp]);
   useEffect(()=>{ chordsRef.current=chords; },[chords]);
+  // See music post-load: re-attach per-chord source-pixel RGBs to the freshly
+  // parsed music-mode chord array. encodeMidi strips _pixelRGB; we kept it in
+  // _imagePixelColorsRef before encode and now position-map it back so the
+  // music-mode mosaic can render in source colours (matching the image-scan
+  // canvas). Triggers exactly once after See music's loadMidi → applyEvents
+  // completes, then clears the ref.
+  useEffect(()=>{
+    if(!_musicFromImageRef.current) return;
+    if(!_imagePixelColorsRef.current) return;
+    if(loadedSource!=='midi') return;
+    if(!chords || chords.length===0) return;
+    const colors = _imagePixelColorsRef.current;
+    // Position-map RGBs onto the live chord array. Mismatched lengths just
+    // map as many as we can — never crash on a partial match.
+    const cur = chordsRef.current;
+    const lim = Math.min(cur.length, colors.length);
+    for(let i=0;i<lim;i++){
+      if(colors[i]) cur[i]._pixelRGB = colors[i];
+    }
+    // Force a repaint so the substrate rebuilds with the new colours.
+    setStamp(s=>s+1);
+    _imagePixelColorsRef.current = null; // single-use
+  },[chords, loadedSource]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
   useEffect(()=>{ gcRef.current=gc; },[gc]);
   const infoRef = useRef(null);
@@ -9615,6 +9646,11 @@ Composition rules:
                 // texture-less.
                 const baked = bakeImageChords(chords);
                 if(baked.length===0) return;
+                // Capture per-chord source-pixel RGBs from the BAKED array
+                // (so position-based re-attach after loadMidi lines up with
+                // the freshly parsed chord array). encodeMidi strips this
+                // metadata; the post-load effect re-injects it.
+                _imagePixelColorsRef.current = baked.map(c => c._pixelRGB || null);
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
@@ -9635,6 +9671,7 @@ Composition rules:
                   if(!chords || chords.length===0) return;
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
+                  _imagePixelColorsRef.current = baked.map(c => c._pixelRGB || null);
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
