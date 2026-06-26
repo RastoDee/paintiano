@@ -23773,58 +23773,47 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // still a Compose/MIC draft, marked by draftOwnerRef. Treat that as a
     // creation (full clear), NOT a loaded source — otherwise Clear would keep
     // the chords and the painting would reappear on replay.
-    // IMAGE source: Clear wipes everything — the painted trace AND the loaded
-    // picture — but STAYS in the image view: loadedSource remains 'image' so the
-    // image-style Color/Custom strip keeps showing, and we do NOT drop to the full
-    // setup. The complete Color+Style panel (with artists) only appears when the
-    // user explicitly taps "← Setup". This keeps the cleared view calm.
+    // IMAGE source: Clear is now a FULL reset — wipes the painted trace, the
+    // loaded picture, the chord array AND the pixel scan data — leaving an
+    // empty black canvas. STAYS in the image view so '+ NEW IMAGE' chip and
+    // '← BACK' button remain available; the user picks the next picture or
+    // returns to Setup from there. (Mirrors Music Clear which also wipes
+    // chord array but stays in the music view with '+ NEW MUSIC' available.)
     if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
-      // Clear always drops back to SCAN and drops the AI-compose state, so a
-      // leftover 'compose' sub-mode can't make the next Play silently re-compose.
-      // Also discard the multi-draft image stash + tile glow.
+      // Drop the AI-compose flag and the multi-draft image stash + tile glow.
       imgComposeRef.current=false; setImgPlayMode('scan'); imgPlayModeRef.current='scan';
       imageStashRef.current=null; setHasImageDraft(false);
-      setPending([]);pendingRef.current=[];
-      pressInfo.current={};sessionStart.current=0;gridSigRef.current='';
-      // Keep the picture's pixel data AND the displayed photo. Clear in image
-      // mode wipes the visible mosaic and rebuilds the (hidden-until-play) notes
-      // from the SAME photo, so Play stays active — the played trace just resets.
+      // Drop the picture itself — pixel scan data, photo URL, backup ref.
+      pixelRef.current=null;
+      scanPixelBackupRef.current=null;
+      setOriginalImgUrl(null);
+      // Drop the chord array and live playback state.
+      setChords([]); chordsRef.current=[];
+      idxRef.current=0; setDisp(0);
+      setPending([]); pendingRef.current=[];
+      pressInfo.current={}; sessionStart.current=0; gridSigRef.current=''; composedModeRef.current=false;
       setInfo(null);
+      // Invalidate cached substrate + last-paint so nothing re-blits.
       substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
       lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
-      try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
-      { let _evts=[]; const _pr=pixelRef.current||scanPixelBackupRef.current;
-        if(_pr){ pixelRef.current=_pr; const _nc=_pr.nc,_nr=_pr.nr,_px=_pr.px;
-          const _hue = mode==='custom'
-            ? Object.assign(activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[0];}),
-                {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
-                 __hasNeutral:activePalette.some(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1]<12;})})
-            : mode==='spectral' ? SPEC_HUE
-            : mode==='phi' ? PHI_HUE
-            : mode==='kontra' ? KONTRA_HUE
-            : COF;
-          const _atmoBias2=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
-          const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current,_atmoBias2);
-          let _ev0=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
-          _evts=_ev0;  // Clear returns to the bare texture — MELODY is a one-shot
-        }
-        setChords(_evts);chordsRef.current=_evts;
-        idxRef.current=_evts.length;setDisp(_evts.length);
-      }
-      setMelodyOn(false);setMelodyData(null);  // cleared image: no sung voice until a fresh re-tap
+      // Explicitly clear ALL three canvas layers — same as Music Clear does.
+      try{
+        const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); }
+        const vc=visualizerRef.current; if(vc){ const vx=vc.getContext('2d'); vx&&vx.clearRect(0,0,vc.width,vc.height); }
+        const hc=highlightCanvasRef.current; if(hc){ const hx=hc.getContext('2d'); hx&&hx.clearRect(0,0,hc.width,hc.height); }
+      }catch(_){}
+      ripplesRef.current=[];
+      setMelodyOn(false); setMelodyData(null);
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setShowColorPalette(false); setCustomArmed(false);
-      // Clear also discards any pending save artefacts (recording row, score row,
-      // the SAVE button state) so the transport returns to a clean PLAY + REC
-      // bar — not stuck showing SAVE / the audio+score rows from the prior take.
+      // Drop any pending save artefacts (recording row, score row, SAVE state).
       setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
       setScoreBlob(null); setScoreFileName(''); setScoreMsg(null);
       setClearArmed(false);
-      // loadedSource stays 'image' and forceSetup stays false → image view persists.
-      // Return the page to its default (top) position so the header + collapsed
-      // strip are back in their resting place — same as the generic clear() path.
+      // loadedSource stays 'image' and forceSetup stays false → image view persists
+      // with the empty canvas. '+ NEW IMAGE' chip + '← BACK' both remain available.
       requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
       return;
     }
