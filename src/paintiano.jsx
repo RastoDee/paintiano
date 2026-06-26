@@ -21644,6 +21644,21 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // internally, so per-cell artists also see source-faithful colours.
     // Audio engine never reads _chordsPaint — it plays the original chords.
     const _hasPaintPc = chords && chords.length>0 && chords[0] && chords[0].n && chords[0].n.some && chords[0].n.some(n=>typeof n._paintPc==='number');
+    // ==== DEBUG TEMPORARY ====
+    if(typeof window!=='undefined' && chords && chords.length>0){
+      if(!window.__paintDbg || window.__paintDbg.lastChords !== chords){
+        window.__paintDbg = {lastChords: chords};
+        try{
+          console.log('[seemusic-dbg] PAINT:', {
+            chordsLen: chords.length,
+            _hasPaintPc,
+            firstChordNotes: chords[0]?.n?.map(n=>({m:n.m, _paintPc:n._paintPc})),
+            anyNoteWithPp: chords.some(c=>c.n.some(n=>typeof n._paintPc==='number')),
+          });
+        }catch(_){}
+      }
+    }
+    // ==== /DEBUG ====
     const _chordsPaint = _hasPaintPc
       ? chords.map(c => ({
           ...c,
@@ -22154,13 +22169,31 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const maps = _imagePaintPcsRef.current;
     const cur = chordsRef.current;
     const lim = Math.min(cur.length, maps.length);
+    let matched=0, total=0;
     for(let i=0;i<lim;i++){
       const m2p = maps[i];
       if(!m2p) continue;
       for(const note of cur[i].n){
-        if(typeof m2p[note.m] === 'number') note._paintPc = m2p[note.m];
+        total++;
+        if(typeof m2p[note.m] === 'number'){
+          note._paintPc = m2p[note.m];
+          matched++;
+        }
       }
     }
+    // ==== DEBUG TEMPORARY ====
+    try{
+      console.log('[seemusic-dbg] RE-ATTACH:', {
+        bakedChords: maps.length,
+        musicChords: cur.length,
+        lim,
+        totalNotesIterated: total,
+        notesMatched: matched,
+        firstChordMusicNotes: cur[0]?.n?.map(n=>({m:n.m, _paintPc:n._paintPc})),
+        firstChordBakedMap: maps[0],
+      });
+    }catch(_){}
+    // ==== /DEBUG ====
     // Force a repaint so the substrate rebuilds with the source-faithful
     // colour assignment.
     setStamp(s=>s+1);
@@ -28784,6 +28817,21 @@ Composition rules:
                   }
                   return map;
                 });
+                // ==== DEBUG TEMPORARY ====
+                try{
+                  const totalNotes = baked.reduce((s,c)=>s+c.n.length,0);
+                  const notesWithPp = baked.reduce((s,c)=>s+c.n.filter(n=>typeof n._paintPc==='number').length,0);
+                  const chordsWithAnyPp = _imagePaintPcsRef.current.filter(m=>Object.keys(m).length>0).length;
+                  console.log('[seemusic-dbg] CAPTURE:', {
+                    bakedChords: baked.length,
+                    totalNotes,
+                    notesWithPaintPc: notesWithPp,
+                    chordsWithAnyPp,
+                    firstChordPaintMap: _imagePaintPcsRef.current[0],
+                    firstChordNotes: baked[0].n.map(n=>({m:n.m, _paintPc:n._paintPc})),
+                  });
+                }catch(_){}
+                // ==== /DEBUG ====
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
