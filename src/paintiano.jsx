@@ -14529,6 +14529,110 @@ const _midiToName = Array.from({length:128},(_,i)=>noteName(i));
 const _nameToMidi = Object.fromEntries(_midiToName.map((n,i)=>[n,i]));
 
 // ─────────────────────────────────────────────────────────────────────────────
+// bakeImageChords — flatten an image-scan chord array into a fully-cooked
+// chord stream suitable for MIDI export / music-mode playback.
+//
+// PROBLEM: image-mode playback applies a lot of piano-technique transforms
+// AT PLAYBACK TIME (not in the chord array): it skips _playable:false
+// merged-plane members, unfolds arpeggio offsets, re-strikes long _tremolo
+// planes, extends sustained-plane durations by _runLen, and so on. The raw
+// chords[] array carries flags but not the unfolded notes. So encodeMidi
+// on the raw array produces a MIDI that's:
+//   • 2-3× denser than what was heard (all chords play, no _playable skip)
+//   • missing arpeggio (notes play simultaneously instead of offset)
+//   • missing tremolo re-strikes (one attack instead of many)
+//   • missing sustained-plane holds (default short durMs)
+// Music-mode playback of that MIDI feels rushed and texture-less.
+//
+// SOLUTION: bake the runtime expansion into the chord array before encoding,
+// so the resulting MIDI carries actual MIDI events for every audible note.
+// Deterministic — same image scan always produces the same bake (seeds come
+// from per-chord _tremSeed already in the array, or fall back to position).
+function bakeImageChords(src){
+  if(!src || !src.length) return [];
+  const out = [];
+  for(let i=0;i<src.length;i++){
+    const c = src[i];
+    if(!c || !c.n || !c.n.length) continue;
+    // Skip merged-plane members — they are sustained by the run's lead chord
+    // already (see _runLen handling below). Image playback also skips these.
+    if(c._playable === false) continue;
+    const durMul = c._runLen || 3;
+    const velScale = c._runLen ? 1 : 0.75;
+    // TREMOLO planes — expand into a re-strike series matching image playback
+    // (which gates _trem only on _runLen>=16). Re-strikes are deterministic;
+    // we use the chord's _tremSeed (set by image scan) for the PRNG so the
+    // same image bakes the same MIDI.
+    if(c._tremolo === true){
+      const gap0 = Math.max(85, (c._tremoloMs || 180));
+      const fullSpan = Math.round((c.n[0]?.durMs || 300) * durMul);
+      const endRatio = Math.max(0.5, Math.min(1.8, c._tremEndRatio || 1));
+      const lift = c._tremLift || 0;
+      const liftCycles = Math.max(1, c._tremLiftCycles || 1);
+      const swell = Math.max(0, Math.min(0.5, c._tremSwell != null ? c._tremSwell : 0.25));
+      const lifts = [0,0,0,lift||7,7,12,5,-5,3];
+      // mulberry32 PRNG, same as runtime playback uses for tremolo.
+      let _seed = (c._tremSeed >>> 0) || 0x9e3779b9;
+      const rnd = () => { _seed |= 0; _seed = _seed + 0x6D2B79F5 | 0; let tt = Math.imul(_seed ^ _seed >>> 15, 1 | _seed); tt = tt + Math.imul(tt ^ tt >>> 7, 61 | tt) ^ tt; return ((tt ^ tt >>> 14) >>> 0) / 4294967296; };
+      let topM = -Infinity;
+      for(const n of c.n){ if(n.m > topM) topM = n.m; }
+      let t = 0, r = 0;
+      const maxReps = 120;
+      while(t < fullSpan - 20 && r < maxReps){
+        const prog = fullSpan > 0 ? t / fullSpan : 0;
+        const gGlide = gap0 * (1 + (endRatio - 1) * prog);
+        const jitT = 0.72 + 0.56 * rnd();
+        const gNow = Math.max(70, Math.round(gGlide * jitT));
+        const segDur = Math.max(95, Math.round(gNow * 1.35));
+        const skip = (r > 0 && rnd() < 0.12);
+        if(!skip){
+          const env = (1 - swell * 0.5 + swell * Math.sin(Math.PI * prog)) * (0.82 + 0.36 * rnd());
+          const cyclePhase = lift > 0 ? (Math.sin(Math.PI * liftCycles * prog) > 0.55) : false;
+          const randLift = (rnd() < 0.22) ? lifts[(rnd() * lifts.length) | 0] : 0;
+          const topShift = cyclePhase ? lift : randLift;
+          const baseVel = r === 0 ? 1 : 0.78;
+          const tail = r === 0 ? 0.4 : 0.14;
+          // Each re-strike is a chord event. Notes are the original notes,
+          // velocity scaled by env*baseVel, top voice optionally lifted.
+          const strikeNotes = c.n.map(n => {
+            const isTop = (n.m === topM);
+            const v = Math.max(20, Math.min(127, Math.round((n.v || 80) * env * baseVel * velScale)));
+            const m = isTop && topShift !== 0 ? Math.max(0, Math.min(127, n.m + topShift)) : n.m;
+            return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)) };
+          });
+          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ });
+        }
+        t += gNow;
+        r++;
+      }
+      continue; // tremolo done
+    }
+    // ARPEGGIO — notes have per-note offsetMs; unfold each into its own
+    // single-note chord event so the MIDI carries the offset timing.
+    const hasArp = c.n.some(n => typeof n.offsetMs === 'number' && n.offsetMs > 0);
+    if(hasArp){
+      for(const n of c.n){
+        const off = (typeof n.offsetMs === 'number' && n.offsetMs > 0) ? n.offsetMs : 0;
+        out.push({
+          n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300) }],
+          startMs: (c.startMs || 0) + off,
+          durQ: c.durQ
+        });
+      }
+      continue;
+    }
+    // Default: a normal (possibly sustained) chord. Extend durMs by durMul
+    // so the chord rings into following steps the way image-mode playback
+    // does. velScale applied to soften piling-up overlapping unmerged chords.
+    const baseNotes = c.n.map(n => ({
+      m: n.m,
+      v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))),
+      durMs: Math.max(80, Math.round((n.durMs || 300) * durMul))
+    }));
+    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ });
+  }
+  return out;
+}
 // §4  I18N — UI STRINGS, CONCEPT TEXT, GUIDE TEXT
 // ─────────────────────────────────────────────────────────────────────────────
 const LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW','ja'];
@@ -28590,14 +28694,16 @@ Composition rules:
               // canvas paints fresh from the same chords.
               try{
                 if(!chords || chords.length===0) return;
-                // Filter out chords that image-mode playback would SKIP: ones
-                // marked _playable:false (members of a merged plane that the
-                // first chord of the run already sustains). Without this filter
-                // the MIDI ends up with 2-3× more events than what the user
-                // heard, making music-mode playback feel rushed.
-                const playable = chords.filter(c => c._playable !== false);
-                if(playable.length===0) return;
-                const bytes = encodeMidi(playable, 120); // 120 BPM neutral default — image scan has no native tempo
+                // Bake image-mode runtime expansion (tremolo re-strikes,
+                // arpeggio per-note offsets, sustained-plane durations,
+                // _playable:false skips) into the chord array so the MIDI
+                // that gets exported carries actual events for everything
+                // the user actually heard. Without baking, music-mode
+                // playback of the raw chords sounds 2-3× faster and
+                // texture-less.
+                const baked = bakeImageChords(chords);
+                if(baked.length===0) return;
+                const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
                 const file = new File([blob], fname+'.mid', { type:'audio/midi', lastModified: Date.now() });
@@ -28615,9 +28721,9 @@ Composition rules:
               }catch(_){
                 try{
                   if(!chords || chords.length===0) return;
-                  const playable = chords.filter(c => c._playable !== false);
-                  if(playable.length===0) return;
-                  const bytes = encodeMidi(playable, 120);
+                  const baked = bakeImageChords(chords);
+                  if(baked.length===0) return;
+                  const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
                   const file = new File([blob], fname+'.mid', { type:'audio/midi', lastModified: Date.now() });

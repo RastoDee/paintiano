@@ -9606,14 +9606,16 @@ Composition rules:
               // canvas paints fresh from the same chords.
               try{
                 if(!chords || chords.length===0) return;
-                // Filter out chords that image-mode playback would SKIP: ones
-                // marked _playable:false (members of a merged plane that the
-                // first chord of the run already sustains). Without this filter
-                // the MIDI ends up with 2-3× more events than what the user
-                // heard, making music-mode playback feel rushed.
-                const playable = chords.filter(c => c._playable !== false);
-                if(playable.length===0) return;
-                const bytes = encodeMidi(playable, 120); // 120 BPM neutral default — image scan has no native tempo
+                // Bake image-mode runtime expansion (tremolo re-strikes,
+                // arpeggio per-note offsets, sustained-plane durations,
+                // _playable:false skips) into the chord array so the MIDI
+                // that gets exported carries actual events for everything
+                // the user actually heard. Without baking, music-mode
+                // playback of the raw chords sounds 2-3× faster and
+                // texture-less.
+                const baked = bakeImageChords(chords);
+                if(baked.length===0) return;
+                const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
                 const file = new File([blob], fname+'.mid', { type:'audio/midi', lastModified: Date.now() });
@@ -9631,9 +9633,9 @@ Composition rules:
               }catch(_){
                 try{
                   if(!chords || chords.length===0) return;
-                  const playable = chords.filter(c => c._playable !== false);
-                  if(playable.length===0) return;
-                  const bytes = encodeMidi(playable, 120);
+                  const baked = bakeImageChords(chords);
+                  if(baked.length===0) return;
+                  const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
                   const file = new File([blob], fname+'.mid', { type:'audio/midi', lastModified: Date.now() });
