@@ -19963,6 +19963,16 @@ export default function Paintiano() {
   // Music canvas can show each cell's source carrying colour while the audio
   // plays the full, unchanged harmony. Pure Image / pure Music never set this.
   const _imageDomPcsRef = useRef(null);
+  // Bridge draft signatures (point 4). When See music / Hear image creates a
+  // target-mode draft and the user works on it then taps Back, the in-progress
+  // target draft is stashed (musicStashRef / imageStashRef) tagged with the
+  // SOURCE scan's signature here. On the NEXT bridge tap we compare the current
+  // source signature: if it matches, restore the in-progress target draft
+  // (resume where they left off); if the source changed (new direction/palette/
+  // length), the stale target draft is discarded and the bridge regenerates a
+  // fresh piece. Null = no reusable bridge draft.
+  const _seeMusicSrcSigRef = useRef(null);  // Image signature when the Music draft was made
+  const _hearImageSrcSigRef = useRef(null); // Music signature when the Image draft was made
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -25765,7 +25775,7 @@ Composition rules:
         setDisp(0);
         resumeFromRef.current=0;
         setStamp(s=>s+1);
-        try{ startPlayRef.current?.(); }catch(_){}
+        try{ startPlayRef.current?.({dirRestart:true}); }catch(_){}
       }
       // Texture swaps live as before. But the MELODY voice is scheduled once at
       // startPlay (parallel timers), so a melody on/off toggle MID-PLAYBACK must
@@ -25883,12 +25893,15 @@ Composition rules:
   const lastStartPlayRef = useRef(0);
   const startPlay=useCallback(async (opts)=>{
     const _melodyRearm = !!(opts && opts.melodyRearm);
+    const _dirRestart = !!(opts && opts.dirRestart);
     const now=Date.now();
     // Skip the double-fire debounce when this call is a melody re-arm (the rebuild
     // effect restarting the voice from the current position) — that legitimately
     // fires right after the original Play, and must not be swallowed, or turning
-    // MELODY on mid-playback would silently do nothing.
-    if(!_melodyRearm && now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
+    // MELODY on mid-playback would silently do nothing. Same for a direction
+    // restart: changing the scan direction during playback re-fires startPlay
+    // immediately to relaunch from the top, and the debounce would swallow it.
+    if(!_melodyRearm && !_dirRestart && now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
     // Gentle in-gesture audio wake: just make sure the context is running. The
     // heavier disconnect/rebuild/restart recovery was destabilising audio across
@@ -25909,7 +25922,7 @@ Composition rules:
     const grid=gridRef.current;
     const info=infoRef.current;
     const viewMode=viewModeRef.current;
-    if((busy && !_melodyRearm)||!chords.length)return;
+    if((busy && !_melodyRearm && !_dirRestart)||!chords.length)return;
     // Await unlock so the AudioContext is guaranteed 'running' before we
     // schedule anything against Tone.now(). Without this, the first chord can
     // land silent — Tone.now() is frozen while the context is suspended, so
@@ -28787,12 +28800,31 @@ Composition rules:
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; const _paintingDone = chords.length>0 && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
             <button onClick={()=>{
               if(_dis) return;
+              // Point 4 — reuse an in-progress Image draft from a PRIOR Hear image
+              // on this same Music piece. If the current Music signature matches
+              // the one captured when that Image draft was stashed, restore it
+              // (resume the partly-scanned Image canvas) instead of re-scanning.
+              // If the Music changed since, fall through to a fresh scan.
+              try{
+                const _curSig = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'');
+                if(imageStashRef.current && _hearImageSrcSigRef.current === _curSig){
+                  try{ stashMode('music'); }catch(_){}   // keep the Music draft for Back
+                  _imageFromMusicRef.current = true;
+                  const ok = restoreMode('image');
+                  if(ok) return;
+                }
+              }catch(_){}
               // Capture the current canvas as a PNG, wrap as a synthetic File,
               // then feed it into the existing image-upload handler. That
               // handler already does the heavy lifting: stops playback, wipes
               // music state, pixelifies the image, switches viewMode to 'image'
               // and sets loadedSource='image' — exactly the bridge we need.
               try{
+                // Fresh scan → supersede any stale Image draft from a previous
+                // Hear image; record the source signature so a later Back tags
+                // the new draft for reuse.
+                _hearImageSrcSigRef.current = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'');
+                imageStashRef.current = null; setHasImageDraft(false);
                 const cv = canvasRef.current;
                 if(!cv) return;
                 cv.toBlob((blob)=>{
@@ -28826,6 +28858,22 @@ Composition rules:
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isImage=(srcBtn==='image'); if(!_isImage) return null; const _paintingDone = chords.length>0 && playedOnce && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
             <button onClick={()=>{
               if(_dis) return;
+              // Point 4 — reuse an in-progress Music draft from a PRIOR See music
+              // on this same Image. If the current Image scan signature matches
+              // the one captured when that Music draft was stashed, restore it
+              // (resume the rebuilt-but-not-finished Music canvas) instead of
+              // regenerating from scratch. If the Image changed since (new scan/
+              // direction/palette → different signature), fall through to a fresh
+              // bake so the new scan is heard.
+              try{
+                const _curSig = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + (chordsRef.current ? chordsRef.current.length : 0);
+                if(musicStashRef.current && _seeMusicSrcSigRef.current === _curSig){
+                  try{ stashMode('image'); }catch(_){}   // keep the Image draft for Back
+                  _musicFromImageRef.current = true;
+                  const ok = restoreMode('music');
+                  if(ok) return;
+                }
+              }catch(_){}
               // Take the chord array the image scan already generated, encode
               // it as a MIDI file, wrap as a synthetic File, and feed loadMidi()
               // the same shape it gets from a real upload. loadMidi() then
@@ -28834,6 +28882,11 @@ Composition rules:
               // canvas paints fresh from the same chords.
               try{
                 if(!chords || chords.length===0) return;
+                // Fresh bake → any stale Music draft from a previous See music is
+                // now superseded; clear it and record the source signature so a
+                // later Back can tag the new draft for reuse.
+                _seeMusicSrcSigRef.current = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + chords.length;
+                musicStashRef.current = null; setHasMusicDraft(false);
                 // Bake image-mode runtime expansion (tremolo re-strikes,
                 // arpeggio per-note offsets, sustained-plane durations,
                 // _playable:false skips) into the chord array so the MIDI
