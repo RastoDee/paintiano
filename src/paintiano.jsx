@@ -21634,38 +21634,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
     _setVariantCap(proStatus==='free' ? 2 : null);
-    // Paint-side chord array: when notes carry _paintPc (set per-note by the
-    // See music post-load effect from the image scan's source-pixel pitch
-    // classes, in song order), build a transformed copy where each such note's
-    // m is rewritten to (oct*12 + _paintPc) — same octave, source-faithful pc.
-    // Canvas-wide overlay painters (Picasso/Pollock drip/Klimt/etc.) consume
-    // chords directly without going through drawBlock, so they get this
-    // paint-side array. drawBlock applies the same per-note rewrite internally,
-    // so per-cell artists also see source-faithful colours. Audio engine never
-    // reads _chordsPaint — it plays the original chords.
-    const _hasPaintPc = chords && chords.length>0 && chords.some && chords.some(c=>c&&c.n&&c.n.some&&c.n.some(n=>typeof n._paintPc==='number'));
-    const _chordsPaint = _hasPaintPc
-      ? chords.map(c => (c&&c.n) ? {
-          ...c,
-          n: c.n.map(n => typeof n._paintPc === 'number'
-            ? { ...n, m: Math.floor(n.m/12)*12 + n._paintPc }
-            : n
-          )
-        } : c)
-      : chords;
+    // See music renders like any other MIDI source: the music chords are
+    // painted through gc(m,v) in the active palette with no special-casing.
+    // _chordsPaint is kept as a plain alias to chords so the overlay call sites
+    // below need no change.
+    const _chordsPaint = chords;
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
       if(!chord) return; // stale disp can index past chords → undefined chord
       _setCurE(chord._E);
-      const{idx}=chord;
-      // Per-cell artists (Mosaic/Mondrian/Rothko/...) colour from the notes
-      // passed here. On the See music path the source-faithful pitch classes
-      // live on _chordsPaint (chord-level _paintPc rewritten onto every note),
-      // so pull the paint-side notes for this chord when available; otherwise
-      // fall back to the chord's own notes. Same index/length as chords.
-      const _pc = (_chordsPaint && _chordsPaint!==chords) ? _chordsPaint[idx] : null;
-      const notes = (_pc && _pc.n) ? _pc.n : chord.n;
+      const{n:notes,idx}=chord;
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
         if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
@@ -22147,49 +22126,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[playing]);
   useEffect(()=>{ dispRef.current=disp; },[disp]);
   useEffect(()=>{ chordsRef.current=chords; },[chords]);
-  // See music post-load: re-attach per-note _paintPc to the freshly parsed
-  // Music chord array. The capture happened in See music onClick before
-  // encodeMidi stripped the field; here we map back by chord position +
-  // note m. Audio engine ignores _paintPc; painter uses it (drawBlock
-  // rewrites m to keep octave but use _paintPc as the pc) to render the
-  // source painting's colours in the active palette — independently of
-  // the harmonically-shaped pcs the audio plays.
-  useEffect(()=>{
-    if(!_imagePaintPcsRef.current) return;
-    if(loadedSource!=='midi') return;
-    if(!chords || chords.length===0) return;
-    const flat = _imagePaintPcsRef.current;       // ordered source pcs (whole song)
-    const cur = chordsRef.current;
-    if(!cur || cur.length===0){ return; }
-    if(!Array.isArray(flat) || flat.length===0){ _imagePaintPcsRef.current=null; return; }
-    // Count music notes in song order, then map each to a source pc by relative
-    // position in the flat list. Both sequences preserve left-to-right song
-    // order through the round-trip, so position j/total in the music maps to
-    // floor(j*flatLen/total) in the source. This restores per-note colour
-    // variety (each note can get a different source pc) AND the spatial
-    // progression of the original painting, while being immune to the chord/
-    // note re-quantization that broke the m-keyed and per-chord approaches.
-    let total = 0;
-    for(let i=0;i<cur.length;i++){ const c=cur[i]; if(c&&c.n) total+=c.n.length; }
-    if(total===0){ _imagePaintPcsRef.current=null; return; }
-    const flatLen = flat.length;
-    let j = 0;
-    for(let i=0;i<cur.length;i++){
-      const c = cur[i];
-      if(!c || !c.n) continue;
-      for(let k=0;k<c.n.length;k++){
-        const srcIdx = Math.min(flatLen-1, Math.floor(j * flatLen / total));
-        const pc = flat[srcIdx];
-        if(typeof pc === 'number') c.n[k]._paintPc = pc;
-        j++;
-      }
-    }
-    // New array reference forces the paint effect to re-run against the chords
-    // now carrying per-note _paintPc; in-place mutation alone wouldn't re-render.
-    setChords(prev => (prev && prev.length ? prev.slice() : prev));
-    setStamp(s=>s+1);
-    _imagePaintPcsRef.current = null; // single-use
-  },[chords, loadedSource]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
   useEffect(()=>{ gcRef.current=gc; },[gc]);
   const infoRef = useRef(null);
@@ -28797,30 +28733,6 @@ Composition rules:
                 // texture-less.
                 const baked = bakeImageChords(chords);
                 if(baked.length===0) return;
-                // Capture a FLAT, song-ordered list of source-pixel pitch
-                // classes. The MIDI round-trip re-quantizes timing and collapses
-                // both the chord count and the note count (~1216->674 chords,
-                // ~2497->1315 notes) and re-voices within chords, so neither a
-                // per-note m lookup nor a per-chord-position map survives: the
-                // first smears one colour across the canvas, the second loses
-                // all variety. What IS invariant is the LEFT-TO-RIGHT ORDER of
-                // notes through the song (MIDI is a time sequence). So we flatten
-                // every baked note's _paintPc into one ordered array and, after
-                // the round-trip, walk the music notes in the same order and
-                // assign pcs proportionally. This keeps both the colour variety
-                // (each note can differ) and the spatial progression (top-left to
-                // bottom-right matches the source painting). Notes with no source
-                // pixel (bass/harmony fills) are skipped so they don't shift the
-                // mapping.
-                _imagePaintPcsRef.current = (()=>{
-                  const flat = [];
-                  for(const c of baked){
-                    for(const n of (c.n||[])){
-                      if(typeof n._paintPc === 'number') flat.push(n._paintPc);
-                    }
-                  }
-                  return flat.length ? flat : null;
-                })();
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
@@ -28841,15 +28753,6 @@ Composition rules:
                   if(!chords || chords.length===0) return;
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
-                  _imagePaintPcsRef.current = (()=>{
-                    const flat = [];
-                    for(const c of baked){
-                      for(const n of (c.n||[])){
-                        if(typeof n._paintPc === 'number') flat.push(n._paintPc);
-                      }
-                    }
-                    return flat.length ? flat : null;
-                  })();
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
