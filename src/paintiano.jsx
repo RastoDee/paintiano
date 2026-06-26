@@ -28443,6 +28443,11 @@ Composition rules:
               setShowMoodMenu(false);setShowMorphMenu(false);setShowComposeRecent(false);setShowMicRecent(false);setPickMode(null);
               const ok = restoreMode('image');
               if(ok){ return; }
+              // restoreMode failed — DON'T fall through to Setup. Reset cleanly
+              // and stay on the canvas; a second Back tap will go to Setup as
+              // normal. This prevents the surprising "Back lands in Setup
+              // instead of Image" regression even if the image stash is gone.
+              return;
             }
             // Leaving to Setup while a painting is playing/paused should PRESERVE
             // the position so "← Canvas" (Resume) picks up exactly where it left
@@ -28574,7 +28579,7 @@ Composition rules:
               a playable chord array. ACTIVE only after the song has reached
               its natural end (same _paintingDone gate as Hear image). Blue
               accent (music modality) mirrors Hear image's orange. */}
-          {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isImage=(srcBtn==='image'); if(!_isImage) return null; const _paintingDone = chords.length>0 && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
+          {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isImage=(srcBtn==='image'); if(!_isImage) return null; const _paintingDone = chords.length>0 && playedOnce && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
             <button onClick={()=>{
               if(_dis) return;
               // Take the chord array the image scan already generated, encode
@@ -28585,12 +28590,24 @@ Composition rules:
               // canvas paints fresh from the same chords.
               try{
                 if(!chords || chords.length===0) return;
-                const bytes = encodeMidi(chords, 120); // 120 BPM neutral default — image scan has no native tempo
+                // Filter out chords that image-mode playback would SKIP: ones
+                // marked _playable:false (members of a merged plane that the
+                // first chord of the run already sustains). Without this filter
+                // the MIDI ends up with 2-3× more events than what the user
+                // heard, making music-mode playback feel rushed.
+                const playable = chords.filter(c => c._playable !== false);
+                if(playable.length===0) return;
+                const bytes = encodeMidi(playable, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
                 const file = new File([blob], fname+'.mid', { type:'audio/midi', lastModified: Date.now() });
                 const dt = new DataTransfer();
                 dt.items.add(file);
+                // Stash the image draft MANUALLY (in addition to loadMidi's
+                // internal stashOutgoing) so restoreMode('image') is
+                // guaranteed to find a populated imageStashRef on the way
+                // back.
+                try{ stashMode('image'); }catch(_){}
                 // Mark this transition so the next ← Back from music mode
                 // returns to the original Image piece, not the Setup screen.
                 _musicFromImageRef.current = true;
@@ -28598,11 +28615,14 @@ Composition rules:
               }catch(_){
                 try{
                   if(!chords || chords.length===0) return;
-                  const bytes = encodeMidi(chords, 120);
+                  const playable = chords.filter(c => c._playable !== false);
+                  if(playable.length===0) return;
+                  const bytes = encodeMidi(playable, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
                   const file = new File([blob], fname+'.mid', { type:'audio/midi', lastModified: Date.now() });
                   const fakeFiles = { 0: file, length: 1, item: (i)=>i===0?file:null };
+                  try{ stashMode('image'); }catch(_){}
                   _musicFromImageRef.current = true;
                   loadMidi({ target: { files: fakeFiles, value: '' } });
                 }catch(__){}
