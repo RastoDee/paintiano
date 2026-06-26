@@ -21634,22 +21634,24 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
     _setVariantCap(proStatus==='free' ? 2 : null);
-    // Paint-side chord array: when chords carry a chord-level _paintPc (set by
-    // the See music post-load effect from the image scan's source-pixel pitch
-    // classes), build a transformed copy where every note's m is rewritten to
-    // (oct*12 + chord._paintPc) — same octave, source-faithful pc. Canvas-wide
-    // overlay painters (Picasso/Pollock drip/Klimt/etc.) consume chords
-    // directly without going through drawBlock, so they get this paint-side
-    // array. drawBlock applies the same chord-level rewrite per-cell internally
-    // (it reads the chord-level pc off the first note we set here), so per-cell
-    // artists also see source-faithful colours. Audio engine never reads
-    // _chordsPaint — it plays the original chords.
-    const _hasPaintPc = chords && chords.length>0 && chords.some && chords.some(c=>typeof c._paintPc==='number');
+    // Paint-side chord array: when notes carry _paintPc (set per-note by the
+    // See music post-load effect from the image scan's source-pixel pitch
+    // classes, in song order), build a transformed copy where each such note's
+    // m is rewritten to (oct*12 + _paintPc) — same octave, source-faithful pc.
+    // Canvas-wide overlay painters (Picasso/Pollock drip/Klimt/etc.) consume
+    // chords directly without going through drawBlock, so they get this
+    // paint-side array. drawBlock applies the same per-note rewrite internally,
+    // so per-cell artists also see source-faithful colours. Audio engine never
+    // reads _chordsPaint — it plays the original chords.
+    const _hasPaintPc = chords && chords.length>0 && chords.some && chords.some(c=>c&&c.n&&c.n.some&&c.n.some(n=>typeof n._paintPc==='number'));
     const _chordsPaint = _hasPaintPc
-      ? chords.map(c => typeof c._paintPc === 'number'
-          ? { ...c, n: (c.n||[]).map(n => ({ ...n, m: Math.floor(n.m/12)*12 + c._paintPc, _paintPc: c._paintPc })) }
-          : c
-        )
+      ? chords.map(c => (c&&c.n) ? {
+          ...c,
+          n: c.n.map(n => typeof n._paintPc === 'number'
+            ? { ...n, m: Math.floor(n.m/12)*12 + n._paintPc }
+            : n
+          )
+        } : c)
       : chords;
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
@@ -22156,25 +22158,34 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!_imagePaintPcsRef.current) return;
     if(loadedSource!=='midi') return;
     if(!chords || chords.length===0) return;
-    const maps = _imagePaintPcsRef.current;       // length = baked chord count
-    const cur = chordsRef.current;                // length = music chord count
+    const flat = _imagePaintPcsRef.current;       // ordered source pcs (whole song)
+    const cur = chordsRef.current;
     if(!cur || cur.length===0){ return; }
-    const srcLen = maps.length;
-    // Proportional position map: the MIDI round-trip collapses the baked chord
-    // count into a smaller music chord count (e.g. 1216 -> 674) and shifts note
-    // m values, so neither index-equality nor per-note m lookup survives. Each
-    // music chord i borrows the representative source pc from the baked chord
-    // that occupies the same RELATIVE position in the song. This is robust to
-    // any merge ratio and keeps the colour progression aligned left-to-right.
+    if(!Array.isArray(flat) || flat.length===0){ _imagePaintPcsRef.current=null; return; }
+    // Count music notes in song order, then map each to a source pc by relative
+    // position in the flat list. Both sequences preserve left-to-right song
+    // order through the round-trip, so position j/total in the music maps to
+    // floor(j*flatLen/total) in the source. This restores per-note colour
+    // variety (each note can get a different source pc) AND the spatial
+    // progression of the original painting, while being immune to the chord/
+    // note re-quantization that broke the m-keyed and per-chord approaches.
+    let total = 0;
+    for(let i=0;i<cur.length;i++){ const c=cur[i]; if(c&&c.n) total+=c.n.length; }
+    if(total===0){ _imagePaintPcsRef.current=null; return; }
+    const flatLen = flat.length;
+    let j = 0;
     for(let i=0;i<cur.length;i++){
-      const srcIdx = srcLen>0 ? Math.min(srcLen-1, Math.floor(i * srcLen / cur.length)) : -1;
-      const pc = srcIdx>=0 ? maps[srcIdx] : null;
-      if(typeof pc === 'number') cur[i]._paintPc = pc;
+      const c = cur[i];
+      if(!c || !c.n) continue;
+      for(let k=0;k<c.n.length;k++){
+        const srcIdx = Math.min(flatLen-1, Math.floor(j * flatLen / total));
+        const pc = flat[srcIdx];
+        if(typeof pc === 'number') c.n[k]._paintPc = pc;
+        j++;
+      }
     }
-    // Force a fresh array reference so the paint effect re-runs against the
-    // chords now carrying _paintPc. In-place mutation alone wouldn't re-trigger
-    // a render; a stamp bump can be coalesced away. setChords with a new array
-    // guarantees the commit.
+    // New array reference forces the paint effect to re-run against the chords
+    // now carrying per-note _paintPc; in-place mutation alone wouldn't re-render.
     setChords(prev => (prev && prev.length ? prev.slice() : prev));
     setStamp(s=>s+1);
     _imagePaintPcsRef.current = null; // single-use
@@ -28786,21 +28797,30 @@ Composition rules:
                 // texture-less.
                 const baked = bakeImageChords(chords);
                 if(baked.length===0) return;
-                // Capture ONE representative _paintPc per baked chord before
-                // encodeMidi strips the field. Per-note m-keyed matching proved
-                // unusable: the MIDI round-trip re-quantizes and re-voices, so
-                // note m values shift and the baked chord count collapses to a
-                // smaller music chord count (e.g. 1216 -> 674). The post-load
-                // effect therefore re-attaches a single pc per chord,
-                // positionally (proportional index map), which survives the
-                // round-trip. The representative is the first note carrying a
-                // source-pixel pc; null if the chord has none.
-                _imagePaintPcsRef.current = baked.map(c => {
-                  for(const n of c.n){
-                    if(typeof n._paintPc === 'number') return n._paintPc;
+                // Capture a FLAT, song-ordered list of source-pixel pitch
+                // classes. The MIDI round-trip re-quantizes timing and collapses
+                // both the chord count and the note count (~1216->674 chords,
+                // ~2497->1315 notes) and re-voices within chords, so neither a
+                // per-note m lookup nor a per-chord-position map survives: the
+                // first smears one colour across the canvas, the second loses
+                // all variety. What IS invariant is the LEFT-TO-RIGHT ORDER of
+                // notes through the song (MIDI is a time sequence). So we flatten
+                // every baked note's _paintPc into one ordered array and, after
+                // the round-trip, walk the music notes in the same order and
+                // assign pcs proportionally. This keeps both the colour variety
+                // (each note can differ) and the spatial progression (top-left to
+                // bottom-right matches the source painting). Notes with no source
+                // pixel (bass/harmony fills) are skipped so they don't shift the
+                // mapping.
+                _imagePaintPcsRef.current = (()=>{
+                  const flat = [];
+                  for(const c of baked){
+                    for(const n of (c.n||[])){
+                      if(typeof n._paintPc === 'number') flat.push(n._paintPc);
+                    }
                   }
-                  return null;
-                });
+                  return flat.length ? flat : null;
+                })();
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
@@ -28821,12 +28841,15 @@ Composition rules:
                   if(!chords || chords.length===0) return;
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
-                  _imagePaintPcsRef.current = baked.map(c => {
-                    for(const n of c.n){
-                      if(typeof n._paintPc === 'number') return n._paintPc;
+                  _imagePaintPcsRef.current = (()=>{
+                    const flat = [];
+                    for(const c of baked){
+                      for(const n of (c.n||[])){
+                        if(typeof n._paintPc === 'number') flat.push(n._paintPc);
+                      }
                     }
-                    return null;
-                  });
+                    return flat.length ? flat : null;
+                  })();
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
