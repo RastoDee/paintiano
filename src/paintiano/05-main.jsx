@@ -1475,11 +1475,15 @@ export default function Paintiano() {
     }
     if(mode==='kontra' && kontraAutoRef.current && viewMode!=='image' && loadedSource!=='image'){
       // EXCEPTION: after a See music transfer the music chord array still
-      // carries source-pixel colours via _currentImageAvgRGBRef. Kontra was
-      // the palette in which the image was scanned and remains meaningful
-      // because the painting is image-derived. Don't force Harmony — let
-      // the user see the piece in the palette it was born from.
-      if(_currentImageAvgRGBRef.current) return;
+      // carries source-pixel colours. Kontra was the palette in which the
+      // image was scanned and remains meaningful because the painting is
+      // image-derived. Don't force Harmony — let the user see the piece in
+      // the palette it was born from. _imagePixelColorsRef is set in the
+      // See music onClick BEFORE loadMidi runs, so by the time this effect
+      // sees loadedSource flip away from 'image' the ref is already truthy.
+      // (_currentImageAvgRGBRef gets populated by the post-load effect which
+      // runs AFTER this one, so it's the wrong signal here.)
+      if(_imagePixelColorsRef.current || _currentImageAvgRGBRef.current) return;
       kontraAutoRef.current=false;
       setMode('harmony');
     }
