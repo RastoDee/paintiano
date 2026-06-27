@@ -548,8 +548,8 @@
   <div class="wrap reveal">
     <h2 class="sec serif" data-i18n="final_h2">Hear it. See it. Keep it.</h2>
     <p data-i18n="final_p">Your song is already a painting. Come find out which one.</p>
-    <a class="btn btn-gold" href="/play" data-i18n="final_cta">Try Paintiano free →</a>
-    <p class="note" style="margin-top:16px;" data-i18n="final_note">No signup, no card.</p>
+    <a class="btn btn-gold" href="/play" id="finalCta" data-i18n="final_cta">Try Paintiano free →</a>
+    <p class="note" style="margin-top:16px;" id="finalNote" data-i18n="final_note">No signup, no card.</p>
   </div>
 </section>
 
@@ -636,12 +636,16 @@ function applyMember(d){
   var welcomeText=document.getElementById('welcomeText');
   var tierPro=document.getElementById('tierPro');
   var tierAi=document.getElementById('tierAi');
+  var finalCta=document.getElementById('finalCta');
+  var finalNote=document.getElementById('finalNote');
   // Always reset to the free/visitor baseline first (so language switches and
   // logged-out states are clean).
   body.classList.remove('is-pro','is-proai');
   if(welcome) welcome.classList.remove('show');
   if(tierPro) tierPro.classList.remove('owned-tier');
   if(tierAi) tierAi.classList.remove('owned-tier');
+  if(finalCta){ finalCta.setAttribute('href','/play'); if(d.final_cta!=null) finalCta.textContent=d.final_cta; }
+  if(finalNote && d.final_note!=null) finalNote.textContent=d.final_note;
   var proAiCta=tierAi ? tierAi.querySelector('.buy') : null;
   if(proAiCta){ proAiCta.setAttribute('href','/play?upgrade=proai'); if(d.proai_cta!=null) proAiCta.textContent=d.proai_cta; }
   if(!tier) return; // visitor / free — leave the page as the sales pitch
@@ -654,6 +658,10 @@ function applyMember(d){
   if(welcomeText) welcomeText.innerHTML = (tier==='pro_ai' ? (d.welcome_proai||'Welcome back — your <b>Pro AI</b> is active.') : (d.welcome_pro||'Welcome back — your <b>Pro</b> is active.'));
   if(navCta){ navCta.textContent = d.welcome_cta||'Open Paintiano →'; navCta.setAttribute('href','/play'); }
   if(heroNote){ heroNote.textContent = (tier==='pro_ai' ? (d.welcome_note_proai||'Your Pro AI is active on this device.') : (d.welcome_note_pro||'Your Pro is active on this device.')); }
+  // The bottom call-to-action mirrors the nav for a member: it's the natural last
+  // entry into the app, and the "free / no card" pitch no longer applies to them.
+  if(finalCta){ finalCta.textContent = d.welcome_cta||'Open Paintiano →'; finalCta.setAttribute('href','/play'); }
+  if(finalNote){ finalNote.textContent = (tier==='pro_ai' ? (d.welcome_note_proai||'Your Pro AI is active on this device.') : (d.welcome_note_pro||'Your Pro is active on this device.')); }
   // Mark the owned tier(s). Pro AI owns both Pro and Pro AI feature-wise; we mark
   // the tier they actually bought, and for a plain-Pro member we turn the Pro AI
   // card's CTA into an upgrade instead of a fresh purchase.
