@@ -2429,6 +2429,23 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         _c[3],
       ];
     }
+    // Song-energy colour tilt (B1): shift the whole piece's saturation/lightness
+    // by its overall energy so a heavy song reads deeper+more saturated and a
+    // soft one lighter+airier. Hue is preserved (blue stays blue). Neutral at
+    // 0.5 (no change), so pure modes / character-less pieces are untouched.
+    // Gentle: ±~14% saturation, ±~10% lightness at the extremes.
+    if(typeof _getSongEnergy === 'function'){
+      const _se = _getSongEnergy();
+      const _d = _se - 0.5;                 // -0.5..+0.5
+      if(_d > 0.001 || _d < -0.001){
+        const r=_c[0], g=_c[1], b=_c[2];
+        const[hh,ss2,ll]=toHsl(r,g,b);
+        const ss3 = Math.max(0, Math.min(100, ss2 * (1 + 0.28*_d)));   // louder → more saturated
+        const ll2 = Math.max(0, Math.min(100, ll  * (1 - 0.20*_d)));   // louder → slightly darker
+        const[r2,g2,b2]=fromHsl(hh, ss3, ll2);
+        _c = [r2, g2, b2, _c[3]];
+      }
+    }
     return _c;
   },[mode,activePalette,tone]);
 
@@ -2443,8 +2460,21 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     return harmCol(60+pc, 100);
   },[]);
 
+  const _songEnergyCacheRef = useRef({ src: null, e: 0.5 });
   useEffect(()=>{
     const cv=canvasRef.current;if(!cv)return;
+    // B1: push the piece's overall energy to the draw module so gc() tilts the
+    // palette's saturation/lightness by character. Cached by chords identity so
+    // it costs one pass per piece, not per frame. Hue is never affected.
+    try{
+      if(typeof _setSongEnergy==='function'){
+        if(_songEnergyCacheRef.current.src !== chords){
+          const _sc = (chords && chords.length && typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
+          _songEnergyCacheRef.current = { src: chords, e: _sc ? _sc.energy : 0.5 };
+        }
+        _setSongEnergy(_songEnergyCacheRef.current.e);
+      }
+    }catch(_){}
     const{N,BW,BH,CW,CH}=grid;
     // SUPERSAMPLING (immersive fullscreen, painted modes only). Renders the painting
     // at SS× internal resolution + pre-scales the context, exactly like the export

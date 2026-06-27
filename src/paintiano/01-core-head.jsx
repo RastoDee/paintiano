@@ -1508,6 +1508,66 @@ function parseMusicXml(xmlText){
     };
   });
 }
+// ─── computeSongCharacter ────────────────────────────────────────────────────
+// A piece's fingerprint, derived ONLY from its chords (velocities + MIDI pitch +
+// note counts). Deterministic: same chords → same character, every time. It does
+// NOT touch audio — it's pure render metadata, read by computeGrid (Mosaic block
+// sizing) and, progressively, by the artist overlays so a Liszt nocturne and a
+// Led Zeppelin riff stop looking alike.
+//
+// Returns:
+//   energy   0..1  overall loudness (mean velocity)
+//   dynRange 0..1  how much the dynamics swing (loud vs soft contrast)
+//   register 0..1  mean pitch height (0 = bass-heavy, 1 = treble-heavy)
+//   density  0..1  mean simultaneous notes per chord (sparse → thick)
+//   weights  []    per-chord size multiplier (loud/bass → bigger, soft/high →
+//                  smaller), MEAN-NORMALISED to ~1 so total canvas fill is
+//                  preserved (the grid still fills exactly).
+function computeSongCharacter(chords){
+  const empty = { energy:0.5, dynRange:0.3, register:0.5, density:0.3, weights:null };
+  if(!Array.isArray(chords) || chords.length===0) return empty;
+  let vSum=0, vN=0, vMin=127, vMax=0, mSum=0, mN=0, nSum=0, nN=0;
+  const perChordV=[], perChordM=[];
+  for(const c of chords){
+    if(!c || !c.n || !c.n.length){ perChordV.push(null); perChordM.push(null); continue; }
+    let cv=0, cvN=0, cm=0, cmN=0;
+    for(const n of c.n){
+      const v=(typeof n.v==='number')?n.v:80;
+      const m=(typeof n.m==='number')?n.m:60;
+      vSum+=v; vN++; cv+=v; cvN++;
+      if(v<vMin) vMin=v; if(v>vMax) vMax=v;
+      mSum+=m; mN++; cm+=m; cmN++;
+    }
+    nSum+=c.n.length; nN++;
+    perChordV.push(cvN?cv/cvN:null);
+    perChordM.push(cmN?cm/cmN:null);
+  }
+  const meanV = vN?vSum/vN:80;
+  const meanM = mN?mSum/mN:60;
+  const meanN = nN?nSum/nN:1;
+  const energy   = Math.max(0, Math.min(1, meanV/127));
+  const dynRange = Math.max(0, Math.min(1, (vMax-vMin)/127));
+  // MIDI 36 (C2) .. 84 (C6) spans most musical registers; normalise into it.
+  const register = Math.max(0, Math.min(1, (meanM-36)/48));
+  const density  = Math.max(0, Math.min(1, (meanN-1)/5)); // 1 note → 0, 6+ → 1
+  // Per-chord size weight: louder than the mean → bigger; lower (bass) than the
+  // mean → bigger; softer/higher → smaller. Kept gentle (±~55%) so phrasing
+  // shows without shredding the grid, then mean-normalised to 1.
+  const weights = new Array(chords.length).fill(1);
+  let wSum=0, wN=0;
+  for(let i=0;i<chords.length;i++){
+    const v=perChordV[i], m=perChordM[i];
+    if(v==null || m==null){ weights[i]=1; wSum+=1; wN++; continue; }
+    const vRel=(v-meanV)/127;            // -1..1-ish
+    const mRel=(meanM-m)/48;             // bass below mean → positive
+    let w = 1 + 0.55*vRel + 0.35*mRel;   // loud & low → larger
+    w = Math.max(0.45, Math.min(1.8, w));
+    weights[i]=w; wSum+=w; wN++;
+  }
+  const wMean = wN?wSum/wN:1;
+  if(wMean>0){ for(let i=0;i<weights.length;i++) weights[i]/=wMean; } // normalise → mean 1
+  return { energy, dynRange, register, density, weights };
+}
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
   const liveMode = !!(opts && opts.liveMode);
@@ -1522,7 +1582,19 @@ function computeGrid(arg, opts){
   // logic deformed circles into ellipses and made the paint lag the leading note.)
   const desktopLandscape = false;
   const fixedFrame = liveMode || desktopLandscape;
-  const totalQ=evs.reduce((s,e)=>s+(e.durQ!=null?e.durQ:1),0);
+  // Song-character block weighting (Mosaic differentiation): scale each event's
+  // durQ by its character weight (loud/bass cells grow, soft/high shrink) so two
+  // different pieces lay out differently. Weights are mean-normalised to 1, so
+  // the weighted total ≈ the unweighted total and the canvas still fills exactly.
+  // Only the live arrays (real chord objects) carry notes; the numeric-arg path
+  // (placeholder durQ:1 events) has no character, so weights stay absent there.
+  const _char = Array.isArray(arg) ? computeSongCharacter(arg) : null;
+  const _wts = (_char && _char.weights && _char.weights.length===evs.length) ? _char.weights : null;
+  const _effDurQ = (i)=>{
+    const base = (evs[i] && evs[i].durQ!=null) ? evs[i].durQ : 1;
+    return _wts ? base * _wts[i] : base;
+  };
+  const totalQ=evs.reduce((s,e,i)=>s+_effDurQ(i),0);
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
   const N0=Math.max(2,Math.ceil(Math.sqrt(totalQ)));
@@ -1592,7 +1664,7 @@ function computeGrid(arg, opts){
   const cells=[];
   let curX=0,curY=0;
   for(let i=0;i<evs.length;i++){
-    const dq=(evs[i].durQ!=null?evs[i].durQ:1)*scale;
+    const dq=_effDurQ(i)*scale;
     let remaining=dq*BW;
     const segments=[];
     while(remaining>0.5){
