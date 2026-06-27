@@ -2467,6 +2467,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // canvas. During playback we paint a subtle scanning highlight at the currently
     // playing cell so the user still gets visual feedback without losing the image.
     if(viewMode==='image'&&pixelRef.current){
+      // TEMP MARKER A: blue dot = effect entered the image branch at all.
+      try{ const ctxA=cv.getContext('2d'); const{CW}=grid; ctxA.fillStyle='#3388ff'; ctxA.fillRect(2,2,12,12);
+        ctxA.fillStyle='#fff'; ctxA.font='8px monospace'; ctxA.fillText('p'+(playing?1:0)+'a'+(anim?1:0), 2, 24);
+        ctxA.fillText('po'+(playedOnce?1:0)+'d'+disp, 2, 33);
+      }catch(_){}
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
       // Paused (incl. returning from Setup while paused): the canvas may have
