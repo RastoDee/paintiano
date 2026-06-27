@@ -248,7 +248,8 @@ const PF_STYLE = `
           justify-content: flex-start !important;
           gap: 16px !important;
         }
-        @media (min-width: 769px) and (min-height: 501px),
+        @media (min-width: 1100px) and (orientation: landscape) and (min-height: 501px),
+               (min-width: 769px) and (orientation: landscape) and (min-height: 501px),
                (max-height: 500px) and (orientation: landscape) {
           html, body {
             background: #050507 !important;
@@ -1820,57 +1821,10 @@ function _ensureEnergies(chords){
 }
 
 function _energyTint(r,g,b){
-  // Tone switch — when Mix is off (Pure or Pastel tones), the energy modulation
-  // is bypassed entirely. In Real tone (_mixOn === true) the function maps the
-  // current chord's energy across an asymmetric range:
-  //
-  //   piano  (_curE = 0)  -> softened     (S → 0.55 * sx,  L blended to 0.75)
-  //   mezzo  (_curE = 0.5) -> raw palette colour, no change
-  //   forte  (_curE = 1)   -> deep        (S boosted hard, L * 0.40)
-  //
-  // IMPORTANT: piano branch is intentionally less aggressive than Pastel tone
-  // (which sits at S * 0.45, L → 0.80). Pastel is the dedicated soft tone and
-  // must remain visually the softest option. Real at piano sits BETWEEN the
-  // original colour and Pastel — clearly lighter than the original, but never
-  // overshooting Pastel. Forte stays strong so the piano↔forte arc is wide.
-  // A power-curve (|d|^0.55) sharpens the middle so chords at E ~ 0.3 / 0.7
-  // already show clear pastel / deep shifts.
-  if(!_mixOn) return [Math.round(r),Math.round(g),Math.round(b)];
-  // Extreme bands (e<0.20 piano, e>0.80 forte) already have a palette-level
-  // pastel/dark variant applied in gc(), so this continuous-modulation step
-  // is a no-op there. Without this guard we'd over-pastelize and over-darken
-  // the band-switched colour, undoing the discrete palette choice.
-  if(_curE < 0.20 || _curE > 0.80) return [Math.round(r),Math.round(g),Math.round(b)];
-  let d=(_curE-0.5)*2;
-  if(d>-0.001 && d<0.001) return [Math.round(r),Math.round(g),Math.round(b)];
-  d = Math.sign(d) * Math.pow(Math.abs(d), 0.55);
-  let R=r/255, G=g/255, B=b/255;
-  const mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2;
-  let h=0, sx=0;
-  if(mx!==mn){ const dl=mx-mn; sx=l>0.5?dl/(2-mx-mn):dl/(mx+mn);
-    if(mx===R)h=(G-B)/dl+(G<B?6:0); else if(mx===G)h=(B-R)/dl+2; else h=(R-G)/dl+4; h/=6; }
-  let S, L;
-  if(d < 0){
-    // Quieter than average -> soften toward pastel territory, but never
-    // overshoot Pastel mode (which uses S * 0.45, L → 0.80).
-    const k = -d;
-    S = sx * (1 - 0.45 * k);            // sx -> 0.55 * sx at k=1 (vs Pastel 0.45)
-    L = l + (0.75 - l) * 0.55 * k;       // l  -> blended toward 0.75 (vs Pastel 0.80)
-  } else {
-    // Louder than average -> push toward deep. Eased forte so forte chords
-    // don't crush to near-black: saturation boost 0.50/0.30 (was 0.60/0.40)
-    // and lightness multiplier 0.50 (was 0.65). Forte still reads clearly
-    // darker than mezzo, but stays in the dramatic-deep band rather than
-    // bottoming out into shadow.
-    S = Math.min(1, sx + (1 - sx) * 0.50 * d + sx * 0.30 * d);
-    L = Math.max(0.04, l * (1 - 0.50 * d));
-  }
-  S = Math.max(0, Math.min(1, S));
-  L = Math.max(0.04, Math.min(0.96, L));
-  if(S < 0.005){ const g2=Math.round(L*255); return [g2,g2,g2]; }
-  const q=L<0.5?L*(1+S):L+S-L*S, pp=2*L-q;
-  const h2=(t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return pp+(q-pp)*6*t; if(t<1/2)return q; if(t<2/3)return pp+(q-pp)*(2/3-t)*6; return pp; };
-  return [Math.round(h2(h+1/3)*255), Math.round(h2(h)*255), Math.round(h2(h-1/3)*255)];
+  // No-op in all tones. Real tone's Pure↔Pastel mix is fully resolved in
+  // gc() (05-main) so the colour reaching this function is already correct.
+  // Kept as a pass-through shim so existing call sites stay stable.
+  return [Math.round(r),Math.round(g),Math.round(b)];
 }
 
 // ── PASTEL mode ─────────────────────────────────────────────────────────────
@@ -2913,9 +2867,24 @@ function drawMatisse(ctx,bx,by,notes,gc,BW,BH){
   });
 }
 function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
-  if(style==='mondrian')return drawMondrian(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='rothko')return drawRothko(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='matisse')return drawMatisse(ctx,bx,by,notes,gc,BW,BH);
+  // See music painting path: if any note carries _paintPc (the pixel-derived
+  // pitch class captured during image scan, before snap/bar progression
+  // overwrote n.m), rewrite each note's m to the same octave but with pc =
+  // _paintPc. Every artist below then paints in the source-faithful colour
+  // via gc(m,v) without needing to know about _paintPc. Audio engine
+  // bypasses this transform — it reads notes directly from the chord array,
+  // so the music still plays the harmonically-shaped pitches.
+  const _hasPaintPc = notes.some(n => typeof n._paintPc === 'number');
+  const _notes = _hasPaintPc
+    ? notes.map(n => {
+        if(typeof n._paintPc !== 'number') return n;
+        const oct = Math.floor(n.m / 12);
+        return { ...n, m: oct*12 + n._paintPc };
+      })
+    : notes;
+  if(style==='mondrian')return drawMondrian(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='rothko')return drawRothko(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='matisse')return drawMatisse(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='picasso'){
     // Picasso has its own canvas-wide cubist plane overlay that supplies all
     // color. The per-block drawer just keeps the dark canvas underneath —
@@ -2924,12 +2893,12 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
     ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2);
     return;
   }
-  if(style==='kusama')return drawKusama(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,notes,gc,BW,BH);
-  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH);
+  if(style==='kusama')return drawKusama(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='kandinsky')return drawKandinsky(ctx,bx,by,_notes,gc,BW,BH);
+  if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
-  if(style==='notes')return drawBlockNotes(ctx,bx,by,notes,gc,BW,BH);
-  return drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH); // implicit default
+  if(style==='notes')return drawBlockNotes(ctx,bx,by,_notes,gc,BW,BH);
+  return drawBlockMosaic(ctx,bx,by,_notes,gc,BW,BH); // implicit default
 }
 
 // ── Shared helper for the Kusama-style overlays (Rothko, Matisse) ──
@@ -12536,7 +12505,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // just nudge it. Mood gets equal weight (50:50), and when it's far from neutral
   // it overrides the image's reading: a strong serene tag on a busy canvas still
   // calms it (and a frantic tag on a calm one wakes it up). All downstream
-  // levers (dynE, dynScale, rhythmDrive, MEL_MAX, maxRestRun) are then computed
+  // levers (dynE, rhythmDrive, MEL_MAX, maxRestRun, dynCentre) are then computed
   // from the blended energy so the mood ripples through tempo, loudness, register,
   // density, and breathing — not just colour tint.
   const valenceBias = atmoV!=null ? atmoV : 0;
@@ -12546,13 +12515,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     const moodW = 0.5 + 0.35*extreme;                        // 0.50 … 0.85 — strong mood prevails
     energy = Math.max(0,Math.min(1, (1-moodW)*energy + moodW*atmoE));
   }
-  // ─── DYNAMICS SCALE (loudness from restlessness + mood) ──────────────────
-  // A calm painting must play SOFT even when vivid (Monet pitfall). Restlessness
-  // (contrast+busyness) sets the base; mood scales it harder than before so a
-  // serene tag really quiets things down (was 0.7+0.6*atmoE → now 0.55+0.9*atmoE).
+  // ─── DYNAMICS RESTLESSNESS — image-driven loudness centre ─────────────────
+  // dynE captures how "restless" the painting is (contrast + busyness). It
+  // feeds the centre-of-gravity calculation in Final dynamics downstream
+  // (busy paintings shift velocity centre up, calm paintings shift it down).
+  // The old global dynScale multiplier that lived here was retired in the
+  // Phase 2 audit — the centre+compress model in Final dynamics replaces
+  // it without the slow-motion-film side effect of flat scaling.
   const dynE = Math.max(0, Math.min(1, 0.55*eContrast + 0.45*eBusy));
-  let dynScale = 0.75 + 0.35*dynE;     // floor 0.75 so plain colour fields still play
-  if(atmoE!=null) dynScale *= (0.55 + 0.9*atmoE);
   // ── RHYTHM DRIVE ──
   // A single 0..1 knob that turns "calm/legato/sparse" into "lively/articulated/
   // dense" as it rises. Driven by energy, nudged up by positive valence (bright
@@ -12724,7 +12694,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     let v = Math.round(38 + (chroma/100) * 68);
     if (isBackgroundHue) v = Math.round(v * 0.6);
     else if (isNearBackground) v = Math.round(v * 0.82);
-    return{m:midi,v,durMs:noteDur};
+    // _paintPc = original pixel-derived pitch class (= midi%12 BEFORE snap +
+    // bar progression overwrite it). Travels alongside the note as a second
+    // channel: the audio engine ignores it, but the Music-mode painter (after
+    // a See music transfer) can use it to render the source-faithful colour
+    // while the audio still plays the harmonically-shaped pcs. Image canvas
+    // paints from pixelRef directly, so this field has no effect there.
+    return{m:midi,v,durMs:noteDur,_paintPc:midi%12};
   }
   // Pick the most vivid of three row-pixels at (band, col) — used when the
   // strict filter would have left this chord empty. Guarantees audible music.
@@ -12753,16 +12729,51 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // painting is. Used later to decide chord fullness (vivid → full triad with
       // its mood-defining third; muted → open, airy voicing).
       let cellChroma=0, cellChN=0;
+      // FLATNESS metric: how monotonous is this cell's pixel area?
+      // Rothko-style colour fields (huge same-colour planes) generate
+      // mechanically identical chords across many cells → repetitive output.
+      // We compute per-cell lightness variance + hue spread; the post-loop
+      // variation pass uses this (plus neighbours) to decide which cells
+      // get rubato, jitter, voicing shift, or rests. Cheap to do here since
+      // we're already iterating these pixels.
+      let lSumC=0, lSqSumC=0, lNC=0;
+      let hueMinC=361, hueMaxC=-1;
+      // Dominant-hue accumulator for the cell's CARRYING colour tone. Saturated
+      // pixels vote into 36 hue bins weighted by chroma; the winning bin becomes
+      // the cell's representative pitch class (_domPc) via the same hue->pc
+      // table pxToNote uses. This is RENDER-ONLY metadata for the Music canvas
+      // (paint a faithful carrying tone instead of the harmony-shuffled pc);
+      // the audio notes built below are never touched by it, so pure Image and
+      // pure Music playback are byte-for-byte unchanged.
+      const _domHueHist=new Float32Array(36);
       for(let sk=0;sk<COL_STEP;sk++){
         const col=cg*COL_STEP+sk; if(col>=nc) break;
         for(let j=0;j<CHORD_SIZE;j++){
           const row=band*CHORD_SIZE+j; if(row>=nr) break;
           const idx=row*nc+col;
-          const{r,g,b}=px[idx],[ ,ss,ll]=toHsl(r,g,b);
+          const{r,g,b}=px[idx],[hh,ss,ll]=toHsl(r,g,b);
           cellChroma += ss*Math.min(ll,100-ll)/50; cellChN++;
+          lSumC += ll; lSqSumC += ll*ll; lNC++;
+          if(ss > 8){ // ignore near-grey pixels for hue spread (their hue is noise)
+            if(hh < hueMinC) hueMinC = hh;
+            if(hh > hueMaxC) hueMaxC = hh;
+            _domHueHist[Math.floor(hh/10)%36] += ss*Math.min(ll,100-ll)/50; // chroma-weighted vote
+          }
           const n=pxToNote(idx);
           if(n&&!seenM.has(n.m)){seenM.add(n.m);notes.push(n);}
         }
+      }
+      // 0 = totally flat (one uniform colour), 1 = highly varied texture.
+      // varL ranges roughly 0..400 in practice; we normalise by 100 to land
+      // most cells in 0..2 then clamp. Hue spread (degrees) caps at ~60° for
+      // a noticeable rainbow gradient within a single cell.
+      let _flat = 0;
+      if(lNC>0){
+        const lMean = lSumC/lNC;
+        const lVar  = Math.max(0, lSqSumC/lNC - lMean*lMean);
+        const hueSpread = hueMaxC>=0 ? (hueMaxC-hueMinC) : 0;
+        const varScore = Math.min(1, lVar/100) * 0.65 + Math.min(1, hueSpread/60) * 0.35;
+        _flat = 1 - varScore;
       }
       // Fallback: grab the most vivid pixel anywhere in the column group
       if(notes.length===0){
@@ -12772,10 +12783,141 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           if(fallback&&!seenM.has(fallback.m)){seenM.add(fallback.m);notes.push(fallback);}
         }
       }
+      // Dominant carrying pitch class for the cell (render-only). Pick the
+      // winning chroma-weighted hue bin and map it through the active hue->pc
+      // table (same table pxToNote uses), so the painted tone matches what the
+      // palette would show for that hue. null when the cell is essentially grey
+      // (no saturated vote) — then the Music canvas just keeps the harmonic pc.
+      let _domPc=null;
+      {
+        let bb=-1,bm=0;
+        for(let b2=0;b2<36;b2++){ if(_domHueHist[b2]>bm){ bm=_domHueHist[b2]; bb=b2; } }
+        if(bb>=0){
+          const domHue=bb*10+5;
+          let pc=0,minD=Infinity;
+          table.forEach((th,ti)=>{const d=Math.min(Math.abs(domHue-th),360-Math.abs(domHue-th));if(d<minD){minD=d;pc=ti;}});
+          _domPc=pc;
+        }
+      }
       // Store band+cg so the canvas mosaic can paint each event's exact cell in
       // traversal order (needed for non-row-major directions like vert/spiral).
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0});
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc});
       evIdx++;
+    }
+  }
+  // ─── ROTHKO PASS — flat-region variation injection ──
+  // Large monochrome color fields (Rothko, Reinhardt, Ad Reinhardt black-on-
+  // black, Yves Klein blue) generate mechanically identical chords across
+  // 60-80% of the canvas — same hue → same pitch class, same chroma → same
+  // velocity, same lightness → same voicing. Result: repetitive. This pass
+  // identifies cells in flat regions (high flatness + low chroma + flat
+  // neighbours) and injects deterministic micro-variation: velocity jitter,
+  // timing rubato, vertical voicing shift, and occasional rests. Cells that
+  // already have variance (Van Gogh brush-strokes, Picasso fragmentation,
+  // Kandinsky scatter) score low on _flat and stay completely untouched.
+  if(evts.length > 0){
+    // Build a band/cg lookup so we can sample neighbours regardless of
+    // traversal direction. Map from "band*effCols+cg" → evts index.
+    const cellMap = new Map();
+    for(let i=0;i<evts.length;i++){
+      const e = evts[i];
+      cellMap.set(e.band*effCols + e.cg, i);
+    }
+    // Image-wide chroma median — used as the "vivid threshold". A cell is
+    // a candidate for the Rothko pass ONLY if its chroma is below median;
+    // otherwise the variation would chew up texture in already-busy parts.
+    const chromaSorted = evts.map(e=>e._chroma||0).slice().sort((a,b)=>a-b);
+    const chromaMed = chromaSorted[Math.floor(chromaSorted.length*0.5)] || 0;
+    // Pass A: per-cell region detection. A cell is "in flat region" if its
+    // 5×3 neighbourhood (±2 horizontal, ±1 vertical) has mean flatness
+    // ≥ 0.55 and the cell itself has chroma below the image median.
+    for(let i=0;i<evts.length;i++){
+      const e = evts[i];
+      if((e._chroma||0) >= chromaMed){ e._inFlatRegion = false; continue; }
+      let sum=0, n=0;
+      for(let db=-1; db<=1; db++){
+        for(let dc=-2; dc<=2; dc++){
+          const key = (e.band+db)*effCols + (e.cg+dc);
+          const ni = cellMap.get(key);
+          if(ni!=null){ sum += (evts[ni]._flat||0); n++; }
+        }
+      }
+      const meanFlat = n>0 ? sum/n : 0;
+      e._inFlatRegion = meanFlat >= 0.55;
+    }
+    // Pass B: variation injection on flat-region cells. Determinism is
+    // critical (same painting must produce same output) — we hash (band, cg)
+    // into a pseudo-random 0..1 instead of Math.random.
+    const detRnd = (band, cg, salt)=>{
+      // Numerical Recipes LCG seeded with band/cg/salt.
+      let h = ((band*48271 + cg*16807 + salt*2654435761) >>> 0);
+      h = ((h*1103515245 + 12345) >>> 0);
+      return (h % 233280) / 233280;
+    };
+    // Track band extents per flat region so the voicing shift knows which
+    // cells are "top of region" vs "bottom of region". Simple per-band-column
+    // chain detection: if cell at (band, cg) is flat AND cells above
+    // (band-1, cg) and (band-2, cg) are also flat, this cell is "lower";
+    // mirror for upper.
+    const isFlat = (band, cg)=>{
+      const ni = cellMap.get(band*effCols + cg);
+      return ni!=null && evts[ni]._inFlatRegion === true;
+    };
+    let rotIdx = 0; // monotonic counter for rest pattern (every 6th flat cell)
+    for(let i=0;i<evts.length;i++){
+      const e = evts[i];
+      if(!e._inFlatRegion) continue;
+      const notes = e.n;
+      if(!notes || notes.length === 0) continue;
+      // (D) REST: every 6th flat cell becomes silent. Creates phrasing the
+      // chord stream wouldn't otherwise have. Skip the first/last cells in
+      // a row so the painting doesn't start or end on silence.
+      rotIdx++;
+      if(rotIdx % 6 === 0 && i > 4 && i < evts.length - 4){
+        e.n = []; // empty notes array = rest
+        continue; // skip further mods for this cell
+      }
+      // (B) Velocity jitter ±12% — same multiplier applied to all notes in
+      // this chord so internal balance is preserved.
+      const velMul = 0.88 + detRnd(e.band, e.cg, 1) * 0.24; // 0.88..1.12
+      // (B) Timing rubato ±20ms — small enough to feel like breath, not
+      // arrhythmia. Pure cosmetic offset on startMs.
+      const tJit = (detRnd(e.band, e.cg, 2) - 0.5) * 40; // -20..+20 ms
+      e.startMs = Math.max(0, e.startMs + tJit);
+      // (C) Voicing shift: vertical position within the region drives octave
+      // bias on the chord extremes. "Top of region" = highest band in this
+      // column's flat chain → push the top note up; "bottom of region" =
+      // lowest band → push the bass note down. Result: the colour field
+      // splits into upper/lower harmonic regions instead of one flat plane.
+      let topShift = 0, bassShift = 0;
+      const aboveFlat  = isFlat(e.band - 1, e.cg);
+      const above2Flat = isFlat(e.band - 2, e.cg);
+      const belowFlat  = isFlat(e.band + 1, e.cg);
+      const below2Flat = isFlat(e.band + 2, e.cg);
+      if(!aboveFlat && belowFlat){
+        // This cell is at the TOP of a multi-row flat region → lift top voice
+        topShift = below2Flat ? 7 : 5;
+      } else if(!belowFlat && aboveFlat){
+        // This cell is at the BOTTOM of a multi-row flat region → drop bass
+        bassShift = above2Flat ? -7 : -5;
+      }
+      // Apply velocity multiplier to ALL notes; apply pitch shifts to the
+      // extreme voices only (top → highest m, bass → lowest m).
+      let topI=0, bassI=0;
+      for(let k=1;k<notes.length;k++){
+        if(notes[k].m > notes[topI].m) topI=k;
+        if(notes[k].m < notes[bassI].m) bassI=k;
+      }
+      for(let k=0;k<notes.length;k++){
+        const baseV = notes[k].v != null ? notes[k].v : 80;
+        notes[k] = {...notes[k], v: Math.max(20, Math.min(127, Math.round(baseV * velMul)))};
+      }
+      if(topShift !== 0 && notes[topI]){
+        notes[topI] = {...notes[topI], m: Math.max(0, Math.min(127, notes[topI].m + topShift))};
+      }
+      if(bassShift !== 0 && notes[bassI] && bassI !== topI){
+        notes[bassI] = {...notes[bassI], m: Math.max(0, Math.min(127, notes[bassI].m + bassShift))};
+      }
     }
   }
   // ─── Music theory pass ──
@@ -13062,7 +13204,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const _melAtmoShift = (atmoE!=null)
     ? (atmoE<0.5 ? -7*(0.5-atmoE)/0.5 : +5*(atmoE-0.5)/0.5)
     : 0;
-  const MEL_MIN=60+MEL_LIFT;                        // C4 (G4 in spectral) — melody floor
+  // Valence shifts the melody floor: positive valence (bright/playful) lifts
+  // the floor up to +3 semitones so the melody sits brighter; negative
+  // valence (heavy/grief) drops the floor up to −3 semitones so the line
+  // feels grounded. ATMO energy already moves the ceiling; valence moves
+  // the floor independently, so mood shapes both ends of the register.
+  const _melValShift = Math.round(valenceBias * 3);                 // -3..+3
+  const MEL_MIN=60+MEL_LIFT+_melValShift;           // C4 (G4 in spectral) — melody floor, valence-shifted
   const MEL_MAX=Math.round(MEL_CEIL_BASE+_melAtmoShift)+MEL_LIFT;  // 79 default; 72 serene; 84 frantic
   const MEL_SPAN=MEL_MAX-MEL_MIN;
   // Brightness range across the image's melody-source notes — used to map each
@@ -13075,6 +13223,8 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   if(!isFinite(bMin)){ bMin=0; bMax=1; }
   const bRange=(bMax-bMin)||1;
   let lastMel=null;                                 // mild smoothing of the contour
+  let lastLastMel=null;                             // for binary-chatter detection (A-B-A-B)
+  let altRun=0;                                     // consecutive A-B-A-B alternations
   let repeatRun=0;                                  // consecutive same-pitch counter (anti-telegraph)
   let darkRepeatLast=null;                          // dark-band lift: own anti-telegraph state
   let darkRepeatRun=0;                              // (kept separate so octave-wide global jumps don't apply)
@@ -13102,12 +13252,29 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     const bright=(((ev._bright!=null?ev._bright:melSrc.m))-bMin)/bRange; // 0 dark … 1 bright
     const targetM=MEL_MIN + bright*MEL_SPAN;        // desired pitch height
     // Place melPc at the octave whose pitch is nearest the brightness target,
-    // then blend lightly toward the previous note so the line is smooth but
-    // still clearly follows the image (70% contour, 30% smoothing).
+    // then blend toward the previous note so the line is smooth but still
+    // follows the image. The contour/smoothing balance is ATMO-aware: calm
+    // pieces (atmoE→0) breathe at 50/50 — gentle line that doesn't jump on
+    // every brightness change; frantic pieces (atmoE→1) at 85/15 — sharp
+    // line that tracks the image's jolts; mid mood keeps the 70/30 default.
     let melM=melPc; while(melM<MEL_MIN) melM+=12; while(melM>MEL_MAX) melM-=12;
-    const aim = lastMel!=null ? (0.7*targetM + 0.3*lastMel) : targetM;
+    const _contourW = atmoE!=null ? (0.50 + 0.35*atmoE) : 0.70;       // 0.50…0.85
+    const aim = lastMel!=null ? (_contourW*targetM + (1-_contourW)*lastMel) : targetM;
     const cands=[melM-12,melM,melM+12].filter(m=>m>=MEL_MIN-12&&m<=MEL_MAX+12);
-    melM=cands.reduce((a,b)=>Math.abs(b-aim)<Math.abs(a-aim)?b:a);
+    // Pick candidate by aim distance + a continuity penalty against lastMel.
+    // The penalty discourages random octave jumps when neighbouring cells
+    // share the same pitch class but lastMel sits in a particular octave.
+    // Penalty weight is ATMO-aware: calm pieces weight continuity HEAVIER
+    // (0.5 — almost matching the aim weight, so the line stays in register),
+    // frantic pieces lighter (0.15 — image jolts can still leap an octave).
+    const _smoothPenalty = lastMel!=null
+      ? (atmoE!=null ? (0.50 - 0.35*atmoE) : 0.30)                    // 0.50…0.15
+      : 0;
+    melM=cands.reduce((a,b)=>{
+      const ascore = Math.abs(a-aim) + (lastMel!=null ? _smoothPenalty*Math.abs(a-lastMel) : 0);
+      const bscore = Math.abs(b-aim) + (lastMel!=null ? _smoothPenalty*Math.abs(b-lastMel) : 0);
+      return bscore < ascore ? b : a;
+    });
     melM=Math.max(MEL_MIN-12,Math.min(MEL_MAX+12,melM));
     // Anti-repeat: a flat, uniform region maps every cell to the same pitch,
     // which re-strikes one note rapidly (a "telegraph beep"). When the melody
@@ -13133,6 +13300,33 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     } else {
       repeatRun=0;
     }
+    // Binary-chatter detector: A-B-A-B-A. The previous anti-repeat catches
+    // A-A but a stripe pattern toggling two pitches passes through. If melM
+    // matches the cell TWO back (i.e. we're alternating with lastMel), count
+    // it as binary chatter. After 2+ alternations, nudge the current note by
+    // a scale step so the line breaks the binary, and drop every 3rd to a
+    // rest the way the repeat handler does. lastLastMel and altRun reset
+    // whenever the pattern breaks naturally.
+    if(lastLastMel!=null && lastMel!=null && melM===lastLastMel && melM!==lastMel){
+      altRun++;
+      if(altRun>=2){
+        const stepToneCh=(from,dir)=>{
+          let m=from+dir;
+          for(let g=0;g<12;g++,m+=dir){
+            const pc=((m%12)+12)%12;
+            if(scalePCs.includes(pc) && m>=MEL_MIN-12 && m<=MEL_MAX+12) return m;
+          }
+          return null;
+        };
+        const dir2=(altRun%2===1)?1:-1;
+        const alt2=stepToneCh(melM,dir2) ?? stepToneCh(melM,-dir2);
+        if(alt2!=null) melM=alt2;
+        if(altRun>=3 && altRun%3===0) ev._melRest=true;
+      }
+    } else {
+      altRun=0;
+    }
+    lastLastMel=lastMel;
     lastMel=melM;
     const intensity=Math.max(0,Math.min(1,(rawInt[i]-intLo)/intRange)); // 0 calm … 1 intense
     // DARK-PASSAGE HANDLING. Two distinct situations where melSrc.bass is true:
@@ -13198,6 +13392,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         darkRepeatRun=0;
       }
       darkRepeatLast=melM;
+      lastLastMel=lastMel;
       lastMel=melM;
     }
     // Melody velocity: softer overall, and higher notes are softened MORE so the
@@ -13213,13 +13408,19 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     // the chord beneath it and a longer ring (handled below). Velocity stays gentle.
     const heightFrac = Math.max(0, Math.min(1, (melM - MEL_MIN) / (MEL_SPAN||1)));
     const isWhiteMel = !!melSrc.white;
-    const rollOff = 0.34;                             // same soft high-end roll-off for all
+    // ATMO-aware roll-off: calm pieces soften the high register MORE (0.42)
+    // so soaring notes float airy; frantic pieces soften LESS (0.22) so the
+    // top register can ring bright and bold. Mid mood keeps 0.34.
+    const rollOff = atmoE!=null ? (0.42 - 0.20*atmoE) : 0.34;
     const melVel = Math.round((melSrc.v||80) * (0.90 - rollOff*heightFrac));
-    const melFloor = 48;
+    // ATMO-aware floor: calm lets the melody go down to a near-whisper (40);
+    // frantic keeps a higher presence floor (54) so even softest notes are
+    // heard against the busy texture. Mid mood keeps the original 48.
+    const melFloor = atmoE!=null ? Math.round(40 + 14*atmoE) : 48;
     const melody = melIsBass
-      ? {...melSrc}                                   // keep its low pitch + velocity
-      : {...melSrc, m:melM, v:Math.max(melFloor,Math.min(96,melVel)), bass:false, white:isWhiteMel};
-    if(melIsBass){ lastMel=null; }                    // don't let it anchor the contour
+      ? {...melSrc, _melody:true}                                          // keep its low pitch + velocity, mark as melody
+      : {...melSrc, m:melM, v:Math.max(melFloor,Math.min(96,melVel)), bass:false, white:isWhiteMel, _melody:true};
+    if(melIsBass){ lastMel=null; lastLastMel=null; altRun=0; }     // don't let it anchor the contour
     // Accompaniment = the rest (minus the chosen melody note). Protected bass
     // notes (black dots) are pulled OUT here so the chord voicing can't lift
     // them up; they're re-added low at the end, fitting under the chord.
@@ -13328,12 +13529,16 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   for(let i=evts.length-1;i>=0;i--){
     if(evts[i].n.length){
       const tonicPc=scalePCs[0];
-      const mel=evts[i].n[0];
+      // Find the melody voice explicitly (not just n[0] which may be a
+      // top-voice accompaniment note after MERGE re-sorts by MIDI).
+      let melIdx = evts[i].n.findIndex(n=>n._melody);
+      if(melIdx < 0) melIdx = 0;                    // fallback: first note
+      const mel = evts[i].n[melIdx];
       let tm=tonicPc; while(tm<MEL_MIN) tm+=12; while(tm>MEL_MAX) tm-=12;
       // nearest tonic octave to where the melody currently is
       const cands=[tm-12,tm,tm+12].filter(m=>m>=MEL_MIN-12&&m<=MEL_MAX+12);
       tm=cands.reduce((a,b)=>Math.abs(b-mel.m)<Math.abs(a-mel.m)?b:a);
-      evts[i].n[0]={...mel, m:tm};
+      evts[i].n[melIdx]={...mel, m:tm};
       break;
     }
   }
@@ -13398,7 +13603,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   {
     const chromaVals2=evts.map(e=>e._chroma||0).filter(c=>c>0).sort((a,b)=>a-b);
     const chromaMed2=chromaVals2.length?chromaVals2[Math.floor(chromaVals2.length*0.55)]:0;
-    const _topMel=ns=>{ const nb=ns.filter(n=>!n.bass); if(!nb.length) return null; return nb.reduce((a,b)=>b.m>a.m?b:a).m; };
+    // Identify melody by explicit flag first; fall back to highest non-bass.
+    const _melMidi=ns=>{
+      const flagged=ns.find(n=>n._melody);
+      if(flagged) return flagged.m;
+      const nb=ns.filter(n=>!n.bass);
+      if(!nb.length) return null;
+      return nb.reduce((a,b)=>b.m>a.m?b:a).m;
+    };
     const _pcKey=ns=>{ const s=new Set(); for(const n of ns) s.add(((n.m%12)+12)%12); return [...s].sort((a,b)=>a-b).join(','); };
     // Walk playable events in order, tracking the previous playable event.
     let prevEv=null;
@@ -13406,11 +13618,11 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       const ev=evts[i];
       if(!ev.n || !ev.n.length || ev._playable===false) continue;
       if(prevEv){
-        const tm=_topMel(ev.n), pm=_topMel(prevEv.n);
+        const tm=_melMidi(ev.n), pm=_melMidi(prevEv.n);
         const vivid=(ev._chroma||0)>=chromaMed2;
         const sameChord=_pcKey(ev.n)===_pcKey(prevEv.n);   // identical → leave to merge
         if(tm!=null && tm===pm && vivid && !sameChord){
-          // Re-strike the melody: restore a clear attack on the tied top note.
+          // Re-strike the melody: restore a clear attack on the tied melody note.
           ev.n=ev.n.map(n=>{
             if(n.m===tm && n._tied){
               const {_tied,...rest}=n;
@@ -13455,14 +13667,22 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         // reflects the WHOLE plane, not just its first onset.
         const meanVel=(()=>{ let s=0,c=0; for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){ s+=(n.v||64); c++; } return c?Math.round(s/c):64; })();
         const pcMids=new Map(); // pc -> [midis...]
-        for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){ const pc=((n.m%12)+12)%12; if(!pcMids.has(pc)) pcMids.set(pc,[]); pcMids.get(pc).push(n.m); }
+        const pcIsMel=new Set();  // PCs that carried the _melody flag in any source event
+        for(let x=k;x<k+groupLen;x++) for(const n of evts[x].n){
+          const pc=((n.m%12)+12)%12;
+          if(!pcMids.has(pc)) pcMids.set(pc,[]);
+          pcMids.get(pc).push(n.m);
+          if(n._melody) pcIsMel.add(pc);
+        }
         const template=evts[k].n[0]||{durMs:300};
         const cleanN=[];
         for(const [pc,mids] of pcMids){
           const avgM=mids.reduce((a,b)=>a+b,0)/mids.length;
           let m=Math.round(avgM); while(((m%12)+12)%12!==pc) m+=(((m%12)+12)%12<pc?1:-1);
           const isBass=evts[k].n.some(n=>((n.m%12)+12)%12===pc && n.bass);
-          cleanN.push({...template, m, v:meanVel, bass:isBass});
+          const out={...template, m, v:meanVel, bass:isBass};
+          if(pcIsMel.has(pc)) out._melody = true;
+          cleanN.push(out);
         }
         cleanN.sort((a,b)=>b.m-a.m);
         evts[k].n=cleanN;
@@ -13541,18 +13761,35 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       const w2=0.5*((Math.sin(ord*0.9+1.3)+1)/2) + 0.5*sr2;
       // Base re-strike tempo glides across the piece, plus seed jitter so no two
       // blocks share a nominal tempo.
-      const baseMs = 230 - 70*piecePos - 50*w;        // ~110..230ms nominal
+      // ATMO-aware: calm pieces breathe slower (re-strikes spaced 1.4× wider —
+      // a serene plane sounds like a held bell, not a rapid tremolo). Frantic
+      // pieces compress to 0.80× (more urgent shimmer). Mid mood keeps the
+      // original nominal.
+      const _atmoTremScale = atmoE!=null
+        ? (atmoE<0.5 ? (1.0 + 0.4*(0.5-atmoE)/0.5)        // 1.0 → 1.4 toward serene
+                     : (1.0 - 0.2*(atmoE-0.5)/0.5))       // 1.0 → 0.8 toward frantic
+        : 1.0;
+      const baseMs = (230 - 70*piecePos - 50*w) * _atmoTremScale;
       ev._tremoloMs = Math.round(Math.max(95, baseMs));
       // ACCEL or RIT — direction chosen by the seed (not ord parity), magnitude
       // varies, so the push/relax pattern is irregular across the field.
       const accel = sr<0.5;
       ev._tremEndRatio = accel ? (0.58 + 0.22*w) : (1.22 + 0.40*w2); // ~0.58..0.8 | 1.22..1.62
       // Register shimmer: octave / fifth / none, chosen by seed.
-      const liftPick = (sr2>0.62) ? 12 : (sr2>0.30) ? 7 : 0;
+      // Calm ATMO biases away from aggressive octave jumps — a serene plane
+      // shimmers within a small interval, not by leaping a whole octave.
+      let liftPick = (sr2>0.62) ? 12 : (sr2>0.30) ? 7 : 0;
+      if(atmoE!=null && atmoE<0.30 && liftPick===12) liftPick = 7;    // octave → fifth in serene
+      if(atmoE!=null && atmoE<0.15 && liftPick===7)  liftPick = 0;    // fifth → none in very serene
       ev._tremLift = liftPick;
       ev._tremLiftCycles = 1 + Math.round(2*w2);              // 1..3 lifts across the hold
-      // Loudness breathing depth.
-      ev._tremSwell = 0.16 + 0.24*w;                          // 0.16..0.40
+      // Loudness breathing depth. ATMO-aware: calm planes breathe gently
+      // (depth ×0.6), frantic planes pulse harder (×1.2). Mid mood neutral.
+      const _atmoSwellScale = atmoE!=null
+        ? (atmoE<0.5 ? (1.0 - 0.4*(0.5-atmoE)/0.5)        // 1.0 → 0.6 toward serene
+                     : (1.0 + 0.2*(atmoE-0.5)/0.5))       // 1.0 → 1.2 toward frantic
+        : 1.0;
+      ev._tremSwell = (0.16 + 0.24*w) * _atmoSwellScale;
       // Rolled (arpeggiated) re-strikes on a seeded subset of blocks for texture.
       ev._planeGesture = (sr>0.68) ? 'roll' : 'arc';
     });
@@ -13626,58 +13863,41 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       ev.n=ev.n.map(n=>({...n,v:Math.max(22,Math.min(120,Math.round((n.v||64)*mul)))}));
     }
   }
-  // ─── Articulation from texture (deterministic) ─────────────────────────────
-  // Smooth, uniform stretches of the image play LEGATO (longer, connected notes);
-  // busy, high-contrast stretches play STACCATO (short, detached). We measure
-  // local "busyness" as the average absolute change in saliency to neighbouring
-  // events, normalise it across the piece, and scale each note's durMs: calm
-  // areas breathe, detailed areas feel crisp and energetic.
-  const texture=evts.map((ev,i)=>{
-    if(!ev.n.length) return 0;
-    let d=0,c=0;
-    for(let k=Math.max(0,i-2);k<=Math.min(evts.length-1,i+2);k++){
-      if(k===i) continue; d+=Math.abs(sal[i]-sal[k]); c++;
-    }
-    return c?d/c:0;
-  });
-  const texSorted=texture.filter((_,i)=>evts[i].n.length).slice().sort((a,b)=>a-b);
-  const texLo=texSorted.length?texSorted[Math.floor(texSorted.length*0.2)]:0;
-  const texHi=texSorted.length?texSorted[Math.floor(texSorted.length*0.8)]:1;
-  const texRange=(texHi-texLo)||1;
+  // ─── Per-voice articulation (deterministic) ────────────────────────────────
+  // A real pianist does not give every voice the same length. The MELODY (top
+  // voice) sings — held long, legato — while the BASS is plucked short and
+  // detached (staccato) so it punctuates without muddying the texture; inner
+  // (mid) voices stay neutral. Signal: a note's role within its own chord —
+  // the highest non-bass pitch is the melody, `n.bass` is the bass, the rest
+  // are mid.
+  //
+  // The texture-driven artMul (smooth=legato, busy=staccato) that used to
+  // live here has been removed — the downstream Articulation pass detects
+  // edges with a music-theory signal (chord-sig change + chroma jump for
+  // staccato, same chord + low chroma delta for legato) which is more
+  // accurate than raw saliency delta. Stacking both was producing dur ×
+  // 0.45 × 0.45 = ×0.20 (inaudible) on busy edges and ×1.30 × 1.6 × 1.4 =
+  // ×2.91 (overlapping) on smooth top voices.
+  const durFloor = Math.round(140 - 70*rhythmDrive);  // 140ms calm … 70ms driving
   for(let i=0;i<evts.length;i++){
     const ev=evts[i];
     if(!ev.n.length||ev._playable===false) continue;
-    const t=Math.max(0,Math.min(1,(texture[i]-texLo)/texRange)); // 0 smooth … 1 busy
-    // Articulation = a COMPOSER'S mix, not a single global setting. Two axes:
-    //   • local texture t  — smooth patches sing long, busy patches clip short
-    //   • global rhythmDrive — a serene painting stays legato everywhere; a
-    //     driving one lets its busy patches become real STACCATO while its
-    //     smooth patches still ring. So one fierce canvas alternates long lyrical
-    //     notes and crisp detached ones (musical), instead of everything legato.
-    // legatoTop: longest ring on smooth cells (1.6× calm → 1.15× driving).
-    // stacMin: shortest on busy cells (1.1× calm = still legato → 0.45× driving = crisp).
-    const legatoTop = 1.6 - 0.45*rhythmDrive;
-    const stacMin   = 1.1 - 0.65*rhythmDrive;
-    const artMul = legatoTop - (legatoTop - stacMin)*t;
-    // Floor scales down with drive so staccato is actually short when lively, but
-    // never a click. Calm keeps the old generous 140ms minimum.
-    const durFloor = Math.round(140 - 70*rhythmDrive);  // 140ms calm … 70ms driving
-    // ─── PIANO TECHNIQUE: PER-VOICE ARTICULATION ──────────────────────────────
-    // A real pianist does not give every voice the same length. The MELODY (top
-    // voice) sings — held long, legato — while the BASS is plucked short and
-    // detached (staccato) so it punctuates without muddying the texture; inner
-    // (mid) voices stay neutral. Signal: a note's role within its own chord —
-    // the highest non-bass pitch is the melody, `n.bass` is the bass, the rest
-    // are mid. The per-voice factor multiplies ON TOP of the texture artMul, so
-    // a busy staccato patch still has a longer top line and a crisper bass.
-    const _nb=ev.n.filter(n=>!n.bass);
-    const _topM=_nb.length?Math.max(..._nb.map(n=>n.m)):-Infinity;
+    // Find the melody voice: prefer the explicit _melody marker, fall back
+    // to highest non-bass MIDI when none is flagged (Alberti expansion etc.).
+    const _melIdx = ev.n.findIndex(n=>n._melody);
+    let _melM = -Infinity;
+    if(_melIdx >= 0){
+      _melM = ev.n[_melIdx].m;
+    } else {
+      const _nb = ev.n.filter(n=>!n.bass);
+      _melM = _nb.length ? Math.max(..._nb.map(n=>n.m)) : -Infinity;
+    }
     ev.n=ev.n.map(n=>{
       let voiceMul=1;
       if(n.bass)              voiceMul=0.55;   // bass: short, detached
-      else if(n.m===_topM)    voiceMul=1.4;    // melody (top voice): long, singing
+      else if(n.m===_melM)    voiceMul=1.4;    // melody: long, singing
       // mid voices → 1 (neutral)
-      const durMs=Math.max(durFloor, Math.round((n.durMs||250)*artMul*voiceMul));
+      const durMs=Math.max(durFloor, Math.round((n.durMs||250)*voiceMul));
       return {...n, durMs};
     });
   }
@@ -13700,7 +13920,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // — at the start of selected later bars. The line still follows the image,
       // but a familiar shape returns, giving the piece a theme rather than a drift.
       const MOTIF_LEN=4;
-      const motifSrc=soundIdx.slice(0,MOTIF_LEN).map(i=>evts[i].n[0].m);
+      // Helper: find the melody note index in an event (by flag, fallback to first)
+      const _melI = ns => {
+        const i = ns.findIndex(n=>n._melody);
+        return i >= 0 ? i : 0;
+      };
+      const motifSrc=soundIdx.slice(0,MOTIF_LEN).map(i=>{
+        const ns=evts[i].n;
+        return ns[_melI(ns)].m;
+      });
       // intervals between consecutive motif notes (semitones), snapped to scale later
       const motifIv=[]; for(let k=1;k<motifSrc.length;k++) motifIv.push(motifSrc[k]-motifSrc[k-1]);
       const totalBarsC=Math.max(1,Math.ceil(evts.length/BAR_EVENTS));
@@ -13713,10 +13941,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         for(const i of soundIdx){ if(Math.floor(i/BAR_EVENTS)===bar) barHeadEvents.push(i); if(barHeadEvents.length>=MOTIF_LEN) break; }
         if(barHeadEvents.length<2) continue;
         // anchor = the bar's first melody note (keeps it in the image's register)
-        let anchor=evts[barHeadEvents[0]].n[0].m, acc=anchor;
+        const _ai = _melI(evts[barHeadEvents[0]].n);
+        let anchor=evts[barHeadEvents[0]].n[_ai].m, acc=anchor;
         for(let k=0;k<barHeadEvents.length;k++){
           const ei=barHeadEvents[k];
-          const mel=evts[ei].n[0];
+          const mi = _melI(evts[ei].n);
+          const mel=evts[ei].n[mi];
           // target pitch = motif shape applied from the anchor, snapped to scale
           if(k>0 && motifIv[k-1]!=null){ acc=acc+motifIv[k-1]; }
           let target=snapToScale(acc);
@@ -13725,7 +13955,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           const snapped=snapToScale(blended);
           // keep within the melody band
           let mm=snapped; while(mm<MEL_MIN-12) mm+=12; while(mm>MEL_MAX+12) mm-=12;
-          evts[ei].n[0]={...mel, m:mm};
+          evts[ei].n[mi]={...mel, m:mm};
           acc=mm;
         }
       }
@@ -13800,6 +14030,445 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       }
     }
   }
+  // ─── Articulation — staccato on edges, legato on smooth passages ─────────
+  // Image edges (where a chord-signature changes AND the chroma jumps) are
+  // perceptually the "consonants" of the painting — sharp transitions that
+  // should sound like detached, articulated keystrokes (staccato). Smooth
+  // monochrome passages (same chord, low chroma delta) are the "vowels" —
+  // long sustained legato. Mid-edges read as natural portato (untouched).
+  // This shape gives the scan the breathing micro-articulation of a real
+  // pianist instead of every note being held for the same fixed sustain.
+  {
+    function chordSigArt(ev){
+      if(!ev || !ev.n || !ev.n.length) return '';
+      const pcs = ev.n.map(n => n.m%12);
+      pcs.sort((a,b)=>a-b);
+      const out=[]; for(const p of pcs) if(out[out.length-1]!==p) out.push(p);
+      return out.join(',');
+    }
+    const sigs = evts.map(chordSigArt);
+    const STAC_MUL = 0.45;          // hard edge → short, detached
+    const LEG_MUL  = 1.30;          // smooth gradient → long, connected
+    for(let i=0; i<evts.length; i++){
+      const ev = evts[i];
+      if(!ev.n || !ev.n.length) continue;
+      const c0 = i>0 ? (evts[i-1]._chroma || 0) : (ev._chroma || 0);
+      const c1 = ev._chroma || 0;
+      const c2 = i<evts.length-1 ? (evts[i+1]._chroma || 0) : c1;
+      const dChromaPrev = Math.abs(c1 - c0);
+      const dChromaNext = Math.abs(c2 - c1);
+      const maxDChroma = Math.max(dChromaPrev, dChromaNext);
+      const sigChangePrev = i>0 && sigs[i] && sigs[i] !== sigs[i-1];
+      const sigChangeNext = i<evts.length-1 && sigs[i] && sigs[i+1] && sigs[i] !== sigs[i+1];
+      let mul = 1.0;
+      // Staccato: real edge — both the harmony AND the chroma jump
+      if((sigChangePrev || sigChangeNext) && maxDChroma > 15){
+        mul = STAC_MUL;
+      }
+      // Legato: smooth — same chord on both sides AND low chroma delta
+      else if(!sigChangePrev && !sigChangeNext && maxDChroma < 8){
+        mul = LEG_MUL;
+      }
+      // else portato/normal — keep dur as-is
+      if(mul !== 1.0){
+        ev.n = ev.n.map(n => ({...n, durMs: Math.round((n.durMs || 600) * mul)}));
+        ev._articulation = (mul < 1) ? 'stac' : 'leg';   // marker for debug / future use
+      }
+    }
+  }
+  // ─── Bass-treble vertical character — left hand vs right hand feel ───────
+  // The image has a top-to-bottom axis the way a keyboard has bass-to-treble.
+  // Real piano writing exploits this: left hand grounds the harmony with full
+  // chords in the bass register, right hand sings the melody with a single
+  // line over light accompaniment in the treble. Our scan already maps the
+  // pixel's LIGHTNESS to an octave (dark→low, light→high), but every event
+  // gets voiced the same way regardless of WHERE on the canvas it sits.
+  //
+  // Fix: shape the voicing by vertical band position, leaving MIDI pitches
+  // alone (so harmony, scale snap and existing octave logic are not
+  // disturbed). Bottom third → bass character (full chord, +3 velocity for
+  // weight). Top third → treble character (only top voice + 1 below dominates;
+  // lower notes pulled −5 so the melody floats above thinner support). Middle
+  // third → untouched, keeps the natural blend. Applied BEFORE voicing so the
+  // top-voice +15 lift compounds on the treble band (melody really stands
+  // forward) and is balanced by the bass band's full chord (grounded harmony).
+  if(_nrBands >= 3){
+    const trebleCut = Math.floor(_nrBands * 0.33);
+    const bassCut   = Math.floor(_nrBands * 0.67);
+    for(const ev of evts){
+      if(!ev.n || ev.n.length < 2) continue;
+      if(typeof ev.band !== 'number') continue;
+      if(ev.band < trebleCut){
+        // Treble: thin out lower voices so the melody sings above
+        let melIdx = ev.n.findIndex(n => n._melody);
+        if(melIdx < 0){
+          melIdx = 0;
+          for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[melIdx].m) melIdx = k;
+        }
+        ev.n = ev.n.map((n,k) => ({
+          ...n,
+          v: Math.max(20, Math.min(120, (n.v||64) + (k===melIdx ? 0 : -3)))
+        }));
+      } else if(ev.band >= bassCut){
+        // Bass: full chord, slightly heavier overall (grounding weight)
+        ev.n = ev.n.map(n => ({
+          ...n,
+          v: Math.max(20, Math.min(120, (n.v||64) + 2))
+        }));
+      }
+      // middle band: untouched
+    }
+  }
+  // ─── Voicing — bring the top voice forward as melody ─────────────────────
+  // Keyboard music is heard "top-voice-as-melody" by default: the brain
+  // picks the highest pitch in a chord and reads it as the tune, with the
+  // lower notes as accompaniment. Here we lift the melody by +10 velocity
+  // and pull the rest down by -3 to widen the contrast.
+  //
+  // Melody picking: prefer the explicit _melody flag set by MELODY
+  // EXTRACTION upstream. Fall back to highest-MIDI only when no marker
+  // exists (e.g. Alberti/shimmer expanded events that don't carry the
+  // flag). The flag-first approach ensures voicing always boosts the
+  // actual melodic line, never an accompaniment voice that happens to
+  // sit higher than the melody.
+  // Applied BEFORE dynamics so the voicing differential survives compression.
+  for(const ev of evts){
+    if(!ev.n || ev.n.length < 2) continue;
+    let melIdx = ev.n.findIndex(n => n._melody);
+    if(melIdx < 0){
+      // Fallback: highest-MIDI voice
+      melIdx = 0;
+      for(let k=1; k<ev.n.length; k++) if(ev.n[k].m > ev.n[melIdx].m) melIdx = k;
+    }
+    ev.n = ev.n.map((n,k) => ({
+      ...n,
+      v: Math.max(20, Math.min(120, (n.v||64) + (k===melIdx ? 10 : -3)))
+    }));
+  }
+  // ─── Octave doubling — forte bass gets a left-hand octave ────────────────
+  // In dramatic piano writing the left hand often doubles the bass at the
+  // octave below — Liszt, Rachmaninoff, the loud climaxes of Chopin — to
+  // give weight to forte moments. We replicate that here: when an event in
+  // the lower half of the image plays strong (vel ≥ 85), find its lowest
+  // MIDI note and add its octave-down sibling (m−12) at slightly softer
+  // velocity. Only fires below the band midpoint (bass register where
+  // doubling is musically meaningful — high treble doubling would crowd
+  // the melody) and only when the octave still sits in the audible piano
+  // range (≥ MIDI 24).
+  //
+  // Calm ATMO override: strong-calm moods ("pomaly letny sen") already
+  // suppress the deep bass pedal upstream — adding octave doubling there
+  // would contradict the mood. Skip octave doubling when atmoE < 0.30 so
+  // the calm character stays vertical and airy, not grounded with weight.
+  if(_nrBands >= 2 && !(atmoE!=null && atmoE<0.30)){
+    const bassThreshold = Math.floor(_nrBands * 0.5);   // bottom half of image
+    for(const ev of evts){
+      if(!ev.n || !ev.n.length) continue;
+      if(typeof ev.band !== 'number' || ev.band < bassThreshold) continue;
+      // Find loudest note in the chord to test forte trigger
+      let maxV = 0;
+      for(const n of ev.n) if((n.v || 0) > maxV) maxV = n.v || 0;
+      if(maxV < 85) continue;
+      // Find lowest MIDI note (the bass line)
+      let lowIdx = 0;
+      for(let k=1; k<ev.n.length; k++) if(ev.n[k].m < ev.n[lowIdx].m) lowIdx = k;
+      const low = ev.n[lowIdx];
+      const octM = low.m - 12;
+      if(octM < 24) continue;
+      // Avoid duplicates (chord already contains the octave below)
+      if(ev.n.some(n => n.m === octM)) continue;
+      ev.n = [...ev.n, {
+        m: octM,
+        v: Math.max(20, Math.min(120, (low.v || 64) - 8)),
+        durMs: low.durMs
+      }];
+      ev._octaveDoubled = true;
+    }
+  }
+  // ─── Final dynamics: ATMO as centre + range, not flat multiplier ────────
+  // Older model: dynScale (~0.55 for serene) collapsed ALL velocities toward
+  // zero in calm pieces — that's what made everything sound like a stuck
+  // slow-motion film. Forte accents got smashed down to the same range as
+  // piano background, so the piece lost its musical contour entirely.
+  //
+  // New model treats ATMO as a CENTRE-OF-GRAVITY for the dynamic range,
+  // plus a compression ratio that's gentler than the old flat scale:
+  //
+  //   calm   → centre = 50  (mp),  compress = 0.75  → forte still reaches ~85
+  //   neutral → centre = 70 (mf),  compress = 1.00  → full range untouched
+  //   intense → centre = 82 (f),   compress = 1.15  → expanded, dramatic
+  //
+  // The musical hierarchy survives because peaks stay relatively above the
+  // background — they just sit at a different absolute level. A calm Monet
+  // still has its visual climax painted as a clear musical climax, only
+  // mezzo-forte instead of fortissimo. An intense Picasso has its quiet
+  // moments still quieter than its loud ones, dramatically so.
+  // dynE (image's own restlessness from contrast+busyness) shifts the
+  // centre on top of ATMO so a calm-tagged BUSY painting lands slightly
+  // brighter than a calm-tagged FLAT painting (image still has a voice).
+  const _atmoCentre  = atmoE!=null ? (40 + atmoE*48) : 70;     // 40..88 by atmo
+  const _imgCentreAdj = (dynE - 0.5) * 12;                       // image busyness ±6
+  const dynCentre = Math.max(34, Math.min(92, Math.round(_atmoCentre + _imgCentreAdj)));
+  const dynCompress = atmoE!=null
+    ? (atmoE<0.5 ? (0.75 + 0.50*atmoE)            // 0.75 (serene) → 1.00 (neutral)
+                 : (1.00 + 0.30*(atmoE-0.5)/0.5)) // 1.00 (neutral) → 1.30 (frantic)
+    : 1.0;
+  // Reference centre = "what the per-event computation assumed before scaling".
+  // Without ATMO the per-pixel pipeline produces v ≈ 38..106 with avg ~70, so
+  // 70 is the natural pre-shift centre. We compress around that, then shift
+  // the result onto dynCentre.
+  const PRE_CENTRE = 70;
+  for(const ev of evts){
+    if(!ev.n || !ev.n.length) continue;
+    ev.n = ev.n.map(n => {
+      const raw = n.v || 64;
+      const compressed = PRE_CENTRE + (raw - PRE_CENTRE) * dynCompress;
+      const shifted = compressed + (dynCentre - PRE_CENTRE);
+      return {...n, v: Math.max(20, Math.min(120, Math.round(shifted)))};
+    });
+  }
+  // ─── Image-chroma accents — sharp colour peaks become musical accents ────
+  // The upstream COMPOSITION PASS already provides a whole-piece dynamic
+  // arc (cos curve, peak around 65 %) and the Rhythmic phrasing pass adds
+  // metric accents on downbeats/bar-starts. Both of those are RHYTHMIC /
+  // STRUCTURAL. What was still missing is IMAGE-DRIVEN accents — when a
+  // pixel cluster's saturation/chroma jumps far above its neighbours, that
+  // mountain in the painting should be heard as a musical stress, not
+  // smoothed out by the metric grid.
+  //
+  // Three tiers (kept gentle so they STACK safely with metric accents +
+  // voicing without clipping velocity to 120 in dense passages). Top voice
+  // bonus removed in Phase 4 — Voicing already lifts the top voice by +10
+  // and per-voice articulation gives it ×1.4 duration, so further marcato
+  // bonus on top was redundant emphasis.
+  //   • delta > 30 vs lower neighbour → MARCATO  +6 velocity
+  //   • delta 18..30                  → ACCENT   +3 velocity
+  //   • delta 8..18                   → touch    +1 velocity
+  //
+  // Valence scales accent intensity (0.7..1.3): positive valence makes
+  // peaks pop (bright/playful moods amplify dynamic variation), negative
+  // valence smooths them (heavy/grief stays even, no jolts).
+  const _accentValScale = 1 + 0.3 * valenceBias;
+  for(let i=1; i<evts.length-1; i++){
+    const c0 = evts[i-1]._chroma || 0;
+    const c1 = evts[i]._chroma   || 0;
+    const c2 = evts[i+1]._chroma || 0;
+    const delta = Math.min(c1 - c0, c1 - c2);
+    if(delta < 8) continue;
+    const ev = evts[i];
+    if(!ev.n || !ev.n.length) continue;
+    let boost, marker;
+    if(delta > 30){       boost = 6; marker = 'marc'; }
+    else if(delta > 18){  boost = 3; marker = 'acc';  }
+    else {                boost = 1; marker = '';     }
+    boost = boost * _accentValScale;
+    ev.n = ev.n.map(n => ({
+      ...n,
+      v: Math.max(20, Math.min(120, Math.round(n.v + boost)))
+    }));
+    if(marker) ev._accent = marker;
+  }
+  // ─── Tremolo — rapid 2-chord alternations on striped patterns ────────────
+  // Op-art, Picasso stripes, Vasarely kinetic grids: paintings with rapid
+  // alternation between two distinct colour regions. The literal scan plays
+  // that as A B A B A — five attacks all at the same length, which sounds
+  // like a marching beat. Real keyboard music renders this as TREMOLO: two
+  // notes alternating with sub-beat speed, the ear hearing them as ONE
+  // shimmering sound rather than five separate strokes.
+  //
+  // We detect runs of 4+ strict A-B-A-B alternations where the two
+  // signatures differ in at least 2 pitch classes (so we don't trip on a
+  // melody that happens to oscillate by a step). Anchors of the run (the
+  // first and last A/B events) keep their full attack so the harmonic
+  // motion reads cleanly; the events between get durMs ×0.5 and are
+  // reduced to the TOP voice only — that gives the shimmer character of
+  // a real piano tremolo (hands flickering between two notes), not the
+  // marching equal-attack pattern of the literal scan.
+  {
+    function sigOf(ev){
+      if(!ev || !ev.n || !ev.n.length) return '';
+      const pcs = ev.n.map(n => n.m%12);
+      pcs.sort((a,b)=>a-b);
+      const out=[]; for(const p of pcs) if(out[out.length-1]!==p) out.push(p);
+      return out.join(',');
+    }
+    function pcSetDiff(sigA, sigB){
+      if(!sigA || !sigB) return 0;
+      const a = new Set(sigA.split(',').map(Number));
+      const b = new Set(sigB.split(',').map(Number));
+      let diff = 0;
+      a.forEach(p => { if(!b.has(p)) diff++; });
+      b.forEach(p => { if(!a.has(p)) diff++; });
+      return diff;
+    }
+    const TREM_MIN_ALT = 4;            // need ABABA (at least 4 transitions = 5 events) to call it tremolo
+    const TREM_MIN_PC_DIFF = 2;        // signatures must differ in 2+ pitch classes
+    let i = 0;
+    while(i < evts.length - TREM_MIN_ALT){
+      const sigA = sigOf(evts[i]);
+      const sigB = sigOf(evts[i+1]);
+      if(!sigA || !sigB || sigA === sigB || pcSetDiff(sigA, sigB) < TREM_MIN_PC_DIFF){
+        i++; continue;
+      }
+      // Walk while strict ABAB alternation continues
+      let j = i + 2;
+      while(j < evts.length){
+        const expected = (j % 2 === i % 2) ? sigA : sigB;
+        if(sigOf(evts[j]) !== expected) break;
+        j++;
+      }
+      const runLen = j - i;
+      if(runLen >= TREM_MIN_ALT + 1){    // 5+ events of strict ABABA
+        // Reshape inner events (skip first and last anchors) to tremolo shimmer
+        for(let k = i+1; k < j-1; k++){
+          const ev = evts[k];
+          if(!ev.n || !ev.n.length) continue;
+          // The shimmering note = melody if flagged, otherwise highest MIDI
+          let melIdx = ev.n.findIndex(n=>n._melody);
+          if(melIdx < 0){
+            melIdx = 0;
+            for(let m=1; m<ev.n.length; m++) if(ev.n[m].m > ev.n[melIdx].m) melIdx = m;
+          }
+          const top = ev.n[melIdx];
+          const note = {
+            m: top.m,
+            v: Math.max(20, Math.min(120, Math.round((top.v || 64) - 4))),
+            durMs: Math.round((top.durMs || 600) * 0.5)
+          };
+          if(top._melody) note._melody = true;
+          ev.n = [note];
+          ev._alternation = true;
+        }
+        i = j;
+      } else {
+        i++;
+      }
+    }
+  }
+  // ─── Alberti bass — classical accompaniment in calm passages ─────────────
+  // Mozart, Haydn and early Beethoven render gentle harmonic sections with
+  // an "Alberti bass" — instead of hammering the chord straight, the left
+  // hand rotates through its notes in a fixed bass→top→middle→top cycle.
+  // The harmony hangs (because all notes belong to the same chord) but the
+  // music constantly moves, the classic ambient sparkle of the classical
+  // sonata slow movement.
+  //
+  // Reads MERGED plane blocks (events carrying _runLen from the upstream
+  // Merge pass): when a merged plane is 4–12 events long, has 3+ notes
+  // and a soft top velocity (< 55), we EXPAND it back into a flowing
+  // Alberti rotation. The remaining (still-merged) events keep their
+  // _playable=false flag flipped back on with their assigned cycle note
+  // so the player actually hears the rotation instead of one held chord.
+  //
+  // Longer or louder merged planes (12+, or louder than mp) keep their
+  // sustained-plane gesture from the existing pipeline — the SUSTAINED-
+  // PLANE VARIATION pass already shapes those tastefully.
+  {
+    const ALB_MIN_RUN = 4;
+    const ALB_MAX_RUN = 12;
+    const ALB_VEL_MAX = 55;
+    for(let i=0; i<evts.length; i++){
+      const ev = evts[i];
+      const rl = ev._runLen || 0;
+      if(rl < ALB_MIN_RUN || rl > ALB_MAX_RUN) continue;
+      if(!ev.n || ev.n.length < 3) continue;
+      // Softness gate: loudest note in the merged chord
+      let maxV = 0;
+      for(const n of ev.n) if((n.v||0) > maxV) maxV = n.v||0;
+      if(maxV >= ALB_VEL_MAX) continue;
+      // Sort chord notes low→high
+      const sortedNotes = [...ev.n].sort((a,b) => a.m - b.m);
+      // Pick the melody note: prefer _melody flag from merged chord, else
+      // highest MIDI. This keeps Alberti's "top" cycle position aligned with
+      // the actual melodic line, not just whatever happens to be highest.
+      const melI = ev.n.findIndex(n=>n._melody);
+      const melNote = melI >= 0 ? ev.n[melI] : sortedNotes[sortedNotes.length - 1];
+      const bass = sortedNotes[0];
+      const top  = melNote;
+      const mid  = sortedNotes[Math.floor(sortedNotes.length / 2)];
+      // Classic Alberti rotation: bass → top → mid → top (top = melody)
+      const cycle = [bass, top, mid, top];
+      // Expand: turn the merged plane back into runLen single-note events
+      const baseTemplate = {
+        v: Math.min(120, Math.max(20, Math.round((bass.v || 50)))),
+        durMs: bass.durMs || 250
+      };
+      for(let k=0; k<rl; k++){
+        const src = cycle[k % cycle.length];
+        const target = evts[i+k];
+        if(!target) break;
+        const isMel = (src === top);
+        const note = {
+          ...baseTemplate,
+          m: src.m,
+          v: Math.min(120, Math.max(20, Math.round(src.v || baseTemplate.v))),
+          durMs: src.durMs || baseTemplate.durMs
+        };
+        if(isMel) note._melody = true;
+        target.n = [note];
+        target._playable = true;          // restore playable (was false on merge continuations)
+        target._alberti = true;
+        if(k > 0) delete target._runLen;  // only first event keeps the plane marker
+      }
+      // First event no longer represents the whole plane — clear its plane flags
+      // so downstream sustained-plane gesture doesn't double-handle it
+      delete ev._runLen;
+      delete ev._planeBright;
+      delete ev._planeChroma;
+      delete ev._planeSal;
+      delete ev._planeBlockIdx;
+      delete ev._planeDrift;
+      i += rl - 1;                        // skip past the expanded plane
+    }
+  }
+  // ─── Run-length collapsing — kill the "plem plem" on flat surfaces ──────
+  // Reads MERGED plane blocks (events carrying _runLen from the upstream
+  // Merge pass). For long flat planes that Alberti didn't claim (length
+  // 13+ OR loud enough that Alberti rejected them), we EXPAND the plane
+  // back into per-event quiet shimmer notes, rotating through the chord
+  // pitches so the surface gets motion + sparkle instead of one held
+  // note for the whole field. The merged event itself keeps its full
+  // attack as the harmonic "arrival"; expansion shimmer fills the rest.
+  //
+  // Very long planes (≥ 24 events) are LEFT to the existing SUSTAINED-
+  // PLANE VARIATION gesture — that one already shapes them with built-in
+  // breath / register lift / rolled gestures, more nuanced than shimmer.
+  {
+    const RUN_MIN_COLLAPSE = 13;             // pick up where Alberti leaves off
+    const RUN_MAX_COLLAPSE = 23;             // beyond this, leave to sustained-plane
+    const SHIMMER_VEL = 26;
+    for(let i = 0; i < evts.length; i++){
+      const ev = evts[i];
+      const rl = ev._runLen || 0;
+      if(rl < RUN_MIN_COLLAPSE || rl > RUN_MAX_COLLAPSE) continue;
+      if(!ev.n || !ev.n.length) continue;
+      const chordNotes = ev.n.slice();        // snapshot of the merged chord
+      for(let k = 1; k < rl; k++){
+        const target = evts[i+k];
+        if(!target) break;
+        const rotIdx = k % chordNotes.length;
+        const src = chordNotes[rotIdx];
+        const note = {
+          m: src.m,
+          v: SHIMMER_VEL,
+          durMs: src.durMs
+        };
+        if(src._melody) note._melody = true;
+        target.n = [note];
+        target._playable = true;              // restore playable
+        target._collapsedShimmer = true;
+        if(k > 0) delete target._runLen;      // only the anchor event keeps the plane marker
+      }
+      // Clear plane flags on the anchor — collapsing handled this plane
+      delete ev._runLen;
+      delete ev._planeBright;
+      delete ev._planeChroma;
+      delete ev._planeSal;
+      delete ev._planeBlockIdx;
+      delete ev._planeDrift;
+      i += rl - 1;                            // skip past the expanded plane
+    }
+  }
   // ─── TEMPO MODULATION (agogics) — per-event step time ───────────────────────
   // The scan playback used to advance one cell every fixed 150 ms, so every
   // painting played at one flat, mechanical pulse ("like a saw"). Real music
@@ -13816,6 +14485,8 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   //       a breath between phrases); plus a closing RITARDANDO over the final bars
   //       so the piece arrives instead of being cut off mid-stream.
   // Rests advance a little quicker so silence doesn't drag.
+  // Run LAST so the final event structure (after Alberti / Run-length / Tremolo
+  // expansions reflipping _playable) is what's reflected in _stepMs.
   {
     // Per-cell interval. Centre at 200ms (was 150 — default was a machine gun).
     // Serene atmo widens up to 260ms (real breathing room); frantic atmo compresses
@@ -13859,14 +14530,22 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
     }
   }
-  // ─── Final dynamics scaling: soften calm paintings, keep wild ones loud ──────
-  // Relative shaping above (accents, arc, phrasing) is preserved; only the overall
-  // level shifts. A calm Monet plays mp/p, a busy Picasso stays loud.
-  if(Math.abs(dynScale-1)>0.001){
-    for(const ev of evts){
-      if(!ev.n || !ev.n.length) continue;
-      ev.n = ev.n.map(n=>({...n, v: Math.max(20, Math.min(120, Math.round((n.v||64)*dynScale)))}));
-    }
+  // ─── durMs ceiling vs step overlap — keep calm pieces from smearing ──────
+  // After all the durMs multipliers (per-voice articulation, edge-based
+  // staccato/legato, sustainMul from ATMO), a single note in a calm piece
+  // can ring 2-3 seconds while the next event starts in 260 ms. That stacks
+  // 5-10 notes simultaneously into a smeared pad instead of a sequence of
+  // distinct attacks. Cap each note's durMs at a multiple of its event's
+  // _stepMs so the legato is still rich (calm 4× 260ms = ~1s ring) but
+  // articulate (no infinite tails). Bass voices get a longer cap so they
+  // ground the harmony for the full beat.
+  for(const ev of evts){
+    if(!ev.n || !ev.n.length) continue;
+    const stepMs = ev._stepMs || 200;
+    ev.n = ev.n.map(n => {
+      const cap = (n.bass ? 6 : 4) * stepMs;
+      return n.durMs > cap ? {...n, durMs: cap} : n;
+    });
   }
   return evts;
 }
@@ -13896,13 +14575,119 @@ const _midiToName = Array.from({length:128},(_,i)=>noteName(i));
 const _nameToMidi = Object.fromEntries(_midiToName.map((n,i)=>[n,i]));
 
 // ─────────────────────────────────────────────────────────────────────────────
+// bakeImageChords — flatten an image-scan chord array into a fully-cooked
+// chord stream suitable for MIDI export / music-mode playback.
+//
+// PROBLEM: image-mode playback applies a lot of piano-technique transforms
+// AT PLAYBACK TIME (not in the chord array): it skips _playable:false
+// merged-plane members, unfolds arpeggio offsets, re-strikes long _tremolo
+// planes, extends sustained-plane durations by _runLen, and so on. The raw
+// chords[] array carries flags but not the unfolded notes. So encodeMidi
+// on the raw array produces a MIDI that's:
+//   • 2-3× denser than what was heard (all chords play, no _playable skip)
+//   • missing arpeggio (notes play simultaneously instead of offset)
+//   • missing tremolo re-strikes (one attack instead of many)
+//   • missing sustained-plane holds (default short durMs)
+// Music-mode playback of that MIDI feels rushed and texture-less.
+//
+// SOLUTION: bake the runtime expansion into the chord array before encoding,
+// so the resulting MIDI carries actual MIDI events for every audible note.
+// Deterministic — same image scan always produces the same bake (seeds come
+// from per-chord _tremSeed already in the array, or fall back to position).
+function bakeImageChords(src){
+  if(!src || !src.length) return [];
+  const out = [];
+  for(let i=0;i<src.length;i++){
+    const c = src[i];
+    if(!c || !c.n || !c.n.length) continue;
+    // Skip merged-plane members — they are sustained by the run's lead chord
+    // already (see _runLen handling below). Image playback also skips these.
+    if(c._playable === false) continue;
+    const durMul = c._runLen || 3;
+    const velScale = c._runLen ? 1 : 0.75;
+    // TREMOLO planes — expand into a re-strike series matching image playback
+    // (which gates _trem only on _runLen>=16). Re-strikes are deterministic;
+    // we use the chord's _tremSeed (set by image scan) for the PRNG so the
+    // same image bakes the same MIDI.
+    if(c._tremolo === true){
+      const gap0 = Math.max(85, (c._tremoloMs || 180));
+      const fullSpan = Math.round((c.n[0]?.durMs || 300) * durMul);
+      const endRatio = Math.max(0.5, Math.min(1.8, c._tremEndRatio || 1));
+      const lift = c._tremLift || 0;
+      const liftCycles = Math.max(1, c._tremLiftCycles || 1);
+      const swell = Math.max(0, Math.min(0.5, c._tremSwell != null ? c._tremSwell : 0.25));
+      const lifts = [0,0,0,lift||7,7,12,5,-5,3];
+      // mulberry32 PRNG, same as runtime playback uses for tremolo.
+      let _seed = (c._tremSeed >>> 0) || 0x9e3779b9;
+      const rnd = () => { _seed |= 0; _seed = _seed + 0x6D2B79F5 | 0; let tt = Math.imul(_seed ^ _seed >>> 15, 1 | _seed); tt = tt + Math.imul(tt ^ tt >>> 7, 61 | tt) ^ tt; return ((tt ^ tt >>> 14) >>> 0) / 4294967296; };
+      let topM = -Infinity;
+      for(const n of c.n){ if(n.m > topM) topM = n.m; }
+      let t = 0, r = 0;
+      const maxReps = 120;
+      while(t < fullSpan - 20 && r < maxReps){
+        const prog = fullSpan > 0 ? t / fullSpan : 0;
+        const gGlide = gap0 * (1 + (endRatio - 1) * prog);
+        const jitT = 0.72 + 0.56 * rnd();
+        const gNow = Math.max(70, Math.round(gGlide * jitT));
+        const segDur = Math.max(95, Math.round(gNow * 1.35));
+        const skip = (r > 0 && rnd() < 0.12);
+        if(!skip){
+          const env = (1 - swell * 0.5 + swell * Math.sin(Math.PI * prog)) * (0.82 + 0.36 * rnd());
+          const cyclePhase = lift > 0 ? (Math.sin(Math.PI * liftCycles * prog) > 0.55) : false;
+          const randLift = (rnd() < 0.22) ? lifts[(rnd() * lifts.length) | 0] : 0;
+          const topShift = cyclePhase ? lift : randLift;
+          const baseVel = r === 0 ? 1 : 0.78;
+          const tail = r === 0 ? 0.4 : 0.14;
+          // Each re-strike is a chord event. Notes are the original notes,
+          // velocity scaled by env*baseVel, top voice optionally lifted.
+          const strikeNotes = c.n.map(n => {
+            const isTop = (n.m === topM);
+            const v = Math.max(20, Math.min(127, Math.round((n.v || 80) * env * baseVel * velScale)));
+            const m = isTop && topShift !== 0 ? Math.max(0, Math.min(127, n.m + topShift)) : n.m;
+            return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)), _paintPc: n._paintPc };
+          });
+          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ, _domPc: c._domPc });
+        }
+        t += gNow;
+        r++;
+      }
+      continue; // tremolo done
+    }
+    // ARPEGGIO — notes have per-note offsetMs; unfold each into its own
+    // single-note chord event so the MIDI carries the offset timing.
+    const hasArp = c.n.some(n => typeof n.offsetMs === 'number' && n.offsetMs > 0);
+    if(hasArp){
+      for(const n of c.n){
+        const off = (typeof n.offsetMs === 'number' && n.offsetMs > 0) ? n.offsetMs : 0;
+        out.push({
+          n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300), _paintPc: n._paintPc }],
+          startMs: (c.startMs || 0) + off,
+          durQ: c.durQ,
+          _domPc: c._domPc
+        });
+      }
+      continue;
+    }
+    // Default: a normal (possibly sustained) chord. Extend durMs by durMul
+    // so the chord rings into following steps the way image-mode playback
+    // does. velScale applied to soften piling-up overlapping unmerged chords.
+    const baseNotes = c.n.map(n => ({
+      m: n.m,
+      v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))),
+      durMs: Math.max(80, Math.round((n.durMs || 300) * durMul)),
+      _paintPc: n._paintPc
+    }));
+    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ, _domPc: c._domPc });
+  }
+  return out;
+}
 // §4  I18N — UI STRINGS, CONCEPT TEXT, GUIDE TEXT
 // ─────────────────────────────────────────────────────────────────────────────
 const LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW','ja'];
 const I18N = {
   EN:{
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_music:'MIDI, mp3/wav or sheet music — Paintiano plays it, finds every chord and turns each one into a brushstroke', helpDesc_image:'pick an image — Scan plays its colours as music, or AI Compose (Pro) writes a full piece from it; flip on atmosphere to match its mood', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmo', atmoDetect:'read mood', melodyLabel:'melody', melodyHint:'AI sings a melody from the picture, over the scan', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', imgScan:'scan', imgScanHint:'read the picture as a score', imgCompose:'AI compose', imgComposeBlurb:'AI composes a full piece from this image — its colours, energy and mood. Press Play.', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', notesStyle:'notes', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_music:'MIDI, mp3/wav or sheet music — Paintiano plays it, finds every chord and turns each one into a brushstroke', helpDesc_image:'pick an image — Scan plays its colours as music, or AI Compose (Pro) writes a full piece from it; flip on atmosphere to match its mood', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', hearImage:'Hear image', hearImageDis:'Finish the painting first', seeMusic:'See music', seeMusicDis:'Finish the painting first', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmo', atmoDetect:'read mood', melodyLabel:'melody', melodyHint:'AI sings a melody from the picture, over the scan', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', imgScan:'scan', imgScanHint:'read the picture as a score', imgCompose:'AI compose', imgComposeBlurb:'AI composes a full piece from this image — its colours, energy and mood. Press Play.', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
     harmony:'harmony', spectral:'spectral', phi:'φ / Phi', kontra:'kontra', custom:'custom', bw:'b/w', setupPickerLabel:'Setup', setupPickerHint:'choose which palettes and artists appear in the canvas pickers', setupPalettesTitle:'Palettes', setupArtistsTitle:'Artists', setupMosaicFamily:'Mosaic family', setupSave:'Done', setupMinError:'Choose at least 1 palette and 1 artist.', setupAll:'All', setupNone:'None', gcat_all:'All', gcat_start:'Start', gcat_colors:'Colors', gcat_style:'Style', gcat_music:'Music', gcat_tools:'Tools', gcat_save:'Save', gcat_pro:'Pro', gcat_book:'Book', guideMore:'More', guideLess:'Less', proLockTitle:'Pro',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'describe any mood — e.g. rainy day in Paris', moodHowFeel:'how do you feel?', moodTwoWays:'Type anything above — or start typing to pick a one-word mood from the list.', moodExamples:['describe any mood in your own words…','e.g. rainy day in Paris','e.g. first snow at midnight','— or just start typing and pick a mood as it appears —','e.g. furious','e.g. nostalgic'], storyCaption:{mood:'this is what {mood} sounds like ✦ paintiano.app',moodFromImg:'the mood of this image, painted ✦ paintiano.app',compose:'made this on the piano · turned it into a painting ✦ paintiano.app',micVoice:'sang into the mic, got back a painting ✦ paintiano.app',micMusic:'caught a song in the room, painted it ✦ paintiano.app',midi:'music turned into colour ✦ paintiano.app',audio:'heard it, painted it ✦ paintiano.app',score:'sheet music, turned into a painting ✦ paintiano.app',image:'what this image sounds like ✦ paintiano.app',default:'music turns into paintings ✦ paintiano.app'}, storyImageHint:'painting + audio · for IG / TikTok', storyImageHintNoAudio:'painting · for IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · save to files', scoreExportHint:'MusicXML · for MuseScore', includeSourceThumb:'include source thumbnail', includeSourceImage:'include source original image', saveAudioHintImg:'image + audio · save to files', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -14039,7 +14824,7 @@ const I18N = {
   },
   DE:{
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_music:'MIDI, mp3/wav oder Noten — Paintiano spielt es, findet jeden Akkord und macht daraus einen Pinselstrich', helpDesc_image:'wähle ein Bild — Scan spielt seine Farben als Musik, oder KI komponiert (Pro) ein ganzes Stück daraus; mit Atmosphäre trifft es die Stimmung', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'Atmo', atmoDetect:'stimmung lesen', melodyLabel:'Melodie', melodyHint:'KI singt eine Melodie aus dem Bild, über den Scan', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', imgScan:'scan', imgScanHint:'das Bild als Partitur lesen', imgCompose:'KI komponieren', imgComposeBlurb:'Die KI komponiert ein ganzes Stück aus diesem Bild — Farben, Energie, Stimmung. Drück Play.', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', notesStyle:'noten', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_music:'MIDI, mp3/wav oder Noten — Paintiano spielt es, findet jeden Akkord und macht daraus einen Pinselstrich', helpDesc_image:'wähle ein Bild — Scan spielt seine Farben als Musik, oder KI komponiert (Pro) ein ganzes Stück daraus; mit Atmosphäre trifft es die Stimmung', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', hearImage:'Bild hören', hearImageDis:'Erst das Bild fertig malen', seeMusic:'Musik sehen', seeMusicDis:'Erst das Bild fertig malen', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'Atmo', atmoDetect:'stimmung lesen', melodyLabel:'Melodie', melodyHint:'KI singt eine Melodie aus dem Bild, über den Scan', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', imgScan:'scan', imgScanHint:'das Bild als Partitur lesen', imgCompose:'KI komponieren', imgComposeBlurb:'Die KI komponiert ein ganzes Stück aus diesem Bild — Farben, Energie, Stimmung. Drück Play.', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
     harmony:'harmonie', spectral:'spektral', phi:'φ / Phi', kontra:'kontra', custom:'eigen', bw:'s/w', setupPickerLabel:'Setup', setupPickerHint:'wähle, welche Paletten und Künstler in den Canvas-Wählern erscheinen', setupPalettesTitle:'Paletten', setupArtistsTitle:'Künstler', setupMosaicFamily:'Mosaik-Familie', setupSave:'Fertig', setupMinError:'Wähle mindestens 1 Palette und 1 Künstler.', setupAll:'Alle', setupNone:'Keine', gcat_all:'Alle', gcat_start:'Start', gcat_colors:'Farben', gcat_style:'Stil', gcat_music:'Musik', gcat_tools:'Werkzeuge', gcat_save:'Sichern', gcat_pro:'Pro', gcat_book:'Buch', guideMore:'Mehr', guideLess:'Weniger', proLockTitle:'Pro',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'beschreibe eine Stimmung — z.B. Regentag in Paris', moodHowFeel:'wie fühlst du dich?', moodTwoWays:'Tippe oben irgendetwas — oder tippe los und wähle eine Ein-Wort-Stimmung aus der Liste.', moodExamples:['beschreibe eine Stimmung in eigenen Worten…','z.B. Regentag in Paris','z.B. erster Schnee um Mitternacht','— oder tippe einfach los und wähle eine vorgeschlagene Stimmung —','z.B. wütend','z.B. nostalgisch'], storyCaption:{mood:'so klingt {mood} ✦ paintiano.app',moodFromImg:'die Stimmung dieses Bildes, gemalt ✦ paintiano.app',compose:'am Klavier gespielt · in ein Bild verwandelt ✦ paintiano.app',micVoice:'ins Mikro gesungen, ein Bild zurückbekommen ✦ paintiano.app',micMusic:'einen Song im Raum eingefangen, gemalt ✦ paintiano.app',midi:'Musik in Farbe verwandelt ✦ paintiano.app',audio:'gehört, gemalt ✦ paintiano.app',score:'Noten, in ein Bild verwandelt ✦ paintiano.app',image:'wie dieses Bild klingt ✦ paintiano.app',default:'Musik wird zu Bildern ✦ paintiano.app'}, storyImageHint:'Bild + Audio · für IG / TikTok', storyImageHintNoAudio:'Bild · für IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · in Dateien speichern', scoreExportHint:'MusicXML · für MuseScore', includeSourceThumb:'Quellminiatur einfügen', includeSourceImage:'Originalbild beifügen', saveAudioHintImg:'Bild + Audio · in Dateien speichern', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -14174,7 +14959,7 @@ const I18N = {
   },
   FR:{
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_music:'MIDI, mp3/wav ou partition — Paintiano le joue, trouve chaque accord et en fait un coup de pinceau', helpDesc_image:'choisis une image — Scan joue ses couleurs en musique, ou Composer IA (Pro) en écrit un morceau entier ; active l’atmosphère pour son ambiance', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'amb.', atmoDetect:'lire ambiance', melodyLabel:'mélodie', melodyHint:'l\'IA chante une mélodie issue de l\'image, par-dessus le scan', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', imgScan:'scan', imgScanHint:'lire l\'image comme une partition', imgCompose:'composer IA', imgComposeBlurb:'L\'IA compose un morceau entier à partir de cette image — couleurs, énergie, ambiance. Appuie sur Play.', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', notesStyle:'notes', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_music:'MIDI, mp3/wav ou partition — Paintiano le joue, trouve chaque accord et en fait un coup de pinceau', helpDesc_image:'choisis une image — Scan joue ses couleurs en musique, ou Composer IA (Pro) en écrit un morceau entier ; active l’atmosphère pour son ambiance', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', hearImage:`Écouter l'image`, hearImageDis:`Finis d'abord la peinture`, seeMusic:'Voir musique', seeMusicDis:`Finis d'abord la peinture`, newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'amb.', atmoDetect:'lire ambiance', melodyLabel:'mélodie', melodyHint:'l\'IA chante une mélodie issue de l\'image, par-dessus le scan', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', imgScan:'scan', imgScanHint:'lire l\'image comme une partition', imgCompose:'composer IA', imgComposeBlurb:'L\'IA compose un morceau entier à partir de cette image — couleurs, énergie, ambiance. Appuie sur Play.', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
     harmony:'harmonie', spectral:'spectral', phi:'φ / Phi', kontra:'contre', custom:'perso', bw:'n/b', setupPickerLabel:'Setup', setupPickerHint:'choisis quelles palettes et quels artistes apparaissent dans les sélecteurs', setupPalettesTitle:'Palettes', setupArtistsTitle:'Artistes', setupMosaicFamily:'Famille Mosaïque', setupSave:'Terminé', setupMinError:'Choisis au moins 1 palette et 1 artiste.', setupAll:'Tout', setupNone:'Aucun', gcat_all:'Tout', gcat_start:'Début', gcat_colors:'Couleurs', gcat_style:'Style', gcat_music:'Musique', gcat_tools:'Outils', gcat_save:'Sauver', gcat_pro:'Pro', gcat_book:'Livre', guideMore:'Plus', guideLess:'Moins', proLockTitle:'Pro',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'décris une humeur — ex. jour de pluie à Paris', moodHowFeel:'comment tu te sens ?', moodTwoWays:'Écris ce que tu veux ci-dessus — ou commence à taper pour choisir une humeur d\'un mot dans la liste.', moodExamples:['décris une humeur avec tes mots…','ex. jour de pluie à Paris','ex. première neige à minuit','— ou commence à taper et choisis une humeur proposée —','ex. furieux','ex. nostalgique'], storyCaption:{mood:'voilà à quoi {mood} ressemble ✦ paintiano.app',moodFromImg:'l\'humeur de cette image, peinte ✦ paintiano.app',compose:'joué au piano · transformé en peinture ✦ paintiano.app',micVoice:'chanté au micro, récupéré une peinture ✦ paintiano.app',micMusic:'attrapé un son dans la pièce, peint ✦ paintiano.app',midi:'musique transformée en couleur ✦ paintiano.app',audio:'entendu, peint ✦ paintiano.app',score:'partition, devenue peinture ✦ paintiano.app',image:'à quoi cette image ressemble en son ✦ paintiano.app',default:'la musique devient peinture ✦ paintiano.app'}, storyImageHint:'image + audio · pour IG / TikTok', storyImageHintNoAudio:'image · pour IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · sauver dans fichiers', scoreExportHint:'MusicXML · pour MuseScore', includeSourceThumb:'inclure la miniature source', includeSourceImage:'inclure l\'image source', saveAudioHintImg:'image + audio · sauver dans fichiers', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -14309,7 +15094,7 @@ const I18N = {
   },
   ES:{
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_music:'MIDI, mp3/wav o partitura — Paintiano lo reproduce, encuentra cada acorde y lo convierte en un trazo', helpDesc_image:'elige una imagen — Escanear suena sus colores como música, o Componer IA (Pro) escribe una pieza entera; activa atmósfera para su ánimo', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'amb.', atmoDetect:'leer ambiente', melodyLabel:'melodía', melodyHint:'la IA canta una melodía de la imagen, sobre el escaneo', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', imgScan:'escanear', imgScanHint:'leer la imagen como partitura', imgCompose:'componer IA', imgComposeBlurb:'La IA compone una pieza completa a partir de esta imagen — colores, energía y ánimo. Pulsa Play.', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_music:'MIDI, mp3/wav o partitura — Paintiano lo reproduce, encuentra cada acorde y lo convierte en un trazo', helpDesc_image:'elige una imagen — Escanear suena sus colores como música, o Componer IA (Pro) escribe una pieza entera; activa atmósfera para su ánimo', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', hearImage:'Oír imagen', hearImageDis:'Termina primero la pintura', seeMusic:'Ver música', seeMusicDis:'Termina primero la pintura', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'amb.', atmoDetect:'leer ambiente', melodyLabel:'melodía', melodyHint:'la IA canta una melodía de la imagen, sobre el escaneo', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', imgScan:'escanear', imgScanHint:'leer la imagen como partitura', imgCompose:'componer IA', imgComposeBlurb:'La IA compone una pieza completa a partir de esta imagen — colores, energía y ánimo. Pulsa Play.', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
     harmony:'armonía', spectral:'espectral', phi:'φ / Phi', kontra:'contra', custom:'personal', bw:'b/n', setupPickerLabel:'Setup', setupPickerHint:'elige qué paletas y artistas aparecen en los selectores', setupPalettesTitle:'Paletas', setupArtistsTitle:'Artistas', setupMosaicFamily:'Familia Mosaico', setupSave:'Listo', setupMinError:'Elige al menos 1 paleta y 1 artista.', setupAll:'Todo', setupNone:'Nada', gcat_all:'Todo', gcat_start:'Inicio', gcat_colors:'Colores', gcat_style:'Estilo', gcat_music:'Música', gcat_tools:'Herramientas', gcat_save:'Guardar', gcat_pro:'Pro', gcat_book:'Libro', guideMore:'Más', guideLess:'Menos', proLockTitle:'Pro',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'describe un estado — p.ej. día lluvioso en París', moodHowFeel:'¿cómo te sientes?', moodTwoWays:'Escribe lo que quieras arriba — o empieza a teclear para elegir un estado de una palabra de la lista.', moodExamples:['describe un estado con tus palabras…','p.ej. día lluvioso en París','p.ej. primera nieve a medianoche','— o empieza a escribir y elige un estado de los sugeridos —','p.ej. furioso','p.ej. nostálgico'], storyCaption:{mood:'así suena {mood} ✦ paintiano.app',moodFromImg:'el estado de esta imagen, pintado ✦ paintiano.app',compose:'tocado al piano · convertido en pintura ✦ paintiano.app',micVoice:'canté al micro, me devolvió una pintura ✦ paintiano.app',micMusic:'cogí un sonido en la sala, lo pinté ✦ paintiano.app',midi:'música convertida en color ✦ paintiano.app',audio:'lo escuché, lo pinté ✦ paintiano.app',score:'partitura, convertida en pintura ✦ paintiano.app',image:'cómo suena esta imagen ✦ paintiano.app',default:'la música se vuelve pintura ✦ paintiano.app'}, storyImageHint:'imagen + audio · para IG / TikTok', storyImageHintNoAudio:'imagen · para IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · guardar en archivos', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura origen', includeSourceImage:'incluir imagen original', saveAudioHintImg:'imagen + audio · guardar en archivos', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -14444,7 +15229,7 @@ const I18N = {
   },
   SK:{
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_music:'MIDI, mp3/wav alebo noty — Paintiano ich prehrá, nájde každý akord a premení ho na ťah štetca', helpDesc_image:'vyber obrázok — Sken zahrá jeho farby ako hudbu, alebo AI skladba (Pro) z neho zloží celú skladbu; zapni atmosféru a vystihne aj náladu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, broz, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmo', atmoDetect:'rozpoznať náladu', melodyLabel:'melódia', melodyHint:'AI zaspieva melódiu z obrazu, nad skenom', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', imgScan:'sken', imgScanHint:'čítať obraz ako partitúru', imgCompose:'AI skladba', imgComposeBlurb:'AI zloží celú skladbu z tohto obrazu — z jeho farieb, energie a nálady. Stlač Play.', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', notesStyle:'noty', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_music:'MIDI, mp3/wav alebo noty — Paintiano ich prehrá, nájde každý akord a premení ho na ťah štetca', helpDesc_image:'vyber obrázok — Sken zahrá jeho farby ako hudbu, alebo AI skladba (Pro) z neho zloží celú skladbu; zapni atmosféru a vystihne aj náladu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, broz, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', hearImage:'Počuť obraz', hearImageDis:'Najprv domaľuj obraz', seeMusic:'Vidieť hudbu', seeMusicDis:'Najprv domaľuj obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmo', atmoDetect:'rozpoznať náladu', melodyLabel:'melódia', melodyHint:'AI zaspieva melódiu z obrazu, nad skenom', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', imgScan:'sken', imgScanHint:'čítať obraz ako partitúru', imgCompose:'AI skladba', imgComposeBlurb:'AI zloží celú skladbu z tohto obrazu — z jeho farieb, energie a nálady. Stlač Play.', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
     harmony:'harmónia', spectral:'spektrum', phi:'φ / Phi', kontra:'kontra', custom:'vlastná', bw:'č/b', setupPickerLabel:'Setup', setupPickerHint:'vyber palety a umelcov, ktorí sa zobrazia v canvas selektoroch', setupPalettesTitle:'Palety', setupArtistsTitle:'Umelci', setupMosaicFamily:'Mosaic rodina', setupSave:'Hotovo', setupMinError:'Vyber aspoň 1 paletu a 1 umelca.', setupAll:'Všetko', setupNone:'Nič', gcat_all:'Všetko', gcat_start:'Začni', gcat_colors:'Farby', gcat_style:'Štýl', gcat_music:'Hudba', gcat_tools:'Nástroje', gcat_save:'Ulož', gcat_pro:'Pro', gcat_book:'Kniha', guideMore:'Viac', guideLess:'Menej', proLockTitle:'Pro',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'opíš akúkoľvek náladu — napr. daždivý deň v Paríži', moodHowFeel:'ako sa cítiš?', moodTwoWays:'Napíš hore čokoľvek — alebo začni písať a vyber jednoslovnú náladu zo zoznamu.', moodExamples:['opíš náladu vlastnými slovami…','napr. daždivý deň v Paríži','napr. prvý sneh o polnoci','— alebo začni písať a vyber z ponúkaných nálad —','napr. zúrivá','napr. nostalgická'], storyCaption:{mood:'takto znie {mood} ✦ paintiano.app',moodFromImg:'nálada tohto obrazu, namaľovaná ✦ paintiano.app',compose:'zahral som si · vznikol obraz ✦ paintiano.app',micVoice:'spieval do mikrofónu, vrátilo to obraz ✦ paintiano.app',micMusic:'zachytil zvuk v miestnosti, namaľoval ✦ paintiano.app',midi:'hudba premenená na farbu ✦ paintiano.app',audio:'vypočul, namaľoval ✦ paintiano.app',score:'noty premenené na obraz ✦ paintiano.app',image:'tak znie tento obraz ✦ paintiano.app',default:'hudba sa stáva maľbou ✦ paintiano.app'}, storyImageHint:'obraz + audio · pre IG / TikTok', storyImageHintNoAudio:'obraz · pre IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · uložiť do súborov', scoreExportHint:'MusicXML · pre MuseScore', includeSourceThumb:'pridať zdrojový náhľad', includeSourceImage:'pridať pôvodný obrázok', saveAudioHintImg:'obrázok + audio · uložiť do súborov', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -14579,7 +15364,7 @@ const I18N = {
   },
   zh:{
     concept:'理念', demo:'演示', guide:'指南',
-    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', notesStyle:'音符', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_music:'MIDI、mp3/wav 或乐谱 — Paintiano 播放它，找出每个和弦，把每个变成一道笔触', helpDesc_image:'选一张图片 — 扫描把颜色当作音乐演奏，或 AI 作曲(Pro)从中谱写一首完整曲子；开启氛围模式还能捕捉它的情绪', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', melodyLabel:'旋律', melodyHint:'AI 从图像唱出一条旋律，叠加在扫描之上', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', imgScan:'扫描', imgScanHint:'把图像当作乐谱来读', imgCompose:'AI 作曲', imgComposeBlurb:'AI 从这幅图像谱写一首完整曲子 — 来自它的色彩、能量与情绪。按 Play。', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
+    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', notesStyle:'音符', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_music:'MIDI、mp3/wav 或乐谱 — Paintiano 播放它，找出每个和弦，把每个变成一道笔触', helpDesc_image:'选一张图片 — 扫描把颜色当作音乐演奏，或 AI 作曲(Pro)从中谱写一首完整曲子；开启氛围模式还能捕捉它的情绪', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', hearImage:'听画', hearImageDis:'先完成绘画', seeMusic:'看音乐', seeMusicDis:'先完成绘画', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', melodyLabel:'旋律', melodyHint:'AI 从图像唱出一条旋律，叠加在扫描之上', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', imgScan:'扫描', imgScanHint:'把图像当作乐谱来读', imgCompose:'AI 作曲', imgComposeBlurb:'AI 从这幅图像谱写一首完整曲子 — 来自它的色彩、能量与情绪。按 Play。', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
     harmony:'和声', spectral:'光谱', phi:'φ / Phi', kontra:'反向', custom:'自定义', bw:'黑白', setupPickerLabel:'设置', setupPickerHint:'选择哪些调色板和艺术家出现在画布选择器中', setupPalettesTitle:'调色板', setupArtistsTitle:'艺术家', setupMosaicFamily:'Mosaic 家族', setupSave:'完成', setupMinError:'至少选择 1 个调色板和 1 位艺术家。', setupAll:'全部', setupNone:'无', gcat_all:'全部', gcat_start:'开始', gcat_colors:'颜色', gcat_style:'风格', gcat_music:'音乐', gcat_tools:'工具', gcat_save:'保存', gcat_pro:'Pro', gcat_book:'书', guideMore:'更多', guideLess:'收起', proLockTitle:'Pro',
     editPalette:'编辑调色板', editShort:'编辑', paletteEditorTitle:'你的调色板', resetPalette:'全部清除', defaultPalette:'默认',
     selectMood:'✦ 选择情绪…', moodPlaceholder:'描述任意情绪 — 例如 巴黎的雨天', moodHowFeel:'你现在感觉如何?', moodTwoWays:'在上方输入任意内容 — 或开始输入,从列表选一个单词情绪。', moodExamples:['用你自己的话描述情绪…','例如 巴黎的雨天','例如 午夜初雪','— 或直接输入,从浮现的情绪中选择 —','例如 愤怒','例如 怀旧'], storyCaption:{mood:'这就是 {mood} 的声音 ✦ paintiano.app',moodFromImg:'这幅图像的情绪,画了出来 ✦ paintiano.app',compose:'弹了钢琴 · 变成了一幅画 ✦ paintiano.app',micVoice:'对着麦克风唱,得到一幅画 ✦ paintiano.app',micMusic:'抓住了房间里的一段声音,画了下来 ✦ paintiano.app',midi:'音乐变成了颜色 ✦ paintiano.app',audio:'听见了,画了下来 ✦ paintiano.app',score:'乐谱,变成了画 ✦ paintiano.app',image:'这张图听起来是这样 ✦ paintiano.app',default:'音乐变成画 ✦ paintiano.app'}, storyImageHint:'图像 + 音频 · 给 IG / TikTok', storyImageHintNoAudio:'图像 · 给 IG / TikTok', saveAudioLabel:'音频', saveAudioHint:'mp3 · 保存到文件', scoreExportHint:'MusicXML · 给 MuseScore', includeSourceThumb:'附加来源缩略图', includeSourceImage:'附加原始图像', saveAudioHintImg:'图像 + 音频 · 保存到文件', moodGo:'开始', morph:'✦ 变形', vary:'✦ 变奏',
@@ -14720,7 +15505,7 @@ const I18N = {
   },
   zhTW:{
     concept:'理念', demo:'示範', guide:'指南',
-    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', notesStyle:'音符', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_music:'MIDI、mp3/wav 或樂譜 — Paintiano 播放它，找出每個和弦，把每個變成一道筆觸', helpDesc_image:'選一張圖片 — 掃描把顏色當作音樂演奏，或 AI 作曲(Pro)從中譜寫一首完整曲子；開啟氛圍模式還能捕捉它的情緒', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', melodyLabel:'旋律', melodyHint:'AI 從圖像唱出一條旋律，疊加在掃描之上', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', imgScan:'掃描', imgScanHint:'把圖像當作樂譜來讀', imgCompose:'AI 作曲', imgComposeBlurb:'AI 從這幅圖像譜寫一首完整曲子 — 來自它的色彩、能量與情緒。按 Play。', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
+    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', notesStyle:'音符', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_music:'MIDI、mp3/wav 或樂譜 — Paintiano 播放它，找出每個和弦，把每個變成一道筆觸', helpDesc_image:'選一張圖片 — 掃描把顏色當作音樂演奏，或 AI 作曲(Pro)從中譜寫一首完整曲子；開啟氛圍模式還能捕捉它的情緒', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', hearImage:'聽畫', hearImageDis:'先完成繪畫', seeMusic:'看音樂', seeMusicDis:'先完成繪畫', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', melodyLabel:'旋律', melodyHint:'AI 從圖像唱出一條旋律，疊加在掃描之上', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', imgScan:'掃描', imgScanHint:'把圖像當作樂譜來讀', imgCompose:'AI 作曲', imgComposeBlurb:'AI 從這幅圖像譜寫一首完整曲子 — 來自它的色彩、能量與情緒。按 Play。', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
     harmony:'和聲', spectral:'光譜', phi:'φ / Phi', kontra:'反向', custom:'自訂', bw:'黑白', setupPickerLabel:'設定', setupPickerHint:'選擇哪些調色盤和藝術家出現在畫布選擇器中', setupPalettesTitle:'調色盤', setupArtistsTitle:'藝術家', setupMosaicFamily:'Mosaic 家族', setupSave:'完成', setupMinError:'至少選擇 1 個調色盤和 1 位藝術家。', setupAll:'全部', setupNone:'無', gcat_all:'全部', gcat_start:'開始', gcat_colors:'顏色', gcat_style:'風格', gcat_music:'音樂', gcat_tools:'工具', gcat_save:'儲存', next:'下一個', showLabel:'放映', gcat_pro:'Pro', gcat_book:'書', guideMore:'更多', guideLess:'收起', proLockTitle:'Pro',
     editPalette:'編輯調色盤', editShort:'編輯', paletteEditorTitle:'你的調色盤', resetPalette:'全部清除', defaultPalette:'預設',
     selectMood:'✦ 選擇情緒…', moodPlaceholder:'描述任意情緒 — 例如 巴黎的雨天', moodHowFeel:'你現在感覺如何?', moodTwoWays:'在上方輸入任意內容 — 或開始輸入,從列表選一個單詞情緒。', moodExamples:['用你自己的話描述情緒…','例如 巴黎的雨天','例如 午夜初雪','— 或直接輸入,從浮現的情緒中選擇 —','例如 憤怒','例如 懷舊'], storyCaption:{mood:'這就是 {mood} 的聲音 ✦ paintiano.app',moodFromImg:'這幅圖像的情緒,畫了出來 ✦ paintiano.app',compose:'彈了鋼琴 · 變成了一幅畫 ✦ paintiano.app',micVoice:'對著麥克風唱,得到一幅畫 ✦ paintiano.app',micMusic:'抓住了房間裡的一段聲音,畫了下來 ✦ paintiano.app',midi:'音樂變成了顏色 ✦ paintiano.app',audio:'聽見了,畫了下來 ✦ paintiano.app',score:'樂譜,變成了畫 ✦ paintiano.app',image:'這張圖聽起來是這樣 ✦ paintiano.app',default:'音樂變成畫 ✦ paintiano.app'}, storyImageHint:'圖像 + 音訊 · 給 IG / TikTok', storyImageHintNoAudio:'圖像 · 給 IG / TikTok', saveAudioLabel:'音訊', saveAudioHint:'mp3 · 儲存到檔案', scoreExportHint:'MusicXML · 給 MuseScore', includeSourceThumb:'附加來源縮圖', includeSourceImage:'附加原始圖像', saveAudioHintImg:'圖像 + 音訊 · 儲存到檔案', moodGo:'開始', morph:'✦ 變形', vary:'✦ 變奏',
@@ -14854,7 +15639,7 @@ const I18N = {
   },
   PT:{
     concept:'conceito', demo:'demo', guide:'guia',
-    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_music:'MIDI, mp3/wav ou partitura — Paintiano toca, encontra cada acorde e transforma cada um em pincelada', helpDesc_image:'escolha uma imagem — Digitalizar toca as cores como música, ou Compor IA (Pro) escreve uma peça inteira; ative atmosfera para o humor', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atm', atmoDetect:'detectar humor', melodyLabel:'melodia', melodyHint:'a IA canta uma melodia da imagem, sobre a digitalização', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', imgScan:'digitalizar', imgScanHint:'ler a imagem como partitura', imgCompose:'compor IA', imgComposeBlurb:'A IA compõe uma peça inteira a partir desta imagem — cores, energia e humor. Carrega em Play.', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
+    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', notesStyle:'notas', oneMStyle:'$oneM$', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_music:'MIDI, mp3/wav ou partitura — Paintiano toca, encontra cada acorde e transforma cada um em pincelada', helpDesc_image:'escolha uma imagem — Digitalizar toca as cores como música, ou Compor IA (Pro) escreve uma peça inteira; ative atmosfera para o humor', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', hearImage:'Ouvir imagem', hearImageDis:'Termina primeiro a pintura', seeMusic:'Ver música', seeMusicDis:'Termina primeiro a pintura', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atm', atmoDetect:'detectar humor', melodyLabel:'melodia', melodyHint:'a IA canta uma melodia da imagem, sobre a digitalização', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', imgScan:'digitalizar', imgScanHint:'ler a imagem como partitura', imgCompose:'compor IA', imgComposeBlurb:'A IA compõe uma peça inteira a partir desta imagem — cores, energia e humor. Carrega em Play.', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
     harmony:'harmonia', spectral:'espectral', phi:'φ / Phi', kontra:'contra', custom:'personalizada', bw:'p&b', setupPickerLabel:'Setup', setupPickerHint:'escolhe que paletas e artistas aparecem nos seletores da tela', setupPalettesTitle:'Paletas', setupArtistsTitle:'Artistas', setupMosaicFamily:'Família Mosaico', setupSave:'Pronto', setupMinError:'Escolhe pelo menos 1 paleta e 1 artista.', setupAll:'Tudo', setupNone:'Nenhum', gcat_all:'Tudo', gcat_start:'Início', gcat_colors:'Cores', gcat_style:'Estilo', gcat_music:'Música', gcat_tools:'Ferramentas', gcat_save:'Guardar', gcat_pro:'Pro', gcat_book:'Livro', guideMore:'Mais', guideLess:'Menos', proLockTitle:'Pro',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'SUA PALETA', resetPalette:'limpar tudo', defaultPalette:'padrão',
     selectMood:'✦ escolha um humor…', moodPlaceholder:'descreva um humor — ex. dia chuvoso em Paris', moodHowFeel:'como te sentes?', moodTwoWays:'Escreve o que quiseres acima — ou começa a digitar para escolher um humor de uma palavra da lista.', moodExamples:['descreve um humor com as tuas palavras…','ex. dia chuvoso em Paris','ex. primeira neve à meia-noite','— ou começa a escrever e escolhe um humor sugerido —','ex. furioso','ex. nostálgico'], storyCaption:{mood:'é assim que {mood} soa ✦ paintiano.app',moodFromImg:'o humor desta imagem, pintado ✦ paintiano.app',compose:'toquei piano · virou pintura ✦ paintiano.app',micVoice:'cantei para o microfone, voltou uma pintura ✦ paintiano.app',micMusic:'apanhei um som na sala, pintei ✦ paintiano.app',midi:'música transformada em cor ✦ paintiano.app',audio:'ouvi, pintei ✦ paintiano.app',score:'partitura, virou pintura ✦ paintiano.app',image:'como esta imagem soa ✦ paintiano.app',default:'a música torna-se pintura ✦ paintiano.app'}, storyImageHint:'imagem + áudio · para IG / TikTok', storyImageHintNoAudio:'imagem · para IG / TikTok', saveAudioLabel:'Áudio', saveAudioHint:'mp3 · guardar em ficheiros', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura de origem', includeSourceImage:'incluir imagem original', saveAudioHintImg:'imagem + áudio · guardar em ficheiros', moodGo:'iniciar', morph:'✦ morph', vary:'✦ variar',
@@ -14989,7 +15774,7 @@ const I18N = {
   },
   ja:{
     concept:'コンセプト', demo:'デモ', guide:'ガイド',
-    sourceLabel:'ソース', moodLabel:'気持ち', colorLabel:'色', styleLabel:'スタイル', mosaicStyle:'モザイク', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'絵画、演奏', tapToSkip:'タップでスキップ', inspiredBy:'{artist} に着想を得て', inspiredByTitle:'着想', onbTitle:'Paintiano', onbSubtitle:'音楽が絵画に変わる', onbPlayLabel:'サンプル再生', onbCaption:'Liebestraum — Liszt · Pollock が描く', onbHint:'すべての和音が一筆に…', onbDescription:'Paintiano は音楽を聴き、各和音を一筆に変える。すべての絵がユニーク。', onbDoneLine:'あなたの絵は唯一のもの', onbReplay:'もう一度', onbTryYourOwn:'自分のもので試す', onbSkip:'スキップ', moodDesc:'気持ちを書く — AI が作曲して描く', mfiDesc:'画像を選ぶ — AI がムードを読み、描く', helpTitle:'何が何をする', helpSub:'セットアップ画面で任意のソースをタップして始める', helpClose:'閉じる', helpFab:'ヘルプ', helpDesc_mood:'気持ちを書くかタップ — Paintiano がそのムードで曲を作り、描く', helpDesc_mfi:'画像を入れる — Paintiano がムードを読み、合う曲を作り、描く', helpDesc_midi:'MIDI ファイル?Paintiano が再生し、各和音を一筆に', helpDesc_audio:'任意の mp3 や wav — Paintiano が聴き、和音を見つけ、聴こえたものを描く', helpDesc_score:'楽譜を撮る — Paintiano が音符を読み、曲を描く', helpDesc_music:'MIDI、mp3/wav、楽譜 — Paintiano が再生し、各和音を見つけ、それぞれを一筆に', helpDesc_image:'画像を選ぶ — Scan は色を音楽として演奏、AI Compose(Pro)は全曲を書く;atmosphere で画像のムードに合わせる', helpDesc_compose:'画面で直接ピアノを弾く — 各音が一筆に、ライブで', helpDesc_mic:'歌う、ハミング、口笛 — Paintiano が和音を聴き取り、ライブで描く', selectNeedsMosaic:'{artist} スタイルをオフにして音符を編集', backToSetup:'戻る', backToCanvas:'キャンバス', backToImage:'画像', newSource:'新規', dirLabel:'スキャン', dir_lr:'行', dir_vert:'列', dir_spiralIn:'内向き螺旋', dir_spiralOut:'外向き螺旋', importLabel:'インポート', createLabel:'作成', imgMood:'画像からムード', atmoLabel:'雰囲気', atmoDetect:'ムードを読む', melodyLabel:'メロディ', melodyHint:'AI が画像からメロディを歌い、スキャンに重ねる', imgComposition:'作曲', imgCompositionHint:'AI がこの画像から曲を書く', imgScan:'スキャン', imgScanHint:'画像を楽譜として読む', imgCompose:'AI 作曲', imgComposeBlurb:'AI がこの画像から完全な曲を書く — その色、エネルギー、ムードから。Play を押す。', aiOffline:'オフライン', aiOfflineHint:'AI 機能には接続が必要',
+    sourceLabel:'ソース', moodLabel:'気持ち', colorLabel:'色', styleLabel:'スタイル', mosaicStyle:'モザイク', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'絵画、演奏', tapToSkip:'タップでスキップ', inspiredBy:'{artist} に着想を得て', inspiredByTitle:'着想', onbTitle:'Paintiano', onbSubtitle:'音楽が絵画に変わる', onbPlayLabel:'サンプル再生', onbCaption:'Liebestraum — Liszt · Pollock が描く', onbHint:'すべての和音が一筆に…', onbDescription:'Paintiano は音楽を聴き、各和音を一筆に変える。すべての絵がユニーク。', onbDoneLine:'あなたの絵は唯一のもの', onbReplay:'もう一度', onbTryYourOwn:'自分のもので試す', onbSkip:'スキップ', moodDesc:'気持ちを書く — AI が作曲して描く', mfiDesc:'画像を選ぶ — AI がムードを読み、描く', helpTitle:'何が何をする', helpSub:'セットアップ画面で任意のソースをタップして始める', helpClose:'閉じる', helpFab:'ヘルプ', helpDesc_mood:'気持ちを書くかタップ — Paintiano がそのムードで曲を作り、描く', helpDesc_mfi:'画像を入れる — Paintiano がムードを読み、合う曲を作り、描く', helpDesc_midi:'MIDI ファイル?Paintiano が再生し、各和音を一筆に', helpDesc_audio:'任意の mp3 や wav — Paintiano が聴き、和音を見つけ、聴こえたものを描く', helpDesc_score:'楽譜を撮る — Paintiano が音符を読み、曲を描く', helpDesc_music:'MIDI、mp3/wav、楽譜 — Paintiano が再生し、各和音を見つけ、それぞれを一筆に', helpDesc_image:'画像を選ぶ — Scan は色を音楽として演奏、AI Compose(Pro)は全曲を書く;atmosphere で画像のムードに合わせる', helpDesc_compose:'画面で直接ピアノを弾く — 各音が一筆に、ライブで', helpDesc_mic:'歌う、ハミング、口笛 — Paintiano が和音を聴き取り、ライブで描く', selectNeedsMosaic:'{artist} スタイルをオフにして音符を編集', backToSetup:'戻る', backToCanvas:'キャンバス', backToImage:'画像', hearImage:'絵を聴く', hearImageDis:'まず絵を完成させて', seeMusic:'音楽を見る', seeMusicDis:'まず絵を完成させて', newSource:'新規', dirLabel:'スキャン', dir_lr:'行', dir_vert:'列', dir_spiralIn:'内向き螺旋', dir_spiralOut:'外向き螺旋', importLabel:'インポート', createLabel:'作成', imgMood:'画像からムード', atmoLabel:'雰囲気', atmoDetect:'ムードを読む', melodyLabel:'メロディ', melodyHint:'AI が画像からメロディを歌い、スキャンに重ねる', imgComposition:'作曲', imgCompositionHint:'AI がこの画像から曲を書く', imgScan:'スキャン', imgScanHint:'画像を楽譜として読む', imgCompose:'AI 作曲', imgComposeBlurb:'AI がこの画像から完全な曲を書く — その色、エネルギー、ムードから。Play を押す。', aiOffline:'オフライン', aiOfflineHint:'AI 機能には接続が必要',
     harmony:'ハーモニー', spectral:'スペクトル', phi:'φ / Phi', kontra:'反転', custom:'カスタム', bw:'白黒', setupPickerLabel:'セットアップ', setupPickerHint:'キャンバスのピッカーに出すパレットとアーティストを選ぶ', setupPalettesTitle:'パレット', setupArtistsTitle:'アーティスト', setupMosaicFamily:'Mosaic ファミリー', setupSave:'完了', setupMinError:'最低 1 パレット + 1 アーティストを選んでください。', setupAll:'すべて', setupNone:'なし', gcat_all:'すべて', gcat_start:'はじめ', gcat_colors:'色', gcat_style:'スタイル', gcat_music:'音楽', gcat_tools:'ツール', gcat_save:'保存', gcat_pro:'Pro', gcat_book:'本', guideMore:'もっと', guideLess:'閉じる', proLockTitle:'Pro',
     editPalette:'パレット編集', editShort:'編集', paletteEditorTitle:'あなたのパレット', resetPalette:'すべてクリア', defaultPalette:'デフォルト',
     selectMood:'✦ ムードを選ぶ…', moodPlaceholder:'どんなムードでも — 例:パリの雨の日', moodHowFeel:'今、どう感じる?', moodTwoWays:'上に何でも書く — または入力を始めてリストから一語ムードを選ぶ。', moodExamples:['自分の言葉でムードを書く…','例:パリの雨の日','例:真夜中の初雪','— または入力を始めて、出てきたムードを選ぶ —','例:激怒','例:ノスタルジック'], storyCaption:{mood:'{mood} はこんな音 ✦ paintiano.app',moodFromImg:'この画像のムード、描きました ✦ paintiano.app',compose:'ピアノで作った曲 · 絵にした ✦ paintiano.app',micVoice:'マイクに歌ったら絵が返ってきた ✦ paintiano.app',micMusic:'部屋の歌を捕まえて描いた ✦ paintiano.app',midi:'音楽が色になった ✦ paintiano.app',audio:'聴いて、描いた ✦ paintiano.app',score:'楽譜を絵にした ✦ paintiano.app',image:'この画像の音 ✦ paintiano.app',default:'音楽が絵画になる ✦ paintiano.app'}, storyImageHint:'絵 + 音声 · IG / TikTok 用', storyImageHintNoAudio:'絵 · IG / TikTok 用', saveAudioLabel:'音声', saveAudioHint:'mp3 · ファイルに保存', scoreExportHint:'MusicXML · MuseScore 用', includeSourceThumb:'ソースサムネを含める', includeSourceImage:'ソースの元画像を含める', saveAudioHintImg:'画像 + 音声 · ファイルに保存', moodGo:'実行', morph:'✦ モーフ', vary:'✦ バリエーション',
@@ -16388,11 +17173,11 @@ const GUIDE_CARDS_I18N = {
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Dice on = surprise`, body:`Same song = same painting, always. Roll the dice and every Next paints a different artist or Mosaic stop. Tap Mosaic with dice on to lock the cycle.`, more:`The deterministic rule: same song · tonality · artist · style → pixel-identical painting, always. The dice only chooses WHICH combination shows next, never how it looks. ◆ Turn on ↻ Shuffle and the Next button appears. ◆ With an artist picked: Next jumps to a random variant of that artist. ◆ Without an artist: Next picks both — a random artist plus a random variant. The pool also includes the three Mosaic-family stops, so shuffle can land on any of them. ◆ Tap Mosaic with Shuffle on to lock the cycle to just those three (Mosaic → Notes → $1M$). ◆ Re-landing on the same combination always repaints the identical picture. ◆ While a piece plays, a ↻ Show button replaces Save: tap it and the painting auto-advances every few seconds (like Next on a timer) for a hands-free slideshow; tap again to stop.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Your live piano`, body:`Tap ♪ Compose. Tap a key for a stab, hold for a wider block. Chord names appear live. Backspace undo, Space play.`, more:`Tap ♪ COMPOSE (or hit Enter). The piano opens. Tap a key for a quick stab, hold for a wider block — longer hold, wider paint. Hardware keyboard works too: A–L white, W/E/T/Y/U/O/P black. Backspace = undo, Space = play/pause, Enter toggles the piano. Hold a chord and its name (C maj, A min, D7…) appears live. The canvas is a fixed golden-ratio frame — rows shrink as you add more, the painting densifies. ◆ Mobile: the full 88 keys are there — swipe horizontally to pan, C4 sits roughly centre. ◆ Scale snap: tap ⚙ to snap everything you play to a key (C maj, A min, G maj…); "Free" (default) stays fully chromatic.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Sing it, paint it`, body:`Two MIC modes. 🔊 Music listens to the room. 🎤 Voice snaps your humming to C major. Both paint live. Original ⇄ Piano toggle after.`, more:`Tap 🎙 MIC. The canvas opens armed with a big REC button. ◆ 🔊 Music (blue, default): listens to whatever's playing in the room — speaker, Spotify, ambient anything — and paints chord changes silently. Long recordings welcome; the canvas grows downward. ◆ 🎤 Voice (red): sing, hum or whistle. Pitch snaps to C major, plays through the piano, paints note by note in a fixed φ-frame. ◆ The top-left badge flips music ⇄ voice; each keeps its own draft (a small ● means one is waiting). Clear wipes only the active mode. ◆ While recording, the canvas gently breathes with room volume — louder pushes it wider, silence lets it rest.`},
-    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio or score`, body:`One button for every musical file. MIDI, MP3/WAV/M4A, or MusicXML from MuseScore/Finale. Type detected automatically.`, more:`One button for every musical file. ◆ MIDI (.mid / .midi) — multi-track condenses into chords, tempo-mapped, painted. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decoded, pitch-detected, painted; best on clean monophonic or sparse material (solo piano, vocal, simple guitar) — dense mixes are harder. ◆ Score (.musicxml .xml .mxl from MuseScore, Finale, Dorico) — pitches, durations, dynamics and chords all come through exact; the most accurate input there is. Paintiano detects the type automatically. Open Music without a file for a built-in sample.`},
+    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio or score`, body:`One button for every musical file. MIDI, MP3/WAV/M4A, or MusicXML from MuseScore/Finale. Type detected automatically.`, more:`One button for every musical file. ◆ MIDI (.mid / .midi) — multi-track condenses into chords, tempo-mapped, painted. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decoded, pitch-detected, painted; best on clean monophonic or sparse material (solo piano, vocal, simple guitar) — dense mixes are harder. ◆ Score (.musicxml .xml .mxl from MuseScore, Finale, Dorico) — pitches, durations, dynamics and chords all come through exact; the most accurate input there is. Paintiano detects the type automatically. Open Music without a file for a built-in sample. ◆ Hear image — when a music piece finishes painting, tap **Hear image** to send the painting itself through the picture scanner. Same painting, heard as a picture. Music ↔ painting, both ways.`},
     {id:'image', glyph:'📷', cat:'music', title:`Photo → music → painting`, body:`Drop in an image. Its colours and energy become a piano piece, then paint in any artist style. Free does Scan, Pro adds AI Compose.`, more:`Upload any image. Paintiano reads it as a score — left to right, top to bottom; length scales with the image's energy (~1½–2¾ min). ◆ The app picks the reading from how colourful the work is: colourful → Harmony or Spectral (hue=pitch, lightness=octave, vividness=loudness); near-monochrome (Guernica, ink, sepia) → B/W. ◆ Custom is yours: only colours close to your 12 swatches sound, the rest fall silent — filter Guernica through tropical pinks and see what survives. ◆ Two ways to play: SCAN reads the picture left-to-right as a score (choose the direction). AI COMPOSE (Pro) writes a whole new piece from the image's palette, energy and mood — and keeps the picture on screen while it plays.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Name a feeling`, body:`Tap ✦ how do you feel? Type any feeling, any language. AI writes a piano piece. Then Morph into another mood, or Vary for a fresh key.`, more:`Tap ✦ "how do you feel?" and type any feeling, in any language — furious, saudade, 3am drive, summer crush. AI writes a piano piece for it and the canvas fills chord by chord as it plays. After: ◆ ✦ MORPH crossfades one mood into another — first half A, second half B, a velocity blend in the 40–60% zone. ◆ ✦ VARY shifts the tonality to a new key (often major ↔ minor): the rhythm and structure stay locked, only the chords — and so the colours — change. Keep tapping for new keys. ◆ Free gets 3 trial AI calls (shared across Mood, Mood-from-image and AI Compose); Pro AI = unlimited.`},
     {id:'save', glyph:'💾', cat:'save', title:`Take both home`, body:`Save → PNG of the painting + audio of the music. Story mode crops it for Instagram / TikTok. Pro removes the watermark and lifts to 300 DPI.`, more:`Two diamonds — the picture and the music. ◆ ↓ SAVE exports your painting as a high-resolution PNG: Story (9:16) for IG/TikTok, Web/Social (~4×, feed-ready), or Print A0 · 300+ DPI (~20×, gallery-grade). Same song always gives the same painting — your songs have signatures now. ◆ ⏺ RECORD (image mode) captures the audio as the painting plays, straight to a shareable file; stops automatically when the piece ends. ◆ ♫ SCORE turns the painting's notes into a MusicXML file — open it in MuseScore, Sibelius or Finale; actual sheet music from a picture. ◆ Free exports carry a small watermark; Pro and Pro AI strip it and unlock the A0 · 300+ DPI size.`},
-    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, speed, loop, mute, clear`, body:`Play/pause and seek the bar. Speed 0.5×–2×. ⟳ Loop repeats. 🔊 Mute paints in silence. Clear resets — smartly, per mode.`, more:`The playback controls. ◆ Play starts and pauses (Space too); tap the progress bar to jump, drag to scrub. ◆ Speed: a chip shows the rate (1× default); tap to snap back to 1×, press-and-hold to cycle 0.5× → 2× and wrap. ◆ ⟳ LOOP keeps a mood piece repeating; gold when on. ◆ 🔊 / 🔇 Mute silences all audio while the painting still renders — remembered across sessions. ◆ Clear is mode-aware: Compose wipes the canvas and stays; MIC drops only the active mode's draft; Image wipes the painted trace and the picture; MIDI/audio/score/text mood do a full reset. ◆ If status says "loading piano…", wait a few seconds (~5 MB sample); it falls back to a synth if that fails.`},
+    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pause and seek the bar. ⟳ Loop repeats. 🔊 Mute paints in silence. Clear resets — smartly, per mode.`, more:`The playback controls. ◆ Play starts and pauses (Space too); tap the progress bar to jump, drag to scrub. ◆ ⟳ LOOP keeps a mood piece repeating; gold when on. ◆ 🔊 / 🔇 Mute silences all audio while the painting still renders — remembered across sessions. ◆ Clear is mode-aware: Compose wipes the canvas and stays; MIC drops only the active mode's draft; Image wipes the painted trace and the picture; MIDI/audio/score/text mood do a full reset. ◆ If status says "loading piano…", wait a few seconds (~5 MB sample); it falls back to a synth if that fails.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro unlocks all of it`, body:`Pro €9.99 → all 18 artists, editable Custom palette, no watermark, lifetime. Pro AI €19.99 adds unlimited AI moods, image compose, atmosphere.`, more:`Three tiers, all one-time payments. ◆ Free — 9 artists unlocked (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 paint types each; each has a Pro partner (tap an active artist again to see it). Custom palette is read-only, exports carry a watermark, AI features run on 3 trial credits. ◆ Pro €9.99 — all 18 artists, all paint types, editable Custom palette, 300 DPI exports without watermark, lifetime access; AI still from the shared 3-credit pool. ◆ Pro AI €19.99 — everything in Pro plus unlimited AI: text moods, Mood-from-image, AI Compose, AI Atmosphere. ◆ Credit costs: AI text & image compose = 1 each, Atmosphere = 0.5. ◆ Pay once, keep forever. No subscriptions. License works on up to 5 devices, one at a time.`}
   ],
   DE: [
@@ -16409,11 +17194,11 @@ const GUIDE_CARDS_I18N = {
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Würfel an = Überraschung`, body:`Gleicher Song = gleiches Bild, immer. Würfle und jedes Weiter malt einen anderen Künstler oder Mosaik-Stopp. Mosaik mit Würfel antippen sperrt den Zyklus.`, more:`Die deterministische Regel: gleicher Song · Tonart · Künstler · Stil → pixel-identisches Bild, immer. Der Würfel wählt nur, WELCHE Kombination als nächstes kommt, nie wie sie aussieht. ◆ ↻ Shuffle an, und der Weiter-Knopf erscheint. ◆ Mit gewähltem Künstler: Weiter springt zu einer zufälligen Variante dieses Künstlers. ◆ Ohne Künstler: Weiter wählt beides — zufälligen Künstler plus zufällige Variante. Der Pool enthält auch die drei Mosaik-Stopps, also kann Shuffle auf jeden davon landen. ◆ Mosaik mit eingeschaltetem Shuffle antippen sperrt den Zyklus auf nur diese drei (Mosaik → Noten → $1M$). ◆ Wieder auf dieselbe Kombination zu landen malt stets dasselbe Bild. ◆ Während ein Stück spielt, ersetzt ein ↻ Show-Knopf das Speichern: antippen und das Bild wechselt automatisch alle paar Sekunden (wie Next auf einem Timer) — eine freihändige Diashow; erneut antippen stoppt.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Dein Live-Klavier`, body:`Tippe ♪ Compose. Taste antippen = Stoß, halten = breiterer Block. Akkordnamen live. Backspace zurück, Leertaste Play.`, more:`Tippe ♪ COMPOSE (oder Enter). Das Klavier öffnet sich. Taste antippen = kurzer Stoß, halten = breiterer Block — länger halten, breiter malen. Hardware-Tastatur geht auch: A–L weiß, W/E/T/Y/U/O/P schwarz. Backspace = rückgängig, Leertaste = Play/Pause, Enter schaltet das Klavier um. Halte einen Akkord und sein Name (C-Dur, a-Moll, D7…) erscheint live. Die Leinwand ist ein fester Rahmen im goldenen Schnitt — Reihen schrumpfen, je mehr du hinzufügst, das Bild verdichtet sich. ◆ Mobil: alle 88 Tasten — wische horizontal zum Schwenken, C4 sitzt etwa mittig. ◆ Scale Snap: tippe ⚙, um alles Gespielte auf eine Tonart zu rasten; „Free" (Standard) bleibt voll chromatisch.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Sing es, mal es`, body:`Zwei MIC-Modi. 🔊 Music hört den Raum. 🎤 Voice rastet dein Summen auf C-Dur. Beide malen live. Original ⇄ Klavier-Umschalter danach.`, more:`Tippe 🎙 MIC. Die Leinwand öffnet scharf mit einem großen REC-Knopf. ◆ 🔊 Music (blau, Standard): hört, was im Raum läuft — Lautsprecher, Spotify, Umgebung — und malt Akkordwechsel still. Lange Aufnahmen willkommen; die Leinwand wächst nach unten. ◆ 🎤 Voice (rot): singen, summen, pfeifen. Tonhöhe rastet auf C-Dur, spielt durchs Klavier, malt Note für Note in festem φ-Rahmen. ◆ Das Badge oben links kippt music ⇄ voice; jeder behält seinen eigenen Entwurf (ein kleines ● heißt, einer wartet). Clear löscht nur den aktiven Modus. ◆ Beim Aufnehmen atmet die Leinwand sanft mit der Raumlautstärke — lauter drückt sie breiter, Stille lässt sie ruhen.`},
-    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, Audio oder Noten`, body:`Ein Knopf für jede Musikdatei. MIDI, MP3/WAV/M4A oder MusicXML aus MuseScore/Finale. Typ wird automatisch erkannt.`, more:`Ein Knopf für jede Musikdatei. ◆ MIDI (.mid / .midi) — Mehrspur kondensiert zu Akkorden, tempo-gemappt, gemalt. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekodiert, tonhöhenerkannt, gemalt; am besten bei klarem monophonem oder dünnem Material (Solo-Klavier, Gesang, einfache Gitarre) — dichte Mixe sind schwerer. ◆ Noten (.musicxml .xml .mxl aus MuseScore, Finale, Dorico) — Tonhöhen, Dauern, Dynamik und Akkorde kommen exakt durch; der genaueste Input überhaupt. Paintiano erkennt den Typ automatisch. Öffne Music ohne Datei für ein eingebautes Beispiel.`},
+    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, Audio oder Noten`, body:`Ein Knopf für jede Musikdatei. MIDI, MP3/WAV/M4A oder MusicXML aus MuseScore/Finale. Typ wird automatisch erkannt.`, more:`Ein Knopf für jede Musikdatei. ◆ MIDI (.mid / .midi) — Mehrspur kondensiert zu Akkorden, tempo-gemappt, gemalt. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekodiert, tonhöhenerkannt, gemalt; am besten bei klarem monophonem oder dünnem Material (Solo-Klavier, Gesang, einfache Gitarre) — dichte Mixe sind schwerer. ◆ Noten (.musicxml .xml .mxl aus MuseScore, Finale, Dorico) — Tonhöhen, Dauern, Dynamik und Akkorde kommen exakt durch; der genaueste Input überhaupt. Paintiano erkennt den Typ automatisch. Öffne Music ohne Datei für ein eingebautes Beispiel. ◆ Bild hören — wenn ein Musikstück fertig gemalt ist, tippe **Bild hören**, um das Bild selbst durch den Bildscanner laufen zu lassen. Dasselbe Bild, als Bild gehört. Musik ↔ Bild, in beide Richtungen.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → Musik → Bild`, body:`Droppe ein Bild. Seine Farben und Energie werden ein Klavierstück, dann malt es in jedem Künstlerstil. Free macht Scan, Pro fügt AI Compose hinzu.`, more:`Lade ein beliebiges Bild. Paintiano liest es als Partitur — links nach rechts, oben nach unten; die Länge skaliert mit der Energie des Bildes (~1½–2¾ Min). ◆ Die App wählt die Lesart danach, wie farbig das Werk ist: farbig → Harmonie oder Spektral (Farbton=Tonhöhe, Helligkeit=Oktave, Lebendigkeit=Lautstärke); fast monochrom (Guernica, Tusche, Sepia) → S/W. ◆ Custom ist deins: nur Farben nah deinen 12 klingen, der Rest verstummt — filtere Guernica durch tropische Pinks und sieh, was überlebt. ◆ Zwei Arten zu spielen: SCAN liest das Bild links-nach-rechts als Partitur (wähle die Richtung). AI COMPOSE (Pro) schreibt ein ganz neues Stück aus Palette, Energie und Stimmung des Bildes — und behält das Bild auf dem Schirm, während es spielt.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nenn ein Gefühl`, body:`Tippe ✦ wie fühlst du dich? Tippe jedes Gefühl, jede Sprache. KI schreibt ein Klavierstück. Dann Morph in eine andere Stimmung, oder Vary für eine frische Tonart.`, more:`Tippe ✦ „wie fühlst du dich?" und tippe jedes Gefühl, in jeder Sprache — wütend, saudade, 3-Uhr-Fahrt, Sommerschwarm. KI schreibt ein Klavierstück dafür und die Leinwand füllt sich Akkord für Akkord, während es spielt. Danach: ◆ ✦ MORPH blendet eine Stimmung in eine andere — erste Hälfte A, zweite B, ein Velocity-Blend in der 40–60%-Zone. ◆ ✦ VARY verschiebt die Tonart auf eine neue (oft Dur ↔ Moll): Rhythmus und Struktur bleiben gesperrt, nur die Akkorde — und somit die Farben — ändern sich. Tippe weiter für neue Tonarten. ◆ Free bekommt 3 Test-KI-Aufrufe (geteilt über Mood, Mood-from-image und AI Compose); Pro KI = unbegrenzt.`},
     {id:'save', glyph:'💾', cat:'save', title:`Nimm beides mit`, body:`Save → PNG des Bildes + Audio der Musik. Story-Modus schneidet für Instagram / TikTok. Pro entfernt das Wasserzeichen und hebt auf 300 DPI.`, more:`Zwei Diamanten — das Bild und die Musik. ◆ ↓ SAVE exportiert dein Bild als hochauflösendes PNG: Story (9:16) für IG/TikTok, Web/Social (~4×, feed-fertig), oder Print A0 · 300+ DPI (~20×, galeriereif). Gleicher Song gibt immer dasselbe Bild — deine Songs haben jetzt Signaturen. ◆ ⏺ RECORD (Bildmodus) nimmt das Audio auf, während das Bild spielt, direkt in eine teilbare Datei; stoppt automatisch am Stückende. ◆ ♫ SCORE wandelt die Noten des Bildes in eine MusicXML-Datei — öffne sie in MuseScore, Sibelius oder Finale; echte Noten aus einem Bild. ◆ Free-Exporte tragen ein kleines Wasserzeichen; Pro und Pro KI entfernen es und schalten die Größe A0 · 300+ DPI frei.`},
-    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, Tempo, Loop, Mute, Clear`, body:`Play/Pause und Leiste suchen. Tempo 0,5×–2×. ⟳ Loop wiederholt. 🔊 Mute malt in Stille. Clear setzt zurück — klug, je Modus.`, more:`Die Wiedergabe-Steuerung. ◆ Play startet und pausiert (auch Leertaste); tippe die Fortschrittsleiste zum Springen, ziehe zum Scrubben. ◆ Tempo: eine Kachel zeigt die Rate (1× Standard); tippen für zurück auf 1×, halten zum Zykeln 0,5× → 2× mit Umbruch. ◆ ⟳ LOOP lässt ein Stimmungsstück wiederholen; gold wenn an. ◆ 🔊 / 🔇 Mute stummschaltet alles Audio, während das Bild weiter entsteht — über Sitzungen gemerkt. ◆ Clear ist modusbewusst: Compose löscht die Leinwand und bleibt; MIC verwirft nur den Entwurf des aktiven Modus; Image löscht die gemalte Spur und das Bild; MIDI/Audio/Noten/Text-Stimmung machen einen vollen Reset. ◆ Steht da „loading piano…", warte ein paar Sekunden (~5 MB Sample); klappt das nicht, schaltet es auf ein Synth-Klavier.`},
+    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, Loop, Mute, Clear`, body:`Play/Pause und Leiste suchen. ⟳ Loop wiederholt. 🔊 Mute malt in Stille. Clear setzt zurück — klug, je Modus.`, more:`Die Wiedergabe-Steuerung. ◆ Play startet und pausiert (auch Leertaste); tippe die Fortschrittsleiste zum Springen, ziehe zum Scrubben. ◆ ⟳ LOOP lässt ein Stimmungsstück wiederholen; gold wenn an. ◆ 🔊 / 🔇 Mute stummschaltet alles Audio, während das Bild weiter entsteht — über Sitzungen gemerkt. ◆ Clear ist modusbewusst: Compose löscht die Leinwand und bleibt; MIC verwirft nur den Entwurf des aktiven Modus; Image löscht die gemalte Spur und das Bild; MIDI/Audio/Noten/Text-Stimmung machen einen vollen Reset. ◆ Steht da „loading piano…", warte ein paar Sekunden (~5 MB Sample); klappt das nicht, schaltet es auf ein Synth-Klavier.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro schaltet alles frei`, body:`Pro 9,99 € → alle 18 Künstler, editierbare Custom-Palette, kein Wasserzeichen, lebenslang. Pro KI 19,99 € fügt unbegrenzte KI-Stimmungen, Image-Compose, Atmosphäre hinzu.`, more:`Drei Stufen, alle Einmalzahlungen. ◆ Free — 9 Künstler freigeschaltet (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 Maltypen je; jeder hat einen Pro-Partner (aktiven Künstler erneut antippen). Custom-Palette schreibgeschützt, Exporte mit Wasserzeichen, KI-Features auf 3 Test-Credits. ◆ Pro 9,99 € — alle 18 Künstler, alle Maltypen, editierbare Custom-Palette, 300-DPI-Exporte ohne Wasserzeichen, lebenslanger Zugang; KI weiter aus dem geteilten 3-Credit-Pool. ◆ Pro KI 19,99 € — alles aus Pro plus unbegrenzte KI: Text-Stimmungen, Mood-from-image, AI Compose, AI Atmosphere. ◆ Credit-Kosten: KI Text & Image Compose = je 1, Atmosphere = 0,5. ◆ Einmal zahlen, für immer behalten. Keine Abos. Lizenz auf bis zu 5 Geräten, eines zur Zeit.`}
   ],
   FR: [
@@ -16430,11 +17215,11 @@ const GUIDE_CARDS_I18N = {
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Dés activés = surprise`, body:`Même morceau = même peinture, toujours. Lance les dés et chaque Suivant peint un autre artiste ou arrêt Mosaïque. Tape Mosaïque avec les dés pour verrouiller le cycle.`, more:`La règle déterministe : même morceau · tonalité · artiste · style → peinture pixel-identique, toujours. Les dés choisissent seulement QUELLE combinaison vient ensuite, jamais son apparence. ◆ Active ↻ Shuffle et le bouton Suivant apparaît. ◆ Avec un artiste choisi : Suivant saute à une variante aléatoire de cet artiste. ◆ Sans artiste : Suivant choisit les deux — artiste aléatoire plus variante aléatoire. Le pool inclut aussi les trois arrêts Mosaïque, donc shuffle peut tomber sur l'un d'eux. ◆ Tape Mosaïque avec Shuffle activé pour verrouiller le cycle à ces trois (Mosaïque → Notes → $1M$). ◆ Retomber sur la même combinaison repeint toujours l'image identique. ◆ Pendant la lecture, un bouton ↻ Show remplace Enregistrer : tape dessus et le tableau change tout seul toutes les quelques secondes (comme Next minuté) — un diaporama mains libres ; tape encore pour arrêter.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Ton piano en direct`, body:`Tape ♪ Compose. Tape une touche = coup, maintiens = bloc plus large. Noms d'accords en direct. Backspace annule, Espace joue.`, more:`Tape ♪ COMPOSE (ou Entrée). Le piano s'ouvre. Tape une touche = coup rapide, maintiens = bloc plus large — plus long maintien, plus large peinture. Le clavier matériel marche aussi : A–L blanches, W/E/T/Y/U/O/P noires. Backspace = annuler, Espace = play/pause, Entrée bascule le piano. Maintiens un accord et son nom (Do maj, La min, Ré7…) apparaît en direct. La toile est un cadre fixe au nombre d'or — les rangées rétrécissent à mesure que tu ajoutes, la peinture se densifie. ◆ Mobile : les 88 touches sont là — glisse horizontalement pour faire défiler, Do4 est à peu près au centre. ◆ Scale snap : tape ⚙ pour caler tout ce que tu joues sur une tonalité ; « Free » (défaut) reste pleinement chromatique.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Chante-le, peins-le`, body:`Deux modes MIC. 🔊 Music écoute la pièce. 🎤 Voice cale ton fredonnement sur Do majeur. Les deux peignent en direct. Bascule Original ⇄ Piano après.`, more:`Tape 🎙 MIC. La toile s'ouvre armée avec un gros bouton REC. ◆ 🔊 Music (bleu, défaut) : écoute ce qui joue dans la pièce — enceinte, Spotify, ambiance quelconque — et peint les changements d'accords en silence. Longs enregistrements bienvenus ; la toile grandit vers le bas. ◆ 🎤 Voice (rouge) : chante, fredonne ou siffle. La hauteur se cale sur Do majeur, joue via le piano, peint note par note dans un cadre φ fixe. ◆ Le badge en haut à gauche bascule music ⇄ voice ; chacun garde son propre brouillon (un petit ● signifie qu'un attend). Clear n'efface que le mode actif. ◆ Pendant l'enregistrement, la toile respire doucement avec le volume de la pièce — plus fort la pousse plus large, le silence la laisse reposer.`},
-    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio ou partition`, body:`Un bouton pour tout fichier musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Type détecté automatiquement.`, more:`Un bouton pour tout fichier musical. ◆ MIDI (.mid / .midi) — le multipiste se condense en accords, mappé au tempo, peint. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — décodé, hauteurs détectées, peint ; mieux sur matériel monophonique propre ou clairsemé (piano solo, voix, guitare simple) — les mix denses sont plus durs. ◆ Partition (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — hauteurs, durées, dynamiques et accords passent exacts ; l'entrée la plus précise qui soit. Paintiano détecte le type automatiquement. Ouvre Music sans fichier pour un exemple intégré.`},
+    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio ou partition`, body:`Un bouton pour tout fichier musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Type détecté automatiquement.`, more:`Un bouton pour tout fichier musical. ◆ MIDI (.mid / .midi) — le multipiste se condense en accords, mappé au tempo, peint. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — décodé, hauteurs détectées, peint ; mieux sur matériel monophonique propre ou clairsemé (piano solo, voix, guitare simple) — les mix denses sont plus durs. ◆ Partition (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — hauteurs, durées, dynamiques et accords passent exacts ; l'entrée la plus précise qui soit. Paintiano détecte le type automatiquement. Ouvre Music sans fichier pour un exemple intégré. ◆ Écouter l'image — quand un morceau finit de peindre, touche **Écouter l'image** pour repasser le tableau lui-même par le scanner d'image. Le même tableau, entendu comme une image. Musique ↔ peinture, dans les deux sens.`},
     {id:'image', glyph:'📷', cat:'music', title:`Photo → musique → peinture`, body:`Dépose une image. Ses couleurs et son énergie deviennent un morceau de piano, puis peint dans tout style d'artiste. Free fait Scan, Pro ajoute AI Compose.`, more:`Charge n'importe quelle image. Paintiano la lit comme une partition — de gauche à droite, de haut en bas ; la durée s'échelonne avec l'énergie de l'image (~1½–2¾ min). ◆ L'app choisit la lecture selon la couleur de l'œuvre : coloré → Harmonie ou Spectral (teinte=hauteur, luminosité=octave, vivacité=force) ; quasi monochrome (Guernica, encre, sépia) → N/B. ◆ Custom est à toi : seules les couleurs proches de tes 12 cases sonnent, le reste se tait — filtre Guernica par des roses tropicaux et vois ce qui survit. ◆ Deux façons de jouer : SCAN lit l'image de gauche à droite comme une partition (choisis le sens). AI COMPOSE (Pro) écrit un tout nouveau morceau à partir de la palette, l'énergie et l'humeur de l'image — et garde l'image à l'écran pendant qu'il joue.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nomme un ressenti`, body:`Tape ✦ comment tu te sens ? Tape n'importe quel ressenti, n'importe quelle langue. L'IA écrit un morceau. Puis Morph vers une autre humeur, ou Vary pour une tonalité neuve.`, more:`Tape ✦ « comment tu te sens ? » et tape n'importe quel ressenti, en n'importe quelle langue — furieux, saudade, virée à 3h, béguin d'été. L'IA écrit un morceau de piano pour lui et la toile se remplit accord par accord pendant qu'il joue. Après : ◆ ✦ MORPH fond une humeur dans une autre — première moitié A, seconde B, un mélange de vélocité dans la zone 40–60%. ◆ ✦ VARY décale la tonalité vers une nouvelle (souvent majeur ↔ mineur) : le rythme et la structure restent verrouillés, seuls les accords — et donc les couleurs — changent. Tape encore pour de nouvelles tonalités. ◆ Free reçoit 3 appels IA d'essai (partagés entre Mood, Mood-from-image et AI Compose) ; Pro IA = illimité.`},
     {id:'save', glyph:'💾', cat:'save', title:`Repars avec les deux`, body:`Save → PNG de la peinture + audio de la musique. Le mode Story recadre pour Instagram / TikTok. Pro retire le filigrane et monte à 300 DPI.`, more:`Deux diamants — l'image et la musique. ◆ ↓ SAVE exporte ta peinture en PNG haute résolution : Story (9:16) pour IG/TikTok, Web/Social (~4×, prêt pour le feed), ou Print A0 · 300+ DPI (~20×, qualité galerie). Même morceau donne toujours la même peinture — tes morceaux ont des signatures maintenant. ◆ ⏺ RECORD (mode image) capture l'audio pendant que la peinture joue, droit vers un fichier partageable ; s'arrête seul à la fin. ◆ ♫ SCORE transforme les notes de la peinture en fichier MusicXML — ouvre-le dans MuseScore, Sibelius ou Finale ; de vraies partitions à partir d'une image. ◆ Les exports Free portent un petit filigrane ; Pro et Pro IA le retirent et débloquent la taille A0 · 300+ DPI.`},
-    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, vitesse, loop, mute, clear`, body:`Play/pause et navigation. Vitesse 0,5×–2×. ⟳ Loop répète. 🔊 Mute peint en silence. Clear réinitialise — intelligemment, par mode.`, more:`Les commandes de lecture. ◆ Play démarre et met en pause (Espace aussi) ; tape la barre de progression pour sauter, glisse pour scruber. ◆ Vitesse : une tuile montre le taux (1× défaut) ; tape pour revenir à 1×, maintiens pour cycler 0,5× → 2× en boucle. ◆ ⟳ LOOP fait répéter une pièce d'humeur ; or quand actif. ◆ 🔊 / 🔇 Mute coupe tout l'audio pendant que la peinture continue — mémorisé entre sessions. ◆ Clear est sensible au mode : Compose efface la toile et reste ; MIC abandonne seulement le brouillon du mode actif ; Image efface la trace peinte et l'image ; MIDI/audio/partition/humeur texte font un reset complet. ◆ Si le statut dit « loading piano… », attends quelques secondes (~5 Mo d'échantillon) ; si ça échoue, il bascule sur un piano synthé.`},
+    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pause et navigation. ⟳ Loop répète. 🔊 Mute peint en silence. Clear réinitialise — intelligemment, par mode.`, more:`Les commandes de lecture. ◆ Play démarre et met en pause (Espace aussi) ; tape la barre de progression pour sauter, glisse pour scruber. ◆ ⟳ LOOP fait répéter une pièce d'humeur ; or quand actif. ◆ 🔊 / 🔇 Mute coupe tout l'audio pendant que la peinture continue — mémorisé entre sessions. ◆ Clear est sensible au mode : Compose efface la toile et reste ; MIC abandonne seulement le brouillon du mode actif ; Image efface la trace peinte et l'image ; MIDI/audio/partition/humeur texte font un reset complet. ◆ Si le statut dit « loading piano… », attends quelques secondes (~5 Mo d'échantillon) ; si ça échoue, il bascule sur un piano synthé.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro débloque tout`, body:`Pro 9,99 € → les 18 artistes, palette Custom éditable, sans filigrane, à vie. Pro IA 19,99 € ajoute humeurs IA illimitées, image compose, atmosphère.`, more:`Trois niveaux, tous en paiement unique. ◆ Free — 9 artistes débloqués (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 types de peinture chacun ; chacun a un partenaire Pro (retape un artiste actif). Palette Custom en lecture seule, exports avec filigrane, fonctions IA sur 3 crédits d'essai. ◆ Pro 9,99 € — les 18 artistes, tous les types de peinture, palette Custom éditable, exports 300 DPI sans filigrane, accès à vie ; l'IA vient toujours du pool partagé de 3 crédits. ◆ Pro IA 19,99 € — tout Pro plus IA illimitée : humeurs texte, Mood-from-image, AI Compose, AI Atmosphere. ◆ Coûts de crédit : IA texte & image compose = 1 chacun, Atmosphere = 0,5. ◆ Paie une fois, garde pour toujours. Aucun abonnement. La licence marche sur jusqu'à 5 appareils, un à la fois.`}
   ],
   ES: [
@@ -16451,11 +17236,11 @@ const GUIDE_CARDS_I18N = {
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Dados activos = sorpresa`, body:`Misma canción = misma pintura, siempre. Tira los dados y cada Siguiente pinta otro artista o parada Mosaico. Toca Mosaico con dados para bloquear el ciclo.`, more:`La regla determinista: misma canción · tonalidad · artista · estilo → pintura idéntica al píxel, siempre. Los dados solo eligen QUÉ combinación viene después, nunca cómo se ve. ◆ Activa ↻ Shuffle y aparece el botón Siguiente. ◆ Con un artista elegido: Siguiente salta a una variante aleatoria de ese artista. ◆ Sin artista: Siguiente elige ambos — artista aleatorio más variante aleatoria. El pool incluye también las tres paradas Mosaico, así shuffle puede caer en cualquiera. ◆ Toca Mosaico con Shuffle activo para bloquear el ciclo solo a esas tres (Mosaico → Notas → $1M$). ◆ Volver a la misma combinación siempre repinta la imagen idéntica. ◆ Mientras suena una pieza, un botón ↻ Show reemplaza a Guardar: tócalo y la pintura avanza sola cada pocos segundos (como Next con temporizador), un pase automático; tócalo de nuevo para parar.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Tu piano en vivo`, body:`Toca ♪ Compose. Toca una tecla = golpe, mantén = bloque más ancho. Nombres de acordes en vivo. Backspace deshace, Espacio reproduce.`, more:`Toca ♪ COMPOSE (o Enter). Se abre el piano. Toca una tecla = golpe rápido, mantén = bloque más ancho — más tiempo, más ancha la pintura. El teclado físico también: A–L blancas, W/E/T/Y/U/O/P negras. Backspace = deshacer, Espacio = play/pausa, Enter alterna el piano. Mantén un acorde y su nombre (Do may, La min, Re7…) aparece en vivo. El lienzo es un marco fijo en proporción áurea — las filas encogen al añadir, la pintura se densifica. ◆ Móvil: las 88 teclas están ahí — desliza horizontal para desplazar, Do4 queda casi al centro. ◆ Scale snap: toca ⚙ para ajustar todo lo que tocas a una tonalidad; «Free» (defecto) sigue plenamente cromático.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Cántalo, píntalo`, body:`Dos modos MIC. 🔊 Music escucha la sala. 🎤 Voice ajusta tu tarareo a Do mayor. Ambos pintan en vivo. Alterna Original ⇄ Piano después.`, more:`Toca 🎙 MIC. El lienzo se abre armado con un gran botón REC. ◆ 🔊 Music (azul, defecto): escucha lo que suena en la sala — altavoz, Spotify, ambiente cualquiera — y pinta cambios de acorde en silencio. Grabaciones largas bienvenidas; el lienzo crece hacia abajo. ◆ 🎤 Voice (rojo): canta, tararea o silba. La altura se ajusta a Do mayor, suena por el piano, pinta nota a nota en marco φ fijo. ◆ La insignia arriba a la izquierda alterna music ⇄ voice; cada uno guarda su borrador (un pequeño ● indica que uno espera). Clear borra solo el modo activo. ◆ Al grabar, el lienzo respira suave con el volumen de la sala — más fuerte lo empuja más ancho, el silencio lo deja descansar.`},
-    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio o partitura`, body:`Un botón para todo archivo musical. MIDI, MP3/WAV/M4A, o MusicXML de MuseScore/Finale. Tipo detectado automáticamente.`, more:`Un botón para todo archivo musical. ◆ MIDI (.mid / .midi) — el multipista se condensa en acordes, mapeado al tempo, pintado. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decodificado, alturas detectadas, pintado; mejor en material monofónico limpio o escaso (piano solo, voz, guitarra simple) — las mezclas densas cuestan más. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, duraciones, dinámicas y acordes pasan exactos; la entrada más precisa que hay. Paintiano detecta el tipo automáticamente. Abre Music sin archivo para una muestra integrada.`},
+    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio o partitura`, body:`Un botón para todo archivo musical. MIDI, MP3/WAV/M4A, o MusicXML de MuseScore/Finale. Tipo detectado automáticamente.`, more:`Un botón para todo archivo musical. ◆ MIDI (.mid / .midi) — el multipista se condensa en acordes, mapeado al tempo, pintado. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decodificado, alturas detectadas, pintado; mejor en material monofónico limpio o escaso (piano solo, voz, guitarra simple) — las mezclas densas cuestan más. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, duraciones, dinámicas y acordes pasan exactos; la entrada más precisa que hay. Paintiano detecta el tipo automáticamente. Abre Music sin archivo para una muestra integrada. ◆ Oír imagen — cuando una pieza musical termina de pintar, pulsa **Oír imagen** para pasar el cuadro mismo por el escáner de imagen. El mismo cuadro, escuchado como imagen. Música ↔ pintura, en ambos sentidos.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Suelta una imagen. Sus colores y energía se vuelven una pieza de piano, luego pinta en cualquier estilo. Free hace Scan, Pro añade AI Compose.`, more:`Sube cualquier imagen. Paintiano la lee como partitura — de izquierda a derecha, de arriba abajo; la duración escala con la energía de la imagen (~1½–2¾ min). ◆ La app elige la lectura según lo colorida que sea: colorida → Armonía o Espectral (tono=altura, luminosidad=octava, viveza=volumen); casi monocroma (Guernica, tinta, sepia) → B/N. ◆ Custom es tuyo: solo suenan los colores cercanos a tus 12 muestras, el resto calla — filtra Guernica por rosas tropicales y mira qué sobrevive. ◆ Dos formas de tocar: SCAN lee la imagen de izquierda a derecha como partitura (elige la dirección). AI COMPOSE (Pro) escribe una pieza nueva a partir de la paleta, energía y ánimo de la imagen — y mantiene la imagen en pantalla mientras suena.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nombra un sentir`, body:`Toca ✦ ¿cómo te sientes? Escribe cualquier sentir, cualquier idioma. La IA escribe una pieza. Luego Morph a otro ánimo, o Vary para una tonalidad nueva.`, more:`Toca ✦ «¿cómo te sientes?» y escribe cualquier sentir, en cualquier idioma — furioso, saudade, manejar a las 3am, amor de verano. La IA escribe una pieza de piano para ello y el lienzo se llena acorde por acorde mientras suena. Después: ◆ ✦ MORPH funde un ánimo en otro — primera mitad A, segunda B, una mezcla de velocidad en la zona 40–60%. ◆ ✦ VARY desplaza la tonalidad a una nueva (a menudo mayor ↔ menor): el ritmo y la estructura quedan fijos, solo cambian los acordes — y por tanto los colores. Sigue tocando para nuevas tonalidades. ◆ Free recibe 3 llamadas IA de prueba (compartidas entre Mood, Mood-from-image y AI Compose); Pro IA = ilimitado.`},
     {id:'save', glyph:'💾', cat:'save', title:`Llévate ambos`, body:`Save → PNG de la pintura + audio de la música. El modo Story recorta para Instagram / TikTok. Pro quita la marca de agua y sube a 300 DPI.`, more:`Dos diamantes — la imagen y la música. ◆ ↓ SAVE exporta tu pintura como PNG de alta resolución: Story (9:16) para IG/TikTok, Web/Social (~4×, listo para el feed), o Print A0 · 300+ DPI (~20×, calidad galería). La misma canción siempre da la misma pintura — tus canciones tienen firmas ahora. ◆ ⏺ RECORD (modo imagen) captura el audio mientras la pintura suena, directo a un archivo compartible; se detiene solo al acabar. ◆ ♫ SCORE convierte las notas de la pintura en un archivo MusicXML — ábrelo en MuseScore, Sibelius o Finale; partituras reales desde una imagen. ◆ Los exports Free llevan una pequeña marca de agua; Pro y Pro IA la quitan y desbloquean el tamaño A0 · 300+ DPI.`},
-    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, velocidad, loop, mute, clear`, body:`Play/pausa y navegar la barra. Velocidad 0,5×–2×. ⟳ Loop repite. 🔊 Mute pinta en silencio. Clear reinicia — listo, por modo.`, more:`Los controles de reproducción. ◆ Play inicia y pausa (Espacio también); toca la barra de progreso para saltar, arrastra para hacer scrub. ◆ Velocidad: una baldosa muestra la tasa (1× defecto); toca para volver a 1×, mantén para ciclar 0,5× → 2× y dar la vuelta. ◆ ⟳ LOOP mantiene una pieza de ánimo repitiendo; oro cuando está activo. ◆ 🔊 / 🔇 Mute silencia todo el audio mientras la pintura sigue generándose — recordado entre sesiones. ◆ Clear es consciente del modo: Compose borra el lienzo y se queda; MIC descarta solo el borrador del modo activo; Image borra el trazo pintado y la imagen; MIDI/audio/partitura/ánimo de texto hacen un reinicio completo. ◆ Si el estado dice «loading piano…», espera unos segundos (~5 MB de muestra); si falla, pasa a un piano sintético.`},
+    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pausa y navegar la barra. ⟳ Loop repite. 🔊 Mute pinta en silencio. Clear reinicia — listo, por modo.`, more:`Los controles de reproducción. ◆ Play inicia y pausa (Espacio también); toca la barra de progreso para saltar, arrastra para hacer scrub. ◆ ⟳ LOOP mantiene una pieza de ánimo repitiendo; oro cuando está activo. ◆ 🔊 / 🔇 Mute silencia todo el audio mientras la pintura sigue generándose — recordado entre sesiones. ◆ Clear es consciente del modo: Compose borra el lienzo y se queda; MIC descarta solo el borrador del modo activo; Image borra el trazo pintado y la imagen; MIDI/audio/partitura/ánimo de texto hacen un reinicio completo. ◆ Si el estado dice «loading piano…», espera unos segundos (~5 MB de muestra); si falla, pasa a un piano sintético.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloquea todo`, body:`Pro 9,99 € → los 18 artistas, paleta Custom editable, sin marca de agua, de por vida. Pro IA 19,99 € añade ánimos IA ilimitados, image compose, atmósfera.`, more:`Tres niveles, todos pago único. ◆ Free — 9 artistas desbloqueados (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) más 2 tipos de pintura cada uno; cada uno tiene un socio Pro (toca de nuevo un artista activo). Paleta Custom de solo lectura, exports con marca de agua, funciones IA con 3 créditos de prueba. ◆ Pro 9,99 € — los 18 artistas, todos los tipos de pintura, paleta Custom editable, exports 300 DPI sin marca de agua, acceso de por vida; la IA sigue del pool compartido de 3 créditos. ◆ Pro IA 19,99 € — todo Pro más IA ilimitada: ánimos de texto, Mood-from-image, AI Compose, AI Atmosphere. ◆ Costes de crédito: IA texto e image compose = 1 cada uno, Atmosphere = 0,5. ◆ Paga una vez, quédatelo para siempre. Sin suscripciones. La licencia funciona en hasta 5 dispositivos, uno a la vez.`}
   ],
   SK: [
@@ -16472,11 +17257,11 @@ const GUIDE_CARDS_I18N = {
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Kocka on = prekvapenie`, body:`Tá istá pieseň = tá istá maľba, vždy. Hoď kocku a každý Next maľuje iného umelca alebo Mosaic stop. Klik na Mosaic s kockou uzamkne cyklus.`, more:`Deterministické pravidlo: tá istá pieseň · tónina · umelec · štýl → pixelovo identická maľba, vždy. Kocka len vyberá, KTORÁ kombinácia príde ďalšia, nikdy ako vyzerá. ◆ Zapni ↻ Shuffle a objaví sa tlačidlo Next. ◆ So zvoleným umelcom: Next skočí na náhodný variant toho umelca. ◆ Bez umelca: Next vyberie oboje — náhodného umelca aj náhodný variant. Pool zahŕňa aj tri Mosaic stopy, takže shuffle môže padnúť na ktorúkoľvek. ◆ Klik na Mosaic so zapnutým Shuffle uzamkne cyklus len na tie tri (Mosaic → Noty → $1M$). ◆ Návrat na tú istú kombináciu vždy prekreslí identický obraz. ◆ Kým skladba hrá, tlačidlo ↻ Show nahradí Uložiť: ťukni a obraz sa automaticky strieda každých pár sekúnd (ako Next na časovači) — bezdotykové pásmo; ďalší ťuk zastaví.`},
     {id:'compose', glyph:'♪', cat:'music', title:`Tvoj živý klavír`, body:`Klikni ♪ Compose. Klik na kláves = úder, podrž = širší blok. Názvy akordov naživo. Backspace späť, Space play.`, more:`Klikni ♪ COMPOSE (alebo Enter). Otvorí sa klavír. Klik na kláves = rýchly úder, podrž = širší blok — dlhšie držanie, širšia maľba. Funguje aj hardvérová klávesnica: A–L biele, W/E/T/Y/U/O/P čierne. Backspace = späť, Space = play/pause, Enter prepína klavír. Podrž akord a jeho názov (C dur, A mol, D7…) sa zjaví naživo. Plátno je pevný rám zlatého rezu — riadky sa zmenšujú, ako pridávaš, maľba hustne. ◆ Mobil: celých 88 klávesov — potiahni vodorovne na posun, C4 je zhruba v strede. ◆ Scale snap: klikni ⚙ a všetko, čo hráš, prichytíš na tóninu; „Free" (default) ostáva plne chromatický.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Zaspievaj, namaľuj`, body:`Dva MIC módy. 🔊 Music počúva miestnosť. 🎤 Voice prichytí tvoj humming na C dur. Oba maľujú live. Original ⇄ Piano prepínač potom.`, more:`Klikni 🎙 MIC. Plátno sa otvorí nabité veľkým REC tlačidlom. ◆ 🔊 Music (modrá, default): počúva, čo hrá v miestnosti — reproduktor, Spotify, ambient čokoľvek — a ticho maľuje zmeny akordov. Dlhé nahrávky vítané; plátno rastie nadol. ◆ 🎤 Voice (červená): spievaj, hum alebo pískaj. Tón sa prichytí na C dur, hrá cez klavír, maľuje tón po tóne v pevnom φ-ráme. ◆ Odznak vľavo hore prepína music ⇄ voice; každý drží vlastný draft (malé ● znamená, že jeden čaká). Clear zmaže len aktívny mód. ◆ Počas nahrávania plátno jemne dýcha s hlasitosťou miestnosti — hlasnejšie ho potlačí širšie, ticho ho nechá oddýchnuť.`},
-    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio či noty`, body:`Jedno tlačidlo pre každý hudobný súbor. MIDI, MP3/WAV/M4A, alebo MusicXML z MuseScore/Finale. Typ sa rozpozná automaticky.`, more:`Jedno tlačidlo pre každý hudobný súbor. ◆ MIDI (.mid / .midi) — multi-track sa zhustí na akordy, tempo-mapuje, maľuje. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekóduje, deteguje tóny, maľuje; najlepšie na čistý monofónny alebo riedky materiál (sólo klavír, vokál, jednoduchá gitara) — husté mixy sú ťažšie. ◆ Noty (.musicxml .xml .mxl z MuseScore, Finale, Dorico) — tóny, trvania, dynamika aj akordy prejdú presne; najpresnejší vstup, aký je. Paintiano rozpozná typ automaticky. Otvor Music bez súboru pre vstavanú ukážku.`},
+    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio či noty`, body:`Jedno tlačidlo pre každý hudobný súbor. MIDI, MP3/WAV/M4A, alebo MusicXML z MuseScore/Finale. Typ sa rozpozná automaticky.`, more:`Jedno tlačidlo pre každý hudobný súbor. ◆ MIDI (.mid / .midi) — multi-track sa zhustí na akordy, tempo-mapuje, maľuje. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekóduje, deteguje tóny, maľuje; najlepšie na čistý monofónny alebo riedky materiál (sólo klavír, vokál, jednoduchá gitara) — husté mixy sú ťažšie. ◆ Noty (.musicxml .xml .mxl z MuseScore, Finale, Dorico) — tóny, trvania, dynamika aj akordy prejdú presne; najpresnejší vstup, aký je. Paintiano rozpozná typ automaticky. Otvor Music bez súboru pre vstavanú ukážku. ◆ Počuť obraz — keď hudobná skladba dokončí maľovanie, klepni **Počuť obraz** a obraz sám pošli cez obrazový skener. Ten istý obraz, počutý ako obrázok. Hudba ↔ maľba, oboma smermi.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → hudba → maľba`, body:`Hoď fotku. Jej farby a energia sa stanú klavírnou skladbou, potom maľuje v štýle umelca. Free robí Scan, Pro pridáva AI Compose.`, more:`Nahraj akýkoľvek obrázok. Paintiano ho číta ako partitúru — zľava doprava, zhora nadol; dĺžka škáluje s energiou obrázka (~1½–2¾ min). ◆ App vyberie čítanie podľa toho, aký farebný je: farebný → Harmónia alebo Spektrum (odtieň=tón, svetlosť=oktáva, živosť=hlasitosť); takmer monochromatický (Guernica, tuš, sépia) → B/W. ◆ Custom je tvoj: znejú len farby blízke tvojim 12, zvyšok stíchne — prefiltruj Guernicu cez tropické ružové a uvidíš, čo prežije. ◆ Dva spôsoby hry: SCAN číta obrázok zľava doprava ako partitúru (vyber smer). AI COMPOSE (Pro) napíše celkom novú skladbu z palety, energie a nálady obrázka — a nechá obraz na obrazovke, kým hrá.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Pomenuj pocit`, body:`Klikni ✦ ako sa cítiš? Napíš akýkoľvek pocit, akýkoľvek jazyk. AI napíše klavírnu skladbu. Potom Morph do inej nálady, alebo Vary pre novú tóninu.`, more:`Klikni ✦ „ako sa cítiš?" a napíš akýkoľvek pocit, v akomkoľvek jazyku — zúrivý, saudade, 3am drive, letná láska. AI preň napíše klavírnu skladbu a plátno sa plní akord po akorde, ako hrá. Potom: ◆ ✦ MORPH prelína jednu náladu do druhej — prvá polovica A, druhá B, dynamický blend v zóne 40–60%. ◆ ✦ VARY posunie tóninu na novú (často dur ↔ mol): rytmus a štruktúra ostávajú zamknuté, menia sa len akordy — a teda farby. Klikaj ďalej pre nové tóniny. ◆ Free dostane 3 skúšobné AI volania (zdieľané cez Mood, Mood-from-image a AI Compose); Pro AI = neobmedzene.`},
     {id:'save', glyph:'💾', cat:'save', title:`Odnes si oboje`, body:`Save → PNG maľby + audio piesne. Story mód oreže pre Instagram / TikTok. Pro odstráni watermark a zdvihne na 300 DPI.`, more:`Dva diamanty — obraz a hudba. ◆ ↓ SAVE exportuje maľbu ako PNG vo vysokom rozlíšení: Story (9:16) pre IG/TikTok, Web/Social (~4×, do feedu), alebo Print A0 · 300+ DPI (~20×, galériová kvalita). Tá istá pieseň vždy dá tú istú maľbu — tvoje piesne majú teraz podpisy. ◆ ⏺ RECORD (image mód) zachytí audio, ako maľba hrá, rovno do zdieľateľného súboru; zastaví sa, keď skladba skončí. ◆ ♫ SCORE premení noty maľby na MusicXML — otvor ho v MuseScore, Sibelius či Finale; skutočné noty z obrázka. ◆ Free exporty nesú malý watermark; Pro a Pro AI ho odstránia a odomknú veľkosť A0 · 300+ DPI.`},
-    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, rýchlosť, loop, mute, clear`, body:`Play/pauza a posun lišty. Rýchlosť 0,5×–2×. ⟳ Loop opakuje. 🔊 Mute maľuje v tichu. Clear resetuje — chytro, podľa módu.`, more:`Ovládanie prehrávania. ◆ Play spustí a pozastaví (aj Space); klik na lištu skočí, ťahaj na scrub. ◆ Rýchlosť: dlaždica ukáže rate (1× default); klik vráti na 1×, podrž a cykluj 0,5× → 2× s prebalením. ◆ ⟳ LOOP necháva náladovú skladbu opakovať; zlatá keď je zapnutá. ◆ 🔊 / 🔇 Mute stíši všetko audio, kým maľba stále vzniká — pamätá sa medzi sedeniami. ◆ Clear je mód-citlivý: Compose zmaže plátno a ostane; MIC zahodí len draft aktívneho módu; Image zmaže maľovanú stopu aj obrázok; MIDI/audio/noty/text mood spravia plný reset. ◆ Ak status hovorí „loading piano…", počkaj pár sekúnd (~5 MB sample); ak to zlyhá, prepne na syntetický klavír.`},
+    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pauza a posun lišty. ⟳ Loop opakuje. 🔊 Mute maľuje v tichu. Clear resetuje — chytro, podľa módu.`, more:`Ovládanie prehrávania. ◆ Play spustí a pozastaví (aj Space); klik na lištu skočí, ťahaj na scrub. ◆ ⟳ LOOP necháva náladovú skladbu opakovať; zlatá keď je zapnutá. ◆ 🔊 / 🔇 Mute stíši všetko audio, kým maľba stále vzniká — pamätá sa medzi sedeniami. ◆ Clear je mód-citlivý: Compose zmaže plátno a ostane; MIC zahodí len draft aktívneho módu; Image zmaže maľovanú stopu aj obrázok; MIDI/audio/noty/text mood spravia plný reset. ◆ Ak status hovorí „loading piano…", počkaj pár sekúnd (~5 MB sample); ak to zlyhá, prepne na syntetický klavír.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro odomkne všetko`, body:`Pro €9.99 → všetkých 18 umelcov, editovateľná Custom paleta, bez watermarku, doživotne. Pro AI €19.99 pridáva neobmedzené AI moody, image compose, atmosphere.`, more:`Tri úrovne, všetky jednorazové platby. ◆ Free — 9 umelcov odomknutých (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) plus 2 typy maľby na každého; každý má Pro partnera (klikni aktívneho umelca znova). Custom paleta len na čítanie, exporty s watermarkom, AI funkcie na 3 skúšobné kredity. ◆ Pro €9.99 — všetkých 18 umelcov, všetky typy maľby, editovateľná Custom paleta, 300 DPI exporty bez watermarku, doživotný prístup; AI stále zo zdieľaného 3-kreditového poolu. ◆ Pro AI €19.99 — všetko z Pro plus neobmedzené AI: textové moody, Mood-from-image, AI Compose, AI Atmosphere. ◆ Ceny kreditov: AI text & image compose = 1 každý, Atmosphere = 0,5. ◆ Zaplať raz, maj navždy. Žiadne predplatné. Licencia funguje na max 5 zariadeniach, jedno naraz.`}
   ],
   PT: [
@@ -16493,11 +17278,11 @@ const GUIDE_CARDS_I18N = {
     {id:'shuffle', glyph:'🎲', cat:'style', title:`Dados ligados = surpresa`, body:`Mesma canção = mesma pintura, sempre. Lança os dados e cada Seguinte pinta outro artista ou paragem Mosaico. Toca Mosaico com dados para travar o ciclo.`, more:`A regra determinística: mesma canção · tonalidade · artista · estilo → pintura idêntica ao píxel, sempre. Os dados só escolhem QUE combinação vem a seguir, nunca como se vê. ◆ Liga ↻ Shuffle e aparece o botão Seguinte. ◆ Com um artista escolhido: Seguinte salta para uma variante aleatória desse artista. ◆ Sem artista: Seguinte escolhe ambos — artista aleatório mais variante aleatória. O pool inclui também as três paragens Mosaico, por isso o shuffle pode cair em qualquer uma. ◆ Toca Mosaico com Shuffle ligado para travar o ciclo só nessas três (Mosaico → Notas → $1M$). ◆ Voltar à mesma combinação repinta sempre a imagem idêntica. ◆ Enquanto uma peça toca, um botão ↻ Show substitui Salvar: toca nele e a pintura avança sozinha a cada poucos segundos (como o Next num temporizador) — uma apresentação sem mãos; toca de novo para parar.`},
     {id:'compose', glyph:'♪', cat:'music', title:`O teu piano ao vivo`, body:`Toca ♪ Compose. Toca uma tecla = batida, segura = bloco mais largo. Nomes de acordes ao vivo. Backspace desfaz, Espaço toca.`, more:`Toca ♪ COMPOSE (ou Enter). O piano abre. Toca uma tecla = batida rápida, segura = bloco mais largo — mais tempo, pintura mais larga. O teclado físico também funciona: A–L brancas, W/E/T/Y/U/O/P pretas. Backspace = desfazer, Espaço = play/pausa, Enter alterna o piano. Segura um acorde e o seu nome (Dó maior, Lá menor, Ré7…) aparece ao vivo. A tela é uma moldura fixa em proporção áurea — as linhas encolhem à medida que adicionas, a pintura adensa. ◆ Móvel: as 88 teclas estão lá — desliza horizontal para percorrer, Dó4 fica quase ao centro. ◆ Scale snap: toca ⚙ para encaixar tudo o que tocas numa tonalidade; «Free» (padrão) fica plenamente cromático.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Canta, pinta`, body:`Dois modos MIC. 🔊 Music ouve a sala. 🎤 Voice encaixa o teu trautear em Dó maior. Ambos pintam ao vivo. Alterna Original ⇄ Piano depois.`, more:`Toca 🎙 MIC. A tela abre armada com um grande botão REC. ◆ 🔊 Music (azul, padrão): ouve o que toca na sala — coluna, Spotify, ambiente qualquer — e pinta mudanças de acorde em silêncio. Gravações longas bem-vindas; a tela cresce para baixo. ◆ 🎤 Voice (vermelho): canta, trauteia ou assobia. A altura encaixa em Dó maior, toca pelo piano, pinta nota a nota numa moldura φ fixa. ◆ O emblema no topo esquerdo alterna music ⇄ voice; cada um guarda o seu rascunho (um pequeno ● indica que um espera). Clear apaga só o modo ativo. ◆ Ao gravar, a tela respira suave com o volume da sala — mais alto empurra-a mais larga, o silêncio deixa-a descansar.`},
-    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, áudio ou partitura`, body:`Um botão para todo ficheiro musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Tipo detetado automaticamente.`, more:`Um botão para todo ficheiro musical. ◆ MIDI (.mid / .midi) — multi-faixa condensa em acordes, mapeado ao tempo, pintado. ◆ Áudio (.mp3 .wav .m4a .ogg .aac) — descodificado, alturas detetadas, pintado; melhor em material monofónico limpo ou esparso (piano solo, voz, guitarra simples) — misturas densas são mais difíceis. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, durações, dinâmicas e acordes passam exatos; a entrada mais precisa que há. O Paintiano deteta o tipo automaticamente. Abre Music sem ficheiro para uma amostra integrada.`},
+    {id:'music', glyph:'🎵', cat:'music', title:`MIDI, áudio ou partitura`, body:`Um botão para todo ficheiro musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Tipo detetado automaticamente.`, more:`Um botão para todo ficheiro musical. ◆ MIDI (.mid / .midi) — multi-faixa condensa em acordes, mapeado ao tempo, pintado. ◆ Áudio (.mp3 .wav .m4a .ogg .aac) — descodificado, alturas detetadas, pintado; melhor em material monofónico limpo ou esparso (piano solo, voz, guitarra simples) — misturas densas são mais difíceis. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, durações, dinâmicas e acordes passam exatos; a entrada mais precisa que há. O Paintiano deteta o tipo automaticamente. Abre Music sem ficheiro para uma amostra integrada. ◆ Ouvir imagem — quando uma peça musical termina de pintar, toca em **Ouvir imagem** para passar o próprio quadro pelo scanner de imagem. O mesmo quadro, ouvido como imagem. Música ↔ pintura, nos dois sentidos.`},
     {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Larga uma imagem. As suas cores e energia tornam-se uma peça de piano, depois pinta em qualquer estilo. Free faz Scan, Pro adiciona AI Compose.`, more:`Carrega qualquer imagem. O Paintiano lê-a como partitura — da esquerda para a direita, de cima para baixo; a duração escala com a energia da imagem (~1½–2¾ min). ◆ A app escolhe a leitura pela cor da obra: colorida → Harmonia ou Espectral (tom=altura, luminosidade=oitava, vivacidade=volume); quase monocromática (Guernica, tinta, sépia) → P&B. ◆ Custom é teu: só soam as cores próximas das tuas 12 amostras, o resto cala — filtra a Guernica por rosas tropicais e vê o que sobrevive. ◆ Duas formas de tocar: SCAN lê a imagem da esquerda para a direita como partitura (escolhe a direção). AI COMPOSE (Pro) escreve uma peça nova a partir da paleta, energia e estado da imagem — e mantém a imagem no ecrã enquanto toca.`},
     {id:'moods', glyph:'✦', cat:'music', title:`Nomeia um sentir`, body:`Toca ✦ como te sentes? Escreve qualquer sentir, qualquer língua. A IA escreve uma peça. Depois Morph para outro estado, ou Vary para uma tonalidade nova.`, more:`Toca ✦ «como te sentes?» e escreve qualquer sentir, em qualquer língua — furioso, saudade, conduzir às 3 da manhã, paixão de verão. A IA escreve uma peça de piano para ele e a tela enche-se acorde a acorde enquanto toca. Depois: ◆ ✦ MORPH funde um estado noutro — primeira metade A, segunda B, uma mistura de velocidade na zona 40–60%. ◆ ✦ VARY desloca a tonalidade para uma nova (muitas vezes maior ↔ menor): o ritmo e a estrutura ficam travados, só os acordes — e portanto as cores — mudam. Continua a tocar para novas tonalidades. ◆ Free recebe 3 chamadas IA de teste (partilhadas entre Mood, Mood-from-image e AI Compose); Pro IA = ilimitado.`},
     {id:'save', glyph:'💾', cat:'save', title:`Leva os dois`, body:`Save → PNG da pintura + áudio da música. O modo Story recorta para Instagram / TikTok. Pro remove a marca de água e sobe para 300 DPI.`, more:`Dois diamantes — a imagem e a música. ◆ ↓ SAVE exporta a tua pintura como PNG de alta resolução: Story (9:16) para IG/TikTok, Web/Social (~4×, pronto para o feed), ou Print A0 · 300+ DPI (~20×, qualidade de galeria). A mesma canção dá sempre a mesma pintura — as tuas canções têm assinaturas agora. ◆ ⏺ RECORD (modo imagem) captura o áudio enquanto a pintura toca, direto para um ficheiro partilhável; para sozinho ao terminar. ◆ ♫ SCORE transforma as notas da pintura num ficheiro MusicXML — abre-o no MuseScore, Sibelius ou Finale; partituras reais a partir de uma imagem. ◆ Os exports Free levam uma pequena marca de água; Pro e Pro IA removem-na e desbloqueiam o tamanho A0 · 300+ DPI.`},
-    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, velocidade, loop, mute, clear`, body:`Play/pausa e navegar a barra. Velocidade 0,5×–2×. ⟳ Loop repete. 🔊 Mute pinta em silêncio. Clear reinicia — esperto, por modo.`, more:`Os controlos de reprodução. ◆ Play inicia e pausa (Espaço também); toca a barra de progresso para saltar, arrasta para fazer scrub. ◆ Velocidade: um ladrilho mostra a taxa (1× padrão); toca para voltar a 1×, segura para ciclar 0,5× → 2× e dar a volta. ◆ ⟳ LOOP mantém uma peça de estado a repetir; dourado quando ligado. ◆ 🔊 / 🔇 Mute silencia todo o áudio enquanto a pintura continua a gerar-se — lembrado entre sessões. ◆ Clear é consciente do modo: Compose apaga a tela e fica; MIC descarta só o rascunho do modo ativo; Image apaga o traço pintado e a imagem; MIDI/áudio/partitura/estado de texto fazem um reset completo. ◆ Se o estado diz «loading piano…», espera uns segundos (~5 MB de amostra); se falhar, passa para um piano sintético.`},
+    {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pausa e navegar a barra. ⟳ Loop repete. 🔊 Mute pinta em silêncio. Clear reinicia — esperto, por modo.`, more:`Os controlos de reprodução. ◆ Play inicia e pausa (Espaço também); toca a barra de progresso para saltar, arrasta para fazer scrub. ◆ ⟳ LOOP mantém uma peça de estado a repetir; dourado quando ligado. ◆ 🔊 / 🔇 Mute silencia todo o áudio enquanto a pintura continua a gerar-se — lembrado entre sessões. ◆ Clear é consciente do modo: Compose apaga a tela e fica; MIC descarta só o rascunho do modo ativo; Image apaga o traço pintado e a imagem; MIDI/áudio/partitura/estado de texto fazem um reset completo. ◆ Se o estado diz «loading piano…», espera uns segundos (~5 MB de amostra); se falhar, passa para um piano sintético.`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloqueia tudo`, body:`Pro 9,99 € → todos os 18 artistas, paleta Custom editável, sem marca de água, vitalício. Pro IA 19,99 € adiciona estados IA ilimitados, image compose, atmosfera.`, more:`Três níveis, todos pagamento único. ◆ Free — 9 artistas desbloqueados (Picasso, Pollock, Kusama, Mondrian, Klimt, Vasarely, af Klint, Haring, Monet) mais 2 tipos de pintura cada; cada um tem um parceiro Pro (toca de novo num artista ativo). Paleta Custom só de leitura, exports com marca de água, funções IA com 3 créditos de teste. ◆ Pro 9,99 € — todos os 18 artistas, todos os tipos de pintura, paleta Custom editável, exports 300 DPI sem marca de água, acesso vitalício; a IA continua do pool partilhado de 3 créditos. ◆ Pro IA 19,99 € — tudo do Pro mais IA ilimitada: estados de texto, Mood-from-image, AI Compose, AI Atmosphere. ◆ Custos de crédito: IA texto e image compose = 1 cada, Atmosphere = 0,5. ◆ Paga uma vez, fica para sempre. Sem subscrições. A licença funciona em até 5 dispositivos, um de cada vez.`}
   ],
   zh: [
@@ -16514,11 +17299,11 @@ const GUIDE_CARDS_I18N = {
     {id:'shuffle', glyph:'🎲', cat:'style', title:`骰子开 = 惊喜`, body:`同一首歌 = 同一幅画,始终。掷骰子,每个 Next 画出不同艺术家或马赛克站点。骰子开时点马赛克,把循环锁在那三站。`, more:`确定性法则:同一首歌 · 调性 · 艺术家 · 风格 → 像素级相同的画,始终。骰子只选「哪个」组合下一个出现,从不改变它的样子。◆ 打开 ↻ Shuffle,Next 按钮出现。◆ 选了艺术家:Next 跳到该艺术家的一个随机变体。◆ 没选艺术家:Next 两者都选——随机艺术家加随机变体。池子也含三个马赛克站点,所以 shuffle 可落在其中任一个。◆ Shuffle 开时点马赛克,把循环锁在那三个(马赛克 → 音符 → $1M$)。◆ 重新落到同一组合总会重绘相同的图。◆ 播放时，↻ Show 按钮会取代保存：点它，画作每隔几秒自动切换（像定时的 Next），形成免手放映；再点一次停止。`},
     {id:'compose', glyph:'♪', cat:'music', title:`你的现场钢琴`, body:`点 ♪ Compose。点键 = 一击,按住 = 更宽的块。和弦名实时显示。Backspace 撤销,空格播放。`, more:`点 ♪ COMPOSE(或按 Enter)。钢琴打开。点键 = 快速一击,按住 = 更宽的块——按得越久,画得越宽。硬件键盘也行:A–L 白键,W/E/T/Y/U/O/P 黑键。Backspace = 撤销,空格 = 播放/暂停,Enter 切换钢琴。按住一个和弦,它的名字(C 大、A 小、D7…)实时出现。画布是固定的黄金比例框——添加越多,行越缩,画越密。◆ 移动端:全部 88 键都在——横向滑动来平移,C4 大致居中。◆ 音阶吸附:点 ⚙ 把你弹的一切吸附到某个调;「Free」(默认)保持完全半音。`},
     {id:'mic', glyph:'🎙', cat:'music', title:`唱出来,画出来`, body:`两个 MIC 模式。🔊 Music 听房间。🎤 Voice 把你的哼唱吸附到 C 大调。两者都实时画。之后切换 Original ⇄ Piano。`, more:`点 🎙 MIC。画布以一个大 REC 按钮就绪打开。◆ 🔊 Music(蓝,默认):听房间里在放的——音箱、Spotify、任何环境声——并静默地画和弦变化。欢迎长录;画布向下生长。◆ 🎤 Voice(红):唱、哼或吹口哨。音高吸附到 C 大调,经钢琴发声,在固定 φ 框里逐音作画。◆ 左上角徽章翻转 music ⇄ voice;每个保留自己的草稿(小 ● 表示有一个在等)。Clear 只擦除当前模式。◆ 录制时,画布随房间音量轻轻呼吸——更响把它推得更宽,安静让它歇息。`},
-    {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音频或乐谱`, body:`一个按钮搞定每种音乐文件。MIDI、MP3/WAV/M4A,或来自 MuseScore/Finale 的 MusicXML。类型自动识别。`, more:`一个按钮搞定每种音乐文件。◆ MIDI(.mid / .midi)——多轨凝缩成和弦,按速度映射,作画。◆ 音频(.mp3 .wav .m4a .ogg .aac)——解码、检测音高、作画;在干净的单音或稀疏素材(独奏钢琴、人声、简单吉他)上最佳——密集混音更难。◆ 乐谱(.musicxml .xml .mxl 来自 MuseScore、Finale、Dorico)——音高、时值、力度、和弦全都精确通过;现有最准确的输入。Paintiano 自动识别类型。不带文件打开 Music 可得内置示例。`},
+    {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音频或乐谱`, body:`一个按钮搞定每种音乐文件。MIDI、MP3/WAV/M4A,或来自 MuseScore/Finale 的 MusicXML。类型自动识别。`, more:`一个按钮搞定每种音乐文件。◆ MIDI(.mid / .midi)——多轨凝缩成和弦,按速度映射,作画。◆ 音频(.mp3 .wav .m4a .ogg .aac)——解码、检测音高、作画;在干净的单音或稀疏素材(独奏钢琴、人声、简单吉他)上最佳——密集混音更难。◆ 乐谱(.musicxml .xml .mxl 来自 MuseScore、Finale、Dorico)——音高、时值、力度、和弦全都精确通过;现有最准确的输入。Paintiano 自动识别类型。不带文件打开 Music 可得内置示例。◆ 听画 —— 当一首乐曲画完后，点击 **听画** 让画作本身穿过图像扫描器。同一幅画，作为图像被听到。音乐 ↔ 绘画，双向通行。`},
     {id:'image', glyph:'📷', cat:'music', title:`照片 → 音乐 → 绘画`, body:`丢入一张图。它的颜色和能量变成一段钢琴曲,然后以任一艺术家风格作画。Free 做 Scan,Pro 增加 AI Compose。`, more:`上传任意图像。Paintiano 把它当乐谱读——从左到右、从上到下;时长随图像能量缩放(约 1½–2¾ 分钟)。◆ 应用按作品有多彩来选读法:多彩 → 和声或光谱(色相=音高,明度=八度,鲜艳=响度);近单色(格尔尼卡、水墨、棕褐)→ 黑白。◆ 自定义是你的:只有接近你 12 格的颜色发声,其余静默——把格尔尼卡过滤成热带粉,看看什么存活。◆ 两种播放方式:SCAN 把图从左到右当乐谱读(选扫描方向)。AI COMPOSE(Pro)从图的调色、能量与情绪写一整首新曲——播放时把图留在屏上。`},
     {id:'moods', glyph:'✦', cat:'music', title:`说出一种感受`, body:`点 ✦ 你感觉如何?输入任何感受、任何语言。AI 写一段钢琴曲。然后 Morph 进另一种情绪,或 Vary 换一个新调。`, more:`点 ✦「你感觉如何?」,输入任何感受、用任何语言——愤怒、saudade、凌晨三点开车、夏日心动。AI 为它写一段钢琴曲,播放时画布逐和弦填满。之后:◆ ✦ MORPH 把一种情绪交叉淡入另一种——前半是 A,后半是 B,在 40–60% 区做力度混合。◆ ✦ VARY 把调性移到一个新调(常是大 ↔ 小):节奏与结构锁定,只有和弦——从而颜色——改变。继续点换新调。◆ Free 得 3 次试用 AI 调用(在 Mood、Mood-from-image 和 AI Compose 间共享);Pro AI = 无限。`},
     {id:'save', glyph:'💾', cat:'save', title:`两者都带走`, body:`Save → 画作的 PNG + 音乐的音频。Story 模式为 Instagram / TikTok 裁切。Pro 去掉水印并提升到 300 DPI。`, more:`两颗钻石——图与乐。◆ ↓ SAVE 把你的画导出为高分辨率 PNG:Story(9:16)给 IG/TikTok,Web/Social(约 4×,适合信息流),或 Print A0 · 300+ DPI(约 20×,画廊级)。同一首歌总给同样的画——你的歌现在有了签名。◆ ⏺ RECORD(图像模式)在画作播放时录下音频,直接成可分享文件;乐曲结束自动停止。◆ ♫ SCORE 把画作的音符变成 MusicXML 文件——在 MuseScore、Sibelius 或 Finale 打开;由一张图生成真正的乐谱。◆ Free 导出带小水印;Pro 与 Pro AI 去掉它并解锁 A0 · 300+ DPI 尺寸。`},
-    {id:'tools', glyph:'🎛', cat:'tools', title:`播放、速度、循环、静音、清除`, body:`播放/暂停并拖进度条。速度 0.5×–2×。⟳ 循环重复。🔊 静音在无声中作画。Clear 智能重置,按模式。`, more:`播放控制。◆ 播放开始并暂停(空格也行);点进度条跳转,拖动来 scrub。◆ 速度:一个方块显示倍率(默认 1×);点击回到 1×,按住循环 0.5× → 2× 并回绕。◆ ⟳ LOOP 让情绪曲重复;开启时为金色。◆ 🔊 / 🔇 静音在画作仍照常生成时静掉所有音频——跨会话记住。◆ Clear 感知模式:Compose 擦画布并留下;MIC 只丢当前模式的草稿;Image 擦掉画的痕迹和图;MIDI/音频/乐谱/文字情绪做完整重置。◆ 若状态显示「loading piano…」,等几秒(约 5 MB 采样);若失败,切换到合成钢琴。`},
+    {id:'tools', glyph:'🎛', cat:'tools', title:`播放、循环、静音、清除`, body:`播放/暂停并拖进度条。⟳ 循环重复。🔊 静音在无声中作画。Clear 智能重置,按模式。`, more:`播放控制。◆ 播放开始并暂停(空格也行);点进度条跳转,拖动来 scrub。◆ ⟳ LOOP 让情绪曲重复;开启时为金色。◆ 🔊 / 🔇 静音在画作仍照常生成时静掉所有音频——跨会话记住。◆ Clear 感知模式:Compose 擦画布并留下;MIC 只丢当前模式的草稿;Image 擦掉画的痕迹和图;MIDI/音频/乐谱/文字情绪做完整重置。◆ 若状态显示「loading piano…」,等几秒(约 5 MB 采样);若失败,切换到合成钢琴。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解锁一切`, body:`Pro €9.99 → 全部 18 位艺术家、可编辑自定义调色板、无水印、终身。Pro AI €19.99 增加无限 AI 情绪、image compose、氛围。`, more:`三个级别,全是一次性付款。◆ Free——解锁 9 位艺术家(毕加索、波洛克、草间、蒙德里安、克里姆特、瓦萨雷里、阿夫·克林特、哈林、莫奈)外加每位 2 种绘法;每位有一个 Pro 搭档(再点一次激活的艺术家)。自定义调色板只读,导出带水印,AI 功能用 3 个试用额度。◆ Pro €9.99——全部 18 位艺术家、每位所有绘法、可编辑自定义调色板、无水印的 300 DPI 导出、终身访问;AI 仍来自共享的 3 额度池。◆ Pro AI €19.99——Pro 的一切外加无限 AI:文字情绪、Mood-from-image、AI Compose、AI Atmosphere。◆ 额度成本:AI 文字与 image compose = 各 1,Atmosphere = 0.5。◆ 一次付清,永久拥有。无订阅。许可证可用于至多 5 台设备,一次一台。`}
   ],
   zhTW: [
@@ -16535,11 +17320,11 @@ const GUIDE_CARDS_I18N = {
     {id:'shuffle', glyph:'🎲', cat:'style', title:`骰子開 = 驚喜`, body:`同一首歌 = 同一幅畫,始終。擲骰子,每個 Next 畫出不同藝術家或馬賽克站點。骰子開時點馬賽克,把循環鎖在那三站。`, more:`確定性法則:同一首歌 · 調性 · 藝術家 · 風格 → 像素級相同的畫,始終。骰子只選「哪個」組合下一個出現,從不改變它的樣子。◆ 打開 ↻ Shuffle,Next 按鈕出現。◆ 選了藝術家:Next 跳到該藝術家的一個隨機變體。◆ 沒選藝術家:Next 兩者都選——隨機藝術家加隨機變體。池子也含三個馬賽克站點,所以 shuffle 可落在其中任一個。◆ Shuffle 開時點馬賽克,把循環鎖在那三個(馬賽克 → 音符 → $1M$)。◆ 重新落到同一組合總會重繪相同的圖。◆ 播放時，↻ Show 按鈕會取代儲存：點它，畫作每隔幾秒自動切換（像定時的 Next），形成免手放映；再點一次停止。`},
     {id:'compose', glyph:'♪', cat:'music', title:`你的現場鋼琴`, body:`點 ♪ Compose。點鍵 = 一擊,按住 = 更寬的塊。和弦名即時顯示。Backspace 復原,空格播放。`, more:`點 ♪ COMPOSE(或按 Enter)。鋼琴打開。點鍵 = 快速一擊,按住 = 更寬的塊——按得越久,畫得越寬。硬體鍵盤也行:A–L 白鍵,W/E/T/Y/U/O/P 黑鍵。Backspace = 復原,空格 = 播放/暫停,Enter 切換鋼琴。按住一個和弦,它的名字(C 大、A 小、D7…)即時出現。畫布是固定的黃金比例框——添加越多,行越縮,畫越密。◆ 行動端:全部 88 鍵都在——橫向滑動來平移,C4 大致置中。◆ 音階吸附:點 ⚙ 把你彈的一切吸附到某個調;「Free」(預設)保持完全半音。`},
     {id:'mic', glyph:'🎙', cat:'music', title:`唱出來,畫出來`, body:`兩個 MIC 模式。🔊 Music 聽房間。🎤 Voice 把你的哼唱吸附到 C 大調。兩者都即時畫。之後切換 Original ⇄ Piano。`, more:`點 🎙 MIC。畫布以一個大 REC 按鈕就緒打開。◆ 🔊 Music(藍,預設):聽房間裡在放的——喇叭、Spotify、任何環境聲——並靜默地畫和弦變化。歡迎長錄;畫布向下生長。◆ 🎤 Voice(紅):唱、哼或吹口哨。音高吸附到 C 大調,經鋼琴發聲,在固定 φ 框裡逐音作畫。◆ 左上角徽章翻轉 music ⇄ voice;每個保留自己的草稿(小 ● 表示有一個在等)。Clear 只擦除當前模式。◆ 錄製時,畫布隨房間音量輕輕呼吸——更響把它推得更寬,安靜讓它歇息。`},
-    {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音訊或樂譜`, body:`一個按鈕搞定每種音樂檔。MIDI、MP3/WAV/M4A,或來自 MuseScore/Finale 的 MusicXML。類型自動辨識。`, more:`一個按鈕搞定每種音樂檔。◆ MIDI(.mid / .midi)——多軌凝縮成和弦,按速度映射,作畫。◆ 音訊(.mp3 .wav .m4a .ogg .aac)——解碼、偵測音高、作畫;在乾淨的單音或稀疏素材(獨奏鋼琴、人聲、簡單吉他)上最佳——密集混音更難。◆ 樂譜(.musicxml .xml .mxl 來自 MuseScore、Finale、Dorico)——音高、時值、力度、和弦全都精確通過;現有最準確的輸入。Paintiano 自動辨識類型。不帶檔案打開 Music 可得內建範例。`},
+    {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音訊或樂譜`, body:`一個按鈕搞定每種音樂檔。MIDI、MP3/WAV/M4A,或來自 MuseScore/Finale 的 MusicXML。類型自動辨識。`, more:`一個按鈕搞定每種音樂檔。◆ MIDI(.mid / .midi)——多軌凝縮成和弦,按速度映射,作畫。◆ 音訊(.mp3 .wav .m4a .ogg .aac)——解碼、偵測音高、作畫;在乾淨的單音或稀疏素材(獨奏鋼琴、人聲、簡單吉他)上最佳——密集混音更難。◆ 樂譜(.musicxml .xml .mxl 來自 MuseScore、Finale、Dorico)——音高、時值、力度、和弦全都精確通過;現有最準確的輸入。Paintiano 自動辨識類型。不帶檔案打開 Music 可得內建範例。◆ 聽畫 —— 當一首樂曲畫完後，點擊 **聽畫** 讓畫作本身穿過圖像掃描器。同一幅畫，作為圖像被聽到。音樂 ↔ 繪畫，雙向通行。`},
     {id:'image', glyph:'📷', cat:'music', title:`照片 → 音樂 → 繪畫`, body:`丟入一張圖。它的顏色和能量變成一段鋼琴曲,然後以任一藝術家風格作畫。Free 做 Scan,Pro 增加 AI Compose。`, more:`上傳任意圖像。Paintiano 把它當樂譜讀——從左到右、從上到下;時長隨圖像能量縮放(約 1½–2¾ 分鐘)。◆ 應用按作品有多彩來選讀法:多彩 → 和聲或光譜(色相=音高,明度=八度,鮮豔=響度);近單色(格爾尼卡、水墨、棕褐)→ 黑白。◆ 自訂是你的:只有接近你 12 格的顏色發聲,其餘靜默——把格爾尼卡濾成熱帶粉,看看什麼存活。◆ 兩種播放方式:SCAN 把圖從左到右當樂譜讀(選掃描方向)。AI COMPOSE(Pro)從圖的調色、能量與情緒寫一整首新曲——播放時把圖留在螢幕上。`},
     {id:'moods', glyph:'✦', cat:'music', title:`說出一種感受`, body:`點 ✦ 你感覺如何?輸入任何感受、任何語言。AI 寫一段鋼琴曲。然後 Morph 進另一種情緒,或 Vary 換一個新調。`, more:`點 ✦「你感覺如何?」,輸入任何感受、用任何語言——憤怒、saudade、凌晨三點開車、夏日心動。AI 為它寫一段鋼琴曲,播放時畫布逐和弦填滿。之後:◆ ✦ MORPH 把一種情緒交叉淡入另一種——前半是 A,後半是 B,在 40–60% 區做力度混合。◆ ✦ VARY 把調性移到一個新調(常是大 ↔ 小):節奏與結構鎖定,只有和弦——從而顏色——改變。繼續點換新調。◆ Free 得 3 次試用 AI 呼叫(在 Mood、Mood-from-image 和 AI Compose 間共享);Pro AI = 無限。`},
     {id:'save', glyph:'💾', cat:'save', title:`兩者都帶走`, body:`Save → 畫作的 PNG + 音樂的音訊。Story 模式為 Instagram / TikTok 裁切。Pro 去掉浮水印並提升到 300 DPI。`, more:`兩顆鑽石——圖與樂。◆ ↓ SAVE 把你的畫匯出為高解析度 PNG:Story(9:16)給 IG/TikTok,Web/Social(約 4×,適合動態消息),或 Print A0 · 300+ DPI(約 20×,畫廊級)。同一首歌總給同樣的畫——你的歌現在有了簽名。◆ ⏺ RECORD(圖像模式)在畫作播放時錄下音訊,直接成可分享檔案;樂曲結束自動停止。◆ ♫ SCORE 把畫作的音符變成 MusicXML 檔——在 MuseScore、Sibelius 或 Finale 打開;由一張圖生成真正的樂譜。◆ Free 匯出帶小浮水印;Pro 與 Pro AI 去掉它並解鎖 A0 · 300+ DPI 尺寸。`},
-    {id:'tools', glyph:'🎛', cat:'tools', title:`播放、速度、循環、靜音、清除`, body:`播放/暫停並拖進度條。速度 0.5×–2×。⟳ 循環重複。🔊 靜音在無聲中作畫。Clear 智慧重置,按模式。`, more:`播放控制。◆ 播放開始並暫停(空格也行);點進度條跳轉,拖動來 scrub。◆ 速度:一個方塊顯示倍率(預設 1×);點擊回到 1×,按住循環 0.5× → 2× 並回繞。◆ ⟳ LOOP 讓情緒曲重複;開啟時為金色。◆ 🔊 / 🔇 靜音在畫作仍照常生成時靜掉所有音訊——跨工作階段記住。◆ Clear 感知模式:Compose 擦畫布並留下;MIC 只丟當前模式的草稿;Image 擦掉畫的痕跡和圖;MIDI/音訊/樂譜/文字情緒做完整重置。◆ 若狀態顯示「loading piano…」,等幾秒(約 5 MB 取樣);若失敗,切換到合成鋼琴。`},
+    {id:'tools', glyph:'🎛', cat:'tools', title:`播放、循環、靜音、清除`, body:`播放/暫停並拖進度條。⟳ 循環重複。🔊 靜音在無聲中作畫。Clear 智慧重置,按模式。`, more:`播放控制。◆ 播放開始並暫停(空格也行);點進度條跳轉,拖動來 scrub。◆ ⟳ LOOP 讓情緒曲重複;開啟時為金色。◆ 🔊 / 🔇 靜音在畫作仍照常生成時靜掉所有音訊——跨工作階段記住。◆ Clear 感知模式:Compose 擦畫布並留下;MIC 只丟當前模式的草稿;Image 擦掉畫的痕跡和圖;MIDI/音訊/樂譜/文字情緒做完整重置。◆ 若狀態顯示「loading piano…」,等幾秒(約 5 MB 取樣);若失敗,切換到合成鋼琴。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖一切`, body:`Pro €9.99 → 全部 18 位藝術家、可編輯自訂調色盤、無浮水印、終身。Pro AI €19.99 增加無限 AI 情緒、image compose、氛圍。`, more:`三個級別,全是一次性付款。◆ Free——解鎖 9 位藝術家(畢卡索、波洛克、草間、蒙德里安、克林姆、瓦沙雷利、阿夫·克林特、哈林、莫內)外加每位 2 種繪法;每位有一個 Pro 搭檔(再點一次啟用的藝術家)。自訂調色盤唯讀,匯出帶浮水印,AI 功能用 3 個試用額度。◆ Pro €9.99——全部 18 位藝術家、每位所有繪法、可編輯自訂調色盤、無浮水印的 300 DPI 匯出、終身存取;AI 仍來自共享的 3 額度池。◆ Pro AI €19.99——Pro 的一切外加無限 AI:文字情緒、Mood-from-image、AI Compose、AI Atmosphere。◆ 額度成本:AI 文字與 image compose = 各 1,Atmosphere = 0.5。◆ 一次付清,永久擁有。無訂閱。授權可用於至多 5 台裝置,一次一台。`}
   ],
   ja: [
@@ -16556,11 +17341,11 @@ const GUIDE_CARDS_I18N = {
     {id:'shuffle', glyph:'🎲', cat:'style', title:`サイコロ オン = 驚き`, body:`同じ曲 = 同じ絵、いつも。サイコロを振れば各 Next が別のアーティストかモザイク停留を描く。サイコロオンでモザイクをタップして循環をロック。`, more:`決定論的な規則:同じ曲 · 調性 · アーティスト · スタイル → ピクセル単位で同一の絵、いつも。サイコロは「どの」組み合わせが次に出るかだけを選び、見た目は決して変えない。◆ ↻ Shuffle をオンにすると Next ボタンが現れる。◆ アーティストを選んだ場合:Next はそのアーティストのランダムなバリアントへ飛ぶ。◆ アーティストなし:Next は両方を選ぶ——ランダムなアーティストとランダムなバリアント。プールには三つのモザイク停留も含まれ、shuffle はそのどれにも着地しうる。◆ Shuffle オンでモザイクをタップすれば循環をその三つだけにロック(モザイク → 音符 → $1M$)。◆ 同じ組み合わせに再着地すれば必ず同一の絵を描き直す。◆ 再生中は ↻ Show ボタンが保存の代わりに現れる。タップすると数秒ごとに絵が自動で切り替わり（タイマー式の Next のように）、手を使わないスライドショーになる。もう一度タップで停止。`},
     {id:'compose', glyph:'♪', cat:'music', title:`あなたのライブピアノ`, body:`♪ Compose をタップ。鍵をタップ = 一撃、長押し = より広いブロック。和音名がライブで。Backspace で取消、スペースで再生。`, more:`♪ COMPOSE をタップ(または Enter)。ピアノが開く。鍵をタップ = 素早い一撃、長押し = より広いブロック——長く押すほど広く描く。ハードウェアキーボードも:A–L 白鍵、W/E/T/Y/U/O/P 黒鍵。Backspace = 取消、スペース = 再生/停止、Enter でピアノ切替。和音を押さえるとその名(C メジャー、A マイナー、D7…)がライブで現れる。キャンバスは固定の黄金比フレーム——足すほど行が縮み、絵が密になる。◆ モバイル:88 鍵すべてある——横にスワイプしてパン、C4 はほぼ中央。◆ スケールスナップ:⚙ をタップで弾く全てを調にスナップ;「Free」(既定)は完全に半音のまま。`},
     {id:'mic', glyph:'🎙', cat:'music', title:`歌って、描いて`, body:`二つの MIC モード。🔊 Music は部屋を聞く。🎤 Voice はあなたのハミングを C メジャーにスナップ。両方ライブで描く。後で Original ⇄ Piano 切替。`, more:`🎙 MIC をタップ。キャンバスが大きな REC ボタンと共に構えて開く。◆ 🔊 Music(青、既定):部屋で流れているもの——スピーカー、Spotify、何でも環境音——を聞き、和音変化を静かに描く。長い録音歓迎;キャンバスは下へ伸びる。◆ 🎤 Voice(赤):歌う、ハミング、口笛。音高は C メジャーにスナップし、ピアノを通して鳴り、固定 φ フレームで一音ずつ描く。◆ 左上のバッジが music ⇄ voice を切替;各モードは自分の下書きを保つ(小さな ● は一つ待っている印)。Clear はアクティブなモードだけ消す。◆ 録音中、キャンバスは部屋の音量と共にそっと呼吸する——大きいと少し広く押し、静けさは休ませる。`},
-    {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音声、楽譜`, body:`あらゆる音楽ファイルに一つのボタン。MIDI、MP3/WAV/M4A、または MuseScore/Finale の MusicXML。種類は自動判別。`, more:`あらゆる音楽ファイルに一つのボタン。◆ MIDI(.mid / .midi)——マルチトラックが和音に凝縮、テンポマップされ、描かれる。◆ 音声(.mp3 .wav .m4a .ogg .aac)——デコードされ、音高検出され、描かれる;きれいな単音または疎な素材(ソロピアノ、声、シンプルなギター)で最良——密なミックスは難しい。◆ 楽譜(.musicxml .xml .mxl、MuseScore・Finale・Dorico から)——音高、長さ、強弱、和音すべて正確に通る;現存する最も正確な入力。Paintiano は種類を自動判別。ファイルなしで Music を開けば内蔵サンプル。`},
+    {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音声、楽譜`, body:`あらゆる音楽ファイルに一つのボタン。MIDI、MP3/WAV/M4A、または MuseScore/Finale の MusicXML。種類は自動判別。`, more:`あらゆる音楽ファイルに一つのボタン。◆ MIDI(.mid / .midi)——マルチトラックが和音に凝縮、テンポマップされ、描かれる。◆ 音声(.mp3 .wav .m4a .ogg .aac)——デコードされ、音高検出され、描かれる;きれいな単音または疎な素材(ソロピアノ、声、シンプルなギター)で最良——密なミックスは難しい。◆ 楽譜(.musicxml .xml .mxl、MuseScore・Finale・Dorico から)——音高、長さ、強弱、和音すべて正確に通る;現存する最も正確な入力。Paintiano は種類を自動判別。ファイルなしで Music を開けば内蔵サンプル。◆ 絵を聴く — 楽曲が描き終わったら、**絵を聴く** をタップ。絵そのものを画像スキャナーに通す。同じ絵を、画像として聴く。音楽 ↔ 絵画、双方向。`},
     {id:'image', glyph:'📷', cat:'music', title:`写真 → 音楽 → 絵画`, body:`画像をドロップ。その色とエネルギーがピアノ曲になり、好きなアーティストのスタイルで描く。Free は Scan、Pro は AI Compose を追加。`, more:`どんな画像でもアップロード。Paintiano はそれを楽譜として読む——左から右、上から下;長さは画像のエネルギーで変わる(約 1½–2¾ 分)。◆ アプリは作品がどれだけ色鮮やかかで読みを選ぶ:色鮮やか → ハーモニーかスペクトル(色相=音高、明度=八度、鮮やかさ=音量);ほぼ単色(ゲルニカ、墨、セピア)→ 白黒。◆ カスタムはあなたのもの:あなたの 12 色に近い色だけが鳴り、残りは静まる——ゲルニカを熱帯ピンクで濾して何が生き残るか見る。◆ 二つの再生法:SCAN は画像を左から右へ楽譜として読む(走査方向を選ぶ)。AI COMPOSE(Pro)は画像のパレット・エネルギー・気分から全く新しい曲を書く——再生中は画像を画面に残す。`},
     {id:'moods', glyph:'✦', cat:'music', title:`感情に名前を`, body:`✦ どんな気分? をタップ。どんな感情でも、どんな言語でも打つ。AI が一曲書く。その後 Morph で別の気分へ、Vary で新しい調へ。`, more:`✦「どんな気分?」をタップし、どんな感情でも、どんな言語でも打つ——激怒、サウダージ、午前3時のドライブ、夏の片思い。AI がそれにピアノ曲を書き、再生中キャンバスが和音ごとに満ちる。その後:◆ ✦ MORPH は一つの気分を別の気分へクロスフェード——前半が A、後半が B、40–60% ゾーンでベロシティをブレンド。◆ ✦ VARY は調性を新しい調へずらす(しばしば長 ↔ 短):リズムと構造はロックされ、和音——ゆえに色——だけが変わる。タップし続けて新しい調へ。◆ Free は試用 AI 呼び出しを 3 回(Mood、Mood-from-image、AI Compose で共有);Pro AI = 無制限。`},
     {id:'save', glyph:'💾', cat:'save', title:`両方を持ち帰る`, body:`Save → 絵の PNG + 音楽の音声。Story モードが Instagram / TikTok 用に切り抜く。Pro はウォーターマークを外し 300 DPI に上げる。`, more:`二つのダイヤ——絵と音楽。◆ ↓ SAVE は絵を高解像度 PNG に書き出す:Story(9:16)は IG/TikTok 用、Web/Social(約 4×、フィード向き)、または Print A0 · 300+ DPI(約 20×、ギャラリー級)。同じ曲はいつも同じ絵を与える——あなたの曲には今や署名がある。◆ ⏺ RECORD(画像モード)は絵が再生される間に音声を録り、共有可能なファイルへ直接;曲が終わると自動停止。◆ ♫ SCORE は絵の音符を MusicXML ファイルにする——MuseScore、Sibelius、Finale で開く;一枚の絵から本物の楽譜。◆ Free の書き出しには小さなウォーターマーク;Pro と Pro AI はそれを外し A0 · 300+ DPI サイズを解放する。`},
-    {id:'tools', glyph:'🎛', cat:'tools', title:`再生・速度・ループ・ミュート・消去`, body:`再生/停止とバー移動。速度 0.5×–2×。⟳ ループで繰返し。🔊 ミュートで無音で描く。Clear はモードごとに賢くリセット。`, more:`再生コントロール。◆ 再生は開始と停止(スペースも);進捗バーをタップでジャンプ、ドラッグでスクラブ。◆ 速度:タイルが倍率を示す(既定 1×);タップで 1× へ戻し、長押しで 0.5× → 2× を循環し回り込む。◆ ⟳ LOOP は気分の曲を繰り返させる;オンで金色。◆ 🔊 / 🔇 ミュートは絵が通常通り生成される間、全音声を消す——セッションをまたいで記憶。◆ Clear はモードを意識する:Compose はキャンバスを消して留まる;MIC はアクティブなモードの下書きだけ捨てる;Image は描いた跡と画像を消す;MIDI/音声/楽譜/テキスト気分は完全リセット。◆ 状態が「loading piano…」と出たら数秒待つ(約 5 MB サンプル);失敗すればシンセピアノに切り替わる。`},
+    {id:'tools', glyph:'🎛', cat:'tools', title:`再生・ループ・ミュート・消去`, body:`再生/停止とバー移動。⟳ ループで繰返し。🔊 ミュートで無音で描く。Clear はモードごとに賢くリセット。`, more:`再生コントロール。◆ 再生は開始と停止(スペースも);進捗バーをタップでジャンプ、ドラッグでスクラブ。◆ ⟳ LOOP は気分の曲を繰り返させる;オンで金色。◆ 🔊 / 🔇 ミュートは絵が通常通り生成される間、全音声を消す——セッションをまたいで記憶。◆ Clear はモードを意識する:Compose はキャンバスを消して留まる;MIC はアクティブなモードの下書きだけ捨てる;Image は描いた跡と画像を消す;MIDI/音声/楽譜/テキスト気分は完全リセット。◆ 状態が「loading piano…」と出たら数秒待つ(約 5 MB サンプル);失敗すればシンセピアノに切り替わる。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro が全てを解放`, body:`Pro €9.99 → 全 18 人のアーティスト、編集可能なカスタムパレット、ウォーターマークなし、永久。Pro AI €19.99 は無制限 AI 気分、image compose、雰囲気を追加。`, more:`三段階、すべて一回払い。◆ Free——9 人のアーティスト解放(ピカソ、ポロック、草間、モンドリアン、クリムト、ヴァザルリ、アフ・クリント、ヘリング、モネ)に各 2 種の描法;各人に Pro パートナー(有効なアーティストをもう一度タップ)。カスタムパレットは読取専用、書き出しはウォーターマーク付き、AI 機能は 3 試用クレジット。◆ Pro €9.99——全 18 人のアーティスト、全描法、編集可能なカスタムパレット、ウォーターマークなしの 300 DPI 書き出し、永久アクセス;AI は共有の 3 クレジットプールから。◆ Pro AI €19.99——Pro の全てに無制限 AI:テキスト気分、Mood-from-image、AI Compose、AI Atmosphere。◆ クレジット費用:AI テキスト & image compose = 各 1、Atmosphere = 0.5。◆ 一度払えば永久に。サブスクなし。ライセンスは最大 5 台、一度に一台で動く。`}
   ]
 };
@@ -19160,6 +19945,34 @@ export default function Paintiano() {
   const canvasRef    = useRef(null);
   const canvasWrapRef = useRef(null); // wrapper around the canvas — scrolled into view when the strip closes
   const stripWrapRef = useRef(null); // wrapper around the Color·Style strip — scroll target on Play in mood-from-image so the strip + source thumbnail stay framed
+  // Set true when the Hear image chip transfers a Music-mode painting into
+  // Image mode. The ← Back handler reads this and routes back to Music
+  // (restoreMode('music')) instead of the default Setup screen. Single-use:
+  // cleared as soon as Back consumes it.
+  const _imageFromMusicRef = useRef(false);
+  // Mirror flag for the REVERSE bridge: set true when See music transfers
+  // an Image-scan chord array into Music mode. The ← Back handler routes
+  // back to Image (restoreMode('image')) instead of Setup. Single-use.
+  const _musicFromImageRef = useRef(false);
+  // See music second channel: per-event dominant carrying tone (_domPc), one
+  // pitch class per image-scan cell, captured in song order before encodeMidi
+  // strips it. After loadMidi parses the MIDI back into chord events, a
+  // post-load effect re-attaches a _domPc onto each Music chord by proportional
+  // song position (the round-trip merges/re-quantizes chords, but left-to-right
+  // order is invariant). Audio never reads _domPc; only the painter does, so the
+  // Music canvas can show each cell's source carrying colour while the audio
+  // plays the full, unchanged harmony. Pure Image / pure Music never set this.
+  const _imageDomPcsRef = useRef(null);
+  // Bridge draft signatures (point 4). When See music / Hear image creates a
+  // target-mode draft and the user works on it then taps Back, the in-progress
+  // target draft is stashed (musicStashRef / imageStashRef) tagged with the
+  // SOURCE scan's signature here. On the NEXT bridge tap we compare the current
+  // source signature: if it matches, restore the in-progress target draft
+  // (resume where they left off); if the source changed (new direction/palette/
+  // length), the stale target draft is discarded and the bridge regenerates a
+  // fresh piece. Null = no reusable bridge draft.
+  const _seeMusicSrcSigRef = useRef(null);  // Image signature when the Music draft was made
+  const _hearImageSrcSigRef = useRef(null); // Music signature when the Image draft was made
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -19334,13 +20147,13 @@ export default function Paintiano() {
     return 'pure';   // default — raw palette colours, no modulation
   });
   useEffect(()=>{
-    // Option B: Real is palette-band-switching only — pastel/pure/dark per
-    // chord based on _curE thresholds inside gc(). No continuous _energyTint
-    // modulation: it was muddying mid-energy chords near the band edges
-    // (sat-red→brown, sat-green→olive, etc.). _setMixOn(false) keeps
-    // _energyTint a no-op for all tones; the three band-switched palettes
-    // alone deliver the dynamic range Mosaic Real shows.
-    try{_setMixOn(false);}catch(_){}
+    // Real tone uses a continuous Pure↔Pastel mix per chord energy (handled
+    // in gc()). _mixOn enables the per-voice velocity modulation inside
+    // drawBlockMosaic / drawBlockNotes — so within a single chord, louder
+    // notes lean a touch more pure and softer notes lean a touch more
+    // pastel, matching musical intuition for inner voicing. _energyTint
+    // and _pastelTint stay disabled — the mix is fully resolved in gc().
+    try{_setMixOn(tone==='real');}catch(_){}
     try{_setPastelOn(false);}catch(_){}
     try{localStorage.setItem('paintiano_tone',tone);}catch(_){}
   },[tone]);
@@ -19803,6 +20616,11 @@ export default function Paintiano() {
       setMode('harmony');
     }
     if(mode==='kontra' && kontraAutoRef.current && viewMode!=='image' && loadedSource!=='image'){
+      // EXCEPTION: after a See music transfer the music chord array still
+      // carries the palette in which the image was scanned. Kontra was
+      // chosen as the auto-mode for the source image and remains the
+      // palette in which the piece was born — don't force Harmony.
+      if(_musicFromImageRef.current) return;
       kontraAutoRef.current=false;
       setMode('harmony');
     }
@@ -20399,10 +21217,10 @@ export default function Paintiano() {
   // clear gold border and gold text. Lighter, more expensive-looking, and the
   // selected state still reads instantly. Idle chips stay on the dark card.
   const chipStyle = useCallback((on)=>({
-    color: on ? PF.gold2 : PF.cream,
-    background: on ? 'rgba(240,192,64,.14)' : PF.card2,
-    border: '1px solid '+(on ? 'rgba(240,192,64,.6)' : 'rgba(242,238,232,.08)'),
-    boxShadow: on ? '0 0 0 1px rgba(240,192,64,.25), 0 4px 14px rgba(240,192,64,.12)' : 'none',
+    color: on ? 'rgba(220,180,90,.98)' : PF.cream,
+    background: on ? 'rgba(201,168,76,.18)' : PF.card2,
+    border: '1px solid '+(on ? 'rgba(201,168,76,.45)' : 'rgba(242,238,232,.08)'),
+    boxShadow: on ? '0 0 0 1px rgba(201,168,76,.22)' : 'none',
   }),[]);
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
@@ -20680,56 +21498,57 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Tone routing:
     //   Pure   → pure palette variant (no modulation)
     //   Pastel → pastel palette variant (uniform, no modulation)
-    //   Real   → HYBRID:
-    //     • _curE < 0.20 → pastel variant (extreme piano ~20% of chords)
-    //     • _curE > 0.80 → dark variant   (extreme forte ~20% of chords)
-    //     • 0.20 ≤ _curE ≤ 0.80 → pure variant + continuous _energyTint
-    //       (the mezzo majority ~60%, continuous modulation as before)
-    //   This gives Real the spectrum Mosaic shows: clear pastel accents for
-    //   the quietest moments, clear dark accents for the loudest, and a
-    //   continuous gradient in between. Critically the palette-level
-    //   pastel/dark accents survive overlay alpha-blending (Kandinsky's
-    //   prevailing translucent stacks washed out continuous-only modulation).
-    let band = 'pure';
-    if(tone === 'pastel') band = 'pastel';
-    else if(tone === 'real'){
-      const e = (typeof _getCurE === 'function') ? _getCurE() : 0.5;
-      if(e < 0.20) band = 'pastel';
-      else if(e > 0.80) band = 'dark';
-      else band = 'pure';   // _energyTint will still modulate this within the band
-    }
+    //   Real   → CONTINUOUS Pure↔Pastel mix per chord energy:
+    //     t = 0.15 + 0.75 * _curE      (range 0.15..0.90)
+    //     out = pastel*(1-t) + pure*t  (linear RGB interp)
+    //
+    //   At e=0 (piano) the colour is 85% pastel + 15% pure → soft but the
+    //   hue identity stays readable (pure C bumps red into the lavender
+    //   blur). At e=1 (forte) it's 90% pure + 10% pastel → vivid but never
+    //   crushing. At mezzo it's a 50/50 mix — visibly its own thing,
+    //   neither Pure nor Pastel. This is the defining character of Real:
+    //   it never reduces to either neighbour mode. Same hue across the
+    //   entire range (pastel C and pure C both have hue 0°), so no mud
+    //   from HSL rotation in the middle.
+    //
+    //   Note: Dark variant is no longer used by Real — it stays in the
+    //   code for possible future use but Real never routes to it.
+    const isReal = (tone === 'real');
+    const useBandPastel = (tone === 'pastel');
     let _c;
     if(mode==='custom'){
-      _c = band==='pastel' ? customColPastel(m,v,activePalette)
-         : band==='dark'   ? customColDark(m,v,activePalette)
-         :                   customCol(m,v,activePalette);
+      _c = useBandPastel ? customColPastel(m,v,activePalette)
+                         : customCol(m,v,activePalette);
     } else if(mode==='spectral'){
-      _c = band==='pastel' ? specColPastel(m,v)
-         : band==='dark'   ? specColDark(m,v)
-         :                   specCol(m,v);
+      _c = useBandPastel ? specColPastel(m,v) : specCol(m,v);
     } else if(mode==='phi'){
-      _c = band==='pastel' ? phiColPastel(m,v)
-         : band==='dark'   ? phiColDark(m,v)
-         :                   phiCol(m,v);
+      _c = useBandPastel ? phiColPastel(m,v)  : phiCol(m,v);
     } else if(mode==='kontra'){
-      _c = band==='pastel' ? kontraColPastel(m,v)
-         : band==='dark'   ? kontraColDark(m,v)
-         :                   kontraCol(m,v);
+      _c = useBandPastel ? kontraColPastel(m,v) : kontraCol(m,v);
     } else {
-      _c = band==='pastel' ? harmColPastel(m,v)
-         : band==='dark'   ? harmColDark(m,v)
-         :                   harmCol(m,v);
+      _c = useBandPastel ? harmColPastel(m,v) : harmCol(m,v);
     }
-    // _energyTint applies continuous modulation only when band==='pure' AND
-    // tone==='real' (controlled by _mixOn). For pastel/dark bands _mixOn
-    // stays on but _energyTint passes through with negligible shift inside
-    // its 0.20-0.80 d-band — the band-switched palette is already at the
-    // target tone. For Pure mode and Pastel mode tone-effect-wise mixOn is
-    // off, so this is a no-op.
-    const _t=_energyTint(_c[0],_c[1],_c[2]);
-    let _r=_t[0],_g=_t[1],_b=_t[2];
-    try{ if(typeof _pastelTint==='function'){ const _p=_pastelTint(_r,_g,_b); _r=_p[0]; _g=_p[1]; _b=_p[2]; } }catch(_){}
-    return [_r,_g,_b,_c[3]];
+    // Real: mix the pure colour above with its pastel sibling, weighted by
+    // the current chord energy. We compute the pastel variant on the fly so
+    // both hues stay identical (no HSL rotation = no mud).
+    if(isReal){
+      let _p;
+      if(mode==='custom')        _p = customColPastel(m,v,activePalette);
+      else if(mode==='spectral') _p = specColPastel(m,v);
+      else if(mode==='phi')      _p = phiColPastel(m,v);
+      else if(mode==='kontra')   _p = kontraColPastel(m,v);
+      else                       _p = harmColPastel(m,v);
+      const e = (typeof _getCurE === 'function') ? _getCurE() : 0.5;
+      const t = 0.15 + 0.75 * Math.max(0, Math.min(1, e));
+      const mt = 1 - t;
+      _c = [
+        Math.round(_p[0]*mt + _c[0]*t),
+        Math.round(_p[1]*mt + _c[1]*t),
+        Math.round(_p[2]*mt + _c[2]*t),
+        _c[3],
+      ];
+    }
+    return _c;
   },[mode,activePalette,tone]);
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
@@ -20781,48 +21600,62 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(viewMode==='image'&&pixelRef.current){
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
-      // Paused: detect via holdPausedRef, which is set synchronously the instant
-      // Pause is tapped (the state version hasn't flushed yet in the render that
-      // runs when playing flips false — that race is why the repaint still fired
-      // and wiped the freshly-painted blocks). When paused, leave the canvas
-      // exactly as the scan loop left it.
-      if(holdPaused || holdPausedRef.current) return;
-      // Fully stopped (not paused): the canvas may have been blanked while we were
-      // away in Setup (the element unmounts/clears). Repaint the already-played
-      // mosaic 0..disp from pixel data so returning via "← Canvas" shows the
-      // progress that was on screen before, instead of a blank image overlay.
-      // BUT: if the user has never started playback yet (playedOnce=false),
-      // changing the colour palette must NOT pre-paint the raster grid over the
-      // original — at that point the user just expects to preview the source
-      // image. The raster only belongs there after Play has actually run.
-      if(!playedOnce) return;
-      try{
-        const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
-        const px=pixelRef.current;
-        if(ctx && px && disp>0){
-          const{nc,nr}=px, pdata=px.px;
-          const{BW,BH,CW,CH}=grid;
-          const colStep=px.colStep||1;
-          const effCols=Math.ceil(nc/colStep);
-          const CHORD_SIZE=4;
-          ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
-          for(let i=0;i<disp && i<chords.length;i++){
-            const _ev=chords[i]||{};
-            const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
-            const cg=_ev.cg!=null?_ev.cg:i%effCols;
-            const colStart=cg*colStep;
-            for(let sk=0;sk<colStep;sk++){
-              const col=colStart+sk; if(col>=nc) break;
-              for(let j=0;j<CHORD_SIZE;j++){
-                const row=band*CHORD_SIZE+j; if(row>=nr) break;
-                const p=pdata[row*nc+col];
-                if(!p) continue;
-                ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
-                ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
+      // Paused (incl. returning from Setup while paused): the canvas may have
+      // been blanked by the element remount, so REPAINT the played-so-far mosaic
+      // 0..disp from pixel data to restore the held position's blocks. Detect
+      // pause via holdPaused state, the synchronous holdPausedRef (set the
+      // instant Pause is tapped, before the state flush), OR resumeFromRef being
+      // set (the saved resume position — also set during the Resume race render,
+      // which must keep the blocks too).
+      // Keep the mosaic blocks on screen whenever there's a scanned trace to
+      // show: while PAUSED (hold the position) AND after the scan has FINISHED
+      // (blocks stay until the user taps Clear or re-scans by changing
+      // direction/palette). The canvas may have been blanked by a Setup remount,
+      // so repaint 0..disp from pixel data. Detect "has a trace" via pause flags
+      // OR playedOnce with a non-zero disp. Only a truly blank state (disp 0 —
+      // before the first Play, or right after Clear) falls through to the clear.
+      const _hasTrace = holdPaused || holdPausedRef.current || resumeFromRef.current!=null || (playedOnce && disp>0);
+      if(_hasTrace){
+        try{
+          const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
+          const px=pixelRef.current;
+          if(ctx && px && disp>0){
+            const{nc,nr}=px, pdata=px.px;
+            const{BW,BH,CW,CH}=grid;
+            const colStep=px.colStep||1;
+            const effCols=Math.ceil(nc/colStep);
+            const CHORD_SIZE=4;
+            ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
+            for(let i=0;i<disp && i<chords.length;i++){
+              const _ev=chords[i]||{};
+              const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
+              const cg=_ev.cg!=null?_ev.cg:i%effCols;
+              const colStart=cg*colStep;
+              for(let sk=0;sk<colStep;sk++){
+                const col=colStart+sk; if(col>=nc) break;
+                for(let j=0;j<CHORD_SIZE;j++){
+                  const row=band*CHORD_SIZE+j; if(row>=nr) break;
+                  const p=pdata[row*nc+col];
+                  if(!p) continue;
+                  ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.42)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+                  ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
+                }
               }
             }
           }
-        }
+        }catch(_){}
+        return;
+      }
+      // Truly idle: not playing, not paused, not mid-resume. The mosaic blocks
+      // belong ONLY to the live scan (during playback) and the paused state.
+      // Once playback ends, the user returns to a finished piece via "← Canvas",
+      // or a palette change re-transcribes, the canvas must show the clean
+      // original <img> with NO blocks over it. Clear and bail. (Previously this
+      // repainted the played-so-far mosaic whenever playedOnce was true, which
+      // made blocks reappear over the artwork after a palette change.)
+      try{
+        const cv2=canvasRef.current, ctx2=cv2&&cv2.getContext('2d');
+        if(ctx2){ const{CW,CH}=grid; ctx2.clearRect(0,0,CW,CH); }
       }catch(_){}
       return;
     }
@@ -20851,12 +21684,33 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
     _setVariantCap(proStatus==='free' ? 2 : null);
+    // See music carrying-tone paint: when a Music chord carries _domPc (set by
+    // the post-load effect from the source image's per-cell dominant hue), build
+    // a paint-side copy where every note's m is rewritten to (oct*12 + _domPc) —
+    // same register, the cell's carrying colour. This makes the Music mosaic
+    // hold the source painting's dominant tone (blue stays blue) instead of the
+    // harmony-shuffled palette. The audio engine never reads _chordsPaint — it
+    // plays the original, fully-harmonic chords, so musicality is unchanged.
+    // Plain MIDI/audio sources carry no _domPc, so _chordsPaint stays === chords
+    // and nothing changes for them.
+    const _hasDomPc = chords && chords.length>0 && chords.some && chords.some(c=>c&&typeof c._domPc==='number');
+    const _chordsPaint = _hasDomPc
+      ? chords.map(c => (c && typeof c._domPc==='number' && c.n)
+          ? { ...c, n: c.n.map(n => ({ ...n, m: Math.floor(n.m/12)*12 + c._domPc })) }
+          : c)
+      : chords;
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
       if(!chord) return; // stale disp can index past chords → undefined chord
       _setCurE(chord._E);
-      const{n:notes,idx}=chord;
+      const{idx}=chord;
+      // Per-cell artists colour from the notes passed here. On the See music
+      // path the carrying-tone notes live on _chordsPaint (chord-level _domPc
+      // rewritten onto every note); pull those when present, else the chord's
+      // own notes. Same index/length as chords.
+      const _pc = (_chordsPaint && _chordsPaint!==chords) ? _chordsPaint[idx] : null;
+      const notes = (_pc && _pc.n) ? _pc.n : chord.n;
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
         if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
@@ -21032,25 +21886,25 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         } else if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0,CW,CH);
         // Run the canvas-wide overlay on top (this is the only per-frame cost
         // that legitimately scales with lim).
-        if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, paintPhase);
-        else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
-        else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='bulge') drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='arcs') drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='bloom') drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='spiral') drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='gold') drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='pop') drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='wave') drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='comic') drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='monet') drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='hokusai') drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, 0);
+        if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, paintPhase);
+        else if(style==='miro')     drawMiroOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='kandinsky')drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, _chordsPaint.length, _chordsPaint);
+        else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='bulge') drawBulgeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='arcs') drawArcsOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='bloom') drawBloomOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='spiral') drawSpiralOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='gold') drawGoldOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='pop') drawPopOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='wave') drawWaveOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='comic') drawComicOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='monet') drawMonetOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='hokusai') drawHokusaiOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
       }
@@ -21063,63 +21917,63 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Pollock global drip overlay — runs AFTER all cells have rendered.
       // Drips ignore cell boundaries and unify the painting under the splatter.
       if(style==='pollock' && lim>0){
-        drawPollockOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawPollockOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='picasso' && lim>0){
-        drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawPicassoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='kusama' && lim>0){
-        drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, paintPhase);
+        drawKusamaOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, paintPhase);
       }
       if(style==='miro' && lim>0){
-        drawMiroOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawMiroOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       // Kandinsky canvas-wide contour overlay — large outlined shapes in
       // varied colors layered over the per-cell Kandinsky composition.
       if(style==='kandinsky' && lim>0){
-        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
+        drawKandinskyOverlay(ctx, CW, CH, lim, pollockSessionSeed, mode, gc, paintPhase, _chordsPaint.length, _chordsPaint);
       }
       if(style==='rothko' && lim>0){
-        drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawRothkoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='matisse' && lim>0){
-        drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawMatisseOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='mondrian' && lim>0){
-        drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawMondrianOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='bulge' && lim>0){
-        drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawBulgeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='arcs' && lim>0){
-        drawArcsOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawArcsOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='bloom' && lim>0){
-        drawBloomOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawBloomOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='spiral' && lim>0){
-        drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawSpiralOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='gold' && lim>0){
-        drawGoldOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawGoldOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='pop' && lim>0){
-        drawPopOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawPopOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='wave' && lim>0){
-        drawWaveOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawWaveOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='comic' && lim>0){
-        drawComicOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawComicOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='monet' && lim>0){
-        drawMonetOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawMonetOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='hokusai' && lim>0){
-        drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, paintPhase);
+        drawHokusaiOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
       if(style==='oneM' && lim>0){
-        drawOneMOverlay(ctx, CW, CH, chords, lim, gc, pollockSessionSeed, mode, 0);
+        drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
       }
       if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='comic'&&style!=='monet'&&style!=='hokusai'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
@@ -21338,6 +22192,34 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[playing]);
   useEffect(()=>{ dispRef.current=disp; },[disp]);
   useEffect(()=>{ chordsRef.current=chords; },[chords]);
+  // See music post-load: re-attach the per-event dominant carrying tone onto the
+  // freshly parsed Music chords. The capture stashed one _domPc per baked event
+  // (song order) before encodeMidi stripped it. The round-trip merges/re-quant-
+  // izes chords (e.g. ~1216 -> ~674), but left-to-right song order is invariant,
+  // so each Music chord i borrows the _domPc from the source event at the same
+  // RELATIVE position. Chord-level (one tone per chord) is exactly the carrying
+  // tone we want — the cell's dominant colour. Audio is untouched: this only
+  // sets a paint field the renderer reads; the engine plays the chords as-is.
+  useEffect(()=>{
+    if(!_imageDomPcsRef.current) return;
+    if(loadedSource!=='midi') return;
+    if(!chords || chords.length===0) return;
+    const src = _imageDomPcsRef.current;          // per-event _domPc, song order
+    const cur = chordsRef.current;
+    if(!cur || cur.length===0){ return; }
+    const srcLen = src.length;
+    if(srcLen===0){ _imageDomPcsRef.current=null; return; }
+    for(let i=0;i<cur.length;i++){
+      const srcIdx = Math.min(srcLen-1, Math.floor(i * srcLen / cur.length));
+      const pc = src[srcIdx];
+      if(typeof pc === 'number') cur[i]._domPc = pc;
+    }
+    // New array reference so the paint effect re-runs against the chords now
+    // carrying _domPc; in-place mutation alone wouldn't re-render.
+    setChords(prev => (prev && prev.length ? prev.slice() : prev));
+    setStamp(s=>s+1);
+    _imageDomPcsRef.current = null; // single-use
+  },[chords, loadedSource]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
   useEffect(()=>{ gcRef.current=gc; },[gc]);
   const infoRef = useRef(null);
@@ -22928,59 +23810,39 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // still a Compose/MIC draft, marked by draftOwnerRef. Treat that as a
     // creation (full clear), NOT a loaded source — otherwise Clear would keep
     // the chords and the painting would reappear on replay.
-    // IMAGE source: Clear wipes everything — the painted trace AND the loaded
-    // picture — but STAYS in the image view: loadedSource remains 'image' so the
-    // image-style Color/Custom strip keeps showing, and we do NOT drop to the full
-    // setup. The complete Color+Style panel (with artists) only appears when the
-    // user explicitly taps "← Setup". This keeps the cleared view calm.
+    // IMAGE source: Clear wipes only the SCAN TRACE (painted blocks + chord
+    // array + playback position) and KEEPS the loaded picture, so the canvas
+    // returns to the clean photo and the user can change direction/palette and
+    // Play again from the top. The picture (pixel scan data, photo URL, backup)
+    // is preserved; only the mosaic the scan painted is cleared. Because the
+    // image canvas is transparent with the <img> beneath, clearing the canvas
+    // reveals the photo again — and the stronger block outline (0.42) makes the
+    // before/after difference obvious so Clear visibly did something.
     if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
-      // Clear always drops back to SCAN and drops the AI-compose state, so a
-      // leftover 'compose' sub-mode can't make the next Play silently re-compose.
-      // Also discard the multi-draft image stash + tile glow.
-      imgComposeRef.current=false; setImgPlayMode('scan'); imgPlayModeRef.current='scan';
-      imageStashRef.current=null; setHasImageDraft(false);
-      setPending([]);pendingRef.current=[];
-      pressInfo.current={};sessionStart.current=0;gridSigRef.current='';
-      // Keep the picture's pixel data AND the displayed photo. Clear in image
-      // mode wipes the visible mosaic and rebuilds the (hidden-until-play) notes
-      // from the SAME photo, so Play stays active — the played trace just resets.
-      setInfo(null);
+      setImgPlayMode('scan'); imgPlayModeRef.current='scan';
+      // KEEP: pixelRef, scanPixelBackupRef, originalImgUrl (the picture stays) AND
+      // the chord array (the current scan). We only reset the PLAYBACK POSITION
+      // and wipe the painted blocks from the canvas, so Play re-scans from the
+      // top. Changing direction/palette afterwards re-transcribes as usual.
+      idxRef.current=0; setDisp(0);
+      setPending([]); pendingRef.current=[];
+      // Invalidate cached substrate + last-paint so nothing re-blits the blocks.
       substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
       lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
-      try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
-      { let _evts=[]; const _pr=pixelRef.current||scanPixelBackupRef.current;
-        if(_pr){ pixelRef.current=_pr; const _nc=_pr.nc,_nr=_pr.nr,_px=_pr.px;
-          const _hue = mode==='custom'
-            ? Object.assign(activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[0];}),
-                {__sats:activePalette.map(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1];}),
-                 __hasNeutral:activePalette.some(hex=>{const[r,g,b]=hexToRgb(hex);return toHsl(r,g,b)[1]<12;})})
-            : mode==='spectral' ? SPEC_HUE
-            : mode==='phi' ? PHI_HUE
-            : mode==='kontra' ? KONTRA_HUE
-            : COF;
-          const _atmoBias2=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
-          const _lit=pixelsToImageEvents(_px,_nc,_nr,_hue,mode,imgDirRef.current,_atmoBias2);
-          let _ev0=(atmoOn&&atmoMood)?_atmoTransform(_lit,atmoMood,true):_lit;
-          _evts=_ev0;  // Clear returns to the bare texture — MELODY is a one-shot
-        }
-        setChords(_evts);chordsRef.current=_evts;
-        idxRef.current=_evts.length;setDisp(_evts.length);
-      }
-      setMelodyOn(false);setMelodyData(null);  // cleared image: no sung voice until a fresh re-tap
+      // Clear all three canvas layers — the transparent main canvas then shows
+      // the photo (<img>) underneath, blocks gone.
+      try{
+        const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); }
+        const vc=visualizerRef.current; if(vc){ const vx=vc.getContext('2d'); vx&&vx.clearRect(0,0,vc.width,vc.height); }
+        const hc=highlightCanvasRef.current; if(hc){ const hx=hc.getContext('2d'); hx&&hx.clearRect(0,0,hc.width,hc.height); }
+      }catch(_){}
+      ripplesRef.current=[];
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
-      setShowColorPalette(false); setCustomArmed(false);
-      // Clear also discards any pending save artefacts (recording row, score row,
-      // the SAVE button state) so the transport returns to a clean PLAY + REC
-      // bar — not stuck showing SAVE / the audio+score rows from the prior take.
-      setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
-      setScoreBlob(null); setScoreFileName(''); setScoreMsg(null);
       setClearArmed(false);
-      // loadedSource stays 'image' and forceSetup stays false → image view persists.
-      // Return the page to its default (top) position so the header + collapsed
-      // strip are back in their resting place — same as the generic clear() path.
-      requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
+      // loadedSource stays 'image' → image view persists with the photo on canvas,
+      // direction/palette controls live, Play ready to re-scan from the top.
       return;
     }
     // MOOD-FROM-IMAGE source: Clear is a FULL RESET of the painted piece —
@@ -24778,12 +25640,18 @@ Composition rules:
           }
           const vividPct = considered ? (vivid/considered)*100 : 0;
           const autoMode = vividPct < 5 ? 'bw' : 'kontra';   // <5% colour ⇒ monochrome reading; colourful ⇒ Kontra (painter's reading) as the image default
-          appModeRef.current = autoMode;             // remember the app's pick for Custom→back
+          // Hear image (Music → Image bridge): the user already has a palette
+          // chosen in Music; carry it across instead of overriding with the
+          // image auto-pick (which would snap Harmony → Kontra on every cross).
+          // A genuinely fresh image (not from Music) still gets the auto read.
+          const _fromMusic = _imageFromMusicRef.current === true;
+          appModeRef.current = _fromMusic ? mode : autoMode; // remember the app's pick for Custom→back
           setSetupNoSel(false);                      // a fresh image re-enables the app's colour pick
           // Keep a manual Custom choice if the user already had it; otherwise apply
           // the app's pick. (spectral/other non-image modes fall back to autoMode.)
-          const startMode = mode==='custom' ? 'custom' : autoMode;
-          kontraAutoRef.current = (startMode==='kontra'); // flag auto-kontra so it doesn't leak to other sources
+          // When arriving from Music, keep the current palette verbatim.
+          const startMode = _fromMusic ? mode : (mode==='custom' ? 'custom' : autoMode);
+          kontraAutoRef.current = (!_fromMusic && startMode==='kontra'); // auto-kontra only on a fresh image, never when palette carried from Music
           if(startMode!==mode) setMode(startMode);
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
           scanPixelBackupRef.current=pixelRef.current; // keep scan data for Clear after a compose nulls pixelRef
@@ -24865,6 +25733,12 @@ Composition rules:
     // custom mode, OR changing the reading direction, forces a re-transcribe.
     const sig = mode + '|' + imgDir + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
+    // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
+    // change re-orders the scan, so playback must restart from the top rather
+    // than resume mid-stream (resuming would jump to an unrelated cell). A
+    // palette/mode change keeps the same order and resumes seamlessly.
+    const _dirChanged = pixelRef.current.lastDir !== undefined && pixelRef.current.lastDir !== imgDir;
+    pixelRef.current.lastDir=imgDir;
     pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
     const{nc,nr,px}=pixelRef.current;
@@ -24891,12 +25765,22 @@ Composition rules:
     // resume playback from that same index. Only when stopped do we reset to the
     // top (ready to play from the start in the new colour).
     if(playingRef.current){
+      // Direction change → re-ordered scan → restart from the top so the mosaic
+      // and audio build cleanly in the new order (resuming mid-stream would land
+      // on an unrelated cell).
+      if(_dirChanged){
+        setChords(evts);chordsRef.current=evts;
+        setDisp(0);
+        resumeFromRef.current=0;
+        setStamp(s=>s+1);
+        try{ startPlayRef.current?.({dirRestart:true}); }catch(_){}
+      }
       // Texture swaps live as before. But the MELODY voice is scheduled once at
       // startPlay (parallel timers), so a melody on/off toggle MID-PLAYBACK must
       // re-arm it: restart from the current position. _melodyTogglePlayingRef is
       // set true by the chip handler only when it flips melody during playback, so
       // a plain colour change still swaps seamlessly without a restart.
-      if(_melodyTogglePlayingRef.current){
+      else if(_melodyTogglePlayingRef.current){
         _melodyTogglePlayingRef.current=false;
         const keep=Math.min(dispRef.current||0, evts.length);
         setChords(evts);chordsRef.current=evts;
@@ -24914,15 +25798,25 @@ Composition rules:
       // Paused mid-piece: swap in the new colour's notes but KEEP the position so
       // pressing Resume continues from where it was, now in the new tones. Don't
       // restart playback (still paused) and don't reset disp to the end.
-      const keep=Math.min(dispRef.current||0, evts.length);
+      // EXCEPT a direction change re-orders the scan — keeping the old position
+      // would resume on an unrelated cell, so reset to the top.
+      const keep=_dirChanged ? 0 : Math.min(dispRef.current||0, evts.length);
       setChords(evts);chordsRef.current=evts;
       setDisp(keep);setStamp(s=>s+1);
       resumeFromRef.current=keep;
     }else{
+      // Stopped / finished: a palette OR direction change re-transcribes and the
+      // blocks should clear back to the bare photo, ready to Play (re-scan) from
+      // the top — rather than instantly repainting the whole mosaic in the new
+      // palette. Reset disp to 0 and playedOnce to false so the gate above falls
+      // through to the clean-photo state until the next Play.
       stopAll();
       setChords(evts);chordsRef.current=evts;
-      setDisp(evts.length);
-      idxRef.current=evts.length;setStamp(s=>s+1);
+      setDisp(0);
+      idxRef.current=0;
+      resumeFromRef.current=null;
+      setPlayedOnce(false);
+      setStamp(s=>s+1);
     }
   },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood,melodyOn,melodyData]);
 
@@ -25005,12 +25899,15 @@ Composition rules:
   const lastStartPlayRef = useRef(0);
   const startPlay=useCallback(async (opts)=>{
     const _melodyRearm = !!(opts && opts.melodyRearm);
+    const _dirRestart = !!(opts && opts.dirRestart);
     const now=Date.now();
     // Skip the double-fire debounce when this call is a melody re-arm (the rebuild
     // effect restarting the voice from the current position) — that legitimately
     // fires right after the original Play, and must not be swallowed, or turning
-    // MELODY on mid-playback would silently do nothing.
-    if(!_melodyRearm && now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
+    // MELODY on mid-playback would silently do nothing. Same for a direction
+    // restart: changing the scan direction during playback re-fires startPlay
+    // immediately to relaunch from the top, and the debounce would swallow it.
+    if(!_melodyRearm && !_dirRestart && now-lastStartPlayRef.current<300){return;} // debounce double-fire (iOS touch+click)
     lastStartPlayRef.current=now;
     // Gentle in-gesture audio wake: just make sure the context is running. The
     // heavier disconnect/rebuild/restart recovery was destabilising audio across
@@ -25031,7 +25928,7 @@ Composition rules:
     const grid=gridRef.current;
     const info=infoRef.current;
     const viewMode=viewModeRef.current;
-    if((busy && !_melodyRearm)||!chords.length)return;
+    if((busy && !_melodyRearm && !_dirRestart)||!chords.length)return;
     // Await unlock so the AudioContext is guaranteed 'running' before we
     // schedule anything against Tone.now(). Without this, the first chord can
     // land silent — Tone.now() is frozen while the context is suspended, so
@@ -25233,7 +26130,7 @@ Composition rules:
             for(let j=0;j<CHORD_SIZE;j++){
               const row=band*CHORD_SIZE+j; if(row>=nr) break;
               const pidx=row*nc+col,p=px[pidx];
-              ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+              ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.42)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
               ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
             }
           }
@@ -26808,7 +27705,7 @@ Composition rules:
         const{nc,nr,px}=pixelRef.current;
         for(let i=0;i<nc*nr;i++){
           const row=Math.floor(i/nc),col=i%nc,p=px[i];
-          hctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;hctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+          hctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.42)`;hctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
           hctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;hctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
         }
       }else{
@@ -27777,6 +28674,44 @@ Composition rules:
             flips isActiveView back to false. */}
         <div className="pf-controls-inner" style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?4:8,position:'relative'}}>
           <button onClick={()=>{if(demoReelOn){demoReelStop();return;}if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);
+            // Special return path: if we entered Image mode via the Hear image
+            // chip (canvas-from-music bridge), Back should restore the original
+            // Music piece instead of going to Setup. Single-use: consume the
+            // flag, then restoreMode('music') loads the stashed music draft.
+            if(_imageFromMusicRef.current && (loadedSource==='image' || viewMode==='image')){
+              _imageFromMusicRef.current = false;
+              // Preserve the in-progress Image piece (position/pause) the user
+              // built here before jumping back to the Music source, so returning
+              // to Image later resumes where they left off instead of losing it.
+              // stashMode reads dispRef, so capture BEFORE stopAll resets it.
+              try{ stashMode('image'); }catch(_){}
+              try{ stopAll(); }catch(_){}
+              try{ wipeCanvasNow(); }catch(_){}
+              setShowMoodMenu(false);setShowMorphMenu(false);setShowComposeRecent(false);setShowMicRecent(false);setPickMode(null);
+              const ok = restoreMode('music');
+              if(ok){ return; }
+              // If for any reason the music draft is gone, fall through to the
+              // normal Back-to-Setup path so the user isn't stranded.
+            }
+            // MIRROR return path: if we entered Music via See music (chord-array
+            // from image bridge), Back should restore the original Image piece.
+            if(_musicFromImageRef.current && (loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score')){
+              _musicFromImageRef.current = false;
+              // Preserve the in-progress Music piece (position/pause) the user
+              // built here before jumping back to the Image source, so returning
+              // to Music later resumes where they left off. Capture BEFORE stopAll.
+              try{ stashMode('music'); }catch(_){}
+              try{ stopAll(); }catch(_){}
+              try{ wipeCanvasNow(); }catch(_){}
+              setShowMoodMenu(false);setShowMorphMenu(false);setShowComposeRecent(false);setShowMicRecent(false);setPickMode(null);
+              const ok = restoreMode('image');
+              if(ok){ return; }
+              // restoreMode failed — DON'T fall through to Setup. Reset cleanly
+              // and stay on the canvas; a second Back tap will go to Setup as
+              // normal. This prevents the surprising "Back lands in Setup
+              // instead of Image" regression even if the image stash is gone.
+              return;
+            }
             // Leaving to Setup while a painting is playing/paused should PRESERVE
             // the position so "← Canvas" (Resume) picks up exactly where it left
             // off — capture disp into resumeFromRef and pause, instead of the full
@@ -27860,6 +28795,155 @@ Composition rules:
             // Back to setup = close any active AI recording window (no seal —
             // next Play after another Add/Recall reopens recording normally).
             if(aiRecordingRef.current){ setAiRecording(false); }}} disabled={recording} className="pf-lift" title={recording?t('stopRecFirst'):t('backToSetup')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'transparent',color:recording?'rgba(230,222,196,.2)':'rgba(230,222,196,.55)',border:'1px solid rgba(242,238,232,.1)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>← {t('backToSetup')}</button>
+          {/* Hear image — bridge to Image scan: transfer the painted
+              canvas into Image mode and let the user replay it through the
+              image-scan pipeline (same painting, different voice). Visible
+              only in music sources where there's actually a painting to
+              hear. ACTIVE only after the song has reached its end (chords
+              loaded, not playing, disp at the last chord) — half-finished
+              paintings are not yet ready to scan. Pushed rightward via
+              marginLeft:'auto' so it sits near + NEW MUSIC (modality pair). */}
+          {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; const _paintingDone = chords.length>0 && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
+            <button onClick={()=>{
+              if(_dis) return;
+              // Point 4 — reuse an in-progress Image draft from a PRIOR Hear image
+              // on this same Music piece. If the current Music signature matches
+              // the one captured when that Image draft was stashed, restore it
+              // (resume the partly-scanned Image canvas) instead of re-scanning.
+              // If the Music changed since, fall through to a fresh scan.
+              try{
+                const _curSig = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'');
+                if(imageStashRef.current && _hearImageSrcSigRef.current === _curSig){
+                  try{ stashMode('music'); }catch(_){}   // keep the Music draft for Back
+                  _imageFromMusicRef.current = true;
+                  const ok = restoreMode('image');
+                  if(ok) return;
+                }
+              }catch(_){}
+              // Capture the current canvas as a PNG, wrap as a synthetic File,
+              // then feed it into the existing image-upload handler. That
+              // handler already does the heavy lifting: stops playback, wipes
+              // music state, pixelifies the image, switches viewMode to 'image'
+              // and sets loadedSource='image' — exactly the bridge we need.
+              try{
+                // Fresh scan → supersede any stale Image draft from a previous
+                // Hear image; record the source signature so a later Back tags
+                // the new draft for reuse.
+                _hearImageSrcSigRef.current = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'');
+                imageStashRef.current = null; setHasImageDraft(false);
+                const cv = canvasRef.current;
+                if(!cv) return;
+                cv.toBlob((blob)=>{
+                  if(!blob) return;
+                  try{
+                    const file = new File([blob], 'painting.png', { type:'image/png', lastModified: Date.now() });
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    // Mark this transition so the next ← Back from image mode
+                    // returns to the original Music piece, not the Setup screen.
+                    _imageFromMusicRef.current = true;
+                    loadImage({ target: { files: dt.files, value: '' } });
+                  }catch(_){ /* DataTransfer not supported — fall back below */
+                    try{
+                      const fakeFiles = { 0: file, length: 1, item: (i)=>i===0?file:null };
+                      _imageFromMusicRef.current = true;
+                      loadImage({ target: { files: fakeFiles, value: '' } });
+                    }catch(__){}
+                  }
+                }, 'image/png');
+              }catch(_){}
+            }} disabled={_dis} className="pf-lift" title={_paintingDone?(t('hearImage')||'Hear image'):(t('hearImageDis')||'Finish the painting first')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',marginLeft:'auto',marginRight:isMobilePortrait?6:0,background:'rgba(28,24,40,.5)',color:_dis?'rgba(230,222,196,.25)':'rgba(248,170,120,.9)',border:'1px solid '+(_dis?'rgba(242,238,232,.15)':'rgba(244,124,60,.3)'),borderRadius:22,cursor:_dis?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{t('hearImage')||'Hear image'}</button>
+          ); })()}
+          {/* See music — REVERSE bridge: take the chord array generated by
+              the image scan and feed it back through the MIDI loader so the
+              same song plays in Music mode with the harmonic-flow canvas
+              painter. Visible only in image mode where the scan has produced
+              a playable chord array. ACTIVE only after the song has reached
+              its natural end (same _paintingDone gate as Hear image). Blue
+              accent (music modality) mirrors Hear image's orange. */}
+          {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isImage=(srcBtn==='image'); if(!_isImage) return null; const _paintingDone = chords.length>0 && playedOnce && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
+            <button onClick={()=>{
+              if(_dis) return;
+              // Point 4 — reuse an in-progress Music draft from a PRIOR See music
+              // on this same Image. If the current Image scan signature matches
+              // the one captured when that Music draft was stashed, restore it
+              // (resume the rebuilt-but-not-finished Music canvas) instead of
+              // regenerating from scratch. If the Image changed since (new scan/
+              // direction/palette → different signature), fall through to a fresh
+              // bake so the new scan is heard.
+              try{
+                const _curSig = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + (chordsRef.current ? chordsRef.current.length : 0);
+                if(musicStashRef.current && _seeMusicSrcSigRef.current === _curSig){
+                  try{ stashMode('image'); }catch(_){}   // keep the Image draft for Back
+                  _musicFromImageRef.current = true;
+                  const ok = restoreMode('music');
+                  if(ok) return;
+                }
+              }catch(_){}
+              // Take the chord array the image scan already generated, encode
+              // it as a MIDI file, wrap as a synthetic File, and feed loadMidi()
+              // the same shape it gets from a real upload. loadMidi() then
+              // does stopAll(), wipeCanvasNow(), parses the MIDI back into
+              // chord events, switches loadedSource to 'midi', and the music
+              // canvas paints fresh from the same chords.
+              try{
+                if(!chords || chords.length===0) return;
+                // Fresh bake → any stale Music draft from a previous See music is
+                // now superseded; clear it and record the source signature so a
+                // later Back can tag the new draft for reuse.
+                _seeMusicSrcSigRef.current = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + chords.length;
+                musicStashRef.current = null; setHasMusicDraft(false);
+                // Bake image-mode runtime expansion (tremolo re-strikes,
+                // arpeggio per-note offsets, sustained-plane durations,
+                // _playable:false skips) into the chord array so the MIDI
+                // that gets exported carries actual events for everything
+                // the user actually heard. Without baking, music-mode
+                // playback of the raw chords sounds 2-3× faster and
+                // texture-less.
+                const baked = bakeImageChords(chords);
+                if(baked.length===0) return;
+                // Capture the per-event dominant carrying tone (_domPc) in song
+                // order, so the Music canvas can paint each cell in the source
+                // painting's carrying colour instead of the harmony-shuffled pc.
+                // The MIDI round-trip strips _domPc (it isn't a MIDI field), so
+                // we stash it on a side channel and re-attach it proportionally
+                // after load. AUDIO IS UNTOUCHED — encodeMidi reads only m/v/
+                // timing; _domPc never affects playback. Pure Image and pure
+                // Music never populate this, so they are byte-for-byte unchanged.
+                _imageDomPcsRef.current = baked.map(c => (typeof c._domPc==='number' ? c._domPc : null));
+                const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
+                const blob = new Blob([bytes], {type:'audio/midi'});
+                const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
+                const file = new File([blob], fname+'.mid', { type:'audio/midi', lastModified: Date.now() });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                // Stash the image draft MANUALLY (in addition to loadMidi's
+                // internal stashOutgoing) so restoreMode('image') is
+                // guaranteed to find a populated imageStashRef on the way
+                // back.
+                try{ stashMode('image'); }catch(_){}
+                // Mark this transition so the next ← Back from music mode
+                // returns to the original Image piece, not the Setup screen.
+                _musicFromImageRef.current = true;
+                loadMidi({ target: { files: dt.files, value: '' } });
+              }catch(_){
+                try{
+                  if(!chords || chords.length===0) return;
+                  const baked = bakeImageChords(chords);
+                  if(baked.length===0) return;
+                  _imageDomPcsRef.current = baked.map(c => (typeof c._domPc==='number' ? c._domPc : null));
+                  const bytes = encodeMidi(baked, 120);
+                  const blob = new Blob([bytes], {type:'audio/midi'});
+                  const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
+                  const file = new File([blob], fname+'.mid', { type:'audio/midi', lastModified: Date.now() });
+                  const fakeFiles = { 0: file, length: 1, item: (i)=>i===0?file:null };
+                  try{ stashMode('image'); }catch(_){}
+                  _musicFromImageRef.current = true;
+                  loadMidi({ target: { files: fakeFiles, value: '' } });
+                }catch(__){}
+              }
+            }} disabled={_dis} className="pf-lift" title={_paintingDone?(t('seeMusic')||'See music'):(t('seeMusicDis')||'Finish the painting first')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',marginLeft:'auto',marginRight:isMobilePortrait?6:0,background:'rgba(28,24,40,.5)',color:_dis?'rgba(230,222,196,.25)':'rgba(150,185,255,.9)',border:'1px solid '+(_dis?'rgba(242,238,232,.15)':'rgba(91,156,246,.3)'),borderRadius:22,cursor:_dis?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{t('seeMusic')||'See music'}</button>
+          ); })()}
           {/* New file of the SAME source type — load another file without
               leaving the canvas. Shows the current mode (e.g. "+ NEW IMAGE").
               Only for file sources; to switch TYPE, use ← Setup. */}
@@ -28213,7 +29297,13 @@ Composition rules:
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['lr','vert','spiralIn','spiralOut'].map(d=>{
                   const sel = imgDir===d;
-                  const locked = playing||holdPaused;
+                  // Direction may be changed during playback now: unlike a palette
+                  // swap (same scan order, just different tones → seamless), a
+                  // direction change re-orders the scan, so the re-transcribe
+                  // effect restarts it from the top. Only a load/export (working)
+                  // blocks it — note `busy` includes `playing`, so we must NOT use
+                  // it here or the button would stay locked during scan.
+                  const locked = working;
                   const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
                   return (
                     <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('dir_'+d)}</button>
@@ -28231,7 +29321,7 @@ Composition rules:
               artist picker belongs there. */}
           {(loadedSource!=='image' || moodFromImg) && (
           <div className="pf-inspired-row" style={{position:'relative',marginTop:6,marginBottom:2}}>
-            <div className="pf-inspired-label" style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:randomMode?'rgba(255,200,120,.85)':'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+            <div className="pf-inspired-label" style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
             <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:randomMode?'rgba(255,200,120,.95)':'rgba(207,197,168,.55)',background:randomMode?'rgba(255,200,120,.1)':'rgba(255,255,255,.02)',border:'1px solid '+(randomMode?'rgba(255,200,120,.4)':'rgba(255,255,255,.08)'),boxShadow:'none'}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
             </button>
@@ -28269,7 +29359,11 @@ Composition rules:
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
             {setupArtists.includes('mosaicFamily') && (()=>{
               const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
-              const mosaicOn = style===null && (!shuffleStyle || inFamilyShuffle);
+              // Manual mosaic = selected and NOT being driven by the dice. Like
+              // the artist pairs, a shuffle-hit shows the white frame (no gold
+              // glow); a manual pick shows the gold glow. Splitting these keeps
+              // the Mosaic family visually consistent with the other chips.
+              const mosaicManual = style===null && !shuffleStyle;
               // Sub-label reflects the current rendered family member.
               const subKind = (shuffleStyle==='notes') ? 'notes'
                             : (shuffleStyle==='oneM') ? 'oneM'
@@ -28299,7 +29393,7 @@ Composition rules:
                 else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
                 else { setOneMMode(false); setNotesMode(false); }
               }
-            }} className={(mosaicOn?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicOn)}}>{subLabel}</button>
+            }} className={(mosaicManual?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicManual),...(!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{subLabel}</button>
             ); })()}
             {effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b)).map(([a,b], _pairIdx)=>{
               // Setup-picker integration: when only ONE side of the pair is in
@@ -28488,7 +29582,12 @@ Composition rules:
               Lives right under the artist grid. Three pills matching the
               palette/artist chip styling. Active tone = gold glow. Setting
               applies live; useEffect in tone state pushes _setMixOn /
-              _setPastelOn so any visible chord re-renders immediately. */}
+              _setPastelOn so any visible chord re-renders immediately.
+              Shown ONLY when the user enabled 2+ tones in Setup — with a single
+              tone there's nothing to switch between, so the picker (and its
+              "tone" label) is hidden on the active canvas; the lone tone is
+              applied silently. */}
+          {setupTones.length>=2 && (
           <div style={{marginTop:10,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
             {(()=>{
@@ -28505,13 +29604,14 @@ Composition rules:
                 {visTones.map(o=>{
                   const sel = tone===o.k;
                   return (
-                  <button key={o.k} onClick={()=>setTone(o.k)} style={{padding:'8px 0',textAlign:'center',borderRadius:10,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:sel?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:sel?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:sel?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{o.label}</button>
+                  <button key={o.k} onClick={()=>setTone(o.k)} style={{padding:'8px 0',textAlign:'center',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',...chipStyle(sel)}}>{o.label}</button>
                   );
                 })}
               </div>
               );
             })()}
           </div>
+          )}
           </>
           )}
           </div>
