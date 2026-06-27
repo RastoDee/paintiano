@@ -289,7 +289,6 @@
 <div class="welcome" id="welcome">
   <div class="wrap">
     <span class="wt" id="welcomeText" data-i18n-html="welcome_pro">Welcome back — your <b>Pro</b> is active.</span>
-    <a class="btn btn-gold" href="/play" id="welcomeCta" data-i18n="welcome_cta">Open Paintiano →</a>
   </div>
 </div>
 
@@ -649,10 +648,11 @@ function applyMember(d){
   // Paid member from here on.
   body.classList.add(tier==='pro_ai' ? 'is-proai' : 'is-pro');
   if(welcome) welcome.classList.add('show');
-  // Welcome bar + nav + hero CTAs all become "open the app".
+  // Welcome bar is an info banner (no button). The single "open the app" action
+  // lives in the nav. The hero keeps its normal "See your song" CTA so a member
+  // isn't shown three identical buttons — the page still reads naturally.
   if(welcomeText) welcomeText.innerHTML = (tier==='pro_ai' ? (d.welcome_proai||'Welcome back — your <b>Pro AI</b> is active.') : (d.welcome_pro||'Welcome back — your <b>Pro</b> is active.'));
   if(navCta){ navCta.textContent = d.welcome_cta||'Open Paintiano →'; navCta.setAttribute('href','/play'); }
-  if(heroCta){ heroCta.textContent = d.welcome_cta||'Open Paintiano →'; heroCta.setAttribute('href','/play'); }
   if(heroNote){ heroNote.textContent = (tier==='pro_ai' ? (d.welcome_note_proai||'Your Pro AI is active on this device.') : (d.welcome_note_pro||'Your Pro is active on this device.')); }
   // Mark the owned tier(s). Pro AI owns both Pro and Pro AI feature-wise; we mark
   // the tier they actually bought, and for a plain-Pro member we turn the Pro AI
