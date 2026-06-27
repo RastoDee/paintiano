@@ -21630,7 +21630,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
                   const row=band*CHORD_SIZE+j; if(row>=nr) break;
                   const p=pdata[row*nc+col];
                   if(!p) continue;
-                  ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+                  ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.42)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
                   ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
                 }
               }
@@ -23803,48 +23803,39 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // still a Compose/MIC draft, marked by draftOwnerRef. Treat that as a
     // creation (full clear), NOT a loaded source — otherwise Clear would keep
     // the chords and the painting would reappear on replay.
-    // IMAGE source: Clear is now a FULL reset — wipes the painted trace, the
-    // loaded picture, the chord array AND the pixel scan data — leaving an
-    // empty black canvas. STAYS in the image view so '+ NEW IMAGE' chip and
-    // '← BACK' button remain available; the user picks the next picture or
-    // returns to Setup from there. (Mirrors Music Clear which also wipes
-    // chord array but stays in the music view with '+ NEW MUSIC' available.)
+    // IMAGE source: Clear wipes only the SCAN TRACE (painted blocks + chord
+    // array + playback position) and KEEPS the loaded picture, so the canvas
+    // returns to the clean photo and the user can change direction/palette and
+    // Play again from the top. The picture (pixel scan data, photo URL, backup)
+    // is preserved; only the mosaic the scan painted is cleared. Because the
+    // image canvas is transparent with the <img> beneath, clearing the canvas
+    // reveals the photo again — and the stronger block outline (0.42) makes the
+    // before/after difference obvious so Clear visibly did something.
     if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
-      // Drop the AI-compose flag and the multi-draft image stash + tile glow.
-      imgComposeRef.current=false; setImgPlayMode('scan'); imgPlayModeRef.current='scan';
-      imageStashRef.current=null; setHasImageDraft(false);
-      // Drop the picture itself — pixel scan data, photo URL, backup ref.
-      pixelRef.current=null;
-      scanPixelBackupRef.current=null;
-      setOriginalImgUrl(null);
-      // Drop the chord array and live playback state.
-      setChords([]); chordsRef.current=[];
+      setImgPlayMode('scan'); imgPlayModeRef.current='scan';
+      // KEEP: pixelRef, scanPixelBackupRef, originalImgUrl (the picture stays) AND
+      // the chord array (the current scan). We only reset the PLAYBACK POSITION
+      // and wipe the painted blocks from the canvas, so Play re-scans from the
+      // top. Changing direction/palette afterwards re-transcribes as usual.
       idxRef.current=0; setDisp(0);
       setPending([]); pendingRef.current=[];
-      pressInfo.current={}; sessionStart.current=0; gridSigRef.current=''; composedModeRef.current=false;
-      setInfo(null);
-      // Invalidate cached substrate + last-paint so nothing re-blits.
+      // Invalidate cached substrate + last-paint so nothing re-blits the blocks.
       substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
       lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
-      // Explicitly clear ALL three canvas layers — same as Music Clear does.
+      // Clear all three canvas layers — the transparent main canvas then shows
+      // the photo (<img>) underneath, blocks gone.
       try{
         const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); }
         const vc=visualizerRef.current; if(vc){ const vx=vc.getContext('2d'); vx&&vx.clearRect(0,0,vc.width,vc.height); }
         const hc=highlightCanvasRef.current; if(hc){ const hx=hc.getContext('2d'); hx&&hx.clearRect(0,0,hc.width,hc.height); }
       }catch(_){}
       ripplesRef.current=[];
-      setMelodyOn(false); setMelodyData(null);
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
-      setShowColorPalette(false); setCustomArmed(false);
-      // Drop any pending save artefacts (recording row, score row, SAVE state).
-      setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false);
-      setScoreBlob(null); setScoreFileName(''); setScoreMsg(null);
       setClearArmed(false);
-      // loadedSource stays 'image' and forceSetup stays false → image view persists
-      // with the empty canvas. '+ NEW IMAGE' chip + '← BACK' both remain available.
-      requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
+      // loadedSource stays 'image' → image view persists with the photo on canvas,
+      // direction/palette controls live, Play ready to re-scan from the top.
       return;
     }
     // MOOD-FROM-IMAGE source: Clear is a FULL RESET of the painted piece —
@@ -26124,7 +26115,7 @@ Composition rules:
             for(let j=0;j<CHORD_SIZE;j++){
               const row=band*CHORD_SIZE+j; if(row>=nr) break;
               const pidx=row*nc+col,p=px[pidx];
-              ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+              ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.42)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
               ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
             }
           }
@@ -27699,7 +27690,7 @@ Composition rules:
         const{nc,nr,px}=pixelRef.current;
         for(let i=0;i<nc*nr;i++){
           const row=Math.floor(i/nc),col=i%nc,p=px[i];
-          hctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.18)`;hctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+          hctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.42)`;hctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
           hctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;hctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
         }
       }else{
