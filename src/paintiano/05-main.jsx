@@ -10446,7 +10446,12 @@ Composition rules:
               Lives right under the artist grid. Three pills matching the
               palette/artist chip styling. Active tone = gold glow. Setting
               applies live; useEffect in tone state pushes _setMixOn /
-              _setPastelOn so any visible chord re-renders immediately. */}
+              _setPastelOn so any visible chord re-renders immediately.
+              Shown ONLY when the user enabled 2+ tones in Setup — with a single
+              tone there's nothing to switch between, so the picker (and its
+              "tone" label) is hidden on the active canvas; the lone tone is
+              applied silently. */}
+          {setupTones.length>=2 && (
           <div style={{marginTop:10,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
             {(()=>{
@@ -10470,6 +10475,7 @@ Composition rules:
               );
             })()}
           </div>
+          )}
           </>
           )}
           </div>
