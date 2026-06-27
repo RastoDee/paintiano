@@ -14531,6 +14531,31 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // Safety clamp: never absurdly fast or slow per cell.
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
     }
+    // startMs was initially laid out as evIdx*msPerBlock (a FLAT grid pace). But
+    // the image scan actually PLAYS at the agogic _stepMs above (dark→slow,
+    // bar-breath, ritardando — 70..520ms, mean ~200). When those two disagree
+    // (e.g. many cells make msPerBlock ~100ms while mean _stepMs ~200ms), a See
+    // music MIDI bake — which encodes startMs — plays ~2× too fast vs the image.
+    // Re-lay startMs as the CUMULATIVE SUM of _stepMs so the exported timeline
+    // matches the heard tempo exactly. Image-mode playback reads _stepMs directly
+    // and is unaffected; only the startMs field (used by the MIDI round-trip and
+    // the See-music gap derivation) is corrected.
+    {
+      // Inline the same deterministic LCG used in Pass B (detRnd is block-scoped
+      // there) so the ±20ms rubato is identical and reproducible.
+      const _detRnd = (band, cg, salt)=>{
+        let h = ((band*48271 + cg*16807 + salt*2654435761) >>> 0);
+        h = ((h*1103515245 + 12345) >>> 0);
+        return (h % 233280) / 233280;
+      };
+      let _acc = 0;
+      for(const ev of evts){
+        const _jit = (typeof ev.band==='number' && typeof ev.cg==='number')
+          ? (_detRnd(ev.band, ev.cg, 2) - 0.5) * 40 : 0;
+        ev.startMs = Math.max(0, Math.round(_acc + _jit));
+        _acc += (ev._stepMs || 200);
+      }
+    }
   }
   // ─── durMs ceiling vs step overlap — keep calm pieces from smearing ──────
   // After all the durMs multipliers (per-voice articulation, edge-based
@@ -29085,7 +29110,10 @@ Composition rules:
                   if(!chords || chords.length===0) return;
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
-                  _imageDomPcsRef.current = baked.map(c => (typeof c._domPc==='number' ? c._domPc : null));
+                  _imageDomPcsRef.current = baked.map(c => ({
+                    pc:  (typeof c._domPc==='number' ? c._domPc : null),
+                    lum: (typeof c._lum==='number'   ? c._lum   : null)
+                  }));
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';

@@ -9946,7 +9946,10 @@ Composition rules:
                   if(!chords || chords.length===0) return;
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
-                  _imageDomPcsRef.current = baked.map(c => (typeof c._domPc==='number' ? c._domPc : null));
+                  _imageDomPcsRef.current = baked.map(c => ({
+                    pc:  (typeof c._domPc==='number' ? c._domPc : null),
+                    lum: (typeof c._lum==='number'   ? c._lum   : null)
+                  }));
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
