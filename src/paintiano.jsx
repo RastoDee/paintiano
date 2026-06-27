@@ -26139,7 +26139,13 @@ Composition rules:
         // colour change mid-playback that swaps in re-transcribed notes is heard
         // immediately on the very next step — no restart needed, no stale copy.
         const liveChords=chordsRef.current;
-        if(i>=liveChords.length){setPlaying(false);setDisp(liveChords.length);return;}
+        if(i>=liveChords.length){
+          // TEMP MARKER E: magenta = scan loop reached its end and is setting
+          // playing=false. Drawn directly so we know the end fired.
+          try{ const cvE=canvasRef.current, ctxE=cvE&&cvE.getContext('2d');
+            if(ctxE){ ctxE.fillStyle='#ff00ff'; ctxE.fillRect(34,2,12,12); } }catch(_){}
+          setPlaying(false);setDisp(liveChords.length);return;
+        }
         // For chord i: take its stored cell (band,cg) so non-row-major directions
         // (vert/spiral) paint the correct cell; fall back to row-major for safety.
         const _ev=liveChords[i]||{};

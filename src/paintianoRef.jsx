@@ -20291,14 +20291,19 @@ export default function Paintiano() {
     try { localStorage.setItem('paintiano_setup_artists', JSON.stringify(setupArtists)); } catch(_) {}
   }, [setupArtists]);
   const [setupTones, setSetupTones] = useState(() => {
+    // Default = Pure only (a single tone). With one tone enabled the canvas
+    // hides the tone picker and paints in Pure silently; a user who wants Real
+    // or Pastel switching enables them in Setup. A previously saved selection in
+    // localStorage is respected.
+    const DEFAULT_TONES = ['pure'];
     try {
       const raw = localStorage.getItem('paintiano_setup_tones');
-      if(!raw) return ALL_TONE_KEYS.slice();
+      if(!raw) return DEFAULT_TONES.slice();
       const arr = JSON.parse(raw);
-      if(!Array.isArray(arr)) return ALL_TONE_KEYS.slice();
+      if(!Array.isArray(arr)) return DEFAULT_TONES.slice();
       const valid = arr.filter(k => ALL_TONE_KEYS.includes(k));
-      return valid.length ? valid : ALL_TONE_KEYS.slice();
-    } catch(_) { return ALL_TONE_KEYS.slice(); }
+      return valid.length ? valid : DEFAULT_TONES.slice();
+    } catch(_) { return DEFAULT_TONES.slice(); }
   });
   useEffect(() => {
     try { localStorage.setItem('paintiano_setup_tones', JSON.stringify(setupTones)); } catch(_) {}
@@ -21598,6 +21603,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // canvas. During playback we paint a subtle scanning highlight at the currently
     // playing cell so the user still gets visual feedback without losing the image.
     if(viewMode==='image'&&pixelRef.current){
+      // TEMP MARKER A: blue dot = effect entered the image branch at all.
+      try{ const ctxA=cv.getContext('2d'); const{CW}=grid; ctxA.fillStyle='#3388ff'; ctxA.fillRect(2,2,12,12);
+        ctxA.fillStyle='#fff'; ctxA.font='8px monospace'; ctxA.fillText('p'+(playing?1:0)+'a'+(anim?1:0), 2, 24);
+        ctxA.fillText('po'+(playedOnce?1:0)+'d'+disp, 2, 33);
+      }catch(_){}
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
       // Paused (incl. returning from Setup while paused): the canvas may have
@@ -21643,6 +21653,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
               }
             }
           }
+          // TEMP MARKER: green = _hasTrace branch ran. Also show why.
+          try{ const{CW}=grid; ctx.fillStyle='#00ff66'; ctx.fillRect(CW-30,2,28,28);
+               ctx.fillStyle='#000'; ctx.font='8px monospace';
+               ctx.fillText('po:'+(playedOnce?1:0), CW-29, 12);
+               ctx.fillText('d:'+disp, CW-29, 21);
+          }catch(_){}
         }catch(_){}
         return;
       }
@@ -21655,7 +21671,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // made blocks reappear over the artwork after a palette change.)
       try{
         const cv2=canvasRef.current, ctx2=cv2&&cv2.getContext('2d');
-        if(ctx2){ const{CW,CH}=grid; ctx2.clearRect(0,0,CW,CH); }
+        if(ctx2){ const{CW,CH}=grid; ctx2.clearRect(0,0,CW,CH);
+          // TEMP MARKER: red = idle-clear branch ran (this is what wipes blocks).
+          ctx2.fillStyle='#ff0033'; ctx2.fillRect(CW-30,2,28,28);
+          ctx2.fillStyle='#fff'; ctx2.font='8px monospace';
+          ctx2.fillText('po:'+(playedOnce?1:0), CW-29, 12);
+          ctx2.fillText('d:'+disp, CW-29, 21);
+        }
       }catch(_){}
       return;
     }
