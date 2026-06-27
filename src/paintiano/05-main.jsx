@@ -4750,6 +4750,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setStamp(s=>s+1); setPlayedOnce(false);
       resumeFromRef.current=null; setHoldPaused(false);
       setClearArmed(false);
+      // Clear also drops the See music bridge: the Music draft built from THIS
+      // scan no longer corresponds to anything painted, so discard it and its
+      // signature. Otherwise Back → Setup → Image chip restores the pre-Clear
+      // Image draft (playedOnce=true, full disp) and SEE MUSIC lights up again as
+      // if the scan were still finished. Refresh the image stash to the CLEARED
+      // state so returning to Image shows the bare photo with SEE MUSIC off.
+      musicStashRef.current=null; setHasMusicDraft(false);
+      _seeMusicSrcSigRef.current=null;
+      _musicFromImageRef.current=false;
+      // stashMode reads dispRef / moodMetaRef.playedOnce (async-updated), which
+      // still hold the pre-Clear values at this synchronous point. Force them to
+      // the cleared state FIRST so the re-stash captures disp=0 / playedOnce=false
+      // — otherwise Back → Image restores the finished draft and SEE MUSIC relights.
+      dispRef.current=0; playedOnceRef.current=false;
+      if(moodMetaRef.current) moodMetaRef.current.playedOnce=false;
+      try{ stashMode('image'); }catch(_){}   // re-stash with cleared playback state
       // loadedSource stays 'image' → image view persists with the photo on canvas,
       // direction/palette controls live, Play ready to re-scan from the top.
       return;
