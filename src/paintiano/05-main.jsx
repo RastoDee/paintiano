@@ -7162,7 +7162,15 @@ Composition rules:
                 if(melodyOnRef.current && _melSteps && _melSteps.length){
                   _gapMs2 = Math.max(8, Math.min(1400, _melSteps[i-1] || 150));
                 } else {
-                  _gapMs2 = (liveChords[i-1] && liveChords[i-1]._stepMs) || 150;
+                  const _prev2 = liveChords[i-1];
+                  const _cur2  = liveChords[i];
+                  if(_prev2 && _prev2._stepMs){
+                    _gapMs2 = _prev2._stepMs;
+                  } else if(_prev2 && _cur2 && typeof _prev2.startMs==='number' && typeof _cur2.startMs==='number' && _cur2.startMs>_prev2.startMs){
+                    _gapMs2 = Math.max(40, Math.min(2000, _cur2.startMs - _prev2.startMs));
+                  } else {
+                    _gapMs2 = 150;
+                  }
                 }
                 pushTimer(step, Math.round(_gapMs2/playbackSpeedRef.current));
               }
@@ -7232,7 +7240,23 @@ Composition rules:
           // breathe — the painting conducts the tempo. Mean stays ≈150ms.
           _gapMs = Math.max(8, Math.min(1400, _melSteps[i-1] || 150));
         } else {
-          _gapMs = (liveChords[i-1] && liveChords[i-1]._stepMs) || 150;
+          // Prefer the chord's own _stepMs (image-scan native pace). When absent
+          // — e.g. a parsed MIDI, including a See music bake whose chords carry
+          // real startMs from groupToEvents — derive the gap from the actual
+          // timeline: the delta between this chord's startMs and the previous
+          // one. Without this the loop falls back to a flat 150ms tick, which
+          // crushes a piece whose chords are spread over tens of seconds into a
+          // 2-5× too-fast playback. Clamp to a sane range. Only the 150ms literal
+          // remains as a last resort when neither field exists.
+          const _prev = liveChords[i-1];
+          const _cur  = liveChords[i];
+          if(_prev && _prev._stepMs){
+            _gapMs = _prev._stepMs;
+          } else if(_prev && _cur && typeof _prev.startMs==='number' && typeof _cur.startMs==='number' && _cur.startMs>_prev.startMs){
+            _gapMs = Math.max(40, Math.min(2000, _cur.startMs - _prev.startMs));
+          } else {
+            _gapMs = 150;
+          }
         }
         timers.current.push(setTimeout(step,Math.round(_gapMs/playbackSpeedRef.current)));
       };
