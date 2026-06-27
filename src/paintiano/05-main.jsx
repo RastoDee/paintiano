@@ -10034,7 +10034,15 @@ Composition rules:
                   for the readout; in AI Compose they still set the palette the AI
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
-              {(()=>{ const _allTabs = appColour?['harmony','spectral','phi','kontra','custom']:['bw','custom']; const _tabs = _allTabs.filter(m => m==='bw' || setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs; return (
+              {(()=>{ const _allTabs = appColour?['harmony','spectral','phi','kontra','custom']:['bw','custom']; const _tabs = _allTabs.filter(m => m==='bw' || setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs;
+              // Single palette shown → render the name as plain text (same font,
+              // cream), not a chip — nothing to switch between.
+              if(_shown.length===1){
+                return (
+                  <div style={{textAlign:'center',padding:'8px 0',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',color:'rgba(220,180,90,.95)',userSelect:'none'}}>{t(_shown[0])}</div>
+                );
+              }
+              return (
               <div className="pf-color-tabs" style={{display:'grid',gridTemplateColumns: `repeat(${_shown.length},1fr)`,gap:6}}>
                 {_shown.map(m=>{
                   const isCustomTab = m==='custom';
@@ -10113,7 +10121,15 @@ Composition rules:
             </div>
             );
           })() : (<>
-            {(()=>{ const _allTabs = ['harmony','spectral','phi','kontra','custom']; const _tabs = _allTabs.filter(m => setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs; return (
+            {(()=>{ const _allTabs = ['harmony','spectral','phi','kontra','custom']; const _tabs = _allTabs.filter(m => setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs;
+            // Single palette enabled in Setup → nothing to switch between, so show
+            // the palette NAME as plain text (same font, cream) instead of a chip.
+            if(_shown.length===1){
+              return (
+                <div style={{textAlign:'center',padding:'8px 0',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',color:'rgba(220,180,90,.95)',userSelect:'none'}}>{t(_shown[0])}</div>
+              );
+            }
+            return (
             <div className="pf-color-tabs" style={{display:'grid',gridTemplateColumns:`repeat(${_shown.length},1fr)`,gap:6}}>
               {_shown.map(m=>{
               const isCustomTab = m==='custom';
@@ -10488,15 +10504,12 @@ Composition rules:
             );
           })()}
           {/* ── TONE picker ────────────────────────────────────────────
-              Lives right under the artist grid. Three pills matching the
-              palette/artist chip styling. Active tone = gold glow. Setting
-              applies live; useEffect in tone state pushes _setMixOn /
-              _setPastelOn so any visible chord re-renders immediately.
-              Shown ONLY when the user enabled 2+ tones in Setup — with a single
-              tone there's nothing to switch between, so the picker (and its
-              "tone" label) is hidden on the active canvas; the lone tone is
-              applied silently. */}
-          {setupTones.length>=2 && (
+              Lives right under the artist grid. The "tone" label always shows.
+              With 2+ tones enabled in Setup the three pills appear (active = gold
+              glow). With a single tone there's nothing to switch between, so the
+              lone tone's NAME is shown as plain gold text instead of a chip
+              (mirrors the single-palette treatment). Setting applies live. */}
+          {setupTones.length>=1 && (
           <div style={{marginTop:10,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
             {(()=>{
@@ -10507,6 +10520,12 @@ Composition rules:
               ];
               const visTones = allTones.filter(o => setupTones.includes(o.k));
               if(!visTones.length) return null;   // user turned all tones off (shouldn't normally happen)
+              // Single tone → gold text, not a chip (nothing to switch between).
+              if(visTones.length===1){
+                return (
+                  <div style={{textAlign:'center',padding:'8px 0',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',color:'rgba(220,180,90,.95)',userSelect:'none'}}>{visTones[0].label}</div>
+                );
+              }
               const cols = visTones.length;
               return (
               <div style={{display:'grid',gridTemplateColumns:`repeat(${cols}, 1fr)`,gap:6}}>
