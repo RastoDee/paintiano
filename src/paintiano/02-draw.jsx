@@ -11124,12 +11124,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // most cells in 0..2 then clamp. Hue spread (degrees) caps at ~60° for
       // a noticeable rainbow gradient within a single cell.
       let _flat = 0;
+      let _lum = null;                       // 0..1 mean lightness of the cell
       if(lNC>0){
         const lMean = lSumC/lNC;
         const lVar  = Math.max(0, lSqSumC/lNC - lMean*lMean);
         const hueSpread = hueMaxC>=0 ? (hueMaxC-hueMinC) : 0;
         const varScore = Math.min(1, lVar/100) * 0.65 + Math.min(1, hueSpread/60) * 0.35;
         _flat = 1 - varScore;
+        _lum = Math.max(0, Math.min(1, lMean/100));   // render-only: cell brightness
       }
       // Fallback: grab the most vivid pixel anywhere in the column group
       if(notes.length===0){
@@ -11157,7 +11159,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       }
       // Store band+cg so the canvas mosaic can paint each event's exact cell in
       // traversal order (needed for non-row-major directions like vert/spiral).
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc});
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc,_lum});
       evIdx++;
     }
   }
@@ -13002,7 +13004,7 @@ function bakeImageChords(src){
             const m = isTop && topShift !== 0 ? Math.max(0, Math.min(127, n.m + topShift)) : n.m;
             return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)), _paintPc: n._paintPc };
           });
-          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ, _domPc: c._domPc });
+          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ, _domPc: c._domPc, _lum: c._lum });
         }
         t += gNow;
         r++;
@@ -13019,7 +13021,8 @@ function bakeImageChords(src){
           n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300), _paintPc: n._paintPc }],
           startMs: (c.startMs || 0) + off,
           durQ: c.durQ,
-          _domPc: c._domPc
+          _domPc: c._domPc,
+          _lum: c._lum
         });
       }
       continue;
@@ -13033,7 +13036,7 @@ function bakeImageChords(src){
       durMs: Math.max(80, Math.round((n.durMs || 300) * durMul)),
       _paintPc: n._paintPc
     }));
-    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ, _domPc: c._domPc });
+    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ, _domPc: c._domPc, _lum: c._lum });
   }
   return out;
 }

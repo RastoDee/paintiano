@@ -12768,12 +12768,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // most cells in 0..2 then clamp. Hue spread (degrees) caps at ~60° for
       // a noticeable rainbow gradient within a single cell.
       let _flat = 0;
+      let _lum = null;                       // 0..1 mean lightness of the cell
       if(lNC>0){
         const lMean = lSumC/lNC;
         const lVar  = Math.max(0, lSqSumC/lNC - lMean*lMean);
         const hueSpread = hueMaxC>=0 ? (hueMaxC-hueMinC) : 0;
         const varScore = Math.min(1, lVar/100) * 0.65 + Math.min(1, hueSpread/60) * 0.35;
         _flat = 1 - varScore;
+        _lum = Math.max(0, Math.min(1, lMean/100));   // render-only: cell brightness
       }
       // Fallback: grab the most vivid pixel anywhere in the column group
       if(notes.length===0){
@@ -12801,7 +12803,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       }
       // Store band+cg so the canvas mosaic can paint each event's exact cell in
       // traversal order (needed for non-row-major directions like vert/spiral).
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc});
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc,_lum});
       evIdx++;
     }
   }
@@ -14646,7 +14648,7 @@ function bakeImageChords(src){
             const m = isTop && topShift !== 0 ? Math.max(0, Math.min(127, n.m + topShift)) : n.m;
             return { m, v, durMs: Math.max(80, Math.round((n.durMs || 300) * tail)), _paintPc: n._paintPc };
           });
-          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ, _domPc: c._domPc });
+          out.push({ n: strikeNotes, startMs: (c.startMs || 0) + t, durQ: c.durQ, _domPc: c._domPc, _lum: c._lum });
         }
         t += gNow;
         r++;
@@ -14663,7 +14665,8 @@ function bakeImageChords(src){
           n: [{ m: n.m, v: Math.max(20, Math.min(127, Math.round((n.v || 80) * velScale))), durMs: Math.max(80, n.durMs || 300), _paintPc: n._paintPc }],
           startMs: (c.startMs || 0) + off,
           durQ: c.durQ,
-          _domPc: c._domPc
+          _domPc: c._domPc,
+          _lum: c._lum
         });
       }
       continue;
@@ -14677,7 +14680,7 @@ function bakeImageChords(src){
       durMs: Math.max(80, Math.round((n.durMs || 300) * durMul)),
       _paintPc: n._paintPc
     }));
-    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ, _domPc: c._domPc });
+    out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ, _domPc: c._domPc, _lum: c._lum });
   }
   return out;
 }
@@ -20273,13 +20276,25 @@ export default function Paintiano() {
       if(!Array.isArray(arr)) return ALL_ARTIST_KEYS.slice();
       const valid = arr.filter(k => ALL_ARTIST_KEYS.includes(k));
       if(!valid.length) return ALL_ARTIST_KEYS.slice();
-      // Auto-add any newly introduced artists (e.g. when a new pair like
-      // monet/hokusai ships) so existing users see them as enabled by default.
-      // Without this, returning users would have the new chips hidden until
-      // they manually re-visit Setup.
+      // One-time auto-add of newly introduced artists (e.g. a new pair like
+      // monet/hokusai) so existing users see them enabled by default on the
+      // first launch after the update. CRITICAL: this must run ONCE PER ARTIST,
+      // not on every launch — otherwise a user who deliberately turns Monet off
+      // in Setup gets it forced back on at the next restart (the bug we're
+      // fixing). We remember which artists have already been seeded in a
+      // separate localStorage flag and never re-seed those again.
       const NEW_ARTISTS = ['monet','hokusai'];
+      let seeded = [];
+      try { const s = JSON.parse(localStorage.getItem('paintiano_setup_artists_seeded')||'[]'); if(Array.isArray(s)) seeded = s; } catch(_){}
+      let seededChanged = false;
       for(const k of NEW_ARTISTS){
-        if(ALL_ARTIST_KEYS.includes(k) && !valid.includes(k)) valid.push(k);
+        if(!ALL_ARTIST_KEYS.includes(k)) continue;
+        if(seeded.includes(k)) continue;          // already seeded once → respect user's choice
+        if(!valid.includes(k)) valid.push(k);     // first time this artist ships → enable by default
+        seeded.push(k); seededChanged = true;     // and mark as seeded so we never force it again
+      }
+      if(seededChanged){
+        try { localStorage.setItem('paintiano_setup_artists_seeded', JSON.stringify(seeded)); } catch(_){}
       }
       return valid;
     } catch(_) { return ALL_ARTIST_KEYS.slice(); }
@@ -21716,10 +21731,38 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // own notes. Same index/length as chords.
       const _pc = (_chordsPaint && _chordsPaint!==chords) ? _chordsPaint[idx] : null;
       const notes = (_pc && _pc.n) ? _pc.n : chord.n;
+      // Carrying-tone lightness: when this See-music chord knows the source
+      // cell's mean lightness (_lum, 0..1), nudge the palette colour toward that
+      // lightness so a pale cream cell paints pale, not full saturated orange.
+      // We blend the gc() RGB toward white (lum>0.5) or black (lum<0.5) by how
+      // far the cell's lightness sits from the palette colour's own lightness —
+      // only a partial pull (max ~0.55) so the palette hue/identity survives.
+      // Audio is untouched; this only rewrites the paint colour. Plain MIDI
+      // chords have no _lum, so gcUse stays === gc and nothing changes there.
+      let gcUse = gc;
+      const _cellLum = (_pc && typeof _pc._lum==='number') ? _pc._lum
+                     : (typeof chord._lum==='number' ? chord._lum : null);
+      if(_cellLum!=null){
+        gcUse = (m,v)=>{
+          const c = gc(m,v); if(!c) return c;
+          const r=c[0],g=c[1],b=c[2];
+          const srcL=(0.299*r+0.587*g+0.114*b)/255;      // palette colour's lightness
+          const d=_cellLum-srcL;                          // how much lighter/darker the cell is
+          const pull=Math.max(-0.55, Math.min(0.55, d));  // partial, keep hue identity
+          const tgt = pull>=0 ? 255 : 0;                  // toward white or black
+          const k=Math.abs(pull);
+          return [
+            Math.round(r+(tgt-r)*k),
+            Math.round(g+(tgt-g)*k),
+            Math.round(b+(tgt-b)*k),
+            c[3]
+          ];
+        };
+      }
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
-        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
-        else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
+        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gcUse,s.w,s.h,style));
+        else drawBlock(ctx,cell.x,cell.y,notes,gcUse,cell.w,cell.h,style);
       }else{
         // No precomputed cell yet (one-render gap between commit's setChords and
         // the grid-recompute effect's setGrid). Instead of the tiny default-grid
@@ -22256,8 +22299,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(srcLen===0){ _imageDomPcsRef.current=null; return; }
     for(let i=0;i<cur.length;i++){
       const srcIdx = Math.min(srcLen-1, Math.floor(i * srcLen / cur.length));
-      const pc = src[srcIdx];
-      if(typeof pc === 'number') cur[i]._domPc = pc;
+      const ent = src[srcIdx];
+      if(ent && typeof ent.pc === 'number') cur[i]._domPc = ent.pc;
+      if(ent && typeof ent.lum === 'number') cur[i]._lum = ent.lum;
     }
     // New array reference so the paint effect re-runs against the chords now
     // carrying _domPc; in-place mutation alone wouldn't re-render.
@@ -29008,15 +29052,19 @@ Composition rules:
                 // texture-less.
                 const baked = bakeImageChords(chords);
                 if(baked.length===0) return;
-                // Capture the per-event dominant carrying tone (_domPc) in song
-                // order, so the Music canvas can paint each cell in the source
-                // painting's carrying colour instead of the harmony-shuffled pc.
-                // The MIDI round-trip strips _domPc (it isn't a MIDI field), so
-                // we stash it on a side channel and re-attach it proportionally
-                // after load. AUDIO IS UNTOUCHED — encodeMidi reads only m/v/
-                // timing; _domPc never affects playback. Pure Image and pure
-                // Music never populate this, so they are byte-for-byte unchanged.
-                _imageDomPcsRef.current = baked.map(c => (typeof c._domPc==='number' ? c._domPc : null));
+                // Capture the per-event carrying tone (_domPc) AND mean cell
+                // lightness (_lum) in song order, so the Music canvas can paint
+                // each cell in the source painting's carrying colour AND keep its
+                // brightness — without this, a pale cream cell (light, low-chroma
+                // orange) repaints as full saturated orange and the whole piece
+                // darkens, losing the airiness of light originals. The MIDI
+                // round-trip strips both (they aren't MIDI fields), so we stash
+                // them on a side channel and re-attach proportionally after load.
+                // AUDIO IS UNTOUCHED — encodeMidi reads only m/v/timing.
+                _imageDomPcsRef.current = baked.map(c => ({
+                  pc:  (typeof c._domPc==='number' ? c._domPc : null),
+                  lum: (typeof c._lum==='number'   ? c._lum   : null)
+                }));
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
