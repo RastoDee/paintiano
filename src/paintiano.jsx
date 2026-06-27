@@ -27697,28 +27697,41 @@ Composition rules:
       // seed-derived draw, not the (null) user selection.
       const style = effectiveStyle;
       const{N,BW,BH,CW,CH}=grid;
-      // sizeMode: 'web' = 4× (good for screens/social), 'print' = A0 ≥300 DPI
+      // sizeMode: 'web' = 4× (good for screens/social), 'print' = A1 print
       let SCALE, label, dpi;
       if(sizeMode==='print'){
-        // A0 = 841 × 1189 mm = 33.11" × 46.81". At 300 DPI the long side is
-        // 14043 px and the short side 9933 px — but most paintings are
-        // landscape/square, so we target the SHORTER A0 dimension as the floor
-        // on the longer canvas side: ≥ 9933 px guarantees A0 at full 300 DPI
-        // regardless of orientation. We use 10000 for a tiny headroom (~302 DPI).
-        // CAP by absolute output pixels (12000 long side) instead of by SCALE —
-        // small source canvases get a higher SCALE to reach the A0 floor, while
-        // huge sources don't render a needlessly huge bitmap. 12000 px on the
-        // long side stays well inside browser canvas limits (16384 in Chrome).
-        const A0_MIN=10000;
-        const MAX_OUT=12000;
+        // A1 = 594 × 841 mm = 23.39" × 33.11". At 300 DPI the long side is
+        // 9933 px, short side 7016 px. We target the SHORTER A1 dimension as the
+        // floor on the longer canvas side (≥ 7016 px) so any orientation reaches
+        // A1 quality. CAP by absolute output pixels so small sources scale up to
+        // the A1 floor while huge sources don't render a needlessly big bitmap.
+        const A1_MIN=7016;
+        let MAX_OUT=9933;             // A1 long side @ 300 DPI; desktop/Android can do this
         const maxSide=Math.max(CW,CH);
-        const minScaleForA0=Math.ceil(A0_MIN/maxSide);
+        // iOS / iPadOS Safari caps a single canvas at ~16.7M PIXELS TOTAL (not per
+        // side): above that, toBlob() returns null → "could not encode image".
+        // A 9933-px-long A1 canvas is ~7000×9933 ≈ 70M px² — over the iOS ceiling.
+        // So on iOS, derive the long-side cap from the area budget for THIS aspect
+        // ratio and clamp MAX_OUT to it; the reported DPI follows the real pixels.
+        const _isIOS = (()=>{ try{
+          return /iPad|iPhone|iPod/.test(navigator.userAgent)
+            || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); // iPadOS reports as Mac
+        }catch(_){ return false; } })();
+        if(_isIOS){
+          const AREA_CAP=16000000;                 // ~16.0M px², safe under iOS 16.7M
+          const aspect=maxSide/Math.min(CW,CH);    // long/short
+          const iosLong=Math.floor(Math.sqrt(AREA_CAP*aspect));
+          MAX_OUT=Math.min(MAX_OUT, iosLong);
+        }
+        const minScaleForA1=Math.ceil(A1_MIN/maxSide);
         const capScale=Math.floor(MAX_OUT/maxSide);
-        SCALE=Math.max(8, Math.min(capScale||8, minScaleForA0));
-        // DPI reported against A0's long side (33.11" for the short A0 edge,
-        // i.e. the floor we're guaranteeing).
+        // capScale wins over the A1 floor when they conflict (iOS can't reach full
+        // A1 @ 300 in one canvas — better a lower DPI that actually encodes than a
+        // null blob). Never below 1.
+        SCALE=Math.max(1, Math.min(capScale||1, minScaleForA1));
+        // Honest DPI: actual long-side pixels / A1 long side in inches (33.11").
         dpi=Math.round((maxSide*SCALE)/33.11);
-        label='A0-print';
+        label='A1-print';
       } else if(sizeMode==='gallery'){
         // Vector SVG export — resolution-independent for fine-art / gallery prints.
         // The print shop's RIP rasterises at whatever DPI it supports (giclée
@@ -28043,11 +28056,19 @@ Composition rules:
         // mark. Pro skips this (applyWatermark is a no-op when isPro=true).
         applyWatermark(st, isPro);
       }
-      const blob=await new Promise(res=>outCanvas.toBlob(res,'image/png'));
+      let blob=await new Promise(res=>outCanvas.toBlob(res,'image/png'));
+      let _mime='image/png', _ext='png';
+      if(!blob){
+        // PNG encode of a very large canvas can fail on iOS even when the canvas
+        // itself is valid. JPEG uses far less memory to encode — try it before
+        // giving up, so Print still produces a (slightly lossy) high-res file.
+        blob=await new Promise(res=>outCanvas.toBlob(res,'image/jpeg',0.92));
+        if(blob){ _mime='image/jpeg'; _ext='jpg'; }
+      }
       if(!blob){setErr(t('errs').printEncode);setErrInfo(false);return;}
       const title=compositionName.trim()||info?.title||'painting';
-      const filename=`paintiano-${title.replace(/[^\w-]+/g,'_').slice(0,60)}-${outCanvas.width}x${outCanvas.height}-${label}.png`;
-      const file=new File([blob],filename,{type:'image/png'});
+      const filename=`paintiano-${title.replace(/[^\w-]+/g,'_').slice(0,60)}-${outCanvas.width}x${outCanvas.height}-${label}.${_ext}`;
+      const file=new File([blob],filename,{type:_mime});
       const url=URL.createObjectURL(blob);
       setPreviewMsg(null);
       setShowSizePicker(false);
@@ -30409,10 +30430,10 @@ Composition rules:
                   <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('print', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
                       <TxIcon n="print" s={14}/>
-                      {({EN:'Print A0 · 300+ DPI',SK:'Tlač A0 · 300+ DPI',DE:'Druck A0 · 300+ DPI',FR:'Impression A0 · 300+ DPI',ES:'Impresión A0 · 300+ DPI',PT:'Impressão A0 · 300+ DPI',zh:'打印 A0 · 300+ DPI',zhTW:'列印 A0 · 300+ DPI',ja:'印刷 A0 · 300+ DPI'})[lang]||'Print A0 · 300+ DPI'}
+                      {({EN:'Print A1',SK:'Tlač A1',DE:'Druck A1',FR:'Impression A1',ES:'Impresión A1',PT:'Impressão A1',zh:'打印 A1',zhTW:'列印 A1',ja:'印刷 A1'})[lang]||'Print A1'}
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
-                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'~20× · large file · print-ready',SK:'~20× · veľký súbor · pripravené na tlač',DE:'~20× · große Datei · druckfertig',FR:'~20× · gros fichier · prêt à imprimer',ES:'~20× · archivo grande · listo para imprimir',PT:'~20× · ficheiro grande · pronto a imprimir',zh:'~20× · 大文件 · 可印刷',zhTW:'~20× · 大檔案 · 可列印',ja:'~20× · 大きいファイル · 印刷可能'})[lang]||'~20× · large file · print-ready'}</div>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'high-res · large file · print-ready',SK:'vysoké rozlíšenie · veľký súbor · na tlač',DE:'hochauflösend · große Datei · druckfertig',FR:'haute résolution · gros fichier · prêt à imprimer',ES:'alta resolución · archivo grande · listo para imprimir',PT:'alta resolução · ficheiro grande · pronto a imprimir',zh:'高分辨率 · 大文件 · 可印刷',zhTW:'高解析度 · 大檔案 · 可列印',ja:'高解像度 · 大きいファイル · 印刷可能'})[lang]||'high-res · large file · print-ready'}</div>
                   </button>
                   <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
