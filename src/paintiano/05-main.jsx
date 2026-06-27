@@ -2087,9 +2087,9 @@ export default function Paintiano() {
   // selected state still reads instantly. Idle chips stay on the dark card.
   const chipStyle = useCallback((on)=>({
     color: on ? 'rgba(220,180,90,.98)' : PF.cream,
-    background: on ? 'rgba(201,168,76,.18)' : PF.card2,
-    border: '1px solid '+(on ? 'rgba(201,168,76,.45)' : 'rgba(242,238,232,.08)'),
-    boxShadow: on ? '0 0 0 1px rgba(201,168,76,.22)' : 'none',
+    background: PF.card2,
+    border: '1px solid '+(on ? 'rgba(201,168,76,.55)' : 'rgba(242,238,232,.08)'),
+    boxShadow: on ? '0 0 0 1px rgba(201,168,76,.28)' : 'none',
   }),[]);
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
