@@ -4759,13 +4759,18 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       musicStashRef.current=null; setHasMusicDraft(false);
       _seeMusicSrcSigRef.current=null;
       _musicFromImageRef.current=false;
-      // stashMode reads dispRef / moodMetaRef.playedOnce (async-updated), which
-      // still hold the pre-Clear values at this synchronous point. Force them to
-      // the cleared state FIRST so the re-stash captures disp=0 / playedOnce=false
-      // — otherwise Back → Image restores the finished draft and SEE MUSIC relights.
+      // Don't try to re-stash via stashMode — its own guard
+      // (`if(!playedOnceRef.current && !imgComposeRef.current) return`) explicitly
+      // SKIPS a just-Cleared image so Back doesn't resurrect it. Instead, patch
+      // the existing stash in place: clear its playback fields so a later restore
+      // (Back → Image chip) reconstitutes the bare photo with SEE MUSIC off. The
+      // image / pixel / chords stay intact — only disp/playedOnce/holdPause reset.
       dispRef.current=0; playedOnceRef.current=false;
       if(moodMetaRef.current) moodMetaRef.current.playedOnce=false;
-      try{ stashMode('image'); }catch(_){}   // re-stash with cleared playback state
+      if(imageStashRef.current){
+        imageStashRef.current.disp = 0;
+        imageStashRef.current.playedOnce = false;
+      }
       // loadedSource stays 'image' → image view persists with the photo on canvas,
       // direction/palette controls live, Play ready to re-scan from the top.
       return;
