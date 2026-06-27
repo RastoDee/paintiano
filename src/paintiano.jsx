@@ -21607,8 +21607,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // instant Pause is tapped, before the state flush), OR resumeFromRef being
       // set (the saved resume position — also set during the Resume race render,
       // which must keep the blocks too).
-      const _paused = holdPaused || holdPausedRef.current || resumeFromRef.current!=null;
-      if(_paused){
+      // Keep the mosaic blocks on screen whenever there's a scanned trace to
+      // show: while PAUSED (hold the position) AND after the scan has FINISHED
+      // (blocks stay until the user taps Clear or re-scans by changing
+      // direction/palette). The canvas may have been blanked by a Setup remount,
+      // so repaint 0..disp from pixel data. Detect "has a trace" via pause flags
+      // OR playedOnce with a non-zero disp. Only a truly blank state (disp 0 —
+      // before the first Play, or right after Clear) falls through to the clear.
+      const _hasTrace = holdPaused || holdPausedRef.current || resumeFromRef.current!=null || (playedOnce && disp>0);
+      if(_hasTrace){
         try{
           const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
           const px=pixelRef.current;
@@ -25798,10 +25805,18 @@ Composition rules:
       setDisp(keep);setStamp(s=>s+1);
       resumeFromRef.current=keep;
     }else{
+      // Stopped / finished: a palette OR direction change re-transcribes and the
+      // blocks should clear back to the bare photo, ready to Play (re-scan) from
+      // the top — rather than instantly repainting the whole mosaic in the new
+      // palette. Reset disp to 0 and playedOnce to false so the gate above falls
+      // through to the clean-photo state until the next Play.
       stopAll();
       setChords(evts);chordsRef.current=evts;
-      setDisp(evts.length);
-      idxRef.current=evts.length;setStamp(s=>s+1);
+      setDisp(0);
+      idxRef.current=0;
+      resumeFromRef.current=null;
+      setPlayedOnce(false);
+      setStamp(s=>s+1);
     }
   },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood,melodyOn,melodyData]);
 
