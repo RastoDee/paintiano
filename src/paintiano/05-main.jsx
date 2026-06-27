@@ -2467,11 +2467,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // canvas. During playback we paint a subtle scanning highlight at the currently
     // playing cell so the user still gets visual feedback without losing the image.
     if(viewMode==='image'&&pixelRef.current){
-      // TEMP MARKER A: blue dot = effect entered the image branch at all.
-      try{ const ctxA=cv.getContext('2d'); const{CW}=grid; ctxA.fillStyle='#3388ff'; ctxA.fillRect(2,2,12,12);
-        ctxA.fillStyle='#fff'; ctxA.font='8px monospace'; ctxA.fillText('p'+(playing?1:0)+'a'+(anim?1:0), 2, 24);
-        ctxA.fillText('po'+(playedOnce?1:0)+'d'+disp, 2, 33);
-      }catch(_){}
       // Animation loop owns the canvas during play/animate — don't interfere
       if(playing||anim) return;
       // Paused (incl. returning from Setup while paused): the canvas may have
@@ -2517,12 +2512,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
               }
             }
           }
-          // TEMP MARKER: green = _hasTrace branch ran. Also show why.
-          try{ const{CW}=grid; ctx.fillStyle='#00ff66'; ctx.fillRect(CW-30,2,28,28);
-               ctx.fillStyle='#000'; ctx.font='8px monospace';
-               ctx.fillText('po:'+(playedOnce?1:0), CW-29, 12);
-               ctx.fillText('d:'+disp, CW-29, 21);
-          }catch(_){}
         }catch(_){}
         return;
       }
@@ -2535,13 +2524,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // made blocks reappear over the artwork after a palette change.)
       try{
         const cv2=canvasRef.current, ctx2=cv2&&cv2.getContext('2d');
-        if(ctx2){ const{CW,CH}=grid; ctx2.clearRect(0,0,CW,CH);
-          // TEMP MARKER: red = idle-clear branch ran (this is what wipes blocks).
-          ctx2.fillStyle='#ff0033'; ctx2.fillRect(CW-30,2,28,28);
-          ctx2.fillStyle='#fff'; ctx2.font='8px monospace';
-          ctx2.fillText('po:'+(playedOnce?1:0), CW-29, 12);
-          ctx2.fillText('d:'+disp, CW-29, 21);
-        }
+        if(ctx2){ const{CW,CH}=grid; ctx2.clearRect(0,0,CW,CH); }
       }catch(_){}
       return;
     }
@@ -3073,6 +3056,46 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(r&&r.state!=='inactive'){
         try{ r.requestData(); }catch(_){}
         try{ r.stop(); }catch(_){}
+      }
+      // IMAGE finish: the scan loop paints blocks straight onto the main canvas
+      // during playback, and on the very last step the canvas gets cleared once
+      // (the bare photo shows through). We want the finished mosaic to STAY until
+      // Clear or a re-scan. The main paint effect doesn't reliably re-run on the
+      // finish render, so repaint the full 0..disp mosaic here, directly, on the
+      // next frame (after the finish clear has landed). Guarded to image mode with
+      // an actual scanned trace; pure Music is untouched (different viewMode).
+      if(viewModeRef.current==='image' && pixelRef.current && playedOnceRef.current){
+        requestAnimationFrame(()=>{
+          try{
+            if(playingRef.current) return;           // a new Play already started
+            const cv=canvasRef.current, ctx=cv&&cv.getContext('2d');
+            const px=pixelRef.current, gr=gridRef.current, ch=chordsRef.current;
+            const dsp=dispRef.current;
+            if(!ctx||!px||!gr||!ch||!(dsp>0)) return;
+            const{nc,nr}=px, pdata=px.px;
+            const{BW,BH,CW,CH}=gr;
+            const colStep=px.colStep||1;
+            const effCols=Math.ceil(nc/colStep);
+            const CHORD_SIZE=4;
+            ctx.clearRect(0,0,CW,CH);
+            for(let i=0;i<dsp && i<ch.length;i++){
+              const _ev=ch[i]||{};
+              const band=_ev.band!=null?_ev.band:Math.floor(i/effCols);
+              const cg=_ev.cg!=null?_ev.cg:i%effCols;
+              const colStart=cg*colStep;
+              for(let sk=0;sk<colStep;sk++){
+                const col=colStart+sk; if(col>=nc) break;
+                for(let j=0;j<CHORD_SIZE;j++){
+                  const row=band*CHORD_SIZE+j; if(row>=nr) break;
+                  const p=pdata[row*nc+col];
+                  if(!p) continue;
+                  ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},0.42)`;ctx.fillRect(col*BW-1,row*BH-1,BW+2,BH+2);
+                  ctx.fillStyle=`rgb(${p.r},${p.g},${p.b})`;ctx.fillRect(col*BW+.5,row*BH+.5,BW-1,BH-1);
+                }
+              }
+            }
+          }catch(_){}
+        });
       }
     }
   },[playing]);
@@ -7003,13 +7026,7 @@ Composition rules:
         // colour change mid-playback that swaps in re-transcribed notes is heard
         // immediately on the very next step — no restart needed, no stale copy.
         const liveChords=chordsRef.current;
-        if(i>=liveChords.length){
-          // TEMP MARKER E: magenta = scan loop reached its end and is setting
-          // playing=false. Drawn directly so we know the end fired.
-          try{ const cvE=canvasRef.current, ctxE=cvE&&cvE.getContext('2d');
-            if(ctxE){ ctxE.fillStyle='#ff00ff'; ctxE.fillRect(34,2,12,12); } }catch(_){}
-          setPlaying(false);setDisp(liveChords.length);return;
-        }
+        if(i>=liveChords.length){setPlaying(false);setDisp(liveChords.length);return;}
         // For chord i: take its stored cell (band,cg) so non-row-major directions
         // (vert/spiral) paint the correct cell; fall back to row-major for safety.
         const _ev=liveChords[i]||{};
