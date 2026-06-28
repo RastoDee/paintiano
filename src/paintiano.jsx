@@ -3862,16 +3862,15 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   let _forcedPollVariant = 0; // set by the phase dispatcher: 0 = Dense, 1 = Sparse
   // ── 7-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
   //  0 = Classic drip — Dense all-over web.
-  //  1 = Stenographic Figure (pre-drip 1942, totemic figures + symbols).
+  //  1 = Vertical drip totem — drip painting organised in vertical columns.
   //  2 = Black pourings / theme colour pour.
   //  3 = Lavender Mist / Totem atmospheric.
   //  4 = White Light (post-drip 1954, INVERTED palette on dark ground).
   //  5 = Blue Poles.
   //  6 = Sparse — bolder strokes, more open canvas, thicker beads (was a hidden
   //      seed bit inside slot 0; now its own cyclable phase).
-  //  Free (cap=2) sees Dense + Stenographic — drip vs pre-drip is the most
-  //  dramatic art-historical contrast Pollock offers, so the two-variant
-  //  preview reads as "two different painters".
+  //  Free (cap=2) sees Dense + Vertical totem — two distinct drip
+  //  compositions (all-over web vs vertical organisation).
   {
     const _pn=_capN(7); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_variantCap === 2){
@@ -4576,154 +4575,106 @@ function pollockPhasePoles(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const progress = N/Math.max(1,cn);
+  const D=Math.min(CW,CH);
+  const sR=_seedRnd(7100,ss,0,0); sR(); sR();
 
-  // Warm cream-yellow ground gradient.
-  const grad = ctx.createLinearGradient(0,0,0,CH);
-  grad.addColorStop(0, isBW?'#cfc5b2':'#e6d18a');
-  grad.addColorStop(1, isBW?'#a89e8a':'#caa55a');
-  ctx.fillStyle = grad;
+  // ── Lavender/cream ground with warm wash gradient overlay ──
+  ctx.fillStyle = isBW ? '#c0b69e' : '#d4c5a8';
+  ctx.fillRect(0,0,CW,CH);
+  const wash = ctx.createLinearGradient(0,0,0,CH);
+  if(isBW){
+    wash.addColorStop(0,'rgba(140,130,120,0.18)');
+    wash.addColorStop(1,'rgba(100,95,90,0.10)');
+  } else {
+    wash.addColorStop(0,'rgba(200,150,120,0.18)');
+    wash.addColorStop(1,'rgba(150,100,80,0.10)');
+  }
+  ctx.fillStyle = wash;
   ctx.fillRect(0,0,CW,CH);
 
-  // Horizontal brush-stroked grain — texture, no chord dependence.
-  const grainCount = 60;
-  for(let i=0;i<grainCount;i++){
-    const rnd = _seedRnd(i+7100, ss, 0, 0);
-    const r = 200+rnd()*30, g = 160+rnd()*30, b = isBW?180:(80+rnd()*30);
-    ctx.strokeStyle = `rgba(${r|0},${g|0},${b|0},${(0.15+rnd()*0.15).toFixed(2)})`;
-    ctx.lineWidth = 8+rnd()*20;
-    ctx.beginPath();
-    const y = rnd()*CH;
-    ctx.moveTo(rnd()*CW*0.3, y);
-    ctx.lineTo(CW*0.7+rnd()*CW*0.3, y+(rnd()-0.5)*30);
-    ctx.stroke();
+  // Song character → column count + per-column density. Calm music = fewer
+  // narrower columns, sparser drips; energetic = more, busier.
+  const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
+  const drive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+  const cols = Math.max(3, Math.min(5, Math.round(3 + drive*2)));
+  const elementsPerCol = Math.round(70 + drive*30);   // 70-100 elements per column at full reveal
+  const colW = CW/cols;
+
+  // Build the column centres deterministically.
+  const colCenters = [];
+  const colWidths = [];
+  for(let c=0;c<cols;c++){
+    const cr = _seedRnd(c+7150,ss,0,0); cr(); cr();
+    colCenters.push(colW*(c+0.5) + (cr()-0.5)*colW*0.25);
+    colWidths.push(colW*(0.55 + cr()*0.25));
   }
 
-  // Figure count scales with progress: 1 → 3 over the piece.
-  const figureSlots = [
-    { x: CW*0.22, y: CH*0.55, scale: 0.85, chordPos: 0.10 },
-    { x: CW*0.50, y: CH*0.50, scale: 1.00, chordPos: 0.50 },
-    { x: CW*0.78, y: CH*0.60, scale: 0.78, chordPos: 0.90 },
-  ];
-  const visFigures = Math.max(1, Math.min(3, Math.ceil(progress * 3)));
+  // Drip palette: Pollock's earthy darks plus chord-driven accents. We mix
+  // fixed darks (ink, cream, brown) with per-element _picChord pulls so the
+  // painting reads as Pollock first, song-coloured second.
+  const fixedPal = isBW
+    ? [[15,12,18],[245,240,228],[100,90,80],[60,55,50],[200,180,160]]
+    : [[20,15,18],[255,250,240],[80,40,30],[180,80,60],[200,170,90]];
 
-  for(let fi=0;fi<visFigures;fi++){
-    const f = figureSlots[fi];
-    const ci = Math.min(cn-1, Math.floor(f.chordPos * cn));
-    const chord = chords[ci];
-    _setCurE(chord && chord._E);
-    const {rgb} = _picChord(chords, ci, gc, isBW);
-    const W = CW*0.13*f.scale, H = CH*0.55*f.scale;
-    ctx.save();
-    ctx.translate(f.x, f.y);
+  const visPerCol = Math.max(4, Math.ceil(elementsPerCol * progress));
 
-    // Head — elongated oval.
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
-    ctx.beginPath();
-    ctx.ellipse(0, -H*0.32, W*0.45, H*0.18, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.strokeStyle = isBW?'#222':'#0e0a08'; ctx.lineWidth = 2.5; ctx.stroke();
+  for(let c=0;c<cols;c++){
+    const colCenter = colCenters[c];
+    const colWidth  = colWidths[c];
+    for(let i=0;i<visPerCol;i++){
+      const pr = _seedRnd(c*1000+i+7300,ss,0,0); pr();
+      // Pick element type: 50% drip line, 35% droplet, 15% splatter cluster
+      const which = pr();
+      // Pick colour: mostly fixed Pollock palette; ~25% chord-driven for song colour.
+      let rgb;
+      if(pr() < 0.25){
+        const _ci = Math.floor((c*elementsPerCol + i) % cn);
+        const _ch2 = chords[_ci];
+        _setCurE(_ch2 && _ch2._E);
+        const _pc = _picChord(chords, _ci, gc, isBW);
+        rgb = _pc.rgb;
+      } else {
+        rgb = fixedPal[Math.floor(pr()*fixedPal.length)];
+      }
+      const alpha = 0.70 + pr()*0.15;
+      const colStr = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha.toFixed(2)})`;
 
-    // Body — vertical totem trapezoid.
-    ctx.beginPath();
-    ctx.moveTo(-W*0.40, -H*0.20);
-    ctx.lineTo(+W*0.40, -H*0.20);
-    ctx.lineTo(+W*0.48, +H*0.30);
-    ctx.lineTo(-W*0.48, +H*0.30);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
-
-    // Body segments (3 horizontal divisions).
-    for(let i=1;i<4;i++){
-      ctx.beginPath();
-      ctx.moveTo(-W*0.45, -H*0.20 + i*(H*0.50/4));
-      ctx.lineTo(+W*0.45, -H*0.20 + i*(H*0.50/4));
-      ctx.stroke();
+      if(which < 0.50){
+        // ── Vertical drip line: quadratic with slight sway ──
+        const x0 = colCenter + (pr()-0.5)*colWidth;
+        const y0 = pr()*CH;
+        const len = CH*(0.08 + pr()*0.30);
+        const sway = (pr()-0.5)*colWidth*0.4;
+        ctx.strokeStyle = colStr;
+        ctx.lineWidth = Math.max(0.8, D*(0.001 + pr()*0.0045));
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.quadraticCurveTo(x0+sway, y0+len*0.5, x0+sway*0.4, y0+len);
+        ctx.stroke();
+      } else if(which < 0.85){
+        // ── Droplet ──
+        const x = colCenter + (pr()-0.5)*colWidth*1.1;
+        const y = pr()*CH;
+        ctx.fillStyle = colStr;
+        ctx.beginPath();
+        ctx.arc(x, y, D*(0.002 + pr()*0.008), 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        // ── Splatter cluster (5 small nearby dots) ──
+        const x = colCenter + (pr()-0.5)*colWidth*0.8;
+        const y = pr()*CH;
+        ctx.fillStyle = colStr;
+        for(let s=0;s<5;s++){
+          const sr = _seedRnd(c*1000+i*10+s+7400,ss,0,0); sr();
+          const dx = (sr()-0.5)*colWidth*0.4;
+          const dy = (sr()-0.5)*CH*0.04;
+          ctx.beginPath();
+          ctx.arc(x+dx, y+dy, D*(0.001 + sr()*0.004), 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
     }
-
-    // Eyes — two black-on-cream tribal eyes on the head.
-    ctx.fillStyle = isBW?'#1a1a1a':'#0e0a08';
-    ctx.beginPath(); ctx.arc(-W*0.15, -H*0.32, W*0.06, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(+W*0.15, -H*0.32, W*0.06, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#f0e8d0';
-    ctx.beginPath(); ctx.arc(-W*0.15+W*0.025, -H*0.34, W*0.025, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(+W*0.15+W*0.025, -H*0.34, W*0.025, 0, Math.PI*2); ctx.fill();
-
-    // Mouth — single horizontal line.
-    ctx.strokeStyle = isBW?'#1a1a1a':'#0e0a08'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(-W*0.08, -H*0.22); ctx.lineTo(+W*0.08, -H*0.22); ctx.stroke();
-
-    // Top horns triangle.
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
-    ctx.beginPath();
-    ctx.moveTo(-W*0.30, -H*0.45);
-    ctx.lineTo(0, -H*0.55);
-    ctx.lineTo(+W*0.30, -H*0.45);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
-
-    // Base / legs.
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(-W*0.25, H*0.30); ctx.lineTo(-W*0.20, H*0.45);
-    ctx.moveTo(+W*0.25, H*0.30); ctx.lineTo(+W*0.20, H*0.45);
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  // Floating symbols — chord-coloured, count scales with progress.
-  const symbolsMax = Math.max(8, Math.min(28, Math.round(cn*0.5)));
-  const visSymbols = Math.max(2, Math.ceil(symbolsMax*progress));
-  for(let i=0;i<visSymbols;i++){
-    const rnd = _seedRnd(i+7800, ss, 0, 0);
-    const ci = Math.floor(i*(cn/Math.max(1,symbolsMax)));
-    const {rgb} = _picChord(chords, ci, gc, isBW);
-    const x = rnd()*CW, y = rnd()*CH;
-    const kind = i%4;
-    ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`;
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
-    ctx.lineWidth = 2.5;
-    if(kind===0){
-      // floating eye
-      ctx.beginPath();
-      ctx.ellipse(x, y, Math.min(CW,CH)*0.018, Math.min(CW,CH)*0.009, 0, 0, Math.PI*2);
-      ctx.stroke();
-      ctx.fillStyle = isBW?'#1a1a1a':'#0e0a08';
-      ctx.beginPath(); ctx.arc(x, y, Math.min(CW,CH)*0.005, 0, Math.PI*2); ctx.fill();
-    } else if(kind===1){
-      // arrow
-      const L = Math.min(CW,CH)*0.018;
-      ctx.beginPath();
-      ctx.moveTo(x-L, y); ctx.lineTo(x+L, y);
-      ctx.moveTo(x+L*0.6, y-L*0.4); ctx.lineTo(x+L, y); ctx.lineTo(x+L*0.6, y+L*0.4);
-      ctx.stroke();
-    } else if(kind===2){
-      // triangle
-      const L = Math.min(CW,CH)*0.012;
-      ctx.beginPath();
-      ctx.moveTo(x, y-L); ctx.lineTo(x-L*0.9, y+L*0.6); ctx.lineTo(x+L*0.9, y+L*0.6);
-      ctx.closePath(); ctx.fill();
-    } else {
-      // squiggle
-      const L = Math.min(CW,CH)*0.016;
-      ctx.beginPath();
-      ctx.moveTo(x-L, y);
-      ctx.quadraticCurveTo(x-L*0.5, y-L*0.7, x, y);
-      ctx.quadraticCurveTo(x+L*0.5, y+L*0.7, x+L, y);
-      ctx.stroke();
-    }
-  }
-
-  // Black scribble connector across the top — appears late in the painting
-  // (after 60% progress) as a unifying line linking the figures.
-  if(progress > 0.6){
-    ctx.strokeStyle = isBW?'rgba(20,20,24,0.8)':'rgba(14,10,8,0.8)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(CW*0.10, CH*0.20);
-    ctx.bezierCurveTo(CW*0.30, CH*0.10, CW*0.45, CH*0.30, CW*0.55, CH*0.15);
-    ctx.bezierCurveTo(CW*0.70, CH*0.05, CW*0.85, CH*0.25, CW*0.92, CH*0.20);
-    ctx.stroke();
   }
 }
 
@@ -11738,24 +11689,138 @@ function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ── Miró D: Biomorphic creatures — curvy organic blobs with eye-dots. ──
+// ── Miró D: "Web" — thin black curving network with palette-coloured nodes.
+// Algorithmically a graph (nodes + edges), not biomorphic blobs. Markedly
+// distinct from Picasso Surreal (which is a few large polygons with eye).
 function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const D=Math.min(CW,CH);
   const P=_miroPal(isBW,gc);
-  ctx.fillStyle=isBW?'rgb(224,220,212)':'rgb(238,228,206)';ctx.fillRect(0,0,CW,CH);
-  const crs=Math.max(2,Math.min(14,Math.round(cn/12)));
-  const vis=Math.max(1,Math.ceil(N/cn*crs));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+601,ss,0,0);
-    const {rgb,energy}=_picChord(chords,Math.floor(i*(cn/crs)),gc,isBW);
-    const cx=0.15*CW+rnd()*0.7*CW, cy=0.15*CH+rnd()*0.7*CH, R=Math.min(CW,CH)*(0.06+energy*0.10);
-    // wobbly blob
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.beginPath();
-    const pts=8;for(let p=0;p<=pts;p++){const a=p/pts*Math.PI*2,rr=R*(0.7+rnd()*0.5);const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr*0.8;if(p===0)ctx.moveTo(x,y);else ctx.quadraticCurveTo(cx+Math.cos(a-0.3)*rr*1.1,cy+Math.sin(a-0.3)*rr*0.9,x,y);}
-    ctx.closePath();ctx.fill();
-    ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.9)`;ctx.lineWidth=Math.max(1.5,CW*0.004);ctx.stroke();
-    // eye
-    ctx.fillStyle=`rgb(${P.WHT[0]},${P.WHT[1]},${P.WHT[2]})`;ctx.beginPath();ctx.arc(cx,cy-R*0.2,R*0.22,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=`rgb(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]})`;ctx.beginPath();ctx.arc(cx,cy-R*0.2,R*0.10,0,Math.PI*2);ctx.fill();
+  // Cream paper ground.
+  const _adjHex=(hex)=>{
+    let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];}
+    if(typeof _pastelTint==='function'){const p=_pastelTint(r,g,b);r=p[0];g=p[1];b=p[2];}
+    return `rgb(${r},${g},${b})`;
+  };
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
+  const grad=ctx.createLinearGradient(0,0,0,CH);
+  if(isBW){
+    grad.addColorStop(0,_adjHex('#e0dcd4'));
+    grad.addColorStop(1,_adjHex('#d4cfc4'));
+  } else {
+    grad.addColorStop(0,_adjHex('#f0e7d2'));
+    grad.addColorStop(1,_adjHex('#e8dcc0'));
+  }
+  ctx.fillStyle=grad; ctx.fillRect(0,0,CW,CH);
+
+  // Node count drives with chord count and song character (calm/sparse = fewer
+  // nodes, energetic/dense = more, busier web).
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const drive=_ch?(0.55*_ch.energy+0.45*_ch.density):0.5;
+  const nodeCountFull=Math.max(6,Math.min(14,Math.round(9+drive*5)));
+  const visN=Math.max(2,Math.ceil(nodeCountFull*reveal));
+
+  // Place nodes on a loose poisson-ish grid (even spread but not regular).
+  const margin=D*0.10;
+  const cols=Math.max(2,Math.ceil(Math.sqrt(nodeCountFull*CW/CH)));
+  const rows=Math.max(2,Math.ceil(nodeCountFull/cols));
+  const cw=(CW-margin*2)/cols, ch=(CH-margin*2)/rows;
+  const nodes=[];
+  let placed=0;
+  for(let row=0;row<rows && placed<nodeCountFull;row++){
+    for(let col=0;col<cols && placed<nodeCountFull;col++){
+      const jr=_seedRnd(placed*23+601,ss,0,0); jr();
+      const cx=margin+cw*(col+0.5)+(jr()-0.5)*cw*0.7;
+      const cy=margin+ch*(row+0.5)+(jr()-0.5)*ch*0.7;
+      nodes.push({x:cx,y:cy,idx:placed});
+      placed++;
+    }
+  }
+
+  // Build edges: each visible node connects to 1-2 nearest visible neighbours.
+  const edges=[]; const seen=new Set();
+  for(let i=0;i<visN;i++){
+    const pr=_seedRnd(i*31+777,ss,0,0); pr();
+    const partnerCount=1+Math.floor(pr()*2);
+    const candidates=[];
+    for(let j=0;j<visN;j++){
+      if(j===i) continue;
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+      candidates.push({j, d2:dx*dx+dy*dy});
+    }
+    candidates.sort((a,b)=>a.d2-b.d2);
+    for(let p=0;p<partnerCount && p<candidates.length;p++){
+      const j=candidates[p].j;
+      const key=i<j?(i+'-'+j):(j+'-'+i);
+      if(!seen.has(key)){ seen.add(key); edges.push({a:i,b:j,key}); }
+    }
+  }
+
+  // Draw thin black curving edges (quadratic with perpendicular control offset).
+  ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.88)`;
+  ctx.lineWidth=Math.max(1.0, D*0.0028);
+  ctx.lineCap='round';
+  for(const e of edges){
+    const A=nodes[e.a], B=nodes[e.b];
+    const er=_seedRnd(e.a*101+e.b+1234,ss,0,0); er();
+    const mx=(A.x+B.x)/2, my=(A.y+B.y)/2;
+    const dx=B.x-A.x, dy=B.y-A.y;
+    const len=Math.sqrt(dx*dx+dy*dy);
+    const nxp=-dy/(len||1), nyp=dx/(len||1);
+    const off=(er()-0.5)*len*0.35;
+    const cpx=mx+nxp*off, cpy=my+nyp*off;
+    ctx.beginPath();
+    ctx.moveTo(A.x,A.y);
+    ctx.quadraticCurveTo(cpx,cpy,B.x,B.y);
+    ctx.stroke();
+  }
+
+  // At each visible node, draw a flat palette-coloured shape.
+  for(let i=0;i<visN;i++){
+    const n=nodes[i];
+    const nr=_seedRnd(i*47+333,ss,0,0); nr();
+    const {rgb}=_picChord(chords, i%cn, gc, isBW);
+    const kind=Math.floor(nr()*4); // 0=disc, 1=diamond, 2=oval, 3=half-circle
+    const size=D*(0.04+nr()*0.06);
+    ctx.save();
+    ctx.translate(n.x,n.y);
+    ctx.rotate((nr()-0.5)*Math.PI);
+    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.9)`;
+    ctx.lineWidth=Math.max(1.0, D*0.0028);
+    if(kind===0){
+      ctx.beginPath(); ctx.arc(0,0,size,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    } else if(kind===1){
+      ctx.beginPath();
+      ctx.moveTo(0,-size); ctx.lineTo(size*0.8,0); ctx.lineTo(0,size); ctx.lineTo(-size*0.8,0);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else if(kind===2){
+      ctx.beginPath(); ctx.ellipse(0,0,size*1.1,size*0.65,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(0,0,size,0,Math.PI); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Miró signature: scatter dots and 4-point stars across the canvas.
+  const marks=Math.ceil(28*reveal);
+  for(let k=0;k<marks;k++){
+    const mr=_seedRnd(k*7+9999,ss,0,0); mr();
+    const x=margin+mr()*(CW-margin*2);
+    const y=margin+mr()*(CH-margin*2);
+    if(mr()<0.55){
+      ctx.beginPath(); ctx.arc(x,y, D*0.005+mr()*D*0.006, 0, Math.PI*2);
+      ctx.fillStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.85)`; ctx.fill();
+    } else {
+      const s=D*(0.010+mr()*0.010);
+      ctx.beginPath();
+      ctx.moveTo(x-s,y); ctx.lineTo(x+s,y); ctx.moveTo(x,y-s); ctx.lineTo(x,y+s);
+      ctx.lineWidth=D*0.0025; ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.78)`;
+      ctx.stroke();
+    }
   }
 }
 
