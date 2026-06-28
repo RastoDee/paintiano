@@ -1,35 +1,3 @@
-// §5b  FIRST-IMPRESSION DEMO SONG  — the auto-play piece a brand-new visitor
-// sees within the first ~3 seconds (UX overhaul, Phase 1). A recognizable,
-// modern piano arpeggio motif (Coldplay "Clocks" feel): an Eb-major figure
-// Eb5-Bb4-G4 cycling through Eb → Bb-min → F-min, with a left-hand bass line,
-// then a short melodic tag. Beat-based [midi, durBeats, beatPos, vel] — the
-// exact array form noteArr2events() accepts (numbers go straight through
-// name2midi; tempo auto-scales to a ~30s playback). Deliberately a short,
-// simplified figure (not a full transcription) so it reads instantly without
-// reproducing a complete copyrighted work.
-const DEMO_FIRST = {
-  title: 'Clocks · Coldplay',
-  tempo: 130,
-  notes: [
-    // bar 1 — Eb (Eb5 Bb4 G4)
-    [75,0.5,0,82],[70,0.5,0.5,72],[67,0.5,1,70],[75,0.5,1.5,80],[70,0.5,2,72],[67,0.5,2.5,70],
-    // bar 2 — Bb-min (Bb4 F4 Db4)
-    [73,0.5,3,82],[68,0.5,3.5,72],[65,0.5,4,70],[73,0.5,4.5,80],[68,0.5,5,72],[65,0.5,5.5,70],
-    // bar 3 — F-min (Ab4 Eb4 C4)
-    [70,0.5,6,82],[65,0.5,6.5,72],[61,0.5,7,70],[70,0.5,7.5,80],[65,0.5,8,72],[61,0.5,8.5,70],
-    // bass under bars 1-3
-    [51,1.5,0,60],[51,1.5,1.5,58],[49,1.5,3,60],[49,1.5,4.5,58],[46,1.5,6,60],[46,1.5,7.5,58],
-    // bars 4-6 — repeat, brighter
-    [75,0.5,9,84],[70,0.5,9.5,74],[67,0.5,10,72],[75,0.5,10.5,82],[70,0.5,11,74],[67,0.5,11.5,72],
-    [73,0.5,12,84],[68,0.5,12.5,74],[65,0.5,13,72],[73,0.5,13.5,82],[68,0.5,14,74],[65,0.5,14.5,72],
-    [70,0.5,15,84],[65,0.5,15.5,74],[61,0.5,16,72],[70,0.5,16.5,82],[65,0.5,17,74],[61,0.5,17.5,72],
-    [51,1.5,9,62],[51,1.5,10.5,60],[49,1.5,12,62],[49,1.5,13.5,60],[46,1.5,15,62],[46,1.5,16.5,60],
-    // melodic tag
-    [75,1,18,86],[79,1,18,80],[78,1,19,82],[75,1,20,80],[73,1.5,21,84],
-    [70,1,22.5,82],[73,1,22.5,76],[68,1,23.5,78],[65,2,24.5,82],
-  ],
-};
-
 // §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
 // ─────────────────────────────────────────────────────────────────────────────
 const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered, isPending, hoverColor, busy, playing, loadedMode, pressNote, releaseNote, setHoveredKey, pressInfo}){
@@ -7646,8 +7614,9 @@ Composition rules:
   const surpriseMe = useCallback(()=>{
     pickExpressiveStyle();
     setMode('harmony');
-    demoLoadAndPlay(DEMO_FIRST);
-  },[pickExpressiveStyle, demoLoadAndPlay]);
+    loadSampleMidiTrimmed(30000);
+    setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
+  },[pickExpressiveStyle, loadSampleMidiTrimmed, startPlay]);
 
   // Auto-play the first-impression demo exactly once, on a brand-new visit.
   // Fires after a short delay so the canvas/grid have initialised, picks a
@@ -7664,7 +7633,11 @@ Composition rules:
       try{
         pickExpressiveStyle();
         setMode('harmony');
-        demoLoadAndPlay(DEMO_FIRST);
+        // Liebestraum (Liszt) — public-domain. Load a digestible 30s slice of
+        // the real sample MIDI, then start playback once React has committed
+        // the chord state (the proven onboarding sequence).
+        loadSampleMidiTrimmed(30000);
+        setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
       }catch(_){}
     }, 300);
     return ()=>clearTimeout(id);
@@ -10215,7 +10188,14 @@ Composition rules:
         </div>
         {!isDesktop && cockpitVisible && (<>
         <div style={{display:'flex',alignItems:'center',width:'100%',gap:6}}>
-          <span style={{width:26,flexShrink:0}} aria-hidden="true" />
+          {/* A+ : hide-controls — collapses the cockpit back to the minimal
+              "simple" first-time view (sets cockpitVisible=false → bottom sheet
+              + ⚙ return). Lets a user who revealed the cockpit step back to the
+              uncluttered experience. Not labelled "Simple/Advanced" on purpose
+              — it reads as plain "hide the controls", no mode vocabulary. */}
+          <button onClick={()=>setCockpitVisible(false)} aria-label={ts('hideControls','Hide controls')} title={ts('hideControls','Hide controls')} style={{width:26,height:26,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:'rgba(230,222,196,.38)',transition:'color .15s ease'}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/><path d="M6 15l6 6 6-6" opacity="0.45"/></svg>
+          </button>
           <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
             <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : (cockpitEdit ? ts('editSet','Edit your set') : ts('pickLook','Pick a look'))}</span>
             <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
