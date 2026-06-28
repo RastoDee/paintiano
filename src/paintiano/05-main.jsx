@@ -6082,88 +6082,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
   },[stopAll,applyEvents,wipeCanvasNow]);
 
-  // ── BASIC mode helpers ────────────────────────────────────────────────────
-  // Expressive, painterly styles for the Surprise feature. On the free tier we
-  // narrow to the ones that are actually unlocked.
-  const EXPRESSIVE_POOL = useMemo(()=>{
-    const base = ['picasso','pollock','kandinsky','mitchell','gold','kusama','bloom','miro','monet','matisse'];
-    const pool = (proStatus === 'free') ? base.filter(k => FREE_UNLOCKED_KEYS.has(k)) : base;
-    return pool.length ? pool : ['picasso'];
-  }, [proStatus, FREE_UNLOCKED_KEYS]);
-
-  // Pick a random expressive style, make sure it's in the active set, select it.
-  const pickExpressiveStyle = useCallback(()=>{
-    const pool = EXPRESSIVE_POOL;
-    const k = pool[Math.floor(Math.random()*pool.length)] || 'picasso';
-    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
-    setRandomMode(false); randomModeRef.current=false;
-    setStyle(k);
-    return k;
-  },[EXPRESSIVE_POOL]);
-
-  // "Surprise me" (full) — random expressive style + harmony palette, then load
-  // the full Liszt sample and play, so the canvas shows a fresh painting.
-  const surpriseMe = useCallback(()=>{
-    pickExpressiveStyle();
-    setMode('harmony');
-    loadSampleMidi();
-    setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
-  },[pickExpressiveStyle, loadSampleMidi, startPlay]);
-
-  // BASIC-mode "Surprise me" — swap to a DIFFERENT random expressive style
-  // WITHOUT restarting the song. The paint effect re-renders live on a style
-  // change, so the whole painting repaints in the new artist's language at the
-  // current position while the music keeps playing. Avoids repeating the
-  // current style so each tap is visibly different.
-  const basicSurprise = useCallback(()=>{
-    const pool = EXPRESSIVE_POOL.filter(k=>k!==style);
-    const src = pool.length ? pool : EXPRESSIVE_POOL;
-    const k = src[Math.floor(Math.random()*src.length)] || 'picasso';
-    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
-    setRandomMode(false); randomModeRef.current=false;
-    setStyle(k);
-  },[EXPRESSIVE_POOL, style]);
-
-  // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
-  // and the canvas is empty (e.g. after the intro splash, or on entering Basic
-  // with nothing loaded). Waits for the loading intro to clear so Liebestraum
-  // doesn't start underneath the splash. Fires once per empty-canvas entry.
-  const basicAutoPlayedRef = useRef(false);
-  useEffect(()=>{
-    if(showIntro) return;
-    if(!basicMode){ basicAutoPlayedRef.current=false; return; }
-    if(chords.length>0 || playing || busy || composeMode || micActive || loadedSource){ basicAutoPlayedRef.current=true; return; }
-    if(basicAutoPlayedRef.current) return;
-    basicAutoPlayedRef.current = true;
-    try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
-    const id=setTimeout(()=>{
-      try{
-        pickExpressiveStyle();
-        setMode('harmony');
-        loadSampleMidi();
-        setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
-      }catch(_){}
-    }, 300);
-    return ()=>clearTimeout(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[showIntro, basicMode]);
-
-  // BASIC mode: auto-start playback whenever a song is loaded but not yet
-  // playing (chords present, nothing drawn yet). Covers "My song" uploads
-  // (loadSound/applyEvents don't auto-play) so the canvas always comes alive
-  // without hunting for a play button. Ref-guarded to fire once per piece.
-  const basicAutoStartedRef = useRef(false);
-  useEffect(()=>{
-    if(!basicMode){ basicAutoStartedRef.current=false; return; }
-    if(chords.length===0){ basicAutoStartedRef.current=false; return; }
-    if(playing || holdPaused || busy || disp>0){ basicAutoStartedRef.current=true; return; }
-    if(basicAutoStartedRef.current) return;
-    basicAutoStartedRef.current = true;
-    const id=setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 120);
-    return ()=>clearTimeout(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[basicMode, chords.length, loadedSource, playing, holdPaused, busy]);
-
   const loadSampleAudio=useCallback(async()=>{
     setWorking(true);setWLabel(t('transcribingSample')||'transcribing sample');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
@@ -7619,6 +7537,88 @@ Composition rules:
 
   // Load the demo song (Für Elise) and start painting it live. Shared by the
   // reel's opening beat. Does NOT schedule the rest of the tour.
+  // ── BASIC mode helpers ────────────────────────────────────────────────────
+  // Expressive, painterly styles for the Surprise feature. On the free tier we
+  // narrow to the ones that are actually unlocked.
+  const EXPRESSIVE_POOL = useMemo(()=>{
+    const base = ['picasso','pollock','kandinsky','mitchell','gold','kusama','bloom','miro','monet','matisse'];
+    const pool = (proStatus === 'free') ? base.filter(k => FREE_UNLOCKED_KEYS.has(k)) : base;
+    return pool.length ? pool : ['picasso'];
+  }, [proStatus, FREE_UNLOCKED_KEYS]);
+
+  // Pick a random expressive style, make sure it's in the active set, select it.
+  const pickExpressiveStyle = useCallback(()=>{
+    const pool = EXPRESSIVE_POOL;
+    const k = pool[Math.floor(Math.random()*pool.length)] || 'picasso';
+    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
+    setRandomMode(false); randomModeRef.current=false;
+    setStyle(k);
+    return k;
+  },[EXPRESSIVE_POOL]);
+
+  // "Surprise me" (full) — random expressive style + harmony palette, then load
+  // the full Liszt sample and play, so the canvas shows a fresh painting.
+  const surpriseMe = useCallback(()=>{
+    pickExpressiveStyle();
+    setMode('harmony');
+    loadSampleMidi();
+    setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
+  },[pickExpressiveStyle, loadSampleMidi, startPlay]);
+
+  // BASIC-mode "Surprise me" — swap to a DIFFERENT random expressive style
+  // WITHOUT restarting the song. The paint effect re-renders live on a style
+  // change, so the whole painting repaints in the new artist's language at the
+  // current position while the music keeps playing. Avoids repeating the
+  // current style so each tap is visibly different.
+  const basicSurprise = useCallback(()=>{
+    const pool = EXPRESSIVE_POOL.filter(k=>k!==style);
+    const src = pool.length ? pool : EXPRESSIVE_POOL;
+    const k = src[Math.floor(Math.random()*src.length)] || 'picasso';
+    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
+    setRandomMode(false); randomModeRef.current=false;
+    setStyle(k);
+  },[EXPRESSIVE_POOL, style]);
+
+  // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
+  // and the canvas is empty (e.g. after the intro splash, or on entering Basic
+  // with nothing loaded). Waits for the loading intro to clear so Liebestraum
+  // doesn't start underneath the splash. Fires once per empty-canvas entry.
+  const basicAutoPlayedRef = useRef(false);
+  useEffect(()=>{
+    if(showIntro) return;
+    if(!basicMode){ basicAutoPlayedRef.current=false; return; }
+    if(chords.length>0 || playing || busy || composeMode || micActive || loadedSource){ basicAutoPlayedRef.current=true; return; }
+    if(basicAutoPlayedRef.current) return;
+    basicAutoPlayedRef.current = true;
+    try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
+    const id=setTimeout(()=>{
+      try{
+        pickExpressiveStyle();
+        setMode('harmony');
+        loadSampleMidi();
+        setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
+      }catch(_){}
+    }, 300);
+    return ()=>clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[showIntro, basicMode]);
+
+  // BASIC mode: auto-start playback whenever a song is loaded but not yet
+  // playing (chords present, nothing drawn yet). Covers "My song" uploads
+  // (loadSound/applyEvents don't auto-play) so the canvas always comes alive
+  // without hunting for a play button. Ref-guarded to fire once per piece.
+  const basicAutoStartedRef = useRef(false);
+  useEffect(()=>{
+    if(!basicMode){ basicAutoStartedRef.current=false; return; }
+    if(chords.length===0){ basicAutoStartedRef.current=false; return; }
+    if(playing || holdPaused || busy || disp>0){ basicAutoStartedRef.current=true; return; }
+    if(basicAutoStartedRef.current) return;
+    basicAutoStartedRef.current = true;
+    const id=setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 120);
+    return ()=>clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[basicMode, chords.length, loadedSource, playing, holdPaused, busy]);
+
   const demoLoadAndPlay=useCallback((songSpec)=>{
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
