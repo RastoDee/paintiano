@@ -21491,6 +21491,7 @@ export default function Paintiano() {
   // full Setup modal alike.
   const togglePalSafe = useCallback((k)=> setSetupPalettes(prev => prev.includes(k) ? (prev.length>1 ? prev.filter(x=>x!==k) : prev) : [...prev, k]),[]);
   const toggleArtSafe = useCallback((k)=> setSetupArtists(prev => prev.includes(k) ? (prev.length>1 ? prev.filter(x=>x!==k) : prev) : [...prev, k]),[]);
+  const toggleToneSafe = useCallback((k)=> setSetupTones(prev => prev.includes(k) ? (prev.length>1 ? prev.filter(x=>x!==k) : prev) : [...prev, k]),[]);
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [morphSel, setMorphSel] = useState([]); // ordered target moods for chain-morph (max 3)
   const [morphPool, setMorphPool] = useState([]);
@@ -28836,7 +28837,10 @@ Composition rules:
                   {key:'concept', label:t('concept'),                          onClick:()=>{setNavMenuOpen(false);setShowAbout(true);}},
                   {key:'book',    label:ts('gcat_book','Book'),                onClick:()=>{setNavMenuOpen(false);setShowBook(true);}},
                   {key:'guide',   label:t('guide'),                           onClick:()=>{setNavMenuOpen(false);setGuideReturnCardId(null);setShowGuide(true);}},
-                  {key:'setup',   label:ts('setupPickerLabel','Setup'),        onClick:()=>{setNavMenuOpen(false);setSetupReturnTo(null);setShowSetupModal(true);}},
+                  // Setup temporarily removed from the menu — testing the inline
+                  // "Pick a look" edit mode as the single mechanism. Restore by
+                  // un-commenting (the modal code itself is untouched).
+                  // {key:'setup',   label:ts('setupPickerLabel','Setup'),        onClick:()=>{setNavMenuOpen(false);setSetupReturnTo(null);setShowSetupModal(true);}},
                   (!isPro)            ? {key:'pro',  label:t('proBadge'),                   pro:'gold',   onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
                   : (!isProAI)        ? {key:'proai',label:t('proAiBadge')||'PRO AI',       pro:'purple', onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
                   : null,
@@ -30034,8 +30038,6 @@ Composition rules:
           {cockpitEdit && (
             <div style={{textAlign:'center',marginTop:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(230,222,196,.55)',lineHeight:1.5}}>
               <span>{ts('editHint','Tap to add or remove from your set.')}</span>
-              <span> </span>
-              <span role="button" tabIndex={0} onClick={()=>{setCockpitEdit(false);setSetupReturnTo(null);setShowSetupModal(true);}} onKeyDown={(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setCockpitEdit(false);setSetupReturnTo(null);setShowSetupModal(true);}}} style={{color:'rgba(220,180,90,.9)',cursor:'pointer',whiteSpace:'nowrap'}}>{ts('editFull','Manage all →')}</span>
             </div>
           )}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
@@ -30067,7 +30069,7 @@ Composition rules:
               tone there's nothing to switch between, so the picker (and its
               "tone" label) is hidden on the active canvas; the lone tone is
               applied silently. */}
-          {setupTones.length>=2 && (
+          {(setupTones.length>=2 || cockpitEdit) && (
           <div style={{marginTop:10,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
             {(()=>{
@@ -30076,15 +30078,19 @@ Composition rules:
                 {k:'real',   label:({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real'},
                 {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'}
               ];
-              const visTones = allTones.filter(o => setupTones.includes(o.k));
-              if(!visTones.length) return null;   // user turned all tones off (shouldn't normally happen)
+              // Edit mode shows all three (off ones as ghosts to tap-add); normal
+              // mode shows only the enabled tones and a tap selects the tone.
+              const visTones = cockpitEdit ? allTones : allTones.filter(o => setupTones.includes(o.k));
+              if(!visTones.length) return null;
               const cols = visTones.length;
               return (
               <div style={{display:'grid',gridTemplateColumns:`repeat(${cols}, 1fr)`,gap:6}}>
                 {visTones.map(o=>{
                   const sel = tone===o.k;
+                  const _inSet = setupTones.includes(o.k);
+                  const _ghost = cockpitEdit && !_inSet;
                   return (
-                  <button key={o.k} onClick={()=>setTone(o.k)} style={{padding:'8px 0',textAlign:'center',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',...chipStyle(sel)}}>{o.label}</button>
+                  <button key={o.k} onClick={()=>{ if(cockpitEdit){ toggleToneSafe(o.k); return; } setTone(o.k); }} style={{padding:'8px 0',textAlign:'center',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _inSet : sel))}}>{o.label}</button>
                   );
                 })}
               </div>
