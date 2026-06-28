@@ -1738,22 +1738,27 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //  D = Nice interior (window/room bands with patterned panels).
   //  E = The Dance (curved figures on blue/green ground).
   //  F = Jazz organic (bold black-outlined organic cut shapes on white).
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ matissePhaseNice(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===4){ matissePhaseDance(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===5){ matissePhaseJazz(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  matissePhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
+  // Slots 0 and 6 both run phase A's cell-based panels; the slot picks the cell
+  // treatment (0 = scattered cut-outs, 6 = nested concentric frames) instead of
+  // a hidden seed bit — both reachable via Vary.
+  matissePhaseA(ctx,CW,CH,chords,lim,gc,ss,mode, (pick===6)?1:0);
 }
 
 // ── Matisse phase A: the original cell-based panels (nested frames / scattered
 // cut-outs, chosen per painting by a seed bit). ──
-function matissePhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+function matissePhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, forcedNested){
   const ss=sessionSeed|0;
   const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,2400,0.34);
-  // whole-painting mode choice (stable per painting, re-rolls on Vary/Random)
-  const nestedMode = ((ss>>>5)&1)===1;
+  // Cell treatment: scattered cut-outs vs nested concentric frames. Now chosen
+  // by the phase slot (passed in as forcedNested) so both are reachable via Vary;
+  // the old seed bit remains only as a defensive fallback if no slot is passed.
+  const nestedMode = (forcedNested!=null) ? (forcedNested===1) : (((ss>>>5)&1)===1);
   ctx.fillStyle='#16120a'; ctx.fillRect(0,0,CW,CH);
   const blob=(rnd,cx,cy,rad,wob,pts)=>{ctx.beginPath();for(let i=0;i<=pts;i++){const ang=(i/pts)*Math.PI*2;const rr=rad*(1+wob*Math.sin(ang*(2+Math.floor(rnd()*3))+rnd()*3));const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr*0.92;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.fill();};
   const star=(cx,cy,rad)=>{ctx.beginPath();for(let i=0;i<8;i++){const ang=(i/8)*Math.PI*2-Math.PI/2;const rr=(i%2===0)?rad:rad*0.36;const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.fill();};
@@ -2138,18 +2143,21 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const N = Math.min(lim, chords.length);
   const isBW = mode==='bw';
   const toGrey = (r,g,b) => { const v=Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; };
-  // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Classic drip (Dense/Sparser, seed-driven internal pick — see body).
+  let _forcedPollVariant = 0; // set by the phase dispatcher: 0 = Dense, 1 = Sparse
+  // ── 7-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
+  //  0 = Classic drip — Dense all-over web.
   //  1 = Stenographic Figure (pre-drip 1942, totemic figures + symbols).
   //  2 = Black pourings / theme colour pour.
   //  3 = Lavender Mist / Totem atmospheric.
   //  4 = White Light (post-drip 1954, INVERTED palette on dark ground).
   //  5 = Blue Poles.
+  //  6 = Sparse — bolder strokes, more open canvas, thicker beads (was a hidden
+  //      seed bit inside slot 0; now its own cyclable phase).
   //  Free (cap=2) sees Dense + Stenographic — drip vs pre-drip is the most
   //  dramatic art-historical contrast Pollock offers, so the two-variant
   //  preview reads as "two different painters".
   {
-    const _pn=_capN(6); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(7); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_variantCap === 2){
       // Free: 0 = Dense (fall through), 1 = Stenographic.
       if(_ppick===1){ pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -2161,9 +2169,10 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
       if(_ppick===4){ pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
       if(_ppick===5){ pollockPhasePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     }
-    // else fall through to original dense/wider body (variant 0; the
-    // Dense vs Sparser choice within is seed-driven, kept as natural
-    // micro-variation rather than its own Vary slot).
+    // Slots 0 and 6 share the dense/sparse body below; the slot decides the
+    // variant (0 = Dense all-over web, 6 = Sparse bolder strokes) instead of a
+    // hidden seed bit — so BOTH are always reachable by cycling Vary.
+    _forcedPollVariant = (_ppick===6) ? 1 : 0;
   }
 
   // Palette weights rebalanced for chromatic painting: ink dropped from 0.28
@@ -2281,7 +2290,7 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // ── Variant chooser (stable per painting, re-rolls on Vary) ──
   //  A = dense all-over web (the classic Pollock).
   //  B = sparse, bolder strokes with more open canvas + thicker beads.
-  const pollVariant = (ss >>> 6) % 2;
+  const pollVariant = _forcedPollVariant;   // phase-driven (slot 0 vs 6), not seed
   // Song character (A2): a loud/dense piece webs up thicker (more passes, a bit
   // wider beads); a soft/sparse one stays airy. Deterministic; audio untouched.
   const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
@@ -4878,6 +4887,7 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
+  let _forcedBloomVariant = 0; // set by phase dispatcher: 0 = field, 1 = edge
   const cn = chords.length;
   const rnd = _seedRnd(83, ss, 0, 0);
 
@@ -4912,15 +4922,16 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   //  Free (cap=2) sees Bloom + Mandala — dense organic vs ordered concentric
   //  is the strongest visual contrast in Sam Francis's catalogue.
   {
-    const _pn=_capN(6); const _fpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(7); const _fpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_fpick===1){ francisPhaseMandala(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===2){ francisPhaseCluster(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===3){ francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===4){ francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===5){ francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original bloom/edge body (variant 0; the bloom vs
-    // edge sub-pick within is seed-driven, kept as natural micro-variation
-    // rather than its own Vary slot).
+    // Slots 0 and 6 share the bloom body; the slot picks the layout (0 = top-
+    // weighted field with drips, 6 = Edge composition: blots ring the borders,
+    // open white centre) instead of a hidden seed bit — both reachable via Vary.
+    _forcedBloomVariant = (_fpick===6) ? 1 : 0;
   }
 
   // Sam Francis's whole tension is colour vs breathing white. Song character
@@ -4941,7 +4952,7 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   // ── Variant chooser (stable per painting, re-rolls on Vary) ──
   //  A = top-weighted field with drips falling down (classic Sam Francis).
   //  B = "edge" composition: blots ring the borders, open white centre.
-  const bloomVariant = (ss >>> 7) % 2;
+  const bloomVariant = _forcedBloomVariant;   // phase-driven (slot 0 vs 6), not seed
 
   // Pre-roll blot positions (stable per painting).
   const blots = [];
@@ -5653,6 +5664,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   const ss = sessionSeed | 0;
   const cn = chords.length;
   const rnd = _seedRnd(97, ss, 0, 0);
+  let _forcedGoldVariant = 0; // set by phase dispatcher: 0 = ornament grid, 1 = frieze bands
 
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
@@ -5682,16 +5694,19 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  Free (cap=2) sees Ornament/Frieze + Spiral Field — gold tile grid vs
   //  abstract spiral field is the strongest decorative contrast.
   {
-    const _pn=_capN(6); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(8); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_gpick===1){ klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===2){ klimtPhaseMosaicField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===3){ klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===4){ klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===5){ klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // Slot 0: seed-driven pick between Ornament tile grid (body below) and
-    // Pattern Frieze (vertical columns). Both share gold-ornament identity.
-    if(((ss>>>5) & 1) === 1){ klimtPhasePatternFrieze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original ornament-grid/frieze body.
+    // Slot 6: the standalone Pattern Frieze (vertical pattern columns) — was a
+    // hidden seed bit on slot 0; now its own cyclable phase.
+    if(_gpick===6){ klimtPhasePatternFrieze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    // Slots 0 and 7 share the ornament body below; the slot picks the layout
+    // (0 = ornament tile grid, 7 = inline frieze bands) instead of a second
+    // hidden seed bit — both reachable via Vary.
+    _forcedGoldVariant = (_gpick===7) ? 1 : 0;
   }
   const gg = ctx.createLinearGradient(0, 0, CW, CH);
   gg.addColorStop(0, '#b8902f');
@@ -5716,7 +5731,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
 
   // ── Ornament grid ─────────────────────────────────────────────────────────
   // ── Ornament composition: two variants chosen by seed ─────────────────────
-  const goldVariant = (ss >>> 3) % 2;
+  const goldVariant = _forcedGoldVariant;   // phase-driven (slot 0 vs 7), not seed
   const revealFrac = Math.max(0, Math.min(1, lim/cn));
 
   if(goldVariant === 1){
@@ -6208,6 +6223,7 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
+  let _forcedPopVariant = 0; // set by phase dispatcher: 0 = grid, 1 = mural
   const rnd = _seedRnd(101, ss, 0, 0);
 
   function chordCol(i, mul){
@@ -6232,13 +6248,16 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
   //  1 = Mural (big scattered glyphs).  2 = Subway chalk (colour figures on dark, recoloured).
   //  3 = Radiant baby.  4 = Barking dog row.  5 = Dancing figures crowd.
   {
-    const _pn=_capN(6); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(7); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_hpick===1){ haringPhaseMural(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===2){ haringPhaseSubway(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===3){ haringPhaseBaby(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===4){ haringPhaseDog(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_hpick===5){ haringPhaseDance(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original glyph-grid body (variant 0)
+    // Slots 0 and 6 share the body below; the slot picks the composition (0 =
+    // glyph grid, 6 = inline mural of big scattered glyphs) instead of a hidden
+    // seed bit — both reachable via Vary.
+    _forcedPopVariant = (_hpick===6) ? 1 : 0;
   }
   // Haring's language is kinetic energy — song character sets how densely the
   // wall fills with figures: a loud, dense piece swarms with glyphs, a calm one
@@ -6315,7 +6334,7 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
   }
 
   // ── Composition: two variants by seed ─────────────────────────────────────
-  const popVariant = (ss >>> 4) % 2;
+  const popVariant = _forcedPopVariant;   // phase-driven (slot 0 vs 6), not seed
 
   if(popVariant === 1){
     // Variant B — mural: big scattered glyphs of varying size overlapping on a
@@ -6496,6 +6515,7 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
+  let _forcedWaveVariant = 0; // set by phase dispatcher: 0 = stripes, 1 = ripple
   const rnd = _seedRnd(103, ss, 0, 0);
 
   function chordCol(i, mul){
@@ -6526,16 +6546,17 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  Free (cap=2) sees Wavy/Ripple + Movement in Squares — wave Riley vs
   //  square Riley is the strongest visual contrast in her catalogue.
   {
-    const _pn=_capN(7); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(8); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_rpick===1){ rileyPhaseWarp(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===2){ rileyPhaseBlaze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===3){ rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===4){ rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===5){ rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===6){ rileyPhaseFall(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original wavy-stripes/ripple body (variant 0; the
-    // stripes vs ripple sub-pick within is seed-driven, kept as natural
-    // micro-variation rather than its own Vary slot).
+    // Slots 0 and 7 share the body below; the slot picks the composition (0 =
+    // wavy vertical stripes, 7 = concentric ripple rings) instead of a hidden
+    // seed bit — both reachable via Vary.
+    _forcedWaveVariant = (_rpick===7) ? 1 : 0;
   }
   const darkC = chordCol(0, 0.5);
   const liteC = chordCol(Math.floor(cn/2), 1.25);
@@ -6545,7 +6566,7 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   ctx.fillRect(0, 0, CW, CH);
 
   // ── Composition: two variants by seed ─────────────────────────────────────
-  const waveVariant = (ss >>> 5) % 2;
+  const waveVariant = _forcedWaveVariant;   // phase-driven (slot 0 vs 7), not seed
 
   if(waveVariant === 1){
     // Variant B — concentric ripple rings (Riley "Blaze"): nested wavy circles
@@ -7005,6 +7026,7 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
+  let _forcedComicVariant = 0; // set by phase dispatcher: 0 = grid, 1 = single panel
   const rnd = _seedRnd(107, ss, 0, 0);
 
   function chordCol(i, mul){
@@ -7036,15 +7058,16 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   //  Free (cap=2) sees Panel/Single + Closeup — comic abstraction vs comic
   //  figuration is Lichtenstein's most dramatic art-historical contrast.
   {
-    const _pn=_capN(6); const _cpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(7); const _cpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_cpick===1){ comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===2){ comicPhaseBenDay(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===3){ comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===4){ comicPhaseLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_cpick===5){ comicPhaseBubble(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original panel-grid/single-panel body (variant 0;
-    // the Panel vs Single sub-pick within is seed-driven, kept as natural
-    // micro-variation rather than its own Vary slot).
+    // Slots 0 and 6 share the body below; the slot picks the layout (0 = panel
+    // grid, 6 = single big burst-centred panel) instead of a hidden seed bit —
+    // both reachable via Vary.
+    _forcedComicVariant = (_cpick===6) ? 1 : 0;
   }
   function halftone(x0, y0, w, h, dotCol, spacing, rad){
     ctx.fillStyle = css(dotCol);
@@ -7071,7 +7094,7 @@ function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   }
 
   const revealFrac = Math.max(0, Math.min(1, lim/cn));
-  const comicVariant = (ss >>> 2) % 2;
+  const comicVariant = _forcedComicVariant;   // phase-driven (slot 0 vs 6), not seed
 
   if(comicVariant === 1){
     // Variant B — single big panel: flat ground + halftone + central burst.
