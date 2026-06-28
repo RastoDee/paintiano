@@ -869,6 +869,36 @@ const PF_STYLE = `
           .pf-mode-live .pf-transport-row .pf-tx-save  { order: 4 !important; }
           .pf-mode-live .pf-transport-row .pf-tx-clear { order: 5 !important; }
           .pf-mode-live .pf-transport-row .pf-tx-scale { order: 6 !important; }
+          /* ── LITE MODE on desktop/tablet-landscape ──────────────────────────
+             Lite has no left/right tool columns (no palettes, no artist picker,
+             no transport dock) — only the canvas + an "inspired by" caption +
+             three CTAs. The 3-col grid would leave two empty side columns and
+             centre the canvas vertically. Override back to a simple centered
+             flex column so the canvas sits high, just under the header, with the
+             inspired-by caption above it. CTAs + picker are fixed-positioned
+             (top-right / top-left) in JSX, so they sit clear of this flow. */
+          .pf-app-root.pf-mode-lite {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding: 14px 24px 28px !important;
+            gap: 0 !important;
+          }
+          .pf-app-root.pf-mode-lite > .pf-stage-part {
+            margin-top: 4px !important;
+            align-self: center !important;
+            max-height: calc(100vh - 200px) !important;
+          }
+          .pf-app-root.pf-mode-lite > .pf-stage-part > canvas {
+            max-height: calc(100vh - 200px) !important;
+            max-width: 100% !important;
+          }
+          /* Inspired-by caption + title row sits centered above the canvas. */
+          .pf-app-root.pf-mode-lite > .pf-seek-block {
+            max-width: min(900px, 70vw) !important;
+            margin: 0 auto 8px !important;
+          }
         }
         /* MOBILE LANDSCAPE (phone on its side). Detect via low viewport HEIGHT
            (≤500px) instead of width, because modern iPhones in landscape are

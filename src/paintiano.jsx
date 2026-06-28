@@ -869,6 +869,36 @@ const PF_STYLE = `
           .pf-mode-live .pf-transport-row .pf-tx-save  { order: 4 !important; }
           .pf-mode-live .pf-transport-row .pf-tx-clear { order: 5 !important; }
           .pf-mode-live .pf-transport-row .pf-tx-scale { order: 6 !important; }
+          /* ── LITE MODE on desktop/tablet-landscape ──────────────────────────
+             Lite has no left/right tool columns (no palettes, no artist picker,
+             no transport dock) — only the canvas + an "inspired by" caption +
+             three CTAs. The 3-col grid would leave two empty side columns and
+             centre the canvas vertically. Override back to a simple centered
+             flex column so the canvas sits high, just under the header, with the
+             inspired-by caption above it. CTAs + picker are fixed-positioned
+             (top-right / top-left) in JSX, so they sit clear of this flow. */
+          .pf-app-root.pf-mode-lite {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding: 14px 24px 28px !important;
+            gap: 0 !important;
+          }
+          .pf-app-root.pf-mode-lite > .pf-stage-part {
+            margin-top: 4px !important;
+            align-self: center !important;
+            max-height: calc(100vh - 200px) !important;
+          }
+          .pf-app-root.pf-mode-lite > .pf-stage-part > canvas {
+            max-height: calc(100vh - 200px) !important;
+            max-width: 100% !important;
+          }
+          /* Inspired-by caption + title row sits centered above the canvas. */
+          .pf-app-root.pf-mode-lite > .pf-seek-block {
+            max-width: min(900px, 70vw) !important;
+            margin: 0 auto 8px !important;
+          }
         }
         /* MOBILE LANDSCAPE (phone on its side). Detect via low viewport HEIGHT
            (≤500px) instead of width, because modern iPhones in landscape are
@@ -28909,7 +28939,7 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {basicMode && liteAwaitTap && !showIntro && (
@@ -32443,18 +32473,18 @@ Composition rules:
         return (
         <>
         {liteSrcPicker && (
-          <div onClick={()=>setLiteSrcPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:'rgba(4,3,8,0.6)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',display:'flex',alignItems:'flex-end',justifyContent:'flex-end'}}>
-            <div onClick={e=>e.stopPropagation()} style={{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,padding:'14px 12px calc(80px + env(safe-area-inset-bottom,0px))',minWidth:200}}>
-              <button onClick={_loadSampleLite} style={{...btn,justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'}}>🎹 {ts('useMySongSample','Sample')}</button>
-              <button onClick={_openFileLite} style={{...btn,justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'}}>🎵 {ts('useMySongFile','File')}</button>
-              <button onClick={_startMicLite} style={{...btn,justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'}}>🎙 {ts('useMySongMic','Mic')}</button>
+          <div onClick={()=>setLiteSrcPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:(basicMode&&isDesktop)?'transparent':'rgba(4,3,8,0.6)',backdropFilter:(basicMode&&isDesktop)?'none':'blur(4px)',WebkitBackdropFilter:(basicMode&&isDesktop)?'none':'blur(4px)',display:'flex',alignItems:(basicMode&&isDesktop)?'flex-start':'flex-end',justifyContent:(basicMode&&isDesktop)?'flex-start':'flex-end'}}>
+            <div onClick={e=>e.stopPropagation()} style={(basicMode&&isDesktop)?{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,padding:'96px 0 0 24px',width:200}:{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,padding:'14px 12px calc(80px + env(safe-area-inset-bottom,0px))',minWidth:200}}>
+              <button onClick={_loadSampleLite} style={{...btn,justifyContent:'flex-start',gap:10,...((basicMode&&isDesktop)?{minHeight:48,height:48,padding:'0 16px',fontSize:(.62*effScale)+'rem'}:{padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🎹 {ts('useMySongSample','Sample')}</button>
+              <button onClick={_openFileLite} style={{...btn,justifyContent:'flex-start',gap:10,...((basicMode&&isDesktop)?{minHeight:48,height:48,padding:'0 16px',fontSize:(.62*effScale)+'rem'}:{padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🎵 {ts('useMySongFile','File')}</button>
+              <button onClick={_startMicLite} style={{...btn,justifyContent:'flex-start',gap:10,...((basicMode&&isDesktop)?{minHeight:48,height:48,padding:'0 16px',fontSize:(.62*effScale)+'rem'}:{padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🎙 {ts('useMySongMic','Mic')}</button>
             </div>
           </div>
         )}
-        <div role="region" aria-label="basic actions" style={{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
-          <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
-          <button onClick={_midClickAware} disabled={!_capturing && !_haveArt} title={_capturing?ts('stopLabel','Stop'):(_done?ts('saveLabel','Save'):(playing?t('pause'):t('play')))} style={{...btn,...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:(_capturing||_haveArt)?1:.5}}>{_midMicAware}</button>
-          <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={btn}>🎵 {ts('useMySong','Use my song')}</button>
+        <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',top:96,right:24,zIndex:60,display:'flex',flexDirection:'column',gap:10,width:200,alignItems:'stretch'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
+          <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{minHeight:48,height:48,padding:'0 14px',fontSize:(.62*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
+          <button onClick={_midClickAware} disabled={!_capturing && !_haveArt} title={_capturing?ts('stopLabel','Stop'):(_done?ts('saveLabel','Save'):(playing?t('pause'):t('play')))} style={{...btn,...((basicMode&&isDesktop)?{minHeight:48,height:48,padding:'0 14px',fontSize:(.62*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:(_capturing||_haveArt)?1:.5}}>{_midMicAware}</button>
+          <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{minHeight:48,height:48,padding:'0 14px',fontSize:(.62*effScale)+'rem'}:{})}}>🎵 {ts('useMySong','Use my song')}</button>
         </div>
         </>
         );
