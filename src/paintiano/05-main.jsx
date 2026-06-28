@@ -10050,11 +10050,14 @@ Composition rules:
               open and we're in a music mode (image-scan has no per-set chips to
               edit). Lit gold while editing. */}
           {(stripOpen && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive) ? (
-            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:30,height:30,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',padding:0,fontFamily:'inherit',background:cockpitEdit?'rgba(201,168,76,.15)':'transparent',border:'1px solid '+(cockpitEdit?'rgba(201,168,76,.85)':'rgba(242,238,232,.18)'),color:cockpitEdit?'rgba(220,180,90,.98)':'rgba(230,222,196,.45)',transition:'all .15s ease'}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg>
+            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:28,height:28,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:8,cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:cockpitEdit?'rgba(220,180,90,.95)':'rgba(230,222,196,.38)',transition:'color .15s ease',opacity:cockpitEdit?1:.9}}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg>
             </button>
-          ) : (<span style={{width:30,flexShrink:0}} aria-hidden="true" />)}
+          ) : (<span style={{width:28,flexShrink:0}} aria-hidden="true" />)}
         </div>
+        {cockpitEdit && (loadedSource!=='image' || moodFromImg) && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:4,fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',color:'rgba(220,180,90,.7)',fontStyle:'italic',textTransform:'none'}}>{ts('editSet','Edit your set')}</div>
+        )}
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
         )}
@@ -10664,10 +10667,9 @@ Composition rules:
               <span role="button" tabIndex={0} onClick={()=>{setCockpitEdit(false);setSetupReturnTo(null);setShowSetupModal(true);}} onKeyDown={(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setCockpitEdit(false);setSetupReturnTo(null);setShowSetupModal(true);}}} style={{color:'rgba(220,180,90,.9)',cursor:'pointer',whiteSpace:'nowrap'}}>{ts('editFull','Manage all →')}</span>
             </div>
           )}
+          {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
               member of the most recently tapped pair with a PRO badge.
-              Clickable: opens the paywall with reason 'settings'. Sitting
-              outside the palette buttons it reads visually as its own
-              affordance, so we honour that and route the tap to the paywall. */}
+              Clickable: opens the paywall with reason 'settings'. */}
           {proStatus==='free' && expandedPair && (()=>{
             const [a,b] = expandedPair.split('|');
             const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
