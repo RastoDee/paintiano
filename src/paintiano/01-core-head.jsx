@@ -888,20 +888,23 @@ const PF_STYLE = `
           .pf-app-root.pf-mode-lite > .pf-stage-part {
             margin-top: 4px !important;
             align-self: center !important;
-            max-height: calc(100vh - 200px) !important;
-            max-width: calc(100vw - 520px) !important;
-            width: auto !important;
+            max-width: calc(100vw - 420px) !important;
+            width: 100% !important;
           }
           .pf-app-root.pf-mode-lite > .pf-stage-part > canvas {
-            max-height: calc(100vh - 200px) !important;
             max-width: 100% !important;
-            width: auto !important;
+            width: 100% !important;
+            height: auto !important;
           }
-          /* Inspired-by caption + title row sits centered above the canvas. */
+          /* Seek/title row spans the same width as the canvas. */
           .pf-app-root.pf-mode-lite > .pf-seek-block {
-            max-width: calc(100vw - 520px) !important;
+            max-width: calc(100vw - 420px) !important;
             margin: 0 auto 8px !important;
           }
+          /* Hide the #root scrollbar in Lite — the canvas can be tall and
+             scrollable, but the visible scrollbar track is distracting. */
+          #root:has(.pf-mode-lite) { scrollbar-width: none !important; }
+          #root:has(.pf-mode-lite)::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
         }
         /* MOBILE LANDSCAPE (phone on its side). Detect via low viewport HEIGHT
            (≤500px) instead of width, because modern iPhones in landscape are
