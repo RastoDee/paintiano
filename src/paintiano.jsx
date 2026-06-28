@@ -20471,17 +20471,9 @@ export default function Paintiano() {
       if(seededChanged){
         try { localStorage.setItem('paintiano_setup_artists_seeded', JSON.stringify(seeded)); } catch(_){}
       }
-      // Heal one-sided pairs: if only ONE side of a pair sits in the set
-      // (legacy state from an older edit toggle that added single sides),
-      // pull in the partner so every enabled pair is two-sided. Otherwise
-      // tap-2 on the chip falls through forcedSide → Mosaic instead of
-      // flipping to the partner.
-      const _PAIRS = [['picasso','matisse'],['pollock','bloom'],['kusama','miro'],['mondrian','kandinsky'],['gold','rothko'],['bulge','wave'],['spiral','arcs'],['pop','mitchell'],['monet','hokusai']];
-      for(const [pa,pb] of _PAIRS){
-        const ha = valid.includes(pa), hb = valid.includes(pb);
-        if(ha && !hb) valid.push(pb);
-        else if(hb && !ha) valid.push(pa);
-      }
+      // Phase 2 (decoupled): pair-healing removed. Styles are now independent
+      // chips — selecting one no longer pulls in its former pair partner. The
+      // set contains exactly the styles the user enabled.
       return valid;
     } catch(_) { return ALL_ARTIST_KEYS.slice(); }
   });
@@ -26933,13 +26925,17 @@ Composition rules:
   },[pickExpressiveStyle, loadSampleMidiTrimmed, startPlay]);
 
   // Auto-play the first-impression demo exactly once, on a brand-new visit.
-  // Fires after a short delay so the canvas/grid have initialised, picks a
-  // random expressive style for a colourful first painting, and stamps the
-  // visited flag so it never repeats. Returning users (flag present) skip this
-  // entirely and keep their normal Setup-first experience.
+  // CRITICAL: it must wait for the colourful loading INTRO splash to finish
+  // first (showIntro=false — the splash ended on its own ~4.8s OR the user
+  // tapped to skip). Starting earlier would run Liebestraum *underneath* the
+  // splash. So this effect keys off showIntro, not a blind mount timer: it
+  // fires the moment the intro clears. Picks a random expressive style for a
+  // colourful first painting and stamps the onboarded flag so it never
+  // repeats. Returning users (flag present) skip this entirely.
   const firstAutoPlayedRef = useRef(false);
   useEffect(()=>{
-    if(!firstVisitRef.current) return;
+    if(showIntro) return;                 // wait until the loading intro clears
+    if(!firstVisitRef.current) return;    // returning users keep Setup-first
     if(firstAutoPlayedRef.current) return;
     firstAutoPlayedRef.current = true;
     try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
@@ -26956,7 +26952,7 @@ Composition rules:
     }, 300);
     return ()=>clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
+  },[showIntro]);
 
   // Tear the reel down completely AND reset to the clean Setup screen.
   // Earlier implementation only paused (stopAll + setStyle(null)), which left
@@ -29514,13 +29510,11 @@ Composition rules:
             <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : (cockpitEdit ? ts('editSet','Edit your set') : ts('pickLook','Pick a look'))}</span>
             <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
           </button>
-          {/* Edit dial — subtle icon, no box. Shown when the strip is open in a
-              music mode. Gold when editing. */}
-          {(stripOpen && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive) ? (
-            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:26,height:26,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:cockpitEdit?'rgba(220,180,90,.95)':'rgba(230,222,196,.38)',transition:'color .15s ease'}}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg>
-            </button>
-          ) : (<span style={{width:26,flexShrink:0}} aria-hidden="true" />)}
+          {/* Phase 2: edit-mode dial removed. The cockpit no longer has a
+              separate "edit your set" mode — every chip (palette, style, tone)
+              is always directly tappable. The header keeps a symmetric spacer
+              so the title stays centred. */}
+          <span style={{width:26,flexShrink:0}} aria-hidden="true" />
         </div>
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
@@ -29538,6 +29532,13 @@ Composition rules:
         </>)}
         {((stripOpen && (isDesktop || cockpitVisible)) || isDesktop) && (
         <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
+          {/* ── Phase 2: Surprise me — primary action at the top of the cockpit.
+              Randomizes the look (expressive style + harmony palette) and
+              replays, so the user gets a fresh painting with one tap. Hidden in
+              image-scan mode (it would fight the scan controls). */}
+          {(loadedSource!=='image' || moodFromImg) && !composeMode && !micActive && (
+            <button onClick={()=>{ if(demoReelOn) return; surpriseMe(); }} disabled={demoReelOn} title={ts('surpriseMe','Surprise me')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'12px',borderRadius:14,cursor:demoReelOn?'default':'pointer',fontFamily:'inherit',fontSize:(.7*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)',opacity:demoReelOn?.5:1,transition:'opacity .15s'}}>↻ {ts('surpriseMe','Surprise me')}</button>
+          )}
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Morph / Vary — only for mood-based pieces (mood + mood-from-image),
               never for loaded MIDI/audio/score. Morph: text moods only. Vary: both. */}
@@ -29895,296 +29896,74 @@ Composition rules:
           {(loadedSource!=='image' || moodFromImg) && (
           <>
           {(()=>{
-            // ── Adaptive chip grid (max 2 rows) ────────────────────────────
-            // Chip count = Mosaic (if family selected) + visible pairs in
-            // current setup. Dice sits ABOVE the grid (in the inspired-by
-            // header row), so it never affects the row count. Column mapping
-            // per spec:
-            //   1→1h0d  2→2h0d  3→3h0d  4→2h2d  5→3h2d  6→3h3d
-            //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
-            const _visiblePairs = cockpitEdit ? effectivePairs : effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b));
-            const _familyOn = setupArtists.includes('mosaicFamily');
-            const _chipCount = (_familyOn?1:0) + _visiblePairs.length;
-            // baseCols per Rasto's key (chips only): 1→1, 2→2, 3→3, 4→2,
-            // 5→3, 6→3, 7→4, 8→4, 9→5, 10→5.
-            const _baseCols = (()=>{
-              switch(_chipCount){
-                case 0: case 1: return 1;
-                case 2: return 2;
-                case 3: return 3;
-                case 4: return 2;
-                case 5: case 6: return 3;
-                case 7: case 8: return 4;
-                default: return 5;
-              }
-            })();
-            const _cols = _baseCols;
+            // ── Phase 2: flat artist grid (decoupled) ──────────────────────
+            // One chip per individual style — pairs are gone at the UI level.
+            // Order follows ALL_ARTIST_KEYS (minus the standalone Mosaic, which
+            // gets its own chip first). Free tier shows ALL styles; the ones
+            // outside FREE_UNLOCKED_KEYS render with a 🔒 and open the paywall
+            // on tap (best-UX: the full catalogue is visible, locked content
+            // advertises the upgrade). Tapping a chip selects that style (and
+            // makes sure it's in setupArtists); tapping the active chip again
+            // deselects back to Mosaic. No edit mode — every chip is always a
+            // direct, single-tap selector. Vary/Dice are unaffected (Vary only
+            // changes the variation salt; Dice shuffles across selected styles).
+            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt'};
+            const _shortOf=(full)=> _artistShort[full] || full;
+            const _styleKeys = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily');
+            const _isLocked=(k)=> (proStatus==='free') && !FREE_UNLOCKED_KEYS.has(k);
+            // Mosaic chip + 18 style chips.
+            const _chipCount = 1 + _styleKeys.length; // 19
+            // Column mapping: keep it dense but readable. 19 chips → 5 columns
+            // (4 rows of 5, last row of 4) reads well on a phone.
+            const _cols = isDesktop ? 6 : 5;
+            const mosaicManual = style===null && !shuffleStyle;
+            const mosaicShuf = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
+            const _mosLabel = (shuffleStyle==='notes')?t('notesStyle'):(shuffleStyle==='oneM')?t('oneMStyle'):(!shuffleStyle&&oneMMode)?t('oneMStyle'):(!shuffleStyle&&notesMode)?t('notesStyle'):t('mosaicStyle');
             return (
-          <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
-            {/* Mosaic = default; not glowing while Shuffle is drawing an artist.
-                Shown when in set, or in edit mode (as a ghost when out of set). */}
-            {(setupArtists.includes('mosaicFamily') || cockpitEdit) && (()=>{
-              const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
-              // Manual mosaic = selected and NOT being driven by the dice. Like
-              // the artist pairs, a shuffle-hit shows the white frame (no gold
-              // glow); a manual pick shows the gold glow. Splitting these keeps
-              // the Mosaic family visually consistent with the other chips.
-              const mosaicManual = style===null && !shuffleStyle;
-              // Sub-label reflects the current rendered family member.
-              const subKind = (shuffleStyle==='notes') ? 'notes'
-                            : (shuffleStyle==='oneM') ? 'oneM'
-                            : (shuffleStyle==='mosaic') ? 'mosaic'
-                            : (!shuffleStyle && oneMMode) ? 'oneM'
-                            : (!shuffleStyle && notesMode) ? 'notes'
-                            : 'mosaic';
-              const subLabel = subKind==='notes' ? t('notesStyle') : subKind==='oneM' ? t('oneMStyle') : t('mosaicStyle');
-              const lockTip = randomMode
-                ? (mosaicShuffleLock ? 'mosaic family locked — tap to release back to full shuffle' : 'tap to lock shuffle to mosaic / notes / $1M$')
-                : (subKind==='oneM' ? 'tap to clear back to mosaic' : (subKind==='notes' ? 'notes — tap for $1M$' : 'mosaic — tap for note names'));
-              return (
+          <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — Mosaic is the plain reading with no artist overlay">
+            {/* Mosaic chip — default reading. Tap cycles Mosaic → Notes → $1M$
+                (dice off) or locks shuffle to the mosaic family (dice on). */}
             <button onClick={()=>{
-              // In edit mode the Mosaic chip behaves like every other chip:
-              // tap toggles its membership in the set (mosaicFamily key in
-              // setupArtists). This makes the edit grid uniform — every chip
-              // is a toggle, none has a hidden second behaviour.
-              if(cockpitEdit){
-                setSetupArtists(prev => {
-                  if(prev.includes('mosaicFamily')){
-                    return prev.length>1 ? prev.filter(x=>x!=='mosaicFamily') : prev;
-                  }
-                  return [...prev, 'mosaicFamily'];
-                });
-                return;
-              }
-              if(style!==null){ selectStyle(style); return; }
+              if(demoReelOn) return;
+              if(style!==null){ selectStyle(style); return; } // currently on an artist → clear back to mosaic
               if(randomMode){
-                // Dice on → toggle "mosaic family" lock. Entering the lock
-                // restarts the cycle at 'mosaic' and clears the dice-off
-                // notes/oneM flags so the locked shuffle is the sole driver.
-                setMosaicShuffleLock(v=>{
-                  const nx = !v;
-                  if(nx){ setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); }
-                  return nx;
-                });
+                setMosaicShuffleLock(v=>{ const nx=!v; if(nx){ setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); } return nx; });
               } else {
-                // Dice off → original 3-tap cycle Mosaic → Notes → $1M$ → Mosaic.
                 if(!notesMode && !oneMMode){ setNotesMode(true); }
                 else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
                 else { setOneMMode(false); setNotesMode(false); }
               }
-            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{subLabel}</button>
-            ); })()}
-            {(cockpitEdit ? effectivePairs : effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b))).map(([a,b], _pairIdx)=>{
-              // Setup-picker integration: when only ONE side of the pair is in
-              // setupArtists, the pair tile collapses to a single-toggle for
-              // that side — no A↔B flip, no info row, no third-tap deselect.
-              const _aOn = setupArtists.includes(a);
-              const _bOn = setupArtists.includes(b);
-              const forcedSide = (_aOn && !_bOn) ? a : (!_aOn && _bOn) ? b : null;
-              // Free tier: only the 'a' side is reachable; the 'b' side is
-              // shown as a small "locked partner" info row beneath the palette
-              // when the pair is tapped. No paywall opens from artist taps —
-              // the lock is purely informational (Guide explains how to unlock).
-              const pairLocked = (proStatus === 'free');
-              // Which of the pair is active? Determines label + next target.
-              const activeKey = style===a ? a : (style===b ? b : null);
-              const isOn = activeKey!==null;
-              const pairKey = a+'|'+b;
-              // The pair's "face" when not active: the member you last picked
-              // from this pair, falling back to the default 'a'. For Free this
-              // is forced to 'a' (the only reachable side).
-              const faceKey = forcedSide
-                ? forcedSide
-                : (pairLocked
-                  ? a
-                  : ((pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a));
-              // Shuffle (Random + no manual pick): highlight whichever button
-              // holds the style the shuffle landed on, and show THAT style's
-              // label so the cycling reads on the buttons themselves.
-              const shufKey = (shuffleStyle===a || shuffleStyle===b) ? shuffleStyle : null;
-              const shufHit = shufKey!==null;
-              // Buttons show the ARTIST that inspired the style (Picasso, Klimt…)
-              // rather than the technique name. Long names are shortened to a
-              // single recognizable word so they fit the narrow 5-up grid cell.
-              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
-              const _shortOf = (full)=> _artistShort[full] || full;
-              // For Free, label always shows the unlocked 'a' artist.
-              const _displayKey = forcedSide || (pairLocked ? a : (activeKey || shufKey || faceKey));
-              const _artFull = STYLE_INSPIRED[_displayKey];
-              const label = _artistShort[_artFull] || _artFull;
-              // In edit mode the partner (the other side of the atomic pair) is
-              // shown as a small subtitle so both names are visible — making
-              // clear that toggling the chip enables/disables both, matching
-              // how Setup presented each pair as a single "Matisse/Picasso" entry.
-              const _partnerKey = (_displayKey === a) ? b : a;
-              const _partnerLabel = _shortOf(STYLE_INSPIRED[_partnerKey]);
-              // Tap behaviour:
-              //  • Free tier: always selects 'a' (the only reachable side).
-              //    Toggles the locked-partner info row beneath the palette:
-              //    tap same pair again → row hides; tap a different pair →
-              //    row reveals the new partner.
-              // Tap behaviour:
-              //
-              // FREE (only 'a' side is reachable):
-              //   shuffle OFF:
-              //     tap 1 (not active)   → paint 'a', NO info row
-              //     tap 2 (active)       → open info row "Matisse 🔒"
-              //     tap 3 (info open)    → close info row, 'a' stays active
-              //     tap 4 (info closed)  → reopen info row (cycle 2↔3)
-              //   shuffle ON:
-              //     tap 1 (not active)   → paint 'a' as shuffle-override
-              //     tap 2 (active)       → deselect → full shuffle
-              //     (no info row in shuffle mode)
-              //
-              // PAID (both sides reachable):
-              //   shuffle OFF:
-              //     tap 1 (not active)   → paint face (last pick / 'a')
-              //     tap 2 (active on a)  → flip to b
-              //     tap 3 (active on b)  → flip back to a (2-state)
-              //   shuffle ON:
-              //     tap 1 (not active)   → paint face as shuffle-override
-              //     tap 2 (active on a)  → flip to b (still override)
-              //     tap 3 (active on b)  → deselect → full shuffle
+            }} className={(mosaicManual?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={randomMode?(mosaicShuffleLock?'mosaic family locked — tap to release':'tap to lock shuffle to mosaic'):(t('mosaicStyle'))} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.52*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicManual),...(!mosaicManual&&mosaicShuf?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{_mosLabel}</button>
+            {/* 18 individual style chips */}
+            {_styleKeys.map((k)=>{
+              const locked = _isLocked(k);
+              const active = style===k;
+              const shufHit = shuffleStyle===k;
+              const _artFull = STYLE_INSPIRED[k] || k;
+              const label = _shortOf(_artFull);
               const onClick = ()=>{
                 if(demoReelOn) return;
-                // ── EDIT MODE ── tap toggles this pair's membership atomically.
-                // Pairs are atomic units: enabling Matisse enables Picasso too,
-                // and vice versa. This guarantees both sides of every enabled
-                // pair are in the set, so tap-2 always flips to the partner
-                // (never falls through forcedSide → Mosaic).
-                if(cockpitEdit){
-                  const _bothOff = !setupArtists.includes(a) && !setupArtists.includes(b);
-                  if(_bothOff){
-                    // Add BOTH sides at once.
-                    setSetupArtists(prev => {
-                      const next = [...prev];
-                      if(!next.includes(a)) next.push(a);
-                      if(!next.includes(b)) next.push(b);
-                      return next;
-                    });
-                  } else {
-                    // Remove both — last-item protection on the whole set.
-                    setSetupArtists(prev => prev.length>1 ? prev.filter(x=>x!==a && x!==b) : prev);
-                  }
-                  return;
-                }
-                if(forcedSide){
-                  if(style===forcedSide){
-                    if(randomMode){ setPairLastPick(p=>({...p,[pairKey]:forcedSide})); setStyleTo(null); }
-                    else { setStyleTo(null); }
-                  } else {
-                    setPairLastPick(p=>({...p,[pairKey]:forcedSide}));
-                    setStyleTo(forcedSide);
-                  }
-                  setExpandedPair(null);
-                  return;
-                }
-                if(pairLocked){
-                  // ── FREE ──
-                  if(randomMode){
-                    // Shuffle ON: paint↔deselect, no info row.
-                    setExpandedPair(null);
-                    if(!isOn){
-                      setPairLastPick(p=>({...p,[pairKey]:a}));
-                      setStyleTo(a);
-                    } else {
-                      setStyleTo(null);
-                    }
-                    return;
-                  }
-                  // Shuffle OFF: paint → info → close (cycle on the same pair).
-                  if(!isOn){
-                    // Tap 1: just paint 'a', no info row.
-                    setPairLastPick(p=>({...p,[pairKey]:a}));
-                    setStyleTo(a);
-                    setExpandedPair(null);
-                  } else {
-                    // Already active: toggle the info row. Tapping a DIFFERENT
-                    // pair while one is expanded is handled by the !isOn branch
-                    // above (it closes the old row); same-pair taps cycle here.
-                    setExpandedPair(prev => prev === pairKey ? null : pairKey);
-                  }
-                  return;
-                }
-                // ── PAID ──
-                // ── PAID ──
-                // Three-state cycle, anchored on faceKey (= the side the user
-                // most recently SETTLED on for this pair, captured at the
-                // moment they deselect):
-                //   tap 1 — not active            → paint faceKey
-                //   tap 2 — active on faceKey     → flip to the other side
-                //                                   (faceKey unchanged so we
-                //                                   can still detect tap 3)
-                //   tap 3 — active on the other   → shuffle ON: capture
-                //                                   `other` as the new face,
-                //                                   then deselect → shuffle
-                //                                   shuffle OFF: flip back
-                // After a deselect, the NEXT tap 1 re-enters at the captured
-                // side, so Picasso→Matisse→deselect→tap = Matisse.
-                if(!isOn){
-                  setStyleTo(faceKey);
-                } else if(style===faceKey){
-                  const other = (faceKey===a) ? b : a;
-                  setStyleTo(other);
+                if(locked){ setPaywallReason('settings'); return; }
+                if(active){
+                  // Deselect → back to Mosaic.
+                  selectStyle(k);
                 } else {
-                  // style is the OTHER side (tap 3).
-                  if(randomMode){
-                    // Remember the side we just left as the new face.
-                    setPairLastPick(p=>({...p,[pairKey]:style}));
-                    setStyleTo(null);
-                  } else {
-                    setStyleTo(faceKey);
-                  }
+                  // Make sure it's in the set, then select it.
+                  setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
+                  setStyleTo(k);
+                  setExpandedPair(null);
                 }
               };
-              const _otherKey = (faceKey===a) ? b : a;
-              const nextHint = pairLocked
-                ? (randomMode
-                    ? (isOn ? ts('tapReturnShuffle','tap to return to shuffle') : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b])))
-                    : (isOn
-                        ? (expandedPair===pairKey ? 'tap to hide info' : 'tap to see partner')
-                        : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b]))))
-                : (!isOn
-                    ? ''
-                    : (style===faceKey
-                        ? `tap for ${STYLE_LABELS[_otherKey]}`
-                        : (randomMode ? 'tap for shuffle' : `tap for ${STYLE_LABELS[faceKey]}`)));
-              const _pairInSet = setupArtists.includes(a) || setupArtists.includes(b);
-              const _pairGhost = cockpitEdit && !_pairInSet;
               return (
-              <Fragment key={a+'_'+b}>
-                <button className={(!cockpitEdit&&isOn)?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
-                  title={cockpitEdit ? (_pairInSet?'in your set — tap to remove':'tap to add to your set') : (pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)))}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:cockpitEdit?1.1:1.2,...(_pairGhost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _pairInSet : isOn)),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}{cockpitEdit && (<span style={{display:'block',fontSize:(.40*effScale)+'rem',opacity:.55,letterSpacing:'.04em',fontWeight:500,marginTop:1,textTransform:'none'}}>/ {_partnerLabel}</span>)}</button>
-              </Fragment>
+              <button key={k} onClick={onClick}
+                title={locked ? `${label} — Paintiano Pro` : (active ? `${_artFull} — tap to clear` : (shufHit ? `🎲 ${_artFull} — shuffle is painting this` : `${label} — tap to paint`))}
+                style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.52*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',opacity:locked?.72:1,...chipStyle(active),...(!active&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
+                {label}{locked && (<span style={{marginLeft:3,fontSize:'.8em',opacity:.7}}>🔒</span>)}
+              </button>
               );
             })}
           </div>
-          ); })()}
-          {cockpitEdit && (
-            <div style={{textAlign:'center',marginTop:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(230,222,196,.55)',lineHeight:1.5}}>
-              <span>{ts('editHint','Tap to add or remove from your set.')}</span>
-            </div>
-          )}
-          {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
-              member of the most recently tapped pair with a PRO badge.
-              Clickable: opens the paywall with reason 'settings'. */}
-          {proStatus==='free' && expandedPair && (()=>{
-            const [a,b] = expandedPair.split('|');
-            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
-            const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
-            return (
-              <div
-                onClick={()=>{ setPaywallReason('settings'); }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setPaywallReason('settings'); } }}
-                title={`${lockedName} — Paintiano Pro`}
-                style={{textAlign:'center',marginTop:8,marginBottom:2,padding:'4px 8px',fontSize:(.58*effScale)+'rem',letterSpacing:'.06em',color:'rgba(201,168,76,.7)',fontStyle:'italic',cursor:'pointer',userSelect:'none',borderRadius:6,transition:'color .15s'}}
-              >
-                {lockedName}<ProBadge t={t} readScale={effScale} size="sm" />
-              </div>
-            );
+          );
           })()}
           {/* ── TONE picker ────────────────────────────────────────────
               Lives right under the artist grid. Three pills matching the
