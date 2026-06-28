@@ -7610,6 +7610,32 @@ Composition rules:
   // Lite "Use my song" opens a tiny File / Mic chooser instead of going straight
   // to the file dialog. Mic arms the listen mode and auto-starts recording.
   const [liteSrcPicker, setLiteSrcPicker] = useState(false);
+  // iOS blocks audio started off a timer (no user gesture), so the auto-played
+  // Liszt can paint but stay silent. The first tap anywhere in Lite unlocks the
+  // audio context and, if a song is loaded but not audibly playing, (re)starts
+  // it with sound. Runs once.
+  const basicTapUnlockedRef = useRef(false);
+  // Lite shows a "Tap to begin" splash on entry. Until the user taps, we hold
+  // playback (iOS needs a gesture for sound anyway) so audio + paint start
+  // together on the tap instead of the canvas playing silently underneath.
+  const [liteAwaitTap, setLiteAwaitTap] = useState(false);
+  const basicTapUnlock = useCallback(()=>{
+    if(!basicMode) return;
+    if(basicTapUnlockedRef.current) return;
+    basicTapUnlockedRef.current = true;
+    setLiteAwaitTap(false);
+    try{ unlockAudio(); }catch(_){}
+    try{ setMuted(false); }catch(_){}
+    setTimeout(()=>{
+      try{
+        if(chordsRef.current && chordsRef.current.length>0 && !playingRef.current){
+          wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); });
+        } else if(playingRef.current){
+          try{ wakeAudio(); }catch(_){}
+        }
+      }catch(_){}
+    }, 30);
+  },[basicMode, unlockAudio]);
   useEffect(()=>{
     if(showIntro) return;
     if(!basicMode){ basicAutoPlayedRef.current=false; return; }
@@ -7628,7 +7654,10 @@ Composition rules:
         pickExpressiveStyle();
         setMode('harmony');
         loadSampleMidi();
-        setTimeout(()=>{ try{ wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); }); }catch(_){ try{ startPlay && startPlay(); }catch(__){} } }, 280);
+        // Load the sample but hold playback behind a "Tap to begin" splash. iOS
+        // needs a user gesture for sound, so we wait for the tap and then start
+        // audio + paint together (basicTapUnlock), instead of painting silently.
+        if(!basicTapUnlockedRef.current) setLiteAwaitTap(true);
       }catch(_){}
     }, 300);
     return ()=>clearTimeout(id);
@@ -7643,6 +7672,9 @@ Composition rules:
   useEffect(()=>{
     if(!basicMode){ basicAutoStartedRef.current=false; return; }
     if(chords.length===0){ basicAutoStartedRef.current=false; return; }
+    // Hold the Liszt auto-start behind the Tap-to-begin splash. User-loaded
+    // songs (loadedSource set) bypass this — they were chosen by a tap already.
+    if(liteAwaitTap && !loadedSource) return;
     if(playing || holdPaused || busy || disp>0){ basicAutoStartedRef.current=true; return; }
     if(basicAutoStartedRef.current) return;
     basicAutoStartedRef.current = true;
@@ -9520,9 +9552,17 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
+      {basicMode && liteAwaitTap && !showIntro && (
+        <div onPointerDown={basicTapUnlock} role="button" aria-label={ts('tapToBegin','Tap to begin')} style={{position:'fixed',inset:0,zIndex:90000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18,cursor:'pointer',background:'rgba(6,5,12,0.82)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',WebkitTapHighlightColor:'transparent'}}>
+          <div style={{width:74,height:74,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(220,180,90,.55)',background:'rgba(220,180,90,.08)',boxShadow:'0 0 40px rgba(220,180,90,.25)'}}>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="rgba(220,180,90,.95)" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:(1.5*effScale)+'rem',fontStyle:'italic',letterSpacing:'.04em',color:'rgba(230,205,140,.95)'}}>{ts('tapToBegin','Tap to begin')}</div>
+        </div>
+      )}
       {showOnboarding && !showIntro && !basicMode && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
         // a big play CTA that loads the trimmed Liszt sample (30 s) and starts
@@ -9683,7 +9723,7 @@ Composition rules:
           const accent = adv ? '220,180,90' : '230,205,140';   // full gold | lite gold
           const label = adv ? ts('advancedMode','Advanced') : ts('basicMode','Lite');
           return (
-            <button onClick={()=>{ const goingAdvanced = basicMode; try{ fullClear(); }catch(_){} try{ setStayActive(false); }catch(_){} try{ setStyle(null); }catch(_){} try{ setForceSetup(goingAdvanced); }catch(_){} basicAutoPlayedRef.current=false; setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
+            <button onClick={()=>{ const goingAdvanced = basicMode; try{ if(micListening) stopMicListening(); }catch(_){} try{ if(micPainting) stopMicPainting(); }catch(_){} try{ if(recording) stopRecord(); }catch(_){} try{ setMicArmed(false); }catch(_){} try{ fullClear(); }catch(_){} try{ setStayActive(false); }catch(_){} try{ setStyle(null); }catch(_){} try{ setForceSetup(goingAdvanced); }catch(_){} basicAutoPlayedRef.current=false; basicTapUnlockedRef.current=false; setLiteAwaitTap(false); setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
               style={{height:38,padding:'0 16px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,borderRadius:19,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',background:'transparent',color:'rgba('+accent+',.98)',border:'1px solid rgba('+accent+',.45)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'color .2s, border-color .2s'}}>
               <span aria-hidden="true" style={{width:7,height:7,borderRadius:'50%',background:'rgba('+accent+',.95)',boxShadow:'0 0 7px rgba('+accent+',.6)',flexShrink:0}}/>
               {label}
