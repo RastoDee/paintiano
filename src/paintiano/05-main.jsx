@@ -855,6 +855,10 @@ export default function Paintiano() {
   // the next revive must force that cycle even though the context reads
   // 'running'. Cleared once a successful re-acquire has run.
   const audioWasHiddenRef = useRef(false);
+  // Re-armed by the audio statechange listener when the context dies mid-session
+  // so the next Lite tap re-runs hard-recovery. Declared here (before unlockAudio
+  // attaches the statechange listener) to avoid a temporal-dead-zone reference.
+  const basicTapUnlockedRef = useRef(false);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -3555,6 +3559,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             if(s==='interrupted' || s==='suspended'){
               try{ if(samplerOk.current && samplerRef.current) samplerRef.current.releaseAll(); }catch(_){}
               try{ if(audioElRef.current) audioElRef.current.pause(); }catch(_){}
+              // The context went dead mid-session (iOS audio-session steal, etc).
+              // Re-arm the Lite first-tap recovery AND flag a forced hard-recover
+              // so the very next user tap rebuilds the audio device in-place,
+              // instead of the user needing to reload the page.
+              try{ basicTapUnlockedRef.current = false; }catch(_){}
+              try{ audioWasHiddenRef.current = true; }catch(_){}
             }
           });
           audioStateListenerRef.current = true;
@@ -7614,7 +7624,6 @@ Composition rules:
   // Liszt can paint but stay silent. The first tap anywhere in Lite unlocks the
   // audio context and, if a song is loaded but not audibly playing, (re)starts
   // it with sound. Runs once.
-  const basicTapUnlockedRef = useRef(false);
   // Lite shows a "Tap to begin" splash on entry. Until the user taps, we hold
   // playback (iOS needs a gesture for sound anyway) so audio + paint start
   // together on the tap instead of the canvas playing silently underneath.
@@ -7626,6 +7635,11 @@ Composition rules:
     setLiteAwaitTap(false);
     try{ unlockAudio(); }catch(_){}
     try{ setMuted(false); }catch(_){}
+    // Force wakeAudio's hard-recovery path (double suspend->resume + sampler
+    // rebuild). On iOS the audio device can be left torn-down after mic use or
+    // an interruption — a plain resume isn't enough and only a full reload via
+    // the landing page fixed it before. This recovers it in-place.
+    try{ audioWasHiddenRef.current = true; }catch(_){}
     setTimeout(()=>{
       try{
         if(chordsRef.current && chordsRef.current.length>0 && !playingRef.current){
@@ -13058,18 +13072,31 @@ Composition rules:
           // Auto-start the capture in the same gesture — no separate REC tap.
           setTimeout(()=>{ try{ wakeAudio().then(()=>{ try{ startMicListening(); }catch(_){} }).catch(()=>{ try{ startMicListening(); }catch(_){} }); }catch(_){ try{ startMicListening(); }catch(__){} } }, 60);
         };
-        const _stopMicLite = ()=>{ try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){} try{ if(recording) stopRecord(); }catch(_){} setMicArmed(false); };
+        const _stopMicLite = ()=>{ try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){} try{ if(recording) stopRecord(); }catch(_){} setMicArmed(false); basicTapUnlockedRef.current=false; try{ audioWasHiddenRef.current=true; }catch(_){} setTimeout(()=>{ try{ wakeAudio(); }catch(_){} }, 80); };
         const _openFileLite = ()=>{ setLiteSrcPicker(false); if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} };
+        const _loadSampleLite = ()=>{
+          setLiteSrcPicker(false);
+          // Load the built-in Liszt sample and play it — same source the Lite
+          // entry auto-loads. This is a real tap, so audio is allowed.
+          try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){}
+          try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){}
+          try{ setMuted(false); }catch(_){}
+          try{ pickExpressiveStyle(); }catch(_){}
+          setMode('harmony');
+          loadSampleMidi();
+          setTimeout(()=>{ try{ wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); }); }catch(_){} }, 120);
+        };
         // Middle button: Stop while capturing, else Save (done) / Pause·Play.
         const _midMicAware = _capturing ? ('■ '+ts('stopLabel','Stop')) : _midLabel;
         const _midClickAware = ()=>{ if(_capturing){ _stopMicLite(); return; } _midClick(); };
         return (
         <>
         {liteSrcPicker && (
-          <div onClick={()=>setLiteSrcPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:'rgba(4,3,8,0.6)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',display:'flex',alignItems:'flex-end',justifyContent:'center'}}>
-            <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:560,display:'flex',gap:10,padding:'14px 12px calc(80px + env(safe-area-inset-bottom,0px))'}}>
-              <button onClick={_openFileLite} style={{...btn,flexDirection:'column',gap:8,padding:'20px 8px',fontSize:(.74*effScale)+'rem'}}>🎵 {ts('useMySongFile','File')}</button>
-              <button onClick={_startMicLite} style={{...btn,flexDirection:'column',gap:8,padding:'20px 8px',fontSize:(.74*effScale)+'rem'}}>🎙 {ts('useMySongMic','Mic')}</button>
+          <div onClick={()=>setLiteSrcPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:'rgba(4,3,8,0.6)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',display:'flex',alignItems:'flex-end',justifyContent:'flex-end'}}>
+            <div onClick={e=>e.stopPropagation()} style={{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,padding:'14px 12px calc(80px + env(safe-area-inset-bottom,0px))',minWidth:200}}>
+              <button onClick={_loadSampleLite} style={{...btn,justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'}}>🎹 {ts('useMySongSample','Sample')}</button>
+              <button onClick={_openFileLite} style={{...btn,justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'}}>🎵 {ts('useMySongFile','File')}</button>
+              <button onClick={_startMicLite} style={{...btn,justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'}}>🎙 {ts('useMySongMic','Mic')}</button>
             </div>
           </div>
         )}
