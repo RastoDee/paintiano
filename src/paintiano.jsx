@@ -29658,10 +29658,12 @@ Composition rules:
             </div>
             );
           })() : (<>
-            {(()=>{ const _allTabs = ['harmony','spectral','phi','kontra','custom']; const _tabs = _allTabs.filter(m => setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs;
+            {(()=>{ const _allTabs = ['harmony','spectral','phi','kontra','custom']; const _enabled = _allTabs.filter(m => setupPalettes.includes(m)); const _baseShown = _enabled.length?_enabled:_allTabs;
+            // Edit mode: show all palettes, off ones as ghosts to tap-add.
+            const _shown = cockpitEdit ? _allTabs : _baseShown;
             // Single palette enabled in Setup → nothing to switch between, so show
             // the palette NAME as plain text (same font, cream) instead of a chip.
-            if(_shown.length===1){
+            if(_shown.length===1 && !cockpitEdit){
               return (
                 <div style={{textAlign:'center',padding:'8px 0',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',color:'rgba(220,180,90,.95)',userSelect:'none'}}>{t(_shown[0])}</div>
               );
@@ -29676,8 +29678,11 @@ Composition rules:
               // editor modal. The palette applied is always the default — the user's
               // saved palette stays locked until they upgrade.
               const isFree = proStatus==='free';
+              const _inSet = setupPalettes.includes(m);
+              const _ghost = cockpitEdit && !_inSet;
               return (
-              <button key={m} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+              <button key={m} className={mode===m&&!cockpitEdit?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+                if(cockpitEdit){ togglePalSafe(m); return; }
                 if(isCustomTab && mode==='custom'){
                   if(!customArmed){
                     // tap 1: arm → label "✎ EDIT" + PRO badge (Free)
@@ -29701,7 +29706,7 @@ Composition rules:
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
                 kontraAutoRef.current=false;   // manual palette choice → deliberate
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...chipStyle(mode===m)}}>
+              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _inSet : (mode===m)))}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
                   <span>{armed?('✎ '+t('editShort')):t(m)}</span>
                   {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
