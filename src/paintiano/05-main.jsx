@@ -2144,6 +2144,21 @@ export default function Paintiano() {
     try{ localStorage.setItem('paintiano_cockpit_hidden', cockpitVisible?'0':'1'); }catch(_){}
   },[cockpitVisible]);
   const revealCockpit = useCallback(()=>{ setCockpitVisible(true); },[]);
+  // ── BASIC vs ADVANCED app mode ────────────────────────────────────────────
+  // basicMode = the simplified experience: a big live canvas painting the Liszt
+  // sample, with just two CTAs (Surprise me · My song). No setup tiles, no
+  // cockpit. A brand-new visitor starts in Basic. The B/A chip in the topbar
+  // flips between Basic and the full Advanced app (setup tiles + cockpit).
+  // Persisted so the choice survives reloads. First visit defaults to Basic.
+  const [basicMode, setBasicMode] = useState(()=>{
+    try{
+      if(!localStorage.getItem('paintiano_onboarded')) return true; // first visit → Basic
+      return localStorage.getItem('paintiano_basic_mode')!=='0';
+    }catch(_){ return true; }
+  });
+  useEffect(()=>{
+    try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
+  },[basicMode]);
   // Inline "edit your set" mode for the Pick-a-look cockpit. When on, disabled
   // palettes/artists show as ghost chips you can tap to add to your set (and
   // enabled ones to remove) — live, without leaving the canvas. The heavy
@@ -7610,35 +7625,48 @@ Composition rules:
     setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
   },[pickExpressiveStyle, loadSampleMidiTrimmed, startPlay]);
 
-  // Auto-play the first-impression demo exactly once, on a brand-new visit.
+  // BASIC-mode "Surprise me" — swap to a DIFFERENT random expressive style
+  // WITHOUT restarting the song. The paint effect re-renders live on a style
+  // change, so the whole painting repaints in the new artist's language at the
+  // current position while the music keeps playing. Avoids repeating the
+  // current style so each tap is visibly different.
+  const basicSurprise = useCallback(()=>{
+    const pool = EXPRESSIVE_POOL.filter(k=>k!==style);
+    const src = pool.length ? pool : EXPRESSIVE_POOL;
+    const k = src[Math.floor(Math.random()*src.length)] || 'picasso';
+    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
+    setRandomMode(false); randomModeRef.current=false;
+    setStyle(k);
+  },[EXPRESSIVE_POOL, style]);
+
+  // Auto-play the first-impression demo. Fires when:
+  //   • a brand-new visitor lands (first visit), OR
+  //   • the app is in BASIC mode with an empty canvas (so Basic always has a
+  //     live sample painting to greet any user, new or returning).
   // CRITICAL: it must wait for the colourful loading INTRO splash to finish
-  // first (showIntro=false — the splash ended on its own ~4.8s OR the user
-  // tapped to skip). Starting earlier would run Liebestraum *underneath* the
-  // splash. So this effect keys off showIntro, not a blind mount timer: it
-  // fires the moment the intro clears. Picks a random expressive style for a
-  // colourful first painting and stamps the onboarded flag so it never
-  // repeats. Returning users (flag present) skip this entirely.
+  // first (showIntro=false). Picks a random expressive style and loads a 30s
+  // slice of the Liszt sample, then starts playback once React commits the
+  // chord state (the proven onboarding sequence).
   const firstAutoPlayedRef = useRef(false);
   useEffect(()=>{
     if(showIntro) return;                 // wait until the loading intro clears
-    if(!firstVisitRef.current) return;    // returning users keep Setup-first
-    if(firstAutoPlayedRef.current) return;
+    const wantAuto = firstVisitRef.current || (basicMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource);
+    if(!wantAuto) return;
+    if(firstAutoPlayedRef.current && !basicMode) return;
+    if(firstAutoPlayedRef.current && chords.length>0) return; // already painting
     firstAutoPlayedRef.current = true;
     try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
     const id = setTimeout(()=>{
       try{
         pickExpressiveStyle();
         setMode('harmony');
-        // Liebestraum (Liszt) — public-domain. Load a digestible 30s slice of
-        // the real sample MIDI, then start playback once React has committed
-        // the chord state (the proven onboarding sequence).
         loadSampleMidiTrimmed(30000);
         setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
       }catch(_){}
     }, 300);
     return ()=>clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[showIntro]);
+  },[showIntro, basicMode]);
 
   // Tear the reel down completely AND reset to the clean Setup screen.
   // Earlier implementation only paused (stopAll + setStyle(null)), which left
@@ -9631,7 +9659,19 @@ Composition rules:
           )}
         </div>
 
-        {/* segmented control — text size + language */}
+        {/* ── BASIC / ADVANCED toggle — mirrors the hamburger's glass-chip look.
+            B = simplified live-canvas experience; A = full setup + cockpit.
+            Persisted via basicMode. Placed right beside the menu so the two
+            top-level controls sit together. */}
+        <div role="group" aria-label="Basic or Advanced mode" style={{display:'inline-flex',alignItems:'center',height:38,borderRadius:19,overflow:'hidden',border:'1px solid rgba(201,168,76,.26)',background:'rgba(255,255,255,.03)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)'}}>
+          {[['B',true],['A',false]].map(([lbl,wantBasic],i)=>{
+            const on = basicMode===wantBasic;
+            return (
+              <button key={lbl} onClick={()=>setBasicMode(wantBasic)} aria-pressed={on} aria-label={wantBasic?ts('basicMode','Basic'):ts('advancedMode','Advanced')} title={wantBasic?ts('basicMode','Basic'):ts('advancedMode','Advanced')}
+                style={{width:34,height:36,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:700,letterSpacing:'.02em',background:on?'rgba(201,168,76,.16)':'transparent',color:on?'rgba(220,180,90,.98)':'rgba(207,197,168,.5)',border:'none',borderLeft:i?'1px solid rgba(201,168,76,.16)':'none',WebkitTapHighlightColor:'transparent',transition:'background .18s, color .18s'}}>{lbl}</button>
+            );
+          })}
+        </div>
         {(() => {
           const LANG_META = {
             EN:{code:'EN',name:'English'},
@@ -9698,7 +9738,7 @@ Composition rules:
           hairline dividers; labels are tiny and faded (recede for return
           users, orient first-timers). lbl() / divider markup inline.
           ───────────────────────────────────────────────────────────── */}
-      {isSetupView && (
+      {isSetupView && !basicMode && (
       <div className="pf-fade pf-panel-part" style={{width:'100%',maxWidth:560,display:'flex',flexDirection:'column',gap:14,marginBottom:18}}>
 
         {/* Resume — when you parked the current painting via "← Setup", this
@@ -9862,7 +9902,7 @@ Composition rules:
       {/* ── Active-view strip ── Color + Style stay reachable while a painting
           is on the canvas, without the full setup panel. Collapsed by default
           so the canvas keeps the room; tap the header to expand. ── */}
-      {isActiveView && (
+      {isActiveView && !basicMode && (
       <div ref={stripWrapRef} className="pf-panel-part" style={{width:'100%',maxWidth:480,marginBottom:(composeMode||micActive)?4:12}}>
         {/* Back to setup — abandons the current mood/source and returns to the
             clean setup screen. clear() resets chords + mood + source, which
@@ -10665,8 +10705,8 @@ Composition rules:
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
             {(()=>{
               const allTones = [
-                {k:'pure',   label:({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure'},
-                {k:'real',   label:({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real'},
+                {k:'pure',   label:({EN:'True',SK:'Pravé',DE:'Echt',FR:'Vrai',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'トゥルー'})[lang]||'True'},
+                {k:'real',   label:({EN:'Soft',SK:'Jemné',DE:'Weich',FR:'Doux',ES:'Suave',PT:'Suave',zh:'柔和',zhTW:'柔和',ja:'ソフト'})[lang]||'Soft'},
                 {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'}
               ];
               // Edit mode shows all three (off ones as ghosts to tap-add); normal
@@ -12593,8 +12633,8 @@ Composition rules:
         const _palLabels = {harmony:t('harmony'), spectral:t('spectral'), phi:t('phi'), kontra:t('kontra'), custom:t('custom')};
         const _artistLabels = (()=>{ const m={mosaicFamily:(ts('setupMosaicFamily','Mosaic family'))}; ALL_ARTIST_KEYS.forEach(k=>{ if(k!=='mosaicFamily') m[k]=STYLE_INSPIRED[k]||k; }); return m; })();
         const _toneLabels = {
-          pure:   ({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure',
-          real:   ({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real',
+          pure:   ({EN:'True',SK:'Pravé',DE:'Echt',FR:'Vrai',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'トゥルー'})[lang]||'True',
+          real:   ({EN:'Soft',SK:'Jemné',DE:'Weich',FR:'Doux',ES:'Suave',PT:'Suave',zh:'柔和',zhTW:'柔和',ja:'ソフト'})[lang]||'Soft',
           pastel: ({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'
         };
         const togglePal = (k)=> setSetupPalettes(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
@@ -12720,7 +12760,7 @@ Composition rules:
           Save & Share reveal the cockpit (where the app's existing export
           controls live) rather than duplicating that pipeline. Returning users
           and desktop never see this — they get the normal cockpit. */}
-      {!isDesktop && !cockpitVisible && !showIntro && (()=>{
+      {!isDesktop && !basicMode && !cockpitVisible && !showIntro && (()=>{
         const paintingDone = chords.length>0 && !playing && disp>=chords.length;
         const btnBase = {flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'12px 8px',borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,letterSpacing:'.02em',border:'1px solid rgba(242,238,232,.16)',background:'rgba(37,32,48,.92)',color:'rgba(232,228,220,.95)',whiteSpace:'nowrap'};
         const primary = {...btnBase,background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)'};
@@ -12750,6 +12790,24 @@ Composition rules:
             )}
           </div>
         </>
+        );
+      })()}
+      {/* ── BASIC mode CTA bar ──────────────────────────────────────────────
+          The three primary actions for the simplified experience, docked at
+          the bottom. Surprise me swaps the artist style live (song keeps
+          playing); Save exports the current painting; My song opens the file
+          picker straight away (no intermediate tile). Shown whenever Basic is
+          active and the intro has cleared. */}
+      {basicMode && !showIntro && (()=>{
+        const btn = {flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'13px 8px',borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,letterSpacing:'.02em',border:'1px solid rgba(242,238,232,.16)',background:'rgba(37,32,48,.92)',color:'rgba(232,228,220,.95)',whiteSpace:'nowrap',WebkitTapHighlightColor:'transparent'};
+        const primary = {...btn,background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)'};
+        const _haveArt = chords.length>0;
+        return (
+        <div role="region" aria-label="basic actions" style={{position:'fixed',left:0,right:0,bottom:'calc(62px + env(safe-area-inset-bottom,0px))',zIndex:55,display:'flex',gap:8,padding:'10px 12px',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
+          <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
+          <button onClick={()=>{ if(!_haveArt) return; try{ exportImage('web'); }catch(_){} }} disabled={!_haveArt} title={ts('saveLabel','Save')} style={{...btn,opacity:_haveArt?1:.5}}>💾 {ts('saveLabel','Save')}</button>
+          <button onClick={()=>{ if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} }} title={ts('useMySong','Use my song')} style={btn}>🎵 {ts('useMySong','Use my song')}</button>
+        </div>
         );
       })()}
     </div>
