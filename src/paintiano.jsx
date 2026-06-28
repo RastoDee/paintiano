@@ -30477,6 +30477,11 @@ Composition rules:
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:8}}>
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
+            {basicMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
+              <span style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
+                <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
+              </span>
+            )}
           </div>
           {(viewMode!=='image' || !(recording||!!recBlob)) && (
           <div
@@ -32312,20 +32317,12 @@ Composition rules:
                                               : (playing ? ('❚❚ '+(t('pause')!=='pause'?t('pause'):'Pause'))
                                                          : ('▶ '+(t('play')!=='play'?t('play'):'Play'))));
         const _midClick = ()=>{ if(_done){ try{ exportImage('web'); }catch(_){} return; } try{ handlePauseClick(); }catch(_){} };
-        const _inspArtist = effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' ? STYLE_INSPIRED[effectiveStyle] : null;
         return (
-        <>
-        {_inspArtist && _haveArt && (
-          <div aria-hidden="true" style={{position:'fixed',left:0,right:0,bottom:'calc(62px + env(safe-area-inset-bottom,0px))',zIndex:59,textAlign:'center',pointerEvents:'none',fontSize:(.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',textShadow:'0 2px 10px rgba(0,0,0,.9)'}}>
-            <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {_inspArtist}
-          </div>
-        )}
         <div role="region" aria-label="basic actions" style={{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
           <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
           <button onClick={_midClick} disabled={!_haveArt} title={_done?ts('saveLabel','Save'):(playing?t('pause'):t('play'))} style={{...btn,opacity:_haveArt?1:.5}}>{_midLabel}</button>
           <button onClick={()=>{ if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} }} title={ts('useMySong','Use my song')} style={btn}>🎵 {ts('useMySong','Use my song')}</button>
         </div>
-        </>
         );
       })()}
     </div>
