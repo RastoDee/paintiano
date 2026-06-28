@@ -7048,641 +7048,443 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-// ── Comic (Roy Lichtenstein) ─────────────────────────────────────────────────
-// Pop / comic-book language: flat primary-colour panels overlaid with Ben-Day
-// halftone dots, heavy black outlines, and the occasional starburst. Each panel
-// (or tile) takes its colour from a chord via gc(); the halftone density and
-// dot colour read the music. Two variants by seed: a panel grid, or a single
-// big burst-centred panel. Reveals progressively as lim advances.
-function drawComicOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+// ── Joan Mitchell (abstract expressionism) ─────────────────────────────────
+// ── Joan Mitchell Overlay — abstract expressionism, no figures, all gesture ──
+// 6 phases honouring Mitchell's career: gestural garden, color bursts, diptych
+// field, dark central mass (early "violent" 60s), sunflower (Van Gogh hommage
+// 1990-91), late sparse white (1992 final paintings).
+// All colours driven by _picChord (song palette), densities by chord count and
+// computeSongCharacter, deterministic from sessionSeed + phaseIndex so the
+// same song + style + variant always recalls the identical painting.
+function drawMitchellOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
-  const cn = chords.length;
-  let _forcedComicVariant = 0; // set by phase dispatcher: 0 = grid, 1 = single panel
-  const rnd = _seedRnd(107, ss, 0, 0);
+  // 6-PHASE CHOOSER (Free cap=2 sees Gestural Garden + Color Bursts).
+  //  A = Gestural Garden (all-over impasto, 70-110 strokes).
+  //  B = Color Bursts (4-7 radial explosions).
+  //  C = Diptych Field (2 panels with vertical seam + bridging strokes).
+  //  D = Dark Central Mass (60s "violent" period — dense central blob).
+  //  E = Sunflower (Van Gogh hommage 1990-91, vertical stems + flower heads).
+  //  F = Late Sparse White (1992 — white ground, 2-3 concentrated zones).
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick===1){ mitchellPhaseBursts(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===2){ mitchellPhaseDiptych(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===3){ mitchellPhaseDarkMass(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===4){ mitchellPhaseSunflower(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===5){ mitchellPhaseLateWhite(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  mitchellPhaseGarden(ctx,CW,CH,chords,lim,gc,ss,mode);
+}
 
-  function chordCol(i, mul){
-    const idx = Math.min(cn-1, Math.max(0, i % cn));
-    const chord = chords[idx];
-    _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) return [240,210,40];
-    let R=0,G=0,B=0,c=0;
-    for(const note of notes){
-      const m = note.m!==undefined?note.m:note;
-      const v = note.v!==undefined?note.v:80;
-      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
-    }
-    const k = mul===undefined?1:mul;
-    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
-  }
-  const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
-  const BLACK = '#0a0a0a';
-  // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Classic comic frame (Panel grid vs Single big panel, seed-driven
-  //      internal pick — see body below). The two sub-modes read as one
-  //      "comic" identity, so they share a single Vary slot.
-  //  1 = Closeup face (Crying Girl / Drowning Girl figuratíve).
-  //  2 = Ben-Day regions.
-  //  3 = Whaam! explosion (kinetic 1963 motif).
-  //  4 = Pop landscape (Mountain Village / Sunrise).
-  //  5 = Speech bubble + bursts (Drowning Girl / M-Maybe).
-  //  Free (cap=2) sees Panel/Single + Closeup — comic abstraction vs comic
-  //  figuration is Lichtenstein's most dramatic art-historical contrast.
-  {
-    const _pn=_capN(7); const _cpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_cpick===1){ comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_cpick===2){ comicPhaseBenDay(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_cpick===3){ comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_cpick===4){ comicPhaseLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_cpick===5){ comicPhaseBubble(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // Slots 0 and 6 share the body below; the slot picks the layout (0 = panel
-    // grid, 6 = single big burst-centred panel) instead of a hidden seed bit —
-    // both reachable via Vary.
-    _forcedComicVariant = (_cpick===6) ? 1 : 0;
-  }
-  function halftone(x0, y0, w, h, dotCol, spacing, rad){
-    ctx.fillStyle = css(dotCol);
-    for(let y=y0+spacing/2; y<y0+h; y+=spacing){
-      const off = (Math.round((y-y0)/spacing)%2) ? spacing/2 : 0;
-      for(let x=x0+spacing/2+off; x<x0+w; x+=spacing){
-        ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI*2); ctx.fill();
-      }
-    }
-  }
-  // Starburst (comic "POW" shape) outline.
-  function burst(cx, cy, r, fillCol){
-    const pts = 12;
-    ctx.fillStyle = css(fillCol);
-    ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(2, r*0.04); ctx.lineJoin='round';
+// ── Impasto multi-layer brush stroke. Three offset layers with slight colour
+// drift give the chunky oil-paint feel without requiring per-pixel work. All
+// random offsets are seeded from (idx, ss) so two paintings of the same song
+// + variant always produce identical strokes. ──
+function _mitchImpasto(ctx, x0, y0, x1, y1, rgb, baseW, ss, idx){
+  for(let layer=0; layer<3; layer++){
+    const lr=_seedRnd(idx*7+layer+9050, ss, 0, 0); lr();
+    const offsetX=(lr()-0.5)*baseW*0.4;
+    const offsetY=(lr()-0.5)*baseW*0.4;
+    const dr=lr()-0.5, dg=lr()-0.5, db=lr()-0.5;
+    const r=Math.max(0,Math.min(255, rgb[0]+dr*40))|0;
+    const g=Math.max(0,Math.min(255, rgb[1]+dg*40))|0;
+    const b=Math.max(0,Math.min(255, rgb[2]+db*40))|0;
+    ctx.strokeStyle=`rgba(${r},${g},${b},${0.45+layer*0.20})`;
+    ctx.lineWidth=baseW*(1-layer*0.15);
+    ctx.lineCap='round';
     ctx.beginPath();
-    for(let i=0;i<pts*2;i++){
-      const a = (i/(pts*2))*Math.PI*2 - Math.PI/2;
-      const rr = (i&1) ? r*0.6 : r;
-      const x = cx+Math.cos(a)*rr, y = cy+Math.sin(a)*rr;
-      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
-
-  const revealFrac = Math.max(0, Math.min(1, lim/cn));
-  const comicVariant = _forcedComicVariant;   // phase-driven (slot 0 vs 6), not seed
-
-  if(comicVariant === 1){
-    // Variant B — single big panel: flat ground + halftone + central burst.
-    const ground = chordCol(0, 1.0);
-    ctx.fillStyle = css([Math.min(255,ground[0]*0.5+120),Math.min(255,ground[1]*0.5+120),Math.min(255,ground[2]*0.5+120)]);
-    ctx.fillRect(0,0,CW,CH);
-    // halftone wash
-    const dotCol = chordCol(2, 0.8);
-    const sp = Math.max(8, Math.min(CW,CH)/40);
-    ctx.globalAlpha = 0.5;
-    halftone(0, 0, CW, CH, dotCol, sp, sp*0.28);
-    ctx.globalAlpha = 1;
-    // central burst sized by reveal
-    const r = Math.min(CW,CH)*0.18*(0.6+revealFrac*0.7);
-    burst(CW*0.5, CH*0.42, r, chordCol(4, 1.1));
-    // a few satellite bursts revealed over time — count grows with song length.
-    const satMax = cn<=30?6:cn<=80?10:cn<=200?16:cn<=400?24:32;
-    const sats = Math.ceil(revealFrac * satMax);
-    for(let i=0;i<sats;i++){
-      const a = rnd()*Math.PI*2, d = Math.min(CW,CH)*(0.3+rnd()*0.25);
-      burst(CW*0.5+Math.cos(a)*d, CH*0.42+Math.sin(a)*d, r*(0.3+rnd()*0.3), chordCol(i+5, 1.0));
-    }
-    // thick frame
-    ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(4, Math.min(CW,CH)*0.02);
-    ctx.strokeRect(ctx.lineWidth/2, ctx.lineWidth/2, CW-ctx.lineWidth, CH-ctx.lineWidth);
-    return;
-  }
-
-  // Variant A — panel grid: each tile flat colour + halftone + black border.
-  // Lichtenstein's signature is the Ben-Day halftone + panel rhythm. Song
-  // character drives both: a dense, energetic piece breaks into more panels with
-  // tighter dots (busy pop surface), a calm one stays bold and open.
-  const _chCo = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _coDrive = _chCo ? (0.55*_chCo.energy + 0.45*_chCo.density) : 0.5;
-  const _coPanelMul = 0.82 + 0.42*_coDrive;   // panel count
-  const _coDotMul   = 1.18 - 0.36*_coDrive;   // dot spacing (smaller = denser)
-  const COLS = Math.max(2, Math.round((cn<=6?2:cn<=18?3:cn<=45?4:cn<=100?5:cn<=200?6:cn<=350?8:10) * _coPanelMul));
-  const ROWS = Math.max(2, Math.round(COLS*(CH/CW)));
-  const cw = CW/COLS, ch = CH/ROWS;
-  const total = COLS*ROWS;
-  const visCells = Math.ceil(revealFrac*total);
-  let drawn=0;
-  for(let row=0; row<ROWS; row++){
-    for(let col=0; col<COLS; col++){
-      if(drawn++ >= visCells) break;
-      const i = row*COLS+col;
-      const x0=col*cw, y0=row*ch;
-      const base = chordCol(i, 1.0);
-      // light flat fill
-      ctx.fillStyle = css([Math.min(255,base[0]*0.55+110),Math.min(255,base[1]*0.55+110),Math.min(255,base[2]*0.55+110)]);
-      ctx.fillRect(x0, y0, cw, ch);
-      // halftone in saturated dot colour
-      const dot = chordCol(i, 0.85);
-      const sp = Math.max(5, Math.min(cw,ch)/8 * _coDotMul);
-      ctx.save();
-      ctx.beginPath(); ctx.rect(x0,y0,cw,ch); ctx.clip();
-      ctx.globalAlpha = 0.6;
-      halftone(x0, y0, cw, ch, dot, sp, sp*0.3);
-      ctx.globalAlpha = 1;
-      ctx.restore();
-      // motif: alternate flat shape vs burst
-      if((i+ (ss%3)) % 3 === 0){
-        burst(x0+cw/2, y0+ch/2, Math.min(cw,ch)*0.3, chordCol(i+3,1.1));
-      }
-      // heavy black panel border
-      ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(3, Math.min(cw,ch)*0.04);
-      ctx.strokeRect(x0, y0, cw, ch);
-    }
+    ctx.moveTo(x0+offsetX, y0+offsetY);
+    const cpx=(x0+x1)/2+offsetX+(lr()-0.5)*baseW;
+    const cpy=(y0+y1)/2+offsetY+(lr()-0.5)*baseW;
+    ctx.quadraticCurveTo(cpx, cpy, x1+offsetX, y1+offsetY);
+    ctx.stroke();
   }
 }
 
-// Ben-Day halftone fill helper for new comic phases.
-function _benDay(ctx,x0,y0,w,h,dotCol,spacing,rad){
-  ctx.fillStyle=dotCol;
-  for(let y=y0+spacing/2;y<y0+h;y+=spacing){const ro=(Math.round((y-y0)/spacing)%2)*spacing*0.5;for(let x=x0+spacing/2;x<x0+w;x+=spacing){ctx.beginPath();ctx.arc(x+ro,y,rad,0,Math.PI*2);ctx.fill();}}
-}
-
-// ── Lichtenstein C: Ben-Day full field — whole canvas one halftone field. ──
-// ── Lichtenstein C: Ben-Day REGIONS v2. Canvas split into 2-6 regions, each
-// with its own dot density / pattern. 4 layouts (h/v/d stripes or wedges). ──
-function comicPhaseBenDay(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(20001,ss,0,0); sR(); sR();
-  ctx.fillStyle=isBW?'#ece8d8':'#f6f2e6'; ctx.fillRect(0,0,CW,CH);
-  const regCount=2+((sR()*5)|0);
-  const layout=(sR()*4)|0;
-  const INK='#0a0a0a';
-  // Build region polygons
-  const regions=[];
-  if(layout===0){ // horizontal stripes
-    for(let i=0;i<regCount;i++){
-      regions.push([[0,i*CH/regCount],[CW,i*CH/regCount],[CW,(i+1)*CH/regCount],[0,(i+1)*CH/regCount]]);
-    }
-  } else if(layout===1){ // vertical stripes
-    for(let i=0;i<regCount;i++){
-      regions.push([[i*CW/regCount,0],[(i+1)*CW/regCount,0],[(i+1)*CW/regCount,CH],[i*CW/regCount,CH]]);
-    }
-  } else if(layout===2){ // diagonal stripes
-    for(let i=0;i<regCount;i++){
-      const t0=i/regCount, t1=(i+1)/regCount;
-      regions.push([[CW*t0-CW*0.3,0],[CW*t1-CW*0.3,0],[CW*t1+CW*0.3,CH],[CW*t0+CW*0.3,CH]]);
-    }
-  } else { // wedges from center
-    const cx=CW/2, cy=CH/2;
-    for(let i=0;i<regCount;i++){
-      const a0=i/regCount*Math.PI*2, a1=(i+1)/regCount*Math.PI*2;
-      const pts=[[cx,cy]];
-      for(let st=0;st<8;st++){ const t=st/7, a=a0+(a1-a0)*t; const rr=Math.max(CW,CH); pts.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]); }
-      regions.push(pts);
-    }
-  }
-  // Render each region
-  regions.forEach((poly,ri)=>{
-    const {rgb}=_picChord(chords,ri*Math.floor(cn/regCount)%cn,gc,isBW);
-    const pale=[Math.min(255,Math.round(rgb[0]*0.45+130)),Math.min(255,Math.round(rgb[1]*0.45+130)),Math.min(255,Math.round(rgb[2]*0.45+130))];
-    // Fill pale base
-    ctx.fillStyle=`rgb(${pale[0]},${pale[1]},${pale[2]})`;
-    ctx.beginPath(); ctx.moveTo(poly[0][0],poly[0][1]);
-    for(let p=1;p<poly.length;p++) ctx.lineTo(poly[p][0],poly[p][1]);
-    ctx.closePath(); ctx.fill();
-    // Clip + draw pattern
-    const pattern=(_seedRnd(ri+21000,ss,0,0)()*4)|0;
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(poly[0][0],poly[0][1]);
-    for(let p=1;p<poly.length;p++) ctx.lineTo(poly[p][0],poly[p][1]);
-    ctx.closePath(); ctx.clip();
-    if(pattern===0){ const sp=Math.max(5,Math.min(CW,CH)*0.025); _benDay(ctx,0,0,CW,CH,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.86)`,sp,sp*0.32); }
-    else if(pattern===1){ const sp=Math.max(12,Math.min(CW,CH)*0.05); _benDay(ctx,0,0,CW,CH,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.86)`,sp,sp*0.38); }
-    else if(pattern===2){ ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.86)`; ctx.fillRect(0,0,CW,CH); }
-    else {
-      const sw=Math.max(4,Math.min(CW,CH)*0.025);
-      ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.86)`;
-      for(let y=0;y<CH;y+=sw*2){ ctx.fillRect(0,y,CW,sw*0.5); }
-    }
-    ctx.restore();
-    ctx.strokeStyle=`rgba(10,10,10,0.86)`; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(poly[0][0],poly[0][1]);
-    for(let p=1;p<poly.length;p++) ctx.lineTo(poly[p][0],poly[p][1]);
-    ctx.closePath(); ctx.stroke();
-  });
-  // 1-3 burst accents
-  const burstN=1+((sR()*3)|0);
-  for(let bi=0;bi<burstN;bi++){
-    const bx=CW*(0.15+sR()*0.70), by=CH*(0.15+sR()*0.70);
-    const br=Math.min(CW,CH)*(0.06+sR()*0.05);
-    const {rgb:bc}=_picChord(chords,(10+bi)%cn,gc,isBW);
-    const pts=[]; for(let i=0;i<24;i++){ const a=i/24*Math.PI*2; const rr=(i%2)?br*0.55:br; pts.push([bx+Math.cos(a)*rr,by+Math.sin(a)*rr]); }
-    ctx.fillStyle=`rgb(${bc[0]},${bc[1]},${bc[2]})`;
-    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
-    for(let p=1;p<pts.length;p++) ctx.lineTo(pts[p][0],pts[p][1]);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke();
-  }
-}
-
-// ── Lichtenstein D: Brushstrokes v2 with orientation variation. ──
-
-// ── Lichtenstein E: Pop landscape v2 — varied sun position + 3 sun styles +
-// random band count (3-8) and types per band. ──
-function comicPhaseLandscape(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(23001,ss,0,0); sR(); sR();
-  ctx.fillStyle=isBW?'#ece8d8':'#f6f2e6'; ctx.fillRect(0,0,CW,CH);
-  const INK='#0a0a0a';
-  const nBands=3+((sR()*6)|0);
-  const bh=CH/nBands;
-  const sunX=CW*(0.15+sR()*0.70), sunY=CH*(0.10+sR()*0.40);
-  const sunR=Math.min(CW,CH)*(0.06+sR()*0.08);
-  const sunVis=sR()<0.7;
-  const sunStyle=(sR()*3)|0;
-  const vis=Math.max(1,Math.ceil(N/cn*nBands*2.5));
-  for(let i=0;i<Math.min(nBands,vis);i++){
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/nBands))%cn,gc,isBW);
-    const y=i*bh;
-    const pattern=(_seedRnd(i+24000,ss,0,0)()*3)|0;
-    if(pattern===0){
-      ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-      ctx.fillRect(0,y,CW,bh);
-    } else if(pattern===1){
-      const pale=[Math.min(255,Math.round(rgb[0]*0.4+140)),Math.min(255,Math.round(rgb[1]*0.4+140)),Math.min(255,Math.round(rgb[2]*0.4+140))];
-      ctx.fillStyle=`rgb(${pale[0]},${pale[1]},${pale[2]})`;
-      ctx.fillRect(0,y,CW,bh);
-      const sp=Math.max(8,bh*0.25);
-      _benDay(ctx,0,y,CW,bh,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.86)`,sp,sp*0.35);
-    } else {
-      const pale=[Math.min(255,Math.round(rgb[0]*0.4+140)),Math.min(255,Math.round(rgb[1]*0.4+140)),Math.min(255,Math.round(rgb[2]*0.4+140))];
-      ctx.fillStyle=`rgb(${pale[0]},${pale[1]},${pale[2]})`;
-      ctx.fillRect(0,y,CW,bh);
-      const sw=Math.max(4,bh*0.18);
-      ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.86)`;
-      for(let yy=y;yy<y+bh;yy+=sw) ctx.fillRect(0,yy,CW,sw*0.5);
-    }
-  }
-  if(sunVis){
-    const {rgb:sc}=_picChord(chords,nBands%cn,gc,isBW);
-    ctx.fillStyle=`rgb(${sc[0]},${sc[1]},${sc[2]})`;
-    ctx.strokeStyle=INK; ctx.lineWidth=3;
-    if(sunStyle===0){
-      ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    } else if(sunStyle===1){
-      ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill(); ctx.stroke();
-      for(let ri=0;ri<12;ri++){
-        const a=ri/12*Math.PI*2;
-        ctx.beginPath();
-        ctx.moveTo(sunX+Math.cos(a)*sunR*1.1,sunY+Math.sin(a)*sunR*1.1);
-        ctx.lineTo(sunX+Math.cos(a)*sunR*1.6,sunY+Math.sin(a)*sunR*1.6);
-        ctx.stroke();
-      }
-    } else {
-      ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI); ctx.fill(); ctx.stroke();
-    }
-  }
-  ctx.strokeStyle=INK; ctx.lineWidth=2;
-  for(let i=1;i<nBands;i++){
-    ctx.beginPath(); ctx.moveTo(0,i*bh); ctx.lineTo(CW,i*bh); ctx.stroke();
-  }
-}
-
-// ── Lichtenstein F: Comic panel v2 — random 1-3 bubbles (3 styles) + 1-4 bursts. ──
-function comicPhaseBubble(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(25001,ss,0,0); sR(); sR();
-  const {rgb:bg0}=_picChord(chords,0,gc,isBW);
-  // Lichtenstein's signature comic-yellow page background. Tone-adjust so
-  // Pastel softens it (and Real picks up the opening chord's energy).
-  const _bgYel = (()=>{
-    if(isBW) return '#ece8d8';
-    let r=244, g=224, b=32;
-    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+// ── Mitchell A: Gestural Garden — all-over impasto in song palette. ──
+function mitchellPhaseGarden(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+  const N=Math.max(1, Math.min(cn, lim));
+  const reveal=Math.max(0, Math.min(1, N/cn));
+  const D=Math.min(CW, CH);
+  // Cream ground (palette-independent for stable identity; tone-adjusted).
+  const _adjHex=(hex)=>{
+    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
     return `rgb(${r},${g},${b})`;
-  })();
-  ctx.fillStyle=_bgYel; ctx.fillRect(0,0,CW,CH);
-  const INK='#0a0a0a';
-  const sp=Math.max(10,Math.min(CW,CH)*0.04);
-  const dotCol=isBW?'rgba(30,30,30,0.86)':`rgba(${Math.round(bg0[0]*0.7)},${Math.round(bg0[1]*0.5)},${Math.round(bg0[2]*0.5)},0.86)`;
-  _benDay(ctx,0,0,CW,CH,dotCol,sp,sp*0.25);
-  const nBubbles=1+((sR()*3)|0);
-  const nBursts=1+((sR()*4)|0);
-  const totalEl=nBubbles+nBursts;
-  const vis=Math.max(1,Math.ceil(N/cn*totalEl*2.5));
-  // Bursts first
-  for(let i=0;i<Math.min(nBursts,vis);i++){
-    const bx=CW*(0.15+sR()*0.70), by=CH*(0.15+sR()*0.70);
-    const br=Math.min(CW,CH)*(0.06+sR()*0.08);
-    const {rgb}=_picChord(chords,(i)%cn,gc,isBW);
-    const pts=[]; for(let j=0;j<24;j++){ const a=j/24*Math.PI*2; const rr=(j%2)?br*0.55:br; pts.push([bx+Math.cos(a)*rr,by+Math.sin(a)*rr]); }
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
-    for(let p=1;p<pts.length;p++) ctx.lineTo(pts[p][0],pts[p][1]);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke();
+  };
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
+  ctx.fillStyle=isBW ? _adjHex('#e8e2d4') : _adjHex('#f4eee0');
+  ctx.fillRect(0,0,CW,CH);
+  // Stroke count scales with chord count + song character.
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+  const strokeCountFull=Math.max(60, Math.round(70 + drive*40));
+  const visStrokes=Math.max(8, Math.ceil(strokeCountFull*reveal));
+  for(let i=0; i<visStrokes; i++){
+    const r=_seedRnd(i+9100, ss, 0, 0); r(); r();
+    const cx=CW*r();
+    const cy=CH*r();
+    const len=D*(0.06 + r()*0.14);
+    const ang=r()*Math.PI*2;
+    const w=D*(0.012 + r()*0.020);
+    // Colour from song palette via chord index (cycled).
+    const {rgb}=_picChord(chords, i%cn, gc, isBW);
+    const x0=cx - Math.cos(ang)*len*0.5;
+    const y0=cy - Math.sin(ang)*len*0.5;
+    const x1=cx + Math.cos(ang)*len*0.5;
+    const y1=cy + Math.sin(ang)*len*0.5;
+    _mitchImpasto(ctx, x0, y0, x1, y1, rgb, w, ss, i);
   }
-  // Bubbles
-  for(let i=0;i<Math.min(nBubbles,Math.max(0,vis-nBursts));i++){
-    const bw=CW*(0.30+sR()*0.30), bh=CH*(0.20+sR()*0.20);
-    const bx=CW*(0.10+sR()*(0.90-bw/CW));
-    const by=CH*(0.10+sR()*(0.90-bh/CH));
-    const style=(sR()*3)|0;
-    ctx.fillStyle=isBW?'#f4f0e8':'#f8f6f0'; ctx.strokeStyle=INK; ctx.lineWidth=3;
-    if(style===0){
-      ctx.beginPath(); ctx.ellipse(bx+bw/2,by+bh/2,bw/2,bh/2,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    } else if(style===1){
-      for(let ci=0;ci<5;ci++){
-        const t=ci/4;
-        const cx=bx+t*bw;
-        const cwSub=bw*0.4, chSub=bh*(0.7+sR()*0.3);
-        ctx.beginPath(); ctx.ellipse(cx,by+chSub/2,cwSub/2,chSub/2,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-      }
-    } else {
-      const r=Math.min(bw,bh)*0.15;
+  // Drip accents — scale with reveal.
+  const drips=Math.ceil(20*reveal);
+  for(let i=0; i<drips; i++){
+    const pr=_seedRnd(i+9150, ss, 0, 0); pr();
+    const {rgb}=_picChord(chords, (i*3)%cn, gc, isBW);
+    ctx.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${0.40+pr()*0.30})`;
+    ctx.lineWidth=Math.max(1, D*0.0025);
+    ctx.beginPath();
+    ctx.moveTo(pr()*CW, pr()*CH);
+    ctx.lineTo(pr()*CW+(pr()-0.5)*20, pr()*CH+D*(0.04+pr()*0.08));
+    ctx.stroke();
+  }
+}
+
+// ── Mitchell B: Color Bursts — radial explosions, each tied to a chord. ──
+function mitchellPhaseBursts(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+  const N=Math.max(1, Math.min(cn, lim));
+  const reveal=Math.max(0, Math.min(1, N/cn));
+  const D=Math.min(CW, CH);
+  const _adjHex=(hex)=>{
+    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgb(${r},${g},${b})`;
+  };
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
+  ctx.fillStyle=isBW ? _adjHex('#dcd6c8') : _adjHex('#e8e2d0');
+  ctx.fillRect(0,0,CW,CH);
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+  const burstCountFull=Math.max(3, Math.min(7, Math.round(4 + drive*3)));
+  const visBursts=Math.max(1, Math.ceil(burstCountFull*reveal));
+  for(let i=0; i<visBursts; i++){
+    const br=_seedRnd(i+9200, ss, 0, 0); br(); br();
+    const cx=CW*(0.15 + br()*0.70);
+    const cy=CH*(0.15 + br()*0.70);
+    const R=D*(0.16 + br()*0.10);
+    // Each burst takes its palette from one chord (cycled).
+    const {rgb}=_picChord(chords, i%cn, gc, isBW);
+    const strokes=18 + Math.floor(br()*12);
+    for(let s=0; s<strokes; s++){
+      const sr=_seedRnd(i*40+s+9250, ss, 0, 0); sr();
+      const ang=sr()*Math.PI*2;
+      const dist=R*(0.2 + sr()*0.9);
+      const x1=cx + Math.cos(ang)*dist*0.3;
+      const y1=cy + Math.sin(ang)*dist*0.3;
+      const x2=cx + Math.cos(ang)*dist;
+      const y2=cy + Math.sin(ang)*dist;
+      const w=Math.max(1.5, D*(0.008 + sr()*0.014));
+      _mitchImpasto(ctx, x1, y1, x2, y2, rgb, w, ss, i*200+s);
+    }
+  }
+}
+
+// ── Mitchell C: Diptych Field — two panels, each its own chord sub-range. ──
+function mitchellPhaseDiptych(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+  const N=Math.max(1, Math.min(cn, lim));
+  const reveal=Math.max(0, Math.min(1, N/cn));
+  const D=Math.min(CW, CH);
+  const _adjHex=(hex)=>{
+    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgb(${r},${g},${b})`;
+  };
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
+  ctx.fillStyle=isBW ? _adjHex('#e4ddc6') : _adjHex('#efeadc');
+  ctx.fillRect(0,0,CW,CH);
+  // Vertical seam.
+  ctx.strokeStyle=isBW ? 'rgba(180,175,160,0.55)' : 'rgba(200,195,180,0.55)';
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.moveTo(CW/2, 0); ctx.lineTo(CW/2, CH);
+  ctx.stroke();
+  // Left panel uses first half of chords; right panel uses second half.
+  const halfCn=Math.max(1, Math.floor(cn/2));
+  const panels=[
+    {x0:0, x1:CW/2, chordStart:0, chordEnd:halfCn},
+    {x0:CW/2, x1:CW, chordStart:halfCn, chordEnd:cn}
+  ];
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+  const strokesPerPanel=Math.max(20, Math.round(40 + drive*20));
+  const visStrokesPerPanel=Math.max(4, Math.ceil(strokesPerPanel*reveal));
+  for(let p=0; p<panels.length; p++){
+    const pan=panels[p];
+    const panW=pan.x1-pan.x0;
+    const panChords=Math.max(1, pan.chordEnd - pan.chordStart);
+    for(let i=0; i<visStrokesPerPanel; i++){
+      const br=_seedRnd(i+p*500+9300, ss, 0, 0); br(); br();
+      const cx=pan.x0 + panW*br();
+      const cy=CH*br();
+      const len=D*(0.05 + br()*0.12);
+      const ang=br()*Math.PI*2;
+      const w=D*(0.010 + br()*0.018);
+      const chordIdx=pan.chordStart + (i % panChords);
+      const {rgb}=_picChord(chords, chordIdx, gc, isBW);
+      const x0=cx - Math.cos(ang)*len*0.5;
+      const y0=cy - Math.sin(ang)*len*0.5;
+      const x1=cx + Math.cos(ang)*len*0.5;
+      const y1=cy + Math.sin(ang)*len*0.5;
+      _mitchImpasto(ctx, x0, y0, x1, y1, rgb, w, ss, i+p*500);
+    }
+  }
+  // Bridging strokes across the seam (use transitional chords near midpoint).
+  const bridgesFull=Math.max(3, Math.min(6, Math.round(3+drive*3)));
+  const visBridges=Math.max(1, Math.ceil(bridgesFull*reveal));
+  for(let i=0; i<visBridges; i++){
+    const br=_seedRnd(i+9380, ss, 0, 0); br(); br();
+    const y=CH*(0.20 + br()*0.60);
+    const transitionIdx=Math.max(0, Math.min(cn-1, halfCn-1 + (i%3)-1));
+    const {rgb}=_picChord(chords, transitionIdx, gc, isBW);
+    const x0=CW*0.35 + br()*CW*0.10;
+    const x1=CW*0.55 + br()*CW*0.10;
+    const w=D*(0.014 + br()*0.014);
+    _mitchImpasto(ctx, x0, y, x1, y+(br()-0.5)*D*0.08, rgb, w, ss, i+9390);
+  }
+}
+
+// ── Mitchell D: Dark Central Mass — 60s "violent" period. Song palette tone-
+// downed (multiplied) so the painting still reflects the song's colours but
+// in a darker, denser register. ──
+function mitchellPhaseDarkMass(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+  const N=Math.max(1, Math.min(cn, lim));
+  const reveal=Math.max(0, Math.min(1, N/cn));
+  const D=Math.min(CW, CH);
+  const _adjHex=(hex)=>{
+    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgb(${r},${g},${b})`;
+  };
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
+  ctx.fillStyle=isBW ? _adjHex('#d4ccb4') : _adjHex('#e0d8c0');
+  ctx.fillRect(0,0,CW,CH);
+  const r0=_seedRnd(9400, ss, 0, 0); r0(); r0();
+  const massX=CW*0.5 + (r0()-0.5)*CW*0.10;
+  const massY=CH*0.5 + (r0()-0.5)*CH*0.10;
+  const massR=D*0.28;
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+  const strokesFull=Math.max(60, Math.round(80 + drive*40));
+  const visStrokes=Math.max(8, Math.ceil(strokesFull*reveal));
+  // Darkening factor — multiplies song palette to give the "violent" mood.
+  const DARK_MUL=0.40;
+  for(let i=0; i<visStrokes; i++){
+    const br=_seedRnd(i+9420, ss, 0, 0); br(); br();
+    // Gaussian-ish cluster around mass center (sqrt skews toward middle).
+    const angR=br()*Math.PI*2;
+    const distR=Math.sqrt(br())*massR;
+    const cx=massX + Math.cos(angR)*distR;
+    const cy=massY + Math.sin(angR)*distR;
+    const len=D*(0.04 + br()*0.10);
+    const ang=br()*Math.PI*2;
+    const w=D*(0.010 + br()*0.020);
+    // Song palette tone-downed.
+    const {rgb}=_picChord(chords, i%cn, gc, isBW);
+    const darkR=[Math.round(rgb[0]*DARK_MUL), Math.round(rgb[1]*DARK_MUL), Math.round(rgb[2]*DARK_MUL)];
+    const x0=cx - Math.cos(ang)*len*0.5;
+    const y0=cy - Math.sin(ang)*len*0.5;
+    const x1=cx + Math.cos(ang)*len*0.5;
+    const y1=cy + Math.sin(ang)*len*0.5;
+    _mitchImpasto(ctx, x0, y0, x1, y1, darkR, w, ss, i+9420);
+  }
+  // Outward angry drips.
+  const dripsFull=15;
+  const visDrips=Math.max(2, Math.ceil(dripsFull*reveal));
+  for(let i=0; i<visDrips; i++){
+    const pr=_seedRnd(i+9490, ss, 0, 0); pr();
+    const ang=pr()*Math.PI*2;
+    const start=massR*(0.7 + pr()*0.3);
+    const end=massR*(1.1 + pr()*0.8);
+    const x0=massX + Math.cos(ang)*start;
+    const y0=massY + Math.sin(ang)*start;
+    const x1=massX + Math.cos(ang)*end;
+    const y1=massY + Math.sin(ang)*end;
+    const {rgb}=_picChord(chords, (i*3)%cn, gc, isBW);
+    const darkR=[Math.round(rgb[0]*DARK_MUL), Math.round(rgb[1]*DARK_MUL), Math.round(rgb[2]*DARK_MUL)];
+    ctx.strokeStyle=`rgba(${darkR[0]},${darkR[1]},${darkR[2]},${0.55+pr()*0.30})`;
+    ctx.lineWidth=Math.max(1.5, D*0.005);
+    ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    ctx.stroke();
+  }
+}
+
+// ── Mitchell E: Sunflower — vertical stems + flower heads (Van Gogh hommage). ──
+function mitchellPhaseSunflower(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+  const N=Math.max(1, Math.min(cn, lim));
+  const reveal=Math.max(0, Math.min(1, N/cn));
+  const D=Math.min(CW, CH);
+  const _adjHex=(hex)=>{
+    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgb(${r},${g},${b})`;
+  };
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
+  // Warm cream-pink ground gradient.
+  const grad=ctx.createLinearGradient(0,0,0,CH);
+  if(isBW){
+    grad.addColorStop(0, _adjHex('#d8d0bc'));
+    grad.addColorStop(1, _adjHex('#bcb098'));
+  } else {
+    grad.addColorStop(0, _adjHex('#e0d4b8'));
+    grad.addColorStop(1, _adjHex('#c8a890'));
+  }
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,CW,CH);
+  // Stem count scales with chord count.
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+  const stemsFull=Math.max(6, Math.min(13, Math.round(8 + drive*5)));
+  const visStems=Math.max(2, Math.ceil(stemsFull*reveal));
+  // Stems — green/blue range derived from song palette (chord-based but biased green).
+  for(let i=0; i<visStems; i++){
+    const sr=_seedRnd(i+9500, ss, 0, 0); sr();
+    const baseX=CW*(0.30 + i*0.40/stemsFull + (sr()-0.5)*0.05);
+    const startY=CH*(0.95 + sr()*0.05);
+    const endY=CH*(0.35 + sr()*0.20);
+    // Stem colour: take chord but bias green/blue.
+    const {rgb}=_picChord(chords, i%cn, gc, isBW);
+    const stemCol=isBW
+      ? [60+rgb[0]*0.2, 90+rgb[1]*0.2, 50+rgb[2]*0.2]
+      : [40+rgb[0]*0.2, 110+rgb[1]*0.3, 50+rgb[2]*0.2];
+    // Multi-layer stem.
+    for(let layer=0; layer<3; layer++){
+      const lr=_seedRnd(i*30+layer+9510, ss, 0, 0); lr();
+      const offset=(lr()-0.5)*D*0.01;
+      const drR=Math.max(0,Math.min(255, stemCol[0]+(lr()-0.5)*30))|0;
+      const drG=Math.max(0,Math.min(255, stemCol[1]+(lr()-0.5)*30))|0;
+      const drB=Math.max(0,Math.min(255, stemCol[2]+(lr()-0.5)*30))|0;
+      ctx.strokeStyle=`rgba(${drR},${drG},${drB},${0.5+layer*0.20})`;
+      ctx.lineWidth=D*(0.008 - layer*0.002);
+      ctx.lineCap='round';
       ctx.beginPath();
-      ctx.moveTo(bx+r,by);
-      ctx.lineTo(bx+bw-r,by); ctx.quadraticCurveTo(bx+bw,by,bx+bw,by+r);
-      ctx.lineTo(bx+bw,by+bh-r); ctx.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh);
-      ctx.lineTo(bx+r,by+bh); ctx.quadraticCurveTo(bx,by+bh,bx,by+bh-r);
-      ctx.lineTo(bx,by+r); ctx.quadraticCurveTo(bx,by,bx+r,by);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
-    // Tail
-    const td=(sR()*4)|0;
-    let tipX,tipY,b1x,b2x,by_;
-    if(td===0){ tipX=bx+bw*0.25; tipY=by+bh+bh*0.4; b1x=bx+bw*0.20; b2x=bx+bw*0.40; by_=by+bh-2; }
-    else if(td===1){ tipX=bx+bw*0.75; tipY=by+bh+bh*0.4; b1x=bx+bw*0.60; b2x=bx+bw*0.80; by_=by+bh-2; }
-    else if(td===2){ tipX=bx-bw*0.3; tipY=by+bh*0.5; b1x=b2x=bx+2; by_=by+bh*0.50; }
-    else { tipX=bx+bw+bw*0.3; tipY=by+bh*0.5; b1x=b2x=bx+bw-2; by_=by+bh*0.50; }
-    ctx.beginPath();
-    if(td<2){ ctx.moveTo(b1x,by_); ctx.lineTo(b2x,by_); }
-    else { ctx.moveTo(b1x,by_-bh*0.1); ctx.lineTo(b2x,by_+bh*0.1); }
-    ctx.lineTo(tipX,tipY); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // Text lines
-    ctx.strokeStyle='rgba(20,20,20,0.7)'; ctx.lineWidth=2;
-    const lines=2+((sR()*3)|0);
-    for(let ln=0;ln<lines;ln++){
-      const ly=by+bh*0.30+ln*bh*0.18;
-      const lx0=bx+bw*0.12, lx1=bx+bw*(0.55-ln*0.06+sR()*0.20);
-      ctx.beginPath(); ctx.moveTo(lx0,ly); ctx.lineTo(lx1,ly); ctx.stroke();
+      ctx.moveTo(baseX+offset, startY);
+      const cpx=baseX + (lr()-0.5)*D*0.04;
+      const cpy=(startY+endY)/2;
+      ctx.quadraticCurveTo(cpx, cpy, baseX+(lr()-0.5)*D*0.03, endY);
+      ctx.stroke();
     }
   }
+  // Flower heads — yellow/orange centers (song palette via chord).
+  for(let i=0; i<visStems; i++){
+    const fr=_seedRnd(i+9550, ss, 0, 0); fr(); fr();
+    const fx=CW*(0.30 + i*0.40/stemsFull + (fr()-0.5)*0.05);
+    const fy=CH*(0.35 + fr()*0.20);
+    // Centre colour from chord, biased warm.
+    const {rgb}=_picChord(chords, (i*2+1)%cn, gc, isBW);
+    const flowerCol=isBW
+      ? [180+rgb[0]*0.2, 160+rgb[1]*0.2, 120+rgb[2]*0.1]
+      : (fr()<0.5
+          ? [200+rgb[0]*0.15, 160+rgb[1]*0.20, 30+rgb[2]*0.1]
+          : [200+rgb[0]*0.10, 100+rgb[1]*0.15, 30+rgb[2]*0.1]);
+    const fsize=D*(0.06 + fr()*0.05);
+    const petals=8 + Math.floor(fr()*6);
+    for(let p=0; p<petals; p++){
+      const pa=(p/petals)*Math.PI*2 + (fr()-0.5)*0.3;
+      const x1=fx + Math.cos(pa)*fsize*0.4;
+      const y1=fy + Math.sin(pa)*fsize*0.4;
+      const x2=fx + Math.cos(pa)*fsize*1.2;
+      const y2=fy + Math.sin(pa)*fsize*1.2;
+      const w=D*(0.010 + fr()*0.012);
+      _mitchImpasto(ctx, x1, y1, x2, y2, flowerCol, w, ss, i*30+p+9560);
+    }
+    // Dark center.
+    ctx.fillStyle=isBW ? 'rgba(50,45,40,0.85)' : 'rgba(80,40,20,0.85)';
+    ctx.beginPath();
+    ctx.arc(fx, fy, fsize*0.35, 0, Math.PI*2);
+    ctx.fill();
+  }
 }
 
-// ── Lichtenstein G: Closeup face — the iconic Lichtenstein woman from
-// Crying Girl / Drowning Girl. Chord-pink halftone skin + chord-yellow hair
-// with black strokes + huge eye with chord-coloured iris + lashes + chord-blue
-// tear + chord-red lips + speech bubble at top-right with reveal-based text
-// lines. Seven chord-driven elements at different points in the song.
-function comicPhaseCloseup(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const progress = N/Math.max(1,cn);
-  const INK='#0a0a0a';
-  const sR=_seedRnd(26001,ss,0,0); sR(); sR();
-
-  // Skin tone — pink, biased by an early chord.
-  const skinChord=_picChord(chords,Math.floor(cn*0.05)%cn,gc,isBW).rgb;
-  const skin=isBW
-    ? [Math.round(skinChord[0]*0.3+200),Math.round(skinChord[0]*0.3+200),Math.round(skinChord[0]*0.3+200)]
-    : [Math.min(255,skinChord[0]*0.3+220),Math.min(255,skinChord[1]*0.3+170),Math.min(255,skinChord[2]*0.3+170)];
-  ctx.fillStyle=`rgb(${skin[0]|0},${skin[1]|0},${skin[2]|0})`;
+// ── Mitchell F: Late Sparse White — 1992 final paintings. White ground with
+// 2-3 concentrated zones tied to chord positions in the song (start/middle/end). ──
+function mitchellPhaseLateWhite(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+  const N=Math.max(1, Math.min(cn, lim));
+  const reveal=Math.max(0, Math.min(1, N/cn));
+  const D=Math.min(CW, CH);
+  const _adjHex=(hex)=>{
+    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgb(${r},${g},${b})`;
+  };
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
+  // White unprimed canvas.
+  ctx.fillStyle=isBW ? _adjHex('#f0eee4') : _adjHex('#fafaf2');
   ctx.fillRect(0,0,CW,CH);
-
-  // Halftone over the face area (below hairline, above lips).
-  const sp=Math.max(8,Math.min(CW,CH)*0.025);
-  const skinDot=[Math.round(skin[0]*0.6),Math.round(skin[1]*0.5),Math.round(skin[2]*0.5)];
-  _benDay(ctx,0,CH*0.15,CW,CH*0.60,`rgba(${skinDot[0]},${skinDot[1]},${skinDot[2]},0.65)`,sp,sp*0.30);
-
-  // Hair — chord-yellow band across the top.
-  const hairChord=_picChord(chords,Math.floor(cn*0.15)%cn,gc,isBW).rgb;
-  let hair=isBW
-    ? [220,220,220]
-    : [Math.min(255,hairChord[0]*0.3+230),Math.min(255,hairChord[1]*0.5+180),Math.min(255,hairChord[2]*0.2+60)];
-  // The hair formula forces a yellow bias on top of the chord colour
-  // (Lichtenstein signature). Tone-adjust the final yellow so Pastel softens
-  // it and Real picks up the hair chord's energy.
-  if(typeof _energyTint === 'function'){ const t=_energyTint(hair[0],hair[1],hair[2]); hair=[t[0],t[1],t[2]]; }
-  if(typeof _pastelTint === 'function'){ const p=_pastelTint(hair[0],hair[1],hair[2]); hair=[p[0],p[1],p[2]]; }
-  ctx.fillStyle=`rgb(${hair[0]|0},${hair[1]|0},${hair[2]|0})`;
-  ctx.beginPath();
-  ctx.moveTo(0,0); ctx.lineTo(CW,0); ctx.lineTo(CW,CH*0.25);
-  ctx.bezierCurveTo(CW*0.7,CH*0.15,CW*0.3,CH*0.15,0,CH*0.25);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.stroke();
-  // Hair strands — count scales with reveal.
-  ctx.lineWidth=3;
-  const strands=Math.max(3,Math.ceil(10*progress));
-  for(let i=0;i<strands;i++){
-    const x=CW*(0.05+i*0.10);
+  // Subtle canvas weave texture (seeded).
+  for(let i=0; i<150; i++){
+    const pr=_seedRnd(i+9610, ss, 0, 0); pr();
+    ctx.fillStyle=`rgba(220,215,200,${0.04+pr()*0.06})`;
     ctx.beginPath();
-    ctx.moveTo(x,0);
-    ctx.lineTo(x+(sR()-0.5)*30,CH*0.20);
-    ctx.stroke();
+    ctx.arc(pr()*CW, pr()*CH, 0.4+pr()*1.0, 0, Math.PI*2);
+    ctx.fill();
   }
-
-  // Eye — large, with chord-coloured iris.
-  const eyeX=CW*0.42, eyeY=CH*0.40;
-  const eyeW=CW*0.16, eyeH=CH*0.10;
-  // Eye white
-  ctx.fillStyle=isBW?'#e8e8e8':'#fafafa';
-  ctx.beginPath();
-  ctx.ellipse(eyeX,eyeY,eyeW/2,eyeH/2,0,0,Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle=INK; ctx.lineWidth=3.5; ctx.stroke();
-  // Iris (chord-coloured)
-  const iris=_picChord(chords,Math.floor(cn*0.50)%cn,gc,isBW).rgb;
-  ctx.fillStyle=`rgb(${iris[0]|0},${iris[1]|0},${iris[2]|0})`;
-  ctx.beginPath();
-  ctx.arc(eyeX,eyeY,eyeH/2*0.85,0,Math.PI*2);
-  ctx.fill(); ctx.stroke();
-  // Pupil
-  ctx.fillStyle=INK;
-  ctx.beginPath(); ctx.arc(eyeX,eyeY,eyeH/2*0.4,0,Math.PI*2); ctx.fill();
-  // Highlight
-  ctx.fillStyle='#fff';
-  ctx.beginPath();
-  ctx.arc(eyeX-eyeW*0.08,eyeY-eyeH*0.15,eyeW*0.04,0,Math.PI*2);
-  ctx.fill();
-  // Eyelashes
-  ctx.strokeStyle=INK; ctx.lineWidth=3;
-  for(let i=-3;i<=3;i++){
-    const t=i/3;
-    const x=eyeX+t*eyeW/2;
-    const y=eyeY-eyeH/2;
+  // 2-3 zones. Each maps to a key chord position in the song.
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+  const zonesFull=Math.max(2, Math.min(3, Math.round(2 + drive*1)));
+  const visZones=Math.max(1, Math.ceil(zonesFull*reveal));
+  // Zone chord positions: start, middle, end (interpolated to zone count).
+  for(let z=0; z<visZones; z++){
+    const zr=_seedRnd(z+9650, ss, 0, 0); zr(); zr();
+    const zx=CW*(0.20 + z*0.30 + (zr()-0.5)*0.08);
+    const zy=CH*(0.30 + zr()*0.30);
+    const zR=D*(0.15 + zr()*0.10);
+    // Chord index for this zone: 0 / cn/2 / cn-1 (interpolated).
+    const chordIdx=Math.floor((z/(zonesFull-1 || 1))*(cn-1));
+    const {rgb}=_picChord(chords, chordIdx, gc, isBW);
+    // Concentrated impasto strokes within zone.
+    const strokeCount=20 + Math.floor(zr()*15);
+    for(let i=0; i<strokeCount; i++){
+      const sr=_seedRnd(z*200+i+9660, ss, 0, 0); sr();
+      const ang=sr()*Math.PI*2;
+      const dist=Math.sqrt(sr())*zR;
+      const cx=zx + Math.cos(ang)*dist;
+      const cy=zy + Math.sin(ang)*dist;
+      const slen=D*(0.04 + sr()*0.08);
+      const sang=sr()*Math.PI*2;
+      const w=D*(0.012 + sr()*0.014);
+      const x0=cx - Math.cos(sang)*slen*0.5;
+      const y0=cy - Math.sin(sang)*slen*0.5;
+      const x1=cx + Math.cos(sang)*slen*0.5;
+      const y1=cy + Math.sin(sang)*slen*0.5;
+      _mitchImpasto(ctx, x0, y0, x1, y1, rgb, w, ss, z*200+i+9670);
+    }
+    // Down-thrusting trail (Mitchell's late signature drip).
+    const trailX=zx + (zr()-0.5)*D*0.04;
+    const trailY=zy + zR*0.7;
+    const trailEnd=trailY + D*(0.12 + zr()*0.10);
+    ctx.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${0.50+zr()*0.30})`;
+    ctx.lineWidth=Math.max(2, D*0.006);
+    ctx.lineCap='round';
     ctx.beginPath();
-    ctx.moveTo(x,y);
-    ctx.lineTo(x-t*8,y-18);
-    ctx.stroke();
-  }
-  // Eyebrow
-  ctx.lineWidth=5;
-  ctx.beginPath();
-  ctx.moveTo(eyeX-eyeW*0.6,eyeY-eyeH*1.5);
-  ctx.quadraticCurveTo(eyeX,eyeY-eyeH*1.9,eyeX+eyeW*0.6,eyeY-eyeH*1.3);
-  ctx.stroke();
-
-  // Tear — chord-blue droplet, only appears after ~40% progress.
-  if(progress>0.4){
-    const tearChord=_picChord(chords,Math.floor(cn*0.70)%cn,gc,isBW).rgb;
-    let tear=isBW
-      ? [180,180,180]
-      : [Math.round(tearChord[0]*0.3+80),Math.round(tearChord[1]*0.4+140),Math.round(tearChord[2]*0.5+170)];
-    // Tone-adjust the forced blue.
-    if(typeof _energyTint === 'function'){ const t=_energyTint(tear[0],tear[1],tear[2]); tear=[t[0],t[1],t[2]]; }
-    if(typeof _pastelTint === 'function'){ const p=_pastelTint(tear[0],tear[1],tear[2]); tear=[p[0],p[1],p[2]]; }
-    ctx.fillStyle=`rgb(${tear[0]},${tear[1]},${tear[2]})`;
-    ctx.strokeStyle=INK; ctx.lineWidth=3;
-    ctx.beginPath();
-    ctx.moveTo(eyeX+eyeW*0.45,eyeY+eyeH*0.4);
-    ctx.bezierCurveTo(eyeX+eyeW*0.55,eyeY+eyeH*1.0,eyeX+eyeW*0.30,eyeY+eyeH*2.5,eyeX+eyeW*0.40,eyeY+eyeH*3.0);
-    ctx.bezierCurveTo(eyeX+eyeW*0.55,eyeY+eyeH*2.8,eyeX+eyeW*0.60,eyeY+eyeH*1.5,eyeX+eyeW*0.50,eyeY+eyeH*0.6);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
-
-  // Lips — chord-red.
-  const lipChord=_picChord(chords,Math.floor(cn*0.85)%cn,gc,isBW).rgb;
-  let lip=isBW
-    ? [110,110,110]
-    : [Math.min(255,lipChord[0]*0.7+80),Math.round(lipChord[1]*0.3+30),Math.round(lipChord[2]*0.3+40)];
-  // Tone-adjust like the hair — Pastel softens, Real picks up lip chord energy.
-  if(typeof _energyTint === 'function'){ const t=_energyTint(lip[0],lip[1],lip[2]); lip=[t[0],t[1],t[2]]; }
-  if(typeof _pastelTint === 'function'){ const p=_pastelTint(lip[0],lip[1],lip[2]); lip=[p[0],p[1],p[2]]; }
-  ctx.fillStyle=`rgb(${lip[0]|0},${lip[1]|0},${lip[2]|0})`;
-  ctx.strokeStyle=INK; ctx.lineWidth=3;
-  ctx.beginPath();
-  ctx.moveTo(CW*0.38,CH*0.65);
-  ctx.quadraticCurveTo(CW*0.50,CH*0.62,CW*0.62,CH*0.65);
-  ctx.quadraticCurveTo(CW*0.50,CH*0.72,CW*0.38,CH*0.65);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-  // Lip parting line
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(CW*0.40,CH*0.67); ctx.lineTo(CW*0.60,CH*0.67);
-  ctx.stroke();
-
-  // Speech bubble at top-right with text lines (lines count grows with reveal).
-  const bx=CW*0.62, by=CH*0.05, bw=CW*0.35, bh=CH*0.20;
-  ctx.fillStyle=isBW?'#f0f0f0':'#fafafa';
-  ctx.strokeStyle=INK; ctx.lineWidth=3;
-  ctx.beginPath();
-  ctx.ellipse(bx+bw/2,by+bh/2,bw/2,bh/2,0,0,Math.PI*2);
-  ctx.fill(); ctx.stroke();
-  // Tail
-  ctx.beginPath();
-  ctx.moveTo(bx+bw*0.20,by+bh-2);
-  ctx.lineTo(bx+bw*0.05,by+bh+bh*0.5);
-  ctx.lineTo(bx+bw*0.40,by+bh-2);
-  ctx.closePath();
-  ctx.fillStyle=isBW?'#f0f0f0':'#fafafa'; ctx.fill(); ctx.stroke();
-  // Text lines — reveal-based count
-  ctx.strokeStyle='rgba(20,20,20,0.7)'; ctx.lineWidth=2;
-  const textLines=Math.max(1,Math.ceil(3*progress));
-  for(let i=0;i<textLines;i++){
-    const y=by+bh*0.30+i*bh*0.20;
-    ctx.beginPath();
-    ctx.moveTo(bx+bw*0.12,y);
-    ctx.lineTo(bx+bw*(0.55-i*0.05),y);
+    ctx.moveTo(trailX, trailY);
+    ctx.quadraticCurveTo(trailX+(zr()-0.5)*D*0.02, (trailY+trailEnd)/2, trailX+(zr()-0.5)*D*0.04, trailEnd);
     ctx.stroke();
   }
 }
 
-// ── Lichtenstein H: Whaam! explosion — the iconic 1963 painting. Yellow
-// chord-driven sky with halftone wash + 3-layer jagged starburst (chord-red
-// outer + white middle + chord-yellow inner core) + 24 black motion lines
-// radiating + heavy black panel frame. Most kinetic Lichtenstein motif.
-function comicPhaseWhaam(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const progress = N/Math.max(1,cn);
-  const INK='#0a0a0a';
-
-  // Yellow sky background — chord-driven hue.
-  const skyChord=_picChord(chords,Math.floor(cn*0.10)%cn,gc,isBW).rgb;
-  let sky=isBW
-    ? [220,220,220]
-    : [Math.min(255,skyChord[0]*0.3+220),Math.min(255,skyChord[1]*0.3+200),Math.min(255,skyChord[2]*0.2+50)];
-  if(typeof _energyTint === 'function'){ const t=_energyTint(sky[0],sky[1],sky[2]); sky=[t[0],t[1],t[2]]; }
-  if(typeof _pastelTint === 'function'){ const p=_pastelTint(sky[0],sky[1],sky[2]); sky=[p[0],p[1],p[2]]; }
-  ctx.fillStyle=`rgb(${sky[0]|0},${sky[1]|0},${sky[2]|0})`;
-  ctx.fillRect(0,0,CW,CH);
-  // Halftone wash over sky.
-  const skySp=Math.max(8,Math.min(CW,CH)*0.022);
-  _benDay(ctx,0,0,CW,CH,
-    isBW?'rgba(120,120,120,0.55)':`rgba(${Math.round(sky[0]*0.6)},${Math.round(sky[1]*0.5)},${Math.round(sky[2]*0.3)},0.55)`,
-    skySp,skySp*0.28);
-
-  // Centre point of the explosion.
-  const cx=CW*0.52, cy=CH*0.50;
-
-  // OUTER LAYER — chord-red jagged starburst (24-point).
-  const explChord=_picChord(chords,Math.floor(cn*0.30)%cn,gc,isBW).rgb;
-  let exp=isBW
-    ? [180,180,180]
-    : [Math.min(255,explChord[0]*0.7+80),Math.round(explChord[1]*0.3+30),Math.round(explChord[2]*0.3+30)];
-  if(typeof _energyTint === 'function'){ const t=_energyTint(exp[0],exp[1],exp[2]); exp=[t[0],t[1],t[2]]; }
-  if(typeof _pastelTint === 'function'){ const p=_pastelTint(exp[0],exp[1],exp[2]); exp=[p[0],p[1],p[2]]; }
-  ctx.fillStyle=`rgb(${exp[0]|0},${exp[1]|0},${exp[2]|0})`;
-  ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.lineJoin='round';
-  ctx.beginPath();
-  const pts1=24;
-  for(let i=0;i<pts1;i++){
-    const a=(i/pts1)*Math.PI*2-Math.PI/2;
-    const r=Math.min(CW,CH)*((i%2===0)?0.42:0.30)*(0.85+0.15*Math.sin(i*0.8));
-    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  }
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-
-  // MIDDLE LAYER — white starburst (16-point), smaller.
-  ctx.fillStyle=isBW?'#f0f0f0':'#fafafa';
-  ctx.beginPath();
-  const pts2=16;
-  for(let i=0;i<pts2;i++){
-    const a=(i/pts2)*Math.PI*2-Math.PI/2;
-    const r=Math.min(CW,CH)*((i%2===0)?0.25:0.16);
-    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  }
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-
-  // INNER CORE — chord-yellow small starburst (10-point).
-  const innerChord=_picChord(chords,Math.floor(cn*0.60)%cn,gc,isBW).rgb;
-  let inner=isBW
-    ? [200,200,200]
-    : [Math.min(255,innerChord[0]*0.5+170),Math.min(255,innerChord[1]*0.5+160),Math.round(innerChord[2]*0.3+50)];
-  if(typeof _energyTint === 'function'){ const t=_energyTint(inner[0],inner[1],inner[2]); inner=[t[0],t[1],t[2]]; }
-  if(typeof _pastelTint === 'function'){ const p=_pastelTint(inner[0],inner[1],inner[2]); inner=[p[0],p[1],p[2]]; }
-  ctx.fillStyle=`rgb(${inner[0]|0},${inner[1]|0},${inner[2]|0})`;
-  ctx.beginPath();
-  const pts3=10;
-  for(let i=0;i<pts3;i++){
-    const a=(i/pts3)*Math.PI*2-Math.PI/2;
-    const r=Math.min(CW,CH)*((i%2===0)?0.13:0.08);
-    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  }
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-
-  // 24 motion lines — count scales with reveal so they appear during the song.
-  ctx.strokeStyle=INK; ctx.lineWidth=4;
-  const lineCount=Math.max(4,Math.ceil(24*progress));
-  for(let i=0;i<lineCount;i++){
-    const a=(i/24)*Math.PI*2;
-    const r0=Math.min(CW,CH)*0.45;
-    const r1=Math.min(CW,CH)*0.55;
-    ctx.beginPath();
-    ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);
-    ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
-    ctx.stroke();
-  }
-
-  // Heavy black panel frame around the canvas.
-  ctx.lineWidth=Math.max(6,Math.min(CW,CH)*0.02);
-  ctx.strokeRect(ctx.lineWidth/2,ctx.lineWidth/2,CW-ctx.lineWidth,CH-ctx.lineWidth);
-}
 
 // ─── Monet (Light) — 6 variants ─────────────────────────────────────────────
 // All explore light, atmosphere, plein-air painting. Outlines forbidden.
