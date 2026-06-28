@@ -21201,8 +21201,12 @@ export default function Paintiano() {
     // active artist — there's no Mosaic chip to fall back to. Auto-select
     // the first playable artist whenever style becomes null (initial mount,
     // user deselect, setup change). Dice mode picks via shuffleStyle, so we
-    // skip when randomMode is on.
+    // skip when randomMode is on. Edit mode also skips — toggling chips in
+    // edit configures the future set, it must not redraw the current canvas
+    // (otherwise removing mosaicFamily would instantly pick an artist as
+    // fallback and the Mosaic toggle would look broken).
     if(randomMode) return;
+    if(cockpitEdit) return;
     if(style) return;
     if(setupArtists.includes('mosaicFamily')) return;
     let target = null;
@@ -21219,7 +21223,7 @@ export default function Paintiano() {
       }
     }
     if(target) setStyle(target);
-  }, [setupArtists, style, randomMode, proStatus]);
+  }, [setupArtists, style, randomMode, proStatus, cockpitEdit]);
   // ── AI "recording" lifecycle ────────────────────────────────────────────────
   // After AI generates (or you Recall an existing piece), the recent entry can
   // be RE-RECORDED by playing it once and tweaking. The "recording" window
