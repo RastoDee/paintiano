@@ -20591,6 +20591,17 @@ export default function Paintiano() {
       if(seededChanged){
         try { localStorage.setItem('paintiano_setup_artists_seeded', JSON.stringify(seeded)); } catch(_){}
       }
+      // Heal one-sided pairs: if only ONE side of a pair sits in the set
+      // (legacy state from an older edit toggle that added single sides),
+      // pull in the partner so every enabled pair is two-sided. Otherwise
+      // tap-2 on the chip falls through forcedSide → Mosaic instead of
+      // flipping to the partner.
+      const _PAIRS = [['picasso','matisse'],['pollock','bloom'],['kusama','miro'],['mondrian','kandinsky'],['gold','rothko'],['bulge','wave'],['spiral','arcs'],['pop','comic'],['monet','hokusai']];
+      for(const [pa,pb] of _PAIRS){
+        const ha = valid.includes(pa), hb = valid.includes(pb);
+        if(ha && !hb) valid.push(pb);
+        else if(hb && !ha) valid.push(pa);
+      }
       return valid;
     } catch(_) { return ALL_ARTIST_KEYS.slice(); }
   });
@@ -29975,10 +29986,17 @@ Composition rules:
               // rather than the technique name. Long names are shortened to a
               // single recognizable word so they fit the narrow 5-up grid cell.
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Roy Lichtenstein':'Lichtenstein','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
+              const _shortOf = (full)=> _artistShort[full] || full;
               // For Free, label always shows the unlocked 'a' artist.
               const _displayKey = forcedSide || (pairLocked ? a : (activeKey || shufKey || faceKey));
               const _artFull = STYLE_INSPIRED[_displayKey];
               const label = _artistShort[_artFull] || _artFull;
+              // In edit mode the partner (the other side of the atomic pair) is
+              // shown as a small subtitle so both names are visible — making
+              // clear that toggling the chip enables/disables both, matching
+              // how Setup presented each pair as a single "Matisse/Picasso" entry.
+              const _partnerKey = (_displayKey === a) ? b : a;
+              const _partnerLabel = _shortOf(STYLE_INSPIRED[_partnerKey]);
               // Tap behaviour:
               //  • Free tier: always selects 'a' (the only reachable side).
               //    Toggles the locked-partner info row beneath the palette:
@@ -30008,14 +30026,25 @@ Composition rules:
               //     tap 3 (active on b)  → deselect → full shuffle
               const onClick = ()=>{
                 if(demoReelOn) return;
-                // ── EDIT MODE ── tap toggles this pair's membership in the set.
-                // We toggle the 'a' side (the primary/Free-reachable member);
-                // fine-grained a-vs-b control lives in the full Styles & palettes
-                // modal. Last-item protection keeps at least one artist enabled.
+                // ── EDIT MODE ── tap toggles this pair's membership atomically.
+                // Pairs are atomic units: enabling Matisse enables Picasso too,
+                // and vice versa. This guarantees both sides of every enabled
+                // pair are in the set, so tap-2 always flips to the partner
+                // (never falls through forcedSide → Mosaic).
                 if(cockpitEdit){
                   const _bothOff = !setupArtists.includes(a) && !setupArtists.includes(b);
-                  if(_bothOff){ toggleArtSafe(a); }
-                  else { setSetupArtists(prev => prev.length>1 ? prev.filter(x=>x!==a && x!==b) : prev); }
+                  if(_bothOff){
+                    // Add BOTH sides at once.
+                    setSetupArtists(prev => {
+                      const next = [...prev];
+                      if(!next.includes(a)) next.push(a);
+                      if(!next.includes(b)) next.push(b);
+                      return next;
+                    });
+                  } else {
+                    // Remove both — last-item protection on the whole set.
+                    setSetupArtists(prev => prev.length>1 ? prev.filter(x=>x!==a && x!==b) : prev);
+                  }
                   return;
                 }
                 if(forcedSide){
@@ -30105,7 +30134,7 @@ Composition rules:
               <Fragment key={a+'_'+b}>
                 <button className={(!cockpitEdit&&isOn)?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
                   title={cockpitEdit ? (_pairInSet?'in your set — tap to remove':'tap to add to your set') : (pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)))}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(_pairGhost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _pairInSet : isOn)),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:cockpitEdit?1.1:1.2,...(_pairGhost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _pairInSet : isOn)),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}{cockpitEdit && (<span style={{display:'block',fontSize:(.40*effScale)+'rem',opacity:.55,letterSpacing:'.04em',fontWeight:500,marginTop:1,textTransform:'none'}}>/ {_partnerLabel}</span>)}</button>
               </Fragment>
               );
             })}
