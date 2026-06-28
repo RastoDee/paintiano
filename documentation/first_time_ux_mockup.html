@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paintiano — First-time UX návrh</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0b0b0f;color:#e8e4dc;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;padding:20px;}
+  h1{font-size:18px;color:#dcb45a;margin-bottom:6px;}
+  p.intro{font-size:13px;color:#9a958c;line-height:1.5;margin-bottom:24px;}
+  .scenarios{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
+  .scenario{background:#15151c;border-radius:18px;padding:14px;}
+  .scenario h2{font-size:13px;color:#dcb45a;margin-bottom:4px;}
+  .scenario p{font-size:11px;color:#9a958c;line-height:1.4;margin-bottom:10px;}
+  .phone{background:#000;border-radius:24px;aspect-ratio:9/19;padding:8px;position:relative;overflow:hidden;}
+  .canvas{background:linear-gradient(135deg,#1a2a5a,#243a5c);border-radius:14px;height:100%;position:relative;overflow:hidden;}
+  .strokes{position:absolute;inset:0;}
+  .stroke{position:absolute;border-radius:50%;filter:blur(4px);opacity:0.7;}
+  .top-bar{position:absolute;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;z-index:5;}
+  .small-pill{background:rgba(0,0,0,0.55);backdrop-filter:blur(20px);color:#e8e4dc;font-size:9px;padding:5px 10px;border-radius:20px;font-weight:500;}
+  .play-button{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);width:44px;height:44px;background:rgba(0,0,0,0.55);backdrop-filter:blur(20px);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#e8e4dc;font-size:18px;z-index:5;}
+  .gear{position:absolute;bottom:18px;right:14px;width:36px;height:36px;background:rgba(0,0,0,0.45);backdrop-filter:blur(20px);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#dcb45a;font-size:14px;z-index:5;}
+  .bottom-sheet{position:absolute;bottom:0;left:0;right:0;background:rgba(20,20,30,0.95);backdrop-filter:blur(30px);border-top-left-radius:20px;border-top-right-radius:20px;padding:14px;color:#e8e4dc;z-index:6;}
+  .sheet-label{font-size:9px;color:#dcb45a;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;text-align:center;}
+  .sheet-row{display:flex;gap:8px;}
+  .sheet-btn{flex:1;background:#252030;border:1px solid #383040;color:#e8e4dc;font-size:11px;padding:11px;border-radius:14px;text-align:center;}
+  .sheet-btn.primary{background:#dcb45a;color:#0b0b0f;border-color:#dcb45a;font-weight:600;}
+  .label{font-size:10px;color:#dcb45a;background:#252030;padding:3px 8px;border-radius:10px;display:inline-block;margin-bottom:6px;}
+  .cockpit-sheet{position:absolute;bottom:0;left:0;right:0;background:rgba(20,20,30,0.96);backdrop-filter:blur(30px);border-top-left-radius:20px;border-top-right-radius:20px;padding:14px;color:#e8e4dc;z-index:7;max-height:70%;overflow:hidden;}
+  .cock-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .cock-title{font-size:11px;color:#dcb45a;text-transform:uppercase;letter-spacing:1.5px;}
+  .cock-close{font-size:14px;color:#9a958c;}
+  .cock-section{margin-bottom:12px;}
+  .cock-section-label{font-size:9px;color:#9a958c;text-transform:uppercase;margin-bottom:6px;letter-spacing:1px;}
+  .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+  .chip{background:#252030;border:1px solid #383040;color:#e8e4dc;font-size:9px;padding:6px 4px;border-radius:10px;text-align:center;}
+  .chip.active{background:#dcb45a;color:#0b0b0f;border-color:#dcb45a;font-weight:600;}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
+  .row3 .chip{font-size:10px;padding:7px 4px;}
+  .surprise-btn{width:100%;background:#dcb45a;color:#0b0b0f;font-size:11px;font-weight:600;padding:11px;border-radius:14px;text-align:center;margin-bottom:12px;}
+  .principles{background:#15151c;border-radius:14px;padding:14px;margin-top:24px;}
+  .principles h3{font-size:13px;color:#dcb45a;margin-bottom:8px;}
+  .principles ul{list-style:none;font-size:11px;color:#9a958c;line-height:1.7;}
+  .principles li::before{content:'✓ ';color:#dcb45a;}
+</style>
+</head>
+<body>
+  <h1>Paintiano — First-time UX</h1>
+  <p class="intro">Gen Z očakáva value v 3 sekundách. App sa otvorí, ihneď hrá + maľuje. Žiadny welcome, žiadny tutoriál, žiadny cockpit. Cockpit je skrytý za ⚙ tlačidlom — odhalí sa až keď user prejaví záujem.</p>
+
+  <div class="scenarios">
+
+    <div class="scenario">
+      <span class="label">0–3 sec</span>
+      <h2>App opens → auto-plays demo</h2>
+      <p>Žiadny welcome screen. App sa otvorí, automaticky začne hrať demo skladbu, plátno sa kreslí v reálnom čase. User vidí magic okamžite.</p>
+      <div class="phone">
+        <div class="canvas">
+          <div class="strokes">
+            <div class="stroke" style="left:20%;top:30%;width:50px;height:50px;background:#e8a830;"></div>
+            <div class="stroke" style="left:45%;top:50%;width:40px;height:40px;background:#c84028;"></div>
+            <div class="stroke" style="left:70%;top:35%;width:55px;height:55px;background:#5a78b8;"></div>
+            <div class="stroke" style="left:25%;top:65%;width:45px;height:45px;background:#48a058;"></div>
+          </div>
+          <div class="top-bar">
+            <span class="small-pill">🎵 Liszt · Hungarian Rhapsody</span>
+          </div>
+          <div class="play-button">⏸</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scenario">
+      <span class="label">5–15 sec</span>
+      <h2>Subtle bottom sheet rises</h2>
+      <p>Po niekoľkých sekundách sa zo spodku jemne dvihne malý sheet s len 2 možnosťami: ↻ Surprise alebo 🎵 Upload. Žiadne palety, žiadni umelci.</p>
+      <div class="phone">
+        <div class="canvas">
+          <div class="strokes">
+            <div class="stroke" style="left:20%;top:25%;width:55px;height:55px;background:#e8a830;"></div>
+            <div class="stroke" style="left:45%;top:45%;width:48px;height:48px;background:#c84028;"></div>
+            <div class="stroke" style="left:70%;top:30%;width:60px;height:60px;background:#5a78b8;"></div>
+            <div class="stroke" style="left:25%;top:60%;width:50px;height:50px;background:#48a058;"></div>
+            <div class="stroke" style="left:55%;top:20%;width:35px;height:35px;background:#d8b85a;"></div>
+          </div>
+          <div class="top-bar">
+            <span class="small-pill">🎵 Liszt · Hungarian Rhapsody</span>
+          </div>
+          <div class="bottom-sheet">
+            <div class="sheet-label">try this</div>
+            <div class="sheet-row">
+              <div class="sheet-btn primary">↻ Surprise me</div>
+              <div class="sheet-btn">🎵 Use my song</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scenario">
+      <span class="label">15–60 sec</span>
+      <h2>After first painting completes</h2>
+      <p>Keď skladba dohrá, sheet sa zmení na save/share/again. Cockpit ⚙ je dole vpravo — diskrétny, čaká.</p>
+      <div class="phone">
+        <div class="canvas">
+          <div class="strokes">
+            <div class="stroke" style="left:15%;top:20%;width:65px;height:65px;background:#e8a830;"></div>
+            <div class="stroke" style="left:50%;top:30%;width:55px;height:55px;background:#c84028;"></div>
+            <div class="stroke" style="left:75%;top:50%;width:50px;height:50px;background:#5a78b8;"></div>
+            <div class="stroke" style="left:20%;top:55%;width:60px;height:60px;background:#48a058;"></div>
+            <div class="stroke" style="left:60%;top:65%;width:45px;height:45px;background:#a06acf;"></div>
+            <div class="stroke" style="left:35%;top:75%;width:40px;height:40px;background:#d8b85a;"></div>
+          </div>
+          <div class="top-bar">
+            <span class="small-pill">✨ Painting complete</span>
+          </div>
+          <div class="bottom-sheet">
+            <div class="sheet-label">your painting</div>
+            <div class="sheet-row">
+              <div class="sheet-btn primary">💾 Save</div>
+              <div class="sheet-btn">↻ Try another</div>
+              <div class="sheet-btn">📤 Share</div>
+            </div>
+          </div>
+          <div class="gear" style="bottom:80px;">⚙</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scenario">
+      <span class="label">User taps ⚙</span>
+      <h2>Customize sheet (cockpit reborn)</h2>
+      <p>Plain-language. Žiadny edit mode. Žiadne páry. „Surprise me" hore. Termíny: Auto/Bright/Bold namiesto Harmony/Spectral/φ Phi.</p>
+      <div class="phone">
+        <div class="canvas">
+          <div class="strokes" style="opacity:0.4;">
+            <div class="stroke" style="left:25%;top:25%;width:55px;height:55px;background:#e8a830;"></div>
+            <div class="stroke" style="left:55%;top:40%;width:50px;height:50px;background:#c84028;"></div>
+            <div class="stroke" style="left:70%;top:55%;width:45px;height:45px;background:#5a78b8;"></div>
+          </div>
+          <div class="cockpit-sheet">
+            <div class="cock-header">
+              <span class="cock-title">Customize</span>
+              <span class="cock-close">✕</span>
+            </div>
+            <div class="surprise-btn">↻ Surprise me</div>
+            <div class="cock-section">
+              <div class="cock-section-label">Style</div>
+              <div class="chips">
+                <div class="chip active">Picasso</div>
+                <div class="chip">Pollock</div>
+                <div class="chip">Mitchell</div>
+                <div class="chip">Monet</div>
+                <div class="chip">Klimt</div>
+                <div class="chip">Matisse</div>
+                <div class="chip">Mondrian</div>
+                <div class="chip">more…</div>
+              </div>
+            </div>
+            <div class="cock-section">
+              <div class="cock-section-label">Color</div>
+              <div class="row3">
+                <div class="chip active">Auto</div>
+                <div class="chip">Bright</div>
+                <div class="chip">Warm</div>
+              </div>
+            </div>
+            <div class="cock-section">
+              <div class="cock-section-label">Vibe</div>
+              <div class="row3">
+                <div class="chip">True</div>
+                <div class="chip active">Soft</div>
+                <div class="chip">Pastel</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="principles">
+    <h3>Prečo táto cesta</h3>
+    <ul>
+      <li>Inverted onboarding (Duolingo princíp) — USE first, then optionally customize</li>
+      <li>3-second value — user vidí magic okamžite, nie po nastavovaní</li>
+      <li>Cognitive load = zero pri prvom dojme (1 tlačidlo: PAUSE)</li>
+      <li>Static welcome → live demo (Gen Z preferencia)</li>
+      <li>Progressive disclosure — cockpit existuje, ale je skrytý kým user nepýta</li>
+      <li>Plain-language termíny (Bold namiesto φ Phi, Bright namiesto Spectral)</li>
+      <li>Žiadny edit mode — všetky chipy tappable always</li>
+      <li>„Surprise me" ako primárna akcia — žiadne rozhodovanie</li>
+    </ul>
+  </div>
+</body>
+</html>

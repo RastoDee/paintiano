@@ -19312,6 +19312,38 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     </div>
   );
 }
+// §5b  FIRST-IMPRESSION DEMO SONG  — the auto-play piece a brand-new visitor
+// sees within the first ~3 seconds (UX overhaul, Phase 1). A recognizable,
+// modern piano arpeggio motif (Coldplay "Clocks" feel): an Eb-major figure
+// Eb5-Bb4-G4 cycling through Eb → Bb-min → F-min, with a left-hand bass line,
+// then a short melodic tag. Beat-based [midi, durBeats, beatPos, vel] — the
+// exact array form noteArr2events() accepts (numbers go straight through
+// name2midi; tempo auto-scales to a ~30s playback). Deliberately a short,
+// simplified figure (not a full transcription) so it reads instantly without
+// reproducing a complete copyrighted work.
+const DEMO_FIRST = {
+  title: 'Clocks · Coldplay',
+  tempo: 130,
+  notes: [
+    // bar 1 — Eb (Eb5 Bb4 G4)
+    [75,0.5,0,82],[70,0.5,0.5,72],[67,0.5,1,70],[75,0.5,1.5,80],[70,0.5,2,72],[67,0.5,2.5,70],
+    // bar 2 — Bb-min (Bb4 F4 Db4)
+    [73,0.5,3,82],[68,0.5,3.5,72],[65,0.5,4,70],[73,0.5,4.5,80],[68,0.5,5,72],[65,0.5,5.5,70],
+    // bar 3 — F-min (Ab4 Eb4 C4)
+    [70,0.5,6,82],[65,0.5,6.5,72],[61,0.5,7,70],[70,0.5,7.5,80],[65,0.5,8,72],[61,0.5,8.5,70],
+    // bass under bars 1-3
+    [51,1.5,0,60],[51,1.5,1.5,58],[49,1.5,3,60],[49,1.5,4.5,58],[46,1.5,6,60],[46,1.5,7.5,58],
+    // bars 4-6 — repeat, brighter
+    [75,0.5,9,84],[70,0.5,9.5,74],[67,0.5,10,72],[75,0.5,10.5,82],[70,0.5,11,74],[67,0.5,11.5,72],
+    [73,0.5,12,84],[68,0.5,12.5,74],[65,0.5,13,72],[73,0.5,13.5,82],[68,0.5,14,74],[65,0.5,14.5,72],
+    [70,0.5,15,84],[65,0.5,15.5,74],[61,0.5,16,72],[70,0.5,16.5,82],[65,0.5,17,74],[61,0.5,17.5,72],
+    [51,1.5,9,62],[51,1.5,10.5,60],[49,1.5,12,62],[49,1.5,13.5,60],[46,1.5,15,62],[46,1.5,16.5,60],
+    // melodic tag
+    [75,1,18,86],[79,1,18,80],[78,1,19,82],[75,1,20,80],[73,1.5,21,84],
+    [70,1,22.5,82],[73,1,22.5,76],[68,1,23.5,78],[65,2,24.5,82],
+  ],
+};
+
 // §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
 // ─────────────────────────────────────────────────────────────────────────────
 const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered, isPending, hoverColor, busy, playing, loadedMode, pressNote, releaseNote, setHoveredKey, pressInfo}){
@@ -21440,6 +21472,32 @@ export default function Paintiano() {
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
   const [stripOpen, setStripOpen] = useState(false);
+  // ── UX overhaul, Phase 1: first-visit auto-play + hidden cockpit ──────────
+  // firstVisit: true the very first time a device opens the app (no
+  // 'paintiano_onboarded' flag yet). Drives the auto-play demo + the discreet
+  // ⚙ entry to the cockpit. Computed once on mount; the flag is stamped after
+  // the demo arms so it never re-fires. Clearing localStorage = treated as a
+  // fresh first visit again (acceptable per handover).
+  const firstVisitRef = useRef(false);
+  const [firstVisit] = useState(()=>{
+    try{ return !localStorage.getItem('paintiano_onboarded'); }catch(_){ return false; }
+  });
+  useEffect(()=>{ firstVisitRef.current = firstVisit; },[firstVisit]);
+  // cockpitVisible: whether the full pick-a-look cockpit chrome is shown.
+  // Returning users keep their prior experience (true). A brand-new visitor
+  // starts with it HIDDEN (false) so the first impression is pure canvas +
+  // music — they reveal the cockpit by tapping the ⚙ button. Persisted so a
+  // returning user who once opened the cockpit keeps it.
+  const [cockpitVisible, setCockpitVisible] = useState(()=>{
+    try{
+      if(!localStorage.getItem('paintiano_onboarded')) return false; // first visit → hidden
+      return localStorage.getItem('paintiano_cockpit_hidden')!=='1';
+    }catch(_){ return true; }
+  });
+  useEffect(()=>{
+    try{ localStorage.setItem('paintiano_cockpit_hidden', cockpitVisible?'0':'1'); }catch(_){}
+  },[cockpitVisible]);
+  const revealCockpit = useCallback(()=>{ setCockpitVisible(true); },[]);
   // Inline "edit your set" mode for the Pick-a-look cockpit. When on, disabled
   // palettes/artists show as ghost chips you can tap to add to your set (and
   // enabled ones to remove) — live, without leaving the canvas. The heavy
@@ -26872,6 +26930,61 @@ Composition rules:
     startPlay();
   },[stopAll,startPlay,fullClear,stashDraft]);
 
+  // ── UX overhaul, Phase 1: curated "expressive" style pool + Surprise ──────
+  // For the first-impression auto-play and the "Surprise me" action we pick
+  // from a CURATED set chosen for visual punch — colourful, gestural,
+  // high-contrast. Deliberately excludes the meditative/minimal styles
+  // (rothko, mondrian) and the implicit Mosaic, which read flatter on a first
+  // glance. Free tier is narrowed to unlocked keys so we never auto-select a
+  // locked style behind the paywall.
+  const EXPRESSIVE_POOL = useMemo(()=>{
+    const base = ['picasso','pollock','kandinsky','mitchell','gold','kusama','bloom','miro','monet','matisse'];
+    const pool = (proStatus === 'free') ? base.filter(k => FREE_UNLOCKED_KEYS.has(k)) : base;
+    return pool.length ? pool : ['picasso'];
+  }, [proStatus, FREE_UNLOCKED_KEYS]);
+
+  // Pick a random expressive style, make sure it's in the active set, and
+  // select it. Returns the chosen key.
+  const pickExpressiveStyle = useCallback(()=>{
+    const pool = EXPRESSIVE_POOL;
+    const k = pool[Math.floor(Math.random()*pool.length)] || 'picasso';
+    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
+    setRandomMode(false); randomModeRef.current=false;
+    setStyle(k);
+    return k;
+  },[EXPRESSIVE_POOL]);
+
+  // "Surprise me" — randomize the look (expressive style + default harmony
+  // palette + soft/real tone) and replay the demo song so the user instantly
+  // sees a fresh painting. Used by the first-time bottom sheet and the cockpit.
+  const surpriseMe = useCallback(()=>{
+    pickExpressiveStyle();
+    setMode('harmony');
+    demoLoadAndPlay(DEMO_FIRST);
+  },[pickExpressiveStyle, demoLoadAndPlay]);
+
+  // Auto-play the first-impression demo exactly once, on a brand-new visit.
+  // Fires after a short delay so the canvas/grid have initialised, picks a
+  // random expressive style for a colourful first painting, and stamps the
+  // visited flag so it never repeats. Returning users (flag present) skip this
+  // entirely and keep their normal Setup-first experience.
+  const firstAutoPlayedRef = useRef(false);
+  useEffect(()=>{
+    if(!firstVisitRef.current) return;
+    if(firstAutoPlayedRef.current) return;
+    firstAutoPlayedRef.current = true;
+    try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
+    const id = setTimeout(()=>{
+      try{
+        pickExpressiveStyle();
+        setMode('harmony');
+        demoLoadAndPlay(DEMO_FIRST);
+      }catch(_){}
+    }, 300);
+    return ()=>clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
   // Tear the reel down completely AND reset to the clean Setup screen.
   // Earlier implementation only paused (stopAll + setStyle(null)), which left
   // the canvas mid-painted in Mosaic — confusing because the user pressed
@@ -28497,11 +28610,16 @@ Composition rules:
   // during initial state setup so we don't briefly flash the setup screen.
   // Feature-flagged via ONBOARDING_V3 — set it false in 01-core-head to disable
   // the feature entirely for everyone.
-  const [showOnboarding, setShowOnboarding] = useState(()=>{
-    if(!ONBOARDING_V3) return false;
-    try { return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_onboarded') !== '1'; }
-    catch(_) { return false; }
-  });
+  // ── UX overhaul, Phase 1: the static welcome HERO is RETIRED. A brand-new
+  // visitor no longer sees the Miró-preview + "Play sample" screen — instead
+  // the app auto-plays the first-impression demo (Clocks) on a clean canvas
+  // with the cockpit hidden (see the auto-play effect + cockpitVisible state).
+  // We keep the hero JSX in place but force it off, so the overhaul is a pure
+  // behaviour swap (revert = drop the `&& false`). The first-visit gate is the
+  // SAME `paintiano_onboarded` flag the hero used, so there's exactly one
+  // first-visit signal and no collision between the two systems.
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  void ONBOARDING_V3; // retained for the (now-dormant) hero; see note above
   // Help cheat-sheet popup — gold "?" FAB bottom-right opens this. Volatile
   // boolean (no persistence) — every fresh visit defaults to closed.
   const [showHelp, setShowHelp] = useState(false);
@@ -29409,7 +29527,7 @@ Composition rules:
             <button onClick={()=>{if(recording)return;setShowMicRecent(v=>!v);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{_sent(t('recentPlayed')||'recent')}</button>
           )}
         </div>
-        {!isDesktop && (<>
+        {!isDesktop && cockpitVisible && (<>
         <div style={{display:'flex',alignItems:'center',width:'100%',gap:6}}>
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
           <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
@@ -29438,7 +29556,7 @@ Composition rules:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):t('dir_'+imgDir)}</div>
         )}
         </>)}
-        {(stripOpen || isDesktop) && (
+        {((stripOpen && (isDesktop || cockpitVisible)) || isDesktop) && (
         <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Morph / Vary — only for mood-based pieces (mood + mood-from-image),
@@ -32147,6 +32265,46 @@ Composition rules:
             <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{position:'absolute',right:14,bottom:12,display:'inline-flex',alignItems:'center',gap:4,padding:'5px 12px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',background:'rgba(28,24,40,.55)',border:'1px solid rgba(201,168,76,.3)',fontSize:'.55rem',fontWeight:600}}>A<span style={{fontSize:(.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.5rem',opacity:.6}}>{readScale===1?'1×':readScale===1.25?'1¼':'1½'}</span></button>
           </div>
         </div>
+        );
+      })()}
+      {/* ── UX overhaul, Phase 1: first-time floating controls ──────────────
+          Shown only on mobile while the cockpit is HIDDEN (brand-new visitor
+          experience). A discreet ⚙ reveals the full cockpit; a minimal bottom
+          sheet offers the two primary first-run actions (Surprise / Use my
+          song) and, once a painting has finished, Save / Try another / Share.
+          Save & Share reveal the cockpit (where the app's existing export
+          controls live) rather than duplicating that pipeline. Returning users
+          and desktop never see this — they get the normal cockpit. */}
+      {!isDesktop && !cockpitVisible && !showIntro && (()=>{
+        const paintingDone = chords.length>0 && !playing && disp>=chords.length;
+        const btnBase = {flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'12px 8px',borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,letterSpacing:'.02em',border:'1px solid rgba(242,238,232,.16)',background:'rgba(37,32,48,.92)',color:'rgba(232,228,220,.95)',whiteSpace:'nowrap'};
+        const primary = {...btnBase,background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)'};
+        return (
+        <>
+          {/* ⚙ reveal-cockpit FAB */}
+          <button onClick={revealCockpit} aria-label={ts('customize','Customize')} title={ts('customize','Customize')}
+            style={{position:'fixed',right:14,bottom:'calc(78px + env(safe-area-inset-bottom,0px))',width:38,height:38,borderRadius:'50%',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.5)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',border:'1px solid rgba(220,180,90,.35)',color:'rgba(220,180,90,.95)',fontSize:'1rem',cursor:'pointer',zIndex:1200,padding:0}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+          {/* Minimal bottom sheet */}
+          <div style={{position:'fixed',left:0,right:0,bottom:0,padding:'14px 14px calc(16px + env(safe-area-inset-bottom,0px))',background:'rgba(20,20,30,.94)',backdropFilter:'blur(28px)',WebkitBackdropFilter:'blur(28px)',borderTopLeftRadius:20,borderTopRightRadius:20,zIndex:1190,boxShadow:'0 -8px 28px rgba(0,0,0,.4)'}}>
+            <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(220,180,90,.9)',textTransform:'uppercase',letterSpacing:'.18em',textAlign:'center',marginBottom:10}}>
+              {paintingDone ? ts('yourPainting','Your painting') : ts('tryThis','Try this')}
+            </div>
+            {paintingDone ? (
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={revealCockpit} style={primary}>💾 {ts('saveLabel','Save')}</button>
+                <button onClick={surpriseMe} style={btnBase}>↻ {ts('tryAnother','Try another')}</button>
+                <button onClick={revealCockpit} style={btnBase}>📤 {ts('shareLabel','Share')}</button>
+              </div>
+            ) : (
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={surpriseMe} style={primary}>↻ {ts('surpriseMe','Surprise me')}</button>
+                <button onClick={()=>{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } setPickMode('sound'); revealCockpit(); }} style={btnBase}>🎵 {ts('useMySong','Use my song')}</button>
+              </div>
+            )}
+          </div>
+        </>
         );
       })()}
     </div>
