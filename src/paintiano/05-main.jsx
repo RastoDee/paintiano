@@ -9744,7 +9744,7 @@ Composition rules:
         })()}
       </div>
       <header style={{textAlign:'center',marginBottom:isActiveView?8:(isDesktop?8:18)}}>
-        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isActiveView?'clamp(1.6rem,7vw,2.2rem)':(isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(3rem,15vw,4.5rem)'),fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(2.4rem,10vw,3.2rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
         {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
         {!isActiveView && !isDesktop && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
@@ -11371,7 +11371,7 @@ Composition rules:
             while playing too) and Save (when the piece is complete & still). Each
             appears by its own condition; they can show together. Fades with the
             other controls on idle. */}
-        {immersive && (()=>{
+        {immersive && !basicMode && (()=>{
           const exportReadyFs =
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
@@ -12998,12 +12998,20 @@ Composition rules:
                                               : (playing ? ('❚❚ '+(t('pause')!=='pause'?t('pause'):'Pause'))
                                                          : ('▶ '+(t('play')!=='play'?t('play'):'Play'))));
         const _midClick = ()=>{ if(_done){ try{ exportImage('web'); }catch(_){} return; } try{ handlePauseClick(); }catch(_){} };
+        const _inspArtist = effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' ? STYLE_INSPIRED[effectiveStyle] : null;
         return (
+        <>
+        {_inspArtist && _haveArt && (
+          <div aria-hidden="true" style={{position:'fixed',left:0,right:0,bottom:'calc(62px + env(safe-area-inset-bottom,0px))',zIndex:59,textAlign:'center',pointerEvents:'none',fontSize:(.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',textShadow:'0 2px 10px rgba(0,0,0,.9)'}}>
+            <span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {_inspArtist}
+          </div>
+        )}
         <div role="region" aria-label="basic actions" style={{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
           <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
           <button onClick={_midClick} disabled={!_haveArt} title={_done?ts('saveLabel','Save'):(playing?t('pause'):t('play'))} style={{...btn,opacity:_haveArt?1:.5}}>{_midLabel}</button>
           <button onClick={()=>{ if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} }} title={ts('useMySong','Use my song')} style={btn}>🎵 {ts('useMySong','Use my song')}</button>
         </div>
+        </>
         );
       })()}
     </div>
