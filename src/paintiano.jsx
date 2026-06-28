@@ -20471,9 +20471,17 @@ export default function Paintiano() {
       if(seededChanged){
         try { localStorage.setItem('paintiano_setup_artists_seeded', JSON.stringify(seeded)); } catch(_){}
       }
-      // Phase 2 (decoupled): pair-healing removed. Styles are now independent
-      // chips — selecting one no longer pulls in its former pair partner. The
-      // set contains exactly the styles the user enabled.
+      // Heal one-sided pairs: if only ONE side of a pair sits in the set
+      // (legacy state from an older edit toggle that added single sides),
+      // pull in the partner so every enabled pair is two-sided. Otherwise
+      // tap-2 on the chip falls through forcedSide → Mosaic instead of
+      // flipping to the partner.
+      const _PAIRS = [['picasso','matisse'],['pollock','bloom'],['kusama','miro'],['mondrian','kandinsky'],['gold','rothko'],['bulge','wave'],['spiral','arcs'],['pop','mitchell'],['monet','hokusai']];
+      for(const [pa,pb] of _PAIRS){
+        const ha = valid.includes(pa), hb = valid.includes(pb);
+        if(ha && !hb) valid.push(pb);
+        else if(hb && !ha) valid.push(pa);
+      }
       return valid;
     } catch(_) { return ALL_ARTIST_KEYS.slice(); }
   });
@@ -21432,38 +21440,13 @@ export default function Paintiano() {
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
   const [stripOpen, setStripOpen] = useState(false);
-  // ── UX overhaul, Phase 1: first-visit auto-play + hidden cockpit ──────────
-  // firstVisit: true the very first time a device opens the app (no
-  // 'paintiano_onboarded' flag yet). Drives the auto-play demo + the discreet
-  // ⚙ entry to the cockpit. Computed once on mount; the flag is stamped after
-  // the demo arms so it never re-fires. Clearing localStorage = treated as a
-  // fresh first visit again (acceptable per handover).
-  const firstVisitRef = useRef(false);
-  const [firstVisit] = useState(()=>{
-    try{ return !localStorage.getItem('paintiano_onboarded'); }catch(_){ return false; }
-  });
-  useEffect(()=>{ firstVisitRef.current = firstVisit; },[firstVisit]);
-  // cockpitVisible: whether the full pick-a-look cockpit chrome is shown.
-  // Returning users keep their prior experience (true). A brand-new visitor
-  // starts with it HIDDEN (false) so the first impression is pure canvas +
-  // music — they reveal the cockpit by tapping the ⚙ button. Persisted so a
-  // returning user who once opened the cockpit keeps it.
-  const [cockpitVisible, setCockpitVisible] = useState(()=>{
-    try{
-      if(!localStorage.getItem('paintiano_onboarded')) return false; // first visit → hidden
-      return localStorage.getItem('paintiano_cockpit_hidden')!=='1';
-    }catch(_){ return true; }
-  });
-  useEffect(()=>{
-    try{ localStorage.setItem('paintiano_cockpit_hidden', cockpitVisible?'0':'1'); }catch(_){}
-  },[cockpitVisible]);
-  const revealCockpit = useCallback(()=>{ setCockpitVisible(true); },[]);
   // ── BASIC vs ADVANCED app mode ────────────────────────────────────────────
   // basicMode = the simplified experience: a big live canvas painting the Liszt
-  // sample, with just two CTAs (Surprise me · My song). No setup tiles, no
-  // cockpit. A brand-new visitor starts in Basic. The B/A chip in the topbar
-  // flips between Basic and the full Advanced app (setup tiles + cockpit).
-  // Persisted so the choice survives reloads. First visit defaults to Basic.
+  // sample, with just three CTAs (Surprise me · contextual Save/Pause · My
+  // song). No setup tiles, no cockpit, no transport dock. A brand-new visitor
+  // starts in Basic; the B/A chip in the topbar flips to the full Advanced app
+  // (the original setup + cockpit, untouched). Persisted so the choice survives
+  // reloads — applies to every user, new or returning.
   const [basicMode, setBasicMode] = useState(()=>{
     try{
       if(!localStorage.getItem('paintiano_onboarded')) return true; // first visit → Basic
@@ -25413,6 +25396,88 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
   },[stopAll,applyEvents,wipeCanvasNow]);
 
+  // ── BASIC mode helpers ────────────────────────────────────────────────────
+  // Expressive, painterly styles for the Surprise feature. On the free tier we
+  // narrow to the ones that are actually unlocked.
+  const EXPRESSIVE_POOL = useMemo(()=>{
+    const base = ['picasso','pollock','kandinsky','mitchell','gold','kusama','bloom','miro','monet','matisse'];
+    const pool = (proStatus === 'free') ? base.filter(k => FREE_UNLOCKED_KEYS.has(k)) : base;
+    return pool.length ? pool : ['picasso'];
+  }, [proStatus, FREE_UNLOCKED_KEYS]);
+
+  // Pick a random expressive style, make sure it's in the active set, select it.
+  const pickExpressiveStyle = useCallback(()=>{
+    const pool = EXPRESSIVE_POOL;
+    const k = pool[Math.floor(Math.random()*pool.length)] || 'picasso';
+    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
+    setRandomMode(false); randomModeRef.current=false;
+    setStyle(k);
+    return k;
+  },[EXPRESSIVE_POOL]);
+
+  // "Surprise me" (full) — random expressive style + harmony palette, then load
+  // the full Liszt sample and play, so the canvas shows a fresh painting.
+  const surpriseMe = useCallback(()=>{
+    pickExpressiveStyle();
+    setMode('harmony');
+    loadSampleMidi();
+    setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
+  },[pickExpressiveStyle, loadSampleMidi, startPlay]);
+
+  // BASIC-mode "Surprise me" — swap to a DIFFERENT random expressive style
+  // WITHOUT restarting the song. The paint effect re-renders live on a style
+  // change, so the whole painting repaints in the new artist's language at the
+  // current position while the music keeps playing. Avoids repeating the
+  // current style so each tap is visibly different.
+  const basicSurprise = useCallback(()=>{
+    const pool = EXPRESSIVE_POOL.filter(k=>k!==style);
+    const src = pool.length ? pool : EXPRESSIVE_POOL;
+    const k = src[Math.floor(Math.random()*src.length)] || 'picasso';
+    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
+    setRandomMode(false); randomModeRef.current=false;
+    setStyle(k);
+  },[EXPRESSIVE_POOL, style]);
+
+  // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
+  // and the canvas is empty (e.g. after the intro splash, or on entering Basic
+  // with nothing loaded). Waits for the loading intro to clear so Liebestraum
+  // doesn't start underneath the splash. Fires once per empty-canvas entry.
+  const basicAutoPlayedRef = useRef(false);
+  useEffect(()=>{
+    if(showIntro) return;
+    if(!basicMode){ basicAutoPlayedRef.current=false; return; }
+    if(chords.length>0 || playing || busy || composeMode || micActive || loadedSource){ basicAutoPlayedRef.current=true; return; }
+    if(basicAutoPlayedRef.current) return;
+    basicAutoPlayedRef.current = true;
+    try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
+    const id=setTimeout(()=>{
+      try{
+        pickExpressiveStyle();
+        setMode('harmony');
+        loadSampleMidi();
+        setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
+      }catch(_){}
+    }, 300);
+    return ()=>clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[showIntro, basicMode]);
+
+  // BASIC mode: auto-start playback whenever a song is loaded but not yet
+  // playing (chords present, nothing drawn yet). Covers "My song" uploads
+  // (loadSound/applyEvents don't auto-play) so the canvas always comes alive
+  // without hunting for a play button. Ref-guarded to fire once per piece.
+  const basicAutoStartedRef = useRef(false);
+  useEffect(()=>{
+    if(!basicMode){ basicAutoStartedRef.current=false; return; }
+    if(chords.length===0){ basicAutoStartedRef.current=false; return; }
+    if(playing || holdPaused || busy || disp>0){ basicAutoStartedRef.current=true; return; }
+    if(basicAutoStartedRef.current) return;
+    basicAutoStartedRef.current = true;
+    const id=setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 120);
+    return ()=>clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[basicMode, chords.length, loadedSource, playing, holdPaused, busy]);
+
   const loadSampleAudio=useCallback(async()=>{
     setWorking(true);setWLabel(t('transcribingSample')||'transcribing sample');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
@@ -26904,101 +26969,6 @@ Composition rules:
     resumeFromRef.current=0;
     startPlay();
   },[stopAll,startPlay,fullClear,stashDraft]);
-
-  // ── UX overhaul, Phase 1: curated "expressive" style pool + Surprise ──────
-  // For the first-impression auto-play and the "Surprise me" action we pick
-  // from a CURATED set chosen for visual punch — colourful, gestural,
-  // high-contrast. Deliberately excludes the meditative/minimal styles
-  // (rothko, mondrian) and the implicit Mosaic, which read flatter on a first
-  // glance. Free tier is narrowed to unlocked keys so we never auto-select a
-  // locked style behind the paywall.
-  const EXPRESSIVE_POOL = useMemo(()=>{
-    const base = ['picasso','pollock','kandinsky','mitchell','gold','kusama','bloom','miro','monet','matisse'];
-    const pool = (proStatus === 'free') ? base.filter(k => FREE_UNLOCKED_KEYS.has(k)) : base;
-    return pool.length ? pool : ['picasso'];
-  }, [proStatus, FREE_UNLOCKED_KEYS]);
-
-  // Pick a random expressive style, make sure it's in the active set, and
-  // select it. Returns the chosen key.
-  const pickExpressiveStyle = useCallback(()=>{
-    const pool = EXPRESSIVE_POOL;
-    const k = pool[Math.floor(Math.random()*pool.length)] || 'picasso';
-    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
-    setRandomMode(false); randomModeRef.current=false;
-    setStyle(k);
-    return k;
-  },[EXPRESSIVE_POOL]);
-
-  // "Surprise me" — randomize the look (expressive style + default harmony
-  // palette + soft/real tone) and replay the demo song so the user instantly
-  // sees a fresh painting. Used by the first-time bottom sheet and the cockpit.
-  const surpriseMe = useCallback(()=>{
-    pickExpressiveStyle();
-    setMode('harmony');
-    loadSampleMidi();
-    setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
-  },[pickExpressiveStyle, loadSampleMidi, startPlay]);
-
-  // BASIC-mode "Surprise me" — swap to a DIFFERENT random expressive style
-  // WITHOUT restarting the song. The paint effect re-renders live on a style
-  // change, so the whole painting repaints in the new artist's language at the
-  // current position while the music keeps playing. Avoids repeating the
-  // current style so each tap is visibly different.
-  const basicSurprise = useCallback(()=>{
-    const pool = EXPRESSIVE_POOL.filter(k=>k!==style);
-    const src = pool.length ? pool : EXPRESSIVE_POOL;
-    const k = src[Math.floor(Math.random()*src.length)] || 'picasso';
-    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
-    setRandomMode(false); randomModeRef.current=false;
-    setStyle(k);
-  },[EXPRESSIVE_POOL, style]);
-
-  // Auto-play the first-impression demo. Fires when:
-  //   • a brand-new visitor lands (first visit), OR
-  //   • the app is in BASIC mode with an empty canvas (so Basic always has a
-  //     live sample painting to greet any user, new or returning).
-  // CRITICAL: it must wait for the colourful loading INTRO splash to finish
-  // first (showIntro=false). Picks a random expressive style and loads a 30s
-  // slice of the Liszt sample, then starts playback once React commits the
-  // chord state (the proven onboarding sequence).
-  const firstAutoPlayedRef = useRef(false);
-  useEffect(()=>{
-    if(showIntro) return;                 // wait until the loading intro clears
-    const wantAuto = firstVisitRef.current || (basicMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource);
-    if(!wantAuto) return;
-    if(firstAutoPlayedRef.current && !basicMode) return;
-    if(firstAutoPlayedRef.current && chords.length>0) return; // already painting
-    firstAutoPlayedRef.current = true;
-    try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
-    const id = setTimeout(()=>{
-      try{
-        pickExpressiveStyle();
-        setMode('harmony');
-        loadSampleMidi();
-        setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
-      }catch(_){}
-    }, 300);
-    return ()=>clearTimeout(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[showIntro, basicMode]);
-
-  // BASIC mode: auto-start playback whenever a song is loaded but not yet
-  // playing (chords present, nothing drawn yet, not already playing/paused).
-  // Covers "My song" uploads (loadSound/applyEvents don't auto-play on their
-  // own) and any other source that lands in Basic — so the canvas always comes
-  // alive without the user hunting for a play button. Guarded by a ref so it
-  // fires once per freshly-loaded piece, not on every Vary/Surprise re-render.
-  const basicAutoStartedRef = useRef(false);
-  useEffect(()=>{
-    if(!basicMode){ basicAutoStartedRef.current=false; return; }
-    if(chords.length===0){ basicAutoStartedRef.current=false; return; }
-    if(playing || holdPaused || busy || disp>0){ basicAutoStartedRef.current=true; return; }
-    if(basicAutoStartedRef.current) return;
-    basicAutoStartedRef.current = true;
-    const id=setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 120);
-    return ()=>clearTimeout(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[basicMode, chords.length, loadedSource, playing, holdPaused, busy]);
 
   // Tear the reel down completely AND reset to the clean Setup screen.
   // Earlier implementation only paused (stopAll + setStyle(null)), which left
@@ -28625,16 +28595,11 @@ Composition rules:
   // during initial state setup so we don't briefly flash the setup screen.
   // Feature-flagged via ONBOARDING_V3 — set it false in 01-core-head to disable
   // the feature entirely for everyone.
-  // ── UX overhaul, Phase 1: the static welcome HERO is RETIRED. A brand-new
-  // visitor no longer sees the Miró-preview + "Play sample" screen — instead
-  // the app auto-plays the first-impression demo (Clocks) on a clean canvas
-  // with the cockpit hidden (see the auto-play effect + cockpitVisible state).
-  // We keep the hero JSX in place but force it off, so the overhaul is a pure
-  // behaviour swap (revert = drop the `&& false`). The first-visit gate is the
-  // SAME `paintiano_onboarded` flag the hero used, so there's exactly one
-  // first-visit signal and no collision between the two systems.
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  void ONBOARDING_V3; // retained for the (now-dormant) hero; see note above
+  const [showOnboarding, setShowOnboarding] = useState(()=>{
+    if(!ONBOARDING_V3) return false;
+    try { return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_onboarded') !== '1'; }
+    catch(_) { return false; }
+  });
   // Help cheat-sheet popup — gold "?" FAB bottom-right opens this. Volatile
   // boolean (no persistence) — every fresh visit defaults to closed.
   const [showHelp, setShowHelp] = useState(false);
@@ -28840,7 +28805,7 @@ Composition rules:
     <div className={"pf-app-root"+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
-      {showOnboarding && !showIntro && (()=>{
+      {showOnboarding && !showIntro && !basicMode && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
         // a big play CTA that loads the trimmed Liszt sample (30 s) and starts
         // playback, and a quiet "skip" link for users who'd rather explore on
@@ -28954,6 +28919,7 @@ Composition rules:
             sit together in a segmented control (right). The five destinations
             (Concept · Book · Guide · Setup · Pro) moved out of the always-on
             text row into the dropdown — same handlers, just relocated. ── */}
+        <div style={{display:'inline-flex',alignItems:'center',gap:6}}>
         <div style={{position:'relative'}}>
           <button onClick={()=>setNavMenuOpen(v=>!v)} aria-label="menu" aria-expanded={navMenuOpen} title="menu" style={{width:38,height:38,display:'inline-flex',alignItems:'center',justifyContent:'center',background:navMenuOpen?'rgba(201,168,76,.12)':'rgba(255,255,255,.03)',border:'1px solid '+(navMenuOpen?'rgba(201,168,76,.45)':'rgba(201,168,76,.26)'),borderRadius:19,cursor:'pointer',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'background .18s,border-color .18s'}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(201,168,76,.92)" strokeWidth="1.7" strokeLinecap="round">
@@ -28991,20 +28957,24 @@ Composition rules:
           )}
         </div>
 
-        {/* ── BASIC / ADVANCED toggle — a polished segmented pill with a
-            sliding gold thumb behind the active side. B = simplified live-canvas
-            experience; A = full setup + cockpit. Persisted via basicMode. */}
-        <div role="group" aria-label="Basic or Advanced mode" style={{position:'relative',display:'inline-flex',alignItems:'center',height:38,padding:3,borderRadius:19,border:'1px solid rgba(201,168,76,.30)',background:'rgba(255,255,255,.03)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',boxShadow:'inset 0 1px 2px rgba(0,0,0,.25)'}}>
-          {/* sliding thumb */}
-          <span aria-hidden="true" style={{position:'absolute',top:3,left:basicMode?3:'calc(50% + 0px)',width:'calc(50% - 3px)',height:'calc(100% - 6px)',borderRadius:16,background:'linear-gradient(135deg,rgba(220,180,90,.95),rgba(201,168,76,.92))',boxShadow:'0 2px 8px rgba(201,168,76,.35)',transition:'left .22s cubic-bezier(.4,.0,.2,1)'}}/>
-          {[['B',true],['A',false]].map(([lbl,wantBasic])=>{
-            const on = basicMode===wantBasic;
-            return (
-              <button key={lbl} onClick={()=>setBasicMode(wantBasic)} aria-pressed={on} aria-label={wantBasic?ts('basicMode','Basic'):ts('advancedMode','Advanced')} title={wantBasic?ts('basicMode','Basic'):ts('advancedMode','Advanced')}
-                style={{position:'relative',zIndex:1,width:32,height:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',fontSize:(.74*effScale)+'rem',fontWeight:700,letterSpacing:'.02em',background:'transparent',color:on?'#1a1206':'rgba(207,197,168,.55)',border:'none',WebkitTapHighlightColor:'transparent',transition:'color .18s'}}>{lbl}</button>
-            );
-          })}
-        </div>
+        {/* ── LITE / ADVANCED mode chip — same height as the Aa/Lang chip,
+            width auto-fits the active mode's label. Tapping toggles the mode.
+            Lite = white chip + white text; Advanced = gold chip + gold text. */}
+        {(()=>{
+          const adv = !basicMode;
+          const accent = adv ? '220,180,90' : '247,243,236';   // gold | white
+          const label = adv ? ts('advancedMode','Advanced') : ts('basicMode','Lite');
+          return (
+            <button onClick={()=>setBasicMode(b=>!b)} aria-label={label} aria-pressed={adv} title={label}
+              style={{height:38,padding:'0 16px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,borderRadius:19,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',background:'rgba('+accent+',.13)',color:'rgba('+accent+',.98)',border:'1px solid rgba('+accent+',.45)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'background .2s, color .2s, border-color .2s'}}>
+              <span aria-hidden="true" style={{width:7,height:7,borderRadius:'50%',background:'rgba('+accent+',.95)',boxShadow:'0 0 7px rgba('+accent+',.6)',flexShrink:0}}/>
+              {label}
+            </button>
+          );
+        })()}
+        </div>{/* ── end left group (hamburger + mode chip) ── */}
+
+        {/* segmented control — text size + language */}
         {(() => {
           const LANG_META = {
             EN:{code:'EN',name:'English'},
@@ -29555,25 +29525,20 @@ Composition rules:
             <button onClick={()=>{if(recording)return;setShowMicRecent(v=>!v);}} disabled={recording} className="pf-lift" title={t('recentPlayed')||'recently played'} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:recording?'rgba(230,222,196,.25)':'rgba(230,222,196,.7)',border:'1px solid rgba(242,238,232,.15)',borderRadius:22,cursor:recording?'default':'pointer',fontFamily:'inherit',fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:0}}>{_sent(t('recentPlayed')||'recent')}</button>
           )}
         </div>
-        {!isDesktop && cockpitVisible && (<>
+        {!isDesktop && (<>
         <div style={{display:'flex',alignItems:'center',width:'100%',gap:6}}>
-          {/* A+ : hide-controls — collapses the cockpit back to the minimal
-              "simple" first-time view (sets cockpitVisible=false → bottom sheet
-              + ⚙ return). Lets a user who revealed the cockpit step back to the
-              uncluttered experience. Not labelled "Simple/Advanced" on purpose
-              — it reads as plain "hide the controls", no mode vocabulary. */}
-          <button onClick={()=>setCockpitVisible(false)} aria-label={ts('hideControls','Hide controls')} title={ts('hideControls','Hide controls')} style={{width:26,height:26,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:'rgba(230,222,196,.38)',transition:'color .15s ease'}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/><path d="M6 15l6 6 6-6" opacity="0.45"/></svg>
-          </button>
+          <span style={{width:26,flexShrink:0}} aria-hidden="true" />
           <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
             <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : (cockpitEdit ? ts('editSet','Edit your set') : ts('pickLook','Pick a look'))}</span>
             <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
           </button>
-          {/* Phase 2: edit-mode dial removed. The cockpit no longer has a
-              separate "edit your set" mode — every chip (palette, style, tone)
-              is always directly tappable. The header keeps a symmetric spacer
-              so the title stays centred. */}
-          <span style={{width:26,flexShrink:0}} aria-hidden="true" />
+          {/* Edit dial — subtle icon, no box. Shown when the strip is open in a
+              music mode. Gold when editing. */}
+          {(stripOpen && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive) ? (
+            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:26,height:26,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:cockpitEdit?'rgba(220,180,90,.95)':'rgba(230,222,196,.38)',transition:'color .15s ease'}}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg>
+            </button>
+          ) : (<span style={{width:26,flexShrink:0}} aria-hidden="true" />)}
         </div>
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
@@ -29589,15 +29554,8 @@ Composition rules:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):t('dir_'+imgDir)}</div>
         )}
         </>)}
-        {((stripOpen && (isDesktop || cockpitVisible)) || isDesktop) && (
+        {(stripOpen || isDesktop) && (
         <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
-          {/* ── Phase 2: Surprise me — primary action at the top of the cockpit.
-              Randomizes the look (expressive style + harmony palette) and
-              replays, so the user gets a fresh painting with one tap. Hidden in
-              image-scan mode (it would fight the scan controls). */}
-          {(loadedSource!=='image' || moodFromImg) && !composeMode && !micActive && (
-            <button onClick={()=>{ if(demoReelOn) return; surpriseMe(); }} disabled={demoReelOn} title={ts('surpriseMe','Surprise me')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'12px',borderRadius:14,cursor:demoReelOn?'default':'pointer',fontFamily:'inherit',fontSize:(.7*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)',opacity:demoReelOn?.5:1,transition:'opacity .15s'}}>↻ {ts('surpriseMe','Surprise me')}</button>
-          )}
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Morph / Vary — only for mood-based pieces (mood + mood-from-image),
               never for loaded MIDI/audio/score. Morph: text moods only. Vary: both. */}
@@ -29955,74 +29913,296 @@ Composition rules:
           {(loadedSource!=='image' || moodFromImg) && (
           <>
           {(()=>{
-            // ── Phase 2: flat artist grid (decoupled) ──────────────────────
-            // One chip per individual style — pairs are gone at the UI level.
-            // Order follows ALL_ARTIST_KEYS (minus the standalone Mosaic, which
-            // gets its own chip first). Free tier shows ALL styles; the ones
-            // outside FREE_UNLOCKED_KEYS render with a 🔒 and open the paywall
-            // on tap (best-UX: the full catalogue is visible, locked content
-            // advertises the upgrade). Tapping a chip selects that style (and
-            // makes sure it's in setupArtists); tapping the active chip again
-            // deselects back to Mosaic. No edit mode — every chip is always a
-            // direct, single-tap selector. Vary/Dice are unaffected (Vary only
-            // changes the variation salt; Dice shuffles across selected styles).
-            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt'};
-            const _shortOf=(full)=> _artistShort[full] || full;
-            const _styleKeys = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily');
-            const _isLocked=(k)=> (proStatus==='free') && !FREE_UNLOCKED_KEYS.has(k);
-            // Mosaic chip + 18 style chips.
-            const _chipCount = 1 + _styleKeys.length; // 19
-            // Column mapping: keep it dense but readable. 19 chips → 5 columns
-            // (4 rows of 5, last row of 4) reads well on a phone.
-            const _cols = isDesktop ? 6 : 5;
-            const mosaicManual = style===null && !shuffleStyle;
-            const mosaicShuf = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
-            const _mosLabel = (shuffleStyle==='notes')?t('notesStyle'):(shuffleStyle==='oneM')?t('oneMStyle'):(!shuffleStyle&&oneMMode)?t('oneMStyle'):(!shuffleStyle&&notesMode)?t('notesStyle'):t('mosaicStyle');
+            // ── Adaptive chip grid (max 2 rows) ────────────────────────────
+            // Chip count = Mosaic (if family selected) + visible pairs in
+            // current setup. Dice sits ABOVE the grid (in the inspired-by
+            // header row), so it never affects the row count. Column mapping
+            // per spec:
+            //   1→1h0d  2→2h0d  3→3h0d  4→2h2d  5→3h2d  6→3h3d
+            //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
+            const _visiblePairs = cockpitEdit ? effectivePairs : effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b));
+            const _familyOn = setupArtists.includes('mosaicFamily');
+            const _chipCount = (_familyOn?1:0) + _visiblePairs.length;
+            // baseCols per Rasto's key (chips only): 1→1, 2→2, 3→3, 4→2,
+            // 5→3, 6→3, 7→4, 8→4, 9→5, 10→5.
+            const _baseCols = (()=>{
+              switch(_chipCount){
+                case 0: case 1: return 1;
+                case 2: return 2;
+                case 3: return 3;
+                case 4: return 2;
+                case 5: case 6: return 3;
+                case 7: case 8: return 4;
+                default: return 5;
+              }
+            })();
+            const _cols = _baseCols;
             return (
-          <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — Mosaic is the plain reading with no artist overlay">
-            {/* Mosaic chip — default reading. Tap cycles Mosaic → Notes → $1M$
-                (dice off) or locks shuffle to the mosaic family (dice on). */}
+          <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
+            {/* Mosaic = default; not glowing while Shuffle is drawing an artist.
+                Shown when in set, or in edit mode (as a ghost when out of set). */}
+            {(setupArtists.includes('mosaicFamily') || cockpitEdit) && (()=>{
+              const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
+              // Manual mosaic = selected and NOT being driven by the dice. Like
+              // the artist pairs, a shuffle-hit shows the white frame (no gold
+              // glow); a manual pick shows the gold glow. Splitting these keeps
+              // the Mosaic family visually consistent with the other chips.
+              const mosaicManual = style===null && !shuffleStyle;
+              // Sub-label reflects the current rendered family member.
+              const subKind = (shuffleStyle==='notes') ? 'notes'
+                            : (shuffleStyle==='oneM') ? 'oneM'
+                            : (shuffleStyle==='mosaic') ? 'mosaic'
+                            : (!shuffleStyle && oneMMode) ? 'oneM'
+                            : (!shuffleStyle && notesMode) ? 'notes'
+                            : 'mosaic';
+              const subLabel = subKind==='notes' ? t('notesStyle') : subKind==='oneM' ? t('oneMStyle') : t('mosaicStyle');
+              const lockTip = randomMode
+                ? (mosaicShuffleLock ? 'mosaic family locked — tap to release back to full shuffle' : 'tap to lock shuffle to mosaic / notes / $1M$')
+                : (subKind==='oneM' ? 'tap to clear back to mosaic' : (subKind==='notes' ? 'notes — tap for $1M$' : 'mosaic — tap for note names'));
+              return (
             <button onClick={()=>{
-              if(demoReelOn) return;
-              if(style!==null){ selectStyle(style); return; } // currently on an artist → clear back to mosaic
+              // In edit mode the Mosaic chip behaves like every other chip:
+              // tap toggles its membership in the set (mosaicFamily key in
+              // setupArtists). This makes the edit grid uniform — every chip
+              // is a toggle, none has a hidden second behaviour.
+              if(cockpitEdit){
+                setSetupArtists(prev => {
+                  if(prev.includes('mosaicFamily')){
+                    return prev.length>1 ? prev.filter(x=>x!=='mosaicFamily') : prev;
+                  }
+                  return [...prev, 'mosaicFamily'];
+                });
+                return;
+              }
+              if(style!==null){ selectStyle(style); return; }
               if(randomMode){
-                setMosaicShuffleLock(v=>{ const nx=!v; if(nx){ setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); } return nx; });
+                // Dice on → toggle "mosaic family" lock. Entering the lock
+                // restarts the cycle at 'mosaic' and clears the dice-off
+                // notes/oneM flags so the locked shuffle is the sole driver.
+                setMosaicShuffleLock(v=>{
+                  const nx = !v;
+                  if(nx){ setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); }
+                  return nx;
+                });
               } else {
+                // Dice off → original 3-tap cycle Mosaic → Notes → $1M$ → Mosaic.
                 if(!notesMode && !oneMMode){ setNotesMode(true); }
                 else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
                 else { setOneMMode(false); setNotesMode(false); }
               }
-            }} className={(mosaicManual?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={randomMode?(mosaicShuffleLock?'mosaic family locked — tap to release':'tap to lock shuffle to mosaic'):(t('mosaicStyle'))} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.52*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicManual),...(!mosaicManual&&mosaicShuf?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{_mosLabel}</button>
-            {/* 18 individual style chips */}
-            {_styleKeys.map((k)=>{
-              const locked = _isLocked(k);
-              const active = style===k;
-              const shufHit = shuffleStyle===k;
-              const _artFull = STYLE_INSPIRED[k] || k;
-              const label = _shortOf(_artFull);
+            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{subLabel}</button>
+            ); })()}
+            {(cockpitEdit ? effectivePairs : effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b))).map(([a,b], _pairIdx)=>{
+              // Setup-picker integration: when only ONE side of the pair is in
+              // setupArtists, the pair tile collapses to a single-toggle for
+              // that side — no A↔B flip, no info row, no third-tap deselect.
+              const _aOn = setupArtists.includes(a);
+              const _bOn = setupArtists.includes(b);
+              const forcedSide = (_aOn && !_bOn) ? a : (!_aOn && _bOn) ? b : null;
+              // Free tier: only the 'a' side is reachable; the 'b' side is
+              // shown as a small "locked partner" info row beneath the palette
+              // when the pair is tapped. No paywall opens from artist taps —
+              // the lock is purely informational (Guide explains how to unlock).
+              const pairLocked = (proStatus === 'free');
+              // Which of the pair is active? Determines label + next target.
+              const activeKey = style===a ? a : (style===b ? b : null);
+              const isOn = activeKey!==null;
+              const pairKey = a+'|'+b;
+              // The pair's "face" when not active: the member you last picked
+              // from this pair, falling back to the default 'a'. For Free this
+              // is forced to 'a' (the only reachable side).
+              const faceKey = forcedSide
+                ? forcedSide
+                : (pairLocked
+                  ? a
+                  : ((pairLastPick[pairKey]===a || pairLastPick[pairKey]===b) ? pairLastPick[pairKey] : a));
+              // Shuffle (Random + no manual pick): highlight whichever button
+              // holds the style the shuffle landed on, and show THAT style's
+              // label so the cycling reads on the buttons themselves.
+              const shufKey = (shuffleStyle===a || shuffleStyle===b) ? shuffleStyle : null;
+              const shufHit = shufKey!==null;
+              // Buttons show the ARTIST that inspired the style (Picasso, Klimt…)
+              // rather than the technique name. Long names are shortened to a
+              // single recognizable word so they fit the narrow 5-up grid cell.
+              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
+              const _shortOf = (full)=> _artistShort[full] || full;
+              // For Free, label always shows the unlocked 'a' artist.
+              const _displayKey = forcedSide || (pairLocked ? a : (activeKey || shufKey || faceKey));
+              const _artFull = STYLE_INSPIRED[_displayKey];
+              const label = _artistShort[_artFull] || _artFull;
+              // In edit mode the partner (the other side of the atomic pair) is
+              // shown as a small subtitle so both names are visible — making
+              // clear that toggling the chip enables/disables both, matching
+              // how Setup presented each pair as a single "Matisse/Picasso" entry.
+              const _partnerKey = (_displayKey === a) ? b : a;
+              const _partnerLabel = _shortOf(STYLE_INSPIRED[_partnerKey]);
+              // Tap behaviour:
+              //  • Free tier: always selects 'a' (the only reachable side).
+              //    Toggles the locked-partner info row beneath the palette:
+              //    tap same pair again → row hides; tap a different pair →
+              //    row reveals the new partner.
+              // Tap behaviour:
+              //
+              // FREE (only 'a' side is reachable):
+              //   shuffle OFF:
+              //     tap 1 (not active)   → paint 'a', NO info row
+              //     tap 2 (active)       → open info row "Matisse 🔒"
+              //     tap 3 (info open)    → close info row, 'a' stays active
+              //     tap 4 (info closed)  → reopen info row (cycle 2↔3)
+              //   shuffle ON:
+              //     tap 1 (not active)   → paint 'a' as shuffle-override
+              //     tap 2 (active)       → deselect → full shuffle
+              //     (no info row in shuffle mode)
+              //
+              // PAID (both sides reachable):
+              //   shuffle OFF:
+              //     tap 1 (not active)   → paint face (last pick / 'a')
+              //     tap 2 (active on a)  → flip to b
+              //     tap 3 (active on b)  → flip back to a (2-state)
+              //   shuffle ON:
+              //     tap 1 (not active)   → paint face as shuffle-override
+              //     tap 2 (active on a)  → flip to b (still override)
+              //     tap 3 (active on b)  → deselect → full shuffle
               const onClick = ()=>{
                 if(demoReelOn) return;
-                if(locked){ setPaywallReason('settings'); return; }
-                if(active){
-                  // Deselect → back to Mosaic.
-                  selectStyle(k);
-                } else {
-                  // Make sure it's in the set, then select it.
-                  setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
-                  setStyleTo(k);
+                // ── EDIT MODE ── tap toggles this pair's membership atomically.
+                // Pairs are atomic units: enabling Matisse enables Picasso too,
+                // and vice versa. This guarantees both sides of every enabled
+                // pair are in the set, so tap-2 always flips to the partner
+                // (never falls through forcedSide → Mosaic).
+                if(cockpitEdit){
+                  const _bothOff = !setupArtists.includes(a) && !setupArtists.includes(b);
+                  if(_bothOff){
+                    // Add BOTH sides at once.
+                    setSetupArtists(prev => {
+                      const next = [...prev];
+                      if(!next.includes(a)) next.push(a);
+                      if(!next.includes(b)) next.push(b);
+                      return next;
+                    });
+                  } else {
+                    // Remove both — last-item protection on the whole set.
+                    setSetupArtists(prev => prev.length>1 ? prev.filter(x=>x!==a && x!==b) : prev);
+                  }
+                  return;
+                }
+                if(forcedSide){
+                  if(style===forcedSide){
+                    if(randomMode){ setPairLastPick(p=>({...p,[pairKey]:forcedSide})); setStyleTo(null); }
+                    else { setStyleTo(null); }
+                  } else {
+                    setPairLastPick(p=>({...p,[pairKey]:forcedSide}));
+                    setStyleTo(forcedSide);
+                  }
                   setExpandedPair(null);
+                  return;
+                }
+                if(pairLocked){
+                  // ── FREE ──
+                  if(randomMode){
+                    // Shuffle ON: paint↔deselect, no info row.
+                    setExpandedPair(null);
+                    if(!isOn){
+                      setPairLastPick(p=>({...p,[pairKey]:a}));
+                      setStyleTo(a);
+                    } else {
+                      setStyleTo(null);
+                    }
+                    return;
+                  }
+                  // Shuffle OFF: paint → info → close (cycle on the same pair).
+                  if(!isOn){
+                    // Tap 1: just paint 'a', no info row.
+                    setPairLastPick(p=>({...p,[pairKey]:a}));
+                    setStyleTo(a);
+                    setExpandedPair(null);
+                  } else {
+                    // Already active: toggle the info row. Tapping a DIFFERENT
+                    // pair while one is expanded is handled by the !isOn branch
+                    // above (it closes the old row); same-pair taps cycle here.
+                    setExpandedPair(prev => prev === pairKey ? null : pairKey);
+                  }
+                  return;
+                }
+                // ── PAID ──
+                // ── PAID ──
+                // Three-state cycle, anchored on faceKey (= the side the user
+                // most recently SETTLED on for this pair, captured at the
+                // moment they deselect):
+                //   tap 1 — not active            → paint faceKey
+                //   tap 2 — active on faceKey     → flip to the other side
+                //                                   (faceKey unchanged so we
+                //                                   can still detect tap 3)
+                //   tap 3 — active on the other   → shuffle ON: capture
+                //                                   `other` as the new face,
+                //                                   then deselect → shuffle
+                //                                   shuffle OFF: flip back
+                // After a deselect, the NEXT tap 1 re-enters at the captured
+                // side, so Picasso→Matisse→deselect→tap = Matisse.
+                if(!isOn){
+                  setStyleTo(faceKey);
+                } else if(style===faceKey){
+                  const other = (faceKey===a) ? b : a;
+                  setStyleTo(other);
+                } else {
+                  // style is the OTHER side (tap 3).
+                  if(randomMode){
+                    // Remember the side we just left as the new face.
+                    setPairLastPick(p=>({...p,[pairKey]:style}));
+                    setStyleTo(null);
+                  } else {
+                    setStyleTo(faceKey);
+                  }
                 }
               };
+              const _otherKey = (faceKey===a) ? b : a;
+              const nextHint = pairLocked
+                ? (randomMode
+                    ? (isOn ? ts('tapReturnShuffle','tap to return to shuffle') : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b])))
+                    : (isOn
+                        ? (expandedPair===pairKey ? 'tap to hide info' : 'tap to see partner')
+                        : (ts('partnerIsPro','{a} · {b} is Pro').replace('{a}',STYLE_LABELS[a]).replace('{b}',STYLE_LABELS[b]))))
+                : (!isOn
+                    ? ''
+                    : (style===faceKey
+                        ? `tap for ${STYLE_LABELS[_otherKey]}`
+                        : (randomMode ? 'tap for shuffle' : `tap for ${STYLE_LABELS[faceKey]}`)));
+              const _pairInSet = setupArtists.includes(a) || setupArtists.includes(b);
+              const _pairGhost = cockpitEdit && !_pairInSet;
               return (
-              <button key={k} onClick={onClick}
-                title={locked ? `${label} — Paintiano Pro` : (active ? `${_artFull} — tap to clear` : (shufHit ? `🎲 ${_artFull} — shuffle is painting this` : `${label} — tap to paint`))}
-                style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.52*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',opacity:locked?.72:1,...chipStyle(active),...(!active&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
-                {label}{locked && (<span style={{marginLeft:3,fontSize:'.8em',opacity:.7}}>🔒</span>)}
-              </button>
+              <Fragment key={a+'_'+b}>
+                <button className={(!cockpitEdit&&isOn)?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
+                  title={cockpitEdit ? (_pairInSet?'in your set — tap to remove':'tap to add to your set') : (pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)))}
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:cockpitEdit?1.1:1.2,...(_pairGhost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _pairInSet : isOn)),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}{cockpitEdit && (<span style={{display:'block',fontSize:(.40*effScale)+'rem',opacity:.55,letterSpacing:'.04em',fontWeight:500,marginTop:1,textTransform:'none'}}>/ {_partnerLabel}</span>)}</button>
+              </Fragment>
               );
             })}
           </div>
-          );
+          ); })()}
+          {cockpitEdit && (
+            <div style={{textAlign:'center',marginTop:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(230,222,196,.55)',lineHeight:1.5}}>
+              <span>{ts('editHint','Tap to add or remove from your set.')}</span>
+            </div>
+          )}
+          {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
+              member of the most recently tapped pair with a PRO badge.
+              Clickable: opens the paywall with reason 'settings'. */}
+          {proStatus==='free' && expandedPair && (()=>{
+            const [a,b] = expandedPair.split('|');
+            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai'};
+            const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
+            return (
+              <div
+                onClick={()=>{ setPaywallReason('settings'); }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setPaywallReason('settings'); } }}
+                title={`${lockedName} — Paintiano Pro`}
+                style={{textAlign:'center',marginTop:8,marginBottom:2,padding:'4px 8px',fontSize:(.58*effScale)+'rem',letterSpacing:'.06em',color:'rgba(201,168,76,.7)',fontStyle:'italic',cursor:'pointer',userSelect:'none',borderRadius:6,transition:'color .15s'}}
+              >
+                {lockedName}<ProBadge t={t} readScale={effScale} size="sm" />
+              </div>
+            );
           })()}
           {/* ── TONE picker ────────────────────────────────────────────
               Lives right under the artist grid. Three pills matching the
@@ -30038,8 +30218,8 @@ Composition rules:
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
             {(()=>{
               const allTones = [
-                {k:'pure',   label:({EN:'True',SK:'Pravé',DE:'Echt',FR:'Vrai',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'トゥルー'})[lang]||'True'},
-                {k:'real',   label:({EN:'Soft',SK:'Jemné',DE:'Weich',FR:'Doux',ES:'Suave',PT:'Suave',zh:'柔和',zhTW:'柔和',ja:'ソフト'})[lang]||'Soft'},
+                {k:'pure',   label:({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure'},
+                {k:'real',   label:({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real'},
                 {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'}
               ];
               // Edit mode shows all three (off ones as ghosts to tap-add); normal
@@ -31966,8 +32146,8 @@ Composition rules:
         const _palLabels = {harmony:t('harmony'), spectral:t('spectral'), phi:t('phi'), kontra:t('kontra'), custom:t('custom')};
         const _artistLabels = (()=>{ const m={mosaicFamily:(ts('setupMosaicFamily','Mosaic family'))}; ALL_ARTIST_KEYS.forEach(k=>{ if(k!=='mosaicFamily') m[k]=STYLE_INSPIRED[k]||k; }); return m; })();
         const _toneLabels = {
-          pure:   ({EN:'True',SK:'Pravé',DE:'Echt',FR:'Vrai',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'トゥルー'})[lang]||'True',
-          real:   ({EN:'Soft',SK:'Jemné',DE:'Weich',FR:'Doux',ES:'Suave',PT:'Suave',zh:'柔和',zhTW:'柔和',ja:'ソフト'})[lang]||'Soft',
+          pure:   ({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure',
+          real:   ({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real',
           pastel: ({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'
         };
         const togglePal = (k)=> setSetupPalettes(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
@@ -32085,65 +32265,22 @@ Composition rules:
         </div>
         );
       })()}
-      {/* ── UX overhaul, Phase 1: first-time floating controls ──────────────
-          Shown only on mobile while the cockpit is HIDDEN (brand-new visitor
-          experience). A discreet ⚙ reveals the full cockpit; a minimal bottom
-          sheet offers the two primary first-run actions (Surprise / Use my
-          song) and, once a painting has finished, Save / Try another / Share.
-          Save & Share reveal the cockpit (where the app's existing export
-          controls live) rather than duplicating that pipeline. Returning users
-          and desktop never see this — they get the normal cockpit. */}
-      {!isDesktop && !basicMode && !cockpitVisible && !showIntro && (()=>{
-        const paintingDone = chords.length>0 && !playing && disp>=chords.length;
-        const btnBase = {flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'12px 8px',borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,letterSpacing:'.02em',border:'1px solid rgba(242,238,232,.16)',background:'rgba(37,32,48,.92)',color:'rgba(232,228,220,.95)',whiteSpace:'nowrap'};
-        const primary = {...btnBase,background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)'};
-        return (
-        <>
-          {/* ⚙ reveal-cockpit FAB */}
-          <button onClick={revealCockpit} aria-label={ts('customize','Customize')} title={ts('customize','Customize')}
-            style={{position:'fixed',right:14,bottom:'calc(78px + env(safe-area-inset-bottom,0px))',width:38,height:38,borderRadius:'50%',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.5)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',border:'1px solid rgba(220,180,90,.35)',color:'rgba(220,180,90,.95)',fontSize:'1rem',cursor:'pointer',zIndex:1200,padding:0}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          </button>
-          {/* Minimal bottom sheet */}
-          <div style={{position:'fixed',left:0,right:0,bottom:0,padding:'14px 14px calc(16px + env(safe-area-inset-bottom,0px))',background:'rgba(20,20,30,.94)',backdropFilter:'blur(28px)',WebkitBackdropFilter:'blur(28px)',borderTopLeftRadius:20,borderTopRightRadius:20,zIndex:1190,boxShadow:'0 -8px 28px rgba(0,0,0,.4)'}}>
-            <div style={{fontSize:(.52*effScale)+'rem',color:'rgba(220,180,90,.9)',textTransform:'uppercase',letterSpacing:'.18em',textAlign:'center',marginBottom:10}}>
-              {paintingDone ? ts('yourPainting','Your painting') : ts('tryThis','Try this')}
-            </div>
-            {paintingDone ? (
-              <div style={{display:'flex',gap:8}}>
-                <button onClick={revealCockpit} style={primary}>💾 {ts('saveLabel','Save')}</button>
-                <button onClick={surpriseMe} style={btnBase}>↻ {ts('tryAnother','Try another')}</button>
-                <button onClick={revealCockpit} style={btnBase}>📤 {ts('shareLabel','Share')}</button>
-              </div>
-            ) : (
-              <div style={{display:'flex',gap:8}}>
-                <button onClick={surpriseMe} style={primary}>↻ {ts('surpriseMe','Surprise me')}</button>
-                <button onClick={()=>{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } setPickMode('sound'); revealCockpit(); }} style={btnBase}>🎵 {ts('useMySong','Use my song')}</button>
-              </div>
-            )}
-          </div>
-        </>
-        );
-      })()}
       {/* ── BASIC mode CTA bar ──────────────────────────────────────────────
-          The three primary actions for the simplified experience, docked at
-          the bottom. Surprise me swaps the artist style live (song keeps
-          playing); Save exports the current painting; My song opens the file
-          picker straight away (no intermediate tile). Shown whenever Basic is
-          active and the intro has cleared. */}
+          Three primary actions docked at the bottom. Surprise me swaps the
+          artist style live (song keeps playing); the middle button is
+          contextual — Pause/Resume while playing, Save once the song finishes;
+          My song opens the file picker straight away (no intermediate tile).
+          Shown whenever Basic is active and the intro has cleared. */}
       {basicMode && !showIntro && (()=>{
         const btn = {flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'13px 8px',borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,letterSpacing:'.02em',border:'1px solid rgba(242,238,232,.16)',background:'rgba(37,32,48,.92)',color:'rgba(232,228,220,.95)',whiteSpace:'nowrap',WebkitTapHighlightColor:'transparent'};
         const primary = {...btn,background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)'};
         const _haveArt = chords.length>0;
-        const _done = _haveArt && !playing && disp>=chords.length;  // song finished
+        const _done = _haveArt && !playing && disp>=chords.length;
         const _midLabel = _done ? ('💾 '+ts('saveLabel','Save'))
                                 : (holdPaused ? ('▶ '+(t('resume')!=='resume'?t('resume'):'Resume'))
                                               : (playing ? ('❚❚ '+(t('pause')!=='pause'?t('pause'):'Pause'))
                                                          : ('▶ '+(t('play')!=='play'?t('play'):'Play'))));
-        const _midClick = ()=>{
-          if(_done){ try{ exportImage('web'); }catch(_){} return; }
-          try{ handlePauseClick(); }catch(_){}
-        };
+        const _midClick = ()=>{ if(_done){ try{ exportImage('web'); }catch(_){} return; } try{ handlePauseClick(); }catch(_){} };
         return (
         <div role="region" aria-label="basic actions" style={{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
           <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
