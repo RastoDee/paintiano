@@ -7621,9 +7621,9 @@ Composition rules:
   const surpriseMe = useCallback(()=>{
     pickExpressiveStyle();
     setMode('harmony');
-    loadSampleMidiTrimmed(30000);
+    loadSampleMidi();
     setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
-  },[pickExpressiveStyle, loadSampleMidiTrimmed, startPlay]);
+  },[pickExpressiveStyle, loadSampleMidi, startPlay]);
 
   // BASIC-mode "Surprise me" — swap to a DIFFERENT random expressive style
   // WITHOUT restarting the song. The paint effect re-renders live on a style
@@ -7660,13 +7660,31 @@ Composition rules:
       try{
         pickExpressiveStyle();
         setMode('harmony');
-        loadSampleMidiTrimmed(30000);
+        loadSampleMidi();
         setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
       }catch(_){}
     }, 300);
     return ()=>clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[showIntro, basicMode]);
+
+  // BASIC mode: auto-start playback whenever a song is loaded but not yet
+  // playing (chords present, nothing drawn yet, not already playing/paused).
+  // Covers "My song" uploads (loadSound/applyEvents don't auto-play on their
+  // own) and any other source that lands in Basic — so the canvas always comes
+  // alive without the user hunting for a play button. Guarded by a ref so it
+  // fires once per freshly-loaded piece, not on every Vary/Surprise re-render.
+  const basicAutoStartedRef = useRef(false);
+  useEffect(()=>{
+    if(!basicMode){ basicAutoStartedRef.current=false; return; }
+    if(chords.length===0){ basicAutoStartedRef.current=false; return; }
+    if(playing || holdPaused || busy || disp>0){ basicAutoStartedRef.current=true; return; }
+    if(basicAutoStartedRef.current) return;
+    basicAutoStartedRef.current = true;
+    const id=setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 120);
+    return ()=>clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[basicMode, chords.length, loadedSource, playing, holdPaused, busy]);
 
   // Tear the reel down completely AND reset to the clean Setup screen.
   // Earlier implementation only paused (stopAll + setStyle(null)), which left
@@ -9659,16 +9677,17 @@ Composition rules:
           )}
         </div>
 
-        {/* ── BASIC / ADVANCED toggle — mirrors the hamburger's glass-chip look.
-            B = simplified live-canvas experience; A = full setup + cockpit.
-            Persisted via basicMode. Placed right beside the menu so the two
-            top-level controls sit together. */}
-        <div role="group" aria-label="Basic or Advanced mode" style={{display:'inline-flex',alignItems:'center',height:38,borderRadius:19,overflow:'hidden',border:'1px solid rgba(201,168,76,.26)',background:'rgba(255,255,255,.03)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)'}}>
-          {[['B',true],['A',false]].map(([lbl,wantBasic],i)=>{
+        {/* ── BASIC / ADVANCED toggle — a polished segmented pill with a
+            sliding gold thumb behind the active side. B = simplified live-canvas
+            experience; A = full setup + cockpit. Persisted via basicMode. */}
+        <div role="group" aria-label="Basic or Advanced mode" style={{position:'relative',display:'inline-flex',alignItems:'center',height:38,padding:3,borderRadius:19,border:'1px solid rgba(201,168,76,.30)',background:'rgba(255,255,255,.03)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',boxShadow:'inset 0 1px 2px rgba(0,0,0,.25)'}}>
+          {/* sliding thumb */}
+          <span aria-hidden="true" style={{position:'absolute',top:3,left:basicMode?3:'calc(50% + 0px)',width:'calc(50% - 3px)',height:'calc(100% - 6px)',borderRadius:16,background:'linear-gradient(135deg,rgba(220,180,90,.95),rgba(201,168,76,.92))',boxShadow:'0 2px 8px rgba(201,168,76,.35)',transition:'left .22s cubic-bezier(.4,.0,.2,1)'}}/>
+          {[['B',true],['A',false]].map(([lbl,wantBasic])=>{
             const on = basicMode===wantBasic;
             return (
               <button key={lbl} onClick={()=>setBasicMode(wantBasic)} aria-pressed={on} aria-label={wantBasic?ts('basicMode','Basic'):ts('advancedMode','Advanced')} title={wantBasic?ts('basicMode','Basic'):ts('advancedMode','Advanced')}
-                style={{width:34,height:36,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:700,letterSpacing:'.02em',background:on?'rgba(201,168,76,.16)':'transparent',color:on?'rgba(220,180,90,.98)':'rgba(207,197,168,.5)',border:'none',borderLeft:i?'1px solid rgba(201,168,76,.16)':'none',WebkitTapHighlightColor:'transparent',transition:'background .18s, color .18s'}}>{lbl}</button>
+                style={{position:'relative',zIndex:1,width:32,height:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',fontSize:(.74*effScale)+'rem',fontWeight:700,letterSpacing:'.02em',background:'transparent',color:on?'#1a1206':'rgba(207,197,168,.55)',border:'none',WebkitTapHighlightColor:'transparent',transition:'color .18s'}}>{lbl}</button>
             );
           })}
         </div>
@@ -11856,7 +11875,7 @@ Composition rules:
       {/* Bottom dock: only docks to the viewport during playback (so you can
           watch the canvas animate while the piano stays visible). When not
           playing, it flows in normal document order. */}
-      {isActiveView && (
+      {isActiveView && !basicMode && (
       <div className="pf-tx-edge-l" aria-hidden="true">
         <button
           className="pf-lift pf-tx-play"
@@ -11888,7 +11907,7 @@ Composition rules:
           style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
       </div>
       )}
-      {isActiveView && (
+      {isActiveView && !basicMode && (
       <div role="region" aria-label="playback controls" className="pf-transport-dock" style={isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(
@@ -12802,10 +12821,19 @@ Composition rules:
         const btn = {flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'13px 8px',borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,letterSpacing:'.02em',border:'1px solid rgba(242,238,232,.16)',background:'rgba(37,32,48,.92)',color:'rgba(232,228,220,.95)',whiteSpace:'nowrap',WebkitTapHighlightColor:'transparent'};
         const primary = {...btn,background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)'};
         const _haveArt = chords.length>0;
+        const _done = _haveArt && !playing && disp>=chords.length;  // song finished
+        const _midLabel = _done ? ('💾 '+ts('saveLabel','Save'))
+                                : (holdPaused ? ('▶ '+(t('resume')!=='resume'?t('resume'):'Resume'))
+                                              : (playing ? ('❚❚ '+(t('pause')!=='pause'?t('pause'):'Pause'))
+                                                         : ('▶ '+(t('play')!=='play'?t('play'):'Play'))));
+        const _midClick = ()=>{
+          if(_done){ try{ exportImage('web'); }catch(_){} return; }
+          try{ handlePauseClick(); }catch(_){}
+        };
         return (
-        <div role="region" aria-label="basic actions" style={{position:'fixed',left:0,right:0,bottom:'calc(62px + env(safe-area-inset-bottom,0px))',zIndex:55,display:'flex',gap:8,padding:'10px 12px',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
+        <div role="region" aria-label="basic actions" style={{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
           <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
-          <button onClick={()=>{ if(!_haveArt) return; try{ exportImage('web'); }catch(_){} }} disabled={!_haveArt} title={ts('saveLabel','Save')} style={{...btn,opacity:_haveArt?1:.5}}>💾 {ts('saveLabel','Save')}</button>
+          <button onClick={_midClick} disabled={!_haveArt} title={_done?ts('saveLabel','Save'):(playing?t('pause'):t('play'))} style={{...btn,opacity:_haveArt?1:.5}}>{_midLabel}</button>
           <button onClick={()=>{ if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} }} title={ts('useMySong','Use my song')} style={btn}>🎵 {ts('useMySong','Use my song')}</button>
         </div>
         );
