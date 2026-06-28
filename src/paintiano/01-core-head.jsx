@@ -248,8 +248,7 @@ const PF_STYLE = `
           justify-content: flex-start !important;
           gap: 16px !important;
         }
-        @media (min-width: 1100px) and (orientation: landscape) and (min-height: 501px),
-               (min-width: 769px) and (orientation: landscape) and (min-height: 501px),
+        @media (min-width: 769px) and (min-height: 501px),
                (max-height: 500px) and (orientation: landscape) {
           html, body {
             background: #050507 !important;
