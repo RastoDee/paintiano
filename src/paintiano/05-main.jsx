@@ -11034,7 +11034,7 @@ Composition rules:
               seek bar and the styles box (this block sits in grid-area rtop, the box
               in styles below it). Mobile has its own header up top. Music modes only. */}
           {isDesktop && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive && (
-          <div style={{display:'flex',alignItems:'center',gap:6,marginTop:14,padding:'0 2px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,marginBottom:2,padding:'0 2px'}}>
             <span style={{flex:1,fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:cockpitEdit?'rgba(220,180,90,.85)':'rgba(201,168,76,.7)'}}>{cockpitEdit?ts('editSet','Edit your set'):ts('pickLook','Pick a look')}</span>
             <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:26,height:26,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:cockpitEdit?'rgba(220,180,90,.95)':'rgba(230,222,196,.38)',transition:'color .15s ease'}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg>
