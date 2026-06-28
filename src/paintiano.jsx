@@ -26958,17 +26958,20 @@ Composition rules:
     setLiteAwaitTap(false);
     try{ unlockAudio(); }catch(_){}
     try{ setMuted(false); }catch(_){}
-    // Force wakeAudio's hard-recovery path (double suspend->resume + sampler
-    // rebuild). On iOS the audio device can be left torn-down after mic use or
-    // an interruption — a plain resume isn't enough and only a full reload via
-    // the landing page fixed it before. This recovers it in-place.
-    try{ audioWasHiddenRef.current = true; }catch(_){}
+    // Only force the hard-recovery (double suspend->resume + sampler rebuild)
+    // when the context is actually dead — running it on a healthy, playing
+    // context causes an audible crackle/"škrt" on every tap (e.g. Surprise).
+    try{
+      const _ac = Tone.getContext().rawContext;
+      if(_ac && _ac.state !== 'running'){ audioWasHiddenRef.current = true; }
+    }catch(_){}
     setTimeout(()=>{
       try{
         if(chordsRef.current && chordsRef.current.length>0 && !playingRef.current){
           wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); });
         } else if(playingRef.current){
-          try{ wakeAudio(); }catch(_){}
+          // Already playing — only wake (revive) if the device actually stalled.
+          try{ const _ac2 = Tone.getContext().rawContext; if(_ac2 && _ac2.state !== 'running'){ wakeAudio(); } }catch(_){}
         }
       }catch(_){}
     }, 30);
