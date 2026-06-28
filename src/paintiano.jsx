@@ -889,14 +889,17 @@ const PF_STYLE = `
             margin-top: 4px !important;
             align-self: center !important;
             max-height: calc(100vh - 200px) !important;
+            max-width: calc(100vw - 520px) !important;
+            width: auto !important;
           }
           .pf-app-root.pf-mode-lite > .pf-stage-part > canvas {
             max-height: calc(100vh - 200px) !important;
             max-width: 100% !important;
+            width: auto !important;
           }
           /* Inspired-by caption + title row sits centered above the canvas. */
           .pf-app-root.pf-mode-lite > .pf-seek-block {
-            max-width: min(900px, 70vw) !important;
+            max-width: calc(100vw - 520px) !important;
             margin: 0 auto 8px !important;
           }
         }
@@ -23198,6 +23201,47 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
         try{if(audioElRef.current && !audioElRef.current.paused) audioElRef.current.pause();}catch(_){}
         unlockAudio();
+        // STOLEN-SESSION re-acquire (two Paintiano tabs competing for the one
+        // iOS audio session). When the OTHER tab held the session, this tab's
+        // context is left 'interrupted' and a single resume() no-ops — which is
+        // why a reload didn't help but navigating away+back did (navigation
+        // forces iOS to release+reissue the session). Emulate that here: retry
+        // suspend->resume a few times with growing delays until the device is
+        // actually re-acquired, then rebuild the sampler if it died.
+        try{
+          const _ac = Tone.getContext().rawContext;
+          if(_ac){
+            let _tries = 0;
+            const _reacquire = ()=>{
+              _tries++;
+              const st = _ac.state;
+              if(st === 'running'){
+                // Confirm the device truly produces sound: silent kick.
+                try{ const b=_ac.createBuffer(1,1,22050); const s=_ac.createBufferSource(); s.buffer=b; s.connect(_ac.destination); s.start(0); s.stop(_ac.currentTime+0.004); }catch(_){}
+                // Rebuild sampler if it was torn down while the session was gone.
+                try{
+                  if(!samplerOk.current){
+                    try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
+                    const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+                      onload:()=>{ samplerOk.current=true; setPiano('ready'); },
+                      onerror:()=>{ samplerOk.current=false; setPiano('error'); },
+                    }).toDestination();
+                    samplerRef.current = s2;
+                  }
+                }catch(_){}
+                return;
+              }
+              if(_tries > 6) return; // give up — user can tap to retry
+              // suspend->resume cycle nudges iOS to re-issue the session once
+              // the other tab has yielded it.
+              Promise.resolve()
+                .then(()=>_ac.suspend()).catch(()=>{})
+                .then(()=>_ac.resume()).catch(()=>{})
+                .finally(()=>{ setTimeout(_reacquire, 120 * _tries); });
+            };
+            setTimeout(_reacquire, 80);
+          }
+        }catch(_){}
       }
     };
     document.addEventListener('visibilitychange',onHide);
@@ -27038,7 +27082,10 @@ Composition rules:
     const id=setTimeout(()=>{
       try{
         try{ setMuted(false); }catch(_){}
-        pickExpressiveStyle();
+        // Lite always opens on Mosaic (no artist overlay) — the bare reading of
+        // the music. Surprise me then cycles into artist styles.
+        try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
+        setStyle(null);
         setMode('harmony');
         loadSampleMidi();
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
@@ -30597,6 +30644,9 @@ Composition rules:
               <span style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
               </span>
+            )}
+            {basicMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='oneM' || !STYLE_INSPIRED[effectiveStyle]) && (
+              <span style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>Mosaic</span>
             )}
           </div>
           {(viewMode!=='image' || !(recording||!!recBlob)) && (

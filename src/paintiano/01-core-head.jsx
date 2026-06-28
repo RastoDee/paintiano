@@ -889,14 +889,17 @@ const PF_STYLE = `
             margin-top: 4px !important;
             align-self: center !important;
             max-height: calc(100vh - 200px) !important;
+            max-width: calc(100vw - 520px) !important;
+            width: auto !important;
           }
           .pf-app-root.pf-mode-lite > .pf-stage-part > canvas {
             max-height: calc(100vh - 200px) !important;
             max-width: 100% !important;
+            width: auto !important;
           }
           /* Inspired-by caption + title row sits centered above the canvas. */
           .pf-app-root.pf-mode-lite > .pf-seek-block {
-            max-width: min(900px, 70vw) !important;
+            max-width: calc(100vw - 520px) !important;
             margin: 0 auto 8px !important;
           }
         }
