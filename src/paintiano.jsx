@@ -29927,8 +29927,9 @@ Composition rules:
             const _cols = _baseCols;
             return (
           <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
-            {/* Mosaic = default; not glowing while Shuffle is drawing an artist. */}
-            {setupArtists.includes('mosaicFamily') && (()=>{
+            {/* Mosaic = default; not glowing while Shuffle is drawing an artist.
+                Shown when in set, or in edit mode (as a ghost when out of set). */}
+            {(setupArtists.includes('mosaicFamily') || cockpitEdit) && (()=>{
               const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
               // Manual mosaic = selected and NOT being driven by the dice. Like
               // the artist pairs, a shuffle-hit shows the white frame (no gold
