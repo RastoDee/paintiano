@@ -10057,10 +10057,18 @@ Composition rules:
         </div>
         {!isDesktop && (<>
         <div style={{display:'flex',alignItems:'center',width:'100%',gap:6}}>
+          <span style={{width:26,flexShrink:0}} aria-hidden="true" />
           <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
             <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : ts('pickLook','Pick a look')}</span>
             <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
           </button>
+          {/* Edit dial — subtle icon, no box. Shown when the strip is open in a
+              music mode. Gold when editing. */}
+          {(stripOpen && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive) ? (
+            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:26,height:26,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:cockpitEdit?'rgba(220,180,90,.95)':'rgba(230,222,196,.38)',transition:'color .15s ease'}}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg>
+            </button>
+          ) : (<span style={{width:26,flexShrink:0}} aria-hidden="true" />)}
         </div>
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
@@ -10078,18 +10086,6 @@ Composition rules:
         </>)}
         {(stripOpen || isDesktop) && (
         <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
-          {/* Edit dial — toggles inline "edit your set" mode. Lives inside the
-              panel so it renders in EVERY mode (mobile portrait/landscape, tablet,
-              desktop) — the panel block is gated (stripOpen||isDesktop), unlike the
-              mobile-only header above. Music modes only (image-scan has no set). */}
-          {((loadedSource!=='image' || moodFromImg) && !composeMode && !micActive) && (
-          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:8,marginBottom:-2}}>
-            {cockpitEdit && (<span style={{flex:1,textAlign:'left',fontSize:(.5*effScale)+'rem',letterSpacing:'.08em',color:'rgba(220,180,90,.75)',fontStyle:'italic'}}>{ts('editSet','Edit your set')}</span>)}
-            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:30,height:30,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:8,cursor:'pointer',padding:0,fontFamily:'inherit',background:cockpitEdit?'rgba(201,168,76,.14)':'transparent',border:'1px solid '+(cockpitEdit?'rgba(201,168,76,.7)':'rgba(242,238,232,.16)'),color:cockpitEdit?'rgba(220,180,90,.98)':'rgba(230,222,196,.5)',transition:'all .15s ease'}}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg>
-            </button>
-          </div>
-          )}
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Morph / Vary — only for mood-based pieces (mood + mood-from-image),
               never for loaded MIDI/audio/score. Morph: text moods only. Vary: both. */}
@@ -10388,6 +10384,18 @@ Composition rules:
           </>)}
           </div>
           <div className="pf-styles-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
+          {/* Right-column header: a "Pick a look" caption + the edit dial, above
+              the inspired-by block. Shown on all non-mobile layouts (desktop &
+              tablet, both orientations) — mobile has its own header in the
+              !isDesktop branch above. Label only; dial on the right edge, subtle. */}
+          {isDesktop && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive && (
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{flex:1,fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:cockpitEdit?'rgba(220,180,90,.85)':'rgba(201,168,76,.7)'}}>{cockpitEdit?ts('editSet','Edit your set'):ts('pickLook','Pick a look')}</span>
+            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:26,height:26,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:cockpitEdit?'rgba(220,180,90,.95)':'rgba(230,222,196,.38)',transition:'color .15s ease'}}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg>
+            </button>
+          </div>
+          )}
           {/* IMAGE mode: the right column (where artists sit in other modes) holds
               the read-mode toggle (Scan / AI Compose) and — in Scan — the scan
               direction. Colours stay in the left column, mirroring every mode. */}
