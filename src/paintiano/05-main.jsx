@@ -1684,17 +1684,22 @@ export default function Paintiano() {
       setStyle(null);                             // disabled artist → release to Mosaic
     }
   }, [setupArtists, style]);
+  // Ref for cockpitEdit so the fallback effect below can skip when the user
+  // is configuring their set (edit mode). cockpitEdit itself is declared much
+  // further down — using it directly here would TDZ. The actual ref value is
+  // synced from cockpitEdit via a useEffect placed after the useState.
+  const cockpitEditRef = useRef(false);
   useEffect(()=>{
     // When Mosaic family is OFF in Setup, the canvas must always have an
     // active artist — there's no Mosaic chip to fall back to. Auto-select
     // the first playable artist whenever style becomes null (initial mount,
     // user deselect, setup change). Dice mode picks via shuffleStyle, so we
-    // skip when randomMode is on. Edit mode also skips — toggling chips in
-    // edit configures the future set, it must not redraw the current canvas
-    // (otherwise removing mosaicFamily would instantly pick an artist as
-    // fallback and the Mosaic toggle would look broken).
+    // skip when randomMode is on. Edit mode also skips (via ref) — toggling
+    // chips in edit configures the future set, must not redraw the current
+    // canvas (otherwise removing mosaicFamily would instantly pick a fallback
+    // artist and the Mosaic deselect would look broken).
     if(randomMode) return;
-    if(cockpitEdit) return;
+    if(cockpitEditRef.current) return;
     if(style) return;
     if(setupArtists.includes('mosaicFamily')) return;
     let target = null;
@@ -1711,7 +1716,7 @@ export default function Paintiano() {
       }
     }
     if(target) setStyle(target);
-  }, [setupArtists, style, randomMode, proStatus, cockpitEdit]);
+  }, [setupArtists, style, randomMode, proStatus]);
   // ── AI "recording" lifecycle ────────────────────────────────────────────────
   // After AI generates (or you Recall an existing piece), the recent entry can
   // be RE-RECORDED by playing it once and tweaking. The "recording" window
@@ -2126,6 +2131,26 @@ export default function Paintiano() {
   // enabled ones to remove) — live, without leaving the canvas. The heavy
   // Styles & palettes modal stays in the menu for full management.
   const [cockpitEdit, setCockpitEdit] = useState(false);
+  // Keep cockpitEditRef (declared earlier, near the style-fallback effect) in
+  // sync. The earlier effect needs to read cockpitEdit but is positioned
+  // before this useState — the ref bridges them without TDZ. On exit (true→
+  // false), if the set state requires a style fallback (no Mosaic and style
+  // is null), apply it now since the earlier effect was skipped during edit.
+  useEffect(()=>{
+    cockpitEditRef.current = cockpitEdit;
+    if(!cockpitEdit && !randomMode && style===null && !setupArtists.includes('mosaicFamily')){
+      // Pick the first playable artist as fallback (same logic as the earlier effect).
+      let target = null;
+      for(const k of setupArtists){
+        if(k === 'mosaicFamily') continue;
+        if(proStatus === 'free'){
+          const pair = BASE_STYLE_PAIRS.find(([a,b]) => a===k || b===k);
+          if(pair){ target = pair[0]; break; }
+        } else { target = k; break; }
+      }
+      if(target) setStyle(target);
+    }
+  }, [cockpitEdit]);
   // Edit mode is a transient tuning state — any real action exits it: pressing
   // Play, collapsing the Pick-a-look strip, loading New music / changing source,
   // or changing view (Back). The strip is always expanded on desktop/landscape
