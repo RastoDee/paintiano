@@ -3170,16 +3170,17 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //  A = Analytic Cubism (angular faceted shards, pencil-grain hatching).
   //  B = Synthetic Cubism collage (large abstract "cut-paper" shapes).
   //  Blue = Blue Atmosphere (cool palette cubist shards, no figures).
-  //  Rose = Rose Atmosphere (warm palette cubist shards, no figures).
   //  Mask → FacetedField (full-canvas dense angular shards, no subject).
   //  Glass → StillLife (overlapping geometric shapes, vase/fruit implied only).
-  // Free (cap=2) sees Analytic + Faceted Field — subtle vs dense shards contrast.
+  //  Surreal = soft biomorphic blobs — the ONLY non-angular phase, dreamlike.
+  //  (Rose Atmosphere retired — it was a near-duplicate of Blue Atmosphere.)
+  // Free (cap=2) sees Analytic + Synthetic collage — subtle structural contrast.
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ picassoPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===3){ picassoPhaseRoseAtmo(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===4){ picassoPhaseFacetedField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===5){ picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===3){ picassoPhaseFacetedField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===4){ picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===5){ picassoPhaseSurreal(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   picassoPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -3764,6 +3765,73 @@ function picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.moveTo(0, tableY + CH*0.05);
   ctx.lineTo(CW, tableY);
   ctx.stroke();
+}
+
+// ── Picasso Surrealism: soft biomorphic forms — the ONLY non-angular Picasso
+// phase. Dreamlike amoeba/blob shapes (smooth quadratic contours, not shards),
+// overlapping on a muted dreamy ground, each filled from the palette with a bold
+// dark outline and an occasional surreal "eye" accent. Honours Paintiano's colour
+// concept (fully chromatic). Count/size driven by song character; reveals with lim.
+function picassoPhaseSurreal(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const D=Math.min(CW,CH);
+  const INK = isBW ? [20,20,22] : [18,12,20];
+
+  // Song character → how many blobs and how busy. Energetic/dense music = more,
+  // smaller, more lobed forms; calm/sparse = fewer, larger, smoother.
+  const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
+  const drive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+
+  const sR=_seedRnd(9301,ss,0,9); sR(); sR();
+
+  // ── Dreamy muted ground: two palette colours, darkened, as a soft gradient ──
+  const {rgb:gA}=_picChord(chords,0,gc,isBW);
+  const {rgb:gB}=_picChord(chords,Math.floor(cn/2),gc,isBW);
+  const _adj=(r,g,b,f)=>{ if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];} if(typeof _pastelTint==='function'){const p=_pastelTint(r,g,b);r=p[0];g=p[1];b=p[2];} return `rgb(${Math.round(r*f)},${Math.round(g*f)},${Math.round(b*f)})`; };
+  const grad=ctx.createLinearGradient(0,0,CW,CH);
+  grad.addColorStop(0,_adj(gA[0],gA[1],gA[2],0.34));
+  grad.addColorStop(1,_adj(gB[0],gB[1],gB[2],0.30));
+  ctx.fillStyle=grad; ctx.fillRect(0,0,CW,CH);
+
+  // ── Biomorphic blobs ──
+  const blobFull=Math.max(5,Math.round(7+drive*8));   // ~7-15
+  const visBlobs=Math.max(2,Math.ceil(blobFull*reveal));
+  for(let i=0;i<visBlobs;i++){
+    const r1=_seedRnd(i+9400,ss,0,0); r1(); r1();
+    const cx=r1()*CW, cy=r1()*CH;
+    const baseR=D*(0.10+r1()*(0.20-drive*0.06));        // calmer songs → larger
+    const lobes=4+Math.floor(r1()*(3+drive*4));         // busier songs → more lobes
+    const {rgb,energy}=_picChord(chords, i%cn, gc, isBW);
+    const fillA=(0.72+energy*0.20).toFixed(2);
+    // Build a smooth closed blob: radial points with wobble, joined by quadratics
+    // through midpoints (so the control points round the corners → no facets).
+    const pts=[];
+    for(let k=0;k<lobes;k++){ const ang=(k/lobes)*Math.PI*2 + (r1()-0.5)*0.4; const rr=baseR*(0.55+r1()*0.85); pts.push([cx+Math.cos(ang)*rr, cy+Math.sin(ang)*rr]); }
+    ctx.save();
+    ctx.beginPath();
+    const m0x=(pts[0][0]+pts[lobes-1][0])/2, m0y=(pts[0][1]+pts[lobes-1][1])/2;
+    ctx.moveTo(m0x,m0y);
+    for(let k=0;k<lobes;k++){ const cur=pts[k], nxt=pts[(k+1)%lobes]; const mx=(cur[0]+nxt[0])/2, my=(cur[1]+nxt[1])/2; ctx.quadraticCurveTo(cur[0],cur[1],mx,my); }
+    ctx.closePath();
+    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${fillA})`;
+    ctx.fill();
+    ctx.strokeStyle=`rgba(${INK[0]},${INK[1]},${INK[2]},0.82)`;
+    ctx.lineWidth=Math.max(1.8,D*(0.005+energy*0.003));
+    ctx.lineJoin='round';
+    ctx.stroke();
+    // Surreal inner accent: a small contrasting "eye" disc, sometimes.
+    if(r1()<0.55){
+      const {rgb:ic}=_picChord(chords,(i*5+3)%cn,gc,isBW);
+      const ex=cx+(r1()-0.5)*baseR*0.5, ey=cy+(r1()-0.5)*baseR*0.5, er=baseR*(0.12+r1()*0.10);
+      ctx.beginPath(); ctx.arc(ex,ey,er,0,Math.PI*2);
+      ctx.fillStyle=`rgb(${ic[0]},${ic[1]},${ic[2]})`; ctx.fill();
+      ctx.strokeStyle=`rgba(${INK[0]},${INK[1]},${INK[2]},0.7)`; ctx.lineWidth=Math.max(1.2,D*0.003); ctx.stroke();
+      if(r1()<0.6){ ctx.beginPath(); ctx.arc(ex,ey,er*0.4,0,Math.PI*2); ctx.fillStyle=`rgba(${INK[0]},${INK[1]},${INK[2]},0.9)`; ctx.fill(); }
+    }
+    ctx.restore();
+  }
 }
 
 // Mondrian canvas-wide overlay. The per-cell drawMondrian goes pixely on long
