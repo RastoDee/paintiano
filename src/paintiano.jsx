@@ -26939,7 +26939,7 @@ Composition rules:
         pickExpressiveStyle();
         setMode('harmony');
         loadSampleMidi();
-        setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
+        setTimeout(()=>{ try{ wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); }); }catch(_){ try{ startPlay && startPlay(); }catch(__){} } }, 280);
       }catch(_){}
     }, 300);
     return ()=>clearTimeout(id);
@@ -26957,7 +26957,7 @@ Composition rules:
     if(playing || holdPaused || busy || disp>0){ basicAutoStartedRef.current=true; return; }
     if(basicAutoStartedRef.current) return;
     basicAutoStartedRef.current = true;
-    const id=setTimeout(()=>{ try{ setMuted(false); }catch(_){} try{ startPlay && startPlay(); }catch(_){} }, 120);
+    const id=setTimeout(()=>{ try{ setMuted(false); }catch(_){} try{ wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); }); }catch(_){ try{ startPlay && startPlay(); }catch(__){} } }, 120);
     return ()=>clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[basicMode, chords.length, loadedSource, playing, holdPaused, busy]);
@@ -28991,11 +28991,11 @@ Composition rules:
             Lite = white chip + white text; Advanced = gold chip + gold text. */}
         {(()=>{
           const adv = !basicMode;
-          const accent = adv ? '220,180,90' : '247,243,236';   // gold | white
+          const accent = adv ? '220,180,90' : '230,205,140';   // full gold | lite gold
           const label = adv ? ts('advancedMode','Advanced') : ts('basicMode','Lite');
           return (
             <button onClick={()=>{ const goingAdvanced = basicMode; try{ fullClear(); }catch(_){} try{ setStayActive(false); }catch(_){} try{ setStyle(null); }catch(_){} try{ setForceSetup(goingAdvanced); }catch(_){} basicAutoPlayedRef.current=false; setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
-              style={{height:38,padding:'0 16px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,borderRadius:19,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',background:'rgba('+accent+',.13)',color:'rgba('+accent+',.98)',border:'1px solid rgba('+accent+',.45)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'background .2s, color .2s, border-color .2s'}}>
+              style={{height:38,padding:'0 16px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,borderRadius:19,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',background:'transparent',color:'rgba('+accent+',.98)',border:'1px solid rgba('+accent+',.45)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'color .2s, border-color .2s'}}>
               <span aria-hidden="true" style={{width:7,height:7,borderRadius:'50%',background:'rgba('+accent+',.95)',boxShadow:'0 0 7px rgba('+accent+',.6)',flexShrink:0}}/>
               {label}
             </button>
