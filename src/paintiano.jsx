@@ -20182,6 +20182,9 @@ export default function Paintiano() {
   // so the next Lite tap re-runs hard-recovery. Declared here (before unlockAudio
   // attaches the statechange listener) to avoid a temporal-dead-zone reference.
   const basicTapUnlockedRef = useRef(false);
+  // Permanent "first tap has unlocked audio" flag — set once, never reset by
+  // statechange, so unlockAudio (and its silent kick) runs exactly once.
+  const liteEverUnlockedRef = useRef(false);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -26953,26 +26956,41 @@ Composition rules:
   const [liteAwaitTap, setLiteAwaitTap] = useState(false);
   const basicTapUnlock = useCallback(()=>{
     if(!basicMode) return;
+    // Two separate concerns:
+    //  • liteEverUnlockedRef — set ONCE on the very first tap; never reset. Its
+    //    job is only to run unlockAudio()+start the splashed song a single time.
+    //    Without this, statechange resetting basicTapUnlockedRef made every tap
+    //    re-run unlockAudio (its silent-kick/suspend cycle) → audible crackle.
+    //  • basicTapUnlockedRef — re-armed by statechange when the device dies, so
+    //    a later tap can trigger recovery. Checked only for the recovery branch.
+    const firstEver = !liteEverUnlockedRef.current;
+    if(firstEver){
+      liteEverUnlockedRef.current = true;
+      basicTapUnlockedRef.current = true;
+      setLiteAwaitTap(false);
+      try{ unlockAudio(); }catch(_){}
+      try{ setMuted(false); }catch(_){}
+      setTimeout(()=>{
+        try{
+          if(chordsRef.current && chordsRef.current.length>0 && !playingRef.current){
+            wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); });
+          }
+        }catch(_){}
+      }, 30);
+      return;
+    }
+    // Already unlocked once. Do NOTHING unless the context actually died — in
+    // which case statechange re-armed basicTapUnlockedRef AND audioWasHiddenRef,
+    // so a single recovery pass is warranted. A healthy running context is left
+    // completely untouched → no crackle on ordinary canvas taps / Surprise.
     if(basicTapUnlockedRef.current) return;
+    let _dead=false;
+    try{ const _ac=Tone.getContext().rawContext; _dead = !!_ac && _ac.state!=='running'; }catch(_){}
+    if(!_dead) return;
     basicTapUnlockedRef.current = true;
-    setLiteAwaitTap(false);
-    try{ unlockAudio(); }catch(_){}
-    try{ setMuted(false); }catch(_){}
-    // Only force the hard-recovery (double suspend->resume + sampler rebuild)
-    // when the context is actually dead — running it on a healthy, playing
-    // context causes an audible crackle/"škrt" on every tap (e.g. Surprise).
-    try{
-      const _ac = Tone.getContext().rawContext;
-      if(_ac && _ac.state !== 'running'){ audioWasHiddenRef.current = true; }
-    }catch(_){}
     setTimeout(()=>{
       try{
-        if(chordsRef.current && chordsRef.current.length>0 && !playingRef.current){
-          wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); });
-        } else if(playingRef.current){
-          // Already playing — only wake (revive) if the device actually stalled.
-          try{ const _ac2 = Tone.getContext().rawContext; if(_ac2 && _ac2.state !== 'running'){ wakeAudio(); } }catch(_){}
-        }
+        wakeAudio().then(()=>{ if(chordsRef.current && chordsRef.current.length>0 && !playingRef.current){ startPlayRef.current && startPlayRef.current(); } }).catch(()=>{});
       }catch(_){}
     }, 30);
   },[basicMode, unlockAudio]);
@@ -29063,7 +29081,7 @@ Composition rules:
           const accent = adv ? '220,180,90' : '230,205,140';   // full gold | lite gold
           const label = adv ? ts('advancedMode','Advanced') : ts('basicMode','Lite');
           return (
-            <button onClick={()=>{ const goingAdvanced = basicMode; try{ if(micListening) stopMicListening(); }catch(_){} try{ if(micPainting) stopMicPainting(); }catch(_){} try{ if(recording) stopRecord(); }catch(_){} try{ setMicArmed(false); }catch(_){} try{ fullClear(); }catch(_){} try{ setStayActive(false); }catch(_){} try{ setStyle(null); }catch(_){} try{ setForceSetup(goingAdvanced); }catch(_){} basicAutoPlayedRef.current=false; basicTapUnlockedRef.current=false; setLiteAwaitTap(false); setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
+            <button onClick={()=>{ const goingAdvanced = basicMode; try{ if(micListening) stopMicListening(); }catch(_){} try{ if(micPainting) stopMicPainting(); }catch(_){} try{ if(recording) stopRecord(); }catch(_){} try{ setMicArmed(false); }catch(_){} try{ fullClear(); }catch(_){} try{ setStayActive(false); }catch(_){} try{ setStyle(null); }catch(_){} try{ setForceSetup(goingAdvanced); }catch(_){} basicAutoPlayedRef.current=false; basicTapUnlockedRef.current=false; liteEverUnlockedRef.current=false; setLiteAwaitTap(false); setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
               style={{height:38,padding:'0 16px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,borderRadius:19,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',background:'transparent',color:'rgba('+accent+',.98)',border:'1px solid rgba('+accent+',.45)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'color .2s, border-color .2s'}}>
               <span aria-hidden="true" style={{width:7,height:7,borderRadius:'50%',background:'rgba('+accent+',.95)',boxShadow:'0 0 7px rgba('+accent+',.6)',flexShrink:0}}/>
               {label}
@@ -30697,7 +30715,7 @@ Composition rules:
         </div>
         );
       })()}
-      <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
+      <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 290px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onClick={e=>{
@@ -30823,7 +30841,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none',transition:'opacity .25s ease'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
+        <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 290px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
@@ -32398,7 +32416,15 @@ Composition rules:
           // Auto-start the capture in the same gesture — no separate REC tap.
           setTimeout(()=>{ try{ wakeAudio().then(()=>{ try{ startMicListening(); }catch(_){} }).catch(()=>{ try{ startMicListening(); }catch(_){} }); }catch(_){ try{ startMicListening(); }catch(__){} } }, 60);
         };
-        const _stopMicLite = ()=>{ try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){} try{ if(recording) stopRecord(); }catch(_){} setMicArmed(false); basicTapUnlockedRef.current=false; try{ audioWasHiddenRef.current=true; }catch(_){} setTimeout(()=>{ try{ wakeAudio(); }catch(_){} }, 80); };
+        const _stopMicLite = ()=>{ try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){} try{ if(recording) stopRecord(); }catch(_){} setMicArmed(false);
+          // Lite mic only PAINTS what it hears — it must not play back a recording.
+          // Clearing the captured-audio refs + listen ownership makes Surprise/Play
+          // replay the painted notes as piano. We do NOT touch the global
+          // playSourceMic state, so Advanced mic behaviour is left completely intact.
+          try{ listenPCMRef.current=null; }catch(_){}
+          try{ if(listenBlobRef.current) listenBlobRef.current=null; }catch(_){}
+          try{ if(draftOwnerRef.current==='listen'||draftOwnerRef.current==='sing') draftOwnerRef.current=null; }catch(_){}
+          basicTapUnlockedRef.current=false; try{ audioWasHiddenRef.current=true; }catch(_){} setTimeout(()=>{ try{ wakeAudio(); }catch(_){} }, 80); };
         const _openFileLite = ()=>{ setLiteSrcPicker(false); if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} };
         const _loadSampleLite = ()=>{
           setLiteSrcPicker(false);
