@@ -3434,23 +3434,25 @@ function picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
   const N=Math.max(1,Math.min(cn,lim));
   const reveal = Math.max(0, Math.min(1, N/cn));
+  const D=Math.min(CW,CH);
   const sR = _seedRnd(8201,ss,0,12); sR(); sR();
 
-  // Per-song layout decisions.
-  const shardCountFull = 70 + Math.floor(sR()*40);          // 70-110 shards
-  const hatchCountFull = 250 + Math.floor(sR()*120);        // 250-370 hatches
-  const hatchAngleBase = -Math.PI/3 + (sR()-0.5)*0.4;       // per-song hatch direction
+  // Song character → plane count + size. Calm/sparse music = fewer, larger,
+  // softer planes (meditative depth). Energetic/dense = more, busier overlap.
+  // Markedly distinct compositional logic from FacetedField's dense small shards.
+  const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
+  const drive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+  const planeCountFull = Math.max(6, Math.round(9 + drive*7));    // 9-16 LARGE planes (was 70-110)
 
-  // Cool blue ground (palette-independent so the mood reads as Blue Period).
-  // Tone-adjust each gradient stop so Pastel softens the whole blue mood and
-  // Real picks up the opening chord's energy.
+  // Cool blue atmospheric ground (palette-independent so the mood reads as Blue
+  // Period). Tone-adjust each gradient stop so Pastel softens, Real picks up
+  // the opening chord's energy.
   const _adjHex = (hex)=>{
     let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
     if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
     if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
     return `rgb(${r},${g},${b})`;
   };
-  // Set energy from opening chord so Real mode reads the song's start.
   if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
   const grad = ctx.createLinearGradient(0,0,CW,CH);
   if(isBW){
@@ -3458,56 +3460,67 @@ function picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     grad.addColorStop(0.5, _adjHex('#3a3a40'));
     grad.addColorStop(1, _adjHex('#22222a'));
   } else {
-    grad.addColorStop(0, _adjHex('#1a2438'));
-    grad.addColorStop(0.5, _adjHex('#2a3e58'));
-    grad.addColorStop(1, _adjHex('#1a2230'));
+    grad.addColorStop(0, _adjHex('#16203a'));
+    grad.addColorStop(0.5, _adjHex('#243a5c'));
+    grad.addColorStop(1, _adjHex('#141d2e'));
   }
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,CW,CH);
 
-  // Cubist shards — count grows with reveal.
-  const visShards = Math.max(8, Math.ceil(shardCountFull * reveal));
-  for(let i=0;i<visShards;i++){
+  // Few LARGE layered translucent planes — Blue Period as depth/atmosphere,
+  // not scattered confetti. Each plane has an inner radial gradient so it
+  // reads as a soft veil, not a flat shard. Overlap creates depth.
+  const visPlanes = Math.max(2, Math.ceil(planeCountFull * reveal));
+  for(let i=0;i<visPlanes;i++){
     const r1 = _seedRnd(i+8300,ss,0,0); r1(); r1();
     const cx = r1()*CW;
     const cy = r1()*CH;
-    const sz = 25 + r1()*120;
+    const sz = D*(0.30 + r1()*0.45);                              // LARGE (30-75% of min dim)
     const rot = r1()*Math.PI*2;
     const sides = 3 + Math.floor(r1()*3);
-    const {rgb} = _picChord(chords, i%cn, gc, isBW);
-    // Bias toward blue.
-    const cr = isBW ? Math.round(rgb[0]*0.5+40) : Math.round(rgb[0]*0.35 + 25);
-    const cg = isBW ? Math.round(rgb[1]*0.5+45) : Math.round(rgb[1]*0.45 + 35);
-    const cb = isBW ? Math.round(rgb[2]*0.5+55) : Math.round(rgb[2]*0.75 + 60);
+    const {rgb,energy} = _picChord(chords, i%cn, gc, isBW);
+    // Blue-bias the chord colour for the plane.
+    const cr = isBW ? Math.round(rgb[0]*0.5+40) : Math.round(rgb[0]*0.30 + 25);
+    const cg = isBW ? Math.round(rgb[1]*0.5+45) : Math.round(rgb[1]*0.42 + 40);
+    const cb = isBW ? Math.round(rgb[2]*0.5+55) : Math.round(rgb[2]*0.75 + 70);
+    // Inner radial gradient: bright-ish centre, fades to near-transparent edge.
+    // This is the depth/atmosphere read — soft veil, not hard shard.
+    const pg = ctx.createRadialGradient(cx, cy, 0, cx, cy, sz);
+    pg.addColorStop(0, `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.36+energy*0.14).toFixed(2)})`);
+    pg.addColorStop(1, `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb+20)|0},0.08)`);
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(rot);
     ctx.beginPath();
     for(let s=0;s<sides;s++){
       const a = (s/sides)*Math.PI*2;
-      const r = sz * (0.65 + r1()*0.70);
+      const r = sz * (0.70 + r1()*0.55);
       const px = Math.cos(a)*r, py = Math.sin(a)*r;
       if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.closePath();
-    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.55 + r1()*0.35).toFixed(2)})`;
+    ctx.fillStyle = pg;
     ctx.fill();
-    ctx.strokeStyle = isBW ? 'rgba(15,15,18,0.7)' : 'rgba(8,12,22,0.7)';
-    ctx.lineWidth = 1 + r1();
+    // Very soft edge — no heavy contour, so planes read as overlapping veils
+    // rather than stacked shards. This is the key visual difference from
+    // FacetedField (which keeps hard contours on its dense small fragments).
+    ctx.strokeStyle = isBW ? 'rgba(15,15,18,0.32)' : 'rgba(10,16,30,0.28)';
+    ctx.lineWidth = Math.max(1, D*0.0024);
     ctx.stroke();
     ctx.restore();
   }
 
-  // Pencil-grain hatching — analytic cubism signature, scale with reveal.
-  const visHatches = Math.ceil(hatchCountFull * reveal);
-  ctx.globalAlpha = 0.18;
+  // Very faint, sparse hatching — atmospheric texture only, not the dense
+  // pencil-grain signature of analytic cubism.
+  const visHatches = Math.ceil(80 * reveal);
+  ctx.globalAlpha = 0.08;
   ctx.strokeStyle = isBW ? 'rgba(15,15,18,0.9)' : 'rgba(15,20,30,0.9)';
   ctx.lineWidth = 0.5;
   for(let k=0;k<visHatches;k++){
     const hR = _seedRnd(k+8400,ss,0,0); hR();
     const sx = hR()*CW, sy = hR()*CH;
-    const len = 8 + hR()*20;
-    const a = hatchAngleBase + (hR()-0.5)*0.2;
+    const len = 10 + hR()*22;
+    const a = -Math.PI/3 + (hR()-0.5)*0.3;
     ctx.beginPath();
     ctx.moveTo(sx, sy);
     ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);

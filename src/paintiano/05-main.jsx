@@ -10501,6 +10501,19 @@ Composition rules:
                 : (subKind==='oneM' ? 'tap to clear back to mosaic' : (subKind==='notes' ? 'notes — tap for $1M$' : 'mosaic — tap for note names'));
               return (
             <button onClick={()=>{
+              // In edit mode the Mosaic chip behaves like every other chip:
+              // tap toggles its membership in the set (mosaicFamily key in
+              // setupArtists). This makes the edit grid uniform — every chip
+              // is a toggle, none has a hidden second behaviour.
+              if(cockpitEdit){
+                setSetupArtists(prev => {
+                  if(prev.includes('mosaicFamily')){
+                    return prev.length>1 ? prev.filter(x=>x!=='mosaicFamily') : prev;
+                  }
+                  return [...prev, 'mosaicFamily'];
+                });
+                return;
+              }
               if(style!==null){ selectStyle(style); return; }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
@@ -10517,7 +10530,7 @@ Composition rules:
                 else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
                 else { setOneMMode(false); setNotesMode(false); }
               }
-            }} className={(mosaicManual?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicManual),...(!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{subLabel}</button>
+            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{subLabel}</button>
             ); })()}
             {(cockpitEdit ? effectivePairs : effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b))).map(([a,b], _pairIdx)=>{
               // Setup-picker integration: when only ONE side of the pair is in
